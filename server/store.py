@@ -3252,7 +3252,12 @@ class Store:
             sql += " WHERE " + " AND ".join(conds)
         sql += " ORDER BY k.last_activity_at DESC, k.native_id ASC "
         if limit is not None:
-            sql += f"LIMIT {max(0, min(int(limit), 2000))} OFFSET {max(0, int(offset))}"
+            # Parameterized LIMIT/OFFSET (slice-2 review P3) — even with
+            # pre-clamped ints, values ride as bound parameters, never
+            # as f-string SQL.
+            sql += "LIMIT ? OFFSET ?"
+            params.extend([max(0, min(int(limit), 2000)),
+                           max(0, int(offset))])
         else:
             sql += "LIMIT 2000"
         with self._lock, self._conn() as db:

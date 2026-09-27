@@ -113,6 +113,45 @@ class TestScan:
         result = scan_pi_stores(root, now=NOW)
         assert result.sessions == []
 
+    def test_symlink_loop_terminates(self, store: Path):
+        """P3 (slice-2 review): a cyclic symlink must not hang the walk —
+        the realpath visited-set ends the cycle after one pass and the
+        scan answers the same listing."""
+        loop = store / "loop"
+        loop.symlink_to(store, target_is_directory=True)
+        try:
+            result = scan_pi_stores(store, now=NOW)
+        finally:
+            loop.unlink()
+        assert {r["native_id"] for r in result.sessions} \
+            == {"1g9x2abc", "2h8y3def"}
+
+    def test_session_vanishing_midscan_is_a_skip_not_a_crash(
+            self, store: Path, monkeypatch):
+        """P3 (slice-2 review): the second stat (mtime) rides the OSError
+        net — a file deleted BETWEEN the size stat and the mtime stat
+        degrades to a skip, never crashes the whole scan."""
+        real_stat = Path.stat
+        calls: dict[str, int] = {}
+
+        def racy_stat(self, *args, **kwargs):
+            stat = real_stat(self, *args, **kwargs)
+            if self.suffix == ".jsonl" and self.name.startswith("20260920"):
+                calls[str(self)] = calls.get(str(self), 0) + 1
+                if calls[str(self)] >= 2:
+                    # vanished after the size stat, before the mtime one;
+                    # a REAL vanished file carries errno=ENOENT (2) — a
+                    # bare string arg would set errno=None and pathlib's
+                    # is_dir() would legitimately re-raise
+                    raise FileNotFoundError(2, "vanished mid-scan",
+                                            str(self))
+            return stat
+
+        monkeypatch.setattr(Path, "stat", racy_stat)
+        result = scan_pi_stores(store, now=NOW)  # must not raise
+        assert all(r["native_id"] != "2h8y3def" for r in result.sessions)
+        assert any(r["native_id"] == "1g9x2abc" for r in result.sessions)
+
 
 class TestAntiWrite:
     def test_scan_leaves_every_byte_identical(self, store: Path):

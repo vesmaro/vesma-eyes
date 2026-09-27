@@ -212,7 +212,13 @@ def _session_row(jsonl: Path, cwd: str, project: str,
     if isinstance(v, dict):
         native_id = str(v.get("sessionId") or "")
     native_id = native_id or jsonl.stem
-    mtime = jsonl.stat().st_mtime
+    # Second stat — must not escape the OSError net: a file deleted
+    # between the first stat and here would otherwise crash the WHOLE
+    # scan (same class as the slice-2 review P3 on pi_reader). Skip.
+    try:
+        mtime = jsonl.stat().st_mtime
+    except OSError:
+        return None
     state = "live" if mtime >= now - live_window_seconds else "idle"
     preview = _preview_from_envelope(envelope)
     if not preview:

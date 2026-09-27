@@ -117,8 +117,10 @@ def store(tmp_path: Path) -> Path:
 class TestAssemble:
     def test_items_roles_kinds_store_order(self, store: Path):
         result = read_zcode_transcript(store, "sess_t", limit=200)
-        # step markers carry no content — 5 items out of 6 parts
-        assert [it["seq"] for it in result.items] == [1, 2, 3, 4, 5]
+        # step markers carry no content — 5 items out of 6 parts, and
+        # P2-2: seq is the part's ABSOLUTE position, so the structural
+        # part leaves a GAP (1, gap at 2, then 3..6), never a shift.
+        assert [it["seq"] for it in result.items] == [1, 3, 4, 5, 6]
         first, reasoning, tool, answer, last = (
             result.items[0], result.items[1], result.items[2],
             result.items[3], result.items[4])
@@ -135,6 +137,28 @@ class TestAssemble:
         # timestamps are ISO, monotonically non-decreasing with seq
         assert all(it["ts"].startswith("20") for it in result.items)
         assert result.items == sorted(result.items, key=lambda i: i["ts"])
+
+    def test_tool_output_list_rendered_as_json(self, tmp_path: Path):
+        """P3 (slice-2 review): state.output of a LIST shape must render
+        through the same json.dumps path as an object — never silently
+        dropped."""
+        db = tmp_path / "listout.sqlite"
+        con = sqlite3.connect(db)
+        con.executescript(_SCHEMA)
+        con.execute("INSERT INTO session VALUES (?,?,?,?,?,?,NULL)",
+                    ("sess_l", None, "/p", "l", NOW_MS, NOW_MS))
+        con.execute("INSERT INTO message VALUES (?,?,?,?,?,?)",
+                    _msg("m1", "assistant"))
+        con.execute("INSERT INTO part VALUES (?,?,?,?,?,?,?)",
+                    ("p1", "m1", "sess_l", NOW_MS, NOW_MS, 1,
+                     json.dumps({"type": "tool", "tool": "ls",
+                                 "state": {"title": "ls",
+                                           "output": ["a.txt", "b.txt"]}})))
+        con.commit()
+        con.close()
+        result = read_zcode_transcript(db, "sess_l")
+        content = result.items[0]["content"]
+        assert "a.txt" in content and "b.txt" in content
 
     def test_torn_message_row_degrades_to_system(self, store: Path):
         """A part whose message vanished (mid-write read) still serves —
@@ -153,14 +177,14 @@ class TestAssemble:
 class TestCursor:
     def test_frozen_cursor_semantics(self, store: Path):
         page1 = read_zcode_transcript(store, "sess_t", after_seq=0, limit=2)
-        assert [it["seq"] for it in page1.items] == [1, 2]
-        assert page1.next_after_seq == 2
+        assert [it["seq"] for it in page1.items] == [1, 3]
+        assert page1.next_after_seq == 3
         assert page1.has_more is True
-        page2 = read_zcode_transcript(store, "sess_t", after_seq=2, limit=2)
-        assert [it["seq"] for it in page2.items] == [3, 4]
+        page2 = read_zcode_transcript(store, "sess_t", after_seq=3, limit=2)
+        assert [it["seq"] for it in page2.items] == [4, 5]
         assert page2.has_more is True
-        page3 = read_zcode_transcript(store, "sess_t", after_seq=4, limit=2)
-        assert [it["seq"] for it in page3.items] == [5]
+        page3 = read_zcode_transcript(store, "sess_t", after_seq=5, limit=2)
+        assert [it["seq"] for it in page3.items] == [6]
         assert page3.has_more is False
 
     def test_empty_page_keeps_the_cursor(self, store: Path):
@@ -173,6 +197,87 @@ class TestCursor:
     def test_limit_clamped_to_contract_cap(self, store: Path):
         result = read_zcode_transcript(store, "sess_t", limit=10_000)
         assert len(result.items) == 5  # everything, not 10k
+
+    def test_seq_anchor_survives_the_sliding_window(self, store: Path):
+        """P2-2 (slice-2 review): the numbering is ANCHORED to the
+        absolute store order — the same part keeps its seq whether the
+        window covers all 6 parts or only the newest 2, so a client
+        cursor never lies when the window slides."""
+        whole = read_zcode_transcript(store, "sess_t", limit=200)
+        narrow = read_zcode_transcript(store, "sess_t", limit=200,
+                                       max_items=2)
+        # the narrow window keeps only the newest 2 parts — with their
+        # ABSOLUTE seqs (5, 6), identical to the full read
+        assert [it["seq"] for it in narrow.items] == [5, 6]
+        whole_by_seq = {it["seq"]: it["content"] for it in whole.items}
+        for index, it in enumerate(narrow.items):
+            expected = whole_by_seq[it["seq"]]
+            if index == 0 and not it["content"].startswith(expected):
+                # the narrow window DROPS a head — its first item SPEAKS
+                # the cut (P2-1), then the same text follows
+                assert it["content"].startswith(
+                    "…[начало транскрипта обрезано ридером Коры: "
+                    "4 записей]…")
+                assert it["content"].endswith(expected)
+            else:
+                assert it["content"] == expected
+
+
+class TestHeadCut:
+    """P2-1 (slice-2 review): the head cut must SPEAK — the first item
+    of every page carries the explicit marker naming the dropped count."""
+
+    def test_marker_on_first_page(self, tmp_path: Path):
+        db = tmp_path / "head.sqlite"
+        con = sqlite3.connect(db)
+        con.executescript(_SCHEMA)
+        con.execute("INSERT INTO session VALUES (?,?,?,?,?,?,NULL)",
+                    ("sess_h", None, "/p", "h", NOW_MS, NOW_MS))
+        con.execute("INSERT INTO message VALUES (?,?,?,?,?,?)",
+                    _msg("m1", "user"))
+        total = 12
+        rows = []
+        for i in range(total):
+            rows.append((f"p{i}", "m1", "sess_h", NOW_MS + i, NOW_MS + i,
+                         i, json.dumps({"type": "text",
+                                        "text": f"r{i}"})))
+        con.executemany("INSERT INTO part VALUES (?,?,?,?,?,?,?)", rows)
+        con.commit()
+        con.close()
+        result = read_zcode_transcript(db, "sess_h", limit=200,
+                                       max_items=5)
+        assert result.head_dropped is True
+        first = result.items[0]
+        assert first["content"].startswith(
+            "…[начало транскрипта обрезано ридером Коры: 7 записей]…")
+        assert first["content"].endswith("r7")  # the real text follows
+        # later items are untouched by the marker
+        assert result.items[1]["content"] == "r8"
+
+    def test_marker_only_when_head_dropped(self, store: Path):
+        result = read_zcode_transcript(store, "sess_t", limit=200)
+        assert result.head_dropped is False
+        assert not result.items[0]["content"].startswith("…[")
+
+    def test_marker_names_the_exact_dropped_count(self, tmp_path: Path):
+        db = tmp_path / "head2.sqlite"
+        con = sqlite3.connect(db)
+        con.executescript(_SCHEMA)
+        con.execute("INSERT INTO session VALUES (?,?,?,?,?,?,NULL)",
+                    ("sess_h2", None, "/p", "h", NOW_MS, NOW_MS))
+        con.execute("INSERT INTO message VALUES (?,?,?,?,?,?)",
+                    _msg("m1", "user"))
+        rows = []
+        for i in range(TRANSCRIPT_MAX_ITEMS + 3):
+            rows.append((f"p{i}", "m1", "sess_h2", NOW_MS + i, NOW_MS + i,
+                         i, json.dumps({"type": "text",
+                                        "text": f"row{i}"})))
+        con.executemany("INSERT INTO part VALUES (?,?,?,?,?,?,?)", rows)
+        con.commit()
+        con.close()
+        result = read_zcode_transcript(db, "sess_h2", limit=10)
+        assert result.items[0]["content"].startswith(
+            f"…[начало транскрипта обрезано ридером Коры: 3 записей]…")
 
 
 class TestCaps:
@@ -215,8 +320,13 @@ class TestCaps:
         con.close()
         result = read_zcode_transcript(db, "sess_m", limit=200)
         assert result.head_dropped is True
-        # the NEWEST max_items survive; the oldest 10 rows are gone
-        assert result.items[0]["content"] == "r10"
+        # the NEWEST max_items survive; the oldest 10 rows are gone —
+        # and the first item SPEAKS the cut (P2-1) with the anchored seq
+        # (absolute position of p10 = 11)
+        assert result.items[0]["seq"] == 11
+        assert result.items[0]["content"].startswith(
+            "…[начало транскрипта обрезано ридером Коры: 10 записей]…")
+        assert result.items[0]["content"].endswith("r10")
 
 
 class TestErrorsAndAntiWrite:

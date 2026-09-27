@@ -143,8 +143,12 @@ class PiScanResult:
 def _session_files(root: Path) -> list[Path]:
     """Interactive-session JSONLs under the sessions root: any depth,
     skipping the non-session siblings (facts §2). The tree is small
-    (the owner's host had 168 files); a bounded walk keeps it honest."""
+    (the owner's host had 168 files); a bounded walk keeps it honest.
+    The walk is symlink-loop safe: every visited directory is recorded
+    by its REALPATH (slice-2 review P3) — a cyclic symlink chain can
+    only waste the loop budget, never hang the scan."""
     out: list[Path] = []
+    seen: set[str] = set()
     stack = [root]
     while stack and len(out) < MAX_SESSIONS * 4:
         current = stack.pop()
@@ -154,6 +158,10 @@ def _session_files(root: Path) -> list[Path]:
             continue
         for entry in entries:
             if entry.is_dir():
+                real = os.path.realpath(entry)
+                if real in seen:
+                    continue  # symlink cycle — never walk it twice
+                seen.add(real)
                 if entry.name not in _SKIP_PARTS:
                     stack.append(entry)
                 continue
@@ -187,7 +195,13 @@ def _session_row(jsonl: Path, *, now: float,
     cwd = header.get("cwd")
     cwd = cwd if isinstance(cwd, str) else ""
     project = cwd.rstrip("/").rsplit("/", 1)[-1] if cwd else ""
-    mtime = jsonl.stat().st_mtime
+    # Second stat — must not escape the OSError net: a file deleted
+    # between the first stat and here (live harness churn) would
+    # otherwise crash the WHOLE scan (slice-2 review P3). Skip honestly.
+    try:
+        mtime = jsonl.stat().st_mtime
+    except OSError:
+        return None
     state = "live" if mtime >= now - live_window_seconds else "idle"
     version = header.get("version")
     if version not in ("3", 3, None):

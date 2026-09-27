@@ -261,10 +261,13 @@ class ZcodeTranscriptResult:
     """One transcript read: the cursor page in store order + read
     diagnostics.
 
-    ``seq`` is assigned HERE, 1..N over the store order of the kept
-    items (append-only store ⇒ the numbering is stable across reads;
-    the frozen contract: «seq is never renumbered»). ``head_dropped``
-    marks an honest head truncation by TRANSCRIPT_MAX_ITEMS. The cursor
+    ``seq`` is the part's ABSOLUTE ascending position in the session
+    (anchored to the indexed part count; structural parts leave gaps but
+    never shift the numbering) — the frozen contract: «seq is never
+    renumbered», and the cursor stays valid when the ``max_items`` window
+    slides over sessions longer than the window. ``head_dropped`` marks
+    an honest head truncation by TRANSCRIPT_MAX_ITEMS; the first item of
+    the served page carries the explicit head-cut marker then. The cursor
     bookkeeping (next_after_seq / has_more) is resolved HERE — the page
     is exactly the frozen KoraTranscriptOut.items content."""
     items: list[dict[str, Any]] = field(default_factory=list)
@@ -331,9 +334,11 @@ def _part_item(pdata: dict[str, Any], role: str) -> dict[str, Any] | None:
         output = state.get("output")
         if isinstance(output, str) and output.strip():
             pieces.append(output.strip())
-        elif isinstance(output, dict):
-            # structured output — render its JSON so the owner still sees
-            # the material (redaction masks credential shapes inside)
+        elif isinstance(output, (dict, list)):
+            # structured output (object OR array) — render its JSON so
+            # the owner still sees the material (redaction masks
+            # credential shapes inside); a bare list was silently lost
+            # before the slice-2 review P3 fix.
             try:
                 pieces.append(json.dumps(output, ensure_ascii=False,
                                          indent=2))
@@ -353,13 +358,22 @@ def read_zcode_transcript(
         max_items: int = TRANSCRIPT_MAX_ITEMS) -> ZcodeTranscriptResult:
     """One read-only transcript page of a zcode session (slice 2).
 
-    Reads the newest ``max_items`` parts of the session (store order),
-    assigns seq 1..N over that order and returns the frozen cursor page:
-    items with ``seq > after_seq``, first ``limit`` of them, plus
-    next_after_seq / has_more (next_after_seq stays at the request's
-    cursor when the page is empty — the contract's exact wording).
-    The content is RAW — the serving path redacts it through the
-    choke-point. Unknown session → SessionNotFoundError (404 upstream).
+    Reads the newest ``max_items`` parts of the session (store order) and
+    returns the frozen cursor page: items with ``seq > after_seq``, first
+    ``limit`` of them, plus next_after_seq / has_more (next_after_seq
+    stays at the request's cursor when the page is empty — the contract's
+    exact wording). The content is RAW — the serving path redacts it
+    through the choke-point. Unknown session → SessionNotFoundError
+    (404 upstream).
+
+    Seq stability (slice-2 review P2-2): ``seq`` is the part's ABSOLUTE
+    ascending position in the session (1-based, from a cheap indexed
+    COUNT) — structural parts leave GAPS in the numbering but never
+    shift it, so the cursor survives the sliding ``max_items`` window
+    even on sessions longer than the window («seq is never renumbered»).
+    When the window drops a head (sessions > max_items parts), the FIRST
+    item of every page carries an explicit marker naming how many head
+    records were cut — silent truncation is hostile (P2-1).
     """
     if not native_id:
         raise SessionNotFoundError("empty native session id")
@@ -372,6 +386,11 @@ def read_zcode_transcript(
         if exists is None:
             raise SessionNotFoundError(
                 f"session not found in store: {native_id}")
+        # Total parts anchor the seq numbering (cheap: part_session_idx
+        # — measured 5 ms against the live 2 GB store, 2026-09-27).
+        total = con.execute(
+            "SELECT COUNT(*) FROM part WHERE session_id=?",
+            (native_id,)).fetchone()[0]
         # The newest ``max_items`` parts, then reversed to store order —
         # a bounded read of a multi-GB store; an overflowing HEAD is
         # dropped and reported (honest truncation).
@@ -382,9 +401,13 @@ def read_zcode_transcript(
             "ORDER BY p.time_created DESC, p.sequence DESC, p.id DESC "
             "LIMIT ?", (native_id, max_items + 1)).fetchall()
         head_dropped = len(rows) > max_items
+        head_dropped_count = max(0, total - min(len(rows), max_items))
         rows = list(reversed(rows[:max_items]))
+        # Absolute ascending position of the FIRST kept part: everything
+        # before it was dropped by the window cap.
+        base = total - len(rows) + 1
         items: list[dict[str, Any]] = []
-        for _pid, ptc, praw, mraw in rows:
+        for offset, (_pid, ptc, praw, mraw) in enumerate(rows):
             try:
                 pdata = json.loads(praw)
             except (ValueError, TypeError):
@@ -393,13 +416,20 @@ def read_zcode_transcript(
                 continue
             piece = _part_item(pdata, _message_role(mraw))
             if piece is None:
-                continue
-            piece["seq"] = len(items) + 1
+                continue  # structural part — leaves a GAP in the seq
+            piece["seq"] = base + offset
             piece["ts"] = _epoch_ms_to_iso(ptc)
             piece["redaction_applied"] = False  # the choke-point sets it
             items.append(piece)
         window = [it for it in items if it["seq"] > after_seq]
         page = window[:limit]
+        if head_dropped and page:
+            # P2-1: the head cut must SPEAK. The marker rides the first
+            # item of EVERY page while the head stays dropped — a client
+            # starting mid-history still learns what it never got.
+            page[0]["content"] = (
+                f"…[начало транскрипта обрезано ридером Коры: "
+                f"{head_dropped_count} записей]…\n" + page[0]["content"])
         return ZcodeTranscriptResult(
             items=page,
             next_after_seq=(page[-1]["seq"] if page else after_seq),
