@@ -3,6 +3,7 @@ import {
   NAV_DOMAINS,
   activeDomain,
   crumbsFor,
+  domainCounterIds,
   isPathActive,
   routeTitle,
   routeTitleKey,
@@ -91,6 +92,21 @@ describe("domain map", () => {
     expect(tasks?.sections?.find((s) => s.to === "/tasks/inbox")?.counter).toBe(
       "inbox",
     );
+  });
+
+  it("UI-30: only the tasks domain aggregates its section counters, derived from the sections", () => {
+    // The flag is declared exactly once — on «Задачи».
+    const aggregating = NAV_DOMAINS.filter((d) => d.aggregateCounters).map((d) => d.to);
+    expect(aggregating).toEqual(["/tasks"]);
+    // The aggregate inputs are DERIVED from the sections (no duplicate list
+    // to forget): today the inbox counter, every future section counter
+    // joins the sum automatically, deduped, in section order.
+    const tasks = NAV_DOMAINS.find((d) => d.to === "/tasks");
+    expect(domainCounterIds(tasks!)).toEqual(["inbox"]);
+    // Domains without counters aggregate nothing (no badge is rendered).
+    const memory = NAV_DOMAINS.find((d) => d.to === "/memory");
+    expect(domainCounterIds(memory!)).toEqual([]);
+    expect(domainCounterIds(NAV_DOMAINS[0]!)).toEqual([]); // root: no sections
   });
 
   it("gives the agents domain its AGW-3/ME-014 sections (root = hosts roster)", () => {
