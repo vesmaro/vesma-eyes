@@ -1425,6 +1425,10 @@ class ActivityEventOut(_ApiModel):
     actor: str | None = None           # attribution — stripped when anon leg
     executor_id: str | None = None
     host: str | None = None            # best-effort registry resolve at read
+    # UI-28 reconciliation (viewer leg, TL verdict): report rows carry the
+    # report kind ("intermediate" | "final") — the final/intermediate
+    # distinction without a second fetch; non-report rows lack the key.
+    report_kind: str | None = None
     detail: str | None = None          # short payload-derived fact, clip 200
 
 
@@ -1435,6 +1439,10 @@ class ActivityOut(_ApiModel):
     # uniform cursor canon (§11, as ReportsFeedOut): true when the
     # requested limit was silently capped at the page cap.
     truncated: bool = False
+    # UI-28 reconciliation (viewer leg, TL verdict 2026-09-27): the honest
+    # end-of-journal signal — rows exist BELOW the last returned id under
+    # the same filters. False = «Это вся глубина журнала».
+    has_more: bool = False
 
 
 class ActivityBucketTypes(_ApiModel):
@@ -3448,6 +3456,8 @@ def _activity_project(row: dict[str, Any], *, include_actor: bool,
         "actor": row["payload"].get("actor") if include_actor else None,
         "executor_id": executor_id,
         "host": hosts.get(executor_id or ""),
+        "report_kind": (row["payload"].get("kind")
+                        if row["kind"] == "task.report" else None),
         "detail": _activity_detail(row),
     }
 
@@ -3496,18 +3506,23 @@ async def activity(request: Request,
     page 200), ``agent=`` (declared identity or ``machine:<id>``),
     ``host=`` (registry resolve at read time). A row:
     {id, ts, kind, task_id, task_title?, actor?, executor_id?, host?,
-    detail?} — optional keys ABSENT, not null (additive contract).
+    report_kind?, detail?} — optional keys ABSENT, not null (additive
+    contract); ``report_kind`` rides task.report rows only
+    (intermediate | final). The envelope carries ``has_more`` — rows
+    exist below the last returned id under the same filters; false IS
+    the honest «Это вся глубина журнала».
 
     Bucket form (``?bucket=hour``): ``hours`` (default 24, silently
     clamped to 1..48) hourly buckets ending at the current hour,
-    zero-filled, oldest first: {ts, total, by_type:{task,assignment,
-    report}} — the same filters, the same access classes. Cursor
-    parameters are meaningless here and are ignored.
+    zero-filled, oldest first (DENSE — reconciliation verdict: the
+    viewer merges/tolerates both shapes, dense keeps the contract
+    simpler): {ts, total, by_type:{task,assignment,report}} — the same
+    filters, the same access classes. Cursor parameters are meaningless
+    here and are ignored.
 
     Retention is the audit table's own (TL verdict 1: the validation
     sweep prunes non-task events at 90 days / 500k rows; task.* is
-    exempt — it feeds the per-task history). The end of the cursor IS
-    the honest «дальше журнала нет».
+    exempt — it feeds the per-task history).
     """
     kinds, task_filter, agent_filter, executor_ids = _activity_common_filters(
         type, task_id, agent, host)
@@ -3549,9 +3564,14 @@ async def activity(request: Request,
 
     truncated = limit > _ACTIVITY_PAGE_CAP
     limit = min(limit, _ACTIVITY_PAGE_CAP)
+    # has_more (UI-28 reconciliation, TL verdict): one extra row is
+    # fetched under the SAME filters — its existence is the honest
+    # «дальше журнала есть» signal; the page itself stays at `limit` rows.
     rows = store.list_activity(
         kinds=kinds, task_id=task_filter, agent=agent_filter,
-        executor_ids=executor_ids, before_id=before_id, limit=limit)
+        executor_ids=executor_ids, before_id=before_id, limit=limit + 1)
+    has_more = len(rows) > limit
+    rows = rows[:limit]
     include_actor = _leg_is_authenticated(request)
     hosts = store.executor_hosts([
         r["payload"].get("executor_id") for r in rows
@@ -3559,7 +3579,7 @@ async def activity(request: Request,
     items = [_activity_project(r, include_actor=include_actor, hosts=hosts)
              for r in rows]
     return {"ok": True, "count": len(items), "items": items,
-            "truncated": truncated}
+            "truncated": truncated, "has_more": has_more}
 
 
 # -------------------------------------------------- assignments (ADR 0009 Ф1)

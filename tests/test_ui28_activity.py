@@ -116,6 +116,47 @@ class TestActivityFeedContract:
         # a client already walks stays byte-stable while events land
         assert page2["count"] == 1
 
+    def test_has_more_true_then_last_page_false(self, client, auth):
+        """Reconciliation (TL verdict): has_more = rows exist below the
+        last returned id under the same filters — the honest end of the
+        journal. Middle page → true; the last page → false; the empty
+        feed → false."""
+        task = _seed_task(client, auth, "ui28-has-more")
+        for i in range(3):
+            r = client.post(f"/api/tasks/{task}/reports",
+                            json={"body": f"hm {i}", "kind": "intermediate",
+                                  "agent": "ui28-hm-agent"},
+                            headers=auth)
+            assert r.status_code == 201, r.text
+        page1 = _items(client, task_id=task, type="report", limit=2)
+        assert page1["count"] == 2 and page1["has_more"] is True
+        boundary = page1["items"][-1]["id"]
+        page2 = _items(client, task_id=task, type="report", limit=2,
+                       before_id=boundary)
+        assert page2["count"] == 1 and page2["has_more"] is False
+        empty = _items(client, task_id="t-does-not-exist")
+        assert empty["count"] == 0 and empty["has_more"] is False
+
+    def test_report_kind_final_vs_intermediate(self, client, auth):
+        """Reconciliation (TL verdict): task.report rows carry
+        report_kind ("intermediate" | "final"); non-report rows lack
+        the key — additive, ABSENT not null."""
+        task = _seed_task(client, auth, "ui28-report-kind")
+        for kind in ("intermediate", "final"):
+            r = client.post(f"/api/tasks/{task}/reports",
+                            json={"body": f"rk {kind}", "kind": kind,
+                                  "agent": "ui28-rk-agent"},
+                            headers=auth)
+            assert r.status_code == 201, r.text
+        items = _items(client, task_id=task)["items"]
+        reports = [i for i in items if i["kind"] == "task.report"]
+        assert len(reports) == 2
+        assert {i["report_kind"] for i in reports} == {"intermediate",
+                                                       "final"}
+        assert all(i["detail"] == f"rk {i['report_kind']}" for i in reports)
+        created = [i for i in items if i["kind"] == "task.created"]
+        assert created and "report_kind" not in created[0]
+
     def test_limit_clamp_truncated_flag(self, client):
         """Cursor canon (§11/CV-6): over the cap → silent clamp +
         truncated:true; at the cap → not truncated."""
