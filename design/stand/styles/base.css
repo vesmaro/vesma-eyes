@@ -286,3 +286,11 @@ h1[tabindex="-1"]:focus {
   transition-duration: 0.01ms !important;
   scroll-behavior: auto !important;
 }
+
+/* ── v2 acceptance fix: hidden attribute must always win ──────────────
+ * Component display (flex/grid on .drawer, .overlay-twins, .status-line)
+ * used to defeat the [hidden] attribute → empty drawers/palette painted
+ * open at load. Global guard: if it says hidden, it stays hidden. */
+[hidden] {
+  display: none !important;
+}

@@ -169,7 +169,7 @@
       <div class="page-head">
         <div>
           <h1 tabindex="-1">Статус</h1>
-          <p class="page-sub" id="page-updated">обновлено только что · <span class="pill live"><span class="dot" aria-hidden="true"></span>live</span></p>
+          <p class="page-sub" id="page-updated">обновлено только что · <span class="pill live" id="live-pill"><span class="dot" aria-hidden="true"></span>live</span></p>
         </div>
         <div class="page-actions">
           <button class="btn secondary sm" type="button" id="st-check">Проверить связь</button>
@@ -355,6 +355,34 @@
         b.textContent = "Проверить связь";
         toast("laptop-go-1 ответил за 0,8 с · vpnus-1 молчит 4 мин", "info");
       }, 800);
+    });
+
+    /* ── Демо-переподключение: честное переключение состояния (07e §3)
+     *    LIVE и «переподключаемся» никогда не показываются вместе ── */
+    var livePill = doc.getElementById("live-pill");
+    var staleNote = doc.getElementById("st-stale");
+    var dated = doc.getElementById("page-updated");
+    var demoBar = doc.createElement("div");
+    demoBar.className = "status-line";
+    demoBar.style.cssText = "padding: var(--space-2) var(--space-4); border-top: var(--line-hairline) solid var(--myelin-hairline)";
+    demoBar.innerHTML =
+      '<button class="btn ghost sm" type="button" id="demo-reconnect" aria-pressed="false">демо: разрыв SSE</button>' +
+      '<span class="hc-meta" style="font-size: var(--text-xs)">демо</span>';
+    doc.querySelector(".status-block").before(demoBar);
+    demoBar.querySelector("#demo-reconnect").addEventListener("click", function () {
+      var broken = this.getAttribute("aria-pressed") === "true";
+      this.setAttribute("aria-pressed", broken ? "false" : "true");
+      if (!broken) {
+        livePill.hidden = true;
+        staleNote.hidden = false;
+        dated.textContent = "данные на 14:07 · переподключаемся";
+        toast("SSE-разрыв — переподключаемся…", "info");
+      } else {
+        livePill.hidden = false;
+        staleNote.hidden = true;
+        dated.innerHTML = "обновлено только что · <span class='pill live' id='live-pill'><span class='dot' aria-hidden='true'></span>live</span>";
+        toast("Связь восстановлена — лента дозапросила пропущенное", "success");
+      }
     });
   })();
 

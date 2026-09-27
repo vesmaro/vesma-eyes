@@ -280,7 +280,7 @@
 
     var LC = {
       provisioning: { cls: "provisioning", pill: '<span class="pill provisioning"><span class="dot" aria-hidden="true"></span>ставится…</span>' },
-      online: { cls: "online", pill: null },
+      online: { cls: "online", pill: '<span class="pill live"><span class="dot" aria-hidden="true"></span>на связи</span>' },
       silent: { cls: "silent", pill: '<span class="pill silent"><span class="dot" aria-hidden="true"></span>молчит 4 мин</span>' },
       off: { cls: "off", pill: '<span class="pill off"><span class="dot" aria-hidden="true"></span>выключен владельцем</span>' },
       revoked: { cls: "revoked", pill: '<span class="pill revoked"><span class="dot" aria-hidden="true"></span>отозван</span>' },
@@ -300,7 +300,7 @@
       card.type = "button";
       card.dataset.idx = idx;
       card.innerHTML =
-        lc.pill +
+        (lc.pill || "") +
         '<span class="hc-name">' + h.name + "</span>" +
         '<span class="hc-meta">' + h.statusLine + "</span>" +
         (h.busyLine ? '<span class="hc-meta">' + h.busyLine + "</span>" : "") +
@@ -563,7 +563,7 @@
       opener = doc.activeElement;
       title.textContent = h.name;
       var lc = LC[h.lifecycle] || LC.online;
-      statusBox.innerHTML = lc.pill + '<span>' + h.statusLine + "</span>";
+      statusBox.innerHTML = (lc.pill || "") + '<span>' + h.statusLine + "</span>";
       busyBox.textContent = h.lifecycle === "off" ? (h.statusNote || "") : (h.busyLine || "");
       if (h.lifecycle === "off") {
         var en = el("button", "btn secondary sm");
