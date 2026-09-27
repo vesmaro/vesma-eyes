@@ -31,6 +31,8 @@ export const STALE_TIMES = {
   taskArchive: 60_000,
   /** Ф2 inbox mirror — refreshed by the server-side scanner */
   taskInbox: 60_000,
+  /** UI-28 activity — a live feed: SSE prepends, refetch is the fallback */
+  taskActivity: 15_000,
   /** AGW-1 assignment queue — SSE transitions invalidate; refetch is the fallback */
   agentsAssignments: 15_000,
   /** AGW-1 executor registry — presence is computed per GET (TTLs in meta) */
@@ -60,6 +62,7 @@ export const GC_TIMES = {
   taskDetail: 10 * 60_000,
   taskArchive: 10 * 60_000,
   taskInbox: 5 * 60_000,
+  taskActivity: 5 * 60_000,
   agentsAssignments: 5 * 60_000,
   agentsExecutors: 60_000,
   agentsSettings: 10 * 60_000,

@@ -1,9 +1,16 @@
 import type { MemoryGateway } from "./MemoryGateway";
 import type { InboxParams } from "./BoardAdapter";
+import {
+  ACTIVITY_DEFAULT_LIMIT,
+  bucketActivityRows,
+  filterActivityRows,
+  pageActivityRows,
+} from "./activityQuery";
 import { resolveRoutingAnnotation } from "./routing";
 import { ApiError } from "@/lib/errors";
 import { MOCK_INBOX_MEMORY, MOCK_MEMORIES, MOCK_SESSIONS, MOCK_TRACES } from "./fixtures";
 import {
+  buildMockActivityCorpus,
   MOCK_ARCHIVED_TASK,
   MOCK_ASSIGNMENTS,
   MOCK_AUTOMATION_SETTINGS,
@@ -23,6 +30,12 @@ import {
   MOCK_TASKS,
 } from "./boardFixtures";
 import type {
+  ActivityBucketParams,
+  ActivityBuckets,
+  ActivityItem,
+  ActivityKind,
+  ActivityPage,
+  ActivityParams,
   ArchivePage,
   ArchiveParams,
   AssignmentCancelledResult,
@@ -225,6 +238,11 @@ export class MockAdapter implements MemoryGateway {
   private nextAssignmentNo = 1;
   private nextRuleNo = 1;
   private nextLaunchNo = 1;
+  /** UI-28: the audit-table mirror (spec §3.2) — seeded at construction,
+   * appended by ui-leg mutations, read through the shared activityQuery
+   * reference semantics. */
+  private activityLog: ActivityItem[] = [];
+  private nextActivityId = 1;
 
   constructor(options: MockAdapterOptions = {}) {
     this.latency = options.latency ?? { minMs: 80, maxMs: 200 };
@@ -255,6 +273,49 @@ export class MockAdapter implements MemoryGateway {
       Math.max(0, ...MOCK_SCHEDULES.map((r) => r.id), ...MOCK_HOOKS.map((r) => r.id)) +
       1;
     this.nextLaunchNo = Math.max(0, ...MOCK_LAUNCHES.map((r) => r.id)) + 1;
+    this.activityLog = buildMockActivityCorpus(this.now());
+    // Runtime rows continue the corpus id sequence (audit-table monotonic).
+    this.nextActivityId =
+      Math.max(0, ...this.activityLog.map((row) => Number(row.id) || 0)) + 1;
+  }
+
+  // --- UI-28 activity (GET /api/activity, week-0 contract mock) ---------------
+
+  /** Append one fact to the audit mirror (runtime mutations, actor `ui`). */
+  private logActivity(kind: ActivityKind, task: BoardTask, detail?: string): void {
+    this.activityLog.push({
+      id: String(this.nextActivityId++),
+      ts: this.stamp(),
+      kind,
+      task_id: task.id,
+      task_title: task.title,
+      actor: "ui",
+      ...(detail !== undefined && detail !== "" ? { detail } : {}),
+    });
+  }
+
+  async activity(
+    params: ActivityParams = {},
+    signal?: AbortSignal,
+  ): Promise<ActivityPage> {
+    await this.delay(signal);
+    const filtered = filterActivityRows(this.activityLog, params);
+    const limit = params.limit ?? ACTIVITY_DEFAULT_LIMIT;
+    if (limit <= 0) {
+      throw new ApiError(422, "limit must be a positive integer", {
+        url: "mock:/api/activity",
+      });
+    }
+    return pageActivityRows(filtered, params);
+  }
+
+  async activityBuckets(
+    params: ActivityBucketParams = {},
+    signal?: AbortSignal,
+  ): Promise<ActivityBuckets> {
+    await this.delay(signal);
+    const filtered = filterActivityRows(this.activityLog, params);
+    return bucketActivityRows(filtered, params, this.now());
   }
 
   async search(params: SearchParams, signal?: AbortSignal): Promise<SearchResult[]> {
@@ -690,6 +751,7 @@ export class MockAdapter implements MemoryGateway {
       validating_since: col === "validating" ? this.stamp() : "",
     };
     this.tasks.push(task);
+    this.logActivity("task.created", task);
     return { ...task };
   }
 
@@ -735,6 +797,7 @@ export class MockAdapter implements MemoryGateway {
     if (this.archivedTasks.some((row) => row.id === taskId)) {
       replaceInPlace(this.archivedTasks, next);
     }
+    this.logActivity("task.updated", next);
     return { ...next };
   }
 
@@ -769,6 +832,9 @@ export class MockAdapter implements MemoryGateway {
       ...(leavingValidating ? { validating_since: "" } : {}),
     };
     replaceInPlace(this.tasks, next);
+    // Column transition detail uses the wire column keys ("in-progress →
+    // resolved"); the UI translates known keys, raw-text otherwise.
+    this.logActivity("task.moved", next, `${task.col} → ${col}`);
     return { ...next };
   }
 
@@ -788,6 +854,7 @@ export class MockAdapter implements MemoryGateway {
     };
     this.tasks = this.tasks.filter((row) => row.id !== taskId);
     replaceInPlace(this.archivedTasks, archived, /* append */ true);
+    this.logActivity("task.archived", archived);
     return { ok: true };
   }
 
@@ -811,6 +878,7 @@ export class MockAdapter implements MemoryGateway {
     };
     this.archivedTasks = this.archivedTasks.filter((row) => row.id !== taskId);
     replaceInPlace(this.tasks, restored, /* append */ true);
+    this.logActivity("task.unarchived", restored);
     return { ok: true, task: { ...restored } };
   }
 
@@ -963,6 +1031,8 @@ export class MockAdapter implements MemoryGateway {
       payload.executor_id ?? "",
       "owner",
     );
+    const target = findMutableTask(payload.task_id, this.tasks, this.archivedTasks);
+    this.logActivity("assignment.created", target);
     return { ok: true, assignment: { ...assignment } };
   }
 

@@ -8,6 +8,10 @@ import { getDeviceToken } from "./deviceToken";
 import { getUiToken } from "./uiToken";
 import type { UiTokenVerifyResult } from "./uiToken";
 import type {
+  ActivityBucketParams,
+  ActivityBuckets,
+  ActivityPage,
+  ActivityParams,
   ArchivePage,
   ArchiveParams,
   AssignmentCancelledResult,
@@ -245,6 +249,17 @@ export interface BoardGateway extends MemoryGateway {
   taskMemories(taskId: string, signal?: AbortSignal): Promise<TaskMemories>;
   /** Filtered + paginated archive page (`GET /api/archive`, Ф2). */
   archive(params?: ArchiveParams, signal?: AbortSignal): Promise<ArchivePage>;
+  /**
+   * UI-28 activity feed page (`GET /api/activity`, before_id cursor).
+   * OPEN read like every listing; the server strips `actor` for anonymous
+   * legs (spec §7) — the row simply carries no actor then.
+   */
+  activity(params?: ActivityParams, signal?: AbortSignal): Promise<ActivityPage>;
+  /** Hour-bucket view (`GET /api/activity?bucket=hour&hours=24`, Ф2). */
+  activityBuckets(
+    params?: ActivityBucketParams,
+    signal?: AbortSignal,
+  ): Promise<ActivityBuckets>;
   /**
    * Single task lookup. The board API has NO per-id GET, so this is a
    * board-projection pick (`GET /api/board` + find); callers that live in
@@ -747,6 +762,47 @@ export class BoardAdapter implements BoardGateway {
         project: params.project,
         limit: params.limit,
         offset: params.offset,
+      },
+      signal,
+    });
+  }
+
+  /**
+   * UI-28 activity page (`GET /api/activity`). Query mapping is pass-through:
+   * the csv `type` value, the `before_id` cursor and the filter strings are
+   * server-owned vocabulary (spec §3.2) — garbage answers 422 and the page
+   * shows its honest error state instead of quietly empty.
+   */
+  async activity(
+    params: ActivityParams = {},
+    signal?: AbortSignal,
+  ): Promise<ActivityPage> {
+    return this.request<ActivityPage>("/activity", {
+      query: {
+        before_id: params.before_id,
+        limit: params.limit,
+        type: params.type,
+        task_id: params.task_id,
+        agent: params.agent,
+        host: params.host,
+      },
+      signal,
+    });
+  }
+
+  /** Hour-bucket view — one endpoint, `?bucket=hour&hours=24` (spec §3.2). */
+  async activityBuckets(
+    params: ActivityBucketParams = {},
+    signal?: AbortSignal,
+  ): Promise<ActivityBuckets> {
+    return this.request<ActivityBuckets>("/activity", {
+      query: {
+        bucket: params.bucket,
+        hours: params.hours,
+        type: params.type,
+        task_id: params.task_id,
+        agent: params.agent,
+        host: params.host,
       },
       signal,
     });

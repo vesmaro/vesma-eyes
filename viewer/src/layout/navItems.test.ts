@@ -73,15 +73,20 @@ describe("domain map", () => {
     expect(activeDomain("/docs/upgrade")?.to).toBe("/docs");
   });
 
-  it("gives the task domain its Ф2–Ф3 sections (kanban / list / inbox / archive)", () => {
+  it("gives the task domain its Ф2–Ф3 sections (kanban / list / activity / inbox / archive)", () => {
     const tasks = NAV_DOMAINS.find((d) => d.to === "/tasks");
     expect(tasks?.soonKey).toBeUndefined();
+    // UI-28 (spec §1/§8.1): «Активность» sits between the list and the inbox.
     expect(tasks?.sections?.map((s) => s.to)).toEqual([
       "/tasks",
       "/tasks/list",
+      "/tasks/activity",
       "/tasks/inbox",
       "/tasks/archive",
     ]);
+    expect(tasks?.sections?.find((s) => s.to === "/tasks/activity")?.key).toBe(
+      "nav.taskActivity",
+    );
     // The inbox section carries the live counter wiring.
     expect(tasks?.sections?.find((s) => s.to === "/tasks/inbox")?.counter).toBe(
       "inbox",

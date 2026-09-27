@@ -834,3 +834,119 @@ export interface PairingExchangeInput {
  * the wire `state` narrowed + the TTL-passed → expired view rule. */
 export type PairingLifecycle =
   "created" | "scanned" | "confirmed" | "issued" | "expired" | "revoked";
+
+// --- UI-28 «Активность» (`GET /api/activity`, spec 2026-09-27 §3.2) -----------
+//
+// Contract-first (week-0 convention): the server slice (feat/activity-server)
+// lands in parallel — these types PIN the agreed wire shape. Everything is
+// additive-compatible with the spec's row: extra OPTIONAL fields only.
+
+/** Event families (the v1 dictionary, spec §2.1): the filter csv alphabet. */
+export type ActivityType = "task" | "assignment" | "report";
+
+/** Exact v1 kinds — the audit-table kinds the feed understands. */
+export type ActivityKind =
+  | "task.created"
+  | "task.moved"
+  | "task.updated"
+  | "task.archived"
+  | "task.unarchived"
+  | "assignment.created"
+  | "assignment.claimed"
+  | "assignment.started"
+  | "assignment.done"
+  | "assignment.failed"
+  | "assignment.cancelled"
+  | "assignment.expired"
+  | "report";
+
+export function isActivityType(value: string): value is ActivityType {
+  return value === "task" || value === "assignment" || value === "report";
+}
+
+/** True for the exact-kind spellings the `type=` csv also accepts. */
+export function isActivityKind(value: string): value is ActivityKind {
+  return (
+    value === "report" ||
+    value.startsWith("task.") ||
+    value.startsWith("assignment.")
+  );
+}
+
+/** Family of one kind (spec §2.1 table; `report` is its own family). */
+export function activityTypeOfKind(kind: string): ActivityType {
+  if (kind === "report") return "report";
+  if (kind.startsWith("assignment.")) return "assignment";
+  return "task";
+}
+
+/** One feed row — spec §3.2 exactly; optionals ride along additively. */
+export interface ActivityItem {
+  /** Monotonic audit-table id (the `before_id` cursor values). */
+  readonly id: string;
+  /** Event time (ISO 8601). */
+  readonly ts: string;
+  readonly kind: ActivityKind;
+  readonly task_id: string;
+  /** Best-effort join with tasks; absent once the task is deleted. */
+  readonly task_title?: string;
+  /** Actor wire string (ADR 0012 Amd §A.5); stripped for anonymous legs. */
+  readonly actor?: string;
+  /** Executor id when the event rode an executor leg. */
+  readonly executor_id?: string;
+  /** Best-effort host of the executor AT READ TIME (spec §3.2). */
+  readonly host?: string;
+  /** ≤200-char fact detail (clip, e.g. column transition / report excerpt). */
+  readonly detail?: string;
+  /** Report flavour (additive proposal; absent = intermediate). */
+  readonly report_kind?: "intermediate" | "final";
+}
+
+/** One cursor page — the agreed envelope `{ok, count, items, truncated,
+ * has_more}`. `ok`/`count` are additive conveniences the client does not
+ * branch on; `has_more=false` is the honest end of the journal. */
+export interface ActivityPage {
+  readonly ok?: boolean;
+  readonly count?: number;
+  readonly items: readonly ActivityItem[];
+  readonly has_more: boolean;
+  /** Present (true) when the server silently clamped `limit` (CV-6). */
+  readonly truncated?: boolean;
+}
+
+/** List params — cursor + the four server-side filters (spec §3.2). */
+export interface ActivityParams {
+  /** Strictly-lower cursor (stable pages under live refill). */
+  readonly before_id?: string;
+  /** Page size; server default 50, hard cap 200 (silent clamp). */
+  readonly limit?: number;
+  /** csv of families and/or exact kinds (`task,report`). */
+  readonly type?: string;
+  readonly task_id?: string;
+  /** Matches declared identity and `machine:<id>` actor legs. */
+  readonly agent?: string;
+  /** Best-effort host filter (resolved at read time). */
+  readonly host?: string;
+}
+
+/** One histogram bucket — counts by family inside the hour starting `ts`. */
+export interface ActivityBucket {
+  readonly ts: string;
+  readonly total: number;
+  readonly by_type: { readonly task: number; readonly assignment: number; readonly report: number };
+}
+
+/** Bucket view (`?bucket=hour&hours=24`): sparse — only hours WITH events. */
+export interface ActivityBuckets {
+  readonly buckets: readonly ActivityBucket[];
+}
+
+export interface ActivityBucketParams {
+  readonly bucket?: "hour";
+  readonly hours?: number;
+  /** The same four filters as the list view. */
+  readonly type?: string;
+  readonly task_id?: string;
+  readonly agent?: string;
+  readonly host?: string;
+}

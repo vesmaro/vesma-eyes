@@ -84,6 +84,10 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
     sections: [
       { to: "/tasks", key: "nav.taskBoard", icon: KanbanSquare, end: true },
       { to: "/tasks/list", key: "nav.taskList", icon: ListTodo, end: true },
+      // UI-28 «Активность» (spec 2026-09-27 §1): the operational live view
+      // sits between the two snapshot projections and the inbox —
+      // «Канбан · Список · Активность · Входящие · Архив».
+      { to: "/tasks/activity", key: "nav.taskActivity", icon: Activity, end: true },
       {
         to: "/tasks/inbox",
         key: "nav.taskInbox",
@@ -240,6 +244,8 @@ export function crumbsFor(pathname: string): Crumb[] {
       return [TASKS_CRUMB, { key: "nav.taskBoard" }];
     case "/tasks/list":
       return [TASKS_CRUMB, { key: "nav.taskList" }];
+    case "/tasks/activity":
+      return [TASKS_CRUMB, { key: "nav.taskActivity" }];
     case "/tasks/inbox":
       return [TASKS_CRUMB, { key: "nav.taskInbox" }];
     case "/tasks/archive":
