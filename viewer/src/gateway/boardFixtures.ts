@@ -384,36 +384,6 @@ export const MOCK_TASKS: BoardTask[] = [
     // Overdue clock: >24h before the corpus reference point (sweep output).
     validating_since: "2026-09-17T09:30:00+00:00",
   },
-  // ME-011 part b (browser render smoke): the UNTRUSTED-surface mermaid
-  // fixture. Deliberately the LAST row, "vesmaro" project — the smoke
-  // opens /app/tasks/TB-15?tab=details and the spec renders through the
-  // TextEngine primitive. F0 contract: an inert code block (source
-  // visible, NO svg); the smoke's assert is written to be flipped in Ф2
-  // (ME-013 activates the svg expectation per ADR 0020 Amendment 1).
-  // Unit suite stays green: no test pins MOCK_TASKS.length or exact
-  // column counts (checked before adding).
-  {
-    id: "TB-15",
-    col: "in-progress",
-    position: 2,
-    title: "ME-011 смоук: недоверенная mermaid-фикстура на странице задачи",
-    summary: "Фикстура для браузерного рендер-смоука (не для борда).",
-    spec:
-      "## Диаграмма (недоверенная поверхность)\n\n```mermaid\nflowchart LR\n  UNTRUSTED[fixture] --> GATE\n```\n\nФенс выше должен остаться инертным код-блоком в Ф0.",
-    agents: ["zcode"],
-    specialists: ["@GCW: Senior Frontend Developer"],
-    env: "laptop",
-    project: "vesmaro",
-    memory_ids: [],
-    mnemos_tags: ["project:vesmaro"],
-    created_at: "2026-09-19T10:00:00+00:00",
-    updated_at: "2026-09-19T10:00:00+00:00",
-    archived: 0,
-    status: "in-progress",
-    priority: "normal",
-    archived_from: "",
-    validating_since: "",
-  },
 ];
 
 /** Archived row (the board projection never carries archived=1 rows). */
