@@ -418,11 +418,14 @@ class TestPresenceSweeper:
         _age_last_seen(app_module, executor["id"], 700)   # > 10 min
 
         queue: asyncio.Queue = asyncio.Queue()
-        app_module._subscribers.add(queue)
+        # UI-28: subscribers are _SseSubscriber legs now; an authorized
+        # viewer leg (strip_actor=False) receives frames byte-identical.
+        sub = app_module._SseSubscriber(queue=queue, strip_actor=False)
+        app_module._subscribers.add(sub)
         try:
             emitted = app_module._presence_sweep_once()
         finally:
-            app_module._subscribers.discard(queue)
+            app_module._subscribers.discard(sub)
         assert len(emitted) == 1
         event = emitted[0]
         assert event["kind"] == "executor.offline"
