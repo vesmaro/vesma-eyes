@@ -1530,9 +1530,9 @@ export const ru = {
 
   // --- Кора (ADR 0019 rev.2 — week-0 contract mocks) -----------------------------
   "kora.title": "Кора — сессии всех хостов",
-  "kora.week0Badge": "Кора · срез 1",
+  "kora.week0Badge": "Кора · срез 2",
   "kora.week0Note":
-    "Живой список zcode-сессий с ноут-стора (read-only сканер, реестр на борде). Транскрипты и руление — срезы 2–3; контракт заморожен в docs/kora/openapi.yaml.",
+    "Сессии ноут-стора: списки zcode/vscode/pi (read-only сканеры, реестр на борде) и read-only транскрипты zcode. Руление — срез 3; контракт заморожен в docs/kora/openapi.yaml.",
   "kora.coverage.title": "Что вижу / чего нет",
   "kora.coverage.support.full": "полностью",
   "kora.coverage.support.lists-only": "только списки",
@@ -1551,6 +1551,7 @@ export const ru = {
     "Новая сессия или промпт в свою — через реле; телефон видит тот же интерфейс, что и рабочий стол.",
   "kora.list.title": "Сессии",
   "kora.list.loading": "Загружаем сессии",
+  "kora.list.loadMore": "Показать ещё",
   "kora.list.loadFailed": "Не удалось загрузить список сессий",
   "kora.list.empty": "Сессий пока нет",
   "kora.list.emptyMessage":

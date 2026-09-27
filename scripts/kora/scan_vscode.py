@@ -1,27 +1,24 @@
 #!/usr/bin/env python3
-"""Kora zcode scanner — host-side listing push (ADR 0019, slice 1).
+"""Kora VS Code Copilot Chat scanner — host-side listing push (ADR 0019,
+slice 2).
 
-The poller-family host module: reads the local zcode store STRICTLY
-read-only (server/kora/zcode_reader.py — mode=ro + WAL-snapshot-fallback
-on the cold start) and upserts the session listing onto the board:
+Reads the local VS Code chat-session stores STRICTLY read-only
+(server/kora/vscode_reader.py — chatSessions JSONL envelope v3, LISTS +
+previews only; the full transcript is the known kind:1 gap of slice 2)
+and upserts the listing onto the board — the exact scan_zcode.py
+contract:
 
   POST {board_url}/api/executors/{executor_id}/kora-scan
        body {"sessions": [...], "drop_missing": true}
 
-Auth: Bearer $VESMARO_BOARD_TOKEN (env only, the poller discipline —
-never in a config file, never in a log line) or an executor token via
-$VESMARO_EXECUTOR_TOKEN (the mesh leg; the board binds the ingest to
-the token identity and 403s a mismatch).
+Auth: Bearer $VESMARO_EXECUTOR_TOKEN (preferred) or $VESMARO_BOARD_TOKEN
+(env only — never a config file, never a log line).
 
-One-shot by design (the slice-1 directive holds): the systemd timer/unit
-wiring is an OWNER DECISION pending, not a slice-2 change — this script
-is a manual/profiling run now and the timer target later.
+One-shot by design (the slice-1 directive holds — the timer is an owner
+decision, see the slice-2 report). Idempotent replay; honest empty scan.
 
-Idempotency: a replayed scan is a no-op upsert of identical values —
-the registry converges to the store's listing, never duplicates.
-
-Exit codes: 0 = pushed (even an empty listing — an honest empty scan);
-1 = configuration error; 2 = store unreadable; 3 = board rejected.
+Exit codes: 0 = pushed; 1 = configuration error; 2 = store unreadable;
+3 = board rejected.
 """
 
 from __future__ import annotations
@@ -43,25 +40,27 @@ from scripts.kora.scan_common import (  # noqa: E402  (path bootstrap above)
     resolve_ca_bundle,
     setup_logging,
 )
-from server.kora.zcode_reader import (  # noqa: E402  (path bootstrap above)
+from server.kora.vscode_reader import (  # noqa: E402  (path bootstrap above)
+    DEFAULT_VSCODE_ROOT,
     ReaderError,
-    scan_zcode_store,
+    scan_vscode_stores,
 )
 
-log = logging.getLogger("kora.scan-zcode")
+log = logging.getLogger("kora.scan-vscode")
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Kora zcode scanner: read-only store listing "
-                    "pushed to the board registry (ADR 0019).")
+        description="Kora slice-2 VS Code Copilot Chat scanner: read-only "
+                    "session listing pushed to the board registry "
+                    "(ADR 0019; lists + previews, kind:1 gap stays open).")
     parser.add_argument("--board-url", default=os.environ.get(
         "VESMARO_BOARD_URL", DEFAULT_BOARD_URL),
         help="board base URL (env VESMARO_BOARD_URL)")
     parser.add_argument("--executor-id", required=True,
         help="executor registry id (ex-…); the ingest binds to it")
-    parser.add_argument("--db", default=None,
-        help="zcode db.sqlite path (default: ~/.zcode/cli/db/db.sqlite)")
+    parser.add_argument("--user-root", default=None,
+        help="VS Code User dir (default: ~/.config/Code/User)")
     parser.add_argument("--keep-missing", action="store_true",
         help="delta push: do NOT drop registry rows the scan missed")
     parser.add_argument("--dry-run", action="store_true",
@@ -78,7 +77,8 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     try:
-        result = scan_zcode_store(args.db) if args.db else scan_zcode_store()
+        result = (scan_vscode_stores(args.user_root) if args.user_root
+                  else scan_vscode_stores())
     except ReaderError as exc:
         log.error("store scan failed: %s", exc)
         return 2
@@ -86,11 +86,11 @@ def main(argv: list[str] | None = None) -> int:
     for row in result.sessions:
         states[row["state"]] = states.get(row["state"], 0) + 1
     log_scan_result(log, len(result.sessions), states,
-                    via_fallback=result.via_fallback,
-                    store_path=result.store_path)
+                    store_path=result.store_path,
+                    extra=f"skipped={result.skipped_files}")
     if args.dry_run:
-        print(f"dry-run: {len(result.sessions)} sessions "
-              f"({states}), fallback={result.via_fallback}")
+        print(f"dry-run: {len(result.sessions)} sessions ({states}), "
+              f"skipped={result.skipped_files}")
         return 0
     try:
         verdict = push_scan(args.board_url, args.executor_id,

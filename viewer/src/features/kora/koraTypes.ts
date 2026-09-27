@@ -48,6 +48,17 @@ export interface KoraTranscriptParams {
   limit?: number;
 }
 
+/**
+ * Session-list pagination params (P4-7, slice 2 load-more):
+ * GET /api/kora/sessions?limit=&offset=. Additive QUERY surface — the
+ * frozen KoraSessionsOut carries no pagination fields; has_more is
+ * derived client-side from count === limit.
+ */
+export interface KoraSessionsParams {
+  limit?: number;
+  offset?: number;
+}
+
 /** KoraDeliveryOut — honest relay queue state («не доставлено — повторите»). */
 export type KoraDelivery = Schemas["KoraDeliveryOut"];
 

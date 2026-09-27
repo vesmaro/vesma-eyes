@@ -239,8 +239,18 @@ class TestListContract:
         auth_headers = {"Authorization": f"Bearer {_eff}"}
         body = client.get("/api/kora/sessions?harness=pi",
                           headers=auth_headers).json()
-        assert body["count"] == 1
-        assert body["items"][0]["harness"] == "pi"
+        # The filter NARROWS: only pi rows survive. The count is NOT
+        # absolute — the registry is board-global and slice-2 suites
+        # legitimately carry their own pi sessions.
+        assert body["count"] >= 1
+        assert all(i["harness"] == "pi" for i in body["items"])
+        assert any(i["executor_id"] == executor_id and i["native_id"] == "s2"
+                   for i in body["items"])
+        # and the unfiltered listing still carries this executor's zcode
+        all_rows = client.get("/api/kora/sessions",
+                              headers=auth_headers).json()
+        assert any(i["executor_id"] == executor_id and i["native_id"] == "s1"
+                   for i in all_rows["items"])
 
 
 class TestIngest:
@@ -367,14 +377,16 @@ class TestIngest:
 
 
     def test_coverage_plate_honest_slice1(self, client: TestClient):
-        """P5 (slice-1 review): `full` lied — slice 1 serves LISTS only;
-        the plate must say lists-only and the gaps must name the
-        transcript boundary explicitly."""
+        """P5 (slice-1 review) evolution — the plate must track the REAL
+        surface: slice 1 had lists-only zcode (a `full` lied); slice 2
+        landed the transcript route, so zcode now HONESTLY reads `full`
+        while vscode/pi stay lists-only with their named gaps."""
         body = _list_sessions(client)
         zcode = next(h for h in body["coverage"]["harnesses"]
                      if h["harness"] == "zcode")
-        assert zcode["support"] == "lists-only", (
-            "slice 1 has no transcript route — `full` overpromises")
+        assert zcode["support"] == "full", (
+            "slice 2 ships the transcript route — staying lists-only "
+            "would now UNDERSTATE the surface")
         assert any("транскрипт" in g for g in body["coverage"]["gaps"])
         for row in body["coverage"]["harnesses"]:
             assert row["support"] in (
