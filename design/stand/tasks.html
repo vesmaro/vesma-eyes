@@ -200,7 +200,8 @@
         <div class="filters-row">
           <div class="field" style="flex: none; width: min(280px, 100%)">
             <label class="sr-only" for="board-q">Поиск по задачам канбана</label>
-            <input class="input" id="board-q" type="search" placeholder="по названию или сводке… (клавиша /)">
+            <input class="input" id="board-q" type="search" placeholder="по названию или сводке…" aria-describedby="board-q-hint">
+            <span class="kbd-hint" id="board-q-hint" aria-hidden="true" style="position: static; display: inline-flex; margin-top: 2px"><kbd class="kbd">/</kbd> фокус поиска</span>
           </div>
           <span class="field-hint">Колонки — пять состояний задач в памяти: перенос меняет состояние</span>
           <button class="btn ghost sm" type="button" id="demo-agent-move" title="Демо: агент берёт задачу сам — автоперенос из памяти">
@@ -208,6 +209,11 @@
           </button>
           <button class="btn ghost sm" type="button" id="demo-report" title="Демо: пришёл непрочитанный отчёт — золотая точка">
             демо: пришёл отчёт
+          </button>
+        </div>
+        <div class="board-tools">
+          <button class="btn ghost sm" type="button" id="board-scroll-hint" hidden title="Прокрутить канбан вправо">
+            → ещё <span class="hint-count" id="board-hint-count">0</span> кол.
           </button>
         </div>
         <div class="board" id="board" aria-label="Канбан: открыто, в работе, блокировано, решено, готово"></div>

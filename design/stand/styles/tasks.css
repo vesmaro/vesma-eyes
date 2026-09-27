@@ -21,7 +21,22 @@
   gap: var(--space-3);
   align-items: start;
   overflow-x: auto;
-  padding-bottom: var(--space-2);
+  /* честная горизонтальная прокрутка: паддинг не даёт последней колонке
+     прилипнуть к краю, скроллбар заметнее дефолтного (border, не subtle) */
+  padding: 0 var(--space-2) var(--space-3);
+  scroll-padding-left: var(--space-2);
+  scrollbar-color: var(--color-border) transparent;
+}
+/* скролл-хинт «→ ещё N колонок» над правым краем доски */
+.board-tools {
+  display: flex;
+  justify-content: flex-end;
+  min-height: 32px;
+  margin-bottom: var(--space-1);
+}
+.board-tools .btn .hint-count {
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--numeric-tnum);
 }
 @media (max-width: 1100px) {
   .board {
@@ -253,18 +268,25 @@
 .report-dot:hover {
   background: var(--myelin-strong);
 }
-.tc-blocked-badge {
+.tc-stagn {
+  font-size: var(--text-data);
+  color: var(--color-warning);
+}
+/* канон-пилюля ошибки на карточке (как assign-row.failed на agents.html):
+   dot + текст, тёплый красный БЕЗ рамки-бокса (дефект приёмки №2) */
+.tc-failed {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-  font-size: var(--text-caps);
-  letter-spacing: var(--tracking-caps);
-  text-transform: uppercase;
+  gap: var(--space-2);
+  font-size: var(--text-data);
   color: var(--color-error);
-  border: 1px solid var(--color-error);
-  border-radius: var(--radius-sm);
-  padding: 0 4px;
-  height: 18px;
+}
+.tc-failed::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-error);
   flex: none;
 }
 .tc-stagn {

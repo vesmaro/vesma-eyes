@@ -189,7 +189,7 @@
     var h = '<span class="tc-title">' + esc(t.title) + "</span>" +
       '<span class="tc-chips">' + confHtml(t) + chipsHtml(t) + "</span>";
     if (t.blockedNote) {
-      h += '<span class="tc-blocked-badge" title="' + esc(t.blockedNote) + '">не вышло</span>';
+      h += '<span class="tc-failed" title="' + esc(t.blockedNote) + '">не вышло</span>';
     }
     if (t.stagnant) {
       h += '<span class="tc-stagn">⚠ ' + esc(t.stagnant) + "</span>";
@@ -343,7 +343,35 @@
       boardEl.appendChild(buildColumn(s));
     });
     renderMiniStats();
+    updateScrollHint();
   }
+
+  /* скролл-хинт «→ ещё N кол.»: появляется, когда доска честно скроллится;
+     клик — прокрутка вправо (дефект приёмки №1: признак прокрутки) */
+  var scrollHint = doc.getElementById("board-scroll-hint");
+  var scrollHintCount = doc.getElementById("board-hint-count");
+  function updateScrollHint() {
+    var over = boardEl.scrollWidth - boardEl.clientWidth;
+    if (over > 8) {
+      var hiddenCols = Math.ceil(over / (boardEl.querySelector(".board-col").offsetWidth + 12));
+      scrollHintCount.textContent = String(Math.max(1, hiddenCols));
+      scrollHint.hidden = false;
+    } else {
+      scrollHint.hidden = true;
+    }
+  }
+  scrollHint.addEventListener("click", function () {
+    boardEl.scrollBy({ left: boardEl.clientWidth * 0.6, behavior: "smooth" });
+  });
+  boardEl.addEventListener("scroll", function () {
+    updateScrollHint();
+  });
+  if (window.ResizeObserver) {
+    new ResizeObserver(updateScrollHint).observe(boardEl);
+  } else {
+    window.addEventListener("resize", updateScrollHint);
+  }
+  /* reduced-motion: прокрутка мгновенно (глобальный guard base.css гасит smooth) */
 
   /* мини-статы: «Готово за сегодня: N · Решено: N» (mono tnum, кликабельны) */
   function renderMiniStats() {

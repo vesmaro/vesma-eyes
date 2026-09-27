@@ -44,7 +44,7 @@
             </div>
             <div class="qr-side">
               <div class="ttl-line">
-                <svg class="ttl-arc" id="ttl-arc" viewBox="0 0 36 36" aria-hidden="true">
+                <svg class="ttl-arc" id="ttl-arc" viewBox="0 0 36 36" width="20" height="20" aria-hidden="true">
                   <circle class="arc-bg" cx="18" cy="18" r="15.5"/>
                   <circle class="arc-fg" id="ttl-fg" cx="18" cy="18" r="15.5" stroke-dasharray="97.4" stroke-dashoffset="0"/>
                 </svg>
@@ -89,7 +89,7 @@
 
         <div class="pair-manual">
           <p class="field-hint" style="margin: 0">Демо-переходы фаз (канон стенда):</p>
-          <div class="pm-row">
+          <div class="pm-grid">
             <button class="btn ghost sm" type="button" data-demo-phase="wait">демо: код отсканирован</button>
             <button class="btn ghost sm" type="button" data-demo-phase="expired">демо: код истёк</button>
             <button class="btn ghost sm" type="button" data-demo-phase="reject">демо: владелец отклонил</button>
@@ -109,12 +109,13 @@
           <span class="spinner" aria-hidden="true"></span>
           <span role="status">Ждём подтверждения на экране владельца…</span>
         </div>
+        <p class="pair-note">На телефоне покажутся те же 4 цифры — сверяйте их с этим экраном.</p>
         <p class="pair-note">Обычно быстро. Проверим ещё раз автоматически через минуту — или проверьте сами:</p>
         <div class="pair-actions">
           <button class="btn secondary sm" type="button" id="check-now">Проверить сейчас</button>
         </div>
         <div class="pair-manual">
-          <div class="pm-row">
+          <div class="pm-grid">
             <button class="btn ghost sm" type="button" data-demo-phase="success">демо: владелец подтвердил</button>
             <button class="btn ghost sm" type="button" data-demo-phase="reject">демо: владелец отклонил</button>
             <button class="btn ghost sm" type="button" data-demo-phase="qr">вернуться к QR</button>
@@ -134,7 +135,7 @@
           <button class="btn primary sm" type="button" data-demo-phase="qr">Готово</button>
         </div>
         <div class="pair-manual">
-          <div class="pm-row">
+          <div class="pm-grid">
             <button class="btn ghost sm" type="button" data-demo-phase="qr">демо: подключить ещё одно</button>
           </div>
         </div>
@@ -151,7 +152,7 @@
           <button class="btn ghost sm" type="button" id="fail-manual">Ввести код заново</button>
         </div>
         <div class="pair-manual">
-          <div class="pm-row">
+          <div class="pm-grid">
             <button class="btn ghost sm" type="button" data-demo-phase="qr">демо: начать заново</button>
           </div>
         </div>
@@ -167,7 +168,7 @@
             <input class="input" id="manual-code-input" type="text" autocomplete="off" spellcheck="false" placeholder="mne-XXXX-XXXX-XXXX" aria-describedby="manual-err">
             <p class="field-error" id="manual-err" hidden>код не похож на mne-XXXX-XXXX-XXXX — проверьте опечатки</p>
           </div>
-          <div class="pm-row">
+          <div class="pm-grid">
             <button class="btn primary" type="submit" id="manual-submit">Подключить</button>
             <button class="btn secondary sm" type="button" data-demo-phase="qr">Назад к QR</button>
           </div>
