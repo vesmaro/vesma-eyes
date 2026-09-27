@@ -15,7 +15,8 @@ import {
   useKoraStepUp,
   useKoraTranscript,
 } from "./useKora";
-import { KoraError, koraErrorCode } from "./koraGateway";
+import { KoraError, koraErrorCode, isKoraUnauthorized } from "./koraGateway";
+import { KoraSignInCta } from "./KoraSignInCta";
 
 /**
  * `/kora/:sessionId` — slices 2 + 3 (ADR 0019 rev.2).
@@ -185,6 +186,47 @@ export function KoraSessionPage() {
 
   if (!decoded) {
     return <EmptyState variant="not-found" title={t("kora.session.noId")} />;
+  }
+
+  // Owner-feedback hotfix, transcript leg: a 401 from either read means the
+  // browser's session is not valid on the server (https-born cookie withheld
+  // on http, 6h idle TTL) — the sign-in CTA replaces the page body; both
+  // queries refetch when a login lands. The 403 `metadata_only` wall and
+  // the 5xx/transport error state keep their existing honest renders below.
+  const unauthorized =
+    (sessions.error !== null && isKoraUnauthorized(sessions.error)) ||
+    (transcript.error !== null && isKoraUnauthorized(transcript.error));
+
+  if (unauthorized) {
+    return (
+      <section
+        aria-labelledby="kora-session-title"
+        className="mx-auto max-w-3xl space-y-4"
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/kora">
+              <ArrowLeft aria-hidden className="size-4" />
+              {t("kora.session.backToList")}
+            </Link>
+          </Button>
+          <h1
+            id="kora-session-title"
+            className="min-w-0 truncate text-lg font-semibold"
+          >
+            {decoded}
+          </h1>
+        </div>
+        <KoraSignInCta
+          title={t("kora.session.inactiveTitle")}
+          message={t("kora.transcript.inactiveHint")}
+          refetch={async () => {
+            await sessions.refetch();
+            await transcript.refetch();
+          }}
+        />
+      </section>
+    );
   }
 
   if (sessions.data && !session) {

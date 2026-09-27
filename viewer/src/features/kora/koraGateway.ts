@@ -15,6 +15,7 @@
  * Both adapters (mock + HTTP) throw subclasses of this type; consumers
  * must check `instanceof KoraError`, never a concrete adapter's class.
  */
+import { isApiError } from "@/lib/errors";
 import type {
   KoraErrorCode,
   KoraMessageAccepted,
@@ -50,6 +51,19 @@ export function koraErrorCode(err: unknown): KoraErrorCode | undefined {
   if (err instanceof KoraError) return err.code;
   const code = (err as { koraCode?: KoraErrorCode } | null)?.koraCode;
   return typeof code === "string" ? code : undefined;
+}
+
+/**
+ * True when the failure is an HTTP 401 — the browser THOUGHT it had a
+ * session, the server disagrees (the cookie was born on https and is
+ * withheld on http, or the 6h idle TTL rotted). Owner-feedback hotfix
+ * branch point: the kora screens answer with the sign-in CTA instead of
+ * the raw error block; 5xx / transport keeps the honest retry state. A
+ * 403 `metadata_only` is NOT this — its explaining wall is its own
+ * verdict and stays untouched.
+ */
+export function isKoraUnauthorized(err: unknown): boolean {
+  return isApiError(err) && err.status === 401;
 }
 
 export interface KoraGateway {
