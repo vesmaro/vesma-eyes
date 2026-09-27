@@ -743,6 +743,20 @@ export const ru = {
   // --- agents domain: execution section (AGW-3) -----------------------------------
   "nav.agentsExecution": "Исполнение",
   "nav.systemSettings": "Настройки",
+  // ME-014: the host roster («Хосты») — the section's default landing.
+  "nav.agentsHosts": "Хосты",
+  "agents.roster.title": "Хосты",
+  "agents.roster.loading": "Загружаем ростер агентов",
+  "agents.roster.failed": "Не удалось загрузить ростер",
+  "agents.roster.emptyTitle": "Агентов ещё нет",
+  "agents.roster.emptyMessage": "Ростер оживёт, когда подключится первый исполнитель.",
+  "agents.roster.emptyAction": "Открыть «Подключение»",
+  "agents.roster.hostUnknown": "хост не указан",
+  "agents.roster.onlineCounter": "{{online}}/{{total}} онлайн",
+  "agents.roster.idle": "простаивает",
+  "agents.roster.disabledBadge": "отключён",
+  "agents.roster.pendingBadge": "ожидает",
+  "agents.roster.revokedBadge": "отозван",
   "agents.execution.title": "Исполнение",
   "agents.execution.emptyTitle": "Поручений нет",
   "agents.execution.emptyMessage":

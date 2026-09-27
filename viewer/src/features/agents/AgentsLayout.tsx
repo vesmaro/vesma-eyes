@@ -8,8 +8,8 @@ import { useAgentsEvents } from "./agentsEvents";
  * pays for a subscription it does not consume (the TasksLayout pattern;
  * this move retired the AGW-1 P3-1 double-connection cost on /tasks).
  * The /agents root itself is an alias: routes.tsx replace-redirects it to
- * /agents/execution (spec §1 — «кто чем занят прямо сейчас», no overview
- * dashboard).
+ * /agents/hosts (ME-014 — the host roster is the section's default
+ * landing; /agents/execution keeps its path).
  */
 export function AgentsLayout() {
   useAgentsEvents();

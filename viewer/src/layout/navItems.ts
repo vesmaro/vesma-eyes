@@ -13,6 +13,7 @@ import {
   PlugZap,
   Search,
   ServerCog,
+  Server,
   Settings,
   Tag,
   Users,
@@ -93,15 +94,22 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
       { to: "/tasks/archive", key: "nav.taskArchive", icon: Archive, end: true },
     ],
   },
-  // Agents domain (AGW-3, spec 2026-09-19 §1): live — the domain root is
-  // the execution alias; AGW-4 adds the registry («Подключение») as the
-  // second section; specialists slots in with its wave.
+  // Agents domain (AGW-3, spec 2026-09-19 §1; ME-014 verdict): live — the
+  // domain root is the HOST ROSTER («Хосты», the default landing since
+  // ME-014); the execution view and the registry («Подключение») keep
+  // their sections; specialists slots in with its wave.
   {
     to: "/agents",
-    linkTo: "/agents/execution",
+    linkTo: "/agents/hosts",
     key: "nav.agents",
     icon: Bot,
     sections: [
+      {
+        to: "/agents/hosts",
+        key: "nav.agentsHosts",
+        icon: Server,
+        end: true,
+      },
       {
         to: "/agents/execution",
         key: "nav.agentsExecution",
@@ -218,6 +226,8 @@ export function crumbsFor(pathname: string): Crumb[] {
       return [SYSTEM_CRUMB, { key: "nav.systemAutomation" }];
     case "/system/devices":
       return [SYSTEM_CRUMB, { key: "nav.devices" }];
+    case "/agents/hosts":
+      return [AGENTS_CRUMB, { key: "nav.agentsHosts" }];
     case "/agents/execution":
       return [AGENTS_CRUMB, { key: "nav.agentsExecution" }];
     case "/agents/harnesses":
