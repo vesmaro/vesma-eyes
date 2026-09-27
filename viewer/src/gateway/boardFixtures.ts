@@ -1,4 +1,6 @@
 import type {
+  ActivityItem,
+  ActivityKind,
   ArchivePage,
   AssignmentItem,
   AssignmentsPage,
@@ -1196,3 +1198,137 @@ export const MOCK_AUTOMATION_STATUS: AutomationStatus = {
     hooks: { total: 2, enabled: 1 },
   },
 };
+
+// --- UI-28 activity corpus (spec 2026-09-27 §3.2, week-0 contract mock) ------
+
+/**
+ * Deterministic activity corpus built AT CONSTRUCTION TIME relative to the
+ * adapter clock (the histogram reads a 24 h window — static fixture dates
+ * would age out of it). Mirrors what the audit table holds: task lifecycle,
+ * the full assignment cycle and reports, actor-signed per ADR 0012 Amd §A.5
+ * — including the HONEST gaps: rows without actor (pre-1.35 records) and
+ * service actors (`machine:reaper`). Ids are a monotonic countdown from the
+ * corpus point (newest = highest id), exactly like the audit table's.
+ */
+export function buildMockActivityCorpus(nowMs: number): ActivityItem[] {
+  const now = Math.floor(nowMs / 60000) * 60000; // minute precision
+  const at = (minutesAgo: number): string =>
+    new Date(now - minutesAgo * 60000).toISOString();
+  const taskTitle = (taskId: string): string | undefined =>
+    MOCK_TASKS.find((task) => task.id === taskId)?.title;
+
+  const row = (
+    minutesAgo: number,
+    kind: ActivityKind,
+    taskId: string,
+    extra: Partial<ActivityItem> = {},
+  ): ActivityItem => ({
+    id: "",
+    ts: at(minutesAgo),
+    kind,
+    task_id: taskId,
+    task_title: taskTitle(taskId),
+    ...extra,
+  });
+
+  const rows: ActivityItem[] = [
+    // freshest head — the «шуршание» of the last hour
+    row(3, "report", "TB-1", {
+      actor: "machine:exec-laptop-zcode",
+      executor_id: "exec-laptop-zcode",
+      host: "laptop",
+      report_kind: "intermediate",
+      detail: "Прогнал vitest: 164 файла зелёные, tsc чист; осталось добить fallback у archcom-флага.",
+    }),
+    row(11, "assignment.started", "TB-1", {
+      actor: "machine:exec-laptop-zcode",
+      executor_id: "exec-laptop-zcode",
+      host: "laptop",
+    }),
+    row(24, "task.moved", "TB-1", { actor: "ui", detail: "в работе → решено" }),
+    row(37, "assignment.created", "TB-1", { actor: "machine:board" }),
+    row(45, "report", "T6", {
+      actor: "machine:exec-laptop-hermes",
+      executor_id: "exec-laptop-hermes",
+      host: "laptop",
+      report_kind: "final",
+      detail: "HttpAdapter подключён к живому API, TOTP-флоу проверен на remote-сессии.",
+    }),
+    row(52, "assignment.done", "T6", {
+      actor: "machine:exec-laptop-hermes",
+      executor_id: "exec-laptop-hermes",
+      host: "laptop",
+    }),
+    // mid-day — claims, moves, a failure, a reaper expiry
+    row(74, "assignment.claimed", "TB-2", {
+      actor: "machine:exec-mesh-qa",
+      executor_id: "exec-mesh-qa",
+      host: "mesh-2",
+    }),
+    row(76, "task.moved", "TB-2", {
+      actor: "device:dev-7pad night-tablet",
+      detail: "открыто → в работе",
+    }),
+    row(95, "assignment.failed", "TB-3", {
+      actor: "machine:exec-old-poller",
+      executor_id: "exec-old-poller",
+      host: "old-laptop",
+      detail: "bootstrap: harness не поднялся",
+    }),
+    row(97, "task.moved", "TB-3", { actor: "machine:board", detail: "в работе → блокировано" }),
+    row(120, "assignment.expired", "TB-4", { actor: "machine:reaper" }),
+    row(132, "task.updated", "TB-5", { actor: "ui" }),
+    row(150, "task.created", "TB-5", { actor: "device:dev-7pad night-tablet" }),
+    row(168, "task.archived", "TB-6", { actor: "ui" }),
+    row(190, "report", "TB-1", {
+      actor: "machine:exec-laptop-zcode",
+      executor_id: "exec-laptop-zcode",
+      host: "laptop",
+      report_kind: "intermediate",
+      detail: "Канбан: dnd-реордер через кластеры закреплён, снапшот-тесты обновлены.",
+    }),
+    row(210, "task.unarchived", "TB-6", { actor: "ui" }),
+    // evening belt — hours 5..10 back, feeding the histogram's mid bars
+    row(322, "task.moved", "T6", { actor: "machine:board", detail: "открыто → в работе" }),
+    row(341, "task.created", "T6", { actor: "ui" }),
+    row(410, "assignment.started", "TB-2", {
+      actor: "machine:exec-mesh-qa",
+      executor_id: "exec-mesh-qa",
+      host: "mesh-2",
+    }),
+    row(437, "report", "TB-2", {
+      actor: "machine:exec-mesh-qa",
+      executor_id: "exec-mesh-qa",
+      host: "mesh-2",
+      report_kind: "intermediate",
+      detail: "Прогнал e2e-план: 12 из 14 сценариев зелёные, 2 флаки взял в разбор.",
+    }),
+    row(505, "assignment.claimed", "TB-1", {
+      actor: "machine:exec-laptop-zcode",
+      executor_id: "exec-laptop-zcode",
+      host: "laptop",
+    }),
+    row(553, "task.moved", "TB-1", { actor: "ui", detail: "бэклог → в работе" }),
+    // the HONEST GAP: pre-1.35 rows carry no actor at all (§2.3)
+    row(620, "task.created", "T7"),
+    row(638, "task.moved", "T7", { detail: "бэклог → открыто" }),
+    row(701, "assignment.created", "T7", { actor: "machine:board" }),
+    row(715, "assignment.cancelled", "T7"),
+    row(780, "report", "T6", {
+      report_kind: "intermediate",
+      detail: "CORS-гейт снят, ждём токен для второго хопа.",
+    }),
+    row(833, "task.updated", "TB-2"),
+    row(901, "task.moved", "TB-4", { detail: "в работе → блокировано" }),
+    row(968, "task.created", "TB-4", { actor: "ui" }),
+  ];
+
+  // Audit-table monotonic ids: the OLDEST row carries the lowest id, the
+  // newest the highest — `before_id` cursors and newest-first sorts read
+  // them numerically. Base 700 stays clear of the fixture task/assignment ids.
+  const ordered = [...rows].sort((a, b) => a.ts.localeCompare(b.ts));
+  ordered.forEach((entry, index) => {
+    (entry as { id: string }).id = String(700 + index);
+  });
+  return rows;
+}

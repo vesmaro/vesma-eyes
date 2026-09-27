@@ -1,4 +1,6 @@
 import type {
+  ActivityBucketParams,
+  ActivityParams,
   ArchiveParams,
   AssignmentListParams,
   PulseParams,
@@ -62,6 +64,16 @@ export const keys = {
     inbox: (params: InboxParams = {}) => ["tasks", "inbox", params] as const,
     /** Prefix over every inbox query (adopt/refresh invalidation, Ф3). */
     inboxAll: ["tasks", "inbox"] as const,
+    // UI-28 «Активность» (spec 2026-09-27): the cursor-paged feed and the
+    // hour-bucket view share one prefix so the SSE-reconnect refetch (the
+    // at-most-once drop window) invalidates both with a single call.
+    activity: {
+      all: ["tasks", "activity"] as const,
+      list: (params: ActivityParams = {}) =>
+        ["tasks", "activity", "list", params] as const,
+      buckets: (params: ActivityBucketParams = {}) =>
+        ["tasks", "activity", "buckets", params] as const,
+    },
   },
   traces: {
     all: ["traces"] as const,

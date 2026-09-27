@@ -106,34 +106,43 @@ export interface BoardExecutor {
 export interface BoardEventMap {
   /** Service frame sent on connect; `last_event_id` is a sync hint only. */
   hello: { readonly kind: "hello"; readonly last_event_id: number };
+  // ADR 0012 Amd §A.5 (UI-28): every task.* frame carries the additive
+  // `actor` wire string (`ui` | `device:<id> <name>` | `machine:<id>`); the
+  // parser preserves it when present — pre-§A.5 frames simply lack it.
   "task.created": {
     readonly kind: "task.created";
     readonly task: BoardTask;
+    readonly actor?: string;
     readonly notification?: BoardNotification;
   };
   "task.updated": {
     readonly kind: "task.updated";
     readonly task: BoardTask;
+    readonly actor?: string;
   };
   "task.moved": {
     readonly kind: "task.moved";
     readonly task: BoardTask;
+    readonly actor?: string;
     readonly notification?: BoardNotification;
   };
   "task.deleted": {
     readonly kind: "task.deleted";
     readonly task_id: string;
+    readonly actor?: string;
     readonly notification?: BoardNotification;
   };
   /** Known client gap of the frozen board (handled from Ф2 in this app). */
   "task.archived": {
     readonly kind: "task.archived";
     readonly task_id: string;
+    readonly actor?: string;
     readonly notification?: BoardNotification;
   };
   "task.unarchived": {
     readonly kind: "task.unarchived";
     readonly task_id: string;
+    readonly actor?: string;
     readonly notification?: BoardNotification;
   };
   /** `server` may be absent, a store name, or a `"group:{name}"` marker. */
@@ -149,6 +158,8 @@ export interface BoardEventMap {
     readonly kind: "report";
     readonly task_id: string;
     readonly report: BoardReport;
+    /** §A.5 additive: the reporting agent (mirrors report.agent). */
+    readonly actor?: string;
   };
   // Reserved kinds (ADR 0009): emitters land with the assignment engine;
   // payload shape is fixed by contract so handlers can be typed already.
@@ -405,6 +416,18 @@ export type ParsedBoardEvent =
  * payload cannot function without); extra fields ride along per the
  * additive-only evolution rules.
  */
+/**
+ * §A.5 additive actor (UI-28): `ui` | `device:<id> <name>` | `machine:<id>`.
+ * Preserved verbatim when the frame carries one; pre-§A.5 frames and
+ * machine-leg emitters that skip it simply yield no field (additive-only
+ * evolution — unknown keys are never invented here).
+ */
+function optionalActor(parsed: Record<string, unknown>): { readonly actor?: string } {
+  return typeof parsed.actor === "string" && parsed.actor.length > 0
+    ? { actor: parsed.actor }
+    : {};
+}
+
 export function parseBoardEvent(raw: string): ParsedBoardEvent {
   let parsed: unknown;
   try {
@@ -429,20 +452,26 @@ export function parseBoardEvent(raw: string): ParsedBoardEvent {
       return {
         status: "event",
         event: withOptionalNotification(
-          { kind, task: parsed.task as BoardTask },
+          { kind, task: parsed.task as BoardTask, ...optionalActor(parsed) },
           parsed,
         ),
       };
     case "task.updated":
       if (!isRecord(parsed.task)) return ignored("malformed-payload", kind);
-      return { status: "event", event: { kind, task: parsed.task as BoardTask } };
+      return {
+        status: "event",
+        event: { kind, task: parsed.task as BoardTask, ...optionalActor(parsed) },
+      };
     case "task.deleted":
     case "task.archived":
     case "task.unarchived":
       if (typeof parsed.task_id !== "string") return ignored("malformed-payload", kind);
       return {
         status: "event",
-        event: withOptionalNotification({ kind, task_id: parsed.task_id }, parsed),
+        event: withOptionalNotification(
+          { kind, task_id: parsed.task_id, ...optionalActor(parsed) },
+          parsed,
+        ),
       };
     case "server.changed":
       return {
@@ -464,7 +493,12 @@ export function parseBoardEvent(raw: string): ParsedBoardEvent {
       }
       return {
         status: "event",
-        event: { kind, task_id: parsed.task_id, report: parsed.report as BoardReport },
+        event: {
+          kind,
+          task_id: parsed.task_id,
+          report: parsed.report as BoardReport,
+          ...optionalActor(parsed),
+        },
       };
     case "assignment.created":
     case "assignment.claimed":

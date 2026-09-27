@@ -1,6 +1,10 @@
 import type { MemoryGateway } from "./MemoryGateway";
 import type { EventStream } from "./events";
 import type {
+  ActivityBucketParams,
+  ActivityBuckets,
+  ActivityPage,
+  ActivityParams,
   ArchivePage,
   ArchiveParams,
   BoardHealthDetail,
@@ -482,5 +486,29 @@ export function isPairingExchangeSource(
 ): gateway is MemoryGateway & PairingExchangeSource {
   return (
     typeof (gateway as Partial<PairingExchangeSource>).exchangePairing === "function"
+  );
+}
+
+/**
+ * UI-28 «Активность» read surface (`GET /api/activity` + the hour-bucket
+ * view). Structural like every guard above: board and mock speak it, the
+ * mnemos HttpAdapter legitimately does not, and the page renders its honest
+ * unsupported state — an adapter that grows the methods lights the section
+ * up with no page change.
+ */
+export interface ActivitySource {
+  activity(params?: ActivityParams, signal?: AbortSignal): Promise<ActivityPage>;
+  activityBuckets(
+    params?: ActivityBucketParams,
+    signal?: AbortSignal,
+  ): Promise<ActivityBuckets>;
+}
+
+export function isActivitySource(
+  gateway: MemoryGateway,
+): gateway is MemoryGateway & ActivitySource {
+  return (
+    typeof (gateway as Partial<ActivitySource>).activity === "function" &&
+    typeof (gateway as Partial<ActivitySource>).activityBuckets === "function"
   );
 }

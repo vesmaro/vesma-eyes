@@ -59,6 +59,11 @@ const TaskDetailPage = lazy(() =>
     default: m.TaskDetailPage,
   })),
 );
+const TaskActivityPage = lazy(() =>
+  import("@/features/tasks/TaskActivityPage").then((m) => ({
+    default: m.TaskActivityPage,
+  })),
+);
 const TaskInboxPage = lazy(() =>
   import("@/features/tasks/TaskInboxPage").then((m) => ({ default: m.TaskInboxPage })),
 );
@@ -232,6 +237,9 @@ export function buildRoutes(): RouteObject[] {
           children: [
             { index: true, element: <TasksIndex /> },
             { path: "list", element: <TaskListPage /> },
+            // UI-28 «Активность» (spec §1): inside the layout — ONE domain
+            // SSE stream (useTaskEvents) feeds the page's live buffer.
+            { path: "activity", element: <TaskActivityPage /> },
             { path: "inbox", element: <TaskInboxPage /> },
             { path: "archive", element: <TaskArchivePage /> },
             // Static siblings rank above :id (react-router ranking).

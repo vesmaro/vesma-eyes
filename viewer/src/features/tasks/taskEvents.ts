@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { QueryClient } from "@tanstack/react-query";
 import { useQueryClient } from "@tanstack/react-query";
 import type { BoardEvent } from "@/gateway/events";
@@ -6,6 +6,7 @@ import type { BoardSummary, BoardTask, TaskReports } from "@/gateway/boardTypes"
 import { isTaskEventSource } from "@/gateway/capabilities";
 import { useGateway } from "@/gateway/GatewayContext";
 import { keys } from "@/lib/queryKeys";
+import { pushActivityEvent, setActivityStreamState } from "./activityStore";
 
 /**
  * SSE → cache mapping for the task domain (Ф2, ARCHCOM-3 verdict §3:
@@ -159,20 +160,41 @@ function applyReportEvent(
 /**
  * Domain events bridge: mounts ONE SSE stream for the /tasks subtree (see
  * TasksLayout) and routes every parsed event into the cache patcher above.
+ * One stream, two sinks (agentsEvents.ts pattern): the cache patcher AND
+ * the UI-28 activity live buffer (activityStore.ts — the /tasks/activity
+ * page merges it over its GET pages; it never opens a second EventSource).
+ * The bridge also mirrors the connection state into the store (live
+ * indicator + amber marker) and refetches the activity queries on a
+ * RECOVERY open — SSE is at-most-once, so the drop window may have missed
+ * feed facts (§5.9 / UI-28 §8.7).
+ *
  * Capability-gated — a gateway without `events()` (mnemos mode) simply
  * never subscribes, and the pages keep their refetch-on-mount behaviour.
  */
 export function useTaskEvents(): void {
   const gateway = useGateway();
   const queryClient = useQueryClient();
+  const openedRef = useRef(false);
   useEffect(() => {
     if (!isTaskEventSource(gateway)) return;
     const stream = gateway.events();
     const unsubscribe = stream.onAny((event) => {
       applyTaskEventToCache(queryClient, event);
+      pushActivityEvent(event);
+    });
+    const unsubscribeState = stream.onStateChange((state) => {
+      setActivityStreamState(state);
+      // Initial connect must NOT refetch (queries just mounted fresh); only
+      // a RECOVERY — open → drop → open — does (§5.9, UI-28 §8.7).
+      if (state === "open" && openedRef.current) {
+        void queryClient.invalidateQueries({ queryKey: keys.tasks.activity.all });
+      }
+      if (state === "open") openedRef.current = true;
     });
     return () => {
       unsubscribe();
+      unsubscribeState();
+      setActivityStreamState("closed");
       stream.close();
     };
   }, [gateway, queryClient]);
