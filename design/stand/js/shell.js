@@ -220,11 +220,16 @@
       { title: "Обзор", href: "index.html", keys: "обзор главная home" },
       { title: "Записи", href: "memories.html", keys: "записи память memory" },
       { title: "Поиск по памяти", href: "search.html", keys: "поиск поиск search" },
+      { title: "Задачи · Канбан", href: "tasks.html", keys: "задачи канбан tasks борд" },
+      { title: "Задачи · Список", href: "tasks.html?view=list", keys: "задачи список таблица list" },
+      { title: "Задачи · Входящие", href: "tasks.html?view=inbox", keys: "задачи входящие предложения inbox" },
+      { title: "Задачи · Архив", href: "tasks.html?view=archive", keys: "задачи архив archive" },
       { title: "Документы", href: "docs.html", keys: "документы docs хабы" },
       { title: "Агенты · Исполнение", href: "agents.html", keys: "агенты исполнение agents" },
       { title: "Агенты · Хосты", href: "hosts.html", keys: "агенты хосты hosts машины" },
       { title: "Агенты · Подключить хост", href: "connect.html", keys: "агенты подключить подключение мастер connect" },
       { title: "Кора · сессии хостов", href: "kora.html", keys: "кора сессии kora транскрипты" },
+      { title: "Подключить телефон", href: "pair.html", keys: "подключить телефон пейринг pair устройство qr" },
       { title: "Статус · живая сводка", href: "status.html", keys: "статус система здоровье status" },
       { title: "Рабочий стол · Терминал", href: "desktop.html", keys: "терминал стол desk" },
       { title: "Проводник проектов", href: "explorer.html", keys: "проводник файлы explorer" },
@@ -233,7 +238,8 @@
       return { group: "Переход", title: c.title, keys: c.keys, href: c.href };
     });
     var actions = [
-      { group: "Действия", title: "Новая задача", keys: "создать задача новая", act: "task" },
+      { group: "Действия", title: "Дать задачу", keys: "задача дать новая создать поручение", act: "give-task" },
+      { group: "Действия", title: "Подключить телефон", keys: "телефон устройство пейринг pair подключить", act: "pair" },
       { group: "Действия", title: "Сменить тему", keys: "тема тёмная светлая береста", act: "theme" },
       { group: "Действия", title: "Плотность: операционная / созерцательная", keys: "плотность компакт", act: "density" },
       { group: "Действия", title: "Сменить язык RU|EN", keys: "язык язык en ru", act: "lang" },
@@ -251,6 +257,14 @@
       { group: "Сущности", title: "агент core", keys: "агент ядро", href: "agents.html" },
       { group: "Сущности", title: "документы mnemos-eyes", keys: "хаб доки", href: "docs.html#mnemos-eyes" }
     );
+    (D.tasks || []).slice(0, 6).forEach(function (t) {
+      ents.push({
+        group: "Сущности",
+        title: "задача · " + t.title,
+        keys: "задача " + t.id + " " + (t.tags || []).join(" "),
+        href: "tasks.html?task=" + encodeURIComponent(t.id),
+      });
+    });
     (D.hosts || []).forEach(function (h) {
       ents.push({
         group: "Сущности",
@@ -367,8 +381,17 @@
       toast("Переключение RU|EN — в стенде не переведено", "info");
       return;
     }
-    if (c.act === "task") {
-      toast("Новая задача — действие продуктовой версии; в стенде задач нет", "info");
+    if (c.act === "give-task") {
+      if (window.location.pathname.indexOf("tasks.html") >= 0) {
+        /* on the tasks page the page script owns the wizard */
+        doc.dispatchEvent(new CustomEvent("stand:give-task"));
+      } else {
+        go("tasks.html?wizard=1");
+      }
+      return;
+    }
+    if (c.act === "pair") {
+      go("pair.html");
       return;
     }
     if (c.href) {
@@ -445,18 +468,19 @@
   var gMap = {
     o: "index.html",
     m: "memories.html",
-    t: "memories.html", // tasks domain has no stand page → Записи is honest closest? No: честнее тост
+    t: "tasks.html",
+    b: "tasks.html",
+    i: "tasks.html?view=inbox",
     a: "agents.html",
     d: "docs.html",
     w: "desktop.html",
     s: "explorer.html",
     p: "memories.html",
-    b: "memories.html",
     e: "agents.html",
     k: "kora.html",
   };
-  /* честность: t/b ведут на разделы без стенда — тост, а не подмена */
-  var gStub = { t: "Задачи", b: "Канбан" };
+  /* v3: t/b/i открыли реальный домен «Задачи» — gStub больше не нужен для них */
+  var gStub = {};
 
   doc.addEventListener("keydown", function (e) {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {

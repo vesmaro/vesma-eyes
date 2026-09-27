@@ -631,6 +631,360 @@
     tasks: { running: 1, queued: 2, validation: 1, doneToday: 3 },
   };
 
+  /* ── v3: tasks world (07g). Kanban mirrors the mnemos state machine
+   * (task:open / in-progress / blocked / resolved / done); cards stay
+   * consistent with agents.html / hosts.html fixtures (T-128 agb running,
+   * T-131 core queued 4 min, T-127 stagnant queue 12 min, T-124 failed). */
+
+  const taskStates = [
+    { key: "open", name: "открыто" },
+    { key: "in-progress", name: "в работе" },
+    { key: "blocked", name: "блокировано" },
+    { key: "resolved", name: "решено" },
+    { key: "done", name: "готово" },
+  ];
+
+  const tasks = [
+    {
+      id: "T-128",
+      title: "UI-10 проводник",
+      state: "in-progress",
+      project: "mnemos-eyes",
+      conf: 0.92,
+      tags: ["ui", "agents"],
+      extraTags: 1,
+      assignee: "агент agb",
+      host: "laptop-go-1",
+      age: "2 ч",
+      priority: "обычный",
+      unreadReport: true,
+      reportCount: 2,
+      reportAge: "6 мин назад",
+      memory: ["M-128", "M-215"],
+      body: [
+        "Проводник проектов открывает дерево слева, редактор в центре, панель агентов справа. Три колонки — не догма: на узких экранах панель агентов уезжает вниз.",
+        "Ключевое правило: правки агента подсвечиваются золотом в дереве и во вкладках редактора. Конфликт двух писателей — блокер, бейдж «конфликт», не цветом одним.",
+        "Открытый вопрос: что показывать в панели агентов, когда пишет больше двух агентов. Черновик — очередь правок по времени, свежие сверху.",
+      ],
+      reports: [
+        {
+          who: "агент agb",
+          when: "6 мин назад · 14:02",
+          kind: "промежуточный",
+          unread: true,
+          body: [
+            "Волна 1 закрыта: дерево проектов, редактор и панель агентов собираются, колонки складываются на узких экранах.",
+            "Дальше — подсветка правок золотом и бейдж конфликта. Больше ничего не трогал.",
+          ],
+          refs: "T-128 · M-148 · M-215",
+        },
+        {
+          who: "агент agb",
+          when: "1 ч назад · 13:04",
+          kind: "промежуточный",
+          unread: false,
+          body: [
+            "Разобрал каркас: три колонки, перетаскивание границ, сохранение раскладки. Скриншоты приложил в запись M-128.",
+          ],
+          refs: "T-128 · M-128",
+        },
+      ],
+      history: [
+        { what: "создано владельцем", when: "2 ч назад · 12:31", actor: "вы" },
+        { what: "открыто → в работе · агент взял задачу", when: "1,5 ч назад · 12:58", actor: "агент agb (автоперенос из памяти)" },
+        { what: "получен отчёт «волна 1 закрыта»", when: "6 мин назад · 14:02", actor: "агент agb" },
+      ],
+      execution: {
+        state: "running",
+        line: "идёт · агент agb · laptop-go-1",
+        pulse: "пульс 40 с назад",
+        report: "отчёт 6 мин назад · подписан agb · пока не проверено",
+      },
+    },
+    {
+      id: "T-131",
+      title: "Дозапись смыслового индекса",
+      state: "open",
+      project: "mnemos-eyes",
+      conf: 0.78,
+      tags: ["memory", "sync"],
+      extraTags: 0,
+      assignee: "агент core",
+      host: "mnemos-02",
+      age: "4 мин",
+      priority: "обычный",
+      unreadReport: false,
+      reportCount: 0,
+      body: [
+        "Дозаписать смысловой индекс после рефакторинга записей: 214 записей переиндексировано, остались 38 с размытыми связями.",
+        "Готовность: индекс считается свежим, когда у каждой записи есть хотя бы один синапс-сосед.",
+      ],
+      reports: [],
+      history: [{ what: "создано владельцем", when: "4 мин назад · 14:10", actor: "вы" }],
+      execution: {
+        state: "queued",
+        line: "в очереди · агент core · mnemos-02",
+        pulse: "агент докладывается каждые ~2 мин — сервер его не дёргает",
+      },
+    },
+    {
+      id: "T-127",
+      title: "Чистка дублей тегов",
+      state: "open",
+      project: "mnemos-eyes",
+      conf: 0.64,
+      tags: ["memory", "tags"],
+      extraTags: 0,
+      assignee: "агент morph",
+      host: "—",
+      age: "12 мин",
+      priority: "низкий",
+      unreadReport: false,
+      reportCount: 0,
+      stagnant: "исполнитель молчит 12 мин",
+      body: [
+        "Свести дубли тегов к алиасам: три пары конфликтуют (черновик словаря — запись M-241). Уверенность записи низкая — словарь ещё не утверждён.",
+        "Перед чисткой свериться с решением по тегам: если владелец не утвердил словарь — только отчёт, без правок.",
+      ],
+      reports: [],
+      history: [
+        { what: "создано агентом core (предложение принято)", when: "12 мин назад · 14:02", actor: "агент core (автоперенос из памяти)" },
+      ],
+      execution: {
+        state: "stagnant",
+        line: "в очереди 12 мин — исполнитель молчит",
+        pulse: "очередь молчит: агент не забирает задачи 12 минут — проверьте связь хоста",
+      },
+    },
+    {
+      id: "T-121",
+      title: "Пейринг QR",
+      state: "open",
+      project: "sealbox",
+      conf: 0.74,
+      tags: ["pairing"],
+      extraTags: 0,
+      assignee: null,
+      host: null,
+      age: "1 д",
+      priority: "обычный",
+      unreadReport: false,
+      reportCount: 0,
+      body: [
+        "Пейринг устройства к колодцу памяти — через QR: устройство показывает код, владелец сканирует с телефона. Ручной ввод ключа остаётся запасным путём для headless-хостов.",
+        "Замечание с ревью: код должен жить не дольше окна пейринга, после — перегенерация. Иначе код, засветившийся на скриншоте, живёт вечно.",
+      ],
+      reports: [],
+      history: [{ what: "создано владельцем", when: "1 д назад", actor: "вы" }],
+      execution: null,
+    },
+    {
+      id: "T-124",
+      title: "Сборка отчёта недели",
+      state: "blocked",
+      project: "gcw",
+      conf: 0.7,
+      tags: ["reporting"],
+      extraTags: 0,
+      assignee: "агент morph",
+      host: "—",
+      age: "1 д",
+      priority: "обычный",
+      unreadReport: false,
+      reportCount: 1,
+      blockedNote: "не вышло: конфликт записи с agb",
+      body: [
+        "Собрать отчёт недели из отчётов исполнителей: в чём проблема, что мешает, что делать — по канону M-148, идентификаторы в сносках.",
+        "Поручение упало: morph и agb одновременно писали в один раздел отчёта. Нужен единственный писатель на раздел.",
+      ],
+      reports: [],
+      history: [
+        { what: "создано владельцем", when: "1 д назад", actor: "вы" },
+        { what: "в работе → блокировано · поручение упало", when: "1 д назад · 13:12", actor: "агент morph (автоперенос из памяти)" },
+      ],
+      execution: {
+        state: "failed",
+        line: "не вышло · агент morph",
+        pulse: "конфликт записи с agb — поручение отменено, задача ждёт нового исполнителя",
+      },
+    },
+    {
+      id: "T-129",
+      title: "Правки токенов после ревью",
+      state: "resolved",
+      project: "mnemos-eyes",
+      conf: 0.9,
+      tags: ["design"],
+      extraTags: 0,
+      assignee: "агент agb",
+      host: "laptop-go-1",
+      age: "3 ч",
+      priority: "обычный",
+      unreadReport: false,
+      reportCount: 1,
+      body: [
+        "Внести правки ревью в токены: контраст фокуса на бересте, плотность строк. Проверить, что имена не поменялись.",
+      ],
+      reports: [
+        {
+          who: "агент agb",
+          when: "3 ч назад · 11:20",
+          kind: "финальный",
+          unread: false,
+          body: ["Правки внесены: ринг на бересте 7.3:1, плотность через общий тумблер. Имена токенов не менялись."],
+          refs: "T-129 · M-156",
+        },
+      ],
+      history: [
+        { what: "создано владельцем", when: "4 ч назад", actor: "вы" },
+        { what: "в работе → решено · отчёт принят", when: "3 ч назад · 11:22", actor: "агент agb (автоперенос из памяти)" },
+      ],
+      execution: {
+        state: "done",
+        line: "завершено · агент agb · laptop-go-1",
+        pulse: "финальный отчёт принят 3 ч назад",
+      },
+    },
+    {
+      id: "T-126",
+      title: "Отчёт волны 1 в Коре",
+      state: "done",
+      project: "gcw",
+      conf: 0.85,
+      tags: ["reporting"],
+      extraTags: 0,
+      assignee: "агент agb",
+      host: "laptop-go-1",
+      age: "3 ч",
+      priority: "обычный",
+      unreadReport: false,
+      reportCount: 1,
+      body: ["Собрать отчёт волны 1 по checkpoint-формату и записать в память."],
+      reports: [
+        {
+          who: "агент agb",
+          when: "3 ч назад",
+          kind: "финальный",
+          unread: false,
+          body: ["Отчёт записан в память, задача закрыта."],
+          refs: "T-126",
+        },
+      ],
+      history: [
+        { what: "решено → готово · отчёт принят", when: "3 ч назад", actor: "вы" },
+      ],
+      execution: {
+        state: "done",
+        line: "завершено · агент agb",
+        pulse: "закрыта владельцем 3 ч назад",
+      },
+    },
+    {
+      id: "T-123",
+      title: "Схема провенанса в свитках",
+      state: "done",
+      project: "mnemos-eyes",
+      conf: 0.88,
+      tags: ["design", "memory"],
+      extraTags: 0,
+      assignee: "агент core",
+      host: "mnemos-02",
+      age: "6 ч",
+      priority: "обычный",
+      unreadReport: false,
+      reportCount: 1,
+      body: ["Показывать тройку провенанса (кто · где · когда) в шапке свитка, числа — mono tabular-nums."],
+      reports: [
+        {
+          who: "агент core",
+          when: "6 ч назад",
+          kind: "финальный",
+          unread: false,
+          body: ["Схема внесена в свитки всех записей; провенанс читается в шапке."],
+          refs: "T-123 · M-233",
+        },
+      ],
+      history: [
+        { what: "решено → готово · отчёт принят", when: "6 ч назад", actor: "агент core (автоперенос из памяти)" },
+      ],
+      execution: {
+        state: "done",
+        line: "завершено · агент core",
+        pulse: "закрыта 6 ч назад",
+      },
+    },
+  ];
+
+  const taskArchive = [
+    {
+      id: "T-118",
+      title: "Мобильный топбар: меню «⋮»",
+      project: "mnemos-eyes",
+      month: "сентябрь 2026",
+      from: "в работе",
+      date: "12 сент",
+      reports: 3,
+      summary: "Свернуть топбар в меню на узких экранах; поиск и тема остаются на поверхности",
+    },
+    {
+      id: "T-114",
+      title: "Скелетоны: shimmer без blur",
+      project: "mnemos-eyes",
+      month: "сентябрь 2026",
+      from: "готово",
+      date: "8 сент",
+      reports: 2,
+      summary: "Мерцание скелетонов через opacity, без фильтров размытия — дешевле на слабых машинах",
+    },
+    {
+      id: "T-111",
+      title: "Канонизация отчётов волн",
+      project: "gcw",
+      month: "сентябрь 2026",
+      from: "решено",
+      date: "3 сент",
+      reports: 4,
+      summary: "Единый формат отчёта волны: checkpoint-доска, исполнители, ревью-циклы",
+    },
+  ];
+
+  const taskInbox = [
+    {
+      id: "IN-2",
+      from: "агент agb",
+      where: "mnemos-01",
+      when: "26 мин назад",
+      title: "Разобрать дубли тегов M-241",
+      excerpt:
+        "Разобрать дубли тегов: три алиаса конфликтуют — «агенты», «agents» и «борт» указывают на один домен, но счётчики расходятся. Предлагаю склеить по решению владельца.",
+      tags: ["memory", "tags"],
+      source: "запись памяти M-241",
+    },
+    {
+      id: "IN-1",
+      from: "агент core",
+      where: "mnemos-02",
+      when: "1 ч назад",
+      title: "Сводка отчётов недели по канону сносок",
+      excerpt:
+        "Предлагаю еженедельную сводку отчётов: тело человеческим языком, идентификаторы — в сносках. Проверить правило на трёх проектах и записать как контракт.",
+      tags: ["reporting", "process"],
+      source: "запись памяти M-148",
+    },
+  ];
+
+  const taskDrafts = [
+    {
+      id: "DR-1",
+      title: "Проверить покрытие сессий vscode в Корее",
+      excerpt: "Что делали vscode-сессии — покрытие начало среза; сверить с реестром сканеров.",
+      tags: ["kora"],
+      step: 2,
+    },
+  ];
+
+  const tagDictionary = ["ui", "agents", "memory", "sync", "design", "reporting", "process", "security", "pairing"];
+
   window.STAND = {
     memories,
     wellNodes,
@@ -655,5 +1009,11 @@
     transcript,
     hostEvents,
     status,
+    taskStates,
+    tasks,
+    taskArchive,
+    taskInbox,
+    taskDrafts,
+    tagDictionary,
   };
 })();
