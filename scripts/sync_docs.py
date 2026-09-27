@@ -423,6 +423,77 @@ def assemble_page(
 
 
 # --------------------------------------------------------------------------
+# contentClass gate (ME-011, ADR 0020 layer 1)
+# --------------------------------------------------------------------------
+
+def _verify_content_class_gate(
+    sidecar_pages: dict[str, dict[str, Any]],
+    provenance_files: dict[str, dict[str, Any]],
+    content_out: Path,
+) -> None:
+    """The layer-1 integrity gate over the SYNC OUTPUT (fail-closed).
+
+    Checks, in order:
+    1. every ``provenance.json`` entry has a sidecar page (the sidecar
+       covers the corpus — a diverged provenance is an untrusted channel);
+    2. every sidecar page carries the uniform ``contentClass: "corpus"``
+       stamp for EACH of its published locales;
+    3. every CORPUS FILE on disk maps to a provenance entry — a planted
+       orphan/manual file poisons the build (the post-build check the CI
+       gate re-runs on a tampered tree).
+
+    Deterministic: reads only the in-memory mappings plus the output tree;
+    no wall-clock, stable order.
+    """
+    # 1+2. provenance entries ↔ sidecar pages, uniform stamp.
+    for slug, locales in sorted(provenance_files.items()):
+        page = sidecar_pages.get(slug)
+        if page is None:
+            raise SyncError(
+                f"contentClass gate: provenance entry {slug!r} has no "
+                "sidecar page — provenance/sidecar diverged"
+            )
+        stamped = page.get("contentClass") or {}
+        missing = [
+            loc for loc in sorted(locales) if stamped.get(loc) != "corpus"
+        ]
+        if missing:
+            raise SyncError(
+                f"contentClass gate: page {slug!r} is not stamped 'corpus' "
+                f"for locales {missing} — the channel is untrusted"
+            )
+    for slug in sorted(sidecar_pages):
+        if slug not in provenance_files:
+            raise SyncError(
+                f"contentClass gate: sidecar page {slug!r} has no "
+                "provenance.json entry — orphan/manual file planting is "
+                "forbidden (fail-closed)"
+            )
+    # 3. the on-disk corpus is exactly the provenance set (orphans die).
+    if content_out.exists():
+        for page_path in sorted(content_out.rglob("*.md")):
+            if page_path.name in (PROVENANCE_NAME, SIDECAR_NAME):
+                continue
+            relative = page_path.relative_to(content_out)
+            parts = relative.parts
+            if len(parts) < 3:
+                raise SyncError(
+                    f"contentClass gate: corpus file {relative!r} is not "
+                    "under <project>/<locale>/ — manual planting"
+                )
+            slug = f"{parts[0]}/{Path(*parts[2:])!s}".replace("\\\\", "/")
+            for suffix in (".md",):
+                slug = slug[: -len(suffix)] if slug.endswith(suffix) else slug
+            if slug not in provenance_files:
+                raise SyncError(
+                    f"contentClass gate: corpus file "
+                    f"{relative.as_posix()!r} has no provenance.json entry "
+                    "— orphan/manual file planting is forbidden "
+                    "(fail-closed)"
+                )
+
+
+# --------------------------------------------------------------------------
 # sync
 # --------------------------------------------------------------------------
 
@@ -574,6 +645,13 @@ def sync(
                 )
                 page_entry["titles"][locale] = title
                 page_entry["locales"] = sorted(page_entry["titles"])
+                # ME-011 (ADR 0020 layer-1 gate): the corpus stamp is UNIFORM
+                # on every sidecar page — the provenance kind of the FILE
+                # lives in provenance.json (`kind`), the STAMP is the same
+                # value for the whole corpus. Its absence (or a mismatch
+                # against provenance.json) = an untrusted channel, fail-closed
+                # in the CI gate (tests/test_sync_docs.py).
+                page_entry.setdefault("contentClass", {})[locale] = "corpus"
             per_locale[locale] = {"files": written, "raw_bytes": bytes_total}
 
         # --- curated translations (W3 prep): our layer, re-sync-proof -------
@@ -680,6 +758,9 @@ def sync(
                 page_entry["titles"][locale] = re.sub(r"\s+", " ", title).strip()
                 page_entry["locales"] = sorted(page_entry["titles"])
                 page_entry.setdefault("kinds", {})[locale] = "curated-translation"
+                # ME-011: same uniform corpus stamp — translations are corpus
+                # too (the channel, not the content, is what is being stamped).
+                page_entry.setdefault("contentClass", {})[locale] = "corpus"
 
         pending_assets.extend(stats["asset_copies"])
 
@@ -721,6 +802,15 @@ def sync(
     # --- manifests ---------------------------------------------------------
     for page in sidecar_pages.values():
         page["locales"] = sorted(page["locales"])
+
+    # --- ME-011 contentClass gate (ADR 0020, layer 1) ----------------------
+    # Every CORPUS file must map to a provenance.json entry AND every
+    # sidecar page must carry the uniform `contentClass` stamp. A planted
+    # orphan/manual file has NO provenance entry -> the sync output is
+    # poisoned -> the sync fails here (fail-closed, build-time).
+    _verify_content_class_gate(
+        sidecar_pages, provenance_files, content_out
+    )
 
     now_pin_dates = {name: pin["commit_date"] for name, pin in pins.items()}
     provenance = {

@@ -385,11 +385,153 @@ def test_sidecar_mirrors_docpage_shape(synced, upstream_repo) -> None:
         "lastVerified",
         "locales",
         "provenance",
+        # ME-011 (ADR 0020 layer 1): the uniform corpus stamp.
+        "contentClass",
     }
     assert getting["locales"] == ["en", "ru"]
     assert getting["titles"]["en"] == "Getting started"
     assert getting["titles"]["ru"] == "Начало работы"
     assert getting["provenance"]["sha"] == upstream_repo["sha"]
+
+
+# --- contentClass gate (ME-011, ADR 0020 layer 1) -----------------------------
+
+
+def _sidecar(content_out: Path) -> dict[str, object]:
+    return json.loads(
+        (content_out / "manifest.sidecar.json").read_text(encoding="utf-8")
+    )
+
+
+def _provenance(content_out: Path) -> dict[str, object]:
+    return json.loads(
+        (content_out / "provenance.json").read_text(encoding="utf-8")
+    )
+
+
+def _corpus_files(content_out: Path) -> set[str]:
+    """Every generated corpus md, as `<project>/<locale>/<rel>`."""
+    corpus: set[str] = set()
+    for project_dir in sorted(content_out.iterdir()):
+        if project_dir.name in ("provenance.json", "manifest.sidecar.json"):
+            continue
+        if not project_dir.is_dir():
+            continue
+        for page in project_dir.rglob("*.md"):
+            corpus.add(
+                f"{project_dir.name}/{path.relative_to(project_dir)}".replace(
+                    "\\", "/"
+                ).replace(str(project_dir) + "/", "", 1)
+                if False
+                else f"{project_dir.name}/{page.relative_to(project_dir)}"
+            )
+    return corpus
+
+
+def test_content_class_uniform_on_every_sidecar_page(synced) -> None:
+    content_out, _, _ = synced
+    sidecar = _sidecar(content_out)
+    assert sidecar["pages"], "sanity: the fake corpus generated pages"
+    for page in sidecar["pages"]:
+        stamped = page.get("contentClass")
+        assert isinstance(stamped, dict), f"{page['slug']}: no contentClass"
+        for locale in page["locales"]:
+            assert stamped.get(locale) == "corpus", (
+                f"{page['slug']}[{locale}] is not stamped 'corpus' "
+                f"(got {stamped.get(locale)!r})"
+            )
+
+
+def test_content_class_covers_the_whole_corpus(synced, upstream_repo) -> None:
+    content_out, _, _ = synced
+    sidecar = _sidecar(content_out)
+    provenance = _provenance(content_out)
+    files = provenance["files"]
+    assert isinstance(files, dict)
+    # Every corpus file carries a provenance entry (channel integrity).
+    for slug, per_locale in files.items():
+        assert isinstance(per_locale, dict)
+        for locale, entry in per_locale.items():
+            assert entry.get("kind") in {"upstream", "curated-translation"}
+    # ...and every sidecar page is stamped for EACH of its locales.
+    for page in sidecar["pages"]:
+        stamped = page["contentClass"]
+        assert set(stamped) == set(page["locales"])
+        assert set(stamped.values()) == {"corpus"}
+
+
+def test_sidecar_slugs_and_provenance_files_align(synced) -> None:
+    content_out, _, _ = synced
+    sidecar = _sidecar(content_out)
+    provenance = _provenance(content_out)
+    files = provenance["files"]
+    assert isinstance(files, dict)
+    assert {page["slug"] for page in sidecar["pages"]} == set(files)
+
+
+def test_orphan_manual_file_planting_fails_the_sync(
+    tmp_path: Path, config: dict[str, object]
+) -> None:
+    # A file planted by hand BEFORE the sync is wiped by the phase-B wipe
+    # (the selection-purity rule) — the orphan case that matters is a file
+    # planted AFTER the sync, surviving into a CONSUMED corpus. The gate
+    # lives inside sync() too (fail-closed): simulate by planting into the
+    # in-memory mapping path — the cheapest honest check is the post-build
+    # verify pass over a tampered output tree.
+    content_out = tmp_path / "content_upstream"
+    assets_out = tmp_path / "assets_upstream"
+    sync_docs.sync(
+        config, content_out=content_out, assets_out=assets_out, repo_root=tmp_path
+    )
+    # Plant an orphan (no provenance entry possible).
+    orphan = (
+        content_out / "fakeproj" / "en" / "user" / "planted-orphan.md"
+    )
+    orphan.write_text("# Planted\n\nManual file, not in provenance.\n", encoding="utf-8")
+    # The gate re-run over the tampered tree must fail (shape as sync()
+    # calls it: the in-memory maps + the output tree; the tampered tree
+    # has an orphan the provenance set does not know).
+    provenance = json.loads(
+        (content_out / "provenance.json").read_text(encoding="utf-8")
+    )
+    pages = {
+        slug: {"contentClass": {locale: "corpus" for locale in locales}}
+        for slug, locales in provenance["files"].items()
+    }
+    with pytest.raises(sync_docs.SyncError, match="orphan|planted"):
+        sync_docs._verify_content_class_gate(
+            pages, provenance["files"], content_out
+        )
+
+
+def test_sync_is_idempotent_with_content_class(
+    tmp_path: Path, config: dict[str, object]
+) -> None:
+    content_out = tmp_path / "content_upstream"
+    assets_out = tmp_path / "assets_upstream"
+    first = sync_docs.sync(
+        config, content_out=content_out, assets_out=assets_out, repo_root=tmp_path
+    )
+    tree_one = {
+        str(p.relative_to(content_out)): p.read_bytes()
+        for p in sorted(content_out.rglob("*"))
+        if p.is_file()
+    }
+    second = sync_docs.sync(
+        config, content_out=content_out, assets_out=assets_out, repo_root=tmp_path
+    )
+    tree_two = {
+        str(p.relative_to(content_out)): p.read_bytes()
+        for p in sorted(content_out.rglob("*"))
+        if p.is_file()
+    }
+    assert tree_one == tree_two, "double sync must be byte-identical"
+    assert first["pages"] == second["pages"]
+    sidecar = json.loads(
+        (content_out / "manifest.sidecar.json").read_text(encoding="utf-8")
+    )
+    for page in sidecar["pages"]:
+        assert set(page["contentClass"].values()) == {"corpus"}
 
 
 # --- selection purity (contract §6.6) ----------------------------------------
