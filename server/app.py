@@ -22,7 +22,7 @@ import os
 import re
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, AsyncIterator, Literal
 
@@ -58,6 +58,7 @@ from .store import (
     DEVICE_GRANTS,
     DEVICE_TOKEN_PREFIX,
     DeviceQuotaError,
+    ACTIVITY_FAMILIES,
     ENROLLMENT_MAX_LIVE,
     ENROLLMENT_TOKEN_PREFIX,
     EnrollmentNotFoundError,
@@ -184,13 +185,28 @@ store = Store(DB_PATH)
 registry = ServerRegistry(store)
 
 # SSE fan-out: subscribers get every board event as it is logged.
-_subscribers: set[asyncio.Queue[dict[str, Any]]] = set()
+# UI-28 (TL verdict 2026-09-27): the strip decision is made ONCE at
+# subscription time (per-leg), not per emission — emitters stay dumb and
+# authorized viewers (ui-cookie/bearer, mnd_) see byte-identical frames.
+class _SseSubscriber:
+    """One /api/events leg: its queue + whether ``actor`` must be
+    stripped from task.* frames on the way out (unauthenticated legs)."""
+
+    __slots__ = ("queue", "strip_actor")
+
+    def __init__(self, queue: asyncio.Queue[dict[str, Any]],
+                 strip_actor: bool) -> None:
+        self.queue = queue
+        self.strip_actor = strip_actor
+
+
+_subscribers: set[_SseSubscriber] = set()
 
 
 def _broadcast(event: dict[str, Any]) -> None:
-    for q in list(_subscribers):
+    for s in list(_subscribers):
         try:
-            q.put_nowait(event)
+            s.queue.put_nowait(event)
         except asyncio.QueueFull:  # pragma: no cover — queue is unbounded
             pass
 
@@ -452,10 +468,37 @@ async def _presence_sweeper() -> None:
 _VALIDATION_SWEEP_INTERVAL_S = 900.0
 _validation_sweep_log = logging.getLogger("vesmaro.validation-sweep")
 
+# UI-28 retention (TL verdict 2026-09-27): the audit events table is
+# pruned by the SAME background sweep — one housekeeping tick owns all
+# board housekeeping, no new loop to babysit. store.sweep_events_retention
+# holds the policy (90 days for non-task chatter; 500k-row hard cap;
+# task.* exempt in both — it feeds the per-task «История» forever).
+# A retention failure must never delay the WF-1 flagging pass below, so
+# it rides in its own try/except and only logs.
+_RETENTION_LOG = logging.getLogger("vesmaro.events-retention")
+
+
+def _events_retention_once() -> None:
+    """One retention pass over the audit events table; failures are
+    logged with the traceback and never propagate (a housekeeping miss
+    must not kill the sweeper loop)."""
+    try:
+        swept = store.sweep_events_retention()
+    except Exception:  # noqa: BLE001 — housekeeping must never break the tick
+        _RETENTION_LOG.exception("events retention pass failed")
+        return
+    if swept["aged"] or swept["capped"]:
+        _RETENTION_LOG.info(
+            "events retention pass: aged=%d capped=%d",
+            swept["aged"], swept["capped"])
+
 
 def _validation_sweep_once() -> int:
     """One synchronous sweep pass — no sleeps, directly testable (the
-    reaper-tick pattern). Returns the number of newly flagged tasks."""
+    reaper-tick pattern). Returns the number of newly flagged tasks
+    (the UI-28 events-retention pass runs alongside but does NOT count
+    toward the return value — its contract is the WF-1 flag count)."""
+    _events_retention_once()
     flagged = 0
     for row in store.stale_validating_tasks():
         task = store.mark_validation_timeout(row["id"])
@@ -790,6 +833,10 @@ _DEVICE_READ_ROUTES: tuple[tuple[str, str], ...] = (
     ("GET", "/api/archive"),
     ("GET", "/api/notifications"),
     ("GET", "/api/assignments"),
+    # UI-28 activity feed (spec §3.2/§7 + TL verdict 2026-09-27): an mnd_
+    # leg is an AUTHENTICATED reader — OPEN facts, with attribution
+    # (anonymous legs read the same rows with the actor field absent).
+    ("GET", "/api/activity"),
     # Kora slice-1 listing (owner decision on the slice-1 review): the
     # LIST is metadata for devices too — previews already pass the
     # redaction choke-point (archcom position).
@@ -1361,6 +1408,62 @@ class ReportsFeedOut(_ApiModel):
     # uniform cursor canon (§11, as MemoryListOut/LaunchesOut): true when
     # the requested limit was silently capped at the page cap.
     truncated: bool = False
+
+
+# UI-28 «Активность» (spec docs/design/2026-09-27-task-activity-stream-spec.md
+# §3.2): the aggregated projection over the audit events table. One row =
+# ЧТО (kind/detail) + ЗАДАЧА (task_id/task_title) + КТО (actor — STRIPPED for
+# unauthenticated legs, verdict 2026-09-27) + ГДЕ (executor_id/host) +
+# КОГДА (ts/id). Optional keys are ABSENT (response_model_exclude_none),
+# not null — the additive contract the viewer builds on.
+class ActivityEventOut(_ApiModel):
+    id: int
+    ts: str
+    kind: str
+    task_id: str | None = None
+    task_title: str | None = None      # best-effort join; absent when gone
+    actor: str | None = None           # attribution — stripped when anon leg
+    executor_id: str | None = None
+    host: str | None = None            # best-effort registry resolve at read
+    # UI-28 reconciliation (viewer leg, TL verdict): report rows carry the
+    # report kind ("intermediate" | "final") — the final/intermediate
+    # distinction without a second fetch; non-report rows lack the key.
+    report_kind: str | None = None
+    detail: str | None = None          # short payload-derived fact, clip 200
+
+
+class ActivityOut(_ApiModel):
+    ok: bool
+    count: int
+    items: list[ActivityEventOut]
+    # uniform cursor canon (§11, as ReportsFeedOut): true when the
+    # requested limit was silently capped at the page cap.
+    truncated: bool = False
+    # UI-28 reconciliation (viewer leg, TL verdict 2026-09-27): the honest
+    # end-of-journal signal — rows exist BELOW the last returned id under
+    # the same filters. False = «Это вся глубина журнала».
+    has_more: bool = False
+
+
+class ActivityBucketTypes(_ApiModel):
+    """Fixed by_type keys (§3.2 Ф2): the three v1 families — a bucket is a
+    counter block for the histogram, never a free-form dict."""
+    task: int = 0
+    assignment: int = 0
+    report: int = 0
+
+
+class ActivityBucketOut(_ApiModel):
+    ts: str
+    total: int
+    by_type: ActivityBucketTypes
+
+
+class ActivityBucketsOut(_ApiModel):
+    ok: bool
+    bucket: str
+    hours: int                         # the EFFECTIVE (clamped) window
+    buckets: list[ActivityBucketOut]
 
 
 # Agent-bridge assignment contract (ADR 0009 phase 1). The public
@@ -2026,7 +2129,7 @@ async def create_task(body: TaskCreate, request: Request) -> TaskOut:
     # store raises ValueError on unknown env/col — surface as 422, not 500
     try:
         task = store.create_task(dump,
-                                 actor=_device_actor(request))
+                                 actor=_sse_actor(request))
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
     _notify_and_broadcast("work", f"{task['id']}: новая задача", task["title"][:120], task["id"], {"kind": "task.created", "task": task, "actor": _sse_actor(request)})
@@ -2057,7 +2160,7 @@ async def patch_task(task_id: str, body: TaskPatch, request: Request) -> TaskOut
     # store raises ValueError on unknown env/priority — surface as 422, not 500
     try:
         task = store.update_task(task_id, dump, force=force,
-                                 actor=_device_actor(request))
+                                 actor=_sse_actor(request))
     except TaskLockedError:
         raise HTTPException(
             423,
@@ -2081,7 +2184,7 @@ async def move_task(task_id: str, body: MoveBody, request: Request) -> TaskOut:
     _guard_write(request, classes=("ui",))
     try:
         task = store.move_task(task_id, body.col, body.position,
-                               actor=_device_actor(request))
+                               actor=_sse_actor(request))
     except InvalidTransitionError as exc:
         # WF-1 v1 transition mirror: blocked → done/resolved is refused
         # with a hint (422, owner-facing message from the store).
@@ -3110,7 +3213,7 @@ async def archive(
 @app.post("/api/tasks/{task_id}/archive")
 async def archive_task(task_id: str, request: Request) -> OkOut:
     _guard_write(request, classes=("ui",))
-    if not store.archive_task(task_id, actor=_device_actor(request)):
+    if not store.archive_task(task_id, actor=_sse_actor(request)):
         raise HTTPException(404, "task not found or already archived")
     _notify_and_broadcast("work", f"{task_id}: в архиве", "задача архивирована", task_id, {"kind": "task.archived", "task_id": task_id, "actor": _sse_actor(request)})
     return {"ok": True}
@@ -3121,7 +3224,7 @@ async def unarchive_task(task_id: str, request: Request) -> UnarchiveOut:
     """Restore an archived task to its pre-archive column (BE-11b); rows
     archived before ``archived_from`` existed fall back to ``open``."""
     _guard_write(request, classes=("ui",))
-    task = store.unarchive_task(task_id, actor=_device_actor(request))
+    task = store.unarchive_task(task_id, actor=_sse_actor(request))
     if task is None:
         raise HTTPException(404, "task not found or not archived")
     _notify_and_broadcast("work", f"{task_id}: из архива", "задача возвращена на доску", task_id, {"kind": "task.unarchived", "task_id": task_id, "actor": _sse_actor(request)})
@@ -3258,6 +3361,225 @@ async def reports_feed(
         before_id=before_id, include_superseded=include_superseded)
     return {"ok": True, "count": len(items), "items": items,
             "truncated": truncated}
+
+
+# ---------------------------------------------------- UI-28 activity (Ф1+Ф2)
+# Spec docs/design/2026-09-27-task-activity-stream-spec.md §3.2 (+ TL
+# verdicts 2026-09-27 on the spec's open questions): ONE aggregated read
+# over the audit events table — the лента (cursor page) and the bucket
+# histogram (Ф2) in a single endpoint. A projection, NOT a new source of
+# truth: rows come straight from ``events`` plus best-effort joins at
+# read time (task title, executor host, report body — §3.2 explicitly
+# declines denormalization). No new SSE kinds, no new event writes, no
+# search — the §8 «НЕ делаем» list is the boundary.
+_ACTIVITY_PAGE_CAP = 200      # page cap — silent clamp + truncated:true (the
+                              # ReportsFeed/MemoryList cursor canon, CV-6)
+_ACTIVITY_DETAIL_CLIP = 200   # §3.2: detail is a clipped fact, not a dump
+# Ф2 window clamp (TL verdict): the histogram never spans more than two
+# days (48 hourly buckets is the whole design's visual budget) and never
+# less than one — degenerate windows make an unreadable axis.
+_ACTIVITY_HOURS_MIN = 1
+_ACTIVITY_HOURS_MAX = 48
+
+# The v1 dictionary flattened — the ONLY kinds the feed surfaces, with or
+# without an explicit type= filter (§7: executor.*, pairing.*,
+# provisioning.*, automation.*, enrollment.* audit rows stay on their own
+# surfaces and never leak into the default лента).
+_ACTIVITY_V1_KINDS: list[str] = sorted(
+    {k for kinds in ACTIVITY_FAMILIES.values() for k in kinds})
+_ACTIVITY_KIND_TO_FAMILY: dict[str, str] = {
+    k: fam for fam, kinds in ACTIVITY_FAMILIES.items() for k in kinds}
+
+
+def _activity_types_kinds(raw: str) -> list[str]:
+    """Resolve the ``type=`` csv into exact audit kinds — family names
+    (task|assignment|report) and/or exact kinds from the v1 dictionary.
+    Garbage is a ValueError (→ 422, the reports kind-filter convention):
+    a mistyped filter must be an honest error state, not a silent empty
+    page (§5.3). An empty csv means the whole dictionary."""
+    values = [v.strip() for v in raw.split(",") if v.strip()]
+    if not values:
+        return list(_ACTIVITY_V1_KINDS)
+    kinds: list[str] = []
+    for v in values:
+        if v in ACTIVITY_FAMILIES:
+            kinds.extend(ACTIVITY_FAMILIES[v])
+        elif v in _ACTIVITY_KIND_TO_FAMILY:
+            kinds.append(v)
+        else:
+            raise ValueError(f"unknown activity type: {v}")
+    return sorted(set(kinds))
+
+
+def _activity_detail(row: dict[str, Any]) -> str | None:
+    """The short payload-derived fact behind the ЧТО verb (§2.2 — the
+    microcopy itself is the viewer's). Built ONLY from what the writers
+    actually put in payloads; None when there is nothing honest to add
+    (task.created's title already rides task_title; assignment.started
+    carries no identity; task.validation-timeout says it all in kind)."""
+    kind = row["kind"]
+    p = row["payload"]
+    text = ""
+    if kind == "task.report":
+        text = (row.get("report_body") or "")[:_ACTIVITY_DETAIL_CLIP]
+    elif kind == "task.moved":
+        text = f"{p.get('from', '')} → {p.get('to', '')}"
+    elif kind == "task.updated":
+        text = ", ".join(p.get("fields") or [])
+        if p.get("forced"):
+            text += " (forced)"
+    elif kind == "assignment.created":
+        text = str(p.get("specialist", ""))
+    elif kind == "assignment.claimed":
+        text = str(p.get("claimed_by", ""))
+    elif kind.startswith("assignment."):
+        text = str(p.get("outcome", ""))
+    text = text.strip()
+    return text[:_ACTIVITY_DETAIL_CLIP] or None
+
+
+def _activity_project(row: dict[str, Any], *, include_actor: bool,
+                      hosts: dict[str, str]) -> dict[str, Any]:
+    """One audit row → one feed row (§3.2 shape). Optional keys are left
+    None — the route's response_model_exclude_none turns them into
+    ABSENT keys, the additive contract. ``actor`` rides the payload's
+    attribution and is dropped entirely for unauthenticated legs (TL
+    verdict 2): for the reader there is no difference between «stripped»
+    and «this event has no actor» — exactly the §7 requirement."""
+    executor_id = row["payload"].get("executor_id") or None
+    return {
+        "id": row["id"],
+        "ts": row["ts"],
+        "kind": row["kind"],
+        "task_id": row["task_id"],
+        "task_title": row.get("task_title"),
+        "actor": row["payload"].get("actor") if include_actor else None,
+        "executor_id": executor_id,
+        "host": hosts.get(executor_id or ""),
+        "report_kind": (row["payload"].get("kind")
+                        if row["kind"] == "task.report" else None),
+        "detail": _activity_detail(row),
+    }
+
+
+def _activity_common_filters(type_csv: str, task_id: str, agent: str,
+                             host: str) -> tuple[list[str], str, str,
+                                                list[str] | None]:
+    """Resolve the shared filter set of both endpoint forms into store
+    arguments: (kinds, task_id, agent, executor_ids). ``host`` resolves
+    through the executors registry AT READ TIME (best-effort per §3.2 —
+    an executor that moved hosts honestly stops matching the old one);
+    an unknown host yields an empty id list → an empty page (200), the
+    «filter, not a resource» rule."""
+    try:
+        kinds = _activity_types_kinds(type_csv)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    executor_ids = store.executor_ids_for_host(host) if host else None
+    return kinds, task_id or None, agent or None, executor_ids
+
+
+@app.get("/api/activity", response_model_exclude_none=True)
+async def activity(request: Request,
+                   limit: int = Query(50, ge=1),
+                   before_id: int | None = None,
+                   type: str = "",
+                   task_id: str = "",
+                   agent: str = "",
+                   host: str = "",
+                   bucket: str = "",
+                   hours: int = 24,
+                   ) -> ActivityOut | ActivityBucketsOut:
+    """The task execution activity feed (UI-28 Ф1) and its hourly
+    histogram (Ф2) — one endpoint per spec §3.2. OPEN read like every
+    listing (the cluster ingress is the auth boundary); the actor-strip
+    policy is the ONE exception: for an unauthenticated leg (anonymous or
+    machine bearer — ui-bearer, ui-cookie and mnd_ legs are
+    authenticated, TL verdict 2) the ``actor`` attribution is ABSENT from
+    every row, indistinguishable from an event that has none.
+
+    Лента (default): ``limit`` (default 50, hard cap 200 — silent clamp +
+    ``truncated: true``) + ``before_id`` cursor (rows with id strictly
+    below it — pages stay stable while live events land). Filters:
+    ``type=`` (csv of families task|assignment|report or exact v1 kinds;
+    garbage → 422), ``task_id=`` (exact; an unknown task is an empty
+    page 200), ``agent=`` (declared identity or ``machine:<id>``),
+    ``host=`` (registry resolve at read time). A row:
+    {id, ts, kind, task_id, task_title?, actor?, executor_id?, host?,
+    report_kind?, detail?} — optional keys ABSENT, not null (additive
+    contract); ``report_kind`` rides task.report rows only
+    (intermediate | final). The envelope carries ``has_more`` — rows
+    exist below the last returned id under the same filters; false IS
+    the honest «Это вся глубина журнала».
+
+    Bucket form (``?bucket=hour``): ``hours`` (default 24, silently
+    clamped to 1..48) hourly buckets ending at the current hour,
+    zero-filled, oldest first (DENSE — reconciliation verdict: the
+    viewer merges/tolerates both shapes, dense keeps the contract
+    simpler): {ts, total, by_type:{task,assignment,report}} — the same
+    filters, the same access classes. Cursor parameters are meaningless
+    here and are ignored.
+
+    Retention is the audit table's own (TL verdict 1: the validation
+    sweep prunes non-task events at 90 days / 500k rows; task.* is
+    exempt — it feeds the per-task history).
+    """
+    kinds, task_filter, agent_filter, executor_ids = _activity_common_filters(
+        type, task_id, agent, host)
+    if bucket:
+        if bucket != "hour":
+            raise HTTPException(422, f"unknown bucket: {bucket} "
+                                     "(only 'hour' is supported)")
+        hours_eff = max(_ACTIVITY_HOURS_MIN, min(_ACTIVITY_HOURS_MAX, hours))
+        now = datetime.now(timezone.utc)
+        end_hour = now.replace(minute=0, second=0, microsecond=0)
+        start_hour = end_hour - timedelta(hours=hours_eff - 1)
+        rows_agg = store.activity_bucket_rows(
+            start=start_hour.isoformat(timespec="seconds"),
+            end=(end_hour + timedelta(hours=1)).isoformat(timespec="seconds"),
+            kinds=kinds, task_id=task_filter, agent=agent_filter,
+            executor_ids=executor_ids)
+        by_hour: dict[str, dict[str, int]] = {
+            (start_hour + timedelta(hours=i)).isoformat(timespec="seconds"):
+            {fam: 0 for fam in ACTIVITY_FAMILIES}
+            for i in range(hours_eff)
+        }
+        for r in rows_agg:
+            # substr(ts,1,13) is 'YYYY-MM-DDTHH' — rebuild the exact
+            # bucket key (every events.ts is UTC isoformat, same format).
+            full = f"{r['hour']}:00:00+00:00"
+            counts = by_hour.get(full)
+            if counts is None:
+                continue  # defensive: hour outside the window
+            fam = _ACTIVITY_KIND_TO_FAMILY.get(r["kind"])
+            if fam is None:
+                continue  # defensive: non-dictionary kind
+            counts[fam] += int(r["n"])
+        buckets = [{"ts": ts,
+                    "total": sum(counts.values()),
+                    "by_type": counts}
+                   for ts, counts in by_hour.items()]
+        return {"ok": True, "bucket": "hour", "hours": hours_eff,
+                "buckets": buckets}
+
+    truncated = limit > _ACTIVITY_PAGE_CAP
+    limit = min(limit, _ACTIVITY_PAGE_CAP)
+    # has_more (UI-28 reconciliation, TL verdict): one extra row is
+    # fetched under the SAME filters — its existence is the honest
+    # «дальше журнала есть» signal; the page itself stays at `limit` rows.
+    rows = store.list_activity(
+        kinds=kinds, task_id=task_filter, agent=agent_filter,
+        executor_ids=executor_ids, before_id=before_id, limit=limit + 1)
+    has_more = len(rows) > limit
+    rows = rows[:limit]
+    include_actor = _leg_is_authenticated(request)
+    hosts = store.executor_hosts([
+        r["payload"].get("executor_id") for r in rows
+        if r["payload"].get("executor_id")])
+    items = [_activity_project(r, include_actor=include_actor, hosts=hosts)
+             for r in rows]
+    return {"ok": True, "count": len(items), "items": items,
+            "truncated": truncated, "has_more": has_more}
 
 
 # -------------------------------------------------- assignments (ADR 0009 Ф1)
@@ -5635,7 +5957,7 @@ async def tasks_inbox_adopt(memory_id: str, request: Request) -> TaskOut:
             "specialists": [specialist] if specialist else [],
             "memory_ids": [memory_id] + ([revision_id] if revision_id else []),
             "mnemos_tags": ["task-queue-import"],
-        }, actor=_device_actor(request))
+        }, actor=_sse_actor(request))
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
     if not store.mark_inbox_adopted(memory_id, task["id"]):
@@ -6067,6 +6389,42 @@ def _cookie_ui_ok(request: Request) -> bool:
     if not supplied:
         return False
     return hmac.compare_digest(supplied.encode("utf-8"), token.encode("utf-8"))
+
+
+def _leg_is_authenticated(request: Request) -> bool:
+    """UI-28 actor-strip policy (spec §7 + TL verdict 2026-09-27): which
+    legs may READ attribution. Authenticated = the ui bearer OR the
+    vesmaro_ui cookie OR an mnd_ device leg (``request.state.device`` —
+    the scope middleware's verdict, the same grammar the write guards
+    use). NOT authenticated = anonymous AND the machine-class bearer (a
+    board token is a service credential, not a person — its reads are
+    OPEN-reading surfaces, not attribution). Header-leg determinism rule
+    (ADR 0014 Ф2): a header present → the header leg ONLY, the cookie is
+    not consulted; the transition-mode board token counts as ui because
+    that is what _bearer_is_class verifies against.
+
+    Read-surface helper (no 401 semantics): the answer only decides
+    whether ``actor`` is projected, never whether the read proceeds."""
+    if getattr(request.state, "device", None) is not None:
+        return True
+    if request.headers.get("Authorization", ""):
+        return _bearer_is_class(request, "ui")
+    return _cookie_ui_ok(request)
+
+
+def _strip_task_actor(event: dict[str, Any]) -> dict[str, Any]:
+    """UI-28 SSE strip (TL verdict 2): the ``actor`` attribution leaves
+    task.* broadcast frames for unauthenticated subscribers — the field
+    is simply ABSENT (additive §A.5 contract: viewers key on presence,
+    not null). Everything else rides byte-identical; assignment.*/report
+    frames are untouched (their identity fields are DECLARED identity —
+    a fact per §7, not attribution). Returns a shallow copy: the same
+    event object fans out to every subscriber and must never be
+    mutated."""
+    if (event.get("kind", "").startswith("task.")
+            and "actor" in event):
+        return {k: v for k, v in event.items() if k != "actor"}
+    return event
 
 
 def _ui_session_expired_detail(classes: tuple[str, ...]) -> str:
@@ -6821,9 +7179,15 @@ async def set_device_grants(device_id: str, body: DeviceGrantsBody,
 
 # ------------------------------------------------------------------------ SSE
 @app.get("/api/events")
-async def events() -> StreamingResponse:
-    queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue(maxsize=256)
-    _subscribers.add(queue)
+async def events(request: Request) -> StreamingResponse:
+    # UI-28 (TL verdict 2026-09-27): the leg is classified at SUBSCRIPTION
+    # time; an unauthenticated leg (anonymous / machine bearer) gets the
+    # actor attribution stripped from task.* frames on the way out — the
+    # same policy as /api/activity rows, applied at the stream's edge.
+    sub = _SseSubscriber(
+        queue=asyncio.Queue(maxsize=256),
+        strip_actor=not _leg_is_authenticated(request))
+    _subscribers.add(sub)
 
     async def stream() -> AsyncIterator[bytes]:
         try:
@@ -6832,14 +7196,15 @@ async def events() -> StreamingResponse:
             yield _sse({"kind": "hello", "last_event_id": store.last_event_id()})
             while True:
                 try:
-                    event = await asyncio.wait_for(queue.get(), timeout=15.0)
-                    yield _sse(event)
+                    event = await asyncio.wait_for(sub.queue.get(), timeout=15.0)
+                    yield _sse(
+                        _strip_task_actor(event) if sub.strip_actor else event)
                 except asyncio.TimeoutError:
                     yield b": keep-alive\n\n"  # comment frame — keeps proxies from idling out
         except asyncio.CancelledError:  # client disconnected
             pass
         finally:
-            _subscribers.discard(queue)
+            _subscribers.discard(sub)
 
     return StreamingResponse(
         stream(),

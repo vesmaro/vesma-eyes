@@ -69,6 +69,39 @@ class InvalidTransitionError(Exception):
     upstream). v1 guards only blocked → done / blocked → resolved."""
 # BE-11a: agent report kinds for a task.
 REPORT_KINDS = ("intermediate", "final")
+# UI-28 «Активность» (spec docs/design/2026-09-27-task-activity-stream-spec.md
+# §2.1): the v1 dictionary — the three feed families mapped onto the audit
+# kinds the events table actually writes. The family ``task`` carries every
+# task.* audit kind EXCEPT ``task.report`` (the report is its own family per
+# §2.1; the SSE frame kind is "report", the audit kind is "task.report").
+# Outside this dictionary (executor.*, pairing.*, provisioning.*,
+# automation.*, enrollment.*, device.*, server.*, kora.*) events stay audit
+# rows and never surface in /api/activity — §7: they are board-life events
+# with their own surfaces, not the task execution stream.
+ACTIVITY_FAMILIES: dict[str, tuple[str, ...]] = {
+    "task": ("task.created", "task.moved", "task.updated",
+             "task.archived", "task.unarchived", "task.deleted",
+             "task.validation-timeout"),
+    "assignment": ("assignment.created", "assignment.claimed",
+                   "assignment.started", "assignment.done",
+                   "assignment.failed", "assignment.cancelled",
+                   "assignment.expired"),
+    "report": ("task.report",),
+}
+# UI-28 retention (TL verdict 2026-09-27 on spec §3.2/§7 open question):
+# - 90 days: the non-task audit depth. A quarter of execution chatter is
+#   more than any surface reads back; the live feed and the buckets never
+#   reach that far (bucket form caps at 48 h).
+# - 500 000 rows: the hard size cap. SQLite stays fast at this size by an
+#   order of magnitude; it bounds a runaway emitter (e.g. a poll loop) from
+#   growing the board DB without bound.
+# In BOTH sweeps the task.* family is EXEMPT: the per-task «История»
+# (GET /api/tasks/{id}/history) reads these rows forever — deleting them
+# would punch holes in a product surface, not just prune chatter. The cap
+# therefore trims oldest NON-task rows only; a board flooded with task.*
+# can exceed the cap (accepted: task history is the retention boundary).
+ACTIVITY_RETENTION_DAYS = 90
+ACTIVITY_RETENTION_CAP = 500_000
 VALID_ENVS = frozenset({"cluster", "laptop", "local", "cloud", "unknown"})
 # BE-12: task priority dictionary. `normal` is both the API default and the
 # column DEFAULT, so pre-migration rows read `normal` with no backfill.
@@ -1737,6 +1770,194 @@ class Store:
                 "SELECT COALESCE(MAX(id), 0) AS m FROM events"
             ).fetchone()
         return int(row["m"])
+
+    # ------------------------------------------------- UI-28 activity feed
+    def _activity_where(self, *, kinds: list[str] | None,
+                        task_id: str | None, agent: str | None,
+                        executor_ids: list[str] | None,
+                        before_id: int | None,
+                        ) -> tuple[str, list[Any]]:
+        """Shared condition-builder for the activity queries (feed page
+        and bucket aggregates). Returns (condition, bound_params) where
+        ``condition`` is either '' or a ' AND '-joined fragment WITHOUT
+        the leading WHERE/AND keyword — the caller glues it into its own
+        query shape. Filter semantics are documented on
+        :meth:`list_activity`."""
+        where: list[str] = []
+        params: list[Any] = []
+        if kinds is not None:
+            # An empty IN-list is invalid SQL; an empty filter matches
+            # nothing by definition.
+            where.append("1=0" if not kinds else
+                         f"e.kind IN ({', '.join('?' for _ in kinds)})")  # noqa: S608 — placeholders from a fixed list
+            params.extend(kinds)
+        if task_id is not None:
+            where.append("e.task_id=?")
+            params.append(task_id)
+        if agent is not None:
+            machine_id = (agent[len("machine:"):]
+                          if agent.startswith("machine:") else agent)
+            # actor matches the given value verbatim OR its machine:<id>
+            # grammar; the declared-identity fields match verbatim. The
+            # field list mirrors every key the writers put in payloads.
+            actor_tests = "json_extract(e.payload,'$.actor') IN (?,?)"
+            declared = (" OR ".join(
+                f"json_extract(e.payload,'$.{f}')=?"
+                for f in ("agent", "created_by", "claimed_by", "by",
+                          "executor_id", "claimed_by_executor")))
+            where.append(f"({actor_tests} OR {declared})")
+            params.extend([agent, f"machine:{machine_id}", agent, agent,
+                           agent, agent, agent, agent])
+        if executor_ids is not None:
+            where.append("1=0" if not executor_ids else
+                         f"json_extract(e.payload,'$.executor_id') IN "
+                         f"({', '.join('?' for _ in executor_ids)})")  # noqa: S608 — placeholders from a fixed list
+            params.extend(executor_ids)
+        if before_id is not None:
+            where.append("e.id<?")
+            params.append(before_id)
+        cond = " AND ".join(where)
+        return cond, params
+
+    def list_activity(self, *, kinds: list[str] | None = None,
+                      task_id: str | None = None, agent: str | None = None,
+                      executor_ids: list[str] | None = None,
+                      before_id: int | None = None, limit: int = 50,
+                      ) -> list[dict[str, Any]]:
+        """The activity feed page (UI-28 §3.2): a projection over the
+        audit ``events`` table, freshest first. The endpoint owns the
+        dictionary (422s), the limit clamp and the actor-strip policy;
+        this method only narrows the SQL honestly.
+
+        Filters: ``kinds`` — exact audit kinds (the v1 dictionary rows,
+        families pre-expanded by the caller; ``None`` = the whole v1
+        dictionary, ``[]`` is normalised by the caller); ``task_id``
+        exact (an unknown task is an EMPTY PAGE, not an error — a filter
+        value, not an addressed resource); ``agent`` — declared identity
+        OR a ``machine:<id>`` actor, matched against the payload fields
+        the writers actually populate (actor / agent / created_by /
+        claimed_by / by / executor_id / claimed_by_executor);
+        ``executor_ids`` — pre-resolved ids for the ``host=`` filter
+        (host → executors registry at read time, best-effort per §3.2:
+        an executor that changed host honestly stops matching its old
+        host). Cursor: ``before_id`` — rows with id strictly below it,
+        so pages stay stable while new events land.
+
+        Rows carry ``report_body`` (the joined report text for
+        ``task.report`` rows — the endpoint clips it into ``detail``)
+        and the parsed ``payload`` dict; they do NOT carry host/actor
+        policy decisions.
+        """
+        cond, params = self._activity_where(
+            kinds=kinds, task_id=task_id, agent=agent,
+            executor_ids=executor_ids, before_id=before_id)
+        with self._lock, self._conn() as db:
+            rows = db.execute(
+                "SELECT e.id, e.ts, e.kind, e.task_id, e.payload, "
+                "t.title AS task_title, "
+                "tr.body AS report_body "
+                "FROM events e "
+                "LEFT JOIN tasks t ON t.id = e.task_id "
+                "LEFT JOIN task_reports tr ON tr.id = "
+                "json_extract(e.payload,'$.report_id') "
+                f"{' WHERE ' + cond if cond else ''} "  # noqa: S608 — fragments from a fixed allow-list, values bound
+                "ORDER BY e.id DESC LIMIT ?",
+                (*params, limit),
+            ).fetchall()
+        out = []
+        for r in rows:
+            e = dict(r)
+            e["payload"] = _loads(e["payload"])
+            out.append(e)
+        return out
+
+    def activity_bucket_rows(self, *, start: str, end: str,
+                             kinds: list[str] | None = None,
+                             task_id: str | None = None,
+                             agent: str | None = None,
+                             executor_ids: list[str] | None = None,
+                             ) -> list[dict[str, Any]]:
+        """Raw (hour, kind, count) aggregates for the bucket form (UI-28
+        Ф2). Same filters as :meth:`list_activity` plus the wall-clock
+        window: ``start`` inclusive, ``end`` exclusive — ISO strings
+        compare lexically because every events.ts is
+        ``datetime.isoformat(timespec='seconds')`` in UTC. Hours with no
+        events are NOT returned; the endpoint owns bucket assembly
+        (zero-filled, chronological)."""
+        cond, filter_params = self._activity_where(
+            kinds=kinds, task_id=task_id, agent=agent,
+            executor_ids=executor_ids, before_id=None)
+        where = f" WHERE (e.ts>=? AND e.ts<?){' AND ' + cond if cond else ''}"
+        with self._lock, self._conn() as db:
+            rows = db.execute(
+                "SELECT substr(e.ts,1,13) AS hour, e.kind, COUNT(*) AS n "
+                "FROM events e"
+                f"{where} "  # noqa: S608 — fragments from a fixed allow-list
+                "GROUP BY hour, e.kind",
+                [start, end, *filter_params],
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+    def executor_hosts(self, executor_ids: list[str]) -> dict[str, str]:
+        """Registry ``host`` per id (UI-28 §2.4: ГДЕ = where the work
+        ran). Best-effort by contract: ids absent from the registry (or
+        with an empty host) simply have no mapping."""
+        if not executor_ids:
+            return {}
+        marks = ", ".join("?" for _ in executor_ids)
+        with self._lock, self._conn() as db:
+            rows = db.execute(
+                f"SELECT id, host FROM executors "  # noqa: S608 — placeholders from a fixed list
+                f"WHERE id IN ({marks}) AND host<>''",
+                executor_ids,
+            ).fetchall()
+        return {r["id"]: r["host"] for r in rows}
+
+    def executor_ids_for_host(self, host: str) -> list[str]:
+        """Registry ids whose CURRENT host matches (UI-28 §3.2: the
+        ``host=`` filter resolves at read time — honest about executors
+        that moved). Empty for an unknown host → empty page, not 404."""
+        with self._lock, self._conn() as db:
+            rows = db.execute(
+                "SELECT id FROM executors WHERE host=?", (host,)
+            ).fetchall()
+        return [r["id"] for r in rows]
+
+    def sweep_events_retention(self) -> dict[str, int]:
+        """UI-28 retention (TL verdict 2026-09-27): prune the audit
+        ``events`` table. Two passes:
+
+        1. AGE — non-task events older than ACTIVITY_RETENTION_DAYS are
+           deleted. The task.* family is exempt (per-task «История»
+           reads it forever; see the constants' motivation).
+        2. CAP — above ACTIVITY_RETENTION_CAP rows total, the oldest
+           non-task rows are deleted down to the cap. Again task.* is
+           never deleted: the cap trims chatter, not history.
+
+        Returns deleted row counts per pass for the sweep log. Idempotent
+        by construction (both passes are conditional DELETEs); safe to
+        run on every validation-sweep tick.
+        """
+        cutoff = (datetime.now(timezone.utc)
+                  - timedelta(days=ACTIVITY_RETENTION_DAYS)
+                  ).isoformat(timespec="seconds")
+        with self._lock, self._conn() as db:
+            aged = db.execute(
+                "DELETE FROM events WHERE kind NOT LIKE 'task.%' AND ts<?",
+                (cutoff,),
+            ).rowcount
+            total = db.execute(
+                "SELECT COUNT(*) AS n FROM events").fetchone()["n"]
+            excess = int(total) - ACTIVITY_RETENTION_CAP
+            capped = 0
+            if excess > 0:
+                capped = db.execute(
+                    "DELETE FROM events WHERE id IN ("
+                    "SELECT id FROM events WHERE kind NOT LIKE 'task.%' "
+                    "ORDER BY id ASC LIMIT ?)",
+                    (excess,),
+                ).rowcount
+        return {"aged": int(aged), "capped": int(capped)}
 
     # ------------------------------------------------------ memory servers
     def list_servers(self, include_disabled: bool = True) -> list[dict[str, Any]]:
