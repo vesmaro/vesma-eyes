@@ -93,6 +93,18 @@ describe("activityItemFromEvent — the SSE fold", () => {
     });
   });
 
+  it("task.deleted is NOT in the v1 dictionary — it never enters the buffer", () => {
+    // review P3-3: an invisible row would still occupy a dedup slot and
+    // inflate the «N новых» counter — so the fold refuses it outright.
+    const event = wire(
+      { kind: "task.deleted", task_id: "TB-1", actor: "ui" },
+    );
+    expect(activityItemFromEvent(event, RECEIVED, 8)).toBeNull();
+    const before = readActivityLive().items.length;
+    pushActivityEvent(event, RECEIVED);
+    expect(readActivityLive().items.length).toBe(before);
+  });
+
   it("non-feed frames (hello, notification, executor.*) fold to nothing", () => {
     expect(activityItemFromEvent(wire({ kind: "hello", last_event_id: 5 }), RECEIVED, 6)).toBeNull();
     expect(

@@ -902,8 +902,12 @@ export interface ActivityItem {
   readonly report_kind?: "intermediate" | "final";
 }
 
-/** One cursor page. `has_more=false` is the honest end of the journal. */
+/** One cursor page — the agreed envelope `{ok, count, items, truncated,
+ * has_more}`. `ok`/`count` are additive conveniences the client does not
+ * branch on; `has_more=false` is the honest end of the journal. */
 export interface ActivityPage {
+  readonly ok?: boolean;
+  readonly count?: number;
   readonly items: readonly ActivityItem[];
   readonly has_more: boolean;
   /** Present (true) when the server silently clamped `limit` (CV-6). */

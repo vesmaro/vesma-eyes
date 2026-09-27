@@ -36,12 +36,7 @@ import {
   parseActor,
   resolveActorName,
 } from "./activityGrammar";
-import {
-  useActivityBuckets,
-  useActivityFeed,
-  useActivityLive,
-  useActivityReconnectRefetch,
-} from "./useActivity";
+import { useActivityBuckets, useActivityFeed, useActivityLive } from "./useActivity";
 import { ActivityPulseChart } from "./ActivityPulseChart";
 import { TasksUnsupported } from "./TasksUnsupported";
 
@@ -119,7 +114,9 @@ export function TaskActivityPage() {
   const feed = useActivityFeed(wireFilters);
   const buckets = useActivityBuckets(wireFilters);
   const live = useActivityLive();
-  useActivityReconnectRefetch(live.reconnects);
+  // Reconnect refetch is owned by the task-events bridge (taskEvents.ts —
+  // the SSE recovery invalidates the activity keys there); the page does
+  // not watch the counter (single-owner rule, review P3-4).
   const reducedMotion = useReducedMotion();
 
   // Registry join for the КТО/ГДЕ columns (shared roster cache).
@@ -218,9 +215,30 @@ export function TaskActivityPage() {
     Date.parse(pageRows[pageRows.length - 1].ts) < Date.parse(urlState.from);
   const feedEnded = !feed.hasNextPage || windowExhausted;
 
-  const patch = (changes: Partial<ActivityUrlState>): void => {
+  // P2-1: the free-text task filter debounces into the URL — a per-keystroke
+  // patch would spam history AND fire a GET per character. The input is
+  // UNCONTROLLED (keyed by the URL value, so direct-open/reset/chips reset
+  // it by remount — no state-mirroring effect); typing arms a 300 ms commit
+  // with replace:true (typing is one refinement, not N back-steps). Chips
+  // and selects keep their push semantics.
+  const taskInputRef = useRef<HTMLInputElement>(null);
+  const [taskDirty, setTaskDirty] = useState(false);
+  useEffect(() => {
+    if (!taskDirty) return;
+    const timer = setTimeout(() => {
+      const value = taskInputRef.current?.value.trim() ?? "";
+      setSearchParams(
+        serializeActivityUrlState({ ...urlState, task_id: value || undefined }),
+        { replace: true },
+      );
+      setTaskDirty(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [taskDirty, urlState, setSearchParams]);
+
+  const patch = (changes: Partial<ActivityUrlState>, replace = false): void => {
     setSearchParams(serializeActivityUrlState({ ...urlState, ...changes }), {
-      replace: false,
+      replace,
     });
   };
 
@@ -380,10 +398,12 @@ export function TaskActivityPage() {
             </label>
             <input
               id="activity-task"
+              key={urlState.task_id ?? ""}
+              ref={taskInputRef}
               type="search"
-              value={urlState.task_id ?? ""}
+              defaultValue={urlState.task_id ?? ""}
               placeholder={t("activity.filter.taskPlaceholder")}
-              onChange={(event) => patch({ task_id: event.target.value || undefined })}
+              onChange={() => setTaskDirty(true)}
               className="h-8 w-44 rounded-md border border-border bg-well px-2 text-sm text-foreground placeholder:text-foreground-muted focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
             />
           </div>
@@ -391,7 +411,11 @@ export function TaskActivityPage() {
             <button
               type="button"
               aria-label={t("activity.filter.clearTask")}
-              onClick={() => patch({ task_id: undefined })}
+              onClick={() => {
+                if (taskInputRef.current) taskInputRef.current.value = "";
+                setTaskDirty(false);
+                patch({ task_id: undefined }, true);
+              }}
               className="rounded-sm p-1 text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
             >
               <X className="size-4" aria-hidden="true" />
@@ -653,7 +677,7 @@ function ActivityRow({
       </span>
       <Link
         to={href}
-        className="inline-flex min-w-0 items-baseline gap-1.5 underline-offset-2 hover:text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+        className="inline-flex min-h-6 min-w-0 items-baseline gap-1.5 rounded-sm py-0.5 underline-offset-2 hover:text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
       >
         <span className="font-mono text-xs">{row.task_id}</span>
         {row.task_title ? (

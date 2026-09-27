@@ -177,6 +177,18 @@ describe("pulse axis — full 24 h join + narrow-screen coalescing (Ф2)", () =>
     expect(slots[0].total).toBe(0);
   });
 
+  it("joins wire ts WITHOUT milliseconds (review P3-5: parse, not string, join)", () => {
+    const slots = buildPulseAxis(
+      [{ ts: "2026-09-19T08:00+00:00", total: 4, by_type: { task: 1, assignment: 1, report: 2 } }],
+      NOW,
+    );
+    expect(slots[22]).toEqual({
+      ts: "2026-09-19T08:00:00.000Z",
+      total: 4,
+      by_type: { task: 1, assignment: 1, report: 2 },
+    });
+  });
+
   it("coalesces 24 hourly slots into 12 two-hour slots (<640px)", () => {
     const slots = buildPulseAxis([], NOW);
     const wide = coalescePulseSlots(slots, 2);

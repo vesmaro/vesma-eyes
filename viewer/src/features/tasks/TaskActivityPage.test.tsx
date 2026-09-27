@@ -17,11 +17,9 @@ import { GatewayContext } from "@/gateway/GatewayContext";
 import type { MemoryGateway } from "@/gateway/MemoryGateway";
 import { parseBoardEvent } from "@/gateway/events";
 import { I18nProvider } from "@/i18n";
-import {
-  pushActivityEvent,
-  resetActivityStore,
-  setActivityStreamState,
-} from "./activityStore";
+import { pushActivityEvent, resetActivityStore } from "./activityStore";
+import { EventStream } from "@/gateway/events";
+import { useTaskEvents } from "./taskEvents";
 import { actUnmount, actWaitUntil } from "@/test/actTools";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -66,6 +64,47 @@ class FailingActivityAdapter extends MockAdapter {
   }
 }
 
+/** Minimal EventSource stand-in the test drives through the factory seam. */
+interface FakeSseSource {
+  onopen: (() => void) | null;
+  onerror: (() => void) | null;
+  onmessage: ((event: { data: string }) => void) | null;
+  closed: boolean;
+  close(): void;
+}
+
+function makeFakeSource(): FakeSseSource {
+  return {
+    onopen: null,
+    onerror: null,
+    onmessage: null,
+    closed: false,
+    close() {
+      this.closed = true;
+    },
+  };
+}
+
+/** MockAdapter + `events()` whose sources the test controls (one stream). */
+class SseActivityAdapter extends MockAdapter {
+  readonly sources: FakeSseSource[] = [];
+
+  events(): EventStream {
+    const source = makeFakeSource();
+    this.sources.push(source);
+    return new EventStream({
+      url: "http://sse.test/events",
+      eventSourceFactory: () => source as unknown as EventSource,
+    });
+  }
+}
+
+/** Mounts the REAL domain bridge next to the page (one stream, §1). */
+function TaskEventsBridge(): null {
+  useTaskEvents();
+  return null;
+}
+
 /** A mock twin with an EMPTY journal — the honest empty state. */
 class EmptyActivityAdapter extends MockAdapter {
   override async activity(): Promise<ActivityPage> {
@@ -80,6 +119,7 @@ async function mountPage(
   gateway: MemoryGateway,
   initialEntry = "/tasks/activity",
   initialLang: "ru" | "en" = "ru",
+  withBridge = false,
 ): Promise<{ root: Root; router: ReturnType<typeof createMemoryRouter> }> {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -87,7 +127,19 @@ async function mountPage(
   // A real router instance so the tests can read the URL state the page
   // writes (MemoryRouter never touches window.location).
   const router = createMemoryRouter(
-    [{ path: "/tasks/activity", element: <TaskActivityPage /> }],
+    [
+      {
+        path: "/tasks/activity",
+        element: withBridge ? (
+          <>
+            <TaskEventsBridge />
+            <TaskActivityPage />
+          </>
+        ) : (
+          <TaskActivityPage />
+        ),
+      },
+    ],
     { initialEntries: [initialEntry] },
   );
   await act(async () => {
@@ -128,6 +180,17 @@ function chipByLabel(label: string): HTMLButtonElement | undefined {
   return [...document.querySelectorAll("button[aria-pressed]")].find(
     (button) => (button.textContent ?? "").trim() === label,
   ) as HTMLButtonElement | undefined;
+}
+
+/** Type into a React-controlled input: the native value setter bypasses the
+ * value-tracker dedupe, then the input event reaches React's onChange. */
+function typeInto(input: HTMLInputElement, value: string): void {
+  const setter = Object.getOwnPropertyDescriptor(
+    HTMLInputElement.prototype,
+    "value",
+  )?.set;
+  setter?.call(input, value);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 afterEach(() => {
@@ -220,6 +283,38 @@ describe("URL state (§8.4) — direct-open restores, filters apply, reset clear
     await actUnmount(root);
   });
 
+  it("the task filter debounces 300 ms into a replace-ed URL entry (review P2-1)", async () => {
+    const { root, router } = await mountPage(adapter());
+    await actWaitUntil(() => {
+      expect(text()).toContain("исполнение начато");
+    }, WAIT);
+    const input = document.getElementById("activity-task") as HTMLInputElement;
+    // keystrokes stay local — no URL write, no history spam
+    await act(async () => {
+      typeInto(input, "TB");
+      await new Promise((resolve) => setTimeout(resolve, 120));
+    });
+    expect(router.state.location.search).not.toContain("task_id=");
+    // after the debounce settles: one replace-ed entry with the final value
+    await act(async () => {
+      typeInto(input, "TB-1");
+    });
+    await actWaitUntil(() => {
+      expect(router.state.location.search).toContain("task_id=TB-1");
+    }, WAIT);
+    // the × clears immediately, also replace-ed (no new history entry)
+    const clear = [...document.querySelectorAll("button")].find(
+      (button) => button.getAttribute("aria-label") === "Убрать фильтр задачи",
+    );
+    await act(async () => {
+      clear?.click();
+    });
+    await actWaitUntil(() => {
+      expect(router.state.location.search).not.toContain("task_id=");
+    }, WAIT);
+    await actUnmount(root);
+  });
+
   it("«Сбросить фильтры» clears every filter param", async () => {
     const { root, router } = await mountPage(
       adapter(),
@@ -292,15 +387,15 @@ describe("live merge (§8.6) — prepends, flashes, never shifts or duplicates",
     const before = feedRows();
     expect(before.length).toBeGreaterThan(3);
 
-    pushWire(
-      {
-        kind: "task.moved",
-        task: { id: "TB-2", col: "blocked", updated_at: "2026-09-19T09:00:30+00:00" },
-        actor: "machine:board",
-      },
-      NOW + 30_000,
-    );
     await act(async () => {
+      pushWire(
+        {
+          kind: "task.moved",
+          task: { id: "TB-2", col: "blocked", updated_at: "2026-09-19T09:00:30+00:00" },
+          actor: "machine:board",
+        },
+        NOW + 30_000,
+      );
       await new Promise((resolve) => setTimeout(resolve, 20));
     });
 
@@ -328,15 +423,15 @@ describe("live merge (§8.6) — prepends, flashes, never shifts or duplicates",
     }, WAIT);
     // The corpus holds assignment.started on TB-1 at 08:xx; a live copy of
     // the SAME fact must not double it in the visible feed.
-    pushWire(
-      {
-        kind: "assignment.started",
-        task_id: "TB-1",
-        assignment: { id: "501", state: "running", executor_id: "exec-laptop-zcode" },
-      },
-      Date.parse("2026-09-19T08:11:00+00:00"),
-    );
     await act(async () => {
+      pushWire(
+        {
+          kind: "assignment.started",
+          task_id: "TB-1",
+          assignment: { id: "501", state: "running", executor_id: "exec-laptop-zcode" },
+        },
+        Date.parse("2026-09-19T08:11:00+00:00"),
+      );
       await new Promise((resolve) => setTimeout(resolve, 20));
     });
     const startedRows = feedRows().filter((row) => row.includes("исполнение начато"));
@@ -365,15 +460,15 @@ describe("the «N новых» plate (§5.2) — rows never move under the reade
       window.dispatchEvent(new Event("scroll"));
     });
 
-    pushWire(
-      {
-        kind: "report",
-        task_id: "TB-9",
-        report: { kind: "intermediate", agent: "machine:exec-laptop-zcode", body: "свежий отчёт" },
-      },
-      NOW + 60_000,
-    );
     await act(async () => {
+      pushWire(
+        {
+          kind: "report",
+          task_id: "TB-9",
+          report: { kind: "intermediate", agent: "machine:exec-laptop-zcode", body: "свежий отчёт" },
+        },
+        NOW + 60_000,
+      );
       await new Promise((resolve) => setTimeout(resolve, 20));
     });
 
@@ -474,23 +569,38 @@ describe("honest journal end (§8.8)", () => {
   });
 });
 
-describe("reconnect refetch (§8.7)", () => {
-  it("a recovery bump invalidates the activity queries — the feed refetches", async () => {
-    const gateway = adapter();
+describe("reconnect refetch (§8.7) — ONE owner: the domain bridge", () => {
+  it("a stream drop→recovery (via TasksLayout's useTaskEvents) refetches exactly once more", async () => {
+    const gateway = new SseActivityAdapter({ latency: false, now: () => NOW });
     const spy = vi.spyOn(gateway, "activity");
-    const { root } = await mountPage(gateway);
+    const { root } = await mountPage(gateway, "/tasks/activity", "ru", true);
     await actWaitUntil(() => {
       expect(spy.mock.calls.length).toBeGreaterThan(0);
     }, WAIT);
     const afterMount = spy.mock.calls.length;
-    // simulate the bridge: drop + recovery (the counter drives the refetch)
+    const source = gateway.sources[0];
+    expect(source).toBeDefined();
+
+    // first open — the initial connect must NOT refetch (P3-4 single-owner
+    // contract, agentsEvents precedent)
     await act(async () => {
-      setActivityStreamState("open", NOW);
-      setActivityStreamState("connecting", NOW + 1000);
-      setActivityStreamState("open", NOW + 2000);
+      source.onopen?.();
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(spy.mock.calls.length).toBe(afterMount);
+
+    // drop (native retry) → recovery open — exactly ONE refetch, driven by
+    // the bridge's onStateChange invalidation; the page owns nothing here.
+    await act(async () => {
+      source.onerror?.();
+    });
+    await act(async () => {
+      source.onopen?.();
     });
     await actWaitUntil(() => {
-      expect(spy.mock.calls.length).toBeGreaterThan(afterMount);
+      expect(spy.mock.calls.length).toBe(afterMount + 1);
     }, WAIT);
     await actUnmount(root);
   });

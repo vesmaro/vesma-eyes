@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 import {
   keepPreviousData,
   useInfiniteQuery,
   useQuery,
-  useQueryClient,
   type QueryFunctionContext,
   type QueryKey,
 } from "@tanstack/react-query";
@@ -102,23 +101,5 @@ export function useActivityLive(): {
   reconnects: number;
 } {
   return useSyncExternalStore(subscribeActivityLive, readActivityLive, readActivityLive);
-}
-
-/**
- * SSE-reconnect refetch (spec §5.1 degraded → §8.7): after a drop+recovery
- * the at-most-once stream may have missed transitions, so the feed and the
- * buckets go stale and ACTIVE observers refetch. Mirrors agentsEvents.ts
- * §5.9; the bridge (taskEvents.ts) bumps the recovery counter this effect
- * watches. The mount-time counter is the baseline — the initial connect
- * must NOT refetch (the queries just mounted fresh).
- */
-export function useActivityReconnectRefetch(reconnects: number): void {
-  const queryClient = useQueryClient();
-  const seenRef = useRef(reconnects); // mount baseline
-  useEffect(() => {
-    if (reconnects === seenRef.current) return;
-    seenRef.current = reconnects;
-    void queryClient.invalidateQueries({ queryKey: keys.tasks.activity.all });
-  }, [reconnects, queryClient, seenRef]);
 }
 

@@ -21,6 +21,15 @@ import type { BoardEvent } from "@/gateway/events";
 /** Client buffer cap (spec §5.2/§7: ≤500 — oldest evicted, quietly). */
 export const ACTIVITY_BUFFER_CAP = 500;
 
+/** The v1 task-kind dictionary the feed folds (§2.1); nothing else enters. */
+const TASK_ACTIVITY_KINDS: ReadonlySet<string> = new Set([
+  "task.created",
+  "task.moved",
+  "task.updated",
+  "task.archived",
+  "task.unarchived",
+]);
+
 /** One live row of the buffer. */
 export interface ActivityLiveItem {
   readonly id: string;
@@ -146,6 +155,11 @@ export function activityItemFromEvent(
   }
 
   if (kind.startsWith("task.")) {
+    // v1 dictionary only (spec §2.1): task.deleted is deliberately ABSENT —
+    // a folded-but-invisible row would still occupy a dedup slot and
+    // inflate the «N новых» counter. Non-dictionary kinds never enter the
+    // buffer.
+    if (!TASK_ACTIVITY_KINDS.has(kind)) return null;
     // §A.5: the actor rides the frame; full-row kinds also carry the task
     // (updated_at is the wire's best fact time — receipt time is the
     // honest fallback).

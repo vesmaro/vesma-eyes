@@ -196,14 +196,20 @@ export function buildPulseAxis(
 ): ActivityPulseSlot[] {
   const HOUR = 60 * 60 * 1000;
   const currentHour = Math.floor(nowMs / HOUR) * HOUR;
-  const byTs = new Map<string, ActivityBucket>();
-  for (const bucket of buckets) byTs.set(bucket.ts, bucket);
+  // Join by the PARSED hour start, never the raw ts string — the wire may
+  // spell the same hour without milliseconds ("2026-09-19T08:00+00:00" vs
+  // "...:00.000Z"); a string join would silently zero the histogram.
+  const byHour = new Map<number, ActivityBucket>();
+  for (const bucket of buckets) {
+    const ts = Date.parse(bucket.ts);
+    if (!Number.isNaN(ts)) byHour.set(Math.floor(ts / HOUR) * HOUR, bucket);
+  }
   const slots: ActivityPulseSlot[] = [];
   for (let index = slotCount - 1; index >= 0; index -= 1) {
-    const ts = new Date(currentHour - index * HOUR).toISOString();
-    const hit = byTs.get(ts);
+    const hourStart = currentHour - index * HOUR;
+    const hit = byHour.get(hourStart);
     slots.push({
-      ts,
+      ts: new Date(hourStart).toISOString(),
       total: hit?.total ?? 0,
       by_type: {
         task: hit?.by_type.task ?? 0,
