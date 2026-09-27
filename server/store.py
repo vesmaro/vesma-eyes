@@ -202,6 +202,89 @@ PRESENCE_ONLINE_S = 120.0
 PRESENCE_STALE_S = 600.0
 
 
+def executor_lifecycle_status(row: dict[str, Any]) -> dict[str, Any]:
+    """Connection lifecycle for the UXE-2 honest-status contract (design
+    dictionary 07a §4 — the replacement for the dead «не проверено» chip).
+
+    Computed ON READ from facts the board already persists — no new
+    columns, no cron, no outbound pings (outbound-only architecture: the
+    board cannot probe an agent; verify = the age of its last report).
+    Inputs and their 07a mapping:
+
+    - ``state``   — registry lifecycle: pending → awaiting-approval /
+      disabled (enabled=0) / revoked; the approved+enabled path is
+      decided by the report clock below.
+    - ``last_seen`` — the last report the poller made (idle queue poll,
+      /heartbeat, /discovery, kora scan — every authenticated leg ticks
+      the same clock): fresh ≤ PRESENCE_ONLINE_S → online; up to
+      PRESENCE_STALE_S → silent; beyond (or never) → offline.
+    - ``since`` — the timestamp of the FACT the state rests on (the
+      report clock for connection states, registered_at for
+      awaiting-approval). ``last_report_age_s`` is '' when no report
+      exists yet (honest absence, never a fake 0).
+
+    07a coverage: provisioning / awaiting-approval / awaiting-first-report
+    / online / silent / offline / disabled / revoked — provisioning is
+    emitted by the ENROLLMENT-side helper (it needs the provision_jobs
+    table; see ``enrollment_lifecycle_status``). ``next_action`` names
+    the owner-facing step the UI layer renders.
+
+    ``reason`` distinguishes the two silent-ish states the dictionary
+    separates («ждёт первый доклад» vs «молчит»): an approved+enabled
+    executor with NO report yet is ``awaiting-first-report``, one that
+    stopped reporting is ``silent``.
+    """
+    registry_state = row.get("state", "pending")
+    last_seen = row.get("last_seen", "")
+    next_action = ""
+    if registry_state == "revoked":
+        state, since, reason = "revoked", row.get("updated_at", ""), "revoked"
+        next_action = "re-register the host if access should be restored"
+    elif registry_state == "pending":
+        # 07a «Ждёт одобрения»: a PENDING row is exactly that, regardless
+        # of enabled (the column defaults to 0 pre-approval — the pill the
+        # owner acts on is the approval decision, not the routing switch).
+        state, since, reason = "awaiting-approval", row.get(
+            "registered_at", ""), "pending"
+        next_action = "review the registration and approve or revoke it"
+    elif row.get("enabled") == 0 or row.get("enabled") is False:
+        # Owner routing kill-switch — 07a «Выключен владельцем». Reports
+        # may keep arriving (enabled only stops task routing), so the
+        # report age stays visible under the state.
+        state, reason = "disabled", "enabled=false"
+        since = last_seen or row.get("updated_at", "")
+        next_action = "re-enable the executor to receive tasks"
+    elif not last_seen:
+        state, since, reason = "awaiting-first-report", row.get(
+            "registered_at", ""), "no report yet"
+        next_action = ("the agent usually reports within minutes — check "
+                       "the service and host connectivity if it stays quiet")
+    else:
+        age = _age_seconds(last_seen)
+        if age <= PRESENCE_ONLINE_S:
+            state, reason = "online", "last report fresh"
+            next_action = ""
+        elif age <= PRESENCE_STALE_S:
+            state, reason = "silent", "no report in the stale corridor"
+            next_action = ("no reports for a few minutes — check the host "
+                           "connection and the agent service")
+        else:
+            state, reason = "offline", "no report beyond the offline threshold"
+            next_action = ("check the host and the agent service — the last "
+                           "report is far behind")
+        since = last_seen
+    status: dict[str, Any] = {
+        "state": state,
+        "since": since,
+        "last_report_age_s": "",
+        "reason": reason,
+        "next_action": next_action,
+    }
+    if last_seen:
+        status["last_report_age_s"] = int(max(0.0, _age_seconds(last_seen)))
+    return status
+
+
 class ExecutorError(Exception):
     """Base class for executor-registry violations (ARCH-9)."""
 
@@ -4471,6 +4554,61 @@ class Store:
         persisted transition + SSE; reads compute it)."""
         return (row["state"] == "created"
                 and _iso_past(row["expires_at"]))
+
+    def enrollment_lifecycle_status(
+            self, row: sqlite3.Row | dict[str, Any]) -> dict[str, Any]:
+        """Token-side lifecycle for the UXE-2 contract (07a §4): the
+        token's own state, refined by a live provisioning job when one is
+        driving it. ``provisioning`` (07a «Ставится») comes from the
+        provision_jobs row whose lifecycle is exactly the install leg:
+        queued/connecting/installing = in flight, watching = the install
+        FINISHED and the job is only waiting for the agent's first
+        report — an honest bridge into awaiting-first-report. A job that
+        died (failed/done without a used token) is surfaced as its
+        terminal token state, never faked as in-flight.
+
+        Computed on read; no new columns."""
+        state = row["state"]
+        since = row["created_at"]
+        reason = state
+        next_action = ""
+        job = self._live_provision_job_for_enrollment_db(
+            row["id"] if "id" in row.keys() else row["enrollment_id"])
+        if job is not None and job["state"] in (
+                "queued", "connecting", "installing"):
+            state, since = "provisioning", job["created_at"]
+            reason = f"provision job {job['id']} {job['state']}"
+            next_action = ("the agent install usually takes a couple of "
+                           "minutes — watch the job progress")
+        elif job is not None and job["state"] == "watching":
+            state, since = "awaiting-first-report", job["updated_at"]
+            reason = "install done — waiting for the agent's first report"
+            next_action = ("the agent usually reports within minutes — check "
+                           "the service and host connectivity if it stays quiet")
+        elif state == "created":
+            next_action = "run the bootstrap command on the host before the TTL expires"
+        elif state == "used":
+            since = row["used_at"] or row["created_at"]
+            next_action = ("the token registered an executor — follow it "
+                           "through the executor registry")
+        elif state == "expired":
+            next_action = "mint a fresh token if the host is still to be enrolled"
+        elif state == "revoked":
+            next_action = "mint a fresh token if the host is still to be enrolled"
+        return {"state": state, "since": since, "reason": reason,
+                "next_action": next_action}
+
+    def _live_provision_job_for_enrollment_db(
+            self, enrollment_id: str) -> dict[str, Any] | None:
+        """The newest provision job driving one enrollment (any state —
+        the caller decides which states mean what). Under the store lock,
+        same discipline as the other enrollment reads."""
+        with self._lock, self._conn() as db:
+            r = db.execute(
+                "SELECT * FROM provision_jobs WHERE enrollment_id=? "
+                "ORDER BY created_at DESC, id DESC LIMIT 1",
+                (enrollment_id,)).fetchone()
+        return dict(r) if r is not None else None
 
     def create_enrollment(self, *, label: str = "", harness_hint: str = "",
                           name_hint: str = "", created_by: str = "owner",
