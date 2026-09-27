@@ -759,12 +759,14 @@ export const ru = {
   "agents.routing.reason.globalDefault": "по умолчанию",
   "agents.routing.reason.auto": "живой свободный исполнитель",
   "agents.routing.reason.unmatched": "без маршрута",
-  "agents.executor.noCapabilities": "возможности не заявлены",
+  "agents.executor.noCapabilities": "пока не назначены",
+  "agents.executor.noCapabilitiesHint":
+    "Умения — что хосту можно запускать. Назначьте — и задачи смогут его находить.",
   "agents.executor.neverSeen": "ни одной связи",
   "agents.executor.lastSeen": "последняя связь",
   "agents.executor.pendingReason": "ожидает подтверждения владельца",
   "agents.executor.revokedReason": "доступ отозван",
-  "agents.executor.disabledReason": "отключён владельцем (маршрутизация выключена)",
+  "agents.executor.disabledReason": "выключен владельцем",
   "agents.executor.offlineReason": "не на связи — последняя связь {{age}} назад",
   "agents.executor.staleReason":
     "пульс пропущен ({{age}} назад) — дефолту нужен строго онлайн",
@@ -904,11 +906,41 @@ export const ru = {
   "agents.registry.disable": "Отключить",
   "agents.registry.revoke": "Отозвать",
   "agents.registry.remove": "Удалить",
-  "agents.registry.capabilitiesLabel": "Возможности",
-  "agents.registry.unverifiedChip": "не проверено",
+  "agents.registry.capabilitiesLabel": "Умения",
+  "agents.registry.capabilitiesHint":
+    "Умения — что хосту можно запускать. Назначьте — и задачи смогут его находить.",
   "agents.registry.hostLabel": "хост",
   "agents.registry.revokedHint":
     "доверие не восстанавливается — зарегистрируйте исполнителя заново",
+
+  // UXE-2: the connection lifecycle pills (07a dictionary §4) — the state
+  // LIST is server-owned (meta.lifecycle.states), the HUMAN wording lives
+  // here. Every pill = state + age + the next step, never a lone chip.
+  "agents.lifecycle.state.provisioning": "ставится…",
+  "agents.lifecycle.state.awaiting-approval": "ждёт одобрения",
+  "agents.lifecycle.state.awaiting-first-report": "ждёт первый доклад",
+  "agents.lifecycle.state.online": "на связи",
+  "agents.lifecycle.state.silent": "молчит",
+  "agents.lifecycle.state.offline": "не на связи",
+  "agents.lifecycle.state.disabled": "выключен владельцем",
+  "agents.lifecycle.state.revoked": "отозван",
+  "agents.lifecycle.next.provisioning":
+    "Ставим агента на машину — обычно пара минут.",
+  "agents.lifecycle.next.awaiting-approval":
+    "Хост зарегистрировался. Проверьте данные и одобрите.",
+  "agents.lifecycle.next.awaiting-first-report":
+    "Агент установлен; обычно докладывается до {{silentMax}} — проверить связь.",
+  "agents.lifecycle.next.online": "Последний доклад {{age}} назад.",
+  "agents.lifecycle.next.silent":
+    "Докладов нет {{age}} — проверить связь.",
+  "agents.lifecycle.next.offline":
+    "Последняя связь {{age}} назад — проверить связь.",
+  "agents.lifecycle.next.disabled": "Новые задачи не получает; доклады продолжаются.",
+  "agents.lifecycle.next.revoked": "Доступ отозван. Секрет больше не действует.",
+  "agents.lifecycle.reportAgo": "{{age}} назад",
+  "agents.lifecycle.reportNever": "докладов ещё не было",
+  "agents.lifecycle.checkLink": "Проверить связь",
+
   "agents.connect.label": "Как подключить внешнего агента",
   "agents.connect.step1":
     "Нажмите «Добавить исполнителя», заполните имя и харнес — свой харнес можно добавить прямо в списке.",

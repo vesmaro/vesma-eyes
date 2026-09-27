@@ -321,12 +321,43 @@ export interface ExecutorItem {
   readonly state: ExecutorRegistryState;
   readonly last_seen: string;
   readonly presence: ExecutorPresence;
-  /** Registration leg: '' = machine bootstrap, `enrollment:<id>` = mne_ leg
-   * (the owner verifies the origin in the approve decision, design §Threat). */
+  /**
+   * UXE-2 (07a §4): the honest computed connection lifecycle. Computed ON
+   * READ server-side, never persisted; the human labels live in i18n, the
+   * state LIST in `meta.lifecycle.states` — clients read, never hardcode.
+   * OPTIONAL: pre-UXE-2 boards omit it; the UI falls back to presence.
+   */
+  readonly status?: ExecutorLifecycleStatus;
+  /** Registration leg: '' = machine bootstrap, `enrollment:<id>` = mne_ leg. */
   readonly registered_via: string;
   readonly registered_at: string;
   readonly updated_at: string;
 }
+
+/**
+ * UXE-2 honest lifecycle (07a dictionary §4) — the board `LifecycleStatus`
+ * shape verbatim. `last_report_age_s` is `""` when no report exists yet
+ * (honest absence, never a fake 0) and an integer otherwise; `next_action`
+ * is the owner-facing step the UI renders as the pill's second line.
+ */
+export interface ExecutorLifecycleStatus {
+  readonly state: ExecutorLifecycleState;
+  readonly since: string;
+  readonly last_report_age_s: number | "";
+  readonly reason: string;
+  readonly next_action: string;
+}
+
+/** The server-owned state list — mirrored from `meta.lifecycle.states`. */
+export type ExecutorLifecycleState =
+  | "provisioning"
+  | "awaiting-approval"
+  | "awaiting-first-report"
+  | "online"
+  | "silent"
+  | "offline"
+  | "disabled"
+  | "revoked";
 
 /**
  * Enrollment token row — board `EnrollmentOut` with `state` narrowed to the
@@ -478,12 +509,24 @@ export interface ProvisionCreateInput {
  * TTL constants (online ≤ 2 min, stale ≤ 10 min) and the sweeper cadence
  * travel WITH the data; clients read them, never hardcode.
  */
+/**
+ * Registry page meta — the server-owned presence contract (spec §5.1): the
+ * TTL constants (online ≤ 2 min, stale ≤ 10 min) and the sweeper cadence
+ * travel WITH the data; clients read them, never hardcode. UXE-2 adds the
+ * lifecycle contract: the closed state list + the silent threshold (the
+ * «ждёт первый доклад» → «молчит» corridor), same read-don't-hardcode rule.
+ */
 export interface ExecutorListMeta {
   readonly presence: {
     readonly online_max_age_s: number;
     readonly stale_max_age_s: number;
   };
   readonly sweeper_interval_s: number;
+  /** UXE-2 (07a §4): server-owned lifecycle states + thresholds. */
+  readonly lifecycle?: {
+    readonly silent_max_age_s: number;
+    readonly states: readonly ExecutorLifecycleStatus["state"][];
+  };
 }
 
 /** Executor registry page — board `ExecutorListOut` (meta re-typed). */

@@ -280,9 +280,10 @@ describe("the disabled badge rides OVER the presence dot", () => {
     // Presence honesty (two-clock rule): the dot stays online-green...
     const dot = row.querySelector("span.size-2");
     expect(dot?.className).toContain("bg-iris-bright");
-    // ...while the badge carries the routing refusal with the full why.
+    // ...while the badge carries the owner-disabled verdict (07a §3.2:
+    // «выключен владельцем» — no routing parenthetical anymore).
     const badge = [...row.querySelectorAll("span[title]")].find((span) =>
-      span.getAttribute("title")?.includes("routing off"),
+      span.getAttribute("title")?.includes("disabled by the owner"),
     );
     expect(badge).toBeDefined();
     expect(badge!.textContent).toBe("disabled");

@@ -740,12 +740,14 @@ export const en: Record<TranslationKey, string> = {
   "agents.routing.reason.globalDefault": "default executor",
   "agents.routing.reason.auto": "live free executor",
   "agents.routing.reason.unmatched": "no route",
-  "agents.executor.noCapabilities": "no capabilities declared",
+  "agents.executor.noCapabilities": "none assigned yet",
+  "agents.executor.noCapabilitiesHint":
+    "Skills are what the host may run. Assign some — and tasks will be able to find it.",
   "agents.executor.neverSeen": "never seen",
   "agents.executor.lastSeen": "last seen",
   "agents.executor.pendingReason": "awaiting owner approval",
   "agents.executor.revokedReason": "access revoked",
-  "agents.executor.disabledReason": "disabled by the owner (routing off)",
+  "agents.executor.disabledReason": "disabled by the owner",
   "agents.executor.offlineReason": "offline — last seen {{age}} ago",
   "agents.executor.staleReason":
     "pulse missed ({{age}} ago) — a default needs strictly online",
@@ -886,10 +888,39 @@ export const en: Record<TranslationKey, string> = {
   "agents.registry.disable": "Disable",
   "agents.registry.revoke": "Revoke",
   "agents.registry.remove": "Delete",
-  "agents.registry.capabilitiesLabel": "Capabilities",
-  "agents.registry.unverifiedChip": "unverified",
+  "agents.registry.capabilitiesLabel": "Skills",
+  "agents.registry.capabilitiesHint":
+    "Skills are what the host may run. Assign some — and tasks will be able to find it.",
   "agents.registry.hostLabel": "host",
   "agents.registry.revokedHint": "trust is not restorable — re-register the executor",
+
+  // UXE-2: the connection lifecycle pills (07a dictionary §4) — the state
+  // LIST is server-owned (meta.lifecycle.states), the human wording lives
+  // here. Every pill = state + age + the next step, never a lone chip.
+  "agents.lifecycle.state.provisioning": "installing…",
+  "agents.lifecycle.state.awaiting-approval": "awaiting approval",
+  "agents.lifecycle.state.awaiting-first-report": "awaiting first report",
+  "agents.lifecycle.state.online": "online",
+  "agents.lifecycle.state.silent": "quiet",
+  "agents.lifecycle.state.offline": "offline",
+  "agents.lifecycle.state.disabled": "disabled by the owner",
+  "agents.lifecycle.state.revoked": "revoked",
+  "agents.lifecycle.next.provisioning":
+    "Installing the agent on the machine — usually a couple of minutes.",
+  "agents.lifecycle.next.awaiting-approval":
+    "The host has registered. Review the details and approve.",
+  "agents.lifecycle.next.awaiting-first-report":
+    "The agent is installed; it usually reports within {{silentMax}} — check the link.",
+  "agents.lifecycle.next.online": "Last report {{age}} ago.",
+  "agents.lifecycle.next.silent": "No reports for {{age}} — check the link.",
+  "agents.lifecycle.next.offline":
+    "Last link {{age}} ago — check the link.",
+  "agents.lifecycle.next.disabled": "Receives no new tasks; reports continue.",
+  "agents.lifecycle.next.revoked": "Access revoked. The secret no longer works.",
+  "agents.lifecycle.reportAgo": "{{age}} ago",
+  "agents.lifecycle.reportNever": "no reports yet",
+  "agents.lifecycle.checkLink": "Check the link",
+
   "agents.connect.label": "How to connect an external agent",
   "agents.connect.step1":
     "Press «Add executor», fill in the name and the harness — you can add your own harness right in the list.",

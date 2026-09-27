@@ -161,23 +161,27 @@ function EnrollmentRow({
 
       {/* used → the minted executor (name from the registry; the row id in
        * mono keeps the link honest even while the registry refetch lags).
-       * AGW-6 B: the deep-link opens the row's SETTINGS CARD (the hash the
-       * registry page consumes into the drawer) — the enrollment flow's
-       * «Открыть карточку»: at mint time no row exists, the card offer
-       * becomes real the moment the token is USED. */}
+       * UXE-1 (07a §3.1): the state word renders ONCE — «использован ·
+       * имя · 14:02», no «использован использован: …» duplication; the
+       * deep-link opens the row's SETTINGS CARD (the hash the registry
+       * page consumes into the drawer) — «Открыть карточку»: at mint
+       * time no row exists, the card offer becomes real the moment the
+       * token is USED.
+       * UXE-2: the executor id stays in mono but moves to the title
+       * (identifiers live in details, 07a §1.4) — the name is the link. */}
       {state === "used" ? (
         <span className="flex min-w-0 items-center gap-1 text-xs text-foreground-secondary">
-          {t("agents.enrollment.usedBy", { name: minted?.name ?? row.executor_id })}
           <Link
             to={`/agents/harnesses#executor-${encodeURIComponent(row.executor_id)}`}
-            className="rounded-sm font-mono text-xs text-foreground underline-offset-2 hover:text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+            className="min-w-0 truncate rounded-sm text-foreground underline-offset-2 hover:text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+            title={row.executor_id}
           >
-            {row.executor_id}
+            {minted?.name ?? row.executor_id}
           </Link>
           {minted ? (
             <Link
               to={`/agents/harnesses#executor-sheet-${encodeURIComponent(row.executor_id)}`}
-              className="flex items-center gap-1 rounded-sm text-xs text-foreground underline-offset-2 hover:text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+              className="flex shrink-0 items-center gap-1 rounded-sm text-xs text-foreground underline-offset-2 hover:text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
             >
               <Settings2 className="size-3" aria-hidden="true" />
               {t("agents.card.menuOpen")}

@@ -133,7 +133,7 @@ describe("ExecutorStrip — tooltip carries capabilities (P3-2, §3.2)", () => {
       meta: META,
     });
     const chip = document.querySelector<HTMLButtonElement>("button[title]");
-    expect(chip?.getAttribute("title")).toContain("no capabilities declared");
+    expect(chip?.getAttribute("title")).toContain("none assigned yet");
     await actUnmount(root);
   });
 });

@@ -1352,7 +1352,14 @@ export class MockAdapter implements MemoryGateway {
       ...(patch.state !== undefined ? { state: patch.state } : {}),
       updated_at: new Date().toISOString(),
     };
-    const updated: ExecutorItem = { ...merged, presence: mockPresenceOf(merged) };
+    // UXE-2 (07a §4): the lifecycle recomputes on read like the server —
+    // approve/enable/disable/revoke must move the pill, not serve the
+    // fixture verdict.
+    const updated: ExecutorItem = {
+      ...merged,
+      presence: mockPresenceOf(merged),
+      status: mockLifecycleOf(merged),
+    };
     this.executors[index] = updated;
     return { ok: true, executor: { ...updated } };
   }
@@ -2613,4 +2620,78 @@ function mockPresenceOf(executor: ExecutorItem): ExecutorItem["presence"] {
   if (ageS <= online) return "online";
   if (ageS <= stale) return "stale";
   return "offline";
+}
+
+/**
+ * UXE-2 (07a §4): recomputed lifecycle for MUTATED rows — the mirror of
+ * ``store.executor_lifecycle_status`` over mock facts (approve/enable/
+ * disable/revoke must move the pill, not serve the fixture verdict).
+ */
+function mockLifecycleOf(executor: ExecutorItem): ExecutorItem["status"] {
+  if (executor.state === "revoked") {
+    return {
+      state: "revoked",
+      since: executor.updated_at,
+      last_report_age_s: "",
+      reason: "revoked",
+      next_action: "re-register the host if access should be restored",
+    };
+  }
+  if (executor.state === "pending") {
+    return {
+      state: "awaiting-approval",
+      since: executor.registered_at,
+      last_report_age_s: "",
+      reason: "pending",
+      next_action: "review the registration and approve or revoke it",
+    };
+  }
+  if (!executor.enabled) {
+    return {
+      state: "disabled",
+      since: executor.last_seen || executor.updated_at,
+      last_report_age_s: "",
+      reason: "enabled=false",
+      next_action: "re-enable the executor to receive tasks",
+    };
+  }
+  const at = Date.parse(executor.last_seen);
+  const ageS = Number.isFinite(at) ? Math.max(0, (Date.now() - at) / 1000) : null;
+  const stale =
+    MOCK_EXECUTORS_META.lifecycle?.silent_max_age_s ??
+    MOCK_EXECUTORS_META.presence.stale_max_age_s;
+  if (ageS === null) {
+    return {
+      state: "awaiting-first-report",
+      since: executor.registered_at,
+      last_report_age_s: "",
+      reason: "no report yet",
+      next_action: "check the service and host connectivity if it stays quiet",
+    };
+  }
+  if (ageS <= MOCK_EXECUTORS_META.presence.online_max_age_s) {
+    return {
+      state: "online",
+      since: executor.last_seen,
+      last_report_age_s: Math.floor(ageS),
+      reason: "last report fresh",
+      next_action: "",
+    };
+  }
+  if (ageS <= stale) {
+    return {
+      state: "silent",
+      since: executor.last_seen,
+      last_report_age_s: Math.floor(ageS),
+      reason: "no report in the stale corridor",
+      next_action: "check the host connection and the agent service",
+    };
+  }
+  return {
+    state: "offline",
+    since: executor.last_seen,
+    last_report_age_s: Math.floor(ageS),
+    reason: "no report beyond the offline threshold",
+    next_action: "check the host and the agent service",
+  };
 }
