@@ -1595,6 +1595,8 @@ export const en: Record<TranslationKey, string> = {
   "kora.list.loading": "Loading sessions",
   "kora.list.loadMore": "Load more",
   "kora.list.loadFailed": "Failed to load the session list",
+  "kora.list.inactiveTitle": "Session not active",
+  "kora.list.inactiveHint": "Sign in — host sessions will appear here",
   "kora.list.empty": "No sessions yet",
   "kora.list.emptyMessage":
     "Connect an executor — its sessions appear on their own: the registry is derived, no registration ceremonies.",
@@ -1610,12 +1612,15 @@ export const en: Record<TranslationKey, string> = {
   "kora.session.notFound": "Session not found",
   "kora.session.notFoundMessage": "Session '{{id}}' is not in the Kora registry.",
   "kora.session.backToList": "Back to the session list",
+  "kora.session.inactiveTitle": "Session not active",
   "kora.session.readonlyPlate": "Someone else's session — read-only",
   "kora.session.readonlyPlateNote":
     "Continuation is available only for relay-origin sessions or after explicit adoption.",
   "kora.transcript.title": "Transcript (read-only)",
   "kora.transcript.loading": "Loading the transcript",
   "kora.transcript.loadFailed": "Failed to load the transcript",
+  "kora.transcript.inactiveHint":
+    "Sign in — the transcript of this session will appear here",
   "kora.transcript.empty": "No entries",
   "kora.transcript.emptyMessage":
     "The session is in the registry but the store has no entries — or the reader has not reached it yet.",

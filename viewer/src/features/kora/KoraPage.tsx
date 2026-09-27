@@ -8,6 +8,8 @@ import { TableRowSkeleton } from "@/components/skeletons/Skeletons";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { useKoraSessionPages } from "./useKora";
+import { isKoraUnauthorized } from "./koraGateway";
+import { KoraSignInCta } from "./KoraSignInCta";
 import type { KoraCoverageHarness, KoraSession } from "./koraTypes";
 
 /**
@@ -203,6 +205,13 @@ export function KoraPage() {
   // appends while full pages keep coming.
   const sessions = useKoraSessionPages(50);
 
+  // Owner-feedback hotfix: a 401 means the browser's session is not valid
+  // on the server (https-born cookie withheld on http, 6h idle TTL) — the
+  // sign-in CTA replaces EVERYTHING data-shaped (coverage panel included:
+  // an empty «что вижу» grid under «не активна» would be its own lie).
+  // 5xx / transport keeps the honest retry state below.
+  const unauthorized = sessions.error !== null && isKoraUnauthorized(sessions.error);
+
   return (
     <section aria-labelledby="kora-title" className="mx-auto max-w-4xl space-y-6">
       <div className="flex flex-wrap items-center gap-3">
@@ -218,56 +227,66 @@ export function KoraPage() {
         {t("kora.week0Note")}
       </p>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <CoveragePanel
-          harnesses={sessions.coverage?.harnesses ?? []}
-          gaps={sessions.coverage?.gaps ?? []}
-        />
-        <OnboardingCard />
-      </div>
-
-      <h2 className="text-lg font-semibold">{t("kora.list.title")}</h2>
-
-      {sessions.isPending ? (
-        <div role="status" aria-label={t("kora.list.loading")}>
-          <TableRowSkeleton rows={4} columns={3} />
-        </div>
-      ) : sessions.error ? (
-        <EmptyState
-          variant="error"
-          title={t("kora.list.loadFailed")}
-          message={sessions.error.message}
-          action={
-            <Button variant="outline" onClick={() => void sessions.refetch()}>
-              {t("common.retry")}
-            </Button>
-          }
-        />
-      ) : sessions.items.length === 0 ? (
-        <EmptyState
-          variant="empty"
-          title={t("kora.list.empty")}
-          message={t("kora.list.emptyMessage")}
+      {unauthorized ? (
+        <KoraSignInCta
+          title={t("kora.list.inactiveTitle")}
+          message={t("kora.list.inactiveHint")}
+          refetch={sessions.refetch}
         />
       ) : (
         <>
-          <ul className="space-y-3">
-            {sessions.items.map((session) => (
-              <SessionRow key={session.id} session={session} />
-            ))}
-          </ul>
-          {sessions.hasMore ? (
-            <div className="flex justify-center">
-              <Button
-                variant="outline"
-                disabled={sessions.isLoadingMore}
-                onClick={() => void sessions.loadMore()}
-              >
-                <ChevronDown aria-hidden className="size-4" />
-                {t("kora.list.loadMore")}
-              </Button>
+          <div className="grid gap-6 md:grid-cols-2">
+            <CoveragePanel
+              harnesses={sessions.coverage?.harnesses ?? []}
+              gaps={sessions.coverage?.gaps ?? []}
+            />
+            <OnboardingCard />
+          </div>
+
+          <h2 className="text-lg font-semibold">{t("kora.list.title")}</h2>
+
+          {sessions.isPending ? (
+            <div role="status" aria-label={t("kora.list.loading")}>
+              <TableRowSkeleton rows={4} columns={3} />
             </div>
-          ) : null}
+          ) : sessions.error ? (
+            <EmptyState
+              variant="error"
+              title={t("kora.list.loadFailed")}
+              message={sessions.error.message}
+              action={
+                <Button variant="outline" onClick={() => void sessions.refetch()}>
+                  {t("common.retry")}
+                </Button>
+              }
+            />
+          ) : sessions.items.length === 0 ? (
+            <EmptyState
+              variant="empty"
+              title={t("kora.list.empty")}
+              message={t("kora.list.emptyMessage")}
+            />
+          ) : (
+            <>
+              <ul className="space-y-3">
+                {sessions.items.map((session) => (
+                  <SessionRow key={session.id} session={session} />
+                ))}
+              </ul>
+              {sessions.hasMore ? (
+                <div className="flex justify-center">
+                  <Button
+                    variant="outline"
+                    disabled={sessions.isLoadingMore}
+                    onClick={() => void sessions.loadMore()}
+                  >
+                    <ChevronDown aria-hidden className="size-4" />
+                    {t("kora.list.loadMore")}
+                  </Button>
+                </div>
+              ) : null}
+            </>
+          )}
         </>
       )}
     </section>

@@ -1620,6 +1620,8 @@ export const ru = {
   "kora.list.loading": "Загружаем сессии",
   "kora.list.loadMore": "Показать ещё",
   "kora.list.loadFailed": "Не удалось загрузить список сессий",
+  "kora.list.inactiveTitle": "Сессия не активна",
+  "kora.list.inactiveHint": "Войдите — и сессии хостов появятся здесь",
   "kora.list.empty": "Сессий пока нет",
   "kora.list.emptyMessage":
     "Подключите исполнителя — его сессии появятся сами: реестр производный, отдельных церемоний регистрации нет.",
@@ -1635,12 +1637,15 @@ export const ru = {
   "kora.session.notFound": "Сессия не найдена",
   "kora.session.notFoundMessage": "Сессии «{{id}}» нет в реестре Коры.",
   "kora.session.backToList": "К списку сессий",
+  "kora.session.inactiveTitle": "Сессия не активна",
   "kora.session.readonlyPlate": "Чужая сессия — только чтение",
   "kora.session.readonlyPlateNote":
     "Продолжение доступно только для сессий relay-происхождения или после явного усыновления.",
   "kora.transcript.title": "Транскрипт (только чтение)",
   "kora.transcript.loading": "Загружаем транскрипт",
   "kora.transcript.loadFailed": "Не удалось загрузить транскрипт",
+  "kora.transcript.inactiveHint":
+    "Войдите — и транскрипт этой сессии появится здесь",
   "kora.transcript.empty": "Записей нет",
   "kora.transcript.emptyMessage":
     "Сессия в реестре, но записей в сторе нет — или ридер ещё не дошёл до неё.",
