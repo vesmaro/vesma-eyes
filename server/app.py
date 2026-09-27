@@ -220,6 +220,29 @@ def _notify_and_broadcast(category: str, title: str, message: str = "",
     _broadcast(event or {"kind": "notification", "notification": n})
 
 
+def _notify_task_created(task: dict[str, Any], actor: str,
+                         provenance: str = "") -> None:
+    """UI-30: ONE notification shape for every task.created path (owner
+    directive: «уведомления — тоже должны сообщать о новых задачах»).
+    The title carries the human-readable task title; the message carries
+    the board link (task id), the creator attribution (``ui`` or the
+    device actor ``device:<id> <name>``, ADR 0012 Amendment) and an
+    optional provenance suffix (inbox adopt). Both fit the surface caps
+    (title ≤ 200, message ≤ 500 — store clamps); the task.created SSE
+    frame keeps riding the standard notification attach. Every
+    store.create_task call site routes through here (UI+device creation
+    and inbox adopt — the poller and the agent loop never create native
+    board tasks)."""
+    message = f"{task['id']} · создал: {actor}"
+    if provenance:
+        message += f" · {provenance}"
+    _notify_and_broadcast(
+        "work", f"Новая задача: {task['title'][:180]}", message,
+        task["id"],
+        {"kind": "task.created", "task": task, "actor": actor},
+    )
+
+
 def get_scope_servers(scope: str, active_only: bool = False) -> tuple[str, list[dict[str, Any]]]:
     """Resolve scope: 'all' | group name | server name → server list."""
     servers = registry.active_servers() if active_only else registry.servers()
@@ -2132,7 +2155,7 @@ async def create_task(body: TaskCreate, request: Request) -> TaskOut:
                                  actor=_sse_actor(request))
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
-    _notify_and_broadcast("work", f"{task['id']}: новая задача", task["title"][:120], task["id"], {"kind": "task.created", "task": task, "actor": _sse_actor(request)})
+    _notify_task_created(task, _sse_actor(request))
     return task
 
 
@@ -5964,11 +5987,10 @@ async def tasks_inbox_adopt(memory_id: str, request: Request) -> TaskOut:
         logging.getLogger("vesmaro.inbox").warning(
             "adopt: mirror row %s vanished mid-adopt (native task %s kept)",
             memory_id, task["id"])
-    _notify_and_broadcast(
-        "work", f"{task['id']}: принята из task:queue",
-        task["title"][:120], task["id"],
-        {"kind": "task.created", "task": task,
-         "actor": _sse_actor(request)},
+    _notify_task_created(
+        task, _sse_actor(request),
+        provenance=(f"принята из task:queue ({rec['server']}, "
+                    f"память {memory_id[:8]})"),
     )
     if sync_error:
         _notify_and_broadcast(
