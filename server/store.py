@@ -817,6 +817,7 @@ CREATE TABLE IF NOT EXISTS executors (
                    CHECK (transport IN ('local-poll','mesh-r4')),
     capabilities   TEXT NOT NULL DEFAULT '[]',
     version        TEXT NOT NULL DEFAULT '',
+    discovered     TEXT NOT NULL DEFAULT '[]',
     enabled        INTEGER NOT NULL DEFAULT 0,
     state          TEXT NOT NULL DEFAULT 'pending'
                    CHECK (state IN ('pending','approved','revoked')),
@@ -1311,6 +1312,15 @@ class Store:
             db.execute(
                 "ALTER TABLE executors "
                 "ADD COLUMN registered_via TEXT NOT NULL DEFAULT ''")
+        # ME-015: discovery facts the executor reports about its own host
+        # (agent protocol §3 — advisory mirror of local fact; capabilities
+        # stay owner-declared). Additive ALTER for pre-ME-015 databases —
+        # the '[]' DEFAULT covers existing rows; no SEED_VERSION bump
+        # (registered_via precedent).
+        if "discovered" not in ecols:
+            db.execute(
+                "ALTER TABLE executors "
+                "ADD COLUMN discovered TEXT NOT NULL DEFAULT '[]'")
         # P2-1: provision_host_pins was reshaped from host-PK to (host,port)
         # PK while still WIP (unreleased). A dev DB carrying the old shape
         # would silently break every pin call — drop it; pins are TOFU
@@ -2995,6 +3005,141 @@ class Store:
                 "WHERE id=? AND state<>'revoked'",
                 (_now(), executor_id))
             return cur.rowcount > 0
+
+    def report_executor_self(self, executor_id: str, *,
+                             version: str | None = None,
+                             transport: str | None = None) -> dict[str, Any] | None:
+        """Honest self-report (ME-015): update ``version`` / ``transport``
+        to the LAST values the agent reported about itself (heartbeat /
+        poll piggyback), instead of freezing the enrollment-time banner.
+        Additive by contract: a field that is absent/empty is NOT written —
+        an agent that does not report leaves the stored value alone (never
+        blanked). Revoked executors never update (kill-switch discipline,
+        same WHERE as touch_executor_last_seen).
+
+        Write discipline: only a CHANGED value is written (updated_at rides
+        only real mutations — an unchanged heartbeat report is a silent
+        no-op, the audit trail stays noise-free). Audit:
+        executor.self_reported with old→new per changed field.
+
+        Raises:
+            ValueError — unknown transport (HTTP 422 upstream).
+        Returns the fresh row, or None when the executor is gone/revoked.
+        """
+        patch: dict[str, str] = {}
+        if version is not None:
+            v = version.strip()[:60]
+            if v:
+                patch["version"] = v
+        if transport is not None:
+            t = transport.strip()
+            if t:
+                if t not in EXECUTOR_TRANSPORTS:
+                    raise ValueError(f"invalid transport: {transport}")
+                patch["transport"] = t
+        if not patch:
+            return self.get_executor(executor_id)
+        with self._lock, self._conn() as db:
+            row = db.execute(
+                "SELECT * FROM executors WHERE id=?", (executor_id,)).fetchone()
+            if row is None or row["state"] == "revoked":
+                return None
+            changes: dict[str, list[str]] = {}
+            for field, value in patch.items():
+                if row[field] != value:
+                    changes[field] = [row[field], value]
+            if not changes:
+                return dict(row)
+            now = _now()
+            sets = ", ".join(f"{k}=?" for k in changes)
+            db.execute(
+                f"UPDATE executors SET {sets}, updated_at=? "  # noqa: S608 — keys from a fixed allow-list
+                "WHERE id=? AND state<>'revoked'",
+                (*[v for _, v in changes.values()], now, executor_id))
+            self._log(db, "executor.self_reported", None, {
+                "executor_id": executor_id, "changes": changes})
+            return self._executor(db, executor_id)
+
+    def report_executor_discovery(
+            self, executor_id: str,
+            entries: list[dict[str, Any]]) -> tuple[dict[str, Any] | None, int, int, list[str]]:
+        """Discovery ingest (agent protocol §3, ME-015): an ADVISORY mirror
+        of what is installed on the executor's host. Never creates registry
+        rows, never touches capabilities (owner-declared, never
+        self-expanded), never changes routing. Entries whose ``name`` is
+        not in the harness dictionary are DROPPED and audited — unknown
+        values never auto-extend the dictionary (dictionary growth is a
+        ui-token owner act, wave 3C).
+
+        The stored list is the LAST report (each scan replaces the
+        previous mirror — it is a snapshot of local fact, not an
+        accumulator). Comparison runs on the NORMALIZED name/version/path
+        facts only — ``seen_at`` is a write-time stamp, never a comparison
+        input (review P2-1: stamping before the compare made two
+        byte-identical hourly reports "differ", churning updated_at and
+        the audit trail 24x/day per executor). A report with NO accepted
+        facts never rewrites the mirror: an all-unknown scan refreshes the
+        discovery.rejected trail but must not wipe the last valid snapshot
+        (review P3-1). A report identical to the stored one is a silent
+        no-op (the hourly cadence must not churn updated_at / audit).
+        Audits: discovery.rejected (every report carrying unknown names),
+        discovery.reported (only when the stored snapshot changed).
+
+        Returns (fresh_row_or_None, accepted_count, rejected_count,
+        rejected_names). Cap/dedupe of the incoming list is the route's
+        duty (422 upstream); this method dedupes by name last-wins and
+        normalizes field lengths.
+        """
+        merged: dict[str, dict[str, str]] = {}
+        for e in entries:
+            if not isinstance(e, dict):
+                continue
+            name = str(e.get("name") or "").strip()[:60]
+            if not name:
+                continue
+            merged[name] = {
+                "name": name,
+                "version": str(e.get("version") or "").strip()[:60],
+                "path": str(e.get("path") or "").strip()[:200],
+            }
+        with self._lock, self._conn() as db:
+            row = db.execute(
+                "SELECT * FROM executors WHERE id=?", (executor_id,)).fetchone()
+            if row is None or row["state"] == "revoked":
+                return None, 0, len(merged), sorted(merged)
+            known = self._harness_names_db(db)
+            accepted: list[dict[str, str]] = []
+            rejected: list[str] = []
+            for name, fact in merged.items():
+                if name in known:
+                    accepted.append(fact)
+                else:
+                    rejected.append(name)
+            if rejected:
+                self._log(db, "discovery.rejected", None, {
+                    "executor_id": executor_id,
+                    "names": sorted(rejected), "count": len(rejected)})
+
+            def facts_key(facts: list[dict[str, Any]]) -> list[tuple[str, ...]]:
+                return sorted((f.get("name", ""), f.get("version", ""),
+                               f.get("path", "")) for f in facts)
+
+            stored = [f for f in _loads(row["discovered"])
+                      if isinstance(f, dict)]
+            if accepted and facts_key(accepted) != facts_key(stored):
+                now = _now()
+                for fact in accepted:
+                    fact["seen_at"] = now
+                db.execute(
+                    "UPDATE executors SET discovered=?, updated_at=? WHERE id=?",
+                    (json.dumps(sorted(accepted, key=lambda f: f["name"])),
+                     now, executor_id))
+                self._log(db, "discovery.reported", None, {
+                    "executor_id": executor_id,
+                    "names": sorted(f["name"] for f in accepted),
+                    "rejected": len(rejected)})
+            return self._executor(db, executor_id), len(accepted), len(rejected), sorted(rejected)
+
 
     def update_executor(self, executor_id: str, patch: dict[str, Any],
                         actor: str = "owner") -> tuple[dict[str, Any], dict[str, Any]]:
