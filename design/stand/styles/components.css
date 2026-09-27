@@ -1730,3 +1730,540 @@ button.chip:hover {
 .mem-row.sim-hover {
   background: color-mix(in srgb, var(--myelin-hairline) 100%, var(--color-bg-well));
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   v2 — agents domain: lifecycle pills, connect wizard, host card, kora
+   sessions, alive status. Extends spec 05; dictionary 07a applies.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Lifecycle pills (07a §4): state + age + action never collapses ─── */
+.pill.provisioning,
+.pill.waiting-approve,
+.pill.waiting-first {
+  color: var(--color-info);
+}
+.pill.provisioning .dot,
+.pill.waiting-first .dot {
+  background: var(--color-info);
+}
+.pill.waiting-approve .dot {
+  background: none;
+  border: 1.5px solid var(--color-info);
+}
+.pill.off,
+.pill.revoked {
+  color: var(--color-text-secondary);
+}
+.pill.off .dot,
+.pill.revoked .dot {
+  background: var(--color-text-muted);
+}
+.pill.revoked {
+  background: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--color-error) 10%, transparent) 0 4px,
+    transparent 4px 8px
+  );
+  color: var(--color-error);
+}
+.pill.revoked .dot {
+  background: var(--color-error);
+}
+.pill.silent {
+  color: var(--color-warning);
+}
+.pill.silent .dot {
+  background: var(--color-warning);
+}
+
+/* Строка статуса: состояние · возраст · действие (07a §1.1) */
+.status-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  font-size: var(--text-data);
+  color: var(--color-text-secondary);
+}
+
+/* ── Drawer (правая панель: карточка хоста, транскрипт) ─────────────── */
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgb(9 11 15 / 0.55);
+}
+.drawer-overlay[hidden] {
+  display: none;
+}
+.drawer {
+  position: fixed;
+  z-index: 95;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(560px, 100vw);
+  background: var(--color-bg-elevated);
+  border-left: 1px solid var(--color-border-subtle);
+  box-shadow: var(--shadow-modal);
+  display: flex;
+  flex-direction: column;
+  animation: drawer-in var(--duration-normal) var(--ease-enter);
+}
+@keyframes drawer-in {
+  from {
+    opacity: 0;
+    translate: 24px 0;
+  }
+}
+.drawer-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: var(--line-hairline) solid var(--myelin-hairline);
+}
+.drawer-head h2 {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+.drawer-body {
+  overflow-y: auto;
+  padding: var(--space-4) var(--space-5);
+  display: grid;
+  gap: var(--space-4);
+}
+.drawer-sec-label {
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-2);
+}
+@media (max-width: 767px) {
+  .drawer {
+    width: 100vw;
+  }
+}
+
+/* ── Host card «Жизнь хоста» (07c) ──────────────────────────────────── */
+.hostcard-busy {
+  font-size: var(--text-data);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-1);
+}
+.now-block .now-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 32px;
+  font-size: var(--text-ui);
+  color: var(--color-text-primary);
+}
+.now-block .now-row .row-cta {
+  margin-left: auto;
+}
+.recent-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  min-height: 32px;
+  font-size: var(--text-data);
+  color: var(--color-text-secondary);
+}
+.recent-row .ev-time {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+  flex: none;
+}
+.recent-row .row-cta {
+  margin-left: auto;
+}
+.skills-roles .skill-chips {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-2);
+}
+.tech-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-data);
+}
+.tech-table td {
+  padding: var(--space-1) 0;
+  vertical-align: top;
+}
+.tech-table dt,
+.tech-table th {
+  text-align: left;
+  color: var(--color-text-muted);
+  font-weight: var(--weight-regular);
+  padding-right: var(--space-4);
+  white-space: nowrap;
+}
+.tech-table td {
+  color: var(--color-text-primary);
+}
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.danger-zone {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding-top: var(--space-3);
+  border-top: var(--line-hairline) solid var(--myelin-hairline);
+}
+
+/* ── Connect wizard (07b): steps indicator + panels + progress ──────── */
+.wizard-steps {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  flex-wrap: wrap;
+}
+.wstep {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 24px;
+  border-radius: var(--radius-full);
+  padding: 2px var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--text-ui);
+}
+.wstep .wnum {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--color-border);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  flex: none;
+}
+.wstep[aria-current="step"] {
+  color: var(--color-text-primary);
+}
+.wstep[aria-current="step"] .wnum {
+  border-color: var(--color-iris);
+  color: var(--color-iris-bright);
+}
+.wstep.done {
+  color: var(--color-text-muted);
+}
+.wstep.done .wnum {
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+.wstep:disabled {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+.wstep-sep {
+  color: var(--color-text-muted);
+}
+.wstep.done-summary {
+  width: 100%;
+  justify-content: space-between;
+  border: var(--line-hairline) solid var(--myelin-hairline);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-well);
+}
+.radio-card {
+  display: flex;
+  gap: var(--space-3);
+  align-items: start;
+  padding: var(--space-3);
+  min-height: 44px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.radio-card:hover {
+  border-color: var(--color-border);
+}
+.radio-card:has(input:checked) {
+  border-color: var(--color-iris-bright);
+  box-shadow: var(--shadow-iris);
+}
+.radio-card input {
+  margin-top: 3px;
+  accent-color: var(--color-iris);
+  width: 16px;
+  height: 16px;
+}
+.radio-card .rc-label {
+  font-weight: var(--weight-medium);
+  color: var(--color-text-primary);
+}
+.radio-card .rc-note {
+  font-size: var(--text-data);
+  color: var(--color-text-secondary);
+}
+.radio-card[data-tone="warning"] .rc-note {
+  color: var(--color-warning);
+}
+.wizard-progress {
+  display: grid;
+  gap: var(--space-2);
+}
+.wp-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 32px;
+  font-size: var(--text-ui);
+  color: var(--color-text-secondary);
+  animation: wp-in var(--duration-normal) var(--ease-enter);
+}
+@keyframes wp-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+.wp-row .wp-stamp {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+  font-size: var(--text-data);
+  flex: none;
+}
+.result-card {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-subtle);
+}
+.result-card.ok {
+  border-color: color-mix(in srgb, var(--color-success) 45%, transparent);
+}
+.result-card.fail {
+  border-color: color-mix(in srgb, var(--color-error) 45%, transparent);
+}
+.result-card.timeout {
+  border-color: color-mix(in srgb, var(--color-warning) 45%, transparent);
+}
+.result-card .rc-title {
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.result-card.ok .rc-title {
+  color: var(--color-success);
+}
+.result-card.fail .rc-title {
+  color: var(--color-error);
+}
+.result-card.timeout .rc-title {
+  color: var(--color-warning);
+}
+.result-card ul {
+  margin: 0;
+  padding-left: var(--space-5);
+  color: var(--color-text-secondary);
+  font-size: var(--text-ui);
+  display: grid;
+  gap: var(--space-1);
+}
+
+/* ── Hosts registry cards (07c §1 / 07f §3.3) ───────────────────────── */
+.host-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--space-3);
+}
+.host-card {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: var(--color-bg-well);
+  border: var(--line-hairline) solid var(--myelin-hairline);
+  border-radius: var(--radius-lg);
+  text-align: left;
+  color: var(--color-text-primary);
+  min-height: 44px;
+}
+.host-card:hover {
+  border-color: var(--color-border);
+}
+.host-card:focus-visible {
+  outline: none;
+  border-color: var(--color-focus);
+  box-shadow: var(--shadow-iris);
+}
+.host-card .hc-name {
+  font-weight: var(--weight-medium);
+}
+.host-card .hc-meta {
+  font-size: var(--text-data);
+  color: var(--color-text-secondary);
+}
+
+/* ── Kora session rows (07d §2) ─────────────────────────────────────── */
+.session-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: var(--line-hairline) solid var(--myelin-hairline);
+  text-align: left;
+  color: var(--color-text-primary);
+  font-size: var(--text-data);
+}
+.session-row:hover {
+  background: color-mix(in srgb, var(--myelin-hairline) 100%, var(--color-bg-well));
+}
+.session-row:focus-visible {
+  outline: none;
+  box-shadow: inset var(--focus-ring-width) 0 0 var(--color-focus);
+}
+.session-row .s-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex: none;
+}
+.session-row[data-state="live"] .s-dot {
+  background: var(--color-success);
+  box-shadow: var(--glow-live);
+}
+.session-row[data-state="done"] .s-dot {
+  background: var(--color-text-muted);
+}
+.session-row[data-state="interrupted"] .s-dot {
+  background: var(--color-warning);
+}
+.session-row .s-meta {
+  color: var(--color-text-secondary);
+}
+.session-row .s-go {
+  margin-left: auto;
+  color: var(--color-text-muted);
+}
+.transcript {
+  font-family: var(--font-scroll);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  max-width: 72ch;
+  display: grid;
+  gap: var(--space-3);
+  background: var(--color-scroll-bg);
+  border: var(--line-hairline) solid var(--color-scroll-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+.transcript .t-line {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-3);
+}
+.transcript .t-time {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-data);
+  color: var(--color-text-muted);
+  padding-top: 3px;
+}
+.transcript .t-who {
+  color: var(--color-iris-bright);
+  font-weight: var(--weight-medium);
+}
+
+/* ── Alive status page (07e) ────────────────────────────────────────── */
+.status-block {
+  background: var(--color-bg-well);
+  border: var(--line-hairline) solid var(--myelin-hairline);
+  border-radius: var(--radius-lg);
+}
+.status-block .sb-rows {
+  display: grid;
+}
+.status-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  min-height: 36px;
+  padding: var(--space-1) var(--space-4);
+  font-size: var(--text-data);
+  color: var(--color-text-primary);
+}
+.status-row:hover {
+  background: color-mix(in srgb, var(--myelin-hairline) 100%, var(--color-bg-well));
+}
+.status-row .st-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex: none;
+  align-self: center;
+}
+.status-row .st-note {
+  color: var(--color-text-muted);
+}
+.status-row .st-open {
+  margin-left: auto;
+  flex: none;
+}
+.status-counters {
+  display: flex;
+  gap: var(--space-5);
+  flex-wrap: wrap;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-data);
+  color: var(--color-text-secondary);
+}
+.status-counters .num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+}
+
+/* ── Collapsible «details» blocks (07a §6): chevron button ≥24px ────── */
+.collapse-block > .cb-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 32px;
+  padding: var(--space-2) 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-ui);
+  text-align: left;
+}
+.collapse-block > .cb-toggle .chev {
+  transition: rotate var(--duration-fast) var(--ease-enter);
+}
+.collapse-block > .cb-toggle[aria-expanded="true"] .chev {
+  rotate: 90deg;
+}
+.collapse-block > .cb-body {
+  padding: var(--space-2) 0 var(--space-3);
+}
+@media (prefers-reduced-motion: reduce) {
+  .drawer,
+  .wp-row,
+  .collapse-block .chev {
+    animation: none;
+    transition: none;
+  }
+}
+[data-motion="reduced"] .drawer,
+[data-motion="reduced"] .wp-row,
+[data-motion="reduced"] .collapse-block .chev {
+  animation: none;
+  transition: none;
+}

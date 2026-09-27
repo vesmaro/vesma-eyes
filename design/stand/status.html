@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Документы — vesmaro-eyes · стенд «Живая кора»</title>
+  <title>Система · Статус — vesmaro-eyes · стенд «Живая кора»</title>
   <link rel="stylesheet" href="styles/tokens.css">
   <link rel="stylesheet" href="styles/base.css">
   <link rel="stylesheet" href="styles/shell.css">
@@ -30,9 +30,9 @@
     <div class="topbar-status">
       <button class="iconbtn search-expand" type="button" data-search-expand aria-label="Открыть поиск"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
       <span class="pill live" title="Живое соединение с демо-лентой стенда"><span class="dot" aria-hidden="true"></span>live</span>
-      <a class="iconbtn" href="agents.html" aria-label="Активные исполнения: 2 — открыть «Исполнение»">
+      <a class="iconbtn" href="agents.html" aria-label="Активные исполнения: 1 — открыть «Исполнение»">
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
-        <span class="badge-dot" aria-hidden="true">2</span>
+        <span class="badge-dot" aria-hidden="true">1</span>
       </a>
       <button class="iconbtn" type="button" data-bell aria-label="Уведомления: лента не подключена в стенде">
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
@@ -82,7 +82,7 @@
       <div class="side-group">
         <button type="button" class="side-link side-domain" aria-expanded="false">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
-          <span class="side-label">Агенты</span><span class="side-count">2</span>
+          <span class="side-label">Агенты</span><span class="side-count">1</span>
           <svg class="side-chevron icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </button>
         <div class="side-sections"><div>
@@ -91,7 +91,11 @@
           <a class="side-section" href="connect.html">Подключить</a>
         </div></div>
       </div>
-      <a class="side-link" href="docs.html" aria-current="page">
+      <a class="side-link" href="kora.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        <span class="side-label">Кора</span>
+      </a>
+      <a class="side-link" href="docs.html">
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
         <span class="side-label">Документы</span>
       </a>
@@ -106,14 +110,14 @@
           <a class="side-section" href="explorer.html">Проводник</a>
         </div></div>
       </div>
-      <div class="side-group">
-        <button type="button" class="side-link side-domain" aria-expanded="false">
+      <div class="side-group" data-open>
+        <button type="button" class="side-link side-domain domain-current" aria-current="true" aria-expanded="true">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
           <span class="side-label">Настройки</span>
           <svg class="side-chevron icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </button>
         <div class="side-sections"><div>
-          <a class="side-section" href="status.html">Статус</a>
+          <a class="side-section" href="status.html" aria-current="page">Статус</a>
           <button class="side-section disabled" type="button" aria-disabled="true" data-demo-action="«Автоматизация» — раздел вне стенда">Автоматизация</button>
           <button class="side-section disabled" type="button" aria-disabled="true" data-demo-action="«Устройства» — раздел вне стенда">Устройства</button>
           <button class="side-section disabled" type="button" aria-disabled="true" data-demo-action="«Трассировки» — раздел вне стенда">Трассировки</button>
@@ -151,7 +155,8 @@
       <span class="gprefix" aria-hidden="true">g→</span>
       <ol>
         <li><a href="index.html">Обзор</a></li>
-        <li><span aria-current="page">Документы</span></li>
+        <li><span>Система</span></li>
+        <li><span aria-current="page">Статус</span></li>
       </ol>
       <span class="crumbs-spacer"></span>
       <button class="btn ghost sm" type="button" data-palette-open>
@@ -163,31 +168,68 @@
 
       <div class="page-head">
         <div>
-          <h1 tabindex="-1">Документы</h1>
-          <p class="page-sub">Три хаба проектов · билингво переключает заголовки, а не перевод содержимого</p>
+          <h1 tabindex="-1">Статус</h1>
+          <p class="page-sub" id="page-updated">обновлено только что · <span class="pill live"><span class="dot" aria-hidden="true"></span>live</span></p>
         </div>
         <div class="page-actions">
-          <div class="segment" role="group" aria-label="Язык заголовков и сниппетов">
-            <button type="button" aria-pressed="true" data-lang="ru">РУС</button>
-            <button type="button" aria-pressed="false" data-lang="orig">ORIG</button>
-          </div>
-          <button class="btn secondary sm" type="button" data-demo-action="«Подключить проект» — действие продуктовой версии; в стенде три хаба уже подключены">
-            Подключить проект
-          </button>
+          <button class="btn secondary sm" type="button" id="st-check">Проверить связь</button>
         </div>
       </div>
-      <div class="hubs" id="hubs"></div>
+
+      <div class="status-line" id="st-stale" hidden style="margin: 0 0 var(--space-2); color: var(--color-warning)">
+        Данные задерживаются — переподключаемся…
+      </div>
+
+      <section class="status-block" aria-label="Хранилища">
+        <div class="panel-head">Хранилища <span class="count" id="stores-count"></span>
+          <span style="margin-left: auto"></span>
+          <button class="btn ghost sm" type="button" data-demo-action="«Хранилища» — раздел вне стенда">Открыть Хранилища →</button>
+        </div>
+        <div class="sb-rows" id="st-stores"></div>
+      </section>
+
+      <section class="status-block" style="margin-top: var(--space-3)" aria-label="Сервер">
+        <div class="panel-head">Сервер (борд)</div>
+        <div class="sb-rows" id="st-board"></div>
+      </section>
+
+      <section class="status-block" style="margin-top: var(--space-3)" aria-label="Хосты">
+        <div class="panel-head">Хосты <span class="count" id="hosts-count"></span>
+          <a class="btn ghost sm" style="margin-left: auto" href="hosts.html">Открыть Хосты →</a>
+        </div>
+        <div class="sb-rows" id="st-hosts"></div>
+      </section>
+
+      <section class="status-block" style="margin-top: var(--space-3)" aria-label="Память">
+        <div class="panel-head">Память
+          <button class="btn ghost sm" style="margin-left: auto" type="button" data-demo-action="«Пульс» — раздел вне стенда">Открыть Пульс →</button>
+        </div>
+        <div class="status-counters" id="st-memory"></div>
+      </section>
+
+      <section class="status-block" style="margin-top: var(--space-3)" aria-label="Задачи">
+        <div class="panel-head">Задачи
+          <button class="btn ghost sm" style="margin-left: auto" type="button" data-demo-action="«Канбан» — раздел вне стенда">Открыть Канбан →</button>
+        </div>
+        <div class="status-counters" id="st-tasks"></div>
+      </section>
+
+      <section class="status-block" style="margin-top: var(--space-3)" aria-label="Последние события">
+        <div class="panel-head">Последние события <span class="count">· 5</span>
+          <a class="btn ghost sm" style="margin-left: auto" href="kora.html">Открыть Кору →</a>
+        </div>
+        <div class="sb-rows" id="st-events" aria-live="off"></div>
+      </section>
 
     </main>
   </div>
 </div>
 
-
 <div class="overlay" id="palette" hidden role="dialog" aria-modal="true" aria-label="Командная палитра">
   <div class="palette">
     <div class="palette-input-wrap">
       <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      <input class="palette-input" type="text" role="combobox" aria-expanded="true" aria-controls="palette-results" aria-autocomplete="list" aria-label="Командная палитра" placeholder="Куда идём? Попробуйте: «задачи», «T-128», «новая задача»">
+      <input class="palette-input" type="text" role="combobox" aria-expanded="true" aria-controls="palette-results" aria-autocomplete="list" aria-label="Командная палитра" placeholder="Куда идём? Попробуйте: «хосты», «кора», «статус»">
     </div>
     <div class="palette-results" id="palette-results" role="listbox" aria-label="Результаты"></div>
     <div class="palette-foot">
@@ -231,79 +273,89 @@
 
   (function () {
     var D = window.STAND;
-    var lang = "ru";
-    var grid = document.getElementById("hubs");
+    var doc = document;
+    var toast = window.standToast;
+    var S = D.status;
 
-    function render() {
-      grid.textContent = "";
-      D.docs.forEach(function (h) {
-        var card = document.createElement("article");
-        card.className = "hub-card" + (h.featured ? " featured" : "") + (h.paused ? " paused" : "");
-        card.id = h.id;
-        var head = document.createElement("div");
-        head.style.display = "flex";
-        head.style.alignItems = "center";
-        head.style.gap = "var(--space-2)";
-        var ttl = document.createElement("h2");
-        ttl.style.marginRight = "auto";
-        ttl.textContent = h.title[lang];
-        head.appendChild(ttl);
-        if (h.paused) {
-          var b = document.createElement("span");
-          b.className = "badge-exp";
-          b.textContent = "на паузе";
-          head.appendChild(b);
-        }
-        card.appendChild(head);
-        var rule = document.createElement("hr");
-        rule.className = "hub-rule";
-        card.appendChild(rule);
-        var snip = document.createElement("p");
-        snip.className = "hub-snippet";
-        snip.textContent = h.snippet[lang];
-        card.appendChild(snip);
-        var stats = document.createElement("div");
-        stats.className = "hub-stats";
-        var c1 = document.createElement("span");
-        c1.textContent = h.count + " д-ов";
-        var c2 = document.createElement("span");
-        c2.textContent = h.updated;
-        stats.appendChild(c1);
-        stats.appendChild(c2);
-        card.appendChild(stats);
-        var prov = document.createElement("p");
-        prov.className = "hub-prov";
-        prov.textContent = "провенанс: " + h.prov;
-        card.appendChild(prov);
-        if (h.paused) {
-          var note = document.createElement("p");
-          note.style.fontSize = "var(--text-sm)";
-          note.style.color = "var(--color-text-muted)";
-          note.textContent = "Проект на паузе — документы в архиве, чтение доступно.";
-          card.appendChild(note);
-        }
-        var btn = document.createElement("a");
-        btn.className = "btn ghost sm";
-        btn.href = "#";
-        btn.textContent = h.paused ? "Открыть архив →" : "Открыть хаб →";
-        btn.addEventListener("click", function (e) {
-          e.preventDefault();
-          window.standToast("Хаб-страницы проектов — вне стенда; здесь титульные листы", "info");
-        });
-        card.appendChild(btn);
-        grid.appendChild(card);
-      });
-    }
-    document.querySelectorAll("[data-lang]").forEach(function (b) {
-      b.addEventListener("click", function () {
-        lang = b.dataset.lang;
-        document.querySelectorAll("[data-lang]").forEach(function (o) {
-          o.setAttribute("aria-pressed", o.dataset.lang === lang ? "true" : "false");
-        });
-        render();
-      });
+    /* ── Хранилища (07e §2): тот же источник, что питает «Обзор» ── */
+    var stores = doc.getElementById("st-stores");
+    doc.getElementById("stores-count").textContent = "· " + D.status.stores.length;
+    D.status.stores.forEach(function (s) {
+      var r = doc.createElement("a");
+      r.className = "status-row";
+      r.href = "index.html";
+      var dotCls = s.state === "жив" ? "success" : s.state === "с оговорками" ? "warning" : "broken";
+      r.innerHTML =
+        '<span class="st-dot" style="background: var(--color-' + dotCls + ')" aria-hidden="true"></span>' +
+        "<span>" + s.name + "</span>" +
+        '<span class="st-note">' + s.state + " · " + s.note + "</span>";
+      stores.appendChild(r);
     });
-    render();
+
+    /* ── Сервер (SSE + версия — уже отдаётся на Обзоре) ── */
+    var board = doc.getElementById("st-board");
+    var br = doc.createElement("div");
+    br.className = "status-row";
+    br.innerHTML =
+      '<span class="st-dot" style="background: var(--color-success)" aria-hidden="true"></span>' +
+      "<span>" + D.status.board.line + "</span>";
+    board.appendChild(br);
+
+    /* ── Хосты: lifecycle-пилюли 07a §4 ────────────────────────── */
+    var hostsBox = doc.getElementById("st-hosts");
+    doc.getElementById("hosts-count").textContent = "· " + D.status.hosts.length;
+    var hostPill = {
+      online: '<span class="pill online"><span class="dot" aria-hidden="true"></span>на связи</span>',
+      silent: '<span class="pill silent"><span class="dot" aria-hidden="true"></span>молчит</span>',
+      off: '<span class="pill off"><span class="dot" aria-hidden="true"></span>выключен</span>',
+    };
+    D.status.hosts.forEach(function (h) {
+      var r = doc.createElement("a");
+      r.className = "status-row";
+      r.href = "hosts.html?host=" + encodeURIComponent(h.name);
+      r.innerHTML =
+        (hostPill[h.lifecycle] || hostPill.online) +
+        "<span>" + h.name + "</span>" +
+        '<span class="st-note">' + h.line.replace(h.name, "").trim() + "</span>";
+      hostsBox.appendChild(r);
+    });
+
+    /* ── Память / Задачи: счётчики с переходом ─────────────────── */
+    doc.getElementById("st-memory").innerHTML =
+      "записей <span class='num'>" + D.status.memory.recs + "</span>" +
+      " · тегов <span class='num'>" + D.status.memory.tags + "</span>" +
+      " · за час импульсов <span class='num'>" + D.status.memory.pulses + "</span>" +
+      " · последняя запись <span class='num'>" + D.status.memory.last + "</span>";
+    var T = D.status.tasks;
+    doc.getElementById("st-tasks").innerHTML =
+      "идёт <span class='num'>" + T.running + "</span>" +
+      " · в очереди <span class='num'>" + T.queued + "</span>" +
+      " · ждёт валидации <span class='num'>" + T.validation + "</span>" +
+      " · завершено за сегодня <span class='num'>" + T.doneToday + "</span>";
+
+    /* ── Последние события (живая лента) ───────────────────────── */
+    var evBox = doc.getElementById("st-events");
+    D.hostEvents.slice(0, 5).forEach(function (ev, i) {
+      var r = doc.createElement("div");
+      r.className = "recent-row" + (i === 0 ? " fresh" : "");
+      r.style.padding = "0 var(--space-4)";
+      r.innerHTML = '<span class="ev-time">' + ev.time + "</span><span>" + ev.host + " · " + ev.text + "</span>";
+      evBox.appendChild(r);
+    });
+
+    /* ── Проверить связь: честный демо-опрос ───────────────────── */
+    doc.getElementById("st-check").addEventListener("click", function () {
+      var b = this;
+      b.classList.add("loading");
+      b.textContent = "Проверяем…";
+      b.disabled = true;
+      setTimeout(function () {
+        b.classList.remove("loading");
+        b.disabled = false;
+        b.textContent = "Проверить связь";
+        toast("laptop-go-1 ответил за 0,8 с · vpnus-1 молчит 4 мин", "info");
+      }, 800);
+    });
   })();
 
 </script>

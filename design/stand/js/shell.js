@@ -222,6 +222,10 @@
       { title: "Поиск по памяти", href: "search.html", keys: "поиск поиск search" },
       { title: "Документы", href: "docs.html", keys: "документы docs хабы" },
       { title: "Агенты · Исполнение", href: "agents.html", keys: "агенты исполнение agents" },
+      { title: "Агенты · Хосты", href: "hosts.html", keys: "агенты хосты hosts машины" },
+      { title: "Агенты · Подключить хост", href: "connect.html", keys: "агенты подключить подключение мастер connect" },
+      { title: "Кора · сессии хостов", href: "kora.html", keys: "кора сессии kora транскрипты" },
+      { title: "Статус · живая сводка", href: "status.html", keys: "статус система здоровье status" },
       { title: "Рабочий стол · Терминал", href: "desktop.html", keys: "терминал стол desk" },
       { title: "Проводник проектов", href: "explorer.html", keys: "проводник файлы explorer" },
       { title: "Галерея дизайн-системы", href: "gallery.html", keys: "галерея дизайн токены" },
@@ -247,6 +251,22 @@
       { group: "Сущности", title: "агент core", keys: "агент ядро", href: "agents.html" },
       { group: "Сущности", title: "документы mnemos-eyes", keys: "хаб доки", href: "docs.html#mnemos-eyes" }
     );
+    (D.hosts || []).forEach(function (h) {
+      ents.push({
+        group: "Сущности",
+        title: "хост " + h.name,
+        keys: "хост машина " + (h.harness || "") + " " + h.statusLine,
+        href: "hosts.html?host=" + encodeURIComponent(h.name),
+      });
+    });
+    (D.koraSessions || []).slice(0, 4).forEach(function (s) {
+      ents.push({
+        group: "Сущности",
+        title: "сессия " + s.harness + " · " + s.host,
+        keys: "сессия кора " + s.host,
+        href: "kora.html?id=" + s.id,
+      });
+    });
     return nav.concat(actions, ents);
   }
 
@@ -433,6 +453,7 @@
     p: "memories.html",
     b: "memories.html",
     e: "agents.html",
+    k: "kora.html",
   };
   /* честность: t/b ведут на разделы без стенда — тост, а не подмена */
   var gStub = { t: "Задачи", b: "Канбан" };

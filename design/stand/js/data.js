@@ -445,6 +445,192 @@
     w("M-359", "Связи записей: синапсы по тегам", 0.86, 108, 3, ["memory"], "core · mnemos-02"),
   ];
 
+  /* ── v2: hosts / registration tokens / kora sessions / status (07a–07f).
+   * All user-facing strings already follow dictionary 07a: lifecycle status
+   * line = «состояние · возраст · действие», ids live only in tech details. */
+
+  const hosts = [
+    {
+      name: "laptop-go-1",
+      lifecycle: "online",
+      statusLine: "на связи · последний доклад 12 с назад",
+      busyLine: "без задач 3 ч",
+      harness: "zcode",
+      tasksActive: 1,
+      now: {
+        task: { title: "UI-10 проводник", state: "идёт", report: "отчёт 6 мин назад" },
+        session: { harness: "zcode", opened: "открыта 41 мин" },
+      },
+      recent: [
+        { time: "14:02", text: "агент доложился (опрос)" },
+        { time: "12:40", text: "отчёт задачи «UI-10»: «волна 1 закрыта»", cta: true },
+        { time: "09:15", text: "задача «UI-11» завершена — отчёт принят", cta: true },
+      ],
+      skills: [],
+      roles: ["researcher", "frontend"],
+      discovered: false,
+      tech: {
+        id: "hst-9f2a",
+        registered: "зарегистрирован по токену регистрации · 2026-09-27",
+        ip: "10.0.0.4",
+        fp: "SHA256:9mXk…",
+        agent: "v0.1.1",
+        harnessVer: "0.9.2",
+        transport: "докладывается из локальной сети",
+        reports: "47 докладов за сегодня · интервал ~2 мин · средняя задержка 1,2 с",
+      },
+    },
+    {
+      name: "vpnus-1",
+      lifecycle: "silent",
+      statusLine: "молчит 4 мин",
+      busyLine: "задач нет",
+      harness: "pi",
+      tasksActive: 0,
+      now: { idle: "Простаивает 4 минуты" },
+      recent: [
+        { time: "13:58", text: "агент доложился (опрос)" },
+        { time: "09:10", text: "сессия pi завершилась · 12 мин" },
+      ],
+      skills: ["терминал"],
+      roles: [],
+      discovered: false,
+      tech: {
+        id: "hst-41c0",
+        registered: "зарегистрирован по токену регистрации · 25 сент",
+        ip: "10.0.0.7",
+        fp: "SHA256:Kk29…",
+        agent: "v0.1.1",
+        harnessVer: "3.1",
+        transport: "через VPN",
+        reports: "112 докладов за сегодня",
+      },
+    },
+    {
+      name: "laptop-zcode-1",
+      lifecycle: "off",
+      statusLine: "выключен владельцем",
+      statusNote: "Новые задачи не получает; доклады продолжаются — машина жива",
+      busyLine: "",
+      harness: "zcode",
+      tasksActive: 0,
+      now: null,
+      recent: [{ time: "08:30", text: "хост выключен владельцем" }],
+      skills: ["терминал", "браузер"],
+      roles: ["frontend"],
+      discovered: false,
+      tech: {
+        id: "hst-77b3",
+        registered: "зарегистрирован по токену регистрации · 20 сент",
+        ip: "10.0.0.9",
+        fp: "SHA256:Qa2e…",
+        agent: "v0.1.1",
+        harnessVer: "0.9.2",
+        transport: "через VPN",
+        reports: "за сегодня: 12 докладов",
+      },
+    },
+    {
+      name: "gpu-box",
+      lifecycle: "provisioning",
+      statusLine: "ставится…",
+      statusNote: "Ставим агента на машину — обычно пара минут",
+      busyLine: "",
+      harness: null,
+      tasksActive: 0,
+      now: null,
+      recent: [],
+      skills: [],
+      roles: [],
+      discovered: false,
+      tech: {
+        id: "hst-c84d",
+        registered: "машина ещё ставится",
+        ip: "10.0.0.12",
+        fp: "—",
+        agent: "—",
+        harnessVer: "—",
+        transport: "—",
+        reports: "докладов ещё не было",
+      },
+    },
+  ];
+
+  const regTokens = [
+    { state: "created", line: "Создан · только что · живёт до 14:15" },
+    { state: "used", line: "Использован · laptop-go-1 · 14:02" },
+    { state: "expired", line: "Истёк · 13:41" },
+  ];
+
+  const koraSessions = [
+    {
+      id: "sess-41a2",
+      host: "laptop-go-1",
+      harness: "zcode",
+      state: "live",
+      line: "идёт · открыта 41 мин · активность 2 мин назад",
+      coverage: "full",
+    },
+    {
+      id: "sess-3d90",
+      host: "laptop-go-1",
+      harness: "zcode",
+      state: "done",
+      line: "вчера 18:04–19:22 · 1 ч 18 мин",
+      coverage: "full",
+    },
+    {
+      id: "sess-2e55",
+      host: "laptop-zcode-1",
+      harness: "zcode",
+      state: "done",
+      line: "25 сент · 44 мин",
+      coverage: "full",
+    },
+  ];
+
+  const transcript = {
+    host: "laptop-go-1",
+    harness: "zcode",
+    state: "идёт · открыта 41 мин · последний ход 2 мин назад",
+    coverageNote: "Покрытие этой сессии: полный транскрипт (zcode)",
+    lines: [
+      { time: "18:04", who: "вы", text: "поправь тесты в tokens.test.ts" },
+      { time: "18:06", who: "zcode", text: "разобрал 3 падения: двое — из-за порядка моков, одно — таймаут на медленном CI. Правлю порядок моков." },
+      { time: "18:09", who: "вы", text: "а третий?" },
+      { time: "18:09", who: "zcode", text: "третье — флакующий таймер; поставил fake timers, падение ушло." },
+      { time: "18:12", who: "zcode", text: "тесты зелёные: 41 passed. Готово к ревью." },
+      { time: "18:20", who: "вы", text: "собери краткий отчёт, что менял" },
+      { time: "18:20", who: "zcode", text: "порядок моков в двух тестах + fake timers в test/tokens.test.ts. Больше ничего не трогал." },
+    ],
+  };
+
+  const hostEvents = [
+    { time: "14:02", host: "laptop-go-1", text: "агент доложился" },
+    { time: "13:58", host: "vpnus-1", text: "агент доложился" },
+    { time: "12:40", host: "laptop-go-1", text: "задача «UI-10»: отчёт «волна 1 закрыта»" },
+    { time: "12:31", host: "laptop-go-1", text: "сессия zcode открыта" },
+    { time: "09:15", host: "laptop-go-1", text: "задача «UI-11» завершена — отчёт принят" },
+  ];
+
+  const status = {
+    updated: "обновлено только что",
+    stores: [
+      { name: "mnemos-01", state: "жив", note: "отвечает 3 с назад" },
+      { name: "seal-vault", state: "с оговорками", note: "отвечает 4 с назад · записи идут, часть запросов медленнее обычного" },
+      { name: "gcw-archive", state: "жив", note: "отвечает 3 с назад" },
+      { name: "vesmaro-docs", state: "жив", note: "отвечает 5 с назад" },
+    ],
+    board: { line: "связь живая · события приходят только что · версия 0.4.2" },
+    hosts: [
+      { name: "laptop-go-1", line: "на связи · доклад 12 с назад · задача: 1 идёт", lifecycle: "online" },
+      { name: "vpnus-1", line: "молчит 4 мин — проверить связь", lifecycle: "silent" },
+      { name: "laptop-zcode-1", line: "выключен владельцем", lifecycle: "off" },
+    ],
+    memory: { recs: "12 483", tags: "342", pulses: "37", last: "2 ч" },
+    tasks: { running: 1, queued: 2, validation: 1, doneToday: 3 },
+  };
+
   window.STAND = {
     memories,
     wellNodes,
@@ -463,5 +649,11 @@
     termFiles,
     feedSeed,
     feedPool,
+    hosts,
+    regTokens,
+    koraSessions,
+    transcript,
+    hostEvents,
+    status,
   };
 })();
