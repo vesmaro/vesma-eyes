@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { Eye, EyeOff, Lightbulb, Radio, ShieldCheck } from "lucide-react";
+import { ChevronDown, Eye, EyeOff, Lightbulb, Radio, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,17 +7,19 @@ import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { TableRowSkeleton } from "@/components/skeletons/Skeletons";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
-import { useKoraSessions } from "./useKora";
+import { useKoraSessionPages } from "./useKora";
 import type { KoraCoverageHarness, KoraSession } from "./koraTypes";
 
 /**
- * `/kora` — slice 1 screen «что происходит» (ADR 0019 rev.2).
+ * `/kora` — slices 1+2 screen «что происходит» (ADR 0019 rev.2).
  *
- * Week-0 UI MOCK: everything renders from the mock gateway (fixtures), no
- * backend exists — the demo plate says so honestly (project principle: no
- * silent degradations). The screen carries the three product surfaces the
- * ADR requires from slice 1: the session list, the coverage panel
- * «что вижу / чего нет» and the onboarding card (3 cases).
+ * The session list reads through the P4-7 load-more hook (slice 2):
+ * the first page renders immediately, «Показать ещё» appends the next
+ * one — the frozen response shape has no pagination fields, so the
+ * button shows only while the registry keeps returning FULL pages.
+ * The screen carries the three product surfaces the ADR requires from
+ * slice 1: the session list, the coverage panel «что вижу / чего нет»
+ * and the onboarding card (3 cases).
  */
 
 const SUPPORT_ICON: Record<KoraCoverageHarness["support"], typeof Eye> = {
@@ -197,7 +199,9 @@ function SessionRow({ session }: { session: KoraSession }) {
 
 export function KoraPage() {
   const t = useT();
-  const sessions = useKoraSessions();
+  // P4-7 (slice 2): paged listing — 50 rows per page, «Показать ещё»
+  // appends while full pages keep coming.
+  const sessions = useKoraSessionPages(50);
 
   return (
     <section aria-labelledby="kora-title" className="mx-auto max-w-4xl space-y-6">
@@ -216,8 +220,8 @@ export function KoraPage() {
 
       <div className="grid gap-6 md:grid-cols-2">
         <CoveragePanel
-          harnesses={sessions.data?.coverage.harnesses ?? []}
-          gaps={sessions.data?.coverage.gaps ?? []}
+          harnesses={sessions.coverage?.harnesses ?? []}
+          gaps={sessions.coverage?.gaps ?? []}
         />
         <OnboardingCard />
       </div>
@@ -228,7 +232,7 @@ export function KoraPage() {
         <div role="status" aria-label={t("kora.list.loading")}>
           <TableRowSkeleton rows={4} columns={3} />
         </div>
-      ) : sessions.isError ? (
+      ) : sessions.error ? (
         <EmptyState
           variant="error"
           title={t("kora.list.loadFailed")}
@@ -239,18 +243,32 @@ export function KoraPage() {
             </Button>
           }
         />
-      ) : sessions.data.items.length === 0 ? (
+      ) : sessions.items.length === 0 ? (
         <EmptyState
           variant="empty"
           title={t("kora.list.empty")}
           message={t("kora.list.emptyMessage")}
         />
       ) : (
-        <ul className="space-y-3">
-          {sessions.data.items.map((session) => (
-            <SessionRow key={session.id} session={session} />
-          ))}
-        </ul>
+        <>
+          <ul className="space-y-3">
+            {sessions.items.map((session) => (
+              <SessionRow key={session.id} session={session} />
+            ))}
+          </ul>
+          {sessions.hasMore ? (
+            <div className="flex justify-center">
+              <Button
+                variant="outline"
+                disabled={sessions.isLoadingMore}
+                onClick={() => void sessions.loadMore()}
+              >
+                <ChevronDown aria-hidden className="size-4" />
+                {t("kora.list.loadMore")}
+              </Button>
+            </div>
+          ) : null}
+        </>
       )}
     </section>
   );

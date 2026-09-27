@@ -1504,9 +1504,9 @@ export const en: Record<TranslationKey, string> = {
 
   // --- Kora (ADR 0019 rev.2 — week-0 contract mocks) -----------------------------
   "kora.title": "Kora — sessions across all hosts",
-  "kora.week0Badge": "Kora · slice 1",
+  "kora.week0Badge": "Kora · slice 2",
   "kora.week0Note":
-    "Live zcode session list from the laptop store (read-only scanner, registry on the board). Transcripts and steering arrive with slices 2–3; the contract stays frozen in docs/kora/openapi.yaml.",
+    "Laptop-store sessions: zcode/vscode/pi lists (read-only scanners, registry on the board) plus read-only zcode transcripts. Steering arrives with slice 3; the contract stays frozen in docs/kora/openapi.yaml.",
   "kora.coverage.title": "What I see / what I don't",
   "kora.coverage.support.full": "full",
   "kora.coverage.support.lists-only": "lists only",
@@ -1525,6 +1525,7 @@ export const en: Record<TranslationKey, string> = {
     "A new session or a prompt into your own — via the relay; the phone sees the same UI as the desktop.",
   "kora.list.title": "Sessions",
   "kora.list.loading": "Loading sessions",
+  "kora.list.loadMore": "Load more",
   "kora.list.loadFailed": "Failed to load the session list",
   "kora.list.empty": "No sessions yet",
   "kora.list.emptyMessage":

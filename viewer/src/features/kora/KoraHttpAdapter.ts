@@ -26,6 +26,7 @@ import type {
   KoraSessionCreated,
   KoraSessionCreate,
   KoraSessionsList,
+  KoraSessionsParams,
   KoraStepUpStatus,
   KoraTranscript,
   KoraTranscriptParams,
@@ -80,13 +81,22 @@ export class KoraHttpAdapter implements KoraGateway {
    * request ships bare and the server answers 401 → the login panel.
    */
   private readIdentityToken(): string {
-    return this.getUiTokenFn().length > 0
-      ? ""
-      : this.getDeviceTokenFn();
+    return this.getUiTokenFn().length > 0 ? "" : this.getDeviceTokenFn();
   }
 
-  async listSessions(signal?: AbortSignal): Promise<KoraSessionsList> {
-    return this.request<KoraSessionsList>("/kora/sessions", { signal });
+  async listSessions(
+    params?: KoraSessionsParams,
+    signal?: AbortSignal,
+  ): Promise<KoraSessionsList> {
+    // P4-7 (slice 2 load-more): additive query params; the frozen
+    // response shape is untouched.
+    const query: Record<string, number> = {};
+    if (params?.limit !== undefined) query.limit = params.limit;
+    if (params?.offset !== undefined) query.offset = params.offset;
+    return this.request<KoraSessionsList>("/kora/sessions", {
+      query,
+      signal,
+    });
   }
 
   async getSession(
@@ -95,7 +105,7 @@ export class KoraHttpAdapter implements KoraGateway {
   ): Promise<KoraSession | null> {
     // Registry-row helper derived from the listing (the week-0 mock kept
     // a map; the HTTP contract has no single-session GET in slice 1).
-    const list = await this.listSessions(signal);
+    const list = await this.listSessions(undefined, signal);
     return list.items.find((s) => s.id === sessionId) ?? null;
   }
 
@@ -228,8 +238,7 @@ export class KoraHttpAdapter implements KoraGateway {
     }
     if (!resp.ok) {
       const errBody = (wire ?? {}) as KoraWireError;
-      const message =
-        errBody.message ?? `Kora ${path} failed: ${resp.status}`;
+      const message = errBody.message ?? `Kora ${path} failed: ${resp.status}`;
       throw new KoraHttpError(
         resp.status,
         message,

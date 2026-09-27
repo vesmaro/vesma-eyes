@@ -33,6 +33,22 @@ describe("KoraMockAdapter — list & coverage (slice 1)", () => {
       expect(s.id).toContain(s.native_id);
     }
   });
+
+  it("P4-7 load-more: limit/offset page the registry", async () => {
+    const a = adapter();
+    const page1 = await a.listSessions({ limit: 2, offset: 0 });
+    const page2 = await a.listSessions({ limit: 2, offset: 2 });
+    expect(page1.items).toHaveLength(2);
+    // 3 fixtures — the second page is the honest short tail.
+    expect(page2.items).toHaveLength(1);
+    // Pages are disjoint and the registry order is stable.
+    const ids = [...page1.items, ...page2.items].map((s) => s.id);
+    expect(new Set(ids).size).toBe(3);
+    // The frozen response has NO pagination fields: has_more derives
+    // caller-side from count === limit.
+    expect(page1.count === 2).toBe(true);
+    expect(page2.count === 2).toBe(false);
+  });
 });
 
 describe("KoraMockAdapter — transcript cursor (slice 2)", () => {

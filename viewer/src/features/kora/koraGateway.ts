@@ -22,6 +22,7 @@ import type {
   KoraSessionCreated,
   KoraSessionCreate,
   KoraSessionsList,
+  KoraSessionsParams,
   KoraStepUpStatus,
   KoraTranscript,
   KoraTranscriptParams,
@@ -52,8 +53,17 @@ export function koraErrorCode(err: unknown): KoraErrorCode | undefined {
 }
 
 export interface KoraGateway {
-  /** Slice 1 — GET /api/kora/sessions (list + coverage). */
-  listSessions(signal?: AbortSignal): Promise<KoraSessionsList>;
+  /**
+   * Slice 1 — GET /api/kora/sessions (list + coverage).
+   * P4-7 (slice 2): optional limit/offset for the UI load-more. The
+   * frozen RESPONSE shape has no pagination fields — the caller derives
+   * has_more from `count === limit`; without params the adapter serves
+   * the legacy full listing.
+   */
+  listSessions(
+    params?: KoraSessionsParams,
+    signal?: AbortSignal,
+  ): Promise<KoraSessionsList>;
 
   /** Slice 1 helper — one registry row (derived from the listing). */
   getSession(sessionId: string, signal?: AbortSignal): Promise<KoraSession | null>;

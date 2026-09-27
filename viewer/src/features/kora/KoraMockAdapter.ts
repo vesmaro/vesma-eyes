@@ -24,6 +24,7 @@ import type {
   KoraSessionCreate,
   KoraSessionCreated,
   KoraSessionsList,
+  KoraSessionsParams,
   KoraStepUpStatus,
   KoraTranscript,
   KoraTranscriptItem,
@@ -96,14 +97,26 @@ export class KoraMockAdapter implements KoraGateway {
     }
   }
 
-  listSessions(): Promise<KoraSessionsList> {
-    return this.delay().then(() => ({
-      ok: true as const,
-      count: this.sessions.size,
-      items: [...this.sessions.values()],
-      coverage: structuredClone(KORA_FIXTURE_COVERAGE),
-      meta: { generated_at: "2026-09-24T11:45:00Z" },
-    }));
+  listSessions(params?: KoraSessionsParams): Promise<KoraSessionsList> {
+    return this.delay().then(() => {
+      // P4-7 (slice 2 load-more): the same limit/offset semantics the
+      // board serves — page slicing over the registry order, no
+      // pagination fields in the response (has_more = count === limit
+      // on the caller side).
+      const all = [...this.sessions.values()];
+      const offset = Math.max(params?.offset ?? 0, 0);
+      const items =
+        params?.limit !== undefined
+          ? all.slice(offset, offset + Math.max(params.limit, 0))
+          : all.slice(offset);
+      return {
+        ok: true as const,
+        count: items.length,
+        items,
+        coverage: structuredClone(KORA_FIXTURE_COVERAGE),
+        meta: { generated_at: "2026-09-24T11:45:00Z" },
+      };
+    });
   }
 
   async getSession(sessionId: string): Promise<KoraSession | null> {

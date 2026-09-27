@@ -20,21 +20,26 @@ export const KORA_FIXTURE_COVERAGE: components["schemas"]["KoraCoverageOut"] = {
   harnesses: [
     {
       harness: "zcode",
-      support: "lists-only",
-      note: "Списки сессий с превью (read-only сканер); полные транскрипты — срез 2",
+      support: "full",
+      note: "Списки и read-only транскрипты (mode=ro + WAL-snapshot-fallback, redaction choke-point)",
     },
     {
       harness: "vscode",
       support: "lists-only",
       note: "Списки и превью; полный транскрипт — известный пробел (kind:1)",
     },
-    { harness: "pi", support: "lists-only", note: "Списки по parentId" },
+    {
+      harness: "pi",
+      support: "lists-only",
+      note: "Списки с превью; транскрипты pi пока не отдаются",
+    },
     { harness: "hermes", support: "absent", note: "Не сканируется до T004" },
   ],
   gaps: [
-    "Удалённые хосты ждут расписания W4 loopback-ingress",
-    "hermes-сессии не видны до T004",
     "Полные транскрипты vscode — известный пробел среза 2 (kind:1)",
+    "Транскрипты pi не отдаются (срез 2 даёт только списки)",
+    "Транскрипты сессий удалённых хостов ждут расписания W4 loopback-ingress",
+    "hermes-сессии не видны до T004",
   ],
 };
 
