@@ -379,6 +379,10 @@ def _executor_public(e: dict[str, Any]) -> dict[str, Any]:
         caps = json.loads(e.get("capabilities") or "[]")
     except (TypeError, ValueError):
         caps = []
+    try:
+        discovered = json.loads(e.get("discovered") or "[]")
+    except (TypeError, ValueError):
+        discovered = []
     return {
         "id": e["id"],
         "name": e["name"],
@@ -387,6 +391,7 @@ def _executor_public(e: dict[str, Any]) -> dict[str, Any]:
         "transport": e.get("transport", "local-poll"),
         "capabilities": [c for c in caps if isinstance(c, str)],
         "version": e.get("version", ""),
+        "discovered": [d for d in discovered if isinstance(d, dict)],
         "enabled": bool(e.get("enabled")),
         "state": e.get("state", "pending"),
         "last_seen": e.get("last_seen", ""),
@@ -1464,6 +1469,7 @@ class ExecutorOut(_ApiModel):
     transport: str = "local-poll"
     capabilities: list[str] = []
     version: str = ""
+    discovered: list[dict[str, Any]] = []  # ME-015: last discovery mirror (advisory)
     enabled: bool = False
     state: str = "pending"             # pending | approved | revoked
     last_seen: str = ""
@@ -1500,6 +1506,29 @@ class ExecutorHeartbeatBody(BaseModel):
     note: str = Field(default="", max_length=2000)
     version: str | None = Field(default=None, max_length=60)
     transport: str | None = Field(default=None, max_length=20)
+
+
+class DiscoveryEntry(BaseModel):
+    """One harness fact (agent protocol §3, frozen v0.1 fields)."""
+    name: str = Field(min_length=1, max_length=60)
+    version: str = Field(default="", max_length=60)
+    path: str = Field(default="", max_length=200)
+
+
+class ExecutorDiscoveryBody(BaseModel):
+    """Discovery report body (agent protocol §3). The AGW-17 additive
+    ``environments`` field is accepted and IGNORED board-side — the
+    contract governs the ``harnesses`` list only."""
+    harnesses: list[DiscoveryEntry] = []
+    environments: list[dict[str, Any]] = []  # additive, content-free — ignored
+
+
+class ExecutorDiscoveryOut(_ApiModel):
+    ok: bool
+    executor: ExecutorOut
+    accepted: int
+    rejected: int
+    rejected_names: list[str] = []
 
 
 class ExecutorRegisteredOut(_ApiModel):
@@ -3937,6 +3966,64 @@ async def executor_heartbeat(executor_id: str, request: Request,
             raise HTTPException(422, str(exc)) from exc
     fresh = store.get_executor(executor_id)
     return {"ok": True, "executor": _executor_public(fresh or executor)}
+
+
+# ME-015 (P2-7, design 2026-09-23-connect-provisioning §C): a discovery
+# report carries at most 32 harness facts — overflow is an honest 422,
+# never a silent truncation.
+_DISCOVERY_MAX_ENTRIES = 32
+
+
+@app.post("/api/executors/{executor_id}/discovery")
+async def executor_discovery(executor_id: str, body: ExecutorDiscoveryBody,
+                             request: Request) -> ExecutorDiscoveryOut:
+    """Discovery ingest (agent protocol §3 — the board side of the leg the
+    agent v0.5+ posts hourly). EXECUTOR-token class, identity-match exactly
+    like the heartbeat: URL id MUST equal the token identity (mismatch →
+    403, an unknown id never 404s here); revoked are 403 (kill-switch);
+    pending MAY report (the approve panel reads the mirror before
+    approval). Shares the heartbeat rate budget (one machine self-report
+    family, 60/60 s; the real cadence is hourly).
+
+    Semantics (advisory mirror, never authority):
+    - entries whose ``name`` is not in the harness dictionary are DROPPED
+      and audited (discovery.rejected) — unknown values never auto-extend
+      the dictionary (ui-token owner act, wave 3C);
+    - capabilities stay owner-declared (never self-expanded, Amd 2 §4);
+    - the stored list is the LAST report (a snapshot of local fact); an
+      identical re-report is a silent no-op (hourly cadence, no churn);
+    - an authenticated report proves liveness as well as a poll (the
+      kora-scan precedent) — last_seen ticks.
+    The additive AGW-17 ``environments`` field is accepted and ignored."""
+    if len(body.harnesses) > _DISCOVERY_MAX_ENTRIES:
+        raise HTTPException(
+            422,
+            f"too many discovery entries: {len(body.harnesses)} "
+            f"(cap {_DISCOVERY_MAX_ENTRIES})")
+    executor = _authenticate_executor(request)
+    if executor is None:
+        raise HTTPException(401, "executor token required")
+    if executor["id"] != executor_id:
+        raise HTTPException(
+            403, "discovery executor does not match the token identity")
+    if executor["state"] == "revoked":
+        raise HTTPException(403, "executor is revoked")
+    client_ip = request.client.host if request.client else "unknown"
+    if not _executor_heartbeat_limiter.acquire(client_ip):
+        raise HTTPException(
+            429,
+            f"executor heartbeat rate limit exceeded "
+            f"({_EXECUTOR_HEARTBEAT_RATE_LIMIT} per "
+            f"{_EXECUTOR_HEARTBEAT_RATE_WINDOW:.0f}s per client)",
+        )
+    store.touch_executor_last_seen(executor_id)
+    row, accepted, rejected, rejected_names = store.report_executor_discovery(
+        executor_id, [e.model_dump() for e in body.harnesses])
+    if row is None:
+        raise HTTPException(404, f"executor {executor_id} not found")
+    return {"ok": True, "executor": _executor_public(row),
+            "accepted": accepted, "rejected": rejected,
+            "rejected_names": rejected_names}
 
 
 @app.patch("/api/executors/{executor_id}")
