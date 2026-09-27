@@ -3223,15 +3223,20 @@ class Store:
                 "dropped": dropped, "new_rows": new_rows}
 
     def kora_sessions(self, harness: str | None = None,
-                      state: str | None = None) -> list[dict[str, Any]]:
+                      state: str | None = None,
+                      *, limit: int | None = None,
+                      offset: int = 0) -> list[dict[str, Any]]:
         """Registry rows for the serving path, newest activity first.
 
         Filters are validated by the route; this read is dictionary-clean.
-        The executor join is LEFT: a registry row must stay visible even
-        if its executor was revoked mid-scan (the owner sees the session
-        with its executor metadata — visibility never blocks on registry
-        lifecycle). Presence (last_seen) rides along for the UI row
-        context; ``state`` is the SESSION state, not the host's."""
+        ``limit``/``offset`` serve the slice-2 load-more (P4-7): absent
+        limit = the legacy full listing (capped at 2000), a set limit is
+        clamped to the same ceiling. The executor join is LEFT: a registry
+        row must stay visible even if its executor was revoked mid-scan
+        (the owner sees the session with its executor metadata —
+        visibility never blocks on registry lifecycle). Presence
+        (last_seen) rides along for the UI row context; ``state`` is the
+        SESSION state, not the host's."""
         sql = ("SELECT k.*, e.name AS executor_name, e.host AS executor_host, "
                "e.last_seen AS executor_last_seen "
                "FROM kora_sessions k "
@@ -3245,10 +3250,38 @@ class Store:
             params.append(state)
         if conds:
             sql += " WHERE " + " AND ".join(conds)
-        sql += (" ORDER BY k.last_activity_at DESC, k.native_id ASC "
-                "LIMIT 2000")
+        sql += " ORDER BY k.last_activity_at DESC, k.native_id ASC "
+        if limit is not None:
+            sql += f"LIMIT {max(0, min(int(limit), 2000))} OFFSET {max(0, int(offset))}"
+        else:
+            sql += "LIMIT 2000"
         with self._lock, self._conn() as db:
             return [dict(r) for r in db.execute(sql, params).fetchall()]
+
+    def kora_session(self, executor_id: str,
+                     native_id: str) -> dict[str, Any] | None:
+        """One registry row by the PK pair — the transcript route's
+        re-validation lookup (frozen contract: every response re-validates
+        the session). LEFT-join semantics match kora_sessions()."""
+        with self._lock, self._conn() as db:
+            row = db.execute(
+                "SELECT k.*, e.name AS executor_name, "
+                "e.host AS executor_host, e.last_seen AS executor_last_seen "
+                "FROM kora_sessions k "
+                "LEFT JOIN executors e ON e.id = k.executor_id "
+                "WHERE k.executor_id=? AND k.native_id=?",
+                (executor_id, native_id)).fetchone()
+        return dict(row) if row else None
+
+    def log_kora_audit(self, kind: str, payload: dict[str, Any]) -> None:
+        """Kora audit events into the board's EXISTING audit trail (the
+        events table — the same store.task_history/journal source): the
+        frozen x-kora-redaction audit rule names
+        ``session.transcript_viewed`` with device_class / network_path /
+        session_host in the payload. No transcript content ever rides
+        along — WHO/WHEN/WHAT(opened), never WHAT(WAS WRITTEN)."""
+        with self._lock, self._conn() as db:
+            self._log(db, kind, None, payload)
 
     # ------------------------------------------- harness dictionary (wave 3C)
     # The owner-managed nomination dictionary (design 2026-09-22 §C). The

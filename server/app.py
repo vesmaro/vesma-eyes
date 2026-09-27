@@ -787,9 +787,15 @@ _DEVICE_READ_ROUTES: tuple[tuple[str, str], ...] = (
     ("GET", "/api/assignments"),
     # Kora slice-1 listing (owner decision on the slice-1 review): the
     # LIST is metadata for devices too — previews already pass the
-    # redaction choke-point (archcom position); transcripts (slice 2)
-    # will NOT ride this table.
+    # redaction choke-point (archcom position).
     ("GET", "/api/kora/sessions"),
+    # Kora slice-2 transcript (ADR 0019 gate 5, mnd_ = metadata-only):
+    # the route rides the read table ONLY so a VALID device reaches the
+    # handler's explanatory wall (403 KoraErrorOut code=metadata_only —
+    # the contract forbids a bare 403). The handler guard
+    # (_kora_transcript_denied) stops every device BEFORE any content
+    # leaves the board; invalid mnd_ tokens still 401 in the middleware.
+    ("GET", "/api/kora/sessions/*/transcript"),
 )
 
 # The old control scope, decomposed into per-device granules (§A.7). Each
@@ -4063,34 +4069,35 @@ class KoraSessionsOut(_ApiModel):
 
 
 def _kora_coverage() -> KoraCoverageOut:
-    """The honest per-harness visibility statement (slice 1 reality):
-    zcode lists land via the scanner; vscode/pi readers are slice 2;
-    hermes is a known gap until T004. Computed per request — no caching,
-    the board sees single-digit rps."""
+    """The honest per-harness visibility statement (slice-2 reality):
+    zcode lists + read-only transcripts land via the scanner/serving
+    path; vscode/pi lists landed in slice 2 (vscode full transcript is
+    the known kind:1 gap; pi transcripts are not served yet); hermes is
+    a known gap until T004. Computed per request — no caching, the board
+    sees single-digit rps."""
     harnesses = [
-        # P5 (slice-1 review): `full` LIED — slice 1 serves LISTS only;
-        # zcode transcripts land in slice 2. The honest level today is
-        # lists-only (metadata + redacted previews over the scanner).
         KoraCoverageHarnessOut(
-            harness="zcode", support="lists-only",
-            note="Списки сессий с превью (read-only сканер, mode=ro + "
-                 "WAL-snapshot-fallback); полные транскрипты — срез 2"),
+            harness="zcode", support="full",
+            note="Списки и read-only транскрипты (mode=ro + "
+                 "WAL-snapshot-fallback, redaction choke-point)"),
         KoraCoverageHarnessOut(
-            harness="vscode", support="absent",
-            note="Сканер vscode — срез 2 (списки и превью)"),
+            harness="vscode", support="lists-only",
+            note="Списки и превью (read-only сканер JSONL); полный "
+                 "транскрипт — известный пробел (kind:1)"),
         KoraCoverageHarnessOut(
-            harness="pi", support="absent",
-            note="Сканер pi — срез 2 (списки по parentId)"),
+            harness="pi", support="lists-only",
+            note="Списки с превью (read-only сканер JSONL); "
+                 "транскрипты pi пока не отдаются"),
         KoraCoverageHarnessOut(
             harness="hermes", support="absent",
             note="Не сканируется до T004 (известный пробел)"),
     ]
     gaps = [
-        "Полные транскрипты zcode — срез 2 (сейчас только списки и превью)",
-        "Срез 1 видит только zcode-сессии; vscode/pi — срез 2",
-        "Удалённые хосты ждут расписания W4 loopback-ingress",
-        "hermes-сессии не видны до T004",
         "Полные транскрипты vscode — известный пробел среза 2 (kind:1)",
+        "Транскрипты pi не отдаются (срез 2 даёт только списки)",
+        "Транскрипты сессий удалённых хостов ждут расписания "
+        "W4 loopback-ingress",
+        "hermes-сессии не видны до T004",
     ]
     return KoraCoverageOut(harnesses=harnesses, gaps=gaps)
 
@@ -4138,20 +4145,30 @@ def _kora_session_public(row: dict[str, Any]) -> KoraSessionOut:
 @app.get("/api/kora/sessions")
 async def list_kora_sessions(request: Request,
                              harness: str = "",
-                             state: str = "") -> KoraSessionsOut:
+                             state: str = "",
+                             limit: int | None = Query(
+                                 None, ge=1, le=2000),
+                             offset: int = Query(0, ge=0)) -> KoraSessionsOut:
     """Slice 1 listing (frozen contract GET /kora/sessions). AUTHED read
     (owner decision on the slice-1 review): the ui class (owner session —
     header or cookie leg) and the mnd_ device class (metadata tier; the
     LIST is metadata, previews already pass the redaction choke-point —
-    the archcom position). Anonymous → 401; transcripts (slice 2) will be
+    the archcom position). Anonymous → 401; transcripts (slice 2) are
     ui-only. Filters must be dictionary values (422, the same validation
-    grammar as assignments)."""
+    grammar as assignments).
+
+    P4-7 (week-0 review, slice 2): OPTIONAL ``limit``/``offset`` for the
+    UI load-more. Additive QUERY surface — the frozen RESPONSE shape is
+    untouched (KoraSessionsOut carries no pagination fields; the client
+    derives has_more from count == limit). No limit → the legacy full
+    listing, count = all rows (backwards compatible)."""
     _guard_kora_read(request)
     if harness and harness not in _KORA_HARNESSES:
         raise HTTPException(422, f"invalid harness: {harness}")
     if state and state not in _KORA_STATES:
         raise HTTPException(422, f"invalid state: {state}")
-    rows = store.kora_sessions(harness=harness or None, state=state or None)
+    rows = store.kora_sessions(harness=harness or None, state=state or None,
+                               limit=limit, offset=offset)
     items = [_kora_session_public(r) for r in rows]
     return KoraSessionsOut(
         ok=True,
@@ -4215,6 +4232,196 @@ async def ingest_kora_scan(executor_id: str, body: KoraScanIn,
         })
     return KoraScanOut(scanned=len(rows), upserted=result["upserted"],
                        listed=result["listed"], dropped=result["dropped"])
+
+
+# ---------------------------------------------------- kora slice 2 (ADR 0019)
+# The «что делалось» surface: THE ONE transcript-serving path (frozen
+# contract GET /kora/sessions/{session_id}/transcript) — chat v1 will
+# re-read the store tail through the same route in slice 3.
+#
+# Access classes (TL decision recorded in the slice-2 handover; the ADR's
+# mnd_ = metadata-only wall): the LISTING stays readable by both classes,
+# TRANSCRIPTS are ui-only. A valid mnd_ device gets the EXPLANATORY wall
+# (403 KoraErrorOut code=metadata_only: why transcripts are forbidden and
+# what to do) — never a bare 403. Every successful read emits the frozen
+# audit record session.transcript_viewed into the board's existing audit
+# trail (device_class / network_path / session_host — WHO/WHEN/WHAT-opened,
+# never transcript content).
+#
+# Serving discipline (gate 4, transcript-serving): registry re-validation
+# on every response; every content byte passes the single redaction
+# choke-point; seq-cursor pagination; the store is opened read-only per
+# request (no transcript cache on the board — no second content buffer).
+
+_KORA_ZCODE_DB_ENV = "VESMARO_KORA_ZCODE_DB"
+
+
+def _kora_zcode_db() -> str:
+    """The zcode store the transcript route reads: the module global
+    (test seam) → the env override → the reader default (~/.zcode/...).
+    Slice-2 reality: the LOCAL store — transcripts of remote-host
+    sessions answer 404 until W4 loopback-ingress (the coverage gap says
+    so honestly)."""
+    if os.environ.get(_KORA_ZCODE_DB_ENV, "").strip():
+        return os.environ[_KORA_ZCODE_DB_ENV].strip()
+    from .kora.zcode_reader import DEFAULT_DB_PATH
+    return DEFAULT_DB_PATH
+
+
+def _kora_error(status: int, code: str, message: str) -> JSONResponse:
+    """The frozen KoraErrorOut body ({ok:false, code, message}) — the
+    contract's error envelope for the Kora surfaces (the mnd_ wall in
+    particular must EXPLAIN, not just answer a status)."""
+    return JSONResponse(status_code=status,
+                        content={"ok": False, "code": code,
+                                 "message": message})
+
+
+_MND_WALL_MESSAGE = (
+    "Транскрипты сессий доступны только владельцу (ui-класс). Устройство "
+    "с mnd_-токеном видит список сессий и маскированные превью — "
+    "метаданные, но не содержимое переписки (решение комитета, ADR 0019 "
+    "§4). Откройте Кору в браузере под owner-сессией, чтобы читать "
+    "транскрипт.")
+
+
+def _kora_transcript_denied(request: Request) -> JSONResponse | None:
+    """The ui-only transcript guard. Returns the DENIAL response (403
+    mnd_ wall / 401) or None when the read may proceed. Leg order and
+    comparison discipline mirror _guard_kora_read (device state FIRST —
+    a device request carries its mnd_ bearer in the Authorization
+    header); the ui bearer/cookie legs follow. Returns nothing about
+    identity to the caller — the audit helper derives the leg."""
+    if getattr(request.state, "device", None) is not None:
+        return _kora_error(403, "metadata_only", _MND_WALL_MESSAGE)
+    auth = request.headers.get("Authorization", "")
+    if auth:
+        ui_token = _token_classes().get("ui", "")
+        if (ui_token and hmac.compare_digest(
+                auth.encode("utf-8"), f"Bearer {ui_token}".encode("utf-8"))):
+            return None
+        return _kora_error(
+            401, "unauthorized",
+            _token_mismatch_detail(auth, _token_classes(), ("ui",)))
+    if _cookie_ui_ok(request):
+        return None
+    return _kora_error(
+        401, "unauthorized",
+        "owner session required — Kora transcripts are ui-only (login at "
+        "/api/auth/ui-token, ADR 0014; mnd_ devices see metadata only)")
+
+
+def _kora_network_path(request: Request) -> str:
+    """The audit's network_path: HOW the read reached the board (cookie
+    leg vs bearer), not an address — enough for the WHO/WHEN audit, no
+    extra data collected."""
+    if not request.headers.get("Authorization", ""):
+        return "cookie"
+    return "bearer"
+
+
+class KoraTranscriptItemOut(_ApiModel):
+    """One frozen KoraTranscriptItemOut row (docs/kora/openapi.yaml):
+    content is the CHOKE-POINT's output, redaction_applied is the honest
+    per-entry mask signal."""
+    seq: int
+    role: str
+    kind: str | None = None
+    ts: str | None = None
+    content: str
+    redaction_applied: bool
+
+
+class KoraTranscriptOut(_ApiModel):
+    session_id: str
+    items: list[KoraTranscriptItemOut]
+    next_after_seq: int
+    has_more: bool
+
+
+@app.get("/api/kora/sessions/{session_id}/transcript")
+async def get_kora_session_transcript(
+        session_id: str, request: Request,
+        after_seq: int = Query(0, ge=0),
+        limit: int = Query(50, ge=1, le=200)):
+    # No return annotation on purpose: this handler answers EITHER the
+    # frozen KoraTranscriptOut page OR a KoraErrorOut JSONResponse — a
+    # union annotation would make FastAPI build an impossible response
+    # model. Both bodies are contract-exact as constructed below.
+    """Slice 2 transcript tail (frozen contract GET
+    /kora/sessions/{id}/transcript): ui-only, seq cursor, redaction
+    choke-point on every content byte, session.transcript_viewed audit
+    on every successful read. zcode sessions only — vscode (kind:1
+    known gap) and pi (lists-only in slice 2) answer 422 with an honest
+    explanation, not a fake empty page."""
+    denied = _kora_transcript_denied(request)
+    if denied is not None:
+        return denied
+    # The opaque handle parses back into the registry PK (slice-1
+    # convention: '<executor_id>:<native_id>'; the executor id carries
+    # no colon). A malformed handle is an unknown session, not a 500.
+    executor_id, sep, native_id = session_id.partition(":")
+    row = (store.kora_session(executor_id, native_id)
+           if sep and executor_id and native_id else None)
+    if row is None:
+        return _kora_error(
+            404, "session_not_found",
+            f"Сессия {session_id} не найдена в реестре Коры.")
+    if row["harness"] != "zcode":
+        return _kora_error(
+            422, "validation",
+            "Транскрипты в срезе 2 отдаются только для zcode-сессий: "
+            "полный транскрипт vscode — известный пробел (kind:1), "
+            "транскрипты pi пока не отдаются. Списки и превью — в "
+            "листинге сессий.")
+    from .kora.zcode_reader import (
+        SessionNotFoundError as ZcodeSessionNotFound,
+    )
+    from .kora.zcode_reader import read_zcode_transcript
+    try:
+        result = read_zcode_transcript(
+            _kora_zcode_db(), native_id,
+            after_seq=after_seq, limit=limit)
+    except ZcodeSessionNotFound:
+        # Registry row without a local store row: a remote-host session
+        # (W4 gap) or a harness-side deletion — both resolve as absent.
+        return _kora_error(
+            404, "session_not_found",
+            f"Транскрипт сессии {session_id} недоступен на этом хосте "
+            "(удалённые хосты ждут W4 loopback-ingress либо сессия "
+            "удалена из стора).")
+    except (RuntimeError, OSError) as exc:
+        # Store unreadable even via the WAL snapshot — operational
+        # failure, honestly outside the contract's response table.
+        raise HTTPException(
+            503, f"kora transcript store unreadable: {exc}") from exc
+    items: list[KoraTranscriptItemOut] = []
+    for item in result.items:
+        content, applied = kora_redaction.redact_body(item["content"])
+        items.append(KoraTranscriptItemOut(
+            seq=item["seq"],
+            role=item["role"],
+            kind=item["kind"],
+            ts=(item["ts"] or None),
+            content=content,
+            redaction_applied=applied,
+        ))
+    # The frozen audit record — WHO/WHEN/WHAT-opened into the existing
+    # board audit trail; content never rides along.
+    store.log_kora_audit("session.transcript_viewed", {
+        "device_class": "ui",
+        "network_path": _kora_network_path(request),
+        "session_host": row.get("executor_host") or "",
+        "session_id": session_id,
+        "executor_id": executor_id,
+        "native_id": native_id,
+    })
+    return KoraTranscriptOut(
+        session_id=session_id,
+        items=items,
+        next_after_seq=result.next_after_seq,
+        has_more=result.has_more,
+    )
 
 
 # ----------------------------------------- harness dictionary (wave 3C)
