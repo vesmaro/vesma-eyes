@@ -1490,6 +1490,18 @@ class ExecutorRegister(BaseModel):
     version: str = Field(default="", max_length=60)
 
 
+class ExecutorHeartbeatBody(BaseModel):
+    """Presence-tick body (agent protocol §3.1): the agent MAY send it,
+    the server historically ignored it. ME-015 makes the additive
+    self-report fields REAL: ``version`` / ``transport`` update the
+    registry to the last reported values (absent/empty = never written —
+    an old agent that reports nothing leaves the row untouched). ``note``
+    stays accept-and-ignore (wire symmetry, §3.1)."""
+    note: str = Field(default="", max_length=2000)
+    version: str | None = Field(default=None, max_length=60)
+    transport: str | None = Field(default=None, max_length=20)
+
+
 class ExecutorRegisteredOut(_ApiModel):
     ok: bool
     executor: ExecutorOut
@@ -3266,29 +3278,49 @@ def _assignment_rate_limit(request: Request, ui: bool) -> None:
         )
 
 
-def _touch_presence_if_authenticated(request: Request, executor_id: str) -> None:
+def _touch_presence_if_authenticated(request: Request, executor_id: str,
+                                     version: str = "",
+                                     transport: str = "") -> None:
     """Presence piggyback for GET /api/assignments?executor_id=... — the
     poll announces itself and its clock ticks. Auth-gated: only the
     executor's OWN token or the machine token may tick presence (an open
     endpoint must not let arbitrary readers fake liveness — presence feeds
     the auto-pick routing tier). Unauthenticated reads stay legal, they
-    just don't tick."""
+    just don't tick.
+
+    ME-015: the same gate carries the optional honest self-report —
+    non-empty ``version`` / ``transport`` update the registry to the last
+    reported values (store-level: changed values only, additive, revoked
+    never updated). Invalid transport is REJECTED BY THE ROUTE (422)
+    before this helper runs, so no exception path lives here."""
     executor = _authenticate_executor(request)
     if executor is not None:
         if executor["id"] == executor_id and executor["state"] != "revoked":
             store.touch_executor_last_seen(executor_id)
+            if version or transport:
+                store.report_executor_self(
+                    executor_id, version=version or None,
+                    transport=transport or None)
         return
     auth = request.headers.get("Authorization", "")
     if BOARD_WRITE_TOKEN and hmac.compare_digest(
             auth.encode("utf-8"),
             f"Bearer {BOARD_WRITE_TOKEN}".encode("utf-8")):
         store.touch_executor_last_seen(executor_id)
+        if version or transport:
+            store.report_executor_self(
+                executor_id, version=version or None,
+                transport=transport or None)
 
 
 @app.get("/api/assignments")
 async def list_assignments(request: Request, state: str = "",
                            task_id: str = "", executor_id: str = "",
-                           by: str = "") -> AssignmentsOut:
+                           by: str = "",
+                           executor_version: str = Query(
+                               default="", max_length=60),
+                           executor_transport: str = Query(
+                               default="", max_length=20)) -> AssignmentsOut:
     """Assignment queue projection (ADR 0009). OPEN read (no bearer), same
     boundary as GET /api/board: the cluster ingress is the auth boundary.
     ``state`` must be a dictionary value (422); ``task_id`` is an exact
@@ -3299,6 +3331,11 @@ async def list_assignments(request: Request, state: str = "",
     - ``?executor_id=`` presence piggyback: a poller announcing itself
       ticks that executor's last_seen — but only when authenticated as
       that executor (its token) or with the machine token.
+    - ME-015 additive self-report on the same auth gate: non-empty
+      ``executor_version`` / ``executor_transport`` update the registry to
+      the last reported values (changed values only; an agent that sends
+      nothing — every client deployed before ME-015 — is unaffected). A
+      non-empty transport outside EXECUTOR_TRANSPORTS is an honest 422.
     - every item carries ``routing`` {resolved, reason} — the resolution
       chain (Amd 2 §5) computed per GET, stored nowhere: explicit pin →
       assignment specialist → task specialists → project default →
@@ -3309,8 +3346,16 @@ async def list_assignments(request: Request, state: str = "",
     if state and state not in ASSIGNMENT_STATES:
         raise HTTPException(422, f"invalid state: {state}")
     executor_id = executor_id.strip()
+    if (executor_version or executor_transport) and not executor_id:
+        raise HTTPException(
+            422, "executor_version/executor_transport require executor_id")
+    if executor_transport and executor_transport not in EXECUTOR_TRANSPORTS:
+        raise HTTPException(
+            422, f"invalid executor_transport: {executor_transport}")
     if executor_id:
-        _touch_presence_if_authenticated(request, executor_id)
+        _touch_presence_if_authenticated(
+            request, executor_id, version=executor_version,
+            transport=executor_transport)
     items = store.assignments(state=state or None, task_id=task_id or None, by=(by or None))
     executors = store.list_executors()
     global_default = (store.get_meta("default_executor") or "").strip()
@@ -3848,8 +3893,9 @@ async def get_executor(executor_id: str) -> ExecutorOut:
 
 
 @app.post("/api/executors/{executor_id}/heartbeat")
-async def executor_heartbeat(executor_id: str,
-                             request: Request) -> ExecutorStateChangeOut:
+async def executor_heartbeat(executor_id: str, request: Request,
+                             body: ExecutorHeartbeatBody | None = None
+                             ) -> ExecutorStateChangeOut:
     """Executor presence tick (idle poller liveness; assignment heartbeats
     piggyback separately in the assignment routes). EXECUTOR-token class:
     the URL id must equal the token-backed executor — a mismatch is 403
@@ -3857,7 +3903,15 @@ async def executor_heartbeat(executor_id: str,
     Pending executors MAY tick (the owner sees liveness before approving);
     revoked may not (kill-switch — presence must decay to offline). Own
     rate budget 60/60 s. NO SSE: per-heartbeat events are forbidden (§11)
-    — clients render age from GET + a local 1 Hz ticker."""
+    — clients render age from GET + a local 1 Hz ticker.
+
+    ME-015: the body (agent protocol §3.1 — historically ignored) now
+    carries the honest self-report: non-empty ``version`` / ``transport``
+    update the registry to the LAST reported values; absent/empty fields
+    are never written (an agent that reports nothing — every client
+    deployed before ME-015 — leaves the row exactly as it was). Invalid
+    transport is an explicit 422; the tick itself is lost with it and the
+    agent retries next beat (never fatal, §3.1)."""
     executor = _authenticate_executor(request)
     if executor is None:
         raise HTTPException(401, "executor token required")
@@ -3875,6 +3929,12 @@ async def executor_heartbeat(executor_id: str,
             f"{_EXECUTOR_HEARTBEAT_RATE_WINDOW:.0f}s per client)",
         )
     store.touch_executor_last_seen(executor_id)
+    if body is not None:
+        try:
+            store.report_executor_self(
+                executor_id, version=body.version, transport=body.transport)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
     fresh = store.get_executor(executor_id)
     return {"ok": True, "executor": _executor_public(fresh or executor)}
 

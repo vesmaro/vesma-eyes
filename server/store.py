@@ -2996,6 +2996,60 @@ class Store:
                 (_now(), executor_id))
             return cur.rowcount > 0
 
+    def report_executor_self(self, executor_id: str, *,
+                             version: str | None = None,
+                             transport: str | None = None) -> dict[str, Any] | None:
+        """Honest self-report (ME-015): update ``version`` / ``transport``
+        to the LAST values the agent reported about itself (heartbeat /
+        poll piggyback), instead of freezing the enrollment-time banner.
+        Additive by contract: a field that is absent/empty is NOT written —
+        an agent that does not report leaves the stored value alone (never
+        blanked). Revoked executors never update (kill-switch discipline,
+        same WHERE as touch_executor_last_seen).
+
+        Write discipline: only a CHANGED value is written (updated_at rides
+        only real mutations — an unchanged heartbeat report is a silent
+        no-op, the audit trail stays noise-free). Audit:
+        executor.self_reported with old→new per changed field.
+
+        Raises:
+            ValueError — unknown transport (HTTP 422 upstream).
+        Returns the fresh row, or None when the executor is gone/revoked.
+        """
+        patch: dict[str, str] = {}
+        if version is not None:
+            v = version.strip()[:60]
+            if v:
+                patch["version"] = v
+        if transport is not None:
+            t = transport.strip()
+            if t:
+                if t not in EXECUTOR_TRANSPORTS:
+                    raise ValueError(f"invalid transport: {transport}")
+                patch["transport"] = t
+        if not patch:
+            return self.get_executor(executor_id)
+        with self._lock, self._conn() as db:
+            row = db.execute(
+                "SELECT * FROM executors WHERE id=?", (executor_id,)).fetchone()
+            if row is None or row["state"] == "revoked":
+                return None
+            changes: dict[str, list[str]] = {}
+            for field, value in patch.items():
+                if row[field] != value:
+                    changes[field] = [row[field], value]
+            if not changes:
+                return dict(row)
+            now = _now()
+            sets = ", ".join(f"{k}=?" for k in changes)
+            db.execute(
+                f"UPDATE executors SET {sets}, updated_at=? "  # noqa: S608 — keys from a fixed allow-list
+                "WHERE id=? AND state<>'revoked'",
+                (*[v for _, v in changes.values()], now, executor_id))
+            self._log(db, "executor.self_reported", None, {
+                "executor_id": executor_id, "changes": changes})
+            return self._executor(db, executor_id)
+
     def update_executor(self, executor_id: str, patch: dict[str, Any],
                         actor: str = "owner") -> tuple[dict[str, Any], dict[str, Any]]:
         """Owner PATCH (ui-token class): name / state / capabilities /
