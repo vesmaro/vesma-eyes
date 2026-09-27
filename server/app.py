@@ -89,6 +89,7 @@ from .store import (
     TaskNotAssignableError,
     UnknownHarnessError,
     VALID_STATUSES,
+    executor_lifecycle_status,
     presence_from_last_seen,
 )
 from . import provisioner as provisioning
@@ -413,7 +414,9 @@ _presence_emitted: dict[str, str] = {}
 
 def _executor_public(e: dict[str, Any]) -> dict[str, Any]:
     """Public executor shape: secret_hash NEVER leaves the store;
-    presence is computed from the last_seen TTL (never stored)."""
+    presence is computed from the last_seen TTL (never stored). UXE-2:
+    ``status`` is the honest computed lifecycle (07a §4) — on read, from
+    the same facts presence uses."""
     try:
         caps = json.loads(e.get("capabilities") or "[]")
     except (TypeError, ValueError):
@@ -435,6 +438,7 @@ def _executor_public(e: dict[str, Any]) -> dict[str, Any]:
         "state": e.get("state", "pending"),
         "last_seen": e.get("last_seen", ""),
         "presence": presence_from_last_seen(e.get("last_seen", "")),
+        "status": executor_lifecycle_status(e),
         "registered_via": e.get("registered_via", ""),
         "registered_at": e.get("registered_at", ""),
         "updated_at": e.get("updated_at", ""),
@@ -1593,6 +1597,23 @@ class AssignmentFinishedOut(_ApiModel):
 # Executor registry contract (ARCH-9, ADR 0009 Amendment 2). The public
 # Executor shape never carries secret material — the plaintext
 # executor_secret exists exactly once, in the register response.
+class LifecycleStatus(_ApiModel):
+    """UXE-2 honest connection lifecycle (07a dictionary §4). Computed on
+    read by the store (``executor_lifecycle_status`` /
+    ``enrollment_lifecycle_status``); never persisted. ``state`` is one of
+    provisioning | awaiting-approval | awaiting-first-report | online |
+    silent | offline | disabled | revoked; ``since`` is the timestamp of
+    the fact the state rests on; ``last_report_age_s`` is '' when no
+    report exists yet (honest absence) and an integer otherwise;
+    ``next_action`` is the owner-facing follow-up (UI renders it, the
+    board never hardcodes labels)."""
+    state: str
+    since: str = ""
+    last_report_age_s: int | str = ""
+    reason: str = ""
+    next_action: str = ""
+
+
 class ExecutorOut(_ApiModel):
     id: str
     name: str
@@ -1606,6 +1627,7 @@ class ExecutorOut(_ApiModel):
     state: str = "pending"             # pending | approved | revoked
     last_seen: str = ""
     presence: str = "offline"          # online | stale | offline (computed)
+    status: LifecycleStatus            # UXE-2: computed lifecycle (07a §4)
     registered_via: str = ""           # '' = machine bootstrap; 'enrollment:<id>'
     registered_at: str = ""
     updated_at: str = ""
@@ -1770,6 +1792,7 @@ class EnrollmentOut(_ApiModel):
     used_at: str = ""
     used_ip: str = ""
     executor_id: str = ""
+    status: LifecycleStatus | None = None  # UXE-2: computed lifecycle (07a §4)
 
 
 class EnrollmentCreatedOut(_ApiModel):
@@ -4119,7 +4142,13 @@ async def list_executors() -> ExecutorListOut:
     (never-heartbeated included). These are server-owned constants and
     travel in ``meta`` — clients must read them, never hardcode. The
     sweeper interval is exposed the same way. secret_hash never leaves
-    the store."""
+    the store.
+
+    UXE-2: every item also carries the honest ``status`` lifecycle object
+    (07a dictionary §4) — the same facts, one more owner-facing verdict
+    (awaiting-approval / awaiting-first-report / online / silent / offline
+    / disabled / revoked) with since, report age and next_action; the
+    state list rides ``meta.lifecycle.states``."""
     rows = store.list_executors()
     return {
         "ok": True,
@@ -4131,6 +4160,14 @@ async def list_executors() -> ExecutorListOut:
                 "stale_max_age_s": int(PRESENCE_STALE_S),
             },
             "sweeper_interval_s": int(_PRESENCE_SWEEP_INTERVAL_S),
+            # UXE-2: the lifecycle thresholds a client may render from —
+            # same discipline as presence: read, never hardcode.
+            "lifecycle": {
+                "silent_max_age_s": int(PRESENCE_STALE_S),
+                "states": ["provisioning", "awaiting-approval",
+                           "awaiting-first-report", "online", "silent",
+                           "offline", "disabled", "revoked"],
+            },
         },
     }
 
@@ -4214,7 +4251,10 @@ async def create_enrollment(body: EnrollmentCreateBody,
     _broadcast({"kind": "enrollment.created",
                 "enrollment_id": row["enrollment_id"],
                 "label": row["label"]})
-    return {"ok": True, "enrollment": row, "token": token,
+    return {"ok": True,
+            "enrollment": {**row, "status": store.enrollment_lifecycle_status(
+                store.get_enrollment(row["enrollment_id"]) or row)},
+            "token": token,
             "ca_fingerprint": _board_ca_fingerprint()}
 
 
@@ -4222,9 +4262,14 @@ async def create_enrollment(body: EnrollmentCreateBody,
 async def list_enrollments(request: Request) -> EnrollmentListOut:
     """Enrollment tokens for the owner panel (ui-token). Items carry NO
     token material — token_hash stays in the store (hash-only); the list
-    shows live tokens plus terminal history for the TTL/used audit trail."""
+    shows live tokens plus terminal history for the TTL/used audit trail.
+    UXE-2: each item carries the computed ``status`` (07a §4) — a live
+    provision job refines the token state into provisioning /
+    awaiting-first-report."""
     _guard_ui_write(request)
-    items = store.list_enrollments()
+    items = [dict(i, status=store.enrollment_lifecycle_status(
+        store.get_enrollment(i["enrollment_id"]) or i))
+        for i in store.list_enrollments()]
     return {"ok": True, "count": len(items), "items": items}
 
 
@@ -4253,7 +4298,9 @@ async def revoke_enrollment(enrollment_id: str,
     if transitioned:
         _broadcast({"kind": "enrollment.revoked",
                     "enrollment_id": enrollment_id})
-    return {"ok": True, "enrollment": row}
+    return {"ok": True,
+            "enrollment": {**row, "status": store.enrollment_lifecycle_status(
+                store.get_enrollment(enrollment_id) or row)}}
 
 
 @app.get("/api/executors/{executor_id}")
@@ -5184,7 +5231,10 @@ async def provision_job_status(job_id: str, request: Request) -> ProvisionJobOut
         erow = store.get_enrollment(row["enrollment_id"])
         if erow is not None:
             enrollment = {"state": erow["state"], "expires_at": erow["expires_at"],
-                          "executor_id": erow.get("executor_id", "")}
+                          "executor_id": erow.get("executor_id", ""),
+                          # UXE-2: the same honest lifecycle object (07a §4)
+                          # the enrollment panel serves.
+                          "status": store.enrollment_lifecycle_status(erow)}
     return {"ok": True, "job": row, "enrollment": enrollment}
 
 

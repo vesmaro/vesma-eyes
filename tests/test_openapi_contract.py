@@ -255,7 +255,8 @@ class TestKeyRoutesReferenceSchemas:
         out = _components(spec)["ExecutorOut"]
         must_have = {"id", "name", "harness", "host", "transport",
                      "capabilities", "version", "enabled", "state",
-                     "last_seen", "presence", "registered_at", "updated_at"}
+                     "last_seen", "presence", "status",
+                     "registered_at", "updated_at"}
         assert must_have <= set(out.get("properties", {}))
         # secret hygiene: neither the hash nor the plaintext is a public field
         assert not ({"secret", "secret_hash", "executor_secret"}

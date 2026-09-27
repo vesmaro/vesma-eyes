@@ -35,6 +35,14 @@ const PENDING: ExecutorItem = {
   state: "pending",
   last_seen: "2026-09-19T08:59:00+00:00",
   presence: "online",
+  // UXE-2 (07a §4): pending → awaiting-approval regardless of the clock.
+  status: {
+    state: "awaiting-approval",
+    since: "2026-09-19T08:40:00+00:00",
+    last_report_age_s: 60,
+    reason: "pending",
+    next_action: "review the registration and approve or revoke it",
+  },
   registered_via: "",
   registered_at: "2026-09-19T08:40:00+00:00",
   updated_at: "2026-09-19T08:40:00+00:00",

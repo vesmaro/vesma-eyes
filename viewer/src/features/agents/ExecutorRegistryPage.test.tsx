@@ -143,21 +143,24 @@ describe("Registry bands (layer order)", () => {
     await actUnmount(root);
   });
 
-  it("every row wears the unverified identity chip; capabilities are chips", async () => {
+  it("every row wears the honest lifecycle pill; capabilities are chips", async () => {
     const { root, container } = await mountPage();
-    // §2.2: declared identity is UNVERIFIED — the chip is on every row.
-    const chips = container.querySelectorAll(
-      'span[title="Identity declared by the executor, never verified by the server"]',
-    );
-    expect(chips.length).toBe(6);
+    // UXE-2 (07a §4): the lifecycle pill replaces the eternal «unverified»
+    // chip — one per row, six fixtures × six states of the corpus.
+    const pills = container.querySelectorAll("section span[title]");
+    expect(pills.length).toBeGreaterThanOrEqual(6);
     // Structure: two allowlist mappings → two separate chips (the mono
     // chip class), not one comma-joined string.
     const connected = band(container, "Connected")!;
     const capabilityChips = connected.querySelectorAll("li span.font-mono.rounded-sm");
     expect(capabilityChips.length).toBe(4);
     expect(connected.textContent).toContain("@GCW: Senior Frontend Developer");
-    // The zero-capability row says so instead of an empty group.
-    expect(connected.textContent).toContain("no capabilities declared");
+    // The zero-capability row says so instead of an empty group (07a §3.3).
+    expect(connected.textContent).toContain("none assigned yet");
+    // The pending band shows the honest «awaiting approval» verdict, not
+    // the dead «unverified».
+    const pending = band(container, "Awaiting approval")!;
+    expect(pending.textContent).toContain("awaiting approval");
     await actUnmount(root);
   });
 });

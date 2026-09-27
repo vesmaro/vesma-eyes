@@ -16,6 +16,14 @@ import { AgentsUnsupported } from "./AgentsUnsupported";
 import { ConnectGuide } from "./ConnectGuide";
 import { EnrollmentDialog } from "./EnrollmentDialog";
 import { EnrollmentTokensPanel } from "./EnrollmentTokensPanel";
+import {
+  formatReportAge,
+  isLifecycle,
+  lifecycleBadgeVariant,
+  lifecycleLabelKey,
+  lifecycleNextKey,
+  silentMaxAgeS,
+} from "./lifecycle";
 import { ExecutorMenu } from "./ExecutorMenu";
 import { ExecutorSheet } from "./ExecutorSheet";
 import {
@@ -270,7 +278,7 @@ function Band({
   );
 }
 
-/** One dense registry row: presence · identity (unverified) · declared
+/** One dense registry row: presence · lifecycle pill · declared
  * meta · capabilities as chips · the state-appropriate owner actions. */
 function ExecutorRow({
   executor,
@@ -340,29 +348,11 @@ function ExecutorRow({
           <span className="sr-only">{t(presenceLabelKey(presenceKey))}</span>
         </span>
         <span className="truncate font-medium">{executor.name}</span>
-        {/* Declared identity is UNVERIFIED (§2.2): outline chip, neutral tone. */}
-        <Badge
-          variant="outline"
-          title={t("agents.identity.tooltip")}
-          className="font-normal"
-        >
-          {t("agents.registry.unverifiedChip")}
-        </Badge>
-        {pending ? (
-          <Badge variant="outline" className="font-normal">
-            {t("agents.executor.pendingReason")}
-          </Badge>
-        ) : null}
-        {executor.state === "approved" && !executor.enabled ? (
-          <Badge variant="outline" title={t("agents.executor.disabledReason")} className="font-normal">
-            {t("agents.executor.disabledReason")}
-          </Badge>
-        ) : null}
-        {revoked ? (
-          <Badge variant="outline" title={t("agents.registry.revokedHint")} className="font-normal">
-            {t("agents.executor.revokedReason")}
-          </Badge>
-        ) : null}
+        {/* UXE-2 (07a §4): the honest lifecycle pill REPLACES the eternal
+         * «не проверено» chip — state + report age + the next step. The
+         * state list rides meta.lifecycle.states (server-owned); the age
+         * reuses the presence ticker (same 1 Hz clock, same human units). */}
+        <LifecyclePill executor={executor} meta={meta} now={now} />
 
         <span className="ml-auto flex items-center gap-1.5">
           {/* Approve stays INLINE — the pending queue is this page's main
@@ -416,7 +406,9 @@ function ExecutorRow({
       </p>
 
       {/* Capabilities as STRUCTURE (§4.3): one chip per allowlist mapping —
-       * never a comma-joined free-text blob. */}
+       * never a comma-joined free-text blob. UXE-1 (07a §3.3): the empty
+       * answer is «пока не назначены» + the what-next hint (label and
+       * value can no longer repeat the same word). */}
       <div className="mt-1 flex flex-wrap items-center gap-1">
         <span className="text-xs text-foreground-muted">
           {t("agents.registry.capabilitiesLabel")}:
@@ -431,11 +423,102 @@ function ExecutorRow({
             </span>
           ))
         ) : (
-          <span className="text-xs text-foreground-muted">
+          <span
+            className="text-xs text-foreground-muted"
+            title={t("agents.registry.capabilitiesHint")}
+          >
             {t("agents.executor.noCapabilities")}
           </span>
         )}
       </div>
     </li>
   );
+}
+
+/**
+ * UXE-2 (07a dictionary §4): the honest lifecycle pill — the replacement
+ * for the dead «не проверено» chip. Anatomy per 07a §1.1:
+ * `[state] + [last-report age] + [next step]` — the state list is
+ * server-owned (`meta.lifecycle.states`), the age reuses the strip's
+ * meta-TTL ticker pattern (same 1 Hz `useValidationNow` clock), the next
+ * step is the hint line (title for sighted users; the SR text carries the
+ * full verdict so the colour+title pairing is never load-bearing).
+ */
+function LifecyclePill({
+  executor,
+  meta,
+  now,
+}: {
+  executor: ExecutorItem;
+  meta: ExecutorListMeta | undefined;
+  now: number;
+}) {
+  const t = useT();
+  // Older boards (pre-UXE-2 server) omit `status` — fall back to the
+  // presence-derived reading instead of crashing or guessing a state.
+  const status = executor.status;
+  if (!isLifecycle(status)) {
+    const ageS = lastSeenAgeS(executor.last_seen, now);
+    return (
+      <Badge variant="outline" className="font-normal">
+        {ageS !== null
+          ? t("agents.lifecycle.next.offline", {
+              age: formatPulseAge(ageS, {
+                minutes: t("agents.age.unitMinutes"),
+                hours: t("agents.age.unitHours"),
+                days: t("agents.age.unitDays"),
+              }),
+            })
+          : t("agents.executor.neverSeen")}
+      </Badge>
+    );
+  }
+
+  const ageText =
+    status.last_report_age_s === ""
+      ? t("agents.lifecycle.reportNever")
+      : formatReportAge(status.last_report_age_s, {
+          agoTemplate: t("agents.lifecycle.reportAgo"),
+          never: t("agents.lifecycle.reportNever"),
+          units: {
+            minutes: t("agents.age.unitMinutes"),
+            hours: t("agents.age.unitHours"),
+            days: t("agents.age.unitDays"),
+          },
+        });
+  const silentMax = silentMaxAgeS(meta);
+  const nextVars =
+    status.state === "awaiting-first-report" && silentMax !== null
+      ? { silentMax: formatPulseAge(silentMax, {
+          minutes: t("agents.age.unitMinutes"),
+          hours: t("agents.age.unitHours"),
+          days: t("agents.age.unitDays"),
+        }) }
+      : undefined;
+
+  return (
+    <Badge
+      variant={lifecycleBadgeVariant(status.state)}
+      title={[t(lifecycleLabelKey(status.state)), ageText, t(lifecycleNextKey(status.state), nextActionVars(nextVars))].join(" · ")}
+      className="font-normal"
+    >
+      {t(lifecycleLabelKey(status.state))}
+      {/* The age rides the pill where the state rests on the report clock
+       * (07a: status is never alone); provisioning/approval ages live in
+       * the tooltip — the actionable fact there is the DECISION, not time. */}
+      {ageText && status.state !== "awaiting-approval" && status.state !== "provisioning" ? (
+        <span className="font-normal text-foreground-secondary">· {ageText}</span>
+      ) : null}
+      <span className="sr-only">
+        {t(lifecycleNextKey(status.state), nextActionVars(nextVars))}
+      </span>
+    </Badge>
+  );
+}
+
+/** i18n var-bag normalisation (empty → undefined keeps templates clean). */
+function nextActionVars(
+  vars: Record<string, string> | undefined,
+): Record<string, string> | undefined {
+  return vars;
 }

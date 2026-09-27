@@ -638,6 +638,14 @@ export const MOCK_EXECUTORS: ExecutorItem[] = [
     state: "approved",
     last_seen: "2026-09-19T08:59:30+00:00",
     presence: "online",
+    // UXE-2 (07a §4): the honest lifecycle — 30 s old report → online.
+    status: {
+      state: "online",
+      since: "2026-09-19T08:59:30+00:00",
+      last_report_age_s: 30,
+      reason: "last report fresh",
+      next_action: "",
+    },
     registered_via: "",
     registered_at: "2026-09-18T09:00:00+00:00",
     updated_at: "2026-09-19T08:00:00+00:00",
@@ -655,6 +663,14 @@ export const MOCK_EXECUTORS: ExecutorItem[] = [
     // 5 min before the corpus point — inside the stale corridor (2–10 min).
     last_seen: "2026-09-19T08:55:00+00:00",
     presence: "stale",
+    // UXE-2: 300 s old report → silent (the same corridor, 07a wording).
+    status: {
+      state: "silent",
+      since: "2026-09-19T08:55:00+00:00",
+      last_report_age_s: 300,
+      reason: "no report in the stale corridor",
+      next_action: "check the host connection and the agent service",
+    },
     registered_via: "",
     registered_at: "2026-09-17T14:20:00+00:00",
     updated_at: "2026-09-18T10:00:00+00:00",
@@ -671,6 +687,14 @@ export const MOCK_EXECUTORS: ExecutorItem[] = [
     state: "approved",
     last_seen: "2026-09-19T08:58:00+00:00",
     presence: "online",
+    // UXE-2: 120 s old report → the silent edge (corridor up to 600 s).
+    status: {
+      state: "silent",
+      since: "2026-09-19T08:58:00+00:00",
+      last_report_age_s: 120,
+      reason: "no report in the stale corridor",
+      next_action: "check the host connection and the agent service",
+    },
     registered_via: "",
     registered_at: "2026-09-16T11:30:00+00:00",
     updated_at: "2026-09-19T07:45:00+00:00",
@@ -689,6 +713,14 @@ export const MOCK_EXECUTORS: ExecutorItem[] = [
     // 3 h silent — beyond the 10 min offline bound.
     last_seen: "2026-09-19T06:00:00+00:00",
     presence: "offline",
+    // UXE-2: 3 h old report → offline.
+    status: {
+      state: "offline",
+      since: "2026-09-19T06:00:00+00:00",
+      last_report_age_s: 10800,
+      reason: "no report beyond the offline threshold",
+      next_action: "check the host and the agent service",
+    },
     registered_via: "",
     registered_at: "2026-09-15T08:00:00+00:00",
     updated_at: "2026-09-15T08:00:00+00:00",
@@ -706,6 +738,15 @@ export const MOCK_EXECUTORS: ExecutorItem[] = [
     // Pending executors MAY tick — the owner sees liveness before approving.
     last_seen: "2026-09-19T08:59:00+00:00",
     presence: "online",
+    // UXE-2: pending → awaiting-approval REGARDLESS of the report clock —
+    // the pill the owner acts on is the approval decision (07a §4).
+    status: {
+      state: "awaiting-approval",
+      since: "2026-09-19T08:40:00+00:00",
+      last_report_age_s: 60,
+      reason: "pending",
+      next_action: "review the registration and approve or revoke it",
+    },
     // Minted through an enrollment token (AGW-5) — the owner cross-checks
     // the origin in the approve decision (design §Threat model).
     registered_via: "enrollment:enr-4f8e2d1c9b0a",
@@ -724,6 +765,14 @@ export const MOCK_EXECUTORS: ExecutorItem[] = [
     state: "revoked",
     last_seen: "2026-09-18T18:00:00+00:00",
     presence: "offline",
+    // UXE-2: revocation is terminal — the report age stays visible under it.
+    status: {
+      state: "revoked",
+      since: "2026-09-18T18:05:00+00:00",
+      last_report_age_s: 54000,
+      reason: "revoked",
+      next_action: "re-register the host if access should be restored",
+    },
     registered_via: "",
     registered_at: "2026-09-14T12:00:00+00:00",
     updated_at: "2026-09-18T18:05:00+00:00",
@@ -733,11 +782,27 @@ export const MOCK_EXECUTORS: ExecutorItem[] = [
 /**
  * Registry page meta — the server-owned presence contract travelling WITH
  * the data (spec §5.1): online ≤ 120 s, stale ≤ 600 s, sweeper every 60 s.
+ * UXE-2 (07a §4): the lifecycle contract rides the same way — the state
+ * list + the silent threshold (the «ждёт первый доклад» → «молчит»
+ * corridor); clients read, never hardcode.
  * Prod constants recorded in the corpus; the UI reads, never hardcodes.
  */
 export const MOCK_EXECUTORS_META: ExecutorsPage["meta"] = {
   presence: { online_max_age_s: 120, stale_max_age_s: 600 },
   sweeper_interval_s: 60,
+  lifecycle: {
+    silent_max_age_s: 600,
+    states: [
+      "provisioning",
+      "awaiting-approval",
+      "awaiting-first-report",
+      "online",
+      "silent",
+      "offline",
+      "disabled",
+      "revoked",
+    ],
+  },
 };
 
 export const MOCK_EXECUTORS_PAGE: ExecutorsPage = {
