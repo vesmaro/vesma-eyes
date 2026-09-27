@@ -32,6 +32,11 @@ import { DOCS_DOMAIN, docsCrumbsFor } from "@/features/docs/docsNav";
  * slots (a disabled button + "soon" badge + tooltip), never as dead links —
  * the IA map is visible ahead of the content waves.
  */
+/** Live sidebar counter ids (UI-30). One id per data source; the registry of
+ * readers lives in Sidebar.tsx (useNavCounterValues — the single hook that
+ * evaluates every source unconditionally, keeping hook order stable). */
+export type NavCounterId = "inbox";
+
 export interface NavSection {
   to: string;
   key: TranslationKey;
@@ -42,7 +47,7 @@ export interface NavSection {
    * Optional live count badge next to the label (Ф2: the inbox counter).
    * The Sidebar renders the matching counter component; undefined = none.
    */
-  counter?: "inbox";
+  counter?: NavCounterId;
 }
 
 export interface NavDomain {
@@ -60,6 +65,14 @@ export interface NavDomain {
   /** Honest "coming in phase N" tooltip key for not-yet-shipped domains. */
   soonKey?: TranslationKey;
   sections?: readonly NavSection[];
+  /**
+   * UI-30 (owner directive): the domain row carries a LIVE badge = the
+   * AGGREGATE of its sections' counters (today: Задачи = the inbox counter).
+   * The same cache entry that feeds the child badges feeds the sum — no new
+   * wire. Hidden when the sum is 0 or any source is unknown (honest
+   * absence, same contract as the child badges).
+   */
+  aggregateCounters?: boolean;
 }
 
 export const NAV_DOMAINS: readonly NavDomain[] = [
@@ -81,6 +94,9 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
     to: "/tasks",
     key: "nav.tasks",
     icon: KanbanSquare,
+    // UI-30: the owner sees new inbox arrivals BEFORE opening the section —
+    // the domain row aggregates its sections' counters (inbox today).
+    aggregateCounters: true,
     sections: [
       { to: "/tasks", key: "nav.taskBoard", icon: KanbanSquare, end: true },
       { to: "/tasks/list", key: "nav.taskList", icon: ListTodo, end: true },
@@ -168,6 +184,21 @@ export function isPathActive(pathname: string, to: string, end = false): boolean
   if (to === "/") return pathname === "/";
   if (end) return pathname === to;
   return pathname === to || pathname.startsWith(`${to}/`);
+}
+
+/**
+ * The distinct counter ids a domain's sections declare, in section order
+ * (UI-30 aggregate inputs). Pure over the module data — when a section gains
+ * a `counter`, the domain aggregate picks it up with no further wiring.
+ */
+export function domainCounterIds(domain: NavDomain): NavCounterId[] {
+  const ids: NavCounterId[] = [];
+  for (const section of domain.sections ?? []) {
+    if (section.counter !== undefined && !ids.includes(section.counter)) {
+      ids.push(section.counter);
+    }
+  }
+  return ids;
 }
 
 /** Domain whose subtree the pathname sits in (for section expansion). */

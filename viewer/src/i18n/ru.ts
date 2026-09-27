@@ -55,6 +55,9 @@ export const ru = {
   // Sidebar version label (owner feedback: «какая версия перед глазами»).
   // {{version}} is the live server version from /api/health.
   "nav.versionAria": "Версия приложения {{version}}",
+  // UI-30: the domain-row aggregate badge («Задачи») — live tooltip/SR name.
+  // Deliberately noun-free (works for any future counter joined to the sum).
+  "nav.newCount": "новых: {{count}}",
   "shell.skipToContent": "Перейти к содержимому",
   "shell.viewFell": "Этот вид упал в колодец",
   // Update banner (owner feedback: остывшие вкладки должны «чиниться сами»

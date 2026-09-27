@@ -46,6 +46,8 @@ export const en: Record<TranslationKey, string> = {
   "nav.modeDeviceControl": "device connected · full access",
   // Sidebar version label (owner feedback) — see ru.ts.
   "nav.versionAria": "App version {{version}}",
+  // UI-30: the domain-row aggregate badge («Задачи») — see ru.ts.
+  "nav.newCount": "new: {{count}}",
   "shell.skipToContent": "Skip to content",
   "shell.viewFell": "This view fell into the well",
   // Update banner (stale-tab self-healing) — see ru.ts.

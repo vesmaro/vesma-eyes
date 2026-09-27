@@ -19,8 +19,8 @@ import { useBoardHealth } from "@/hooks/usePulse";
 import { DocsSidebarGroups } from "@/features/docs/DocsSidebarGroups";
 import { useFocusTrap } from "@/lib/useFocusTrap";
 import { setSidebarOverlayOpen } from "@/lib/sidebarOverlayState";
-import { NAV_DOMAINS, activeDomain, isPathActive } from "./navItems";
-import type { NavDomain, NavSection } from "./navItems";
+import { NAV_DOMAINS, activeDomain, domainCounterIds, isPathActive } from "./navItems";
+import type { NavCounterId, NavDomain, NavSection } from "./navItems";
 import { cn } from "@/lib/utils";
 
 /**
@@ -388,6 +388,9 @@ function DomainLink({
   }
 
   const active = isPathActive(pathname, domain.to, domain.end);
+  // UI-30: the aggregate badge sums the sections' counters (inbox today).
+  // The ids come from the static nav data — stable per domain across renders.
+  const counterIds = domain.aggregateCounters ? domainCounterIds(domain) : [];
   return (
     <Link
       to={domain.linkTo ?? domain.to}
@@ -402,10 +405,16 @@ function DomainLink({
           ? "bg-elevated font-medium text-iris-bright"
           : "text-foreground-secondary",
         expanded && !active && "text-foreground",
+        // The collapsed-rail corner badge (UI-30) anchors to the row; the
+        // expanded panel's ml-auto pill needs no positioning context.
+        !panelExpanded && "relative",
       )}
     >
       <Icon className="size-4 shrink-0" aria-hidden="true" />
       <span className={hideLabels}>{label}</span>
+      {counterIds.length > 0 ? (
+        <AggregateCountBadge ids={counterIds} panelExpanded={panelExpanded} />
+      ) : null}
     </Link>
   );
 }
@@ -464,13 +473,114 @@ function SectionLink({
  */
 function InboxCount() {
   const t = useT();
-  const inbox = useTaskInbox();
-  const count = inbox.data?.count ?? 0;
-  if (inbox.isPending || inbox.isError || count === 0) return null;
+  const count = useInboxCounterValue();
+  if (count === null || count === 0) return null;
   return (
     <span
       title={t("tasks.inboxCount", { count })}
       aria-label={t("tasks.inboxCount", { count })}
+      className="ml-auto inline-flex shrink-0 items-center rounded-full bg-iris/15 px-1.5 font-mono text-xs text-iris-bright"
+    >
+      {count}
+    </span>
+  );
+}
+
+// --- Live counter sources (UI-30) ---------------------------------------------
+//
+// The sidebar counters all read the SAME TanStack cache entries the pages
+// use — one wire per source, and a cache patch (an SSE bridge handler or an
+// invalidation) re-renders every badge that shows it, no refetch involved.
+// The inbox source is the `tasks.inbox` key (`useTaskInbox`); the /tasks SSE
+// bridge (taskEvents.ts) and the server-side inbox events are the writers.
+
+/**
+ * One live reading per counter id. The record shape is FIXED, not a dynamic
+ * loop: every source hook runs unconditionally on every render, so the hook
+ * order is stable by construction. Adding a counter = one `NavCounterId`
+ * member, one field here, one line in `useNavCounterValues` — the aggregate
+ * (`domainCounterIds`) picks new section counters up automatically.
+ *
+ * `null` = the source is unknown (pending / error / incapable gateway) —
+ * honest absence; callers never render a guessed number.
+ */
+interface NavCounterValues {
+  inbox: number | null;
+}
+
+function useNavCounterValues(): NavCounterValues {
+  return { inbox: useInboxCounterValue() };
+}
+
+/** The inbox reading that feeds BOTH the «Входящие» badge and the domain
+ * aggregate: the same `tasks.inbox` cache entry `useTaskInbox` serves. */
+function useInboxCounterValue(): number | null {
+  const inbox = useTaskInbox();
+  if (inbox.isPending || inbox.isError) return null;
+  return inbox.data?.count ?? null;
+}
+
+/**
+ * Sum the requested counters. `null` when ANY requested source is unknown —
+ * a partial sum would understate the badge (and flash wrong numbers while
+ * sources load); 0 and below render nothing (same honest absence as the
+ * child badges).
+ */
+function navCounterSum(
+  values: NavCounterValues,
+  ids: readonly NavCounterId[],
+): number | null {
+  let sum = 0;
+  for (const id of ids) {
+    const value = values[id];
+    if (value === null) return null;
+    sum += value;
+  }
+  return sum;
+}
+
+/** Display cap of the collapsed-rail corner badge: the rail variant must
+ * stay width-bounded (UI-19 hygiene), so three-digit sums show "99+". The
+ * expanded pill mirrors the child badges and shows the raw count. */
+const RAIL_BADGE_CAP = 99;
+
+/**
+ * UI-30 (owner directive): the domain row's live badge = the AGGREGATE of
+ * its sections' counters. Expanded panel: the exact pill of the «Входящие»
+ * badge (same tokens, zero new colours), pushed right by `ml-auto`.
+ * Collapsed rail: a compact corner pill pinned inside the row (`relative`
+ * on the row) — the count survives, nothing can push the fixed w-14 slot
+ * into a horizontal scroll. Hidden while the sum is unknown or zero.
+ */
+function AggregateCountBadge({
+  ids,
+  panelExpanded,
+}: {
+  ids: readonly NavCounterId[];
+  /** The PANEL expansion (not the domain-open flag): the rail shows the
+   * corner variant, the expanded panel the standard pill. */
+  panelExpanded: boolean;
+}) {
+  const t = useT();
+  const values = useNavCounterValues();
+  const count = navCounterSum(values, ids);
+  if (count === null || count <= 0) return null;
+  const label = t("nav.newCount", { count });
+  if (!panelExpanded) {
+    return (
+      <span
+        title={label}
+        aria-label={label}
+        className="absolute right-1 top-1 inline-flex shrink-0 items-center justify-center rounded-full bg-iris/15 px-1 font-mono text-[10px] leading-4 text-iris-bright"
+      >
+        {count > RAIL_BADGE_CAP ? `${RAIL_BADGE_CAP}+` : count}
+      </span>
+    );
+  }
+  return (
+    <span
+      title={label}
+      aria-label={label}
       className="ml-auto inline-flex shrink-0 items-center rounded-full bg-iris/15 px-1.5 font-mono text-xs text-iris-bright"
     >
       {count}
