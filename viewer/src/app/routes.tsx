@@ -73,6 +73,12 @@ const TasksLayout = lazy(() =>
 const AgentsLayout = lazy(() =>
   import("@/features/agents/AgentsLayout").then((m) => ({ default: m.AgentsLayout })),
 );
+// ME-014: the agent roster («Хосты») — the section's default landing.
+const AgentsHostsPage = lazy(() =>
+  import("@/features/agents/HostsRosterPage").then((m) => ({
+    default: m.HostsRosterPage,
+  })),
+);
 const AgentsExecutionPage = lazy(() =>
   import("@/features/agents/ExecutionPage").then((m) => ({ default: m.ExecutionPage })),
 );
@@ -233,13 +239,13 @@ export function buildRoutes(): RouteObject[] {
           ],
         },
 
-        // Агенты domain (AGW-3, spec 2026-09-19 §1): the root is an ALIAS —
-        // replace-redirect to the execution view (no overview dashboard:
-        // «кто чем занят прямо сейчас»). ONE route object (review P3-7 —
-        // the former duplicate path is gone): the layout owns the domain
-        // SSE bridge, the index child redirects to the execution view, and
-        // /agents/specialists + /agents/harnesses slot in as sibling
-        // children when their waves land (nothing here excludes them).
+        // Агенты domain (AGW-3, spec 2026-09-19 §1 + ME-014 verdict): the
+        // root is an ALIAS — replace-redirect to the HOST ROSTER (the
+        // «Хосты» view is the default landing since ME-014; /agents/execution
+        // and /agents/harnesses keep their paths — existing links and
+        // bookmarks survive). ONE route object (review P3-7 — the former
+        // duplicate path is gone): the layout owns the domain SSE bridge,
+        // the index child redirects to the default view.
         {
           path: "/agents",
           element: (
@@ -248,7 +254,10 @@ export function buildRoutes(): RouteObject[] {
             </Page>
           ),
           children: [
-            { index: true, element: <Navigate to="/agents/execution" replace /> },
+            { index: true, element: <Navigate to="/agents/hosts" replace /> },
+            // ME-014: the roster — hosts → agents, presence + chips,
+            // zero mutations (the registry owns them).
+            { path: "hosts", element: <AgentsHostsPage /> },
             { path: "execution", element: <AgentsExecutionPage /> },
             // AGW-4: the executor registry — connection guide + approve /
             // enable / revoke / delete management (spec §1, wave 2).

@@ -88,14 +88,15 @@ describe("domain map", () => {
     );
   });
 
-  it("gives the agents domain its AGW-3 execution section (root = alias)", () => {
+  it("gives the agents domain its AGW-3/ME-014 sections (root = hosts roster)", () => {
     const agents = NAV_DOMAINS.find((d) => d.to === "/agents");
     expect(agents?.soonKey).toBeUndefined();
-    // The domain root has no index route — the domain link goes to the
-    // execution view (spec §1: /agents aliases /agents/execution).
-    expect(agents?.linkTo).toBe("/agents/execution");
-    // AGW-4 wave 2 adds the registry («Подключение») next to execution.
+    // ME-014: the domain root has no index route — the domain link goes to
+    // the host roster (the section's default landing).
+    expect(agents?.linkTo).toBe("/agents/hosts");
+    // The roster leads; execution and the AGW-4 registry keep their paths.
     expect(agents?.sections?.map((s) => s.to)).toEqual([
+      "/agents/hosts",
       "/agents/execution",
       "/agents/harnesses",
     ]);

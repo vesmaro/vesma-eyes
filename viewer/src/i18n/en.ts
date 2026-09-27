@@ -725,6 +725,21 @@ export const en: Record<TranslationKey, string> = {
   // --- agents domain: execution section (AGW-3) -----------------------------------
   "nav.agentsExecution": "Execution",
   "nav.systemSettings": "Settings",
+  // ME-014: the host roster («Хосты») — the section's default landing.
+  "nav.agentsHosts": "Hosts",
+  "agents.roster.title": "Hosts",
+  "agents.roster.loading": "Loading the agent roster",
+  "agents.roster.failed": "Failed to load the roster",
+  "agents.roster.emptyTitle": "No agents yet",
+  "agents.roster.emptyMessage":
+    "The roster comes alive once the first executor connects.",
+  "agents.roster.emptyAction": "Open Connect",
+  "agents.roster.hostUnknown": "host not reported",
+  "agents.roster.onlineCounter": "{{online}}/{{total}} online",
+  "agents.roster.idle": "idle",
+  "agents.roster.disabledBadge": "disabled",
+  "agents.roster.pendingBadge": "pending",
+  "agents.roster.revokedBadge": "revoked",
   "agents.execution.title": "Execution",
   "agents.execution.emptyTitle": "No assignments",
   "agents.execution.emptyMessage":
