@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Mermaid } from "mermaid";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
+import { normalizeMermaidSvgXml } from "./mermaidSvgXml";
 
 /**
  * Mermaid fences (АРХКОМ-8): `language-mermaid` code blocks render as
@@ -67,15 +68,28 @@ export function MermaidDiagram({ code }: { code: string }) {
         tempId = `docs-mermaid-${Date.now()}-${Math.random().toString(36).slice(2)}`;
         const { svg } = await mermaid.render(tempId, code);
         if (cancelled) return;
+        // Normalize KNOWN HTML-isms (unclosed <br>, non-XML named entities
+        // inside foreignObject labels) so benign mermaid output is
+        // well-formed XML — ME-017. The normalization is a narrow string
+        // repair: everything else that fails strict XML stays rejected
+        // (fail-closed; see mermaidSvgXml.ts for the security rationale).
+        const parsed = new DOMParser().parseFromString(
+          normalizeMermaidSvgXml(svg),
+          "image/svg+xml",
+        );
         // Parse, DON'T innerHTML: the SVG is inspected node-by-node before
         // it may enter our DOM (no dangerouslySetInnerHTML — gate §9).
-        const parsed = new DOMParser().parseFromString(svg, "image/svg+xml");
         const svgNode = parsed.documentElement;
-        if (
+        // happy-dom quirk (diverges from real browsers): a failed strict
+        // parse keeps tagName "svg" and embeds a <parsererror> child — the
+        // real gate is the parsererror presence (and the tagName check for
+        // real browsers, which report tagName "html").
+        const parseFailed =
           svgNode === null ||
           svgNode.nodeName === "parsererror" ||
-          svgNode.tagName.toLowerCase() !== "svg"
-        ) {
+          svgNode.tagName.toLowerCase() !== "svg" ||
+          svgNode.querySelector("parsererror") !== null;
+        if (parseFailed) {
           throw new Error("mermaid produced an unparsable svg");
         }
         // Neutralize click-links: unwrap <a> so labels survive, navigation
