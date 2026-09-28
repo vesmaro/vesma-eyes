@@ -7,6 +7,7 @@ import { MarkdownView } from "../MarkdownView";
 import { I18nProvider } from "@/i18n";
 import { MermaidDiagram } from "./Mermaid";
 import { MERMAID_UNTRUSTED_MAX_FENCES_PER_SURFACE } from "./mermaidCaps";
+import hostileRaw from "@/features/docs/__fixtures__/hostile.md?raw";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =
   true;
@@ -185,6 +186,27 @@ describe("untrusted mermaid (Amendment 1)", () => {
     expect(mermaidMock.render).toHaveBeenCalledTimes(
       MERMAID_UNTRUSTED_MAX_FENCES_PER_SURFACE,
     );
+  });
+
+  it("the shared hostile corpus through MarkdownView: zero diagrams, giant fence inert (ADR 0020 invariant 2, ME-013 review P2-1)", async () => {
+    // The hostile corpus must run through BOTH profiles (invariant 2): the
+    // curated gate lives in features/docs/Markdown.test.tsx; THIS is the
+    // untrusted counterpart. The corpus's single mermaid fence is 22_413
+    // chars — far over the 10_000 cap — so the whole surface must stay
+    // diagram-free with the fence source fully visible (honest fallback),
+    // and every hostile vector must degrade to inert text exactly as the
+    // golden pins for benign corpus shapes.
+    const el = await mountView(hostileRaw);
+    expect(el.querySelector("figure"), "hostile corpus must mount no diagram").toBeNull();
+    expect(el.querySelectorAll("svg").length).toBe(0);
+    expect(mermaidMock.render).not.toHaveBeenCalled();
+    // The oversized fence source stays visible — auditable, not dropped.
+    expect(el.querySelector("pre code")?.textContent).toContain("N0001 --> M0001");
+    expect(el.querySelector("pre code")?.textContent).toContain("N1400 --> M1400");
+    // And the hostile vectors are as inert as ever on this profile.
+    for (const tag of ["script", "iframe", "object", "embed", "form", "style"]) {
+      expect(el.querySelector(tag), `<${tag}> became an element`).toBeNull();
+    }
   });
 
   it("a diagram component mount unwraps click-links (shared posture, untrusted too)", async () => {
