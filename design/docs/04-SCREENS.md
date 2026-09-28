@@ -12,6 +12,7 @@
 - Импульсы и glow — только по словарю `06-MOTION.md` §5; фейковых сигналов нет.
 - Каждый экран несёт: hover/focus/active/disabled/loading/empty/error у интерактивов
   (полные матрицы — `05-COMPONENTS.md`).
+- Кора (`/kora`) в этой главе не дублируется: сессии — `07d-KORA-SESSIONS.md`, рабочая область (док) — `07i-KORA-WORKSPACE.md`.
 
 ---
 
