@@ -32,8 +32,8 @@ import { normalizeMermaidSvgXml } from "./mermaidSvgXml";
  * visible (loader fallback — the page never jumps empty).
  */
 
-/** Fixed by committee protocol — NOT tuning knobs (ADR 0017 records them). */
-const MERMAID_MAX_TEXT_SIZE = 20_000;
+/** Fixed by committee protocol — NOT tuning knobs (ADR 0017 records them). Exported for the caps tests (ME-013 review P3-2): the untrusted fence cap must stay 2x under THIS app constant — upstream mermaid defaults to 50_000, ours is the АРХКОМ-8 20_000. */
+export const MERMAID_MAX_TEXT_SIZE = 20_000;
 const MERMAID_MAX_EDGES = 200;
 
 /** Type-only import: erased at build time, the chunk stays dynamic-only. */

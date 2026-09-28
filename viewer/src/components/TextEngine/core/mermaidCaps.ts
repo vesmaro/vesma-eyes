@@ -1,3 +1,6 @@
+import { unified } from "unified";
+import remarkParse from "remark-parse";
+
 /**
  * Hard size caps for mermaid on the UNTRUSTED profile (ADR 0020 Amendment 1,
  * ratified by the owner 2026-09-25, protective condition 2).
@@ -13,16 +16,16 @@
  * Values (fixed here, not tuning knobs):
  * - FENCE CHARS  = 10_000 — generous for real agent diagrams (a large
  *   flowchart/sequence diagram is 1–3 KB; 10 KB ≈ many hundreds of edges),
- *   yet 2× under mermaid's own maxTextSize (20_000, the АРХКОМ-8 constant)
+ *   yet 2× under the app's own mermaid maxTextSize (20_000, the АРХКОМ-8
+ *   constant exported from core/Mermaid.tsx — upstream's default is 50_000)
  *   so a hopeless fence is cut BEFORE the library chunk even loads.
  * - FENCES/SURFACE = 5 — far above any real report (1–2 diagrams); bounds
  *   the per-surface render passes, including the on-line theme-switch
  *   redraw of every mounted diagram (MutationObserver re-render).
  *   Worst case per surface: 5 × 10 KB = 50 KB of mermaid input.
  *
- * Both caps fail in the SAFE direction: any scanner doubt (exotic fence
- * syntax the regex can't parse) can only OVERCOUNT/overshoot, i.e. fall
- * back to source — never render more than the budget allows.
+ * Both caps fail in the SAFE direction: a verdict can only refuse to render
+ * (honest fallback), never render more than the budget allows.
  */
 
 /** Max chars of a single mermaid fence body on the untrusted profile. */
@@ -37,38 +40,44 @@ export function fenceExceedsSizeCap(code: string): boolean {
 }
 
 /**
- * Count the mermaid fences in a markdown SOURCE (a per-surface verdict
- * computed once per text — derived state, never per-render mutation; render
- * order is not observable, so counting at mount time would be a race).
+ * The fence COUNTER — same parser as the renderer (ME-013 review P1-1).
  *
- * A CommonMark line-scan: a fence OPENS on `^ {0,3}` + 3+ backticks/tildes
- * with first info word "mermaid", and CLOSES on a same-marker line at least
- * as long with an empty info string (unclosed EOF fence still counts —
- * micromark renders it as code to EOF). Deliberately conservative: it never
- * needs parser parity, because both error directions are safe (overcount →
- * honest fallback; the one true undercount risk — a fence micromark accepts
- * that this scan misses — requires an info string micromark itself would
- * trim differently, not a realistic report shape).
+ * The renderer intercepts a fence when react-markdown (remark-gfm over
+ * micromark/remark-parse) produces a `code` node whose `lang` the mdast→hast
+ * conversion turns into `language-mermaid` (hast.ts `languageOf` compares
+ * EXACTLY, case included). Counting through the same parse removes the
+ * entire scan-vs-parser drift class the review flagged: a line-regex missed
+ * container-nested fences (blockquote `> ```mermaid`, list items — CommonMark
+ * parses both into `code` nodes the renderer happily intercepts), letting N
+ * diagrams render against a count of zero.
+ *
+ * A BARE `unified().use(remarkParse)` processor, not the engine pipeline:
+ * fences are core CommonMark — remark-gfm (both profiles' remark layer)
+ * adds tables/strikethrough/task lists and does not touch fence parsing —
+ * and the caps module must not couple to the pipeline cache or the trust
+ * modes. Same tokenization guarantees, minimal surface. `parse()` is
+ * synchronous; the processor is frozen once at module scope.
+ *
+ * `lang === "mermaid"` is exact on purpose (case, first word only): that is
+ * what the renderer intercepts — `language-MERMAID` renders as a plain code
+ * block in both the theme branch and this counter, by construction.
  */
+const FENCE_COUNTER = unified().use(remarkParse);
+
+/** Minimal structural mdast shape (no transitive type imports). */
+interface MdastNode {
+  type?: string;
+  lang?: string | null;
+  children?: readonly MdastNode[];
+}
+
 export function countMermaidFences(source: string): number {
+  const tree = FENCE_COUNTER.parse(source) as MdastNode;
   let count = 0;
-  let open: { marker: string; isMermaid: boolean } | null = null;
-  for (const line of source.split(/\r\n|\r|\n/)) {
-    const match = /^[ \t]{0,3}(`{3,}|~{3,})(.*)$/.exec(line);
-    if (open === null) {
-      if (match === null) continue;
-      const info = (match[2] ?? "").trim();
-      const firstWord = info.split(/\s+/)[0]?.toLowerCase() ?? "";
-      open = { marker: match[1], isMermaid: firstWord === "mermaid" };
-      if (open.isMermaid) count += 1;
-    } else {
-      const closing =
-        match !== null &&
-        match[1][0] === open.marker[0] &&
-        match[1].length >= open.marker.length &&
-        (match[2] ?? "").trim() === "";
-      if (closing) open = null;
-    }
-  }
+  const walk = (node: MdastNode): void => {
+    if (node.type === "code" && node.lang === "mermaid") count += 1;
+    for (const child of node.children ?? []) walk(child);
+  };
+  walk(tree);
   return count;
 }
