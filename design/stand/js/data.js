@@ -1127,7 +1127,7 @@
    * duplicate it — footer status lines (sidebar, pair, auth) and the gallery
    * caption all read STAND.version / STAND.slice. */
   const version = "1.41.0";
-  const slice = "v6";
+  const slice = "v7";
 
   window.STAND = {
     version,

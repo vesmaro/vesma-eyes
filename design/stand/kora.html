@@ -170,136 +170,160 @@
     </nav>
 
     <main class="content" id="main">
-      <div class="kora-page" id="kora-page" data-kora="empty">
+      <!-- v7 (07l §1): каркас-приложение 100vh — прокрутки страницы нет,
+           всё скроллится внутри своих блоков. Шапка 40px: крошки + H1 +
+           сводка-числа + фильтр в одной строке. -->
+      <div class="kora-page" id="kora-page">
 
-        <div class="page-head">
-          <div>
-            <h1 tabindex="-1">Кора · сессии хостов</h1>
-            <p class="page-sub">Кора — журнал сессий: что агенты делали и что говорили. Записи только для чтения.</p>
-            <!-- сводка считается из фикстур рантаймом (07j §2.2.3): число в разметке = баг -->
-            <p class="status-line" id="kora-summary" style="margin-top: var(--space-1)"></p>
-          </div>
-          <div class="page-actions">
-            <div class="field" style="min-width: 200px">
-              <label for="host-filter" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%)">Фильтр по хосту</label>
-              <div class="input-wrap">
-                <select class="input" id="host-filter">
-                  <option value="">Все хосты</option>
-                  <option value="laptop-go-1">laptop-go-1</option>
-                  <option value="vpnus-1">vpnus-1</option>
-                  <option value="laptop-zcode-1">laptop-zcode-1</option>
-                  <option value="gpu-box">gpu-box</option>
-                </select>
-              </div>
+        <header class="kora-head" id="kora-head">
+          <nav class="kora-crumbs" aria-label="Хлебные крошки">
+            <a href="agents.html">Агенты</a>
+            <span class="kc-sep" aria-hidden="true">/</span>
+          </nav>
+          <h1 id="kora-title" tabindex="-1" title="Кора — журнал сессий: что агенты делали и что говорили. Записи только для чтения">Кора · сессии хостов</h1>
+          <!-- сводка считается из фикстур рантаймом (07j §2.2.3): число в разметке = баг.
+               Спрятанные при сужении числа остаются в tooltip сводки (07l §1.3). -->
+          <p class="kora-summary" id="kora-summary"></p>
+          <div class="kora-head-actions">
+            <div class="kora-filter">
+              <label for="host-filter" class="sr-only">Фильтр по хосту</label>
+              <select class="input kora-filter-select" id="host-filter">
+                <option value="">Фильтр: все хосты</option>
+                <option value="laptop-go-1">laptop-go-1</option>
+                <option value="vpnus-1">vpnus-1</option>
+                <option value="laptop-zcode-1">laptop-zcode-1</option>
+                <option value="gpu-box">gpu-box</option>
+              </select>
             </div>
             <button class="btn secondary sm narrow-only" type="button" id="side-open">Хосты и сессии</button>
-            <button class="btn secondary sm" type="button" id="kora-check">Проверить связь</button>
+            <button class="btn ghost sm" type="button" id="kora-check">Проверить связь</button>
           </div>
-        </div>
+          <!-- служебный тулбар стенда — вне продуктовой поверхности (07j §5-13) -->
+          <div class="demo-toolbar" id="demo-toolbar">
+            <span class="demo-caps">Демо-стенд</span>
+            <button class="btn ghost sm" type="button" id="demo-noreports" aria-pressed="false" title="Показать состояние «сканеры ещё не доложили»">без докладов</button>
+          </div>
+        </header>
 
-        <div class="kora-body">
+        <!-- ── центральная рабочая зона: всегда развёрнута (07j §3.1) ── -->
+        <section class="kora-workzone" id="workzone" role="region" aria-label="Ход сессии">
 
-          <!-- ── центральная рабочая зона: всегда развёрнута (07j §3.1) ── -->
-          <section class="kora-workzone" id="workzone" role="region" aria-label="Ход сессии">
-
-            <!-- ничего не выбрано: приглашение + Эфир на сцене (07j §3.1 А) -->
-            <div class="wz-empty" id="wz-empty">
-              <p class="wz-invite" id="wz-invite">Выберите сессию из дерева справа — здесь откроется её ход. Пока идёт Эфир:</p>
-              <div class="ether-card" id="wz-ether">
-                <p class="ether-caps">Эфир — всё, что происходит в сессиях сейчас</p>
-                <div class="ether-feed" id="ether-stage" role="log" aria-live="off"></div>
-              </div>
-              <div class="empty-state" id="wz-noreports" hidden></div>
+          <!-- v7 (07l §5.3): экран ошибки — единственная альтернатива пустому центру.
+               role="alert" в разметке ДО вставки текста — AT объявит честно. -->
+          <div class="kora-fatal" id="kora-fatal" role="alert" hidden>
+            <h2 id="kora-fatal-title" tabindex="-1">Не удалось отрисовать журнал</h2>
+            <p class="kora-fatal-text">Похоже, повреждены сохранённые настройки вида. Перезагрузка обычно помогает.</p>
+            <div class="kora-fatal-actions">
+              <button class="btn secondary" type="button" id="kora-fatal-reload">Перезагрузить страницу</button>
+              <button class="btn ghost" type="button" id="kora-fatal-reset">Сбросить вид</button>
             </div>
+            <p class="kora-fatal-alt">Пока журнал недоступен: статистика — <a href="index.html">на Обзоре →</a></p>
+          </div>
 
-            <!-- выбрана сессия: транскрипт-свиток (07j §3.1 Б, канон 07d §3) -->
-            <div class="wz-session" id="wz-session" hidden>
-              <div class="wz-head">
-                <h2 id="wz-title" tabindex="-1"></h2>
-                <span id="wz-state"></span>
+          <!-- ничего не выбрано: приглашение + Эфир на сцене (07j §3.1 А) -->
+          <div class="wz-empty" id="wz-empty">
+            <p class="wz-invite" id="wz-invite">Выберите сессию из дерева справа — здесь откроется её ход. Пока идёт Эфир:</p>
+            <div class="ether-card" id="wz-ether">
+              <p class="ether-caps">Эфир — всё, что происходит в сессиях сейчас</p>
+              <div class="ether-feed" id="ether-stage" role="log" aria-live="off"></div>
+            </div>
+            <div class="empty-state" id="wz-noreports" hidden></div>
+          </div>
+
+          <!-- выбрана сессия: транскрипт-свиток (07j §3.1 Б, канон 07d §3) -->
+          <div class="wz-session" id="wz-session" hidden>
+            <div class="wz-head">
+              <h2 id="wz-title" tabindex="-1"></h2>
+              <span id="wz-state"></span>
+            </div>
+            <div class="wz-tools">
+              <button class="wz-tool" type="button" id="wz-follow" aria-pressed="true">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+                Следить за хвостом
+              </button>
+              <div class="wz-searchwrap">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+                <input class="wz-search" id="wz-search" type="search" placeholder="Найти в сессии…" aria-label="Найти в сессии" aria-describedby="wz-count">
               </div>
-              <div class="wz-tools">
-                <button class="wz-tool" type="button" id="wz-follow" aria-pressed="true">
-                  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
-                  Следить за хвостом
+              <span class="wz-count" id="wz-count" role="status"></span>
+            </div>
+            <p class="wz-cov" id="wz-cov"></p>
+            <div class="wz-scrollwrap">
+              <div class="wz-scroll" id="wz-scroll" role="log" aria-label="Транскрипт сессии" aria-live="off" tabindex="0"></div>
+              <button class="wz-tail" type="button" id="wz-tail" hidden>
+                Вернуться к хвосту
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+              </button>
+            </div>
+            <p class="wz-honest">Управлять сессией отсюда пока нельзя — только читать. Это в планах</p>
+          </div>
+        </section>
+
+        <!-- ── правая панель: единый скролл — Блок 1 → Блок 2 (sticky) → легенда.
+             Хендл ширины — шов на левом краю панели (07l §3.1). ── -->
+        <div class="kora-seam kora-seam-side" id="side-seam" role="separator" aria-orientation="vertical" tabindex="0"
+             aria-label="Ширина панели хостов и сессий" aria-valuemin="240" aria-valuemax="420" aria-valuenow="320" aria-valuetext="320 пикселей"
+             title="Потяните, чтобы изменить ширину. Двойной клик — вернуть как было"></div>
+
+        <aside class="kora-side" id="kora-side" aria-label="Хосты и сессии">
+
+          <section class="side-card">
+            <div class="side-head"><h2 class="side-caps-h">Хосты и агенты</h2></div>
+            <p class="side-note">Агенты — программы, через которые на машине идёт работа: например, zcode</p>
+            <nav class="tree" id="host-tree" aria-label="Хосты и агенты"></nav>
+          </section>
+
+          <section class="side-card">
+            <div class="side-head ks-sticky">
+              <h2 class="side-caps-h" id="ctx-title">Сессии · все хосты</h2>
+              <span class="ctx-count mono" id="ctx-count"></span>
+            </div>
+            <div class="side-body">
+              <div class="qf-row">
+                <button class="chip" type="button" id="qf-running" aria-pressed="false">идущие</button>
+                <button class="chip" type="button" id="qf-day" aria-pressed="false">за 24 ч</button>
+              </div>
+              <div class="collapse-block about-block">
+                <button class="cb-toggle" type="button" id="about-toggle" aria-expanded="false" aria-controls="about-body">
+                  <svg class="chev icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                  О сессии
                 </button>
-                <div class="wz-searchwrap">
-                  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-                  <input class="wz-search" id="wz-search" type="search" placeholder="Найти в сессии…" aria-label="Найти в сессии" aria-describedby="wz-count">
-                </div>
-                <span class="wz-count" id="wz-count" role="status"></span>
+                <div class="cb-body" id="about-body" hidden></div>
               </div>
-              <p class="wz-cov" id="wz-cov"></p>
-              <div class="wz-scrollwrap">
-                <div class="wz-scroll" id="wz-scroll" role="log" aria-label="Транскрипт сессии" aria-live="off" tabindex="0"></div>
-                <button class="wz-tail" type="button" id="wz-tail" hidden>
-                  Вернуться к хвосту
-                  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
-                </button>
-              </div>
-              <p class="wz-honest">Управлять сессией отсюда пока нельзя — только читать. Это в планах</p>
+              <p class="ctx-openline" id="ctx-openline" hidden>Сейчас открыта: <button class="linkbtn" type="button" id="ctx-open-btn"></button></p>
+              <div class="ctx-hostinfo" id="ctx-hostinfo" hidden></div>
+              <div id="ctx-list" role="list"></div>
+              <div id="ctx-empty" hidden></div>
             </div>
           </section>
 
-          <div class="kora-scrim" id="kora-scrim" hidden></div>
-
-          <!-- ── правая панель: Блок 1 дерево + Блок 2 сессии (07j §3.3–3.4) ── -->
-          <aside class="kora-side" id="kora-side" aria-label="Хосты и сессии">
-
-            <section class="side-card">
-              <div class="side-head"><h2 class="side-caps-h">Хосты и агенты</h2></div>
-              <p class="side-note">Агенты — программы, через которые на машине идёт работа: например, zcode</p>
-              <nav class="tree" id="host-tree" aria-label="Хосты и агенты"></nav>
-            </section>
-
-            <section class="side-card">
-              <div class="side-head">
-                <h2 class="side-caps-h" id="ctx-title">Сессии · все хосты</h2>
-                <span class="ctx-count mono" id="ctx-count"></span>
+          <section class="collapse-block side-legend">
+            <button class="cb-toggle" type="button" id="legend-toggle" aria-expanded="false" aria-controls="legend-body">
+              <svg class="chev icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+              Что мы видим с ваших машин
+            </button>
+            <div class="cb-body" id="legend-body" hidden>
+              <div class="legend-grid">
+                <div class="status-line"><span class="legend-harness">zcode</span> полный ход сессии: что делали и что говорили</div>
+                <div class="status-line"><span class="legend-harness">vscode</span> видим начало сессий; полный ход появится по мере готовности сканеров</div>
+                <div class="status-line"><span class="legend-harness">pi</span> видим начало сессий; полный ход появится по мере готовности сканеров</div>
+                <div class="status-line"><span class="legend-harness">hermes</span> пока не сканируем</div>
+                <p class="status-line" style="margin: 0">Покрытие растёт по мере готовности сканеров — список обновим.</p>
+                <p class="status-line" style="margin: 0">Кора читает сессии с ваших машин, пока вы работаете. Ничего отправлять и регистрировать не нужно — сессии появляются сами, как только харнес работает.</p>
               </div>
-              <div class="side-body" style="padding-top: var(--space-2)">
-                <div class="qf-row">
-                  <button class="chip" type="button" id="qf-running" aria-pressed="false">идущие</button>
-                  <button class="chip" type="button" id="qf-day" aria-pressed="false">за 24 ч</button>
-                </div>
-                <div class="collapse-block about-block">
-                  <button class="cb-toggle" type="button" id="about-toggle" aria-expanded="false" aria-controls="about-body">
-                    <svg class="chev icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-                    О сессии
-                  </button>
-                  <div class="cb-body" id="about-body" hidden></div>
-                </div>
-                <p class="ctx-openline" id="ctx-openline" hidden>Сейчас открыта: <button class="linkbtn" type="button" id="ctx-open-btn"></button></p>
-                <div class="ctx-hostinfo" id="ctx-hostinfo" hidden></div>
-                <div id="ctx-list" role="list"></div>
-                <div id="ctx-empty" hidden></div>
-              </div>
-            </section>
+            </div>
+          </section>
 
-            <section class="collapse-block side-legend">
-              <button class="cb-toggle" type="button" id="legend-toggle" aria-expanded="false" aria-controls="legend-body">
-                <svg class="chev icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-                Что мы видим с ваших машин
-              </button>
-              <div class="cb-body" id="legend-body" hidden>
-                <div class="legend-grid">
-                  <div class="status-line"><span class="legend-harness">zcode</span> полный ход сессии: что делали и что говорили</div>
-                  <div class="status-line"><span class="legend-harness">vscode</span> видим начало сессий; полный ход появится по мере готовности сканеров</div>
-                  <div class="status-line"><span class="legend-harness">pi</span> видим начало сессий; полный ход появится по мере готовности сканеров</div>
-                  <div class="status-line"><span class="legend-harness">hermes</span> пока не сканируем</div>
-                  <p class="status-line" style="margin: 0">Покрытие растёт по мере готовности сканеров — список обновим.</p>
-                  <p class="status-line" style="margin: 0">Кора читает сессии с ваших машин, пока вы работаете. Ничего отправлять и регистрировать не нужно — сессии появляются сами, как только харнес работает.</p>
-                </div>
-              </div>
-            </section>
+        </aside>
 
-          </aside>
-        </div>
-
-        <!-- ── Пульт: вкладки Дайджест | Эфир + бейдж (07j §4) ── -->
-        <section class="pult" id="pult" role="region" aria-label="Пульт" data-open="false">
+        <!-- ── Пульт-стык (07l §2): ширина центральной колонки, стык без зазора,
+             шов-хендл row-resize на верхней кромке. Свёрнутый — полоса 40px. ── -->
+        <section class="pult" id="pult" role="region" aria-label="Пульт">
+          <div class="kora-seam kora-seam-pult" id="pult-seam" role="separator" aria-orientation="horizontal" tabindex="0"
+               aria-label="Высота Пульта" aria-valuemin="160" aria-valuemax="420" aria-valuenow="40" aria-valuetext="свёрнут, 40 пикселей"
+               title="Потяните, чтобы изменить высоту. Двойной клик — вернуть как было"></div>
           <div class="pult-head">
-            <span class="pult-caps" aria-hidden="true">Пульт</span>
+            <span class="pult-caps">Пульт<span id="pult-caps-tab"></span></span>
             <span class="pult-invite" id="pult-invite">Выберите сессию — здесь появится её дайджест</span>
             <div class="pult-tabs" role="tablist" aria-label="Вкладки Пульта" id="pult-tabs" hidden>
               <button class="pult-tab" type="button" role="tab" id="tab-digest" aria-selected="true" aria-controls="panel-digest">Дайджест</button>
@@ -322,11 +346,7 @@
           </div>
         </section>
 
-        <!-- ── служебный тулбар стенда: вне продуктовой поверхности (07j §5-13) ── -->
-        <div class="demo-toolbar" id="demo-toolbar">
-          <span class="demo-caps">Демо-стенд</span>
-          <button class="btn ghost sm" type="button" id="demo-noreports" aria-pressed="false">показать состояние без докладов</button>
-        </div>
+        <div class="kora-scrim" id="kora-scrim" hidden></div>
 
       </div>
     </main>
@@ -382,7 +402,8 @@
   (function () {
 
     /* v6 (07k §3): anonymous visit renders the gate instead of the section —
-     * shell.js has already replaced #main; nothing here should run or throw. */
+     * shell.js has already replaced #main; nothing here should run or throw.
+     * v7 (07l): the frame initialises strictly after the gate check. */
     if (document.getElementById("main") && document.getElementById("main").dataset.gated) return;
     var D = window.STAND;
     var doc = document;
@@ -392,7 +413,8 @@
     /* ── утилиты ─────────────────────────────────────────────────────── */
     var store = {
       get: function (k, d) { try { return localStorage.getItem(k) || d; } catch (e) { return d; } },
-      set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) { /* file:// */ } },
+      set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) { console.warn("[kora] персист недоступен (" + k + ") — работаем без него"); } },
+      del: function (k) { try { localStorage.removeItem(k); } catch (e) { console.warn("[kora] персист недоступен (" + k + ") — работаем без него"); } },
     };
     function sstore(k, v) {
       try { if (v === undefined) return sessionStorage.getItem(k); sessionStorage.setItem(k, v); } catch (e) { return null; }
@@ -400,6 +422,11 @@
     function reduced() {
       return window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
         doc.documentElement.getAttribute("data-motion") === "reduced";
+    }
+    function clamp(n, min, max) {
+      if (n < min) return min;
+      if (n > max) return max;
+      return n;
     }
     var live = doc.getElementById("kora-live");
     var liveTimer = null;
@@ -421,6 +448,7 @@
       if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
       return many;
     }
+    function pxWord(n) { return n + " " + plural(n, "пиксель", "пикселя", "пикселей"); }
 
     /* ── времена: все из offsets от якоря «сейчас» (07j §2.2) ────────── */
     var ANCHOR = new Date();
@@ -494,6 +522,73 @@
     }
     function linkOf(s) { return "kora.html?session=" + encodeURIComponent(s.id); }
 
+    /* ── P0: контракт хранилища v2 и миграция (07l §5.2) ─────────────── */
+    var STORAGE_VERSION = 2;
+    /* пространство миграции — только vesmaro.kora*; чужие домены
+     * (vesmaro.authSession, сайдбар, тема) не трогаются никогда */
+    function koraKeyList(storage) {
+      var out = [];
+      try {
+        for (var i = 0; i < storage.length; i++) {
+          var k = storage.key(i);
+          if (k && k.indexOf("vesmaro.kora") === 0) out.push(k);
+        }
+      } catch (e) { /* хранилище недоступно — персиста нет, это не ошибка init */ }
+      return out;
+    }
+    function removeAllKora() {
+      [window.localStorage, window.sessionStorage].forEach(function (st) {
+        if (!st) return;
+        koraKeyList(st).forEach(function (k) {
+          try { st.removeItem(k); }
+          catch (e) { console.warn("[kora] миграция: ключ " + k + " не удалился", e); }
+        });
+      });
+    }
+    function writeStorageVersion() {
+      try { localStorage.setItem("vesmaro.storageVersion", String(STORAGE_VERSION)); }
+      catch (e) { console.warn("[kora] версия хранилища не записалась — персист недоступен, работаем без него"); }
+    }
+    function migrationToast() {
+      /* тост — канон 05 §3; дублируем polite-объявлением (4.1.3) */
+      if (toast) toast("Настройки вида Коры обновлены", "info");
+      announce("Настройки вида Коры обновлены");
+    }
+    function migrateStorage() {
+      var ver = NaN;
+      try { ver = parseInt(localStorage.getItem("vesmaro.storageVersion"), 10); }
+      catch (e) {
+        console.warn("[kora] localStorage недоступен (file:// или приватный режим) — работаем без персиста");
+        return;
+      }
+      var hasKora = koraKeyList(localStorage).length > 0;
+      if (isNaN(ver)) {
+        if (hasKora) {
+          /* наследие v4–v6: сброс, не конвертация (07l §5.2) */
+          removeAllKora();
+          writeStorageVersion();
+          migrationToast();
+        } else {
+          /* свежий пользователь: версия пишется молча, без тоста */
+          writeStorageVersion();
+        }
+      } else if (ver < STORAGE_VERSION) {
+        removeAllKora();
+        writeStorageVersion();
+        migrationToast();
+      }
+    }
+    /* безопасный геттер числа: мусор/чужой тип → дефолт, вне диапазона → clamp,
+     * никогда не throw (07l §5.2) */
+    function readInt(key, def, min, max) {
+      var raw = null;
+      try { raw = localStorage.getItem(key); } catch (e) { return def; }
+      if (raw === null || raw === "") return def;
+      var n = parseInt(raw, 10);
+      if (!isFinite(n)) return def;
+      return clamp(n, min, max);
+    }
+
     /* ── dom ─────────────────────────────────────────────────────────── */
     var page = doc.getElementById("kora-page");
     var filter = doc.getElementById("host-filter");
@@ -531,6 +626,7 @@
     var legendBody = doc.getElementById("legend-body");
 
     var pult = doc.getElementById("pult");
+    var capsTab = doc.getElementById("pult-caps-tab");
     var pultInvite = doc.getElementById("pult-invite");
     var pultTabs = doc.getElementById("pult-tabs");
     var tabDigest = doc.getElementById("tab-digest");
@@ -544,6 +640,13 @@
     var etherPanel = doc.getElementById("ether-panel");
     var badgeN = doc.getElementById("badge-n");
 
+    var sideSeam = doc.getElementById("side-seam");
+    var pultSeam = doc.getElementById("pult-seam");
+    var fatalBox = doc.getElementById("kora-fatal");
+    var fatalTitle = doc.getElementById("kora-fatal-title");
+    var fatalReload = doc.getElementById("kora-fatal-reload");
+    var fatalReset = doc.getElementById("kora-fatal-reset");
+
     var demoToolbar = doc.getElementById("demo-toolbar");
     var demoBtn = doc.getElementById("demo-noreports");
     var scrim = doc.getElementById("kora-scrim");
@@ -551,6 +654,7 @@
     var sideOpenBtn = doc.getElementById("side-open");
 
     var narrowMq = window.matchMedia("(max-width: 1023px)");
+    var lowMq = window.matchMedia("(max-height: 560px)");
 
     /* ── состояние ───────────────────────────────────────────────────── */
     var sessions = D.koraSessions;
@@ -562,10 +666,16 @@
     var query = "";
     var scrollHist = {};                                  /* id → {offset, follow} — память страницы */
     var pultOpen = false;
-    var panelTab = store.get("vesmaro.koraPanel", "");    /* "" | digest | ether — только явный клик */
-    if (panelTab !== "digest" && panelTab !== "ether") panelTab = "";
     var drawerOpen = false;
     var drawerOpener = null;
+
+    /* ресайз каркаса v7 (07l §3): диапазоны и персист */
+    var RIGHT_MIN = 240, RIGHT_MAX = 420, RIGHT_DEF = 320;
+    var PULT_MIN = 160, PULT_MAX = 420, PULT_COLLAPSE_AT = 120;
+    var sideW = RIGHT_DEF;     /* ширина правой панели, px */
+    var pultFixedH = 0;        /* высота Пульта: 0 = авто по контенту (160–280) */
+    var treeState = {};        /* ветки дерева — сессия браузера (07j §3.3) */
+    var panelTab = "";         /* "" | digest | ether — только явный клик */
 
     function findS(id) {
       for (var i = 0; i < sessions.length; i++) if (sessions[i].id === id) return sessions[i];
@@ -576,10 +686,6 @@
       (D.tasks || []).forEach(function (t) { if (t.unreadReport) n++; });
       return n;
     }
-
-    /* ── ветки дерева: персист в сессии браузера (07j §3.3) ──────────── */
-    var treeState = {};
-    try { treeState = JSON.parse(sstore("vesmaro.koraTree") || "{}") || {}; } catch (e) { treeState = {}; }
     function branchOpen(key, defOpen) {
       if (typeof treeState[key] === "boolean") return treeState[key];
       return defOpen;
@@ -589,18 +695,56 @@
       sstore("vesmaro.koraTree", JSON.stringify(treeState));
     }
 
-    /* ── сводка (07j §3.2): все числа из фикстур ─────────────────────── */
+    /* ── защищённый init (07l §5.3): фазы, фатальный экран ───────────── */
+    function showFatal(err) {
+      console.warn("[kora] init прерван — показан экран ошибки (07l §5.3):", err);
+      wzEmpty.hidden = true;
+      wzSession.hidden = true;
+      /* Пульт не должен висеть развёрнутой пустотой под экраном ошибки */
+      pult.classList.add("is-strip");
+      pult.classList.remove("mode-fixed");
+      if (!fatalBox) return;
+      fatalBox.hidden = false;
+      if (fatalTitle) fatalTitle.focus();
+    }
+    function phase(name, fn) {
+      try { fn(); return true; }
+      catch (e) { showFatal(e); return false; }
+    }
+    /* ошибки ПОСЛЕ успешного init страницу не валят: блок помечается
+     * stale «данные на HH:MM» + console (07l §5.3) */
+    function markStale(box) {
+      if (!box || box.querySelector(".stale-line")) return;
+      var d = new Date();
+      box.appendChild(el("p", "stale-line", "данные на " + pad2(d.getHours()) + ":" + pad2(d.getMinutes())));
+    }
+    function guarded(name, box, fn) {
+      return function () {
+        try { fn.apply(null, arguments); }
+        catch (e) {
+          console.warn("[kora] " + name + ": ошибка после init — блок помечен устаревшим:", e);
+          markStale(box);
+        }
+      };
+    }
+
+    /* ── сводка в шапке (07j §3.2 + 07l §1.3): числа из фикстур ──────── */
     function hostByLifecycle(lc) {
       var found = null;
       D.hosts.forEach(function (h) { if (h.lifecycle === lc && !found) found = h; });
       return found;
+    }
+    function ksumPair(cls, btn) {
+      var wrap = el("span", "ksum-pair " + cls);
+      wrap.appendChild(btn);
+      wrap.appendChild(el("span", "ksep", "·"));
+      return wrap;
     }
     function renderSummary() {
       var online = D.hosts.filter(function (h) { return h.lifecycle === "online"; }).length;
       var silent = D.hosts.filter(function (h) { return h.lifecycle === "silent"; }).length;
       var running = sessions.filter(function (s) { return s.state === "live"; }).length;
       var day = sessions.filter(function (s) { return s.lastActivityMinAgo < 1440; }).length;
-      sumBox.innerHTML = "";
       sumOnline.className = "linkbtn";
       sumSilent.className = "linkbtn";
       sumRunning.className = "linkbtn";
@@ -609,14 +753,14 @@
       sumSilent.textContent = silent + " " + plural(silent, "молчит", "молчат", "молчат");
       sumRunning.textContent = running + " " + plural(running, "сессия идёт", "сессии идут", "сессий идут");
       sumDay.textContent = "за 24 ч: " + day;
-      var sep = function () { return el("span", null, "·"); };
-      sumBox.appendChild(sumOnline);
-      sumBox.appendChild(sep());
-      sumBox.appendChild(sumSilent);
-      sumBox.appendChild(sep());
-      sumBox.appendChild(sumRunning);
-      sumBox.appendChild(sep());
-      sumBox.appendChild(el("span", null, "")).appendChild(sumDay);
+      sumBox.innerHTML = "";
+      sumBox.appendChild(ksumPair("ksum-online", sumOnline));
+      sumBox.appendChild(ksumPair("ksum-silent", sumSilent));
+      sumBox.appendChild(ksumPair("ksum-running", sumRunning));
+      sumBox.appendChild(sumDay);
+      /* спрятанные при сужении числа остаются в tooltip сводки (07l §1.3) */
+      sumBox.title = sumOnline.textContent + " · " + sumSilent.textContent + " · " +
+        sumRunning.textContent + " · " + sumDay.textContent;
       sumOnline.title = "Показать сессии этого хоста";
       sumSilent.title = "Показать сессии этого хоста";
       sumRunning.title = "Оставить в списке только идущие";
@@ -643,7 +787,9 @@
       b.type = "button";
       b.dataset.sid = s.id;
       b.dataset.state = s.state;
-      b.appendChild(el("span", "s-dot")).setAttribute("aria-hidden", "true");
+      var dot = el("span", "s-dot");
+      dot.setAttribute("aria-hidden", "true");
+      b.appendChild(dot);
       b.appendChild(el("span", "ts-name", s.name));
       b.appendChild(el("span", "ts-age mono", shortAge(s.state === "live" ? s.startedMinAgo : s.lastActivityMinAgo)));
       if (s.shared) b.title = "Участники: " + s.participants.join(" + ");
@@ -941,15 +1087,6 @@
       }
       rows.forEach(function (s) { ctxList.appendChild(sessionRow(s)); });
     }
-    ctxOpenBtn.addEventListener("click", function () {
-      var sel = findS(selectedId);
-      if (sel) {
-        setContext(sel.shared ? "host" : "agent", sel.host, sel.agent);
-        renderBlock2();
-      }
-    });
-
-    /* ── «О сессии»: детали рядом, не вместо контента (07j §3.4) ─────── */
     function fillAbout() {
       var s = findS(selectedId);
       aboutBody.innerHTML = "";
@@ -1010,12 +1147,6 @@
       tech.appendChild(tb);
       aboutBody.appendChild(tech);
     }
-    aboutToggle.addEventListener("click", function () {
-      var open = aboutToggle.getAttribute("aria-expanded") === "true";
-      aboutToggle.setAttribute("aria-expanded", open ? "false" : "true");
-      aboutBody.hidden = open;
-      store.set("vesmaro.koraAbout", open ? "0" : "1");
-    });
 
     /* ── рабочая зона (07j §3.1): Эфир без выбора, свиток с выбором ──── */
     function renderWorkzone() {
@@ -1166,40 +1297,8 @@
     function scrollToTail() {
       wzScroll.scrollTo({ top: wzScroll.scrollHeight, behavior: reduced() ? "auto" : "smooth" });
     }
-    followBtn.addEventListener("click", function () { setFollow(!followOn); });
-    tailBtn.addEventListener("click", function () { setFollow(true); });
     var scrollTick = false;
-    wzScroll.addEventListener("scroll", function () {
-      if (scrollTick) return;
-      scrollTick = true;
-      requestAnimationFrame(function () {
-        scrollTick = false;
-        if (!followOn) return;
-        if (wzScroll.scrollTop < wzScroll.scrollHeight - wzScroll.clientHeight - 48) {
-          setFollow(false);
-        }
-      });
-    });
     var searchTimer = null;
-    searchInput.addEventListener("input", function () {
-      if (searchTimer) clearTimeout(searchTimer);
-      searchTimer = setTimeout(function () {
-        query = searchInput.value.trim().toLowerCase();
-        var s = findS(selectedId);
-        if (s) renderTranscript(s);
-        if (followOn) scrollToTail();
-      }, 300);
-    });
-    searchInput.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && searchInput.value) {
-        e.stopPropagation();
-        searchInput.value = "";
-        query = "";
-        var s = findS(selectedId);
-        if (s) renderTranscript(s);
-        searchCount.textContent = "";
-      }
-    });
     function saveScroll() {
       if (!selectedId) return;
       scrollHist[selectedId] = { offset: wzScroll.scrollTop, follow: followOn };
@@ -1263,13 +1362,17 @@
       });
     }
 
-    /* ── Пульт (07j §4): вкладки, умный дефолт, бейдж ────────────────── */
+    /* ── Пульт (07j §4 + 07l §2): стык, вкладки, умный дефолт, бейдж ──── */
     function tabLabel(t) { return t === "ether" ? "Эфир" : "Дайджест"; }
+    function pultExpanded() {
+      return pultOpen && !!findS(selectedId) && !lowMq.matches;
+    }
     function setTab(t, persist) {
       tabDigest.setAttribute("aria-selected", t === "digest" ? "true" : "false");
       tabEther.setAttribute("aria-selected", t === "ether" ? "true" : "false");
       panelDigest.hidden = t !== "digest";
       panelEther.hidden = t !== "ether";
+      capsTab.textContent = " · " + tabLabel(t);
       if (t === "ether") renderEtherInto(etherPanel, true);
       else renderDigest();
       if (persist) {
@@ -1278,20 +1381,6 @@
         announce("Вкладка: " + tabLabel(t));
       }
     }
-    tabDigest.addEventListener("click", function () { setTab("digest", true); });
-    tabEther.addEventListener("click", function () { setTab("ether", true); });
-    pultTabs.addEventListener("keydown", function (e) {
-      var dir = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
-      if (!dir && e.key !== "Home" && e.key !== "End") return;
-      e.preventDefault();
-      var order = [tabDigest, tabEther];
-      var i = order.indexOf(doc.activeElement);
-      if (e.key === "Home") i = 0;
-      else if (e.key === "End") i = order.length - 1;
-      else i = (i + dir + order.length) % order.length;
-      order[i].focus();
-      order[i].click();
-    });
     function renderDigest() {
       panelDigest.innerHTML = "";
       var s = findS(selectedId);
@@ -1349,47 +1438,114 @@
       }
       panelDigest.appendChild(grid);
     }
+    /* высота Пульта: полоса 40px ⇄ авто (160–280) ⇄ фикс (160–420) (07l §3) */
+    function applyPultHeight() {
+      var expanded = pultExpanded();
+      pult.classList.toggle("is-strip", !expanded);
+      pult.classList.toggle("mode-fixed", expanded && !!pultFixedH);
+      if (expanded && pultFixedH) pult.style.height = pultFixedH + "px";
+      else pult.style.height = "";
+      pultToggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+      pultBody.hidden = !expanded;
+    }
+    function updatePultSeamAria() {
+      var h = Math.round(pult.getBoundingClientRect().height);
+      pultSeam.setAttribute("aria-valuenow", String(h));
+      pultSeam.setAttribute("aria-valuetext",
+        pult.classList.contains("is-strip") ? "свёрнут, " + pxWord(h)
+          : pultFixedH ? "высота " + pxWord(h) : "авто, " + pxWord(h));
+    }
+    function setPultFixed(px) {
+      pultFixedH = px;
+      applyPultHeight();
+      updatePultSeamAria();
+    }
+    function persistPultH() {
+      if (pultFixedH) store.set("vesmaro.koraPultH", String(pultFixedH));
+      else store.del("vesmaro.koraPultH");
+    }
     function renderPult() {
       var s = findS(selectedId);
-      badgeN.textContent = waitingOwnerCount();
-      badgeN.parentElement.classList.toggle("empty", waitingOwnerCount() === 0);
+      var n = waitingOwnerCount();
+      badgeN.textContent = n;
+      badgeN.parentElement.classList.toggle("empty", n === 0);
       if (!s) {
-        pult.dataset.open = "false";
-        pult.setAttribute("data-open", "false");
+        /* (А) ничего не выбрано: полоса с приглашением (07j §4.2) */
+        pultOpen = false;
         pultTabs.hidden = true;
         pultToggle.hidden = true;
         pultInvite.hidden = false;
         pultInvite.textContent = "Выберите сессию — здесь появится её дайджест";
-        pultBody.hidden = true;
         pultToggleText.textContent = "Развернуть";
-        return;
-      }
-      pultTabs.hidden = false;
-      pultToggle.hidden = false;
-      pult.dataset.open = pultOpen ? "true" : "false";
-      pult.setAttribute("data-open", pultOpen ? "true" : "false");
-      pultToggle.setAttribute("aria-expanded", pultOpen ? "true" : "false");
-      pultToggleText.textContent = pultOpen ? "Свернуть" : "Развернуть";
-      pultBody.hidden = !pultOpen;
-      pultInvite.hidden = pultOpen;
-      if (!pultOpen) pultInvite.textContent = tabLabel(panelTab || "digest") + " · " + s.name;
-      if (pultOpen) {
-        setTab(panelTab || "digest", false);
-        if (!sstore("vesmaro.koraPultHint")) {
-          pultHint.hidden = false;
-          sstore("vesmaro.koraPultHint", "1");
-          setTimeout(function () { pultHint.hidden = true; }, 6000);
+        capsTab.textContent = "";
+      } else {
+        var expanded = pultExpanded();
+        pultTabs.hidden = false;
+        pultToggle.hidden = false;
+        pultToggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+        pultToggleText.textContent = expanded ? "Свернуть" : "Развернуть";
+        pultInvite.hidden = expanded;
+        if (!expanded) pultInvite.textContent = tabLabel(panelTab || "digest") + " · " + s.name;
+        capsTab.textContent = " · " + tabLabel(panelTab || "digest");
+        if (expanded) {
+          setTab(panelTab || "digest", false);
+          if (!sstore("vesmaro.koraPultHint")) {
+            pultHint.hidden = false;
+            sstore("vesmaro.koraPultHint", "1");
+            setTimeout(function () { pultHint.hidden = true; }, 6000);
+          }
         }
       }
+      applyPultHeight();
+      updatePultSeamAria();
     }
     pultToggle.addEventListener("click", function () {
       pultOpen = !pultOpen;
       renderPult();
+      announce(pultOpen ? "Пульт развёрнут" : "Пульт свёрнут");
     });
     function collapsePult(refocus) {
       pultOpen = false;
       renderPult();
       if (refocus) pultToggle.focus();
+    }
+    /* высота меняется мгновенно везде, кроме кнопки сворачивания/разворота
+     * (07l §8): на время мгновенных изменений глушим transition */
+    function instantHeight(fn) {
+      page.classList.add("seam-dragging");
+      fn();
+      setTimeout(function () { page.classList.remove("seam-dragging"); }, 260);
+    }
+
+    /* ── шов правой панели: col-resize 240–420, дефолт 320 (07l §3) ──── */
+    function applySideW(px) {
+      sideW = px;
+      page.style.setProperty("--kora-right-w", px + "px");
+      sideSeam.setAttribute("aria-valuenow", String(px));
+      sideSeam.setAttribute("aria-valuetext", pxWord(px));
+    }
+    function persistSideW() {
+      store.set("vesmaro.koraRightW", String(sideW));
+    }
+    var sideDrag = null;   /* {startX, startW} */
+    var sideKbStart = null;
+
+    /* ── шов Пульта: row-resize 160–420, прилипание <120 → свёрнут ───── */
+    var pultDrag = null;   /* {startY, top, startH, startFixed, expandedNow, toCollapse} */
+    var pultKbStart = null;
+
+    function dragCursors(cursor) {
+      doc.body.classList.toggle("seam-grab", !!cursor);
+      doc.body.style.cursor = cursor || "";
+    }
+    function cancelPultDrag() {
+      if (!pultDrag) return;
+      var d = pultDrag;
+      pultDrag = null;
+      page.classList.remove("seam-dragging");
+      dragCursors(null);
+      if (d.expandedNow) setPultFixed(d.startFixed);
+      renderPult();
     }
 
     /* ── «Что мы видим с ваших машин» — легенда внизу панели (07j §3.5) ── */
@@ -1400,12 +1556,6 @@
       legendToggle.focus();
       side.scrollIntoView({ block: "end", behavior: reduced() ? "auto" : "smooth" });
     }
-    legendToggle.addEventListener("click", function () {
-      var open = legendToggle.getAttribute("aria-expanded") === "true";
-      legendToggle.setAttribute("aria-expanded", open ? "false" : "true");
-      legendBody.hidden = open;
-      store.set("stand-kora-cov", open ? "0" : "1");
-    });
 
     /* ── выбор сессии: клик → транскрипт в центре сразу (07j §5-3) ───── */
     function renderAll() {
@@ -1485,16 +1635,6 @@
       if (!s && !noReports) renderEtherInto(etherStage, false);
       if (s && !panelEther.hidden && pultOpen) renderEtherInto(etherPanel, true);
     }
-    filter.addEventListener("change", function () {
-      applyFilter();
-      announce(filter.value ? "Фильтр: " + filter.value : "Фильтр сброшен");
-    });
-    qfRunning.addEventListener("click", function () { setQf("running"); });
-    qfDay.addEventListener("click", function () { setQf("day"); });
-    sumOnline.addEventListener("click", function () { var h = hostByLifecycle("online"); if (h) setHostFilter(h.name); });
-    sumSilent.addEventListener("click", function () { var h = hostByLifecycle("silent"); if (h) setHostFilter(h.name); });
-    sumRunning.addEventListener("click", function () { setQf("running"); });
-    sumDay.addEventListener("click", function () { setQf("day"); });
 
     /* ── «Проверить связь» — честный демо-опрос ──────────────────────── */
     function koraCheck() {
@@ -1509,7 +1649,6 @@
         toast("laptop-go-1 ответил за 0,8 с · vpnus-1 молчит 4 мин", "info");
       }, 800);
     }
-    doc.getElementById("kora-check").addEventListener("click", koraCheck);
 
     /* ── правая панель как дровер <1024px (07j §8) ───────────────────── */
     function openDrawer(opener) {
@@ -1529,83 +1668,410 @@
       if (refocus && drawerOpener && drawerOpener.focus) drawerOpener.focus();
       drawerOpener = null;
     }
-    scrim.addEventListener("click", function () { closeDrawer(true); });
-    sideOpenBtn.addEventListener("click", function () { openDrawer(sideOpenBtn); });
 
-    /* ── Esc-лестница (03 §7): Пульт → выбор → ничего (07j §6.1) ─────── */
-    doc.addEventListener("keydown", function (e) {
-      if (e.key === "Escape") {
-        if (doc.querySelector(".overlay:not([hidden])")) return; /* палитра/шпаргалка — владеет shell */
-        if (narrowMq.matches && drawerOpen) {
-          e.preventDefault();
-          closeDrawer(true);
+    /* ── фаза 3: проводка событий (07l §5.3) ─────────────────────────── */
+    function wireEvents() {
+
+      /* шапка: фильтр, сводка, проверка связи, дровер, демо */
+      filter.addEventListener("change", function () {
+        applyFilter();
+        announce(filter.value ? "Фильтр: " + filter.value : "Фильтр сброшен");
+      });
+      qfRunning.addEventListener("click", function () { setQf("running"); });
+      qfDay.addEventListener("click", function () { setQf("day"); });
+      sumOnline.addEventListener("click", function () { var h = hostByLifecycle("online"); if (h) setHostFilter(h.name); });
+      sumSilent.addEventListener("click", function () { var h = hostByLifecycle("silent"); if (h) setHostFilter(h.name); });
+      sumRunning.addEventListener("click", function () { setQf("running"); });
+      sumDay.addEventListener("click", function () { setQf("day"); });
+      doc.getElementById("kora-check").addEventListener("click", koraCheck);
+      scrim.addEventListener("click", function () { closeDrawer(true); });
+      sideOpenBtn.addEventListener("click", function () { openDrawer(sideOpenBtn); });
+      demoBtn.addEventListener("click", guarded("демо «без докладов»", etherStage, function () {
+        noReports = !noReports;
+        demoBtn.setAttribute("aria-pressed", noReports ? "true" : "false");
+        renderAll();
+      }));
+
+      /* шов правой панели: drag (07l §3.2) */
+      sideSeam.addEventListener("pointerdown", function (e) {
+        if (narrowMq.matches) return; /* <1024 — дровер, шва нет */
+        sideDrag = { startX: e.clientX, startW: sideW };
+        page.classList.add("seam-dragging");
+        dragCursors("col-resize");
+        sideSeam.setPointerCapture(e.pointerId);
+        e.preventDefault();
+      });
+      sideSeam.addEventListener("pointermove", function (e) {
+        if (!sideDrag) return;
+        var right = page.getBoundingClientRect().right;
+        applySideW(clamp(right - e.clientX, RIGHT_MIN, RIGHT_MAX));
+      });
+      sideSeam.addEventListener("pointerup", function () {
+        if (!sideDrag) return;
+        sideDrag = null;
+        page.classList.remove("seam-dragging");
+        dragCursors(null);
+        persistSideW(); /* персист — на завершение drag, не на каждый кадр */
+      });
+      sideSeam.addEventListener("pointercancel", function () {
+        if (sideDrag) applySideW(sideDrag.startW);
+        sideDrag = null;
+        page.classList.remove("seam-dragging");
+        dragCursors(null);
+      });
+      sideSeam.addEventListener("dblclick", function () {
+        applySideW(RIGHT_DEF); /* двойной клик — сброс к дефолту */
+        persistSideW();
+      });
+      /* клавиатурный путь (07l §3.3): стрелки двигают кромку, Home — дефолт,
+       * End — максимум, Esc — откат серии; персист на keyup */
+      sideSeam.addEventListener("focus", function () { sideKbStart = sideW; });
+      sideSeam.addEventListener("blur", function () { sideKbStart = null; });
+      sideSeam.addEventListener("keydown", function (e) {
+        var next = null;
+        if (e.key === "ArrowLeft") next = sideW + 16;       /* кромка влево — панель шире */
+        else if (e.key === "ArrowRight") next = sideW - 16; /* кромка вправо — панель уже */
+        else if (e.key === "Home") next = RIGHT_DEF;
+        else if (e.key === "End") next = RIGHT_MAX;
+        else if (e.key === "Escape") {
+          if (sideKbStart != null && sideKbStart !== sideW) {
+            e.preventDefault();
+            applySideW(sideKbStart);
+          }
+          return;
+        } else return;
+        e.preventDefault();
+        applySideW(clamp(next, RIGHT_MIN, RIGHT_MAX));
+      });
+      sideSeam.addEventListener("keyup", function (e) {
+        if (e.key.indexOf("Arrow") === 0 || e.key === "Home" || e.key === "End") persistSideW();
+      });
+
+      /* шов Пульта: drag высоты (07l §3.2) */
+      pultSeam.addEventListener("pointerdown", function (e) {
+        var rect = pult.getBoundingClientRect();
+        pultDrag = {
+          startY: e.clientY,
+          top: rect.top,
+          startH: Math.round(rect.height),
+          startFixed: pultFixedH,
+          expandedNow: pultExpanded(),
+          toCollapse: false,
+        };
+        if (pultDrag.expandedNow) {
+          /* авто → фикс в момент взятия: геометрия не прыгает */
+          instantHeight(function () { setPultFixed(pultDrag.startH); });
+        }
+        page.classList.add("seam-dragging");
+        dragCursors("row-resize");
+        pultSeam.setPointerCapture(e.pointerId);
+        e.preventDefault();
+      });
+      pultSeam.addEventListener("pointermove", function (e) {
+        if (!pultDrag || !pultDrag.expandedNow) return;
+        var h = e.clientY - pultDrag.top;
+        if (h < PULT_COLLAPSE_AT) { pultDrag.toCollapse = true; return; }
+        pultDrag.toCollapse = false;
+        pult.style.height = clamp(h, PULT_MIN, PULT_MAX) + "px";
+      });
+      pultSeam.addEventListener("pointerup", function (e) {
+        if (!pultDrag) return;
+        var d = pultDrag;
+        pultDrag = null;
+        page.classList.remove("seam-dragging");
+        dragCursors(null);
+        if (!d.expandedNow) {
+          /* drag вниз от полосы — разворот на последнюю сохранённую высоту
+           * или авто (07l §3.2, гистерезис) */
+          if (e.clientY - d.startY > 16) {
+            pultOpen = true;
+            renderPult();
+            announce("Пульт развёрнут");
+          }
           return;
         }
-        if (selectedId && pultOpen) {
-          e.preventDefault();
-          collapsePult(true);
+        var h = e.clientY - d.top;
+        if (h < PULT_COLLAPSE_AT) {
+          /* прилипание «<120px → свёрнут» — мгновенно (07l §8) */
+          collapsePult(false);
           return;
         }
-        if (selectedId) {
-          e.preventDefault();
-          deselectSession(true);
+        setPultFixed(clamp(h, PULT_MIN, PULT_MAX));
+        persistPultH(); /* drag переводит в фиксированную с персистом */
+      });
+      pultSeam.addEventListener("pointercancel", cancelPultDrag);
+      pultSeam.addEventListener("dblclick", function () {
+        /* сброс → авто-режим: ключ удаляется (07l §3.2) */
+        instantHeight(function () {
+          store.del("vesmaro.koraPultH");
+          pultFixedH = 0;
+          if (!pultExpanded()) pultOpen = true;
+          renderPult();
+        });
+      });
+      pultSeam.addEventListener("focus", function () {
+        pultKbStart = { fixed: pultFixedH, open: pultOpen };
+      });
+      pultSeam.addEventListener("blur", function () { pultKbStart = null; });
+      pultSeam.addEventListener("keydown", function (e) {
+        function cur() { return Math.round(pult.getBoundingClientRect().height); }
+        if (e.key === "Escape") {
+          if (pultKbStart && (pultKbStart.fixed !== pultFixedH || pultKbStart.open !== pultOpen)) {
+            e.preventDefault();
+            instantHeight(function () {
+              pultFixedH = pultKbStart.fixed;
+              pultOpen = pultKbStart.open;
+              renderPult();
+            });
+          }
+          return;
         }
-        return;
-      }
-      /* фокус-ловушка только для дровера узких экранов */
-      if (e.key === "Tab" && drawerOpen && narrowMq.matches) {
-        var f = side.querySelectorAll("button, a[href], input, select, textarea");
-        if (!f.length) return;
-        var first = f[0], last = f[f.length - 1];
-        if (e.shiftKey && doc.activeElement === first) { e.preventDefault(); last.focus(); }
-        else if (!e.shiftKey && doc.activeElement === last) { e.preventDefault(); first.focus(); }
-      }
-    });
+        if (e.key === "Home") {
+          e.preventDefault();
+          instantHeight(function () {
+            store.del("vesmaro.koraPultH");
+            pultFixedH = 0;
+            pultOpen = true;
+            renderPult();
+          });
+          return;
+        }
+        if (e.key === "End") {
+          e.preventDefault();
+          instantHeight(function () { setPultFixed(PULT_MAX); });
+          persistPultH();
+          return;
+        }
+        var delta = e.key === "ArrowUp" ? 16 : e.key === "ArrowDown" ? -16 : 0;
+        if (!delta) return;
+        e.preventDefault();
+        instantHeight(function () {
+          if (!pultExpanded()) {
+            /* из полосы стрелка вверх разворачивает (07l §3.4) */
+            if (delta > 0) {
+              pultOpen = true;
+              renderPult();
+              announce("Пульт развёрнут");
+            }
+            return;
+          }
+          var next = cur() + delta;
+          /* клавиатурный шаг ниже минимума = намерение свернуть:
+           * прилипание как у drag'а; без этого clamp(160) даёт
+           * фиксированную точку 160↔144 и «свернуть» недостижимо */
+          if (next < PULT_MIN) {
+            collapsePult(false);
+            return;
+          }
+          setPultFixed(clamp(next, PULT_MIN, PULT_MAX));
+        });
+      });
+      pultSeam.addEventListener("keyup", function (e) {
+        if (e.key.indexOf("Arrow") === 0 || e.key === "Home" || e.key === "End") persistPultH();
+      });
+      /* вкладки Пульта (07j §4.2) */
+      tabDigest.addEventListener("click", function () { setTab("digest", true); });
+      tabEther.addEventListener("click", function () { setTab("ether", true); });
+      pultTabs.addEventListener("keydown", function (e) {
+        var dir = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+        if (!dir && e.key !== "Home" && e.key !== "End") return;
+        e.preventDefault();
+        var order = [tabDigest, tabEther];
+        var i = order.indexOf(doc.activeElement);
+        if (e.key === "Home") i = 0;
+        else if (e.key === "End") i = order.length - 1;
+        else i = (i + dir + order.length) % order.length;
+        order[i].focus();
+        order[i].click();
+      });
 
-    /* ── демо-стенд: служебные контролы вне продукта (07j §5-13) ─────── */
-    demoBtn.addEventListener("click", function () {
-      noReports = !noReports;
-      demoBtn.setAttribute("aria-pressed", noReports ? "true" : "false");
-      renderAll();
-    });
+      /* «О сессии»: персист раскрытия (07j §3.4) */
+      aboutToggle.addEventListener("click", function () {
+        var open = aboutToggle.getAttribute("aria-expanded") === "true";
+        aboutToggle.setAttribute("aria-expanded", open ? "false" : "true");
+        aboutBody.hidden = open;
+        store.set("vesmaro.koraAbout", open ? "0" : "1");
+      });
+      legendToggle.addEventListener("click", function () {
+        var open = legendToggle.getAttribute("aria-expanded") === "true";
+        legendToggle.setAttribute("aria-expanded", open ? "false" : "true");
+        legendBody.hidden = open;
+        store.set("stand-kora-cov", open ? "0" : "1");
+      });
 
-    /* ── «О сессии» и легенда: персист раскрытия ─────────────────────── */
-    try {
-      if (store.get("vesmaro.koraAbout", "0") === "1") {
-        aboutToggle.setAttribute("aria-expanded", "true");
-        aboutBody.hidden = false;
-      }
-      if (store.get("stand-kora-cov", "0") === "1") {
-        legendToggle.setAttribute("aria-expanded", "true");
-        legendBody.hidden = false;
-      }
-    } catch (e) { /* file:// */ }
+      /* хвост и поиск */
+      followBtn.addEventListener("click", function () { setFollow(!followOn); });
+      tailBtn.addEventListener("click", function () { setFollow(true); });
+      wzScroll.addEventListener("scroll", function () {
+        if (scrollTick) return;
+        scrollTick = true;
+        requestAnimationFrame(function () {
+          scrollTick = false;
+          if (!followOn) return;
+          if (wzScroll.scrollTop < wzScroll.scrollHeight - wzScroll.clientHeight - 48) {
+            setFollow(false);
+          }
+        });
+      });
+      searchInput.addEventListener("input", function () {
+        if (searchTimer) clearTimeout(searchTimer);
+        searchTimer = setTimeout(guarded("поиск в сессии", wzScroll, function () {
+          query = searchInput.value.trim().toLowerCase();
+          var s = findS(selectedId);
+          if (s) renderTranscript(s);
+          if (followOn) scrollToTail();
+        }), 300);
+      });
+      searchInput.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && searchInput.value) {
+          e.stopPropagation();
+          searchInput.value = "";
+          query = "";
+          var s = findS(selectedId);
+          if (s) renderTranscript(s);
+          searchCount.textContent = "";
+        }
+      });
 
-    /* ── старт: сводка, дерево, глубокие ссылки (07j: ?open=1 игнорируем,
-     *    ?session= выбирает, ?host= фильтрует, ?demo=empty — честная пустота,
-     *    ?demo=0 — скрыть служебный тулбар) ───────────────────────────── */
-    var q = new URLSearchParams(window.location.search);
-    var preHost = q.get("host");
-    if (preHost) {
-      var known = D.hosts.some(function (h) { return h.name === preHost; });
-      if (known) filter.value = preHost;
+      /* малая высота (зум/малый вьюпорт): Пульт принудительно свёрнут,
+       * персист-высота возвращается после возврата высоты (07l §1.5) */
+      var onLowChange = function () { renderPult(); };
+      if (lowMq.addEventListener) lowMq.addEventListener("change", onLowChange);
+      else lowMq.addListener(onLowChange);
+
+      /* Esc-лестница (03 §7): drag → Пульт → выбор → ничего (07j §6.1) */
+      doc.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") {
+          /* Esc снимает активный drag (07l §7): откат к значению на взятии */
+          if (sideDrag) {
+            applySideW(sideDrag.startW);
+            sideDrag = null;
+            page.classList.remove("seam-dragging");
+            dragCursors(null);
+            return;
+          }
+          if (pultDrag) {
+            cancelPultDrag();
+            return;
+          }
+          if (doc.querySelector(".overlay:not([hidden])")) return; /* палитра/шпаргалка — владеет shell */
+          if (narrowMq.matches && drawerOpen) {
+            e.preventDefault();
+            closeDrawer(true);
+            return;
+          }
+          if (selectedId && pultOpen) {
+            e.preventDefault();
+            collapsePult(true);
+            return;
+          }
+          if (selectedId) {
+            e.preventDefault();
+            deselectSession(true);
+          }
+          return;
+        }
+        /* фокус-ловушка только для дровера узких экранов */
+        if (e.key === "Tab" && drawerOpen && narrowMq.matches) {
+          var f = side.querySelectorAll("button, a[href], input, select, textarea");
+          if (!f.length) return;
+          var first = f[0], last = f[f.length - 1];
+          if (e.shiftKey && doc.activeElement === first) { e.preventDefault(); last.focus(); }
+          else if (!e.shiftKey && doc.activeElement === last) { e.preventDefault(); first.focus(); }
+        }
+      });
+
+      /* высота Пульта доедает transition при кнопке — aria по факту (4.1.2) */
+      pult.addEventListener("transitionend", function (e) {
+        if (e.propertyName === "height") updatePultSeamAria();
+      });
     }
-    if (q.get("demo") === "empty") {
-      noReports = true;
-      demoBtn.setAttribute("aria-pressed", "true");
+
+    /* ── фаза 0: проводка экрана ошибки — до всех фаз, чтобы кнопки
+     *    работали при падении любой из них (07l §5.3) ─────────────────── */
+    function wireFatal() {
+      fatalReload.addEventListener("click", function () { location.reload(); });
+      fatalReset.addEventListener("click", function () {
+        /* «Сбросить вид» чистит только vesmaro.kora* — вход, тема и сайдбар
+         * не страдают (07l §5.3); confirm не нужен: обратимо */
+        removeAllKora();
+        location.reload();
+      });
     }
-    demoToolbar.hidden = q.get("demo") === "0";
-    renderTree();
-    renderSummary();
-    renderBlock2();
-    renderWorkzone();
-    renderPult();
-    var preSession = q.get("session");
-    if (preSession) {
-      var s0 = findS(preSession);
-      if (s0) selectSession(s0, { focus: false });
-      else toast("Сессия " + preSession + " не нашлась в стенде", "info");
+
+    /* ── фаза 1: миграция + чтение состояния (07l §5.2–5.3) ──────────── */
+    function readState() {
+      migrateStorage();
+      sideW = readInt("vesmaro.koraRightW", RIGHT_DEF, RIGHT_MIN, RIGHT_MAX);
+      pultFixedH = readInt("vesmaro.koraPultH", 0, PULT_MIN, PULT_MAX); /* 0 = авто */
+      panelTab = store.get("vesmaro.koraPanel", "");
+      if (panelTab !== "digest" && panelTab !== "ether") panelTab = "";
+      try { treeState = JSON.parse(sstore("vesmaro.koraTree") || "{}") || {}; }
+      catch (e) {
+        treeState = {};
+        console.warn("[kora] ветки дерева: мусор в сессии браузера — раскрыты дефолты");
+      }
     }
+
+    /* ── фаза 2: сборка DOM (07l §5.3) ───────────────────────────────── */
+    function buildAll() {
+      /* seed-страница: самопроверка фатального экрана (07l §10 — падение
+       * должно быть проверено, а не описано); ключ в пространстве vesmaro.kora*,
+       * поэтому «Сбросить вид» его снимает */
+      if (sstore("vesmaro.koraSelfTest") === "1") {
+        throw new Error("kora: самопроверка экрана ошибки (seed-страница, сценарий 6)");
+      }
+      applySideW(sideW);
+      /* «О сессии» и легенда: персист раскрытия */
+      try {
+        if (store.get("vesmaro.koraAbout", "0") === "1") {
+          aboutToggle.setAttribute("aria-expanded", "true");
+          aboutBody.hidden = false;
+        }
+        if (store.get("stand-kora-cov", "0") === "1") {
+          legendToggle.setAttribute("aria-expanded", "true");
+          legendBody.hidden = false;
+        }
+      } catch (e) {
+        console.warn("[kora] персист раскрытия блоков не читался — открыты дефолты");
+      }
+      renderTree();
+      renderSummary();
+      renderBlock2();
+      renderWorkzone();
+      renderPult();
+    }
+
+    /* ── фаза 4: глубокие ссылки и служебные параметры (07j §2) ──────── */
+    function applyDeepLinks() {
+      var q = new URLSearchParams(window.location.search);
+      var preHost = q.get("host");
+      if (preHost) {
+        var known = D.hosts.some(function (h) { return h.name === preHost; });
+        if (known) filter.value = preHost;
+      }
+      if (q.get("demo") === "empty") {
+        noReports = true;
+        demoBtn.setAttribute("aria-pressed", "true");
+        renderAll();
+      }
+      demoToolbar.hidden = q.get("demo") === "0";
+      var preSession = q.get("session");
+      if (preSession) {
+        var s0 = findS(preSession);
+        if (s0) selectSession(s0, { focus: false });
+        else toast("Сессия " + preSession + " не нашлась в стенде", "info");
+      }
+    }
+
+    /* ── старт: экран ошибки → миграция/чтение → DOM → события → ссылки
+     *    (07l §5.3). Любая фаза падает → экран ошибки; пустой центр
+     *    невозможен. ───────────────────────────────────────────────────── */
+    phase("проводка экрана ошибки", wireFatal)
+      && phase("чтение состояния", readState)
+      && phase("сборка DOM", buildAll)
+      && phase("проводка событий", wireEvents)
+      && phase("глубокие ссылки", applyDeepLinks);
   })();
 
 </script>

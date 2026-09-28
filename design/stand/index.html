@@ -186,7 +186,7 @@
       <section class="anon-summary panel" data-anon-only aria-label="Публичная сводка: цифры открыты всем">
         <div class="anon-summary-row">
           <span class="anon-line">Сводка открыта всем: <span class="num">12 483</span> записи · <span class="num">342</span> тега · <span class="num">5</span> активных задач · <span class="num">3</span> агента</span>
-          <span class="anon-line" id="anon-stores">хранилища: 4 · 3 на связи · 1 с предупреждением</span>
+          <span class="anon-line" id="anon-stores">хранилища: 4 · 3 на связи · 1 с оговорками</span>
         </div>
       </section>
 
@@ -319,7 +319,7 @@
     if (anonStores) {
       anonStores.textContent =
         "хранилища: " + D.servers.length + " · " + okN + " " + (okN === 1 ? "живо" : "живы") +
-        (warnN ? " · " + warnN + " с предупреждением" : " · все отвечают");
+        (warnN ? " · " + warnN + " с оговорками" : " · все отвечают");
     }
     var wl = document.getElementById("waiting");
     D.waiting.forEach(function (w) {

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Seed-страница Коры · служебная — vesmaro-eyes · стенд «Живая кора»</title>
+  <link rel="stylesheet" href="styles/tokens.css">
+  <link rel="stylesheet" href="styles/base.css">
+  <style>
+    /* служебная страница стенда: вне сайдбара, URL-only (07l §5.4).
+       Только токены 02; никаких новых имён. */
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: start center;
+      padding: var(--space-8) var(--space-4);
+      background: var(--color-bg-base);
+      color: var(--color-text-primary);
+      font-family: var(--font-ui);
+      font-size: var(--text-ui);
+    }
+    .seed {
+      width: 100%;
+      max-width: 880px;
+      display: grid;
+      gap: var(--space-4);
+    }
+    .seed-head {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+    .seed-caps {
+      font-size: var(--text-caps);
+      letter-spacing: var(--tracking-caps);
+      text-transform: uppercase;
+      color: var(--color-text-muted);
+    }
+    .badge-stand {
+      font-size: var(--text-caps);
+      letter-spacing: var(--tracking-caps);
+      text-transform: uppercase;
+      color: var(--color-text-muted);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius-full);
+      padding: 1px var(--space-2);
+    }
+    h1 {
+      margin: 0;
+      font-size: var(--text-xl);
+      font-weight: var(--weight-semibold);
+    }
+    .seed-intro {
+      margin: 0;
+      max-width: 72ch;
+      color: var(--color-text-secondary);
+    }
+    .panel {
+      background: var(--color-bg-well);
+      border: var(--line-hairline) solid var(--myelin-hairline);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4) var(--space-5);
+      display: grid;
+      gap: var(--space-3);
+    }
+    .panel > h2 {
+      margin: 0;
+      font-size: var(--text-caps);
+      letter-spacing: var(--tracking-caps);
+      text-transform: uppercase;
+      font-weight: var(--weight-medium);
+      color: var(--color-text-muted);
+    }
+    .seed-btns {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: var(--space-3);
+    }
+    .seed-btn {
+      display: grid;
+      gap: var(--space-1);
+      justify-items: start;
+      text-align: left;
+      padding: var(--space-3) var(--space-4);
+      background: var(--color-bg-elevated);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius-md);
+      color: var(--color-text-primary);
+      font: inherit;
+      cursor: pointer;
+      transition: border-color var(--duration-instant) var(--ease-enter),
+        background var(--duration-instant) var(--ease-enter);
+    }
+    .seed-btn:hover {
+      border-color: var(--color-border);
+      background: var(--strata-memory);
+    }
+    .seed-btn:focus-visible {
+      outline: var(--focus-ring-width) solid var(--color-focus);
+      outline-offset: var(--focus-ring-offset);
+    }
+    .seed-btn b {
+      font-weight: var(--weight-semibold);
+    }
+    .seed-btn span {
+      font-size: var(--text-data);
+      color: var(--color-text-secondary);
+    }
+    .seed-note {
+      margin: 0;
+      font-size: var(--text-data);
+      color: var(--color-text-secondary);
+    }
+    .seed-check {
+      margin: 0;
+      padding-left: var(--space-5);
+      display: grid;
+      gap: var(--space-1);
+      font-size: var(--text-data);
+      color: var(--color-text-secondary);
+    }
+    .seed-store {
+      margin: 0;
+      font-family: var(--font-mono);
+      font-size: var(--text-data);
+      font-variant-numeric: var(--numeric-tnum);
+      color: var(--color-text-secondary);
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    a {
+      color: var(--color-iris-bright);
+    }
+    a:focus-visible, button:focus-visible {
+      outline: var(--focus-ring-width) solid var(--color-focus);
+      outline-offset: var(--focus-ring-offset);
+    }
+  </style>
+</head>
+<body>
+<div class="seed">
+  <header class="seed-head">
+    <span class="seed-caps">Демо-стенд</span>
+    <span class="badge-stand">служебная страница стенда</span>
+  </header>
+  <h1 tabindex="-1">Seed-страница Коры: сценарии хранилища</h1>
+  <p class="seed-intro">Готовит localStorage под сценарии diagnostics P0 «раздел Кора пропадает»
+    (07l §5.4–5.5) и перебрасывает на <a href="kora.html">kora.html</a>. Ключи вне
+    <code>vesmaro.kora*</code> — вход, тема, сайдбар — сценарии не трогают.
+    В меню стенда страницы нет: она служебная.</p>
+
+  <section class="panel" aria-labelledby="seed-scenarios">
+    <h2 id="seed-scenarios">Сценарии</h2>
+    <div class="seed-btns">
+      <button class="seed-btn" type="button" data-seed="legacy">
+        <b>1 · Наследие v4: полный набор</b>
+        <span>koraDock + koraTree {open:[…]} + koraPanel «transcript», без версии. Ждём: тост миграции, дефолты, версия 2</span>
+      </button>
+      <button class="seed-btn" type="button" data-seed="broken">
+        <b>2 · Битый JSON дерева</b>
+        <span>koraTree = {&quot;open":[ — обрыв, без версии. Ждём: init не падает, тост миграции, рендер с дефолтами</span>
+      </button>
+      <button class="seed-btn" type="button" data-seed="garbage">
+        <b>3 · Мусорные типы</b>
+        <span>koraPanel = 17, koraRightW = «abc», koraPultH = null, без версии. Ждём: сброс + тост, clamp/дефолты</span>
+      </button>
+      <button class="seed-btn" type="button" data-seed="clean">
+        <b>4 · Чистый вход</b>
+        <span>стереть все vesmaro.kora* и версию. Ждём: без тоста, версия 2 записана молча</span>
+      </button>
+      <button class="seed-btn" type="button" data-seed="crash">
+        <b>6 · Самопроверка экрана ошибки</b>
+        <span>флаг vesmaro.koraSelfTest — init падает намеренно (07l §10). Ждём: экран «Не удалось отрисовать журнал», «Сбросить вид» чинит</span>
+      </button>
+    </div>
+    <p class="seed-note"><b>5 · Хранилище недоступно</b> — вручную: откройте стенд в приватном окне
+      браузера (localStorage часто недоступен) или с file://. Ждём: Кора рендерится без персиста,
+      без ошибок и без тоста.</p>
+  </section>
+
+  <section class="panel" aria-labelledby="seed-checklist">
+    <h2 id="seed-checklist">Чек-лист приёмки P0 (07l §5.4) — на каждом сценарии</h2>
+    <ol class="seed-check">
+      <li>(а) центр не пуст: рабочая зона отрисована или показан экран ошибки с действиями;</li>
+      <li>(б) тост «Настройки вида Коры обновлены» показан ровно один раз и не возвращается при следующем входе (на сценарии 4 — не показан вовсе);</li>
+      <li>(в) после сценариев 1–3 ключи vesmaro.koraDock и старая схема не возвращаются, в storage — версия 2;</li>
+      <li>(г) «Сбросить вид» на экране ошибки чистит только vesmaro.kora* — vesmaro.authSession выживает, вход не слетает;</li>
+      <li>(д) переход «Агенты → Исполнение → Кора» больше не меняет состояние Коры — симптом владельца устранён.</li>
+    </ol>
+  </section>
+
+  <section class="panel" aria-labelledby="seed-state">
+    <h2 id="seed-state">Текущее состояние хранилища (имена ключей, без значений)</h2>
+    <p class="seed-store" id="seed-store" role="status"></p>
+    <p class="seed-note">Показывается после каждого возврата с Коры — обновите страницу (F5),
+      чтобы увидеть состояние после сценария.</p>
+  </section>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* сценарии пишут только vesmaro.kora*; версия не пишется — её ставит
+   * миграция на Корее (07l §5.2). Ключи прочих доменов не трогаются. */
+  var SCENARIOS = {
+    legacy: function () {
+      localStorage.setItem("vesmaro.koraDock", '{"collapsed":false,"tab":"transcript"}');
+      localStorage.setItem("vesmaro.koraTree", '{"open":["h-lgo","h-vpn"]}');
+      localStorage.setItem("vesmaro.koraPanel", "transcript");
+    },
+    broken: function () {
+      localStorage.setItem("vesmaro.koraTree", '{"open":[');
+    },
+    garbage: function () {
+      localStorage.setItem("vesmaro.koraPanel", "17");
+      localStorage.setItem("vesmaro.koraRightW", "abc");
+      localStorage.setItem("vesmaro.koraPultH", "null");
+    },
+    clean: function () {
+      wipeKora();
+      localStorage.removeItem("vesmaro.storageVersion");
+    },
+    crash: function () {
+      try { sessionStorage.setItem("vesmaro.koraSelfTest", "1"); }
+      catch (e) { /* сессия недоступна — сценарий неосуществим, сообщим */ window.alert("sessionStorage недоступен: сценарий самопроверки нельзя засеять"); }
+    },
+  };
+  function wipeKora() {
+    var killed = [];
+    [window.localStorage, window.sessionStorage].forEach(function (st) {
+      if (!st) return;
+      for (var i = st.length - 1; i >= 0; i--) {
+        var k = st.key(i);
+        if (k && k.indexOf("vesmaro.kora") === 0) {
+          st.removeItem(k);
+          killed.push(k);
+        }
+      }
+    });
+    return killed;
+  }
+  function run(name) {
+    try {
+      SCENARIOS[name]();
+    } catch (e) {
+      window.alert("Сценарий не записан: хранилище недоступно (" + e.message + ")");
+      return;
+    }
+    window.location.href = "kora.html";
+  }
+  document.querySelectorAll("[data-seed]").forEach(function (b) {
+    b.addEventListener("click", function () { run(b.dataset.seed); });
+  });
+
+  /* readout: имена ключей без значений — значения могут нести секреты */
+  function renderState() {
+    var box = document.getElementById("seed-store");
+    var lines = [];
+    try {
+      var ver = localStorage.getItem("vesmaro.storageVersion");
+      lines.push("vesmaro.storageVersion = " + (ver === null ? "нет" : ver));
+      [window.localStorage, window.sessionStorage].forEach(function (st, i) {
+        if (!st) return;
+        var name = i === 0 ? "localStorage" : "sessionStorage";
+        for (var j = 0; j < st.length; j++) {
+          var k = st.key(j);
+          if (k && (k.indexOf("vesmaro.") === 0 || k.indexOf("stand-kora") === 0)) {
+            lines.push(name + ": " + k + " = <значение скрыто>");
+          }
+        }
+      });
+    } catch (e) {
+      lines.push("хранилище недоступно: " + e.message);
+    }
+    box.textContent = lines.length ? lines.join("\n") : "ключи vesmaro.* не найдены";
+  }
+  renderState();
+})();
+</script>
+</body>
+</html>
