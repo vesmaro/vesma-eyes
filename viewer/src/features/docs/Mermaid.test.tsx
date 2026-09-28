@@ -123,6 +123,45 @@ describe("MermaidDiagram", () => {
     warnSpy.mockRestore();
   });
 
+  it("ME-017: renders mermaid-shaped HTML-isms (unclosed <br>, &nbsp;) instead of falling back", async () => {
+    // The REAL defect (probe-verified against mermaid@11.17.2): multi-line
+    // labels serialize as `<p>…<br>…</p>` inside foreignObject — invalid
+    // XML, previously "unparsable svg" → fallback. The component must
+    // normalize (mermaidSvgXml) and render the svg.
+    const mermaidShaped =
+      '<svg viewBox="0 0 4 4" xmlns="http://www.w3.org/2000/svg">' +
+      '<foreignObject><div xmlns="http://www.w3.org/1999/xhtml">' +
+      '<span class="nodeLabel"><p>Extract dynamic spans<br>ordered by specificity&nbsp;here</p></span>' +
+      "</div></foreignObject></svg>";
+    mermaidMock.render.mockResolvedValue({ svg: mermaidShaped });
+    const container = await mountDiagram("flowchart LR;A-->B;");
+    const svg = container.querySelector("svg");
+    expect(svg, "normalized mermaid svg must render, not fall back").not.toBeNull();
+    expect(container.querySelector("pre")).toBeNull(); // no source fallback
+    expect(svg?.querySelector("br")).not.toBeNull(); // label line-break survives
+  });
+
+  it("ME-017: still rejects hostile-shaped svg (unclosed <img> is NOT repaired)", async () => {
+    // Security probe: strict-mode mermaid output carrying an unclosed
+    // <img> (remote src) must keep failing the strict parse — the
+    // normalization repairs only <br>/named entities, never other markup.
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const hostile =
+      '<svg viewBox="0 0 4 4" xmlns="http://www.w3.org/2000/svg">' +
+      '<foreignObject><div xmlns="http://www.w3.org/1999/xhtml">' +
+      '<span class="nodeLabel"><p><img src="https://evil.example/pixel"></p></span>' +
+      "</div></foreignObject></svg>";
+    mermaidMock.render.mockResolvedValue({ svg: hostile });
+    const container = await mountDiagram("flowchart LR;A-->B;");
+    expect(container.querySelector("svg")).toBeNull(); // fallback, no svg in DOM
+    expect(
+      warnSpy.mock.calls.some((call) =>
+        String(call[0]).includes("unparsable svg"),
+      ),
+    ).toBe(true);
+    warnSpy.mockRestore();
+  });
+
   it("redraws on-line when the root data-theme flips", async () => {
     mermaidMock.render.mockResolvedValue({ svg: SVG_WITH_LINK });
     document.documentElement.setAttribute("data-theme", "light");
