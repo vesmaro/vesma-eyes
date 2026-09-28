@@ -29,6 +29,16 @@ describe("text-engine/core", () => {
     expect(() => themeComponents("article")).toThrow(/articleComponents/);
   });
 
+  it("themeComponents keeps ONE map per (theme, inert-flag) pair (ME-013 cache key)", () => {
+    const full = themeComponents("full");
+    const inert = themeComponents("full", { mermaidFencesInert: true });
+    // The Amendment 1 fallback flag is part of the cache key: distinct maps,
+    // each stable by reference (the ME-005 churn rule holds for both).
+    expect(inert).not.toBe(full);
+    expect(themeComponents("full", { mermaidFencesInert: true })).toBe(inert);
+    expect(themeComponents("full")).toBe(full);
+  });
+
   it("articleComponents builds the docs typography around the hooks", () => {
     const map = articleComponents({
       headingSlug: (text) => text,

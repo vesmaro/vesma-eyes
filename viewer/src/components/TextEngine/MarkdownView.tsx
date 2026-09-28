@@ -1,7 +1,11 @@
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 import { buildPipeline, themeComponents, type TextEngineTheme } from "./core";
+import {
+  MERMAID_UNTRUSTED_MAX_FENCES_PER_SURFACE,
+  countMermaidFences,
+} from "./core/mermaidCaps";
 
 /**
  * The markdown renderer behind TextEngine (UI-27) — ONE react-markdown +
@@ -16,6 +20,14 @@ import { buildPipeline, themeComponents, type TextEngineTheme } from "./core";
  * the typography from the memoized theme factory (compact/full byte-identical
  * to the pre-Ф1 variantClasses). The lazy-chunk boundary and the public props
  * are unchanged.
+ *
+ * ME-013 (ADR 0020 Amendment 1): mermaid fences render as diagrams on this
+ * profile too, behind the hard caps of core/mermaidCaps. The per-SURFACE
+ * fences cap is enforced HERE — one derived verdict per source (a pure scan,
+ * never per-render mutation): a surface carrying more than
+ * MERMAID_UNTRUSTED_MAX_FENCES_PER_SURFACE fences gets ALL of them as
+ * honest inert code blocks. The per-fence size cap lives in the theme's
+ * `pre` branch (core/theme.tsx).
  *
  * SECURITY (SEC-4 — memory content is untrusted, never instructions):
  * - NO rehype-raw, NO dangerouslySetInnerHTML: raw HTML in the source is
@@ -58,7 +70,16 @@ function MarkdownViewImpl({
   className,
   style,
 }: MarkdownViewProps) {
-  const components = themeComponents(variant as TextEngineTheme);
+  // Amendment 1 per-surface verdict: one pure scan per source, memoized —
+  // an over-cap surface renders every mermaid fence inert (honest fallback).
+  const mermaidFencesInert =
+    useMemo(
+      () => countMermaidFences(source),
+      [source],
+    ) > MERMAID_UNTRUSTED_MAX_FENCES_PER_SURFACE;
+  const components = themeComponents(variant as TextEngineTheme, {
+    mermaidFencesInert,
+  });
   return (
     <div
       className={cn(
