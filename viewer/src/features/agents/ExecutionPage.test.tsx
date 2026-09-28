@@ -211,7 +211,12 @@ describe("ExecutorStrip (layer 1)", () => {
       );
     });
     expect(container.textContent).toContain("No executors connected");
-    expect(container.textContent).toContain("deploy/poller/README.md");
+    // UX-overhaul §4.1/§8 (Ф1): pip/systemd internals are gone from the
+    // owner copy — the hint points at the Connect guide instead.
+    expect(container.textContent).toContain(
+      "How to connect an agent",
+    );
+    expect(container.textContent).not.toContain("pip install");
     await actUnmount(root);
   });
 

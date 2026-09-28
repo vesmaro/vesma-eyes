@@ -143,7 +143,12 @@ describe("ProvisionCard — the form", () => {
     await act(async () => {
       passwordOption.click();
     });
-    expect(document.body.textContent).toContain("provisioner.passwordAuth");
+    // UX-overhaul §8 (Ф1): the note speaks owner language — the deployment
+    // flag name never renders in the UI.
+    expect(document.body.textContent).toContain(
+      "Password sign-in is currently off on the server",
+    );
+    expect(document.body.textContent).not.toContain("provisioner.passwordAuth");
     await actUnmount(root);
   });
 });

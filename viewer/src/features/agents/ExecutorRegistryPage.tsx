@@ -38,6 +38,7 @@ import { orderRegistry } from "./registryOrder";
 import type { RegistryBands } from "./registryOrder";
 import { effectiveEnrollmentState } from "./enrollment";
 import { ProvisionCard } from "./ProvisionCard";
+import { useActiveProvisionJob } from "./useProvision";
 import { useExecutors } from "./useAgents";
 import { useEnrollments } from "./useEnrollment";
 import { useExecutorMutations } from "./useExecutorMutations";
@@ -57,11 +58,19 @@ function safeDecodeHash(value: string): string | null {
 /**
  * `/agents/harnesses` — «Подключение агентов» (AGW-4, spec §1 wave 2): the
  * executor registry with management, answering the owner's «где интерфейс
- * подключения внешних агентов?». The page renders THREE bands from
- * orderRegistry — the pending approval queue FIRST (the page's main
- * answer), then connected (enabled ahead of disabled), revoked last as
- * visibly dead-but-present rows; empty bands render nothing (§1.1 — no
- * counter furniture).
+ * подключения внешних агентов?».
+ *
+ * UX-overhaul §4.1 (Ф1, П2): the registry comes FIRST, configuration below —
+ * the ProvisionCard folds under a disclosure («Подключить нового агента»)
+ * and opens itself only when it is the answer: an EMPTY registry (the guide
+ * becomes the first screen — the one legal meta-first case) or a LIVE
+ * provision job (every state visible — no silent spinner). Order:
+ * registry → connect card (folded) → tokens → guide.
+ *
+ * The page renders THREE bands from orderRegistry — the pending approval
+ * queue FIRST (the page's main answer), then connected (enabled ahead of
+ * disabled), revoked last as visibly dead-but-present rows; empty bands
+ * render nothing (§1.1 — no counter furniture).
  *
  * Management goes through the gated write path (useExecutorMutations →
  * PATCH/DELETE /api/executors/{id}, ui-token; server error text lands in
@@ -74,8 +83,7 @@ function safeDecodeHash(value: string): string | null {
  * Identity (name/host/harness/version) is executor-claimed and
  * server-UNVERIFIED — every row wears the outline unverified chip (§2.2).
  * Presence reuses the strip's meta-TTL language (presence.ts) off the
- * shared 1 Hz ticker. Registration itself is machine-class API — the
- * ConnectGuide at the bottom is the honest «no button for that» answer.
+ * shared 1 Hz ticker.
  */
 export function ExecutorRegistryPage() {
   const t = useT();
@@ -151,12 +159,9 @@ export function ExecutorRegistryPage() {
         </Button>
       </header>
 
-      {/* AGW-11 (wave 4): the connect card — the registry's expansion
-       * entry point. The SSH path walks a machine to a pending row by
-       * itself; it sits ABOVE the bands (the owner's primary answer),
-       * the manual mint stays one click away in the header. */}
-      <ProvisionCard />
-
+      {/* UX-overhaul §4.1 (Ф1): the working state first. An EMPTY registry
+       * is the one legal meta-first case — the guide IS the answer there,
+       * and the connect card below opens itself. */}
       {executors.isPending ? (
         <div role="status" aria-label={t("agents.registry.loading")}>
           <TableRowSkeleton rows={4} columns={3} />
@@ -165,7 +170,7 @@ export function ExecutorRegistryPage() {
         <EmptyState
           variant="error"
           title={t("agents.registry.failed")}
-          message={executors.error.message}
+          techDetail={executors.error.message}
           action={
             <Button variant="outline" onClick={() => void executors.refetch()}>
               {t("common.retry")}
@@ -173,11 +178,7 @@ export function ExecutorRegistryPage() {
           }
         />
       ) : items.length === 0 ? (
-        <EmptyState
-          variant="empty"
-          title={t("agents.strip.empty")}
-          message={t("agents.registry.empty")}
-        />
+        <ConnectGuide />
       ) : (
         <div className="space-y-3">
           {bands.pending.length > 0 ? (
@@ -219,6 +220,12 @@ export function ExecutorRegistryPage() {
         </div>
       )}
 
+      {/* AGW-11 (wave 4) + UX-overhaul §4.1 (Ф1): the connect card — the
+       * registry's expansion entry point, FOLDED below the working state.
+       * It opens itself when the registry is empty or a provision job is
+       * live (the funnel is never hidden mid-run). */}
+      <ProvisionDisclosure registryEmpty={!executors.isPending && !executors.isError && items.length === 0} />
+
       {/* Token statuses: live countdowns + terminal history (ui-gated read —
        * the panel carries its own login hint without a token). */}
       <EnrollmentTokensPanel
@@ -231,8 +238,11 @@ export function ExecutorRegistryPage() {
 
       {/* The connect path: the one-command flow in five steps + the honest
        * installer note + the manual-path pointer (REMOTE-EXECUTOR.md).
-       * Always available — it is the page's second answer. */}
-      <ConnectGuide />
+       * When the registry is empty the guide already led the screen above —
+       * the tail copy would only repeat it. */}
+      {executors.isPending || executors.isError || items.length === 0 ? null : (
+        <ConnectGuide />
+      )}
 
       <EnrollmentDialog
         open={enrollmentOpen}
@@ -252,6 +262,34 @@ export function ExecutorRegistryPage() {
           }}
         />
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * UX-overhaul §4.1 (Ф1): the connect card under a disclosure (П2). Folded
+ * by default; opens itself while `registryEmpty` (the card is the empty
+ * domain's answer) or while a provision job is LIVE (the funnel must stay
+ * visible — «тихий отказ» запрещён). The owner's toggle wins over the
+ * defaults once touched.
+ */
+function ProvisionDisclosure({ registryEmpty }: { registryEmpty: boolean }) {
+  const t = useT();
+  const { active } = useActiveProvisionJob();
+  const [userOpen, setUserOpen] = useState<boolean | null>(null);
+  const open = userOpen ?? (registryEmpty || active !== null);
+  return (
+    <div className="flex flex-col gap-2">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setUserOpen(!open)}
+        className="flex w-fit items-center gap-1.5 rounded-md px-1 py-1 text-left text-sm font-medium text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+      >
+        <span aria-hidden="true">{open ? "▾" : "▸"}</span>
+        {t("agents.provision.enrollTitle")}
+      </button>
+      {open ? <ProvisionCard /> : null}
     </div>
   );
 }

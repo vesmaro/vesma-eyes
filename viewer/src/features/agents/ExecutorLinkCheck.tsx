@@ -15,7 +15,7 @@ import {
 import { ExecutorTestTaskDialog } from "./ExecutorTestTaskDialog";
 
 /**
- * The reusable link-check verdict (AGW-6 A): a «Проверить связь» trigger +
+ * The reusable link-check verdict (AGW-6 A): a «Обновить пульс» trigger +
  * the age automaton + the permanent outbound-only disclaimer. Two mounting
  * surfaces —
  * - MENU (`variant="menu-item"`): the trigger renders as a role=menuitem
@@ -24,6 +24,11 @@ import { ExecutorTestTaskDialog } from "./ExecutorTestTaskDialog";
  * - CARD (`variant="card"`, `autoCheck`): a normal button; the verdict is
  *   already shown on mount (the card IS the check surface) and the trigger
  *   re-checks.
+ *
+ * UX-overhaul §4.4 (Ф1): the trigger's explicit promise rides BOTH the
+ * title tooltip and the visible verdict («отвечал N назад») — the button
+ * renames to what it actually does (refresh the registry, speak the
+ * presence age), it never claims to ping.
  *
  * ARCHITECTURAL HONESTY (ADR 0009 §9): the trigger is a cache
  * INVALIDATION (executors react-query family refetch), never a "ping" —
@@ -81,6 +86,7 @@ export function ExecutorLinkCheck({
           <button
             type="button"
             role="menuitem"
+            title={t("agents.linkcheck.triggerHint")}
             className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm text-foreground transition-colors duration-instant hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
             onClick={(event) => {
               event.stopPropagation();
@@ -91,7 +97,13 @@ export function ExecutorLinkCheck({
             <span className="flex-1">{t("agents.linkcheck.trigger")}</span>
           </button>
         ) : (
-          <Button type="button" variant="outline" size="sm" onClick={check}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            title={t("agents.linkcheck.triggerHint")}
+            onClick={check}
+          >
             <Activity className="size-3.5" aria-hidden="true" />
             {t("agents.linkcheck.trigger")}
           </Button>
