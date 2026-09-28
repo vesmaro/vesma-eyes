@@ -12,3 +12,4 @@
 2026-09-27T19:07:06+0300 | abyss@core-51 | deploy | rev 78>79 | image 1.40.0 | chart 1.40.0 | HEAD 3d6c19d | auto-waived: image.tag drift = previous release (deployed-revision appVersion)
 2026-09-28T01:17:08+0300 | abyss@core-51 | deploy | rev 79>80 | image 1.41.0 | chart 1.41.0 | HEAD e42310a | auto-waived: image.tag drift = previous release (deployed-revision appVersion)
 2026-09-28T11:45:36+0300 | abyss@core-51 | deploy | rev 80>81 | image 1.42.0 | chart 1.42.0 | HEAD 44eefee | auto-waived: image.tag drift = previous release (deployed-revision appVersion)
+2026-09-28T18:35:38+0300 | abyss@core-51 | deploy | rev 81>82 | image 1.43.0 | chart 1.43.0 | HEAD 69fda95 | auto-waived: image.tag drift = previous release (deployed-revision appVersion)
