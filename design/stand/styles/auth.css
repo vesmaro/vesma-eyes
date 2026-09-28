@@ -1,0 +1,191 @@
+/* auth.css — «Живая кора» stand v6: public sign-in page (spec 07k §4).
+ * Pattern 07h: outside the Shell, own header, centered max-w-md column,
+ * card on --color-bg-well. The page's only glow is the fields' focus
+ * (public-page canon 07h §7). Tokens only; motion 150/240ms with
+ * reduced-motion cut-offs (06). */
+
+/* ── вкладки «Вход | Регистрация» (07k §4.1): сегмент с ирис-подчёркиванием
+ * выбранной вкладки (≥3:1 — 1.4.11); цели ≥36px (2.5.8) ────────────────── */
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: var(--line-hairline) solid var(--myelin-hairline);
+}
+.auth-tab {
+  position: relative;
+  min-height: 36px;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-ui);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  transition: color var(--duration-fast) var(--ease-enter);
+}
+.auth-tab:hover {
+  color: var(--color-text-secondary);
+}
+.auth-tab:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: calc(-1 * var(--focus-ring-width));
+  border-radius: var(--radius-sm);
+}
+.auth-tab[aria-selected="true"] {
+  color: var(--color-iris-bright);
+}
+.auth-tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  left: var(--space-3);
+  right: var(--space-3);
+  bottom: -1px;
+  height: 2px;
+  background: var(--color-iris);
+}
+
+/* ── панели вкладок: 150ms fade, reduced — мгновенно (07k §7) ─────────── */
+.auth-panel {
+  display: grid;
+  gap: var(--space-4);
+}
+.auth-panel-in {
+  animation: auth-panel-in var(--duration-fast) var(--ease-in-out);
+}
+@keyframes auth-panel-in {
+  from {
+    opacity: 0;
+  }
+}
+[data-motion="reduced"] .auth-panel-in {
+  animation: none;
+}
+
+/* продуктовая история вкладки регистрации (07k §4.1) */
+.auth-story {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+/* ── поле пароля + eye-переключатель (24px клик-цель, 07k §4.4) ───────── */
+.pass-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.pass-wrap .input {
+  width: 100%;
+  padding-right: var(--space-8);
+}
+.pass-eye {
+  position: absolute;
+  right: var(--space-1);
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+}
+.pass-eye:hover {
+  color: var(--color-text-secondary);
+}
+.pass-eye:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: 1px;
+}
+.pass-eye .icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* ── вердикт ошибки: инлайн под кнопкой, «Ошибка:» в тексте (07k §4.2);
+ * не цветом одним — префикс и «что проверить» рядом (3.3.1/1.4.1) ──────── */
+.auth-verdict {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--color-error) 45%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-error) 8%, transparent);
+}
+.auth-verdict .verdict-title {
+  margin: 0;
+  font-size: var(--text-ui);
+  font-weight: var(--weight-semibold);
+  color: var(--color-error);
+}
+.auth-verdict .verdict-title span[aria-hidden] {
+  color: var(--color-error);
+}
+.auth-verdict .verdict-hint {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+/* сабмит: primary на всю ширину карточки (07k §4 схема) */
+.auth-submit {
+  width: 100%;
+  justify-content: center;
+}
+.auth-submit .spinner {
+  width: 16px;
+  height: 16px;
+}
+
+/* ── стенд-честность: постоянный бейдж под карточкой (07k §4.2) ───────── */
+.auth-honesty {
+  margin: 0;
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+/* демо-исходы: ровный ряд, armed — нажатое состояние (честный тумблер) */
+.auth-demo {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  color: var(--color-text-muted);
+}
+.auth-demo [data-demo-phase][aria-pressed="true"] {
+  border-color: var(--color-iris);
+  color: var(--color-iris-bright);
+  background: var(--myelin-strong);
+}
+
+/* ── футер: статусная строка + «Статистика — на Обзоре →» (07k §4.3) ──── */
+.auth-foot {
+  display: block;
+}
+.auth-foot-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.auth-foot-row a {
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  color: var(--color-iris-bright);
+}
+.auth-foot-row a:hover {
+  text-decoration: none;
+  color: var(--color-text-primary);
+}
+.auth-foot-row a:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+@media (max-width: 640px) {
+  .auth-foot-row {
+    justify-content: center;
+  }
+}

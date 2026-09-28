@@ -30,7 +30,7 @@
     <div class="topbar-status">
       <button class="iconbtn search-expand" type="button" data-search-expand aria-label="Открыть поиск"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
       <span class="pill live" title="Живое соединение с демо-лентой стенда"><span class="dot" aria-hidden="true"></span>live</span>
-      <a class="iconbtn" href="agents.html" aria-label="Активные исполнения: 1 — открыть «Исполнение»">
+      <a class="iconbtn" href="agents.html" data-exec-count aria-label="Активные исполнения: 1 — открыть «Исполнение»">
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
         <span class="badge-dot" aria-hidden="true">1</span>
       </a>
@@ -149,7 +149,7 @@
         <span class="side-label">Свернуть</span>
         <span class="side-count">[</span>
       </button>
-      <p class="stand-note">Стенд дизайна · демо-данные</p>
+      <p class="stand-note stand-status" data-stand-version-line></p>
     </div>
   </aside>
 
@@ -174,37 +174,60 @@
           <p class="page-sub"><span class="num">12 483</span> записи · импульсов за час: <span class="num" id="pulses-hour">37</span></p>
         </div>
         <div class="page-actions">
-          <button class="btn secondary sm" type="button" data-share>
+          <button class="btn secondary sm" type="button" data-share data-auth-only>
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98"/><path d="M15.41 6.51l-6.82 3.98"/></svg>
             Поделиться
           </button>
         </div>
       </div>
 
-      <section class="well-hero" aria-label="Колодец памяти: граф воспоминаний с событийными импульсами">
+      <!-- v6 (07k §6): анонимная сводка — агрегаты без содержимого.
+           Видна только анониму; авторизованный её не видит. -->
+      <section class="anon-summary panel" data-anon-only aria-label="Публичная сводка: цифры открыты всем">
+        <div class="anon-summary-row">
+          <span class="anon-line">Сводка открыта всем: <span class="num">12 483</span> записи · <span class="num">342</span> тега · <span class="num">5</span> активных задач · <span class="num">3</span> агента</span>
+          <span class="anon-line" id="anon-stores">хранилища: 4 · 3 на связи · 1 с предупреждением</span>
+        </div>
+      </section>
+
+      <section class="well-hero" data-auth-only aria-label="Колодец памяти: граф воспоминаний с событийными импульсами">
         <canvas class="well-canvas"></canvas>
         <span class="well-caption" aria-hidden="true">Записи памяти и их связи. Наведите — подсветим связанное, клик — покажем запись</span>
       </section>
 
+      <!-- v6: CTA-блок занимает слот колодца и живой ленты у анонима (07k §6):
+           композиция остаётся двухзонной, без «ободранного экрана». -->
+      <section class="anon-cta panel" data-anon-only aria-label="Память — после входа">
+        <div class="anon-cta-inner">
+          <p class="anon-cta-text">Статистика открыта всем. Войдите — увидите память целиком: колодец-граф записей и живую ленту.</p>
+          <div class="anon-cta-actions">
+            <a class="btn primary" href="auth.html?return=index.html">Войти</a>
+            <a class="btn ghost" href="auth.html?return=index.html&amp;tab=register">Создать аккаунт</a>
+          </div>
+        </div>
+      </section>
+
       <section class="bento" aria-label="Состояние памяти">
         <div class="bento-block">
-          <h2>Здоровье хранилища</h2>
+          <h2>Здоровье хранилищ</h2>
+          <!-- v6: имена хранилищ — содержимое; аноним видит агрегат (07k §6) -->
           <div id="servers"></div>
           <p class="bento-sub" id="servers-sub"></p>
+          <p class="anon-stores-note" data-anon-only>Имена хранилищ — после входа</p>
         </div>
         <div class="bento-block">
           <h2>Счётчики</h2>
           <div class="bento-num">12 483</div>
-          <p class="bento-sub"><a href="memories.html">Записи памяти →</a></p>
+          <p class="bento-sub"><a href="memories.html" data-anon-gated>Записи памяти →</a></p>
           <div class="bento-num" style="margin-top: var(--space-3)">342</div>
           <p class="bento-sub">активных тега</p>
           <p class="bento-sub" style="margin-top: var(--space-2)"><a href="memories.html" data-demo-action="Раздел «Теги» — вне стенда; ссылка — заглушка">Открыть теги →</a></p>
         </div>
-        <div class="bento-block">
+        <div class="bento-block" data-auth-only>
           <h2>Ждут владельца</h2>
           <div id="waiting"></div>
         </div>
-        <div class="bento-block">
+        <div class="bento-block" data-auth-only>
           <h2>Сессии агентов</h2>
           <p class="agent-session"><span class="as-num">1</span> идёт · <span class="as-num">2</span> в очереди</p>
           <p class="agent-session">агент agb · задача про UI-10 · доклад 40 с назад</p>
@@ -214,7 +237,7 @@
         </div>
       </section>
 
-      <section class="panel" style="margin-top: var(--space-4)" aria-label="Живая лента событий">
+      <section class="panel" style="margin-top: var(--space-4)" data-auth-only aria-label="Живая лента событий">
         <div class="panel-head">Живая лента <span class="count">· последние 8</span></div>
         <div class="feed" aria-live="polite" aria-label="События памяти: поиск, запись агента, ошибка"></div>
       </section>
@@ -290,6 +313,14 @@
     document.getElementById("servers-sub").textContent =
       okN + " " + (okN === 1 ? "жив" : "живы") +
       (warnN ? " · " + warnN + " с оговорками" : " · все отвечают");
+    /* v6 (07k §6): anonymous aggregate — «4 хранилища · 3 живы · 1 с оговорками»,
+     * without server names; computed from the same fixture, not hardcoded */
+    var anonStores = document.getElementById("anon-stores");
+    if (anonStores) {
+      anonStores.textContent =
+        "хранилища: " + D.servers.length + " · " + okN + " " + (okN === 1 ? "живо" : "живы") +
+        (warnN ? " · " + warnN + " с предупреждением" : " · все отвечают");
+    }
     var wl = document.getElementById("waiting");
     D.waiting.forEach(function (w) {
       var row = document.createElement("div");
@@ -308,26 +339,28 @@
       wl.appendChild(row);
     });
     var feed = document.querySelector(".feed");
-    D.feedSeed.forEach(function (ev, i) {
-      var row = document.createElement("div");
-      row.className = "feed-row";
-      if (i === 0) row.classList.add("fresh");
-      row.dataset.ev = ev.ev;
-      row.dataset.mem = ev.mem;
-      row.id = "feed-seed-" + ev.mem;
-      var dot = document.createElement("span");
-      dot.className = "ev-dot";
-      dot.setAttribute("aria-hidden", "true");
-      var txt = document.createElement("span");
-      txt.textContent = ev.text;
-      var tm = document.createElement("span");
-      tm.className = "ev-time";
-      tm.textContent = ev.time;
-      row.appendChild(dot);
-      row.appendChild(txt);
-      row.appendChild(tm);
-      feed.appendChild(row);
-    });
+    if (feed) {
+      D.feedSeed.forEach(function (ev, i) {
+        var row = document.createElement("div");
+        row.className = "feed-row";
+        if (i === 0) row.classList.add("fresh");
+        row.dataset.ev = ev.ev;
+        row.dataset.mem = ev.mem;
+        row.id = "feed-seed-" + ev.mem;
+        var dot = document.createElement("span");
+        dot.className = "ev-dot";
+        dot.setAttribute("aria-hidden", "true");
+        var txt = document.createElement("span");
+        txt.textContent = ev.text;
+        var tm = document.createElement("span");
+        tm.className = "ev-time";
+        tm.textContent = ev.time;
+        row.appendChild(dot);
+        row.appendChild(txt);
+        row.appendChild(tm);
+        feed.appendChild(row);
+      });
+    }
   })();
 
 </script>

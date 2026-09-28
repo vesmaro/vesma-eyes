@@ -1,6 +1,8 @@
 /* shell.js — «Живая кора» stand: sidebar, topbar, command palette, hotkeys, toasts.
  * Vanilla JS, no dependencies. All navigation between stand pages = real <a href>.
- * Guard rule (spec 03 §7): hotkeys except Esc/Ctrl+K are ignored inside inputs. */
+ * Guard rule (spec 03 §7): hotkeys except Esc/Ctrl+K are ignored inside inputs.
+ * v6 (07k): auth session, footer status line, anonymous topbar, sidebar locks,
+ * gate screen, user chip menu, anon palette/search guards. */
 (function () {
   "use strict";
 
@@ -20,6 +22,49 @@
       } catch (e) {
         /* file:// without storage — stand still works */
       }
+    },
+  };
+
+  /* ── Auth session (07k §5.1): model key, NOT a view setting ─────────── */
+  var AUTH_KEY = "vesmaro.authSession";
+  var HANDOFF_KEY = "stand-auth-handoff"; /* toast text that survives redirect */
+  function readSession() {
+    try {
+      var raw = localStorage.getItem(AUTH_KEY);
+      if (!raw) return null;
+      var s = JSON.parse(raw);
+      return s && s.user ? s : null;
+    } catch (e) {
+      return null;
+    }
+  }
+  function writeSession(s) {
+    try {
+      if (s) localStorage.setItem(AUTH_KEY, JSON.stringify(s));
+      else localStorage.removeItem(AUTH_KEY);
+    } catch (e) {
+      /* file:// — stand still works */
+    }
+    doc.dispatchEvent(new CustomEvent("stand:authchange"));
+  }
+  function humanInterval(ms) {
+    /* 07a §1.5: human intervals, precise stamps live in tooltips/details */
+    var m = Math.max(1, Math.round(ms / 60000));
+    if (m < 60) return m + " мин назад";
+    var h = Math.round(m / 60);
+    if (h < 24) return h + " ч назад";
+    var d = Math.round(h / 24);
+    return d + " дн назад";
+  }
+  window.standAuth = {
+    get: readSession,
+    set: writeSession,
+    /* sign in/out from auth.html and the chip menu share one writer */
+    signIn: function (user, role) {
+      writeSession({ user: user, role: role || "owner", since: new Date().toISOString() });
+    },
+    signOut: function () {
+      writeSession(null);
     },
   };
 
@@ -66,6 +111,24 @@
   }
   window.standToast = toast;
 
+  /* ── Cross-page handoff toast (07k §4.2): text survives a redirect ──── */
+  (function () {
+    var pending = null;
+    try {
+      pending = sessionStorage.getItem(HANDOFF_KEY);
+      if (pending) sessionStorage.removeItem(HANDOFF_KEY);
+    } catch (e) {}
+    if (pending) {
+      /* one frame later: region exists, page scripts are not racing us */
+      setTimeout(function () { toast(pending, "success"); }, 0);
+    }
+  })();
+  window.standHandoffToast = function (text) {
+    try {
+      sessionStorage.setItem(HANDOFF_KEY, text);
+    } catch (e) {}
+  };
+
   /* ── Focus transfer to H1 after palette/hotkey navigation (03 §8) ───── */
   if (store.get("focus-h1", "") === "1") {
     store.set("focus-h1", "");
@@ -79,6 +142,410 @@
     window.location.href = url;
   }
   window.standGo = go;
+
+  /* ── v6 auth hook (07k §2–§5): session → view, before first paint ────── */
+  var GATED = { /* pages of gated domains (07k §2.1) */
+    "memories.html": "Память",
+    "search.html": "Память",
+    "tasks.html": "Задачи",
+    "agents.html": "Агенты",
+    "hosts.html": "Агенты",
+    "connect.html": "Агенты",
+    "kora.html": "Кора",
+    "status.html": "Система",
+    "desktop.html": "Рабочий стол",
+    "explorer.html": "Рабочий стол",
+  };
+  var GATE_INSIDE = { /* «что внутри», одна строка по 07k §3 */
+    "Память": "Записи, поиск по смыслу, пульс и теги — содержимое памяти",
+    "Задачи": "Канбан, список, входящие и архив — работа и поручения",
+    "Агенты": "Исполнение, хосты и подключение новых машин",
+    "Кора": "Журнал сессий всех хостов: что агент делал и что говорил",
+    "Система": "Статус, устройства и трассировки — служебная зона",
+    "Рабочий стол": "Терминал и проводник — экспериментальная зона стенда",
+  };
+  var GATE_AFTER = { /* свёрнутый блок: конкретика раздела, без обещаний лишнего */
+    "Память": [
+      "Список записей с уверенностью и провенансом: кто · где · когда.",
+      "Поиск по смыслу: вопрос человеческим языком — ответ со ссылками на записи.",
+      "Пульс памяти: свежие записи и события живой ленты.",
+    ],
+    "Задачи": [
+      "Канбан и список задач с исполнителями и сроками.",
+      "Входящие: предложения задач, ещё не взятых в работу.",
+      "Архив завершённых задач — история остаётся на борту.",
+    ],
+    "Агенты": [
+      "Исполнение: какой агент какую задачу ведёт прямо сейчас.",
+      "Хосты: машины, на которых работают агенты, и их связь.",
+      "Подключение новой машины за 4 шага — мастер 07b.",
+    ],
+    "Кора": [
+      "Сессии всех хостов: транскрипты — что агент делал и говорил.",
+      "Ход сессии по уровням глубины: от старта до вердикта.",
+    ],
+    "Система": [
+      "Статус хранилищ и устройств с человеческими пояснениями.",
+      "Трассировки — служебная зона для разбора инцидентов.",
+    ],
+    "Рабочий стол": [
+      "Терминал стенда: демо-панель без доступа к реальным машинам.",
+      "Проводник проектов: дерево файлов и вкладки редактора.",
+    ],
+  };
+  function pageName() {
+    var p = window.location.pathname.split("/").pop() || "index.html";
+    return p.split("?")[0];
+  }
+  function returnParam() {
+    var p = pageName();
+    var q = window.location.search;
+    return q ? p + q : p;
+  }
+  function authUrl(tab) {
+    return "auth.html?return=" + encodeURIComponent(returnParam()) + (tab ? "&tab=" + tab : "");
+  }
+
+  var esc2 = function (s) {
+    return s.replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  };
+
+  /* ── Footer status line (07k §1): one source STAND.version ──────────── */
+  function shortVersion() {
+    var D = window.STAND || {};
+    return (D.version || "?").split(".").slice(0, 2).join(".");
+  }
+  function footerText(session) {
+    var D = window.STAND || { version: "?", slice: "v?" };
+    return "vesmaro-eyes " + D.version + " · " + (session ? "вы: " + session.user : "аноним");
+  }
+  function footerTooltip(session) {
+    var D = window.STAND || { version: "?", slice: "v?" };
+    var base = "Стенд дизайна, срез " + D.slice + " · демо-данные";
+    if (session) {
+      var role = session.role === "owner" ? "владелец" : "участник";
+      var age = session.since ? " · вход " + humanInterval(Date.now() - new Date(session.since).getTime()) : "";
+      return base + " · роль: " + role + age;
+    }
+    return base;
+  }
+  function renderFooterStatus(session) {
+    /* Sidebar slot: replaces the old stand-note (07k §1.2) */
+    var foot = doc.querySelector(".side-foot .stand-note");
+    if (foot) {
+      foot.textContent = "";
+      var full = doc.createElement("span");
+      full.className = "ss-full";
+      full.textContent = footerText(session);
+      foot.appendChild(full);
+      foot.title = footerTooltip(session);
+      foot.classList.toggle("auth-user", !!session);
+      foot.setAttribute("data-short", shortVersion());
+    }
+    /* Pages outside Shell (pair, auth): second line of the footer (07k §1.3) */
+    doc.querySelectorAll("[data-stand-version-line]").forEach(function (el) {
+      if (el === foot) return;
+      el.textContent = footerText(session);
+      el.title = footerTooltip(session);
+      el.classList.toggle("auth-user", !!session);
+    });
+  }
+
+  /* ── Sidebar locks (07k §2.2): counter → lock on gated domains ──────── */
+  var LOCK_SVG =
+    '<svg class="side-lock icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="10" x="5" y="11" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+  function renderSidebarLocks(session) {
+    /* re-run safe: locks apply once, only in the anonymous state (07k §2.2) */
+    if (session || doc.querySelector(".side-count-gated, .side-lock-slot")) return;
+    doc.querySelectorAll(".side-link").forEach(function (row) {
+      var label = row.querySelector(".side-label");
+      if (!label) return;
+      var name = label.textContent.trim();
+      /* domain rows (.side-domain) and standalone gated links (Кора) map by name */
+      if (!GATE_DOMAINS[name]) return; /* public row — no lock */
+      var count = row.querySelector(".side-count");
+      if (count) {
+        count.classList.add("side-count-gated");
+        count.innerHTML = LOCK_SVG;
+        count.setAttribute("data-gated", "true");
+      } else {
+        /* rows without a counter (Память, Настройки, Кора): append a lock */
+        var lock = doc.createElement("span");
+        lock.className = "side-count side-lock-slot";
+        lock.setAttribute("data-gated", "true");
+        lock.innerHTML = LOCK_SVG;
+        var chev = row.querySelector(".side-chevron");
+        if (chev) row.insertBefore(lock, chev);
+        else row.appendChild(lock);
+      }
+      row.setAttribute("title", "Откроется после входа");
+      row.setAttribute("aria-label", name + " — откроется после входа");
+    });
+    /* collapsed sidebar: lock visible under the icon of a gated row (07k §2.2) */
+    doc.querySelectorAll(".side-link").forEach(function (row) {
+      var label = row.querySelector(".side-label");
+      if (!label || !GATE_DOMAINS[label.textContent.trim()]) return;
+      var lock = doc.createElement("span");
+      lock.className = "side-lock-collapsed";
+      lock.setAttribute("aria-hidden", "true");
+      lock.innerHTML = LOCK_SVG;
+      row.appendChild(lock);
+    });
+  }
+  var GATE_DOMAINS = {
+    "Память": "Память",
+    "Задачи": "Задачи",
+    "Агенты": "Агенты",
+    "Кора": "Кора",
+    "Система": "Система",
+    "Настройки": "Система",
+    "Рабочий стол": "Рабочий стол",
+  };
+
+  /* ── Topbar: two states (07k §2.3) + user chip (07k §5.2) ───────────── */
+  var applyAuthState = null; /* set by renderTopbar; re-applies slot only */
+  function renderTopbar(session) {
+    var status = doc.querySelector(".topbar-status");
+    if (!status || status.dataset.authBound === "done") {
+      if (status && status.dataset.authBound === "done" && applyAuthState) applyAuthState(session);
+      return;
+    }
+    status.dataset.authBound = "done";
+    var anon = !session;
+    root.setAttribute("data-auth", anon ? "anon" : "user");
+    /* search slot: anon gets none — search leaks memory contents (07k §0);
+     * hidden up-front by html[data-auth="anon"] CSS + [hidden] for a11y tree */
+    var ts = doc.querySelector(".topsearch");
+    if (ts) ts.hidden = anon;
+    var expand = status.querySelector("[data-search-expand]");
+    if (expand) expand.hidden = anon;
+    var bell = status.querySelector("[data-bell]");
+    if (bell) bell.hidden = anon;
+    var exec = status.querySelector("[data-exec-count]");
+    if (exec) exec.hidden = anon;
+    /* auth pair / chip live in a slot the hook owns; myelin divider between
+     * the auth zone and the settings (lang/theme) zone (07k §2.3) */
+    var slot = doc.createElement("span");
+    slot.className = "auth-slot";
+    status.insertBefore(slot, status.querySelector(".langtoggle"));
+    var myelin = doc.createElement("span");
+    myelin.className = "topbar-myelin";
+    myelin.setAttribute("aria-hidden", "true");
+    status.insertBefore(myelin, slot);
+    applyAuthState = function (s) {
+      var anonNow = !s;
+      slot.textContent = "";
+      if (anonNow) {
+        var login = doc.createElement("a");
+        login.className = "btn primary sm";
+        login.href = "auth.html?return=" + encodeURIComponent(returnParam());
+        login.textContent = "Войти";
+        var reg = doc.createElement("a");
+        reg.className = "btn ghost sm";
+        reg.href = "auth.html?return=" + encodeURIComponent(returnParam()) + "&tab=register";
+        reg.textContent = "Регистрация";
+        slot.appendChild(login);
+        slot.appendChild(reg);
+      } else {
+        slot.appendChild(buildChip(s));
+      }
+    };
+    applyAuthState(session);
+  }
+
+  function buildChip(session) {
+    var chip = doc.createElement("button");
+    chip.type = "button";
+    chip.className = "user-chip";
+    chip.setAttribute("aria-haspopup", "menu");
+    chip.setAttribute("aria-expanded", "false");
+    var roleWord = session.role === "owner" ? "владелец" : "участник";
+    chip.innerHTML =
+      '<span class="user-ava" aria-hidden="true">' + esc2(session.user.charAt(0).toUpperCase()) + "</span>" +
+      '<span class="user-name">' + esc2(session.user) + "</span>" +
+      '<svg class="icon user-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+    chip.setAttribute("aria-label", "вы: " + session.user + " · " + roleWord + " — открыть меню");
+
+    var menu = doc.createElement("div");
+    menu.className = "user-menu";
+    menu.setAttribute("role", "menu");
+    menu.setAttribute("aria-label", "Меню пользователя");
+    menu.hidden = true;
+    menu.innerHTML =
+      '<div class="user-menu-head">' +
+      '<div class="um-title">вы: ' + esc2(session.user) + " · " + roleWord + "</div>" +
+      '<div class="um-since">вход: ' + (session.since ? humanInterval(Date.now() - new Date(session.since).getTime()) : "—") + "</div>" +
+      "</div>" +
+      '<div class="user-menu-sep" role="separator"></div>' +
+      '<button type="button" class="user-menu-item" role="menuitem" data-um="profile">Профиль</button>' +
+      '<button type="button" class="user-menu-item" role="menuitem" data-um="logout">Выйти</button>';
+
+    chip.addEventListener("click", function () {
+      menu.hidden ? openMenu() : closeMenu();
+    });
+    menu.addEventListener("keydown", function (e) {
+      var items = Array.prototype.slice.call(menu.querySelectorAll("[role='menuitem']"));
+      var i = items.indexOf(doc.activeElement);
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        var next = e.key === "ArrowDown" ? (i + 1) % items.length : (i - 1 + items.length) % items.length;
+        items[next].focus();
+      } else if (e.key === "Escape") {
+        e.stopPropagation();
+        closeMenu();
+        chip.focus();
+      } else if (e.key === "Tab") {
+        /* focus trap inside the menu (03 §7 overlay canon) */
+        e.preventDefault();
+        if (e.shiftKey) items[items.length - 1].focus();
+        else items[0].focus();
+      }
+    });
+    menu.addEventListener("click", function (e) {
+      var item = e.target.closest("[data-um]");
+      if (!item) return;
+      if (item.dataset.um === "profile") {
+        closeMenu();
+        toast("Профиль — появится в продуктовой версии", "info");
+      } else {
+        signOutHere();
+      }
+    });
+    function openMenu() {
+      /* fixed menu is anchored to the chip (appended to body → no clipping) */
+      var r = chip.getBoundingClientRect();
+      menu.style.top = r.bottom + 6 + "px";
+      menu.style.right = Math.max(8, window.innerWidth - r.right) + "px";
+      menu.hidden = false;
+      chip.setAttribute("aria-expanded", "true");
+      var first = menu.querySelector("[role='menuitem']");
+      if (first) first.focus();
+    }
+    function closeMenu() {
+      menu.hidden = true;
+      chip.setAttribute("aria-expanded", "false");
+    }
+    doc.addEventListener("click", function (e) {
+      if (menu.hidden) return;
+      if (!e.target.closest(".user-chip") && !e.target.closest(".user-menu")) closeMenu();
+    });
+    doc.body.appendChild(menu);
+    return chip;
+  }
+
+  /* ── Sign out (07k §5.3): reversible → no confirm ───────────────────── */
+  function signOutHere() {
+    window.standAuth.signOut();
+    toast("Вы вышли из аккаунта", "info");
+    var page = pageName();
+    if (GATED[page]) {
+      go("index.html"); /* gated page → anonymous has no business here */
+      return;
+    }
+    /* public page: re-render anon view without reload (hook listens) */
+    applyAuthEverywhere(null);
+  }
+
+  /* ── Gate screen (07k §3): replaces the content slot, no flash ──────── */
+  function renderGate(domain) {
+    var main = doc.getElementById("main");
+    if (!main) return;
+    main.dataset.gated = "true";
+    /* owner's H1 template (07k §3): «Раздел „Имя“ откроется после входа» */
+    var title = "Раздел „" + domain + "“ откроется после входа";
+    var inner = GATE_AFTER[domain] || [];
+    var url = authUrl();
+    var gate = doc.createElement("div");
+    gate.className = "gate-screen";
+    gate.setAttribute("role", "region");
+    gate.setAttribute("aria-label", "Раздел закрыт до входа");
+    gate.innerHTML =
+      '<svg class="gate-iris" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/></svg>' +
+      '<h1 class="gate-h1" tabindex="-1">' + esc2(title) + "</h1>" +
+      '<p class="gate-what">' + esc2(GATE_INSIDE[domain] || "") + "</p>" +
+      '<p class="gate-public">Статистика открыта всем — она на <a href="index.html">Обзоре</a>.</p>' +
+      '<div class="gate-actions">' +
+      '<a class="btn primary" href="' + esc2(url) + '">Войти</a>' +
+      '<a class="btn ghost" href="' + esc2(url) + '&amp;tab=register">Создать аккаунт</a>' +
+      "</div>" +
+      '<div class="collapse-block gate-more"><button class="cb-toggle" type="button" aria-expanded="false" aria-controls="gate-after">' +
+      '<svg class="chev icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>' +
+      "Что я увижу после входа</button>" +
+      '<div class="cb-body" id="gate-after" hidden><ul>' +
+      inner.map(function (li) { return "<li>" + esc2(li) + "</li>"; }).join("") +
+      "</ul></div></div>";
+    /* crumbs stay (they live outside #main) — the user sees where they arrived;
+     * everything the page scripts render into #main must not leak: replace node */
+    while (main.firstChild) main.removeChild(main.firstChild);
+    main.appendChild(gate);
+    /* collapse-block behaviour (07h §2 pattern: persistent in session) */
+    var tg = gate.querySelector(".cb-toggle");
+    var body = gate.querySelector(".cb-body");
+    if (store.get("gate-more", "") === "1" && tg) {
+      tg.setAttribute("aria-expanded", "true");
+      body.hidden = false;
+    }
+    tg.addEventListener("click", function () {
+      var open = tg.getAttribute("aria-expanded") === "true";
+      tg.setAttribute("aria-expanded", open ? "false" : "true");
+      body.hidden = open;
+      store.set("gate-more", open ? "" : "1");
+    });
+    var hh = gate.querySelector("h1");
+    if (hh) hh.focus({ preventScroll: false });
+  }
+
+  /* ── One hook to run and re-run on auth change ──────────────────────── */
+  function applyAuthEverywhere(session) {
+    root.setAttribute("data-auth", session ? "user" : "anon");
+    /* overview two-state slots (07k §6): data-auth-only / data-anon-only;
+     * hidden attribute wins globally (base.css) — a11y tree follows */
+    doc.querySelectorAll("[data-auth-only]").forEach(function (el) {
+      el.hidden = !session;
+    });
+    doc.querySelectorAll("[data-anon-only]").forEach(function (el) {
+      el.hidden = !!session;
+    });
+    /* public counters: clickable → gate, honest tooltip, never a dead number
+     * (07k §6); the tip applies only while anonymous */
+    doc.querySelectorAll("[data-anon-gated]").forEach(function (el) {
+      if (!session) el.setAttribute("title", "Откроется после входа");
+      else el.removeAttribute("title");
+    });
+    renderFooterStatus(session);
+    renderTopbar(session);
+    renderSidebarLocks(session);
+    var page = pageName();
+    var domain = GATED[page];
+    if (domain && !session && !doc.getElementById("main").dataset.gated) {
+      renderGate(domain);
+    }
+    /* cheat-sheet (07k §2.2): «/» hotkey is gated — the row says so for anons */
+    if (!session) {
+      doc.querySelectorAll("#cheatsheet tbody tr").forEach(function (tr) {
+        var kbd = tr.querySelector("td:first-child kbd");
+        var td = tr.querySelector("td:last-child");
+        if (!kbd || !td || kbd.textContent.trim() !== "/" || td.dataset.gateMark) return;
+        td.dataset.gateMark = "1";
+        td.textContent += " — после входа";
+      });
+    }
+  }
+  applyAuthEverywhere(readSession());
+  doc.addEventListener("stand:authchange", function () {
+    applyAuthEverywhere(readSession());
+  });
+
+  /* Counters of the public summary: clickable → gate, never a dead number
+   * (07k §6). Applied only for an anonymous visitor. */
+  doc.addEventListener("click", function (e) {
+    var link = e.target.closest("[data-anon-gated]");
+    if (!link || root.getAttribute("data-auth") !== "anon") return;
+    e.preventDefault();
+    go(link.getAttribute("href"));
+  });
 
   /* ── Theme + density + motion ───────────────────────────────────────── */
   function applyTheme(t) {
@@ -236,6 +703,10 @@
 
   function paletteCommands() {
     var D = window.STAND || { memories: [] };
+    /* v6 (07k §2.2): anonymous palette = public + gated (lock mark) + auth
+     * actions. Entities (записи, хосты, задачи) and «Дать задачу» are content
+     * — hidden. Navigation itself is not a secret. */
+    var anon = root.getAttribute("data-auth") === "anon";
     var nav = [
       { title: "Обзор", href: "index.html", keys: "обзор главная home" },
       { title: "Записи", href: "memories.html", keys: "записи память memory" },
@@ -255,52 +726,70 @@
       { title: "Проводник проектов", href: "explorer.html", keys: "проводник файлы explorer" },
       { title: "Галерея дизайн-системы", href: "gallery.html", keys: "галерея дизайн токены" },
     ].map(function (c) {
-      return { group: "Переход", title: c.title, keys: c.keys, href: c.href };
-    });
-    var actions = [
-      { group: "Действия", title: "Дать задачу", keys: "задача дать новая создать поручение", act: "give-task" },
-      { group: "Действия", title: "Подключить телефон", keys: "телефон устройство пейринг pair подключить", act: "pair" },
-      { group: "Действия", title: "Сменить тему", keys: "тема тёмная светлая береста", act: "theme" },
-      { group: "Действия", title: "Плотность: операционная / созерцательная", keys: "плотность компакт", act: "density" },
-      { group: "Действия", title: "Сменить язык RU|EN", keys: "язык язык en ru", act: "lang" },
-    ];
-    var ents = (D.memories || []).slice(0, 6).map(function (m) {
       return {
-        group: "Сущности",
-        title: m.id + " · " + m.title,
-        keys: (m.tags || []).join(" "),
-        href: "memories.html?id=" + m.id,
+        group: "Переход",
+        title: c.title,
+        keys: c.keys,
+        href: c.href,
+        gated: !!GATED[c.href.split("?")[0]],
       };
     });
-    ents.push(
-      { group: "Сущности", title: "агент agb", keys: "агент агент writer", href: "agents.html" },
-      { group: "Сущности", title: "агент core", keys: "агент ядро", href: "agents.html" },
-      { group: "Сущности", title: "документы mnemos-eyes", keys: "хаб доки", href: "docs.html#mnemos-eyes" }
-    );
-    (D.tasks || []).slice(0, 6).forEach(function (t) {
-      ents.push({
-        group: "Сущности",
-        title: "задача · " + t.title,
-        keys: "задача " + t.id + " " + (t.tags || []).join(" "),
-        href: "tasks.html?task=" + encodeURIComponent(t.id),
+    var actions = anon
+      ? [
+          { group: "Действия", title: "Войти", keys: "войти вход login авторизация сессия", href: authUrl() },
+          { group: "Действия", title: "Создать аккаунт", keys: "регистрация создать аккаунт sign up", href: authUrl("register") },
+          { group: "Действия", title: "Подключить телефон", keys: "телефон устройство пейринг pair подключить", act: "pair" },
+          { group: "Действия", title: "Сменить тему", keys: "тема тёмная светлая береста", act: "theme" },
+          { group: "Действия", title: "Плотность: операционная / созерцательная", keys: "плотность компакт", act: "density" },
+          { group: "Действия", title: "Сменить язык RU|EN", keys: "язык язык en ru", act: "lang" },
+        ]
+      : [
+          { group: "Действия", title: "Дать задачу", keys: "задача дать новая создать поручение", act: "give-task" },
+          { group: "Действия", title: "Подключить телефон", keys: "телефон устройство пейринг pair подключить", act: "pair" },
+          { group: "Действия", title: "Сменить тему", keys: "тема тёмная светлая береста", act: "theme" },
+          { group: "Действия", title: "Плотность: операционная / созерцательная", keys: "плотность компакт", act: "density" },
+          { group: "Действия", title: "Сменить язык RU|EN", keys: "язык язык en ru", act: "lang" },
+        ];
+    var ents = [];
+    if (!anon) {
+      ents = (D.memories || []).slice(0, 6).map(function (m) {
+        return {
+          group: "Сущности",
+          title: m.id + " · " + m.title,
+          keys: (m.tags || []).join(" "),
+          href: "memories.html?id=" + m.id,
+        };
       });
-    });
-    (D.hosts || []).forEach(function (h) {
-      ents.push({
-        group: "Сущности",
-        title: "хост " + h.name,
-        keys: "хост машина " + (h.harness || "") + " " + h.statusLine,
-        href: "hosts.html?host=" + encodeURIComponent(h.name),
+      ents.push(
+        { group: "Сущности", title: "агент agb", keys: "агент агент writer", href: "agents.html" },
+        { group: "Сущности", title: "агент core", keys: "агент ядро", href: "agents.html" },
+        { group: "Сущности", title: "документы mnemos-eyes", keys: "хаб доки", href: "docs.html#mnemos-eyes" }
+      );
+      (D.tasks || []).slice(0, 6).forEach(function (t) {
+        ents.push({
+          group: "Сущности",
+          title: "задача · " + t.title,
+          keys: "задача " + t.id + " " + (t.tags || []).join(" "),
+          href: "tasks.html?task=" + encodeURIComponent(t.id),
+        });
       });
-    });
-    (D.koraSessions || []).slice(0, 4).forEach(function (s) {
-      ents.push({
-        group: "Сущности",
-        title: "сессия · " + (s.name || (s.agent + " на " + s.host)),
-        keys: "сессия кора " + s.host + " " + (s.agent || ""),
-        href: "kora.html?session=" + encodeURIComponent(s.id),
+      (D.hosts || []).forEach(function (h) {
+        ents.push({
+          group: "Сущности",
+          title: "хост " + h.name,
+          keys: "хост машина " + (h.harness || "") + " " + h.statusLine,
+          href: "hosts.html?host=" + encodeURIComponent(h.name),
+        });
       });
-    });
+      (D.koraSessions || []).slice(0, 4).forEach(function (s) {
+        ents.push({
+          group: "Сущности",
+          title: "сессия · " + (s.name || (s.agent + " на " + s.host)),
+          keys: "сессия кора " + s.host + " " + (s.agent || ""),
+          href: "kora.html?session=" + encodeURIComponent(s.id),
+        });
+      });
+    }
     return nav.concat(actions, ents);
   }
 
@@ -339,9 +828,13 @@
         '<div class="palette-empty"><span>Ничего не нашлось по «' +
         esc(q) +
         "».</span>" +
-        '<a class="btn secondary sm" href="search.html?q=' +
-        encodeURIComponent(q.trim()) +
-        '">Запустить поиск по памяти →</a></div>';
+        /* v6: memory search is content — no search CTA for an anonymous visitor */
+        (root.getAttribute("data-auth") === "anon"
+          ? ""
+          : '<a class="btn secondary sm" href="search.html?q=' +
+            encodeURIComponent(q.trim()) +
+            '">Запустить поиск по памяти →</a>') +
+        "</div>";
       return;
     }
     var html = "";
@@ -351,6 +844,9 @@
         html += '<div class="palette-group">' + c.group + "</div>";
         lastGroup = c.group;
       }
+      var lock = c.gated
+        ? '<svg class="icon palette-lock" viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="10" x="5" y="11" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>'
+        : "";
       html +=
         '<button type="button" class="palette-item" role="option" id="pal-opt-' +
         idx +
@@ -358,7 +854,10 @@
         idx +
         '" data-active="' +
         (idx === 0) +
-        '">' +
+        '"' +
+        (c.gated ? ' aria-label="' + esc(c.title) + ' — откроется после входа"' : "") +
+        ">" +
+        lock +
         markMatch(c.title, ql) +
         (c.href ? '<span class="palette-id">' + esc(c.href.replace(".html", "").replace(/^/, "/")) + "</span>" : "") +
         "</button>";
@@ -415,7 +914,10 @@
       return;
     }
     if (c.href) {
-      toast("Перешли: " + c.title.split(" · ")[0].replace(/^агент |^документы /, ""), "success");
+      /* the auth page is self-evident — no «Перешли» toast on the way to it */
+      if (c.href.indexOf("auth.html") !== 0) {
+        toast("Перешли: " + c.title.split(" · ")[0].replace(/^агент |^документы /, ""), "success");
+      }
       go(c.href);
     }
   }
@@ -539,6 +1041,11 @@
     if (inInput(e)) return;
     if (e.key === "/") {
       e.preventDefault();
+      /* v6: global search is gated — it returns memory contents (07k §0) */
+      if (root.getAttribute("data-auth") === "anon") {
+        toast("Поиск откроется после входа — он ищет по памяти", "info");
+        return;
+      }
       if (topInput) topInput.focus();
       return;
     }
@@ -563,6 +1070,9 @@
         toast("«" + gStub[k] + "» — раздел вне стенда; в сайдбаре помечен как недоступный", "info");
         return;
       }
+      /* v6: gated destinations for an anonymous visitor (07k §2.2):
+       * navigation itself is URL-first and not a secret — the gate screen
+       * waits at the destination, no redirect loops. */
       toast("Перешли: " + k, "success");
       go(gMap[k]);
     }

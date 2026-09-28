@@ -192,10 +192,39 @@
   </main>
 
   <footer class="pair-foot">
-    Управление устройствами — в <a href="index.html" data-demo-action="Настройки · Устройства — раздел вне стенда; управление устройствами появится в продуктовой версии">Настройки · Устройства</a>
+    <div>Управление устройствами — в <a href="index.html" data-demo-action="Настройки · Устройства — раздел вне стенда; управление устройствами появится в продуктовой версии">Настройки · Устройства</a></div>
+    <!-- v6 (07k §1.3): статусная строка версии и сессии — та же константа STAND.version -->
+    <div class="pair-version-line stand-status" data-stand-version-line></div>
   </footer>
 </div>
 
+<script src="js/data.js"></script>
 <script src="js/pair.js"></script>
+<script>
+  /* v6 (07k §1.3, §5.1): pair footer renders the same session/status line —
+   * a tiny local render, no Shell here. Reads the model key directly
+   * (vesmaro.authSession — the same contract shell.js writes; no standAuth
+   * helper outside the Shell). RU strings per 07a. */
+  (function () {
+    var line = document.querySelector("[data-stand-version-line]");
+    if (!line) return;
+    var session = null;
+    try {
+      session = JSON.parse(localStorage.getItem("vesmaro.authSession") || "null");
+      if (!session || !session.user) session = null;
+    } catch (e) {}
+    var ver = (window.STAND && window.STAND.version) || "?";
+    var sl = (window.STAND && window.STAND.slice) || "v6";
+    line.textContent = "vesmaro-eyes " + ver + " · " + (session ? "вы: " + session.user : "аноним");
+    var tip = "Стенд дизайна, срез " + sl + " · демо-данные";
+    if (session && session.since) {
+      var min = Math.max(1, Math.round((Date.now() - new Date(session.since).getTime()) / 60000));
+      var age = min < 60 ? min + " мин" : Math.round(min / 60) + " ч";
+      tip += " · роль: " + (session.role === "owner" ? "владелец" : "участник") + " · вход " + age + " назад";
+    }
+    line.title = tip;
+    line.classList.toggle("auth-user", !!session);
+  })();
+</script>
 </body>
 </html>

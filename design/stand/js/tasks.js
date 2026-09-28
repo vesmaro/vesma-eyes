@@ -5,6 +5,10 @@
 (function () {
   "use strict";
 
+  /* v6 (07k §3): anonymous visit renders the gate instead of the board —
+   * shell.js has already replaced #main; nothing here should run or throw. */
+  if (document.getElementById("main") && document.getElementById("main").dataset.gated) return;
+
   var D = window.STAND;
   var doc = document;
   var toast = window.standToast;

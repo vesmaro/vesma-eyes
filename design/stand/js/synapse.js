@@ -14,6 +14,9 @@
 
   var hero = document.querySelector(".well-hero");
   if (!hero) return;
+  /* v6 (07k §6): anonymous overview hides the well (content, not aggregate);
+   * no decorative fake fog — the canvas does not run when the slot is hidden. */
+  if (hero.hidden || document.documentElement.getAttribute("data-auth") === "anon") return;
   var canvas = hero.querySelector(".well-canvas");
   var ctx = canvas.getContext("2d");
   var D = window.STAND;
@@ -556,13 +559,28 @@
     pushEvent(pool[pi % pool.length]);
     pi++;
   }
+  var feedTimer = null; /* v6: cancelled on anonymous authchange (below) */
   if (feedEl && pool.length) {
-    setTimeout(nextEvent, 2500);
+    feedTimer = setTimeout(nextEvent, 2500);
     (function schedule() {
-      setTimeout(function () {
+      feedTimer = setTimeout(function () {
         if (!document.hidden) nextEvent();
         schedule();
       }, 5000 + Math.random() * 4000);
     })();
   }
+
+  /* v6 (07k §6): sign-out on a public page hides the well without a reload —
+   * stop the canvas loop and the demo feed (no decorative fake life).
+   * Registered after full init: the anon-load early-return above already
+   * guarantees nothing runs; sign-in always arrives as a fresh page load. */
+  document.addEventListener("stand:authchange", function () {
+    if (document.documentElement.getAttribute("data-auth") !== "anon") return;
+    if (raf != null) {
+      cancelAnimationFrame(raf);
+      raf = null;
+    }
+    if (feedTimer != null) clearTimeout(feedTimer);
+    feedTimer = null;
+  });
 })();
