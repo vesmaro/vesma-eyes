@@ -47,10 +47,20 @@ function matchesAll(haystack: string[], needles: string[]): boolean {
   );
 }
 
-/** Plain-text projection of a page body (for snippets + body tokens). */
-function bodyToText(body: string): string {
+/**
+ * Plain-text projection of a page body (for snippets + body tokens).
+ *
+ * HTML comments are dropped (multiline `<!-- ... -->`, any position —
+ * ME-019 review P2-1): sync_docs writes GENERATED provenance banners into
+ * imported bodies, comments never REACH the DOM (the sanitizer drops them),
+ * so indexing them made the banners searchable tokens that could surface in
+ * findSnippet/DocsSearch — the exact defect class ADR 0020 Ф2 kills with the
+ * manifest-build banner slice. Exported for the search-index gate tests.
+ */
+export function bodyToText(body: string): string {
   return stripLeadingH1(body)
     .replace(/```[a-z]*\n?/g, " ")
+    .replace(/<!--[\s\S]*?-->/g, " ")
     .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
     .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
     .replace(/^#{1,6}\s+/gm, "")

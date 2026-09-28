@@ -1,30 +1,26 @@
 import type { Options } from "react-markdown";
 import type { Schema } from "hast-util-sanitize";
 import remarkGfm from "remark-gfm";
-import rehypeRaw from "rehype-raw";
-import rehypeSanitize from "rehype-sanitize";
-import { isElement } from "./hast";
-import type { HastishNode } from "./hast";
 
 /**
  * Pipeline construction as a function of trust MODE (ADR 0020 Ф1 — «сборка
  * пайплайна как функции от режима»); the unified engine's single pipeline
- * factory.
+ * factory — escape-only half.
  *
  * - `escape-only` omits rehype-raw entirely: react-markdown's default
  *   degrades raw HTML to inert text nodes — the untrusted profile adds
  *   nothing on top (SEC-4).
- * - `corpus` wires rehype-raw → rehypeDropSubtrees → rehype-sanitize(schema)
- *   exactly as today's curated docs pipeline (АРХКОМ-8: the ORDER is the
- *   security model — raw must exist as nodes before sanitize prunes, and
- *   script/style/iframe vanish whole so their source never leaks as text).
+ * - `corpus` (raw → dropSubtrees → sanitize) lives in `./pipeline.corpus` —
+ *   a SEPARATE module since Ф2. The split is load-bearing for the chunk
+ *   budget, not stylistic: this module must stay statically free of the
+ *   sanitize stack (rehype-raw/rehype-sanitize/parse5) so the untrusted
+ *   import graph never pulls the `md-sanitize` vendor pool (ADR 0020 Ф2:
+ *   «недоверенный путь перестаёт платить за sanitize-стек»). Curated
+ *   renderers import buildCorpusPipeline directly from that module — the
+ *   barrel (index.ts) deliberately does not re-export it.
  *
- * Ф1 scope: only TextEngine's escape-only renderer consumes this (via
- * MarkdownView). features/docs/Markdown.tsx keeps its own pipeline until Ф2
- * moves it onto the core wrapper — this module pins the TARGET shape so the
- * Ф2 diff is a delegation, not a rewrite. The rehype-raw/rehype-sanitize
- * imports sit OUTSIDE the ESLint docs-feature gates (they scope
- * src/features/docs/**), and no Ф1 consumer passes corpus mode.
+ * Ф2 scope: TextEngine/MarkdownView consumes escape-only (via MarkdownView);
+ * features/docs/Markdown.tsx is the curated consumer of pipeline.corpus.
  */
 
 /** Raw-HTML handling mode of a pipeline (trust is the import, never data). */
@@ -65,55 +61,27 @@ const ESCAPE_ONLY_PIPELINE: EnginePipeline = {
   rehypePlugins: EMPTY_REHYPE,
 };
 
-/** Cache keyed by the exact corpus config (drop list + schema identity). */
-const corpusCache = new Map<CorpusRawHtmlConfig, EnginePipeline>();
-
 /**
- * Build the plugin pipeline for a trust mode. The same mode/config returns
- * the same cached arrays: react-markdown v10 builds a fresh processor per
- * render (no memoization needed for correctness), but stable plugin-list
+ * Build the plugin pipeline for a trust mode. The escape-only pipeline is a
+ * module-level singleton: react-markdown v10 builds a fresh processor per
+ * render (no memoization needed for correctness), and the stable plugin-list
  * identities keep downstream props objects stable under re-renders.
- * `rawHtml` must be a stable module-level object — never an inline literal
- * in render.
+ *
+ * Corpus mode is intentionally NOT assembled here (see module doc): it throws
+ * fail-closed and points at `./pipeline.corpus`, the module that owns the
+ * rehype-raw → drop → sanitize order (АРХКОМ-8) behind the md-sanitize chunk
+ * boundary. Ф2 flag: this rejection is the ONE behavioral change to the Ф1
+ * signature, and it is unreachable in production — no Ф1 consumer passes
+ * corpus mode (core.test.ts pinned that; the corpus tests moved to
+ * pipeline.corpus.test.ts).
  */
-export function buildPipeline({ mode, rawHtml }: BuildPipelineInput): EnginePipeline {
-  if (mode === "escape-only") {
-    // NO rehype-raw, NO sanitize — nothing runs on the untrusted profile.
-    return ESCAPE_ONLY_PIPELINE;
-  }
-
-  if (!rawHtml) {
+export function buildPipeline({ mode }: BuildPipelineInput): EnginePipeline {
+  if (mode === "corpus") {
     throw new Error(
-      "buildPipeline: corpus mode requires rawHtml { dropSubtrees, schema }",
+      "buildPipeline: corpus mode moved to pipeline.corpus (buildCorpusPipeline) — " +
+        "importing it here would weld the md-sanitize chunk onto the untrusted path",
     );
   }
-  const cached = corpusCache.get(rawHtml);
-  if (cached) return cached;
-
-  const { dropSubtrees, schema } = rawHtml;
-  const dropped = new Set(dropSubtrees);
-
-  // Verbatim from features/docs/Markdown.tsx (Ф2 moves the call here).
-  const rehypeDropSubtrees = () => (tree: HastishNode) => {
-    const walk = (node: HastishNode) => {
-      const children = node.children;
-      if (children === undefined) return;
-      const kept: HastishNode[] = [];
-      for (const child of children) {
-        if (isElement(child) && dropped.has(child.tagName ?? "")) continue;
-        walk(child);
-        kept.push(child);
-      }
-      (node as { children?: HastishNode[] }).children = kept;
-    };
-    walk(tree);
-  };
-
-  const built: EnginePipeline = {
-    remarkPlugins: REMARK_GFM_ONLY,
-    // The order IS the security model (АРХКОМ-8), pinned once here.
-    rehypePlugins: [rehypeRaw, rehypeDropSubtrees, [rehypeSanitize, schema]],
-  };
-  corpusCache.set(rawHtml, built);
-  return built;
+  // NO rehype-raw, NO sanitize — nothing runs on the untrusted profile.
+  return ESCAPE_ONLY_PIPELINE;
 }

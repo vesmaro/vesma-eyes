@@ -16,18 +16,32 @@ const BOARD_DEV_TARGET = process.env.VITE_BOARD_DEV_TARGET ?? "http://127.0.0.1:
 const DEV_ADAPTER = process.env.VITE_ADAPTER ?? "";
 
 // Deterministic vendor pools for the docs-render budgets (ADR-0015 as
-// amended by АРХКОМ-8): the markdown pipeline pool (≤150 KiB gzip) and the
-// mermaid LAZY pool (≤450 KiB gzip) get stable chunk names so
-// scripts/budget-docs-render.mjs can measure and CI-gate them. Returning
-// undefined keeps vite's default placement for everything else (app code,
-// react, per-file content chunks). mermaid stays lazy BECAUSE its only
-// import site is the dynamic import in features/docs/Mermaid.tsx — the
-// named pool must never become statically reachable (the budget script
-// asserts that too).
+// amended by АРХКОМ-8; split per ADR 0020 Ф2): the md-core pool
+// (react-markdown + remark-gfm and the shared unified/micromark stack) and
+// the md-sanitize pool (rehype-raw + rehype-sanitize + the parse5/
+// hast-util-raw closure — ONLY the curated docs path pays for it) get
+// stable chunk names so scripts/budget-docs-render.mjs can measure and
+// CI-gate them. Returning undefined keeps vite's default placement for
+// everything else (app code, react, per-file content chunks). mermaid stays
+// lazy BECAUSE its only import site is the dynamic import in features/docs/
+// Mermaid.tsx — its pool must never become statically reachable (the budget
+// script asserts that, and since Ф2 it asserts the same for md-sanitize vs
+// the eager base set).
 const DOCS_RENDER_PACKAGE =
   /^(react-markdown|remark(-[a-z-]+)?|rehype(-[a-z-]+)?|micromark(-[a-z-]+)?|mdast(-util-[a-z-]+)?|unist-util-[a-z-]+|unified|vfile(-[a-z-]+)?|bail|trough|devlop|zwitch|is-plain-obj|property-information|space-separated-tokens|comma-separated-tokens|decode-named-character-reference|character-entities(-[a-z-]+)?|trim-lines|html-url-attributes|html-void-elements|web-namespaces|ccount|escape-string-regexp|markdown-table|longest-streak|collapse-white-space|fault|direction|style-to-object|inline-style-parser)$/;
 
-function docsVendorPool(id: string): "docs-render" | "preload-helper" | undefined {
+// The sanitize stack's OWN closure (verified against the installed tree):
+// packages reachable ONLY from rehype-raw/rehype-sanitize. Everything shared
+// with react-markdown/remark-gfm must stay in md-core — pinning a shared
+// package here would make md-core statically import md-sanitize and the
+// untrusted path would pay for sanitization again (the Ф2 defect). The
+// post-build reachability gate in budget-docs-render.mjs asserts the split.
+const MD_SANITIZE_PACKAGE =
+  /^(rehype-raw|rehype-sanitize|hast-util-raw|hast-util-sanitize|hast-util-from-parse5|hast-util-to-parse5|hast-util-parse-selector|hastscript|parse5|entities|vfile-location)$/;
+
+function docsVendorPool(
+  id: string,
+): "md-core" | "md-sanitize" | "preload-helper" | undefined {
   // vite's preload helper must NOT ride a vendor chunk: whatever chunk hosts
   // it becomes statically reachable from the entry (the entry imports
   // __vitePreload from it), which welds lazily-loaded vendor pools onto every
@@ -43,7 +57,8 @@ function docsVendorPool(id: string): "docs-render" | "preload-helper" | undefine
   const match = /[\\/]node_modules[\\/](@[^\\/]+[\\/][^\\/]+|[^\\/]+)/.exec(id);
   if (match === null) return undefined;
   const name = match[1];
-  if (DOCS_RENDER_PACKAGE.test(name)) return "docs-render";
+  if (MD_SANITIZE_PACKAGE.test(name)) return "md-sanitize";
+  if (DOCS_RENDER_PACKAGE.test(name)) return "md-core";
   return undefined;
 }
 

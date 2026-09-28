@@ -1,12 +1,25 @@
 #!/usr/bin/env node
 /**
- * Docs-render budget gate (ADR-0015 as amended by АРХКОМ-8, verdict on
- * SysEng Q2): run AFTER `npm run build`, exits non-zero on any breach.
+ * Docs-render budget gate (ADR-0015 as amended by АРХКОМ-8; pools split per
+ * ADR 0020 Ф2): run AFTER `npm run build`, exits non-zero on any breach.
  *
- *   pipeline pool   dist/assets/docs-render-*.js        ≤ 150 KiB gzip
+ *   md-core pool    dist/assets/md-core-*.js          ≤  90 KiB gzip
+ *                   (react-markdown + remark-gfm and
+ *                   the shared unified/micromark stack)
+ *   md-sanitize     dist/assets/md-sanitize-*.js      ≤  60 KiB gzip
+ *                   (rehype-raw + rehype-sanitize +
+ *                   parse5/hast-util-raw — curated
+ *                   docs path ONLY)
  *   mermaid pool    mermaid.core chunk + the heaviest    ≤ 450 KiB gzip
  *                   single on-demand branch (diagram
  *                   engines for ONE diagram type)
+ *
+ * Reachability gates (ADR 0020 Ф2, mechanical):
+ * - md-sanitize must NOT be in the eager base set (the static closure of
+ *   index.html) — the entry and every eager page stay sanitize-free;
+ * - md-core must NOT statically import md-sanitize — the untrusted profile
+ *   (TextEngine/MarkdownView) never pays for sanitization;
+ * - the mermaid library stays lazy: never statically reachable.
  *
  * The mermaid library is lazy: its entry must never be statically reachable
  * from index.html or any eagerly-loaded chunk. "Fence-page pool" accounting:
@@ -15,7 +28,7 @@
  * uses more than one or two). The full on-demand closure (every diagram type
  * at once) is reported as info for ADR-0017.
  *
- * Usage: node scripts/budget-docs-render.mjs [--max-pipeline 150] [--max-mermaid 450]
+ * Usage: node scripts/budget-docs-render.mjs [--max-md-core 90] [--max-md-sanitize 60] [--max-mermaid 450]
  */
 
 import { readdirSync, readFileSync } from "node:fs";
@@ -31,7 +44,8 @@ function argValue(flag, fallback) {
   const index = args.indexOf(flag);
   return index !== -1 ? Number(args[index + 1]) : fallback;
 }
-const MAX_PIPELINE_KIB = argValue("--max-pipeline", 150);
+const MAX_MD_CORE_KIB = argValue("--max-md-core", 90);
+const MAX_MD_SANITIZE_KIB = argValue("--max-md-sanitize", 60);
 const MAX_MERMAID_KIB = argValue("--max-mermaid", 450);
 
 const KIB = 1024;
@@ -91,19 +105,64 @@ const eagerFromHtml = [
   .filter((name) => jsFiles.includes(name));
 const baseSet = closure(eagerFromHtml, false);
 
-// --- pipeline pool ----------------------------------------------------------------
-const pipelineChunks = jsFiles.filter((name) => name.startsWith("docs-render-"));
-if (pipelineChunks.length === 0) {
-  report.push("FAIL docs-render: no chunk found — named pool missing from the build");
+// --- md pools (ADR 0020 Ф2 split) -------------------------------------------------
+// md-core has NO direct eager-exclusion assert (it is deliberately hoisted
+// into the entry by vite's transitive-import hoisting) — its eagerness is
+// guarded indirectly by the entry total staying ±0 between releases.
+const mdCoreChunks = jsFiles.filter((name) => name.startsWith("md-core-"));
+if (mdCoreChunks.length === 0) {
+  report.push("FAIL md-core: no chunk found — named pool missing from the build");
   failed = true;
 } else {
-  const gzip = sumGzip(pipelineChunks);
-  const ok = gzip <= MAX_PIPELINE_KIB;
+  const gzip = sumGzip(mdCoreChunks);
+  const ok = gzip <= MAX_MD_CORE_KIB;
   if (!ok) failed = true;
   report.push(
-    `${ok ? "ok  " : "FAIL"} docs-render (render pipeline): ${round1(gzip)} KiB gzip ` +
-      `(budget ≤${MAX_PIPELINE_KIB}; ${pipelineChunks.join(", ")})`,
+    `${ok ? "ok  " : "FAIL"} md-core (render pipeline, shared): ${round1(gzip)} KiB gzip ` +
+      `(budget ≤${MAX_MD_CORE_KIB}; ${mdCoreChunks.join(", ")})`,
   );
+}
+
+const mdSanitizeChunks = jsFiles.filter((name) => name.startsWith("md-sanitize-"));
+if (mdSanitizeChunks.length === 0) {
+  report.push("FAIL md-sanitize: no chunk found — named pool missing from the build");
+  failed = true;
+} else {
+  const gzip = sumGzip(mdSanitizeChunks);
+  const ok = gzip <= MAX_MD_SANITIZE_KIB;
+  if (!ok) failed = true;
+  report.push(
+    `${ok ? "ok  " : "FAIL"} md-sanitize (raw-HTML + sanitize, curated only): ${round1(gzip)} KiB gzip ` +
+      `(budget ≤${MAX_MD_SANITIZE_KIB}; ${mdSanitizeChunks.join(", ")})`,
+  );
+  // ADR 0020 Ф2 reachability gate 1: the eager base set (static closure of
+  // index.html) must not contain the sanitize pool — no eager page pays for
+  // sanitization.
+  const eager = mdSanitizeChunks.filter((name) => baseSet.has(name));
+  if (eager.length > 0) {
+    failed = true;
+    report.push(
+      `FAIL md-sanitize is EAGERLY reachable (in the base closure: ${eager.join(", ")}) — ` +
+        `the entry/first paint would pay for the sanitize stack`,
+    );
+  } else {
+    report.push("ok   md-sanitize not in the eager base set (entry stays sanitize-free)");
+  }
+  // ADR 0020 Ф2 reachability gate 2: md-core must not statically import
+  // md-sanitize (the untrusted profile imports the pipeline too — escape-only
+  // must stay statically free of the sanitize stack).
+  const crossEdges = mdCoreChunks.filter((name) =>
+    chunkOf(name).static.some((target) => mdSanitizeChunks.includes(target)),
+  );
+  if (crossEdges.length > 0) {
+    failed = true;
+    report.push(
+      `FAIL md-core statically imports md-sanitize (chunks: ${crossEdges.join(", ")}) — ` +
+        `the untrusted path would pay for sanitization`,
+    );
+  } else {
+    report.push("ok   md-core has no static edge into md-sanitize (untrusted path stays lean)");
+  }
 }
 
 // --- mermaid pool -----------------------------------------------------------------
@@ -167,6 +226,6 @@ if (mermaidEntries.length === 0) {
   }
 }
 
-console.log("docs-render budget (ADR-0015/АРХКОМ-8):");
+console.log("docs-render budget (ADR-0015/АРХКОМ-8, pools split per ADR 0020 Ф2):");
 for (const line of report) console.log("  " + line);
 process.exit(failed ? 1 : 0);

@@ -6,6 +6,7 @@ import { DOC_CATEGORIES, docCategory } from "./categories";
 import {
   firstParagraph,
   getManifest,
+  loadDocBody,
   localeForPage,
   parseFrontmatter,
   stripLeadingBanners,
@@ -203,7 +204,10 @@ describe("corpus render (contract §9.3)", () => {
     for (const page of pages) {
       const raw = await loadMarkdown(page.slug, localeForPage(page, "ru"));
       expect(raw, page.slug).toBeDefined();
-      const body = stripLeadingH1(parseFrontmatter(raw!)!.body);
+      // Same preparation as the manifest body build (loadDocBody, Ф2): h1
+      // off, leading provenance banners sliced at the BUILD, not in the
+      // renderer.
+      const body = stripLeadingBanners(stripLeadingH1(parseFrontmatter(raw!)!.body));
       const html = renderToString(
         <MemoryRouter>
           <Markdown source={body} pageSlug={page.slug} />
@@ -215,6 +219,19 @@ describe("corpus render (contract §9.3)", () => {
     }
     expect(unexpectedErrors(), JSON.stringify(unexpectedErrors())).toEqual([]);
     expect(unexpectedWarnings()).toEqual([]);
+  });
+
+  it("slices provenance banners at the manifest body build (Ф2 — render path no longer strips)", async () => {
+    // An imported corpus page: sync_docs writes a GENERATED banner into the
+    // file; the BUILT body (what Markdown.tsx and every downstream consumer
+    // receive) must be banner-free — ADR 0020 moved the slice here.
+    const imported = (await getManifest()).pages.find((page) =>
+      page.provenance !== undefined,
+    );
+    expect(imported, "sanity: the corpus contains imported pages").not.toBeNull();
+    const built = await loadDocBody(imported!.slug, "ru");
+    expect(built).not.toBeNull();
+    expect(built!.body).not.toContain("GENERATED");
   });
 });
 
@@ -304,7 +321,7 @@ describe("firstParagraph banner hygiene (АРХКОМ-8 follow-up, ME-009)", () 
   });
 
   it("keeps stripLeadingBanners leading-only semantics for the article pipeline", () => {
-    // Markdown.tsx receives stripLeadingH1-trimmed bodies (banner at line 0):
+    // loadDocBody slices banners AFTER stripLeadingH1 (banner at line 0):
     // the lead strip must stay as-is, NOT become position-independent.
     expect(stripLeadingBanners(`${BANNER}\n\nТело статьи.`)).toBe("Тело статьи.");
     // A non-banner line 0 → nothing stripped, source returned verbatim.

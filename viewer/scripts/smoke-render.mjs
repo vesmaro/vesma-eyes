@@ -283,6 +283,14 @@ async function runSmoke(page) {
     "article body renders",
     (articleText ?? "").slice(0, 100),
   );
+  // Banner-body gate (ME-019 review P3c): the built body served to the
+  // renderer must carry no provenance banner — the slice lives at the
+  // manifest build (ADR 0020 Ф2); this restores the lost /tmp/smoke-134
+  // banner-check.mjs assert at the article surface.
+  assert(
+    !(articleText ?? "").includes("GENERATED"),
+    "article body carries no GENERATED banner (manifest-build slice)",
+  );
   assert(
     (await page.locator("main h2[id], main h3[id]").count()) > 0,
     "article headings carry GitHub-style slug ids (curated capability)",

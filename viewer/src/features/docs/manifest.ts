@@ -113,10 +113,10 @@ export function stripLeadingH1(body: string): string {
  * Leading provenance banners (GENERATED/curated whole-line `<!-- ... -->`
  * comments) are presentation noise — the sidecar badge carries provenance
  * (АРХКОМ-8 verdict 1). Line-based by design: a comment embedded inside a
- * content paragraph is NOT stripped here. LEADING-ONLY by contract: the
- * article pipeline (Markdown.tsx) receives stripLeadingH1-trimmed bodies, so
- * the banner sits at line 0 there; description/snippet consumers use
- * stripBannerComments (ME-009) instead.
+ * content paragraph is NOT stripped here. LEADING-ONLY by contract: applied
+ * at the manifest body build (loadDocBody, Ф2 — ADR 0020 moved the slice out
+ * of the renderer) AFTER stripLeadingH1, so the banner sits at line 0;
+ * description/snippet consumers use stripBannerComments (ME-009) instead.
  */
 export function stripLeadingBanners(source: string): string {
   const lines = source.split("\n");
@@ -132,9 +132,8 @@ export function stripLeadingBanners(source: string): string {
  * stripLeadingBanners misses it and the category-row description surfaced
  * the banner verbatim. Same line-based rule as stripLeadingBanners (a
  * comment embedded INSIDE a content paragraph survives), extended to any
- * position and to multi-line banner blocks. Excerpt path only — per
- * ADR 0020 the banner strip moves into the manifest/excerpt build layer in
- * convergence Ф2; this is the verdict-compatible immediate repair.
+ * position and to multi-line banner blocks. Excerpt path only — the article
+ * body's banner slice lives in loadDocBody since Ф2 (ADR 0020).
  */
 function stripBannerComments(source: string): string {
   const kept: string[] = [];
@@ -449,5 +448,10 @@ export async function loadDocBody(
   if (raw === undefined) return null;
   const parsed = parseFrontmatter(raw);
   if (!parsed) return null; // excluded upstream as well — stay consistent
-  return { page, body: stripLeadingH1(parsed.body) };
+  // Ф2 (ADR 0020): banner slicing happens HERE, at the manifest body build —
+  // the render path (Markdown.tsx) no longer strips, so every consumer of a
+  // built body (article renderer, TOC, future surfaces) sees banner-free
+  // text and the render-time strip defect class dies. Leading-only rule
+  // preserved: bodies arrive h1-trimmed, so provenance banners sit at line 0.
+  return { page, body: stripLeadingBanners(stripLeadingH1(parsed.body)) };
 }

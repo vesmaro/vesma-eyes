@@ -4,8 +4,11 @@ import type { Schema } from "hast-util-sanitize";
 /**
  * Sanitize schema for the docs pipeline (АРХКОМ-8 2026-09-23, Security
  * position): raw HTML IS allowed, but only through `rehype-raw` followed by
- * `rehype-sanitize` with THIS schema — in that order, at the single site
- * (Markdown.tsx).
+ * `rehype-sanitize` with THIS schema — in that order. Since Ф2 (ADR 0020)
+ * the pipeline ASSEMBLY lives in TextEngine/core/pipeline.corpus.ts (the
+ * md-sanitize chunk boundary); THIS file stays the schema's home and the
+ * docs feature stays the config call-site (Markdown.tsx passes it in) —
+ * one schema, governance-PR only.
  *
  * Construction is DEFAULTSCHEMA MINUS SUBTRACTIONS — deliberately NOT a
  * hand-rolled allowlist: a manual mini-list silently drops markdown-native

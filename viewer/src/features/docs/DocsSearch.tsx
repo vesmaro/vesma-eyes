@@ -13,7 +13,11 @@ import {
 } from "./docsSearch";
 import { useDocsManifest } from "./manifest";
 import { docUrl } from "./projects";
-import { DOCS_MARK_CLASS } from "./Markdown";
+// The mark class comes from core/constants directly (NOT the core barrel and
+// NOT ./Markdown): a constants import is dependency-free, while the barrel
+// pulls the remark-gfm stack and ./Markdown pulls the curated renderer + the
+// md-sanitize pool into the search-dialog chunk (ME-019 review P2-3).
+import { ARTICLE_MARK_CLASS } from "@/components/TextEngine/core/constants";
 import { cn } from "@/lib/utils";
 
 /**
@@ -31,7 +35,7 @@ function Highlighted({ text, query }: { text: string; query: string }) {
     <>
       {highlightSegments(text, query).map((segment, index) =>
         segment.hit ? (
-          <mark key={index} className={DOCS_MARK_CLASS}>
+          <mark key={index} className={ARTICLE_MARK_CLASS}>
             {segment.text}
           </mark>
         ) : (

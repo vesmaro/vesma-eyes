@@ -1,34 +1,48 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
-import type { Components } from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeRaw from "rehype-raw";
-import rehypeSanitize from "rehype-sanitize";
 import { Check, Copy } from "lucide-react";
 import { Link } from "react-router";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
+// The curated pipeline (rehype-raw → dropSubtrees → sanitize) comes from the
+// core's corpus module — deliberately NOT the core barrel, which stays
+// untrusted-safe (ADR 0020 Ф2 chunk split; ESLint pins pipeline.corpus.ts as
+// the single rehype-raw/rehype-sanitize site in src).
+import { buildCorpusPipeline } from "@/components/TextEngine/core/pipeline.corpus";
+import { articleComponents, LINK_CLASS, MONO } from "@/components/TextEngine/core";
 import { createHeadingSlugger } from "./headingSlug";
-import { stripLeadingBanners } from "./manifest";
 import { resolveDocImageUrl } from "./docsAssets";
 import { resolveDocLink } from "./docsLinks";
 import { sanitizeSchema } from "./sanitizeSchema";
 import { MermaidDiagram } from "./Mermaid";
 
 /**
- * The SINGLE react-markdown + remark-gfm point (contract §3, gate §9.4; raw
- * HTML pipeline per АРХКОМ-8): raw HTML IS rendered, but only after
- * `rehype-raw` → `rehype-sanitize(sanitizeSchema)` IN THAT ORDER — the
- * defaultSchema-minus schema is the security boundary, this file is its only
- * call site (ESLint enforces; dangerouslySetInnerHTML stays banned). GitHub
- * parity: GFM tables, details/summary, kbd/sub/sup, task lists; hostile
- * content dies in the schema, not in the DOM. Element classes follow the
- * design-spec token table (§6–§7) — no literal colours anywhere. In-body
- * images resolve through docsAssets.ts (the one asset glob); absolute
+ * The curated docs renderer — a THIN wrapper over text-engine/core (ADR 0020
+ * Ф2): the pipeline is assembled by `buildCorpusPipeline`, the typography is
+ * the core factory's `article` branch, and this file keeps only what is
+ * docs-OWNED capability — the sanitize CALL-SITE (the drop list + schema
+ * config below), the corpus link policy, the asset resolution, the copy
+ * chrome and the mermaid lazy-chunk hook. Zero DOM drift is the gate: the
+ * golden files pin every byte (F2 must be a ZERO diff, like F1).
+ *
+ * SECURITY (АРХКОМ-8): raw HTML IS rendered, but only after `rehype-raw` →
+ * `rehype-sanitize(sanitizeSchema)` IN THAT ORDER — that order is pinned once
+ * in core/pipeline.corpus.ts; the SCHEMA is the security boundary and its
+ * construction + governance stay here, in the docs feature (one schema,
+ * governance-PR only). dangerouslySetInnerHTML stays banned
+ * (ESLint enforces; the sanitizer is the only HTML path).
+ * GitHub parity: GFM tables, details/summary, kbd/sub/sup, task lists;
+ * hostile content dies in the schema, not in the DOM. Element classes come
+ * from the core theme factory's article branch — no class strings here. In-
+ * body images resolve through docsAssets.ts (the one asset glob); absolute
  * http(s) srcs and unknown paths render as-is (CSP bounds the rest).
  * Links: /docs* stay SPA Links, anchors stay plain, and corpus-internal
  * references (our `slug.md`, upstream board slugs like `mnemos/user/sync`)
  * resolve through the manifest into project-scoped URLs (W1c — дефект из W2).
+ * Leading provenance banners are cut at the MANIFEST BUILD (loadDocBody)
+ * since Ф2 — the render path no longer strips (ADR 0020: «срез баннеров — в
+ * сборку манифеста»); the sanitizer still drops any comment that slips
+ * through as a second line of defence.
  */
 
 /**
@@ -36,64 +50,21 @@ import { MermaidDiagram } from "./Mermaid";
  * hast-util-sanitize replaces disallowed elements with their CHILDREN, so a
  * schema-only ban would leak the JS/CSS/frame source as visible text.
  * GitHub hides that content — so do we (АРХКОМ-8 hostile gate).
+ *
+ * The curated config: STABLE module-level identity (the pipeline cache is
+ * keyed by it) — never an inline literal in render.
  */
-const DROPPED_SUBTREES = new Set(["script", "style", "iframe"]);
+const DROPPED_SUBTREES = ["script", "style", "iframe"] as const;
 
-function rehypeDropSubtrees() {
-  return (tree: HastishNode) => {
-    const walk = (node: HastishNode) => {
-      const children = node.children;
-      if (children === undefined) return;
-      const kept: HastishNode[] = [];
-      for (const child of children) {
-        if (isElement(child) && DROPPED_SUBTREES.has(child.tagName ?? "")) continue;
-        walk(child);
-        kept.push(child);
-      }
-      (node as { children?: HastishNode[] }).children = kept;
-    };
-    walk(tree);
-  };
-}
+const CORPUS_RAW_HTML = {
+  dropSubtrees: DROPPED_SUBTREES,
+  schema: sanitizeSchema,
+};
 
-// Minimal structural hast shape (avoids importing transitive type packages
-// while staying assignable from the real @types/hast elements).
-interface HastishNode {
-  type: string;
-  value?: unknown;
-  tagName?: string;
-  properties?: Record<string, unknown>;
-  children?: readonly HastishNode[];
-}
-
-function isElement(node: HastishNode | undefined): boolean {
-  return node !== undefined && node.type === "element";
-}
-
-function nodeText(node: HastishNode | undefined): string {
-  if (node === undefined) return "";
-  if (typeof node.value === "string") return node.value;
-  return (node.children ?? []).map(nodeText).join("");
-}
-
-/** `language-*` token of a code element (undefined when absent/unmatched). */
-function languageOf(node: HastishNode | undefined): string | undefined {
-  const className = node?.properties?.className;
-  if (!Array.isArray(className)) return undefined;
-  const token = className.find(
-    (name) => typeof name === "string" && name.startsWith("language-"),
-  ) as string | undefined;
-  return token?.slice("language-".length);
-}
-
-/** JetBrains Mono for ALL code (design spec §1: вес 400 — других нет). */
-const MONO: React.CSSProperties = { fontFamily: "var(--font-mono)" };
-
-/** Search-hit <mark> — shared styling (design spec §6). */
-export const DOCS_MARK_CLASS = "rounded-sm bg-iris/15 px-0.5 text-foreground";
-
-const LINK_CLASS =
-  "text-iris-bright underline underline-offset-2 transition-colors duration-instant hover:decoration-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright";
+// The curated pipeline, built once at module scope: stable plugin-list
+// identities for the lifetime of the chunk (same discipline as MarkdownView's
+// escape-only pipeline).
+const PIPELINE = buildCorpusPipeline(CORPUS_RAW_HTML);
 
 /** Unresolvable .md reference — visibly broken, never a crash (W1c gate). */
 const BROKEN_LINK_CLASS =
@@ -142,10 +113,14 @@ function CopyButton({ code }: { code: string }) {
   );
 }
 
-function CodeBlock({ node }: { node?: HastishNode }) {
-  const codeNode = (node?.children ?? []).find((child) => isElement(child));
-  const code = nodeText(codeNode);
-  const language = languageOf(codeNode);
+/** Fenced block chrome (docs-owned): language label + copy + EXACT code. */
+function CodeBlock({
+  code,
+  language,
+}: {
+  code: string;
+  language: string | undefined;
+}) {
   return (
     <div className="relative my-4">
       {language ? (
@@ -169,63 +144,19 @@ function CodeBlock({ node }: { node?: HastishNode }) {
   );
 }
 
-function buildComponents(pageSlug: string | undefined): Components {
+/**
+ * The docs-owned hooks of the article theme: corpus link policy (below), the
+ * asset glob, the mermaid lazy chunk and the copy chrome. The typography
+ * itself comes from core (articleComponents) — class drift is impossible by
+ * construction.
+ */
+function buildArticleHooks(pageSlug: string | undefined) {
+  // A fresh slug counter per pass keeps h2/h3 anchors deterministic (same
+  // heading order → same ids) while restarting per document by construction.
   const slug = createHeadingSlugger();
   return {
-    h1: ({ node, children }) => (
-      // The page h1 renders outside the md body; a body h1 is a content bug
-      // the integrity test catches — render it, styled, at least honestly.
-      <h1
-        id={slug(nodeText(node))}
-        className="mb-4 scroll-mt-24 text-xl font-semibold text-foreground"
-      >
-        {children}
-      </h1>
-    ),
-    h2: ({ node, children }) => (
-      <h2
-        id={slug(nodeText(node))}
-        className="mb-4 mt-10 scroll-mt-24 text-lg font-semibold text-foreground"
-      >
-        {children}
-      </h2>
-    ),
-    h3: ({ node, children }) => (
-      <h3
-        id={slug(nodeText(node))}
-        className="mb-3 mt-8 scroll-mt-24 text-base font-semibold text-foreground"
-      >
-        {children}
-      </h3>
-    ),
-    h4: ({ children }) => (
-      <h4 className="text-base font-medium text-foreground">{children}</h4>
-    ),
-    // Upstream typography (design spec §9.2): h5–h6 share one honest look —
-    // text-sm/medium. Order stays visible; TOC remains h2/h3 only.
-    h5: ({ children }) => (
-      <h5 className="text-sm font-medium text-foreground">{children}</h5>
-    ),
-    h6: ({ children }) => (
-      <h6 className="text-sm font-medium text-foreground-secondary">{children}</h6>
-    ),
-    p: ({ children }) => (
-      <p className="mb-4 text-base leading-relaxed text-foreground">{children}</p>
-    ),
-    ul: ({ children }) => (
-      <ul className="mb-4 list-disc space-y-2 pl-6 marker:text-foreground-muted">
-        {children}
-      </ul>
-    ),
-    ol: ({ children }) => (
-      <ol className="mb-4 list-decimal space-y-2 pl-6 marker:text-foreground-muted">
-        {children}
-      </ol>
-    ),
-    li: ({ children }) => (
-      <li className="text-base leading-relaxed text-foreground">{children}</li>
-    ),
-    a: ({ href, children }) => {
+    headingSlug: slug,
+    link: (href: string | undefined, children: React.ReactNode) => {
       if (!href) return <a className={LINK_CLASS}>{children}</a>;
       // Internal docs links stay in-app (no full reload); anchors are plain.
       if (href.startsWith("/docs")) {
@@ -269,63 +200,11 @@ function buildComponents(pageSlug: string | undefined): Components {
         </a>
       );
     },
-    blockquote: ({ children }) => (
-      <blockquote className="mb-4 border-l-2 border-iris-dim pl-4 text-foreground-secondary">
-        {children}
-      </blockquote>
+    imageSrc: resolveDocImageUrl,
+    mermaid: (code: string) => <MermaidDiagram code={code} />,
+    codeBlock: (block: { code: string; language: string | undefined }) => (
+      <CodeBlock code={block.code} language={block.language} />
     ),
-    // Block code short-circuits here (the inner `code` never renders).
-    // mermaid fences are intercepted FIRST (АРХКОМ-8): they become
-    // diagrams, not code blocks — the pre wrapper is skipped entirely.
-    pre: ({ node }) => {
-      const codeNode = (node?.children ?? []).find((child) => isElement(child));
-      if (languageOf(codeNode) === "mermaid") {
-        return <MermaidDiagram code={nodeText(codeNode)} />;
-      }
-      return <CodeBlock node={node} />;
-    },
-    // Everything reaching `code` is INLINE code (spec §7.1) — except a
-    // mermaid fence arriving without a pre parent (raw-HTML edge): it goes
-    // to the diagram component as well, never through the inline styling.
-    code: ({ node, children }) => {
-      if (languageOf(node) === "mermaid") {
-        return <MermaidDiagram code={nodeText(node)} />;
-      }
-      return (
-        <code
-          style={MONO}
-          className="rounded-sm border border-border-subtle bg-elevated px-1.5 py-px text-sm text-foreground [overflow-wrap:anywhere]"
-        >
-          {children}
-        </code>
-      );
-    },
-    table: ({ children }) => (
-      <div className="mb-4 overflow-x-auto rounded-md border border-border-subtle">
-        <table className="w-full border-collapse text-sm">{children}</table>
-      </div>
-    ),
-    th: ({ children }) => (
-      <th className="[overflow-wrap:anywhere] border-b border-border px-3 py-2 text-left text-sm font-medium text-foreground-secondary">
-        {children}
-      </th>
-    ),
-    td: ({ children }) => (
-      <td className="[overflow-wrap:anywhere] border-b border-border-subtle px-3 py-2 text-sm text-foreground [tr:last-child_&]:border-b-0">
-        {children}
-      </td>
-    ),
-    img: ({ src, alt, title }) => (
-      <img
-        src={resolveDocImageUrl(typeof src === "string" ? src : undefined)}
-        alt={alt ?? ""}
-        title={title}
-        loading="lazy"
-        className="mb-4 max-w-full rounded-md border border-border-subtle"
-      />
-    ),
-    hr: () => <hr className="my-8 border-border-subtle" />,
-    mark: ({ children }) => <mark className={DOCS_MARK_CLASS}>{children}</mark>,
   };
 }
 
@@ -341,27 +220,18 @@ export interface MarkdownProps {
 }
 
 export function Markdown({ source, className, pageSlug }: MarkdownProps) {
-  // Built per render: a fresh object of closures is cheap, and a fresh
-  // slug counter per pass keeps h2/h3 anchors deterministic (same heading
-  // order → same ids) while restarting per document by construction.
-  const components = buildComponents(pageSlug);
+  // Built per render: a fresh object of closures is cheap (and required —
+  // the slugger restarts per document); the TYPOGRAPHY is the factory's,
+  // so only the closures are fresh, never the class strings.
+  const components = articleComponents(buildArticleHooks(pageSlug));
   return (
     <div className={cn("text-base leading-relaxed text-foreground", className)}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        // Order IS the security model (АРХКОМ-8): raw HTML must exist as
-        // nodes BEFORE the sanitizer prunes them — sanitize-first would
-        // sanitize nothing (raw text nodes are inert), raw-without-sanitize
-        // is the hole the first wave's gate existed to prevent. The
-        // subtree-drop runs between them: script/style/iframe vanish whole.
-        rehypePlugins={[
-          rehypeRaw,
-          rehypeDropSubtrees,
-          [rehypeSanitize, sanitizeSchema],
-        ]}
+        remarkPlugins={PIPELINE.remarkPlugins}
+        rehypePlugins={PIPELINE.rehypePlugins}
         components={components}
       >
-        {stripLeadingBanners(source)}
+        {source}
       </ReactMarkdown>
     </div>
   );

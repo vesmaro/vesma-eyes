@@ -9,7 +9,7 @@ import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router";
 
 import { Markdown } from "./Markdown";
-import { parseFrontmatter, stripLeadingH1 } from "./manifest";
+import { parseFrontmatter, stripLeadingBanners, stripLeadingH1 } from "./manifest";
 import goldenRaw from "./__fixtures__/golden.md?raw";
 import { MarkdownView } from "@/components/TextEngine/MarkdownView";
 import { I18nProvider } from "@/i18n";
@@ -77,8 +77,18 @@ function expectGolden(
 
 // --- curated pipeline (features/docs/Markdown.tsx) ---------------------------
 
-/** Same preparation as a real page: frontmatter off, leading h1 off. */
-const corpusBody = stripLeadingH1(parseFrontmatter(goldenRaw)!.body);
+/**
+ * Body prep per surface, pinned since Ф2:
+ * - CURATED (docs) receives a BUILT body — loadDocBody slices frontmatter,
+ *   h1 and leading provenance banners at the manifest build (ADR 0020 Ф2);
+ *   the golden renders exactly what prod renders.
+ * - UNTRUSTED (TextEngine) receives arbitrary authored text verbatim — it
+ *   has no build step, so its body KEEPS the banner (which must degrade to
+ *   inert escaped text). Its pipeline is untouched in Ф2; its golden stays
+ *   byte-identical.
+ */
+const rawCorpusBody = stripLeadingH1(parseFrontmatter(goldenRaw)!.body);
+const corpusBody = stripLeadingBanners(rawCorpusBody);
 
 function renderDocs(source: string): string {
   return renderToString(
@@ -197,7 +207,7 @@ describe("golden — curated pipeline (Markdown.tsx)", () => {
       (element) => element.textContent === "class injection outside code",
     );
     expect(injected?.getAttribute("class")).toBeNull();
-    // The banner comment is cut by the renderer (leading-banner rule).
+    // The banner is sliced at the manifest build (Ф2); a built body has none.
     expect(doc.body.textContent).not.toContain("GENERATED");
   });
 
@@ -216,12 +226,12 @@ describe("golden — curated pipeline (Markdown.tsx)", () => {
 
 describe("golden — untrusted pipeline (TextEngine/MarkdownView)", () => {
   it("pins the CURRENT full HTML (golden gate)", async () => {
-    const el = await mount(<MarkdownView source={corpusBody} />);
+    const el = await mount(<MarkdownView source={rawCorpusBody} />);
     expectGolden(el.innerHTML, "golden.text-engine.html");
   });
 
   it("renders structural markdown WITHOUT curated capabilities", async () => {
-    const el = await mount(<MarkdownView source={corpusBody} />);
+    const el = await mount(<MarkdownView source={rawCorpusBody} />);
     // Structural parity with the curated profile.
     expect(el.querySelector("h2")?.textContent).toBe("Headings");
     expect(el.querySelector("strong")?.textContent).toBe("strong");
@@ -239,7 +249,7 @@ describe("golden — untrusted pipeline (TextEngine/MarkdownView)", () => {
   });
 
   it("degrades raw HTML to ESCAPED TEXT — no elements, no handlers, no schemes", async () => {
-    const el = await mount(<MarkdownView source={corpusBody} />);
+    const el = await mount(<MarkdownView source={rawCorpusBody} />);
     for (const tag of [
       "script",
       "iframe",
@@ -276,7 +286,7 @@ describe("golden — untrusted pipeline (TextEngine/MarkdownView)", () => {
   });
 
   it("keeps GFM task-list semantics (disabled checkboxes)", async () => {
-    const el = await mount(<MarkdownView source={corpusBody} />);
+    const el = await mount(<MarkdownView source={rawCorpusBody} />);
     const inputs = [...el.querySelectorAll("input")];
     expect(inputs.length).toBeGreaterThanOrEqual(2);
     for (const input of inputs) {
@@ -286,7 +296,7 @@ describe("golden — untrusted pipeline (TextEngine/MarkdownView)", () => {
   });
 
   it("negative control: a MUTATED render must fail the golden gate", async () => {
-    const el = await mount(<MarkdownView source={corpusBody} />);
+    const el = await mount(<MarkdownView source={rawCorpusBody} />);
     const mutant = el.innerHTML.replace(/<ul[\s\S]*?<\/ul>/, "");
     expect(() => expectGolden(mutant, "golden.text-engine.html", { force: true })).toThrow();
     const mutant2 = el.innerHTML.replace(
