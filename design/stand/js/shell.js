@@ -296,9 +296,9 @@
     (D.koraSessions || []).slice(0, 4).forEach(function (s) {
       ents.push({
         group: "Сущности",
-        title: "сессия " + s.harness + " · " + s.host,
-        keys: "сессия кора " + s.host,
-        href: "kora.html?id=" + s.id,
+        title: "сессия · " + (s.name || (s.agent + " на " + s.host)),
+        keys: "сессия кора " + s.host + " " + (s.agent || ""),
+        href: "kora.html?session=" + encodeURIComponent(s.id),
       });
     });
     return nav.concat(actions, ents);

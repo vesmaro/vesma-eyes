@@ -2276,9 +2276,10 @@ button.chip:hover {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   v4 — kora workspace dock (07i): bar 48px → work area ~55vh.
-   Right panel = info (б) / switcher (в); center keeps list + coverage.
-   Tokens only; honest disabled input instead of a fake console (07i §5).
+   v5 — kora host tree (07j): central work zone always open, right panel
+   = hosts/agents tree + sessions block, bottom = Пульт (Дайджест | Эфир).
+   Tokens only; counters are derived from fixtures (07j §2.2.3) — a literal
+   number in kora.html markup is a review bug.
    ═══════════════════════════════════════════════════════════════════════ */
 
 .kora-page {
@@ -2286,217 +2287,219 @@ button.chip:hover {
   flex-direction: column;
   min-height: 100%;
   /* рабочая зона во всю высоту: 100dvh − topbar 48 − crumbs 40 − padding-top
-     контента (--space-6). Полоса дока (margin-top: auto) упирается точно в
-     нижнюю кромку вьюпорта и не уезжает за фолд — проверено на 900/768px */
+     контента (--space-6). Пульт (margin-top: auto) упирается в нижнюю кромку */
   min-height: calc(100vh - 48px - 40px - var(--space-6));
   min-height: calc(100dvh - 48px - 40px - var(--space-6));
 }
-/* dock lives at the very bottom edge: no dead padding under it */
+/* Пульт живёт у самой кромки: без мёртвого отступа под ним */
 .content:has(.kora-page) {
   padding-bottom: 0;
 }
 
+/* кнопки-числа сводки и строка-ссылка: текст-акцент, не цветом одним */
+.linkbtn {
+  display: inline;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-iris-bright);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.linkbtn:hover {
+  text-decoration: underline;
+}
+.linkbtn:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+  border-radius: 2px;
+}
+
 .kora-body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 340px;
   gap: var(--space-5);
   flex: 1;
+  min-height: 0;
+  align-items: stretch;
 }
-.kora-page[data-kora="info"] .kora-body,
-.kora-page[data-kora="open"] .kora-body {
-  grid-template-columns: minmax(0, 1fr) 340px;
-}
-.kora-center {
+
+/* ── центральная рабочая зона: всегда развёрнута (07j §3.1) ──────────── */
+.kora-workzone {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 320px;
+  background: var(--color-bg-well);
+  border: var(--line-hairline) solid var(--myelin-hairline);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
-.kora-list-panel.departing {
-  opacity: 0;
-  transition: opacity var(--duration-fast) var(--ease-exit);
-}
-.kora-list-panel.arriving {
-  animation: k-fade-in var(--duration-fast) var(--ease-enter);
-}
-@keyframes k-fade-in {
-  from {
-    opacity: 0;
-  }
-}
-.kora-cov {
-  margin-bottom: var(--space-5); /* fixed gap above the dock; dock itself pulls with margin-top:auto */
-}
-.session-row.selected {
-  box-shadow: inset 2px 0 0 var(--color-iris);
-  background: var(--strata-memory);
-}
-
-/* ── dock: one element, bar 48px ⇄ work area (07i §3) ────────────────── */
-.kora-dock {
-  position: sticky;
-  bottom: 0;
-  z-index: 30;
-  margin-top: auto;
-  align-self: center;
-  width: min(920px, 100%);
+.wz-empty {
   display: flex;
   flex-direction: column;
-  height: 48px;
-  background: var(--color-bg-well);
-  border: 1px solid var(--color-border);
-  border-bottom: none;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  box-shadow: var(--shadow-float);
-  /* без overflow: hidden — caps-легенда (а) стоит НА кромке полосы
-     (translateY(-50%)) и не должна срезаться собственным доком; углы чистые:
-     дети не красятся за радиус, свиток клипсируется своим overflow-y */
-  transition: height var(--duration-normal) var(--ease-exit);
+  gap: var(--space-4);
+  padding: var(--space-6) var(--space-5);
 }
-.kora-dock[data-open="true"] {
-  height: clamp(320px, 55vh, 100dvh);
-  transition-timing-function: var(--ease-enter);
+.wz-invite {
+  margin: 0;
+  max-width: 60ch;
+  font-size: var(--text-ui);
+  color: var(--color-text-secondary);
 }
-.kora-page[data-kora="none"] .kora-dock {
-  width: fit-content;
-  max-width: 100%;
+.ether-card {
+  border: var(--line-hairline) solid var(--myelin-hairline);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4) var(--space-4);
 }
-/* (а) правой панели нет — не оставляем пустой грид-ряд под центром */
-.kora-page[data-kora="none"] .kora-side {
-  display: none;
-}
-
-/* (а) некликабельное приглашение: hover/focus нет (07i §9) */
-.dock-invite {
-  position: relative;
-}
-/* caps-легенда на верхней кромке полосы — как в схеме 07i §2.1 */
-.dock-caps {
-  position: absolute;
-  top: 0;
-  left: var(--space-4);
-  transform: translateY(-50%);
-  padding: 0 var(--space-2);
-  background: var(--color-bg-well);
+.ether-caps {
+  margin: 0 0 var(--space-2);
   font-size: var(--text-caps);
   letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--color-text-muted);
-  white-space: nowrap;
 }
-.dock-invite-text {
-  font-size: var(--text-ui);
-  color: var(--color-text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.ether-feed {
+  display: grid;
 }
-.dock-bar {
+.ether-row {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: var(--space-3);
-  height: 48px;
-  box-sizing: border-box;
-  padding: 0 var(--space-3) 0 var(--space-4);
-  min-width: 0;
-}
-.dock-name {
-  font-size: var(--text-ui);
-  font-weight: var(--weight-medium);
+  min-height: 36px;
+  padding: var(--space-1) 0;
+  border-bottom: var(--line-hairline) solid var(--myelin-hairline);
+  font-size: var(--text-data);
   color: var(--color-text-primary);
+}
+.ether-row:last-child {
+  border-bottom: none;
+}
+.ether-row.compact {
+  min-height: 32px;
+}
+.e-age {
+  flex: none;
+  min-width: 72px;
+  font-variant-numeric: var(--numeric-tnum);
+  color: var(--color-text-muted);
+}
+/* импульс цветом события — только на реальное событие, всегда с текстом (06 §5) */
+.e-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  align-self: center;
+}
+.ether-row[data-kind="write"] .e-dot {
+  background: var(--synapse-write);
+}
+.ether-row[data-kind="recall"] .e-dot {
+  background: var(--synapse-recall);
+}
+.ether-row[data-kind="error"] .e-dot {
+  background: var(--synapse-error);
+  box-shadow: var(--glow-error);
+}
+.e-text {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.dock-btn {
+.e-cta {
   margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  height: 44px;
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-md);
-  color: var(--color-iris-bright);
-  font-size: var(--text-ui);
-  font-weight: var(--weight-medium);
   flex: none;
-  transition: background var(--duration-instant) var(--ease-enter);
 }
-.dock-btn:hover {
-  background: var(--myelin-strong);
-}
-.dock-btn .chev {
-  transition: rotate var(--duration-fast) var(--ease-enter);
-}
-.dock-btn[aria-expanded="true"] .chev {
-  rotate: 180deg;
-}
-/* floating bar: ring offset 4px so it never hugs the edge (WCAG 2.4.11) */
-.kora-dock .dock-btn:focus-visible {
-  outline-offset: 4px;
+.ether-empty {
+  margin: 0;
+  font-size: var(--text-data);
+  color: var(--color-text-muted);
 }
 
-/* (в) развёрнутая шапка: три слота — [заголовок+пилюля] [coverage flex+ellipsis] [кнопка]
-   «Свернуть» — собственный слот flex: none,coverage не подползает к кнопке */
-.dock-fullhead {
+/* (Б) выбрана сессия: шапка → инструменты → покрытие → свиток → честность */
+.wz-session {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.wz-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 52px;
+  padding: var(--space-2) var(--space-5);
   border-bottom: var(--line-hairline) solid var(--myelin-hairline);
 }
-.dock-hrow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  height: 48px;
-  box-sizing: border-box;
-  padding: 0 var(--space-3) 0 var(--space-4);
-  min-width: 0;
-}
-.dock-hid {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  flex: 0 1 auto;
-  min-width: 0;
-}
-.dock-pill {
-  flex: none;
-}
-.dock-fullhead h2 {
+.wz-head h2 {
   margin: 0;
-  font-size: var(--text-ui);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-md);
   font-weight: var(--weight-semibold);
   color: var(--color-text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
-/* programmatic focus target on expand (07i §7): ring visible, keyboard-only
-   via :focus-visible heuristics; bare :focus kept silent for mouse clicks */
-.dock-fullhead h2:focus-visible,
-.side-head h2:focus-visible {
+/* фокус при выборе сессии приходит сюда (07j §6.1) */
+.wz-head h2:focus-visible {
   outline: var(--focus-ring-width) solid var(--color-focus);
-  outline-offset: var(--focus-ring-width);
+  outline-offset: var(--focus-ring-offset);
 }
-.dock-cov {
-  flex: 1 1 0;
-  min-width: 0;
+.state-line {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   font-size: var(--text-data);
   color: var(--color-text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-/* reserved slot кнопки: ширина по содержимому, никогда не наезжает на coverage */
-.dock-hrow .dock-btn {
   flex: none;
-  margin-left: 0;
 }
-.dock-tools {
+.state-line .s-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex: none;
+}
+.state-line[data-state="live"] .s-dot {
+  background: var(--color-success);
+  box-shadow: var(--glow-live);
+}
+.state-line[data-state="done"] .s-dot {
+  background: var(--color-text-muted);
+}
+.state-line[data-state="interrupted"] .s-dot {
+  background: var(--color-warning);
+}
+/* связь хоста: те же точки, словарь 07a §4 */
+.state-line[data-lifecycle="online"] .s-dot {
+  background: var(--color-success);
+  box-shadow: var(--glow-live);
+}
+.state-line[data-lifecycle="silent"] .s-dot {
+  background: var(--color-warning);
+}
+.state-line[data-lifecycle="off"] .s-dot {
+  background: var(--color-text-muted);
+}
+.state-line[data-lifecycle="provisioning"] .s-dot {
+  background: var(--color-iris);
+}
+.wz-head .state-line {
+  margin-left: auto;
+}
+
+.wz-tools {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
-  padding: 0 var(--space-3) var(--space-2) var(--space-4);
+  padding: var(--space-2) var(--space-5);
+  border-bottom: var(--line-hairline) solid var(--myelin-hairline);
 }
-.dock-tool {
+.wz-tool {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
@@ -2510,21 +2513,21 @@ button.chip:hover {
   transition: background var(--duration-instant) var(--ease-enter),
     color var(--duration-instant) var(--ease-enter);
 }
-.dock-tool:hover {
+.wz-tool:hover {
   background: var(--myelin-strong);
   color: var(--color-text-primary);
 }
 /* независимый toggle: состояние объявлено рамкой + весом, не цветом одним */
-.dock-tool[aria-pressed="true"] {
+.wz-tool[aria-pressed="true"] {
   background: var(--strata-memory);
   border-color: transparent;
   color: var(--color-iris-bright);
   font-weight: var(--weight-medium);
 }
-.dock-tool[aria-pressed="true"]::after {
+.wz-tool[aria-pressed="true"]::after {
   content: "✓";
 }
-.dock-searchwrap {
+.wz-searchwrap {
   position: relative;
   display: flex;
   align-items: center;
@@ -2532,13 +2535,13 @@ button.chip:hover {
   min-width: 160px;
   max-width: 360px;
 }
-.dock-searchwrap > svg {
+.wz-searchwrap > svg {
   position: absolute;
   left: var(--space-3);
   color: var(--color-text-muted);
   pointer-events: none;
 }
-.dock-search {
+.wz-search {
   width: 100%;
   height: 32px;
   padding: 0 var(--space-3) 0 var(--space-8);
@@ -2548,49 +2551,46 @@ button.chip:hover {
   color: var(--color-text-primary);
   font-size: var(--text-sm);
 }
-.dock-search::placeholder {
+.wz-search::placeholder {
   color: var(--color-text-muted);
 }
-.dock-search:focus-visible {
+.wz-search:focus-visible {
   outline: none;
   border-color: var(--color-iris-bright);
   box-shadow: var(--shadow-iris);
 }
-.dock-count {
+.wz-count {
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
   white-space: nowrap;
 }
-
-/* тело дока: свиток-транскрипт + честный подвал */
-.dock-lower {
-  flex: 1;
-  min-height: 0;
+.wz-cov {
+  margin: 0;
   display: flex;
-  flex-direction: column;
-  visibility: hidden;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-5);
+  border-bottom: var(--line-hairline) solid var(--myelin-hairline);
+  font-size: var(--text-data);
+  color: var(--color-text-secondary);
+  overflow: hidden;
 }
-.kora-dock[data-open="true"] .dock-lower {
-  visibility: visible;
+.wz-cov .cov-caps {
+  flex: none;
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
 }
-.dock-lower.swap-out {
-  animation: k-fade-out var(--duration-fast) var(--ease-exit) forwards;
-}
-@keyframes k-fade-out {
-  to {
-    opacity: 0;
-  }
-}
-.dock-lower.swap-in {
-  animation: k-fade-in var(--duration-fast) var(--ease-enter);
-}
-.dock-scrollwrap {
+
+.wz-scrollwrap {
   position: relative;
   flex: 1;
   min-height: 0;
   display: flex;
 }
-.dock-scroll {
+/* свиток: Lora, ≤72ch, mono-времена (канон 07d §3) */
+.wz-scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -2599,17 +2599,34 @@ button.chip:hover {
   flex-direction: column;
   gap: var(--space-3);
 }
-.dock-scroll:focus-visible {
+.wz-scroll:focus-visible {
   outline: var(--focus-ring-width) solid var(--color-focus);
   outline-offset: calc(-1 * var(--focus-ring-width));
 }
-/* строки-реплики: время mono + автор + текст Lora, копирование по hover/focus */
-.kora-dock .t-line {
+.wz-scroll > * {
+  max-width: 72ch;
+}
+.wz-scroll .t-line {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: var(--space-3);
   align-items: start;
   border-radius: var(--radius-sm);
+  font-family: var(--font-scroll);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text-primary);
+}
+.wz-scroll .t-time {
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--numeric-tnum);
+  font-size: var(--text-data);
+  color: var(--color-text-muted);
+  padding-top: 4px;
+}
+.wz-scroll .t-who {
+  color: var(--color-iris-bright);
+  font-weight: var(--weight-medium);
 }
 .t-copy {
   width: 24px;
@@ -2618,6 +2635,8 @@ button.chip:hover {
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-sm);
+  border: none;
+  background: none;
   color: var(--color-text-muted);
   opacity: 0;
   transition: opacity var(--duration-instant) var(--ease-enter);
@@ -2639,13 +2658,30 @@ button.chip:hover {
   padding: 0 1px;
 }
 .t-end,
-.dock-noresult {
+.wz-noresult {
   margin: 0;
   font-size: var(--text-data);
   color: var(--color-text-muted);
 }
+.wz-nonecov {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  font-size: var(--text-data);
+  color: var(--color-text-secondary);
+}
+.wz-nonecov p {
+  margin: 0;
+}
+.skel-line {
+  height: 16px;
+  width: 100%;
+}
+.skel-line.short {
+  width: 62%;
+}
 /* «Вернуться к хвосту» — плавающая над свитком, 150ms enter/exit */
-.dock-tail {
+.wz-tail {
   position: absolute;
   right: var(--space-4);
   bottom: var(--space-3);
@@ -2668,34 +2704,35 @@ button.chip:hover {
     translate: 0 4px;
   }
 }
-.dock-tail:hover {
+.wz-tail:hover {
   background: var(--myelin-strong);
   color: var(--color-text-primary);
 }
-.dock-tail[hidden] {
+.wz-tail[hidden] {
   display: none;
 }
-.dock-foot {
-  border-top: var(--line-hairline) solid var(--myelin-hairline);
-  padding: var(--space-2) var(--space-4) var(--space-3);
-  display: grid;
-  gap: var(--space-2);
-}
-.dock-honest {
+.wz-honest {
   margin: 0;
+  padding: var(--space-2) var(--space-5) var(--space-3);
+  border-top: var(--line-hairline) solid var(--myelin-hairline);
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
 }
-/* честная мёртвая зона: disabled всегда, курсор not-allowed, вне tab-порядка */
-.dock-dead {
-  height: 44px;
-  cursor: not-allowed;
+/* смена сессии: crossfade 250ms + скелетон, высота не прыгает (07j §6.2) */
+.wz-session.swap-out {
+  opacity: 0;
+  transition: opacity var(--duration-normal) var(--ease-exit);
 }
-.dock-deadwrap {
-  display: block;
+.wz-session.swap-in {
+  animation: k-fade-in var(--duration-normal) var(--ease-in-out);
+}
+@keyframes k-fade-in {
+  from {
+    opacity: 0;
+  }
 }
 
-/* ── правая панель: инфо-карточка (б) / переключатель (в) ────────────── */
+/* ── правая панель: Блок 1 + Блок 2 + легенда (07j §3.3–3.5) ─────────── */
 .kora-scrim {
   position: fixed;
   inset: 0;
@@ -2706,10 +2743,13 @@ button.chip:hover {
   display: none;
 }
 .kora-side {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-4);
-  align-content: start;
   min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 .side-card {
   display: flex;
@@ -2745,11 +2785,23 @@ button.chip:hover {
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
+.ctx-count {
+  font-variant-numeric: var(--numeric-tnum);
+  font-size: var(--text-caps);
+  color: var(--color-text-muted);
+}
+.side-note {
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  border-bottom: var(--line-hairline) solid var(--myelin-hairline);
+  font-size: var(--text-caps);
+  letter-spacing: 0.01em;
+  color: var(--color-text-muted);
+}
 .side-body {
   padding: var(--space-4);
   display: grid;
   gap: var(--space-3);
-  overflow-y: auto;
 }
 .side-caps {
   margin: 0 0 var(--space-1);
@@ -2763,93 +2815,594 @@ button.chip:hover {
   font-size: var(--text-data);
   color: var(--color-text-primary);
 }
-/* подсказка «список переехал» при первом развороте дока (u-a #7): 6 с, один раз */
-.side-hint {
+
+/* ── Блок 1: дерево «Хосты и агенты» (07j §1.2, §3.3) ────────────────── */
+.tree {
+  padding: var(--space-2) var(--space-2) var(--space-3);
+}
+.tree ul {
   margin: 0;
-  padding: var(--space-2) var(--space-4);
-  border-bottom: var(--line-hairline) solid var(--myelin-hairline);
-  font-size: var(--text-sm);
-  color: var(--color-iris-bright);
+  padding: 0;
+  list-style: none;
 }
-.side-actions {
-  display: grid;
+.tree > .tree-host > .tree-branch > ul {
+  padding-left: var(--space-4);
+}
+.tree-agent > .tree-branch > ul {
+  padding-left: var(--space-5);
+}
+.tree-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 36px;
+}
+.tree-chev {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  transition: rotate var(--duration-fast) var(--ease-exit);
+}
+.tree-chev[aria-expanded="true"] {
+  rotate: 90deg;
+  transition-timing-function: var(--ease-enter);
+}
+.tree-chev:hover {
+  color: var(--color-text-primary);
+  background: var(--myelin-hairline);
+}
+.tree-chev:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+.tree-name {
+  border: none;
+  background: none;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-ui);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: pointer;
+  min-height: 24px;
+}
+.tree-name:hover {
+  background: var(--myelin-hairline);
+}
+.tree-name:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+.tree-count {
+  margin-left: auto;
+  padding-right: var(--space-2);
+  font-variant-numeric: var(--numeric-tnum);
+  font-size: var(--text-caps);
+  color: var(--color-text-muted);
+  flex: none;
+}
+/* пилюля связи хоста: вторая строка под именем, точка + текст (07a §4) */
+.tree-conn {
+  display: flex;
+  align-items: center;
   gap: var(--space-2);
-  justify-items: start;
-  padding-top: var(--space-2);
-  border-top: var(--line-hairline) solid var(--myelin-hairline);
+  min-height: 24px;
+  padding: 0 var(--space-2) var(--space-1) 32px;
+  font-size: var(--text-caps);
+  letter-spacing: 0.01em;
+  color: var(--color-text-secondary);
 }
-.side-about {
-  border-top: var(--line-hairline) solid var(--myelin-hairline);
+.tree-conn .s-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  flex: none;
 }
-.side-about .tech-table {
-  margin-top: var(--space-2);
+.tree-conn[data-lifecycle="online"] .s-dot {
+  background: var(--color-success);
 }
-.side-foot-actions {
-  padding: var(--space-3) var(--space-4);
-  border-top: var(--line-hairline) solid var(--myelin-hairline);
+.tree-conn[data-lifecycle="silent"] .s-dot {
+  background: var(--color-warning);
 }
-.btn.dock-tall {
-  width: 100%;
-  min-height: 44px;
+.tree-conn[data-lifecycle="off"] .s-dot {
+  background: var(--color-text-muted);
 }
-/* компактный переключатель сессий: точка + хост · харнес + время (--text-data) */
-.kswitch-row {
+.tree-conn[data-lifecycle="provisioning"] .s-dot {
+  background: var(--color-iris);
+}
+/* раскрытие ветки: 150ms enter / exit, без прыжков (07j §6.2) */
+.tree-branch {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--duration-fast) var(--ease-exit);
+}
+.tree-branch.open {
+  grid-template-rows: 1fr;
+  transition-timing-function: var(--ease-enter);
+}
+.tree-branch > ul,
+.tree-branch > .tree-hint {
+  overflow: hidden;
+  min-height: 0;
+  margin: 0;
+}
+.tree-hint {
+  padding: var(--space-1) var(--space-2) var(--space-2);
+  font-size: var(--text-caps);
+  letter-spacing: 0.01em;
+  color: var(--color-text-muted);
+}
+/* хост выключен — ветка приглушена; чужой фильтр — тинт 150ms (07j §6.2) */
+.dimmed-branch {
+  opacity: 0.55;
+}
+.tree-host {
+  transition: opacity var(--duration-fast) var(--ease-enter);
+}
+.tree-host.dimmed {
+  opacity: 0.45;
+}
+.tree-host.match > .tree-row {
+  background: var(--strata-memory);
+  border-radius: var(--radius-sm);
+}
+/* сессия в дереве: точка + имя + mono-возраст */
+.tree-session {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   width: 100%;
-  min-height: 44px;
-  padding: var(--space-1) var(--space-4);
-  border-bottom: var(--line-hairline) solid var(--myelin-hairline);
+  min-height: 36px;
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
   text-align: left;
   font-size: var(--text-data);
   color: var(--color-text-primary);
+  cursor: pointer;
   transition: background var(--duration-instant) var(--ease-enter);
 }
-.kswitch-row:hover {
-  background: var(--myelin-strong); /* hover-edge token (02 §3); selected bg wins below */
+.tree-session:hover {
+  background: var(--myelin-hairline);
 }
-.kswitch-row:focus-visible {
+.tree-session:focus-visible {
   outline: none;
   box-shadow: inset var(--focus-ring-width) 0 0 var(--color-focus);
 }
-.kswitch-row.selected {
+.tree-session.selected {
   box-shadow: inset 2px 0 0 var(--color-iris);
   background: var(--strata-memory);
 }
-.kswitch-row .ks-name {
+.tree-session .s-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  flex: none;
+}
+.tree-session[data-state="live"] .s-dot {
+  background: var(--color-success);
+  box-shadow: var(--glow-live);
+}
+.tree-session[data-state="done"] .s-dot {
+  background: var(--color-text-muted);
+}
+.tree-session[data-state="interrupted"] .s-dot {
+  background: var(--color-warning);
+}
+.tree-session .ts-name {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.kswitch-row .ks-time {
+.tree-session .ts-age {
   margin-left: auto;
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
+  padding-left: var(--space-2);
+  font-variant-numeric: var(--numeric-tnum);
   font-size: var(--text-caps);
   color: var(--color-text-muted);
   flex: none;
 }
-/* каскад переезда списка (06 §3): шаг stagger, максимум 8 */
-.casc-in > .kswitch-row {
-  animation: k-casc var(--duration-normal) var(--ease-enter) both;
-  animation-delay: calc(var(--i, 0) * var(--duration-stagger));
+
+/* ── Блок 2 «Сессии · контекст» (07j §3.4) ───────────────────────────── */
+.qf-row {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
 }
-@keyframes k-casc {
-  from {
-    opacity: 0;
-    translate: 0 8px;
-  }
+.ctx-openline {
+  margin: 0;
+  font-size: var(--text-data);
+  color: var(--color-iris-bright);
+}
+.ctx-hostinfo {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  padding: var(--space-2) 0;
+  border-bottom: var(--line-hairline) solid var(--myelin-hairline);
+}
+.b2-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  border-bottom: var(--line-hairline) solid var(--myelin-hairline);
+  border-radius: 0;
+  background: none;
+  text-align: left;
+  font-size: var(--text-data);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background var(--duration-instant) var(--ease-enter);
+}
+.b2-row:hover {
+  background: var(--myelin-hairline);
+}
+.b2-row:focus-visible {
+  outline: none;
+  box-shadow: inset var(--focus-ring-width) 0 0 var(--color-focus);
+}
+.b2-row.selected {
+  box-shadow: inset 2px 0 0 var(--color-iris);
+  background: var(--strata-memory);
+}
+.b2-row .s-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  flex: none;
+}
+.b2-row[data-state="live"] .s-dot {
+  background: var(--color-success);
+  box-shadow: var(--glow-live);
+}
+.b2-row[data-state="done"] .s-dot {
+  background: var(--color-text-muted);
+}
+.b2-row[data-state="interrupted"] .s-dot {
+  background: var(--color-warning);
+}
+.b2-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+.b2-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.b2-sub {
+  font-size: var(--text-caps);
+  letter-spacing: 0.01em;
+  color: var(--color-text-muted);
+}
+.b2-part {
+  flex: none;
+  font-size: var(--text-caps);
+  letter-spacing: 0.01em;
+  color: var(--color-text-secondary);
+}
+.b2-row .state-line {
+  margin-left: auto;
+  flex: none;
 }
 
-/* ── narrow: правая панель → дровер поверх (07i §10) ─────────────────── */
+/* «О сессии»: детали рядом, не вместо контента (07j §3.4) */
+.about-block {
+  border-bottom: var(--line-hairline) solid var(--myelin-hairline);
+}
+.about-empty {
+  margin: 0;
+  font-size: var(--text-data);
+  color: var(--color-text-muted);
+}
+.about-name {
+  margin: 0;
+  font-size: var(--text-ui);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+}
+.about-topic {
+  margin: 0;
+  font-size: var(--text-data);
+  color: var(--color-text-secondary);
+}
+.about-facts {
+  margin: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+.about-facts > div {
+  display: flex;
+  gap: var(--space-2);
+  font-size: var(--text-data);
+}
+.about-facts dt {
+  color: var(--color-text-muted);
+  min-width: 88px;
+}
+.about-facts dd {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-variant-numeric: var(--numeric-tnum);
+}
+.about-copy {
+  justify-self: start;
+}
+
+/* легенда «Что мы видим с ваших машин» внизу панели (07j §3.5) */
+.side-legend {
+  padding: 0 var(--space-4) var(--space-3);
+  background: var(--color-bg-well);
+  border: var(--line-hairline) solid var(--myelin-hairline);
+  border-radius: var(--radius-lg);
+}
+.side-legend > .cb-toggle {
+  min-height: 44px;
+}
+.legend-grid {
+  display: grid;
+  gap: var(--space-2);
+  font-size: var(--text-data);
+  color: var(--color-text-secondary);
+}
+.legend-harness {
+  display: inline-block;
+  min-width: 56px;
+  color: var(--color-text-primary);
+}
+
+/* ── Пульт (07j §4): полоса 48px ⇄ clamp(200px, 30vh, 320px) ───────────
+   В потоке, не overlay: развёрнутый Пульт не перекрывает свиток и строку
+   честности (WCAG 2.4.11 — сфокусированное не остаётся под поверхностью) */
+.pult {
+  position: relative; /* якорь для caps-лейбла на верхней кромке */
+  margin-top: auto;
+  width: 100%;
+  height: 48px;
+  background: var(--color-bg-well);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-float);
+  overflow: hidden;
+  transition: height var(--duration-normal) var(--ease-exit);
+}
+.pult[data-open="true"] {
+  height: clamp(200px, 30vh, 320px);
+  transition-timing-function: var(--ease-enter);
+}
+.pult-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: 48px;
+  box-sizing: border-box;
+  padding: 0 var(--space-4);
+  min-width: 0;
+}
+.pult-caps {
+  position: absolute;
+  top: 0;
+  left: var(--space-4);
+  transform: translateY(-50%);
+  padding: 0 var(--space-2);
+  background: var(--color-bg-well);
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.pult-invite {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-ui);
+  color: var(--color-text-secondary);
+}
+.pult-tabs {
+  display: flex;
+  gap: var(--space-1);
+  flex: none;
+}
+.pult-tab {
+  height: 32px;
+  padding: 0 var(--space-3);
+  border: none;
+  border-radius: var(--radius-md);
+  background: none;
+  font-size: var(--text-ui);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background var(--duration-instant) var(--ease-enter),
+    color var(--duration-instant) var(--ease-enter);
+}
+.pult-tab:hover {
+  background: var(--myelin-hairline);
+  color: var(--color-text-primary);
+}
+.pult-tab[aria-selected="true"] {
+  background: var(--strata-memory);
+  color: var(--color-iris-bright);
+  font-weight: var(--weight-medium);
+}
+.pult-tab:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: 2px;
+}
+.pult-btn {
+  margin-left: auto;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 44px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-md);
+  border: none;
+  background: none;
+  color: var(--color-iris-bright);
+  font-size: var(--text-ui);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition: background var(--duration-instant) var(--ease-enter);
+}
+.pult-btn:hover {
+  background: var(--myelin-strong);
+}
+.pult-btn .chev {
+  transition: rotate var(--duration-fast) var(--ease-enter);
+}
+.pult-btn[aria-expanded="true"] .chev {
+  rotate: 180deg;
+}
+/* плавающая полоса: ринг с offset 4px, не жмётся к кромке (WCAG 2.4.11) */
+.pult .pult-btn:focus-visible {
+  outline-offset: 4px;
+}
+.pult-badge {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 28px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-full);
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-iris-bright);
+  white-space: nowrap;
+}
+.pult-badge:hover {
+  background: var(--myelin-hairline);
+  border-color: var(--color-border);
+}
+.pult-badge.empty {
+  color: var(--color-text-muted);
+}
+.pult-badge .mono {
+  font-variant-numeric: var(--numeric-tnum);
+}
+.pult-body {
+  height: calc(100% - 48px);
+  overflow-y: auto;
+  border-top: var(--line-hairline) solid var(--myelin-hairline);
+}
+.pult-hint {
+  margin: 0;
+  padding: var(--space-1) var(--space-4);
+  font-size: var(--text-caps);
+  letter-spacing: 0.01em;
+  color: var(--color-iris-bright);
+}
+.pult-tabpanel {
+  padding: var(--space-2) var(--space-4) var(--space-4);
+}
+.pult-tabpanel:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: calc(-1 * var(--focus-ring-width));
+}
+
+/* Дайджест (07j §4.3) */
+.digest-caps {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.digest-caps .digest-name {
+  color: var(--color-text-secondary);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.digest-grid {
+  display: grid;
+  gap: var(--space-2);
+}
+.digest-row {
+  margin: 0;
+  display: flex;
+  gap: var(--space-3);
+  font-size: var(--text-data);
+  color: var(--color-text-primary);
+}
+.digest-k {
+  flex: none;
+  min-width: 72px;
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  padding-top: 2px;
+}
+.digest-mems {
+  color: var(--color-text-secondary);
+}
+.digest-sep {
+  color: var(--color-text-muted);
+}
+.digest-note {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  font-size: var(--text-data);
+  color: var(--color-text-secondary);
+}
+.digest-note p {
+  margin: 0;
+}
+.digest-empty {
+  margin: 0;
+  font-size: var(--text-data);
+  color: var(--color-text-muted);
+}
+
+/* ── служебный тулбар стенда — вне продуктовой поверхности (07j §5-13) ── */
+.demo-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0 var(--space-4);
+  margin-top: var(--space-5);
+  border-top: var(--line-hairline) solid var(--myelin-hairline);
+}
+.demo-toolbar[hidden] {
+  display: none;
+}
+.demo-caps {
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.demo-toolbar .btn[aria-pressed="true"] {
+  color: var(--color-iris-bright);
+}
+
+/* ── narrow: правая панель → дровер поверх (07j §8) ──────────────────── */
 .narrow-only {
   display: none;
 }
 @media (max-width: 1023px) {
-  .kora-page[data-kora="info"] .kora-body,
-  .kora-page[data-kora="open"] .kora-body {
+  .kora-body {
     grid-template-columns: minmax(0, 1fr);
   }
   .narrow-only {
@@ -2866,54 +3419,70 @@ button.chip:hover {
     background: var(--color-bg-elevated);
     border-left: 1px solid var(--color-border-subtle);
     box-shadow: var(--shadow-modal);
+    padding: var(--space-3);
   }
   .kora-side.side-open {
-    display: grid;
-    align-content: start;
+    display: flex;
     animation: drawer-in var(--duration-normal) var(--ease-enter);
   }
 }
-/* ── mobile: док — bottom sheet на всю ширину, цели 44px (07i §10) ───── */
+/* ── mobile: цели 44px, дерево дышит, Пульт на всю ширину (07j §8) ───── */
 @media (max-width: 767px) {
-  .kora-dock {
-    align-self: stretch;
-    width: 100%;
+  .tree-row,
+  .tree-session {
+    min-height: 44px;
+  }
+  .tree-chev {
+    width: 32px;
+    height: 32px;
   }
   .t-copy {
     width: 44px;
     height: 44px;
     opacity: 1; /* тач-сценарий: без hover — копирование всегда видно */
   }
-  .session-row {
+  .b2-row {
     border: 1px solid var(--color-border-subtle);
     border-radius: var(--radius-md);
-    margin: var(--space-2);
+    margin-bottom: var(--space-2);
+  }
+  .wz-head,
+  .wz-tools,
+  .wz-cov,
+  .wz-honest {
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+  }
+  .e-text {
+    white-space: normal;
   }
 }
 
-/* ── reduced motion: раскрытия и каскады мгновенные (02 §7, 07i §8) ──── */
+/* ── reduced motion: раскрытия и crossfade мгновенные (06 §7) ────────── */
 @media (prefers-reduced-motion: reduce) {
-  .kora-dock,
-  .dock-btn .chev,
-  .dock-tail,
-  .kora-list-panel.arriving,
-  .dock-lower.swap-in,
-  .casc-in > .kswitch-row {
+  .tree-branch,
+  .tree-chev,
+  .pult,
+  .pult-btn .chev,
+  .wz-tail,
+  .wz-session.swap-in,
+  .kora-side.side-open {
     animation: none;
     transition: none;
   }
 }
-[data-motion="reduced"] .kora-dock,
-[data-motion="reduced"] .dock-btn .chev,
-[data-motion="reduced"] .dock-tail,
-[data-motion="reduced"] .kora-list-panel.arriving,
-[data-motion="reduced"] .kora-list-panel.departing,
-[data-motion="reduced"] .dock-lower.swap-in,
-[data-motion="reduced"] .dock-lower.swap-out,
-[data-motion="reduced"] .casc-in > .kswitch-row {
+[data-motion="reduced"] .tree-branch,
+[data-motion="reduced"] .tree-chev,
+[data-motion="reduced"] .pult,
+[data-motion="reduced"] .pult-btn .chev,
+[data-motion="reduced"] .wz-tail,
+[data-motion="reduced"] .wz-session.swap-out,
+[data-motion="reduced"] .wz-session.swap-in,
+[data-motion="reduced"] .kora-side.side-open,
+[data-motion="reduced"] .tree-host {
   animation: none;
   transition: none;
 }
-[data-motion="reduced"] .dock-tail {
-  animation: k-tail-in 80ms linear; /* появление ≤80ms opacity (07i §8) */
+[data-motion="reduced"] .wz-tail {
+  animation: k-tail-in 80ms linear; /* появление ≤80ms opacity */
 }
