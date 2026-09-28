@@ -124,13 +124,30 @@ afterEach(() => {
 });
 
 describe("ExecutorSheet — identity + the diff PATCH discipline", () => {
-  it("renders the sections and the harness WHY-note (never a bare refusal)", async () => {
+  it("renders the sections; the work block leads, service facts fold (UX-overhaul §4.3)", async () => {
     const mount = await mountCard("exec-laptop-zcode");
     const html = mount.text();
+    // П3: the card's FIRST block is «Сейчас выполняет» (idle is a state
+    // too); the trigger renamed per §4.4.
+    expect(html).toContain("Working on now");
+    expect(html).toContain("Idle — nothing in progress");
+    expect(html).toContain("All tasks");
+    expect(html).toContain("Refresh pulse");
     for (const section of ["Identity", "Link", "Access", "Capabilities", "Danger zone"]) {
       expect(html).toContain(section);
     }
-    expect(html).toContain("silently desync the board from poller.yaml");
+    // П2: the harness WHY-note (a service fact) sits under the FOLDED
+    // «Technical data» disclosure — the refusal is still never bare, but
+    // it is no longer primary text (persona-review feedback).
+    expect(html).toContain("Technical data");
+    expect(html).not.toContain("silently desync the board from poller.yaml");
+    const tech = mount
+      .query<HTMLButtonElement>("button")
+      .find((button) => button.textContent?.includes("Technical data"))!;
+    await act(async () => {
+      tech.click();
+    });
+    expect(mount.text()).toContain("silently desync the board from poller.yaml");
     expect(html).toContain("dispatch = approved AND enabled");
     expect(html).toContain("the real gate is the poller's local allowlist");
     await actUnmount(mount.root);

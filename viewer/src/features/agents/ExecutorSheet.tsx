@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, Check, Copy, Plus, X } from "lucide-react";
+import { Link, useLocation } from "react-router";
+import {
+  AlertTriangle,
+  Check,
+  ChevronRight,
+  Copy,
+  ExternalLink,
+  Plus,
+  X,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -7,7 +16,11 @@ import type { ExecutorItem } from "@/gateway/boardTypes";
 import { useI18n, useT } from "@/i18n";
 import type { TranslationKey } from "@/i18n";
 import { formatTaskDate } from "@/features/tasks/taskStatus";
+import { useBoardTasks } from "@/features/tasks/useTasks";
+import { withReturn } from "@/lib/returnParams";
 import { useHonestCopy } from "./useEnrollment";
+import { AssignmentStateBadge } from "./AssignmentStateBadge";
+import { ACTIVE_ASSIGNMENT_STATES } from "./assignmentStatus";
 import { ExecutorLinkCheck } from "./ExecutorLinkCheck";
 import {
   EXECUTOR_CAPABILITIES_MAX,
@@ -17,7 +30,7 @@ import {
 import { PasteBackApprove } from "./ProvisionApprove";
 import { PROVISION_APPROVE_PUBLISHED, peekProvisionApprove } from "./provisionContext";
 import type { ProvisionApproveContext } from "./provisionContext";
-import { useExecutors } from "./useAgents";
+import { useAssignments, useExecutors } from "./useAgents";
 import { useExecutorMutations } from "./useExecutorMutations";
 
 /**
@@ -26,14 +39,16 @@ import { useExecutorMutations } from "./useExecutorMutations";
  * AssignmentDrawer's). One family with the EnrollmentDialog: the mint flow
  * offers «Открыть карточку» as a `#executor-sheet-<id>` deep-link.
  *
- * Sections: identity (name EDITABLE; harness/transport/host/version
- * read-only WITH the why — harness is the machine-side allowlist matching
- * axis, changing it would silently desync the board from poller.yaml, the
- * honest path is revoke + re-enroll) · link (the ExecutorLinkCheck
- * verdict) · access (state + approve + the enabled kill-switch, dispatch =
- * approved AND enabled) · declared capabilities (structural editor, ≤64,
- * dedup; [] is a server-side WIPE → confirm) · the danger zone (revoke
- * terminal, delete hard) — the same useExecutorMutations gate everywhere.
+ * UX-overhaul §4.3 (Ф1, П2/П3): work first — «Сейчас выполняет» opens the
+ * card: the executor's ACTIVE assignments read from the SHARED unfiltered
+ * queue query (`useAssignments()`, filtered client-side by
+ * `claimed_by_executor` — one wire call, the useActiveAssignment pattern).
+ * An empty answer is a state too («Свободен…»), never a missing block.
+ * Then: link (the ExecutorLinkCheck verdict) · access (state + approve +
+ * the enabled kill-switch) · identity (name EDITABLE) · declared
+ * capabilities · the danger zone. The service facts (harness/transport/
+ * host/version/registration) fold under «Технические данные» at the bottom
+ * (persona-review: they are not the card's primary text).
  *
  * PATCH discipline (verified against the server PATCH route + store
  * update_executor): the card sends ONLY the computed diff
@@ -115,6 +130,76 @@ export function ExecutorSheet({
   );
 }
 
+/**
+ * UX-overhaul §4.3 (Ф1, П3): the card's FIRST block — what the executor is
+ * working on right now, from the shared assignments queue filtered by
+ * `claimed_by_executor` (the registry fact, not the declared claim).
+ * Empty answer = «Свободен» — a state, not an absent block. «Все задачи»
+ * deep-links to /agents/execution pre-filtered on this executor
+ * (ExecutionPage reads `?executor=`); task links carry `return=` per UI-18.
+ */
+function NowWorkingSection({ executorId }: { executorId: string }) {
+  const t = useT();
+  const location = useLocation();
+  const assignments = useAssignments();
+  const board = useBoardTasks();
+  const active = (assignments.data?.items ?? []).filter(
+    (row) =>
+      row.claimed_by_executor === executorId &&
+      ACTIVE_ASSIGNMENT_STATES.includes(row.state),
+  );
+  const titleOf = (taskId: string): string =>
+    (board.data?.tasks ?? []).find((task) => task.id === taskId)?.title ?? "";
+
+  return (
+    <section
+      aria-label={t("agents.card.nowWorking")}
+      className="flex flex-col gap-2"
+    >
+      <h3 className="text-xs font-medium text-foreground-secondary">
+        {t("agents.card.nowWorking")}
+      </h3>
+      {active.length === 0 ? (
+        <p className="text-sm text-foreground-secondary">
+          {t("agents.card.nowIdle")}
+        </p>
+      ) : (
+        <ul className="flex flex-col gap-1.5">
+          {active.map((row) => (
+            <li
+              key={row.id}
+              className="flex flex-wrap items-center gap-2 rounded-md border border-border-subtle bg-elevated px-2 py-1.5 text-sm"
+            >
+              <AssignmentStateBadge state={row.state} />
+              <span className="min-w-0 flex-1 truncate">
+                {titleOf(row.task_id) || row.task_id}
+              </span>
+              <Link
+                to={withReturn(
+                  `/tasks/${encodeURIComponent(row.task_id)}?tab=execution`,
+                  location.pathname,
+                  location.search,
+                )}
+                className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+              >
+                <ExternalLink className="size-3" aria-hidden="true" />
+                {t("agents.row.openTask")}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+      <Link
+        to={`/agents/execution?executor=${encodeURIComponent(executorId)}`}
+        className="inline-flex w-fit items-center gap-1 text-xs text-foreground-secondary transition-colors duration-instant hover:text-foreground hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+      >
+        {t("agents.card.allTasks")}
+        <ChevronRight className="size-3.5" aria-hidden="true" />
+      </Link>
+    </section>
+  );
+}
+
 /** The card body: sections + the diff-save. Re-seeds via the parent key. */
 function ExecutorSheetForm({
   executor,
@@ -170,6 +255,9 @@ function ExecutorSheetForm({
   ]);
   const [capInput, setCapInput] = useState("");
   const [capHint, setCapHint] = useState<"dup" | "max" | null>(null);
+  // The service-facts disclosure («Технические данные») — collapsed by
+  // default, re-seeded with the form via the parent key.
+  const [techOpen, setTechOpen] = useState(false);
 
   const diff = executorPatchDiff(executor, { name, capabilities });
   const diffEmpty = Object.keys(diff).length === 0;
@@ -265,52 +353,8 @@ function ExecutorSheetForm({
         </p>
       ) : null}
 
-      {/* --- Identity ------------------------------------------------- */}
-      <section aria-label={t("agents.card.sectionIdentity")} className="flex flex-col gap-2">
-        <h3 className="text-xs font-medium text-foreground-secondary">
-          {t("agents.card.sectionIdentity")}
-        </h3>
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          {t("agents.card.nameLabel")}
-          <input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            maxLength={120}
-            disabled={revoked}
-            className={fieldClass}
-          />
-        </label>
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-xs text-foreground-muted">{executor.id}</span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-6 px-1.5 text-xs"
-            onClick={() => copy("id", executor.id)}
-            aria-label={t("agents.card.copyId", { id: executor.id })}
-          >
-            {copied === "id" ? (
-              <Check className="size-3" aria-hidden="true" />
-            ) : (
-              <Copy className="size-3" aria-hidden="true" />
-            )}
-            {t("agents.enrollment.copy")}
-          </Button>
-        </div>
-        <dl className="flex flex-col gap-1 text-sm">
-          {facts.map((fact) => (
-            <div key={fact.label} className="flex items-baseline justify-between gap-3">
-              <dt className="shrink-0 text-foreground-muted">{fact.label}</dt>
-              <dd className="min-w-0 break-all text-right font-mono text-xs text-foreground-secondary">
-                {fact.value}
-              </dd>
-            </div>
-          ))}
-        </dl>
-        {/* WHY harness is not editable (the honest refusal). */}
-        <p className="text-xs text-foreground-muted">{t("agents.card.harnessNote")}</p>
-      </section>
+      {/* --- Now working (П3: the card answers «чем занят» first) ------ */}
+      <NowWorkingSection executorId={executor.id} />
 
       {/* --- Link ----------------------------------------------------- */}
       <section aria-label={t("agents.card.sectionLink")} className="flex flex-col gap-2">
@@ -363,6 +407,41 @@ function ExecutorSheetForm({
         {pending ? (
           <p className="text-xs text-foreground-muted">{t("agents.card.enabledPendingHint")}</p>
         ) : null}
+      </section>
+
+      {/* --- Identity (editable working field) -------------------------- */}
+      <section aria-label={t("agents.card.sectionIdentity")} className="flex flex-col gap-2">
+        <h3 className="text-xs font-medium text-foreground-secondary">
+          {t("agents.card.sectionIdentity")}
+        </h3>
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          {t("agents.card.nameLabel")}
+          <input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            maxLength={120}
+            disabled={revoked}
+            className={fieldClass}
+          />
+        </label>
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-xs text-foreground-muted">{executor.id}</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-6 px-1.5 text-xs"
+            onClick={() => copy("id", executor.id)}
+            aria-label={t("agents.card.copyId", { id: executor.id })}
+          >
+            {copied === "id" ? (
+              <Check className="size-3" aria-hidden="true" />
+            ) : (
+              <Copy className="size-3" aria-hidden="true" />
+            )}
+            {t("agents.enrollment.copy")}
+          </Button>
+        </div>
       </section>
 
       {/* --- Declared capabilities ------------------------------------- */}
@@ -449,6 +528,35 @@ function ExecutorSheetForm({
           </Button>
         </div>
       ) : null}
+
+      {/* --- Service facts, folded (persona-review: not primary text) --- */}
+      <section aria-label={t("agents.card.techDetails")} className="flex flex-col gap-2">
+        <button
+          type="button"
+          aria-expanded={techOpen}
+          onClick={() => setTechOpen((value) => !value)}
+          className="flex w-fit items-center gap-1.5 rounded-md px-1 py-0.5 text-left text-xs font-medium text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+        >
+          <span aria-hidden="true">{techOpen ? "▾" : "▸"}</span>
+          {t("agents.card.techDetails")}
+        </button>
+        {techOpen ? (
+          <div className="flex flex-col gap-2">
+            <dl className="flex flex-col gap-1 text-sm">
+              {facts.map((fact) => (
+                <div key={fact.label} className="flex items-baseline justify-between gap-3">
+                  <dt className="shrink-0 text-foreground-muted">{fact.label}</dt>
+                  <dd className="min-w-0 break-all text-right font-mono text-xs text-foreground-secondary">
+                    {fact.value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            {/* WHY harness is not editable (the honest refusal). */}
+            <p className="text-xs text-foreground-muted">{t("agents.card.harnessNote")}</p>
+          </div>
+        ) : null}
+      </section>
 
       {/* --- Danger zone ------------------------------------------------ */}
       <section aria-label={t("agents.card.sectionDanger")} className="flex flex-col gap-2">
