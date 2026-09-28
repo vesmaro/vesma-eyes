@@ -1,9 +1,10 @@
 import { Link } from "react-router";
-import { ArrowRight, Bot, Search, Files, Tag } from "lucide-react";
+import { ArrowRight, Bot, Search, Files, Tag, KanbanSquare, Workflow } from "lucide-react";
 import { IrisLogo } from "@/components/IrisLogo/IrisLogo";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { HonestLine } from "@/components/HonestLine/HonestLine";
 import { isAutomationSource, isBoardHealthSource, isPulseSource } from "@/gateway/capabilities";
 import type { BoardHealthServer } from "@/gateway/boardTypes";
 import { useGateway } from "@/gateway/GatewayContext";
@@ -23,6 +24,12 @@ import { useT } from "@/i18n";
  * store/pulse sections appear only when the gateway speaks those views
  * (board / mock adapters) and only when they have content. The session-aware
  * mode line states the app's current contract plainly (read-only / active).
+ *
+ * UX-overhaul §3 (Ф1): the cockpit's first steps into the WORKING domains —
+ * «Задачи → канбан» and «Агенты → исполнение» join the quick-links (J1
+ * walks without hunting); the honest line at the bottom names what is not
+ * live yet in one sentence (persona-review wording). The full cockpit
+ * blocks («Кто занят» / «Что ждёт меня») are Ф2 — no live tiles here yet.
  */
 export function OverviewPage() {
   const t = useT();
@@ -59,8 +66,21 @@ export function OverviewPage() {
         <p className="text-xs text-foreground-muted">{t("overview.searchHint")}</p>
       </div>
 
-      {/* Quick links — the three daily entrances of the memory domain. */}
+      {/* Quick links — the daily entrances of the memory domain (UX-overhaul
+       * §3 Ф1: Tasks → kanban and Agents → execution lead first). */}
       <nav aria-label={t("overview.quickLinks")} className="grid gap-4 sm:grid-cols-3">
+        <QuickLink
+          to="/tasks"
+          icon={<KanbanSquare className="size-5" aria-hidden="true" />}
+          label={t("nav.taskBoard")}
+          hint={t("overview.tasksHintLink")}
+        />
+        <QuickLink
+          to="/agents/execution"
+          icon={<Workflow className="size-5" aria-hidden="true" />}
+          label={t("nav.agentsExecution")}
+          hint={t("overview.agentsHintLink")}
+        />
         <QuickLink
           to="/memory/search"
           icon={<Search className="size-5" aria-hidden="true" />}
@@ -167,6 +187,12 @@ export function OverviewPage() {
           )}
         </section>
       ) : null}
+
+      {/* UX-overhaul §3/§8 (Ф1): the honesty line — one sentence naming the
+       * not-yet-live surfaces (persona-review wording: «Хранилища и Метрики
+       * ещё в работе»). Ф2 folds the removed nav domains into the same
+       * line; the sentence stays single. */}
+      <HonestLine>{t("overview.honestyLater")}</HonestLine>
 
       {/* Session-aware mode line (fix/login-feedback) — same derivation as
        * the sidebar footer: states the live contract instead of the static
