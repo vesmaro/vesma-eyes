@@ -673,9 +673,11 @@ button.chip:hover {
 .wait-row .wait-title {
   color: var(--color-text-primary);
   min-width: 0;
+  /* полный заголовок; обрезка только с 3-й строки (u-a #3) */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .wait-row .btn {
   flex: none;
@@ -1127,6 +1129,11 @@ button.chip:hover {
   letter-spacing: var(--tracking-caps);
   color: var(--color-warning);
   text-transform: uppercase;
+}
+/* причина падения поручения: вторая строка под «не вышло» (u-a #9) */
+.fail-note {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
 }
 .unverified {
   font-family: var(--font-mono);
@@ -2755,6 +2762,14 @@ button.chip:hover {
   margin: 0;
   font-size: var(--text-data);
   color: var(--color-text-primary);
+}
+/* подсказка «список переехал» при первом развороте дока (u-a #7): 6 с, один раз */
+.side-hint {
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  border-bottom: var(--line-hairline) solid var(--myelin-hairline);
+  font-size: var(--text-sm);
+  color: var(--color-iris-bright);
 }
 .side-actions {
   display: grid;

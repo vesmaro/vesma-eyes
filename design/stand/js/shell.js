@@ -148,6 +148,26 @@
     });
   });
 
+  /* ── Sidebar counters: computed from the same fixtures that feed the screens
+   *    (u-a #13). tasks = live states only (open / in-progress / blocked);
+   *    agents = running assignments; hosts / inbox = fixture lengths. ─────── */
+  (function () {
+    var D = window.STAND;
+    if (!D) return;
+    var sideCounts = {
+      tasks: (D.tasks || []).filter(function (t) {
+        return t.state === "open" || t.state === "in-progress" || t.state === "blocked";
+      }).length,
+      agents: D.assignments ? D.assignments.active.length : 0,
+      hosts: (D.hosts || []).length,
+      inbox: (D.taskInbox || []).length,
+    };
+    doc.querySelectorAll("[data-side-count]").forEach(function (el) {
+      var v = sideCounts[el.getAttribute("data-side-count")];
+      if (typeof v === "number") el.textContent = String(v);
+    });
+  })();
+
   /* ── Topbar: search, lang, bell ─────────────────────────────────────── */
   var topInput = doc.querySelector(".topsearch input");
   if (topInput) {

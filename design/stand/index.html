@@ -30,9 +30,9 @@
     <div class="topbar-status">
       <button class="iconbtn search-expand" type="button" data-search-expand aria-label="Открыть поиск"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
       <span class="pill live" title="Живое соединение с демо-лентой стенда"><span class="dot" aria-hidden="true"></span>live</span>
-      <a class="iconbtn" href="agents.html" aria-label="Активные исполнения: 2 — открыть «Исполнение»">
+      <a class="iconbtn" href="agents.html" aria-label="Активные исполнения: 1 — открыть «Исполнение»">
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
-        <span class="badge-dot" aria-hidden="true">2</span>
+        <span class="badge-dot" aria-hidden="true">1</span>
       </a>
       <button class="iconbtn" type="button" data-bell aria-label="Уведомления: лента не подключена в стенде">
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
@@ -69,25 +69,25 @@
       <div class="side-group">
         <button type="button" class="side-link side-domain" aria-expanded="false">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v9"/></svg>
-          <span class="side-label">Задачи</span><span class="side-count">4</span>
+          <span class="side-label">Задачи</span><span class="side-count" data-side-count="tasks">5</span>
           <svg class="side-chevron icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </button>
         <div class="side-sections"><div>
           <a class="side-section" href="tasks.html">Канбан</a>
           <a class="side-section" href="tasks.html?view=list">Список</a>
-          <a class="side-section" href="tasks.html?view=inbox">Входящие</a>
+          <a class="side-section" href="tasks.html?view=inbox">Входящие<span class="side-count" data-side-count="inbox">2</span></a>
           <a class="side-section" href="tasks.html?view=archive">Архив</a>
         </div></div>
       </div>
       <div class="side-group">
         <button type="button" class="side-link side-domain" aria-expanded="false">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
-          <span class="side-label">Агенты</span><span class="side-count">2</span>
+          <span class="side-label">Агенты</span><span class="side-count" data-side-count="agents">1</span>
           <svg class="side-chevron icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </button>
         <div class="side-sections"><div>
           <a class="side-section" href="agents.html">Исполнение</a>
-          <a class="side-section" href="hosts.html">Хосты</a>
+          <a class="side-section" href="hosts.html">Хосты<span class="side-count" data-side-count="hosts">4</span></a>
           <a class="side-section" href="connect.html">Подключить</a>
         </div></div>
       </div>
@@ -183,14 +183,14 @@
 
       <section class="well-hero" aria-label="Колодец памяти: граф воспоминаний с событийными импульсами">
         <canvas class="well-canvas"></canvas>
-        <span class="well-caption" aria-hidden="true">наведите — спотлайт · клик — выбор · стрелки — обход</span>
+        <span class="well-caption" aria-hidden="true">Записи памяти и их связи. Наведите — подсветим связанное, клик — покажем запись</span>
       </section>
 
       <section class="bento" aria-label="Состояние памяти">
         <div class="bento-block">
           <h2>Здоровье хранилища</h2>
           <div id="servers"></div>
-          <p class="bento-sub">4/4 отвечают · seal-vault — деградация</p>
+          <p class="bento-sub" id="servers-sub"></p>
         </div>
         <div class="bento-block">
           <h2>Счётчики</h2>
@@ -216,7 +216,7 @@
 
       <section class="panel" style="margin-top: var(--space-4)" aria-label="Живая лента событий">
         <div class="panel-head">Живая лента <span class="count">· последние 8</span></div>
-        <div class="feed" aria-live="polite" aria-label="События памяти: recall, запись агента, ошибка"></div>
+        <div class="feed" aria-live="polite" aria-label="События памяти: поиск, запись агента, ошибка"></div>
       </section>
 
     </main>
@@ -281,9 +281,15 @@
       dot.className = "sdot";
       dot.setAttribute("aria-hidden", "true");
       row.appendChild(dot);
-      row.appendChild(document.createTextNode(s.name + (s.status === "warn" ? " — деградация" : " — ok")));
+      row.appendChild(document.createTextNode(s.name + (s.status === "warn" ? " — с оговорками" : " — жив")));
       sv.appendChild(row);
     });
+    /* сводка считается из данных, не хардкодом: «4/4 отвечают» при деградации — ложь (u-a #6) */
+    var okN = D.servers.filter(function (s) { return s.status !== "warn"; }).length;
+    var warnN = D.servers.length - okN;
+    document.getElementById("servers-sub").textContent =
+      okN + " " + (okN === 1 ? "жив" : "живы") +
+      (warnN ? " · " + warnN + " с оговорками" : " · все отвечают");
     var wl = document.getElementById("waiting");
     D.waiting.forEach(function (w) {
       var row = document.createElement("div");
@@ -295,8 +301,8 @@
       var b = document.createElement("button");
       b.className = "btn ghost sm";
       b.type = "button";
-      b.textContent = "Разобрать";
-      b.setAttribute("data-demo-action", "«Разобрать решения» — действие продуктовой версии; в стенде демо-данные");
+      b.textContent = w.cta || "Открыть";
+      b.setAttribute("data-demo-action", "«Открыть решение» — действие продуктовой версии; в стенде демо-данные");
       row.appendChild(t);
       row.appendChild(b);
       wl.appendChild(row);
