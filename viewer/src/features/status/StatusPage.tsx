@@ -1,4 +1,5 @@
 import { EmptyState } from "@/components/EmptyState/EmptyState";
+import { HonestLine } from "@/components/HonestLine/HonestLine";
 import { StatusPanel } from "@/components/StatusPanel/StatusPanel";
 import { StatGridSkeleton } from "@/components/skeletons/Skeletons";
 import { Button } from "@/components/ui/button";
@@ -12,9 +13,14 @@ import { useT } from "@/i18n";
  * metrics load through `useStatus` / `useMetrics`; each half fails and
  * retries independently.
  *
- * Board mode (owner feedback 1.4.0): the merge-API declares /metrics
- * unsupported (501) — that is an honest "not available in board mode" state,
- * not an error, so it renders the empty variant with a plain explanation.
+ * UX-overhaul §6 (Ф1, П1): the health panel renders WHENEVER health data is
+ * in hand — a working system must never look broken because a sibling view
+ * is unavailable (audit fact #3). Only `health.isError` keeps the fullscreen
+ * EmptyState (health is genuinely absent); every metrics failure degrades to
+ * ONE HonestLine under the live panel:
+ * - board-mode 501 → «Метрики появятся позже…» (neutral incompleteness);
+ * - any other metrics error → warning + Retry (live but partial).
+ * Raw adapter error text never renders open — it rides `techDetail`.
  */
 export function StatusPage() {
   const t = useT();
@@ -40,40 +46,41 @@ export function StatusPage() {
         </div>
       ) : health.isError ? (
         <EmptyState
-          variant={metrics.isError ? "error" : "offline"}
+          variant="error"
           title={t("status.unreachable")}
-          message={health.error.message}
+          message={t("status.unreachableMessage")}
+          techDetail={health.error.message}
           action={
             <Button variant="outline" onClick={() => void health.refetch()}>
               {t("common.retry")}
             </Button>
           }
         />
-      ) : metricsBoardUnavailable ? (
-        <EmptyState
-          variant="empty"
-          title={t("status.metricsBoardUnavailable")}
-          message={t("status.metricsBoardMessage")}
-          detail={metrics.error.message}
-        />
-      ) : metrics.isError ? (
-        <EmptyState
-          variant="error"
-          title={t("status.metricsBroken")}
-          message={metrics.error.message}
-          action={
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => void metrics.refetch()}>
-                {t("status.retryMetrics")}
-              </Button>
-              <Button variant="ghost" onClick={() => void health.refetch()}>
-                {t("status.refreshHealth")}
-              </Button>
-            </div>
-          }
-        />
       ) : (
-        <StatusPanel health={health.data} metrics={metrics.data} />
+        <>
+          {/* Health is in hand — the panel renders, metrics or no metrics
+           * (metrics.data is undefined on failure → health-only grid). */}
+          <StatusPanel health={health.data} metrics={metrics.data} />
+          {metricsBoardUnavailable ? (
+            <HonestLine>{t("status.metricsLater")}</HonestLine>
+          ) : metrics.isError ? (
+            <HonestLine
+              tone="warning"
+              action={
+                <>
+                  <Button variant="outline" onClick={() => void metrics.refetch()}>
+                    {t("status.retryMetrics")}
+                  </Button>
+                  <Button variant="ghost" onClick={() => void health.refetch()}>
+                    {t("status.refreshHealth")}
+                  </Button>
+                </>
+              }
+            >
+              {t("status.metricsBroken")}
+            </HonestLine>
+          ) : null}
+        </>
       )}
     </section>
   );

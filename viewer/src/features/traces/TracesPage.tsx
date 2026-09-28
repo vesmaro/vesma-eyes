@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { EmptyState } from "@/components/EmptyState/EmptyState";
+import { HonestLine } from "@/components/HonestLine/HonestLine";
 import { TraceRow } from "@/components/TraceRow/TraceRow";
 import { TableRowSkeleton } from "@/components/skeletons/Skeletons";
 import { Input } from "@/components/ui/input";
@@ -16,9 +17,10 @@ import { useT } from "@/i18n";
  * commits into the URL (debounced) — no sync effects, URL stays the source of
  * truth.
  *
- * Board mode (owner feedback 1.4.0): the merge-API declares /traces
- * unsupported (501) — that renders the honest "not available in board mode"
- * empty state, never a scary error.
+ * UX-overhaul §6 (Ф1, П1): the route stays alive for bookmarks/legacy
+ * redirects, but the board-mode 501 is ONE HonestLine («Трассировки появятся
+ * позже»), matching the nav disabled-slot — not a fullscreen dead-end. Raw
+ * adapter error text rides `techDetail`, never open copy.
  */
 const DEBOUNCE_MS = 300; // same commit budget as the search page keystrokes
 
@@ -87,17 +89,12 @@ export function TracesPage() {
           <TableRowSkeleton rows={5} columns={5} />
         </div>
       ) : boardUnsupported ? (
-        <EmptyState
-          variant="empty"
-          title={t("traces.unavailableBoard")}
-          message={t("traces.unavailableBoardMessage")}
-          detail={traces.error.message}
-        />
+        <HonestLine>{t("nav.soonTraces")}</HonestLine>
       ) : traces.isError ? (
         <EmptyState
           variant="error"
           title={t("traces.loadFailed")}
-          message={traces.error.message}
+          techDetail={traces.error.message}
           action={
             <Button variant="outline" onClick={() => void traces.refetch()}>
               {t("common.retry")}

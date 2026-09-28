@@ -1,4 +1,5 @@
 import { EmptyState } from "@/components/EmptyState/EmptyState";
+import { HonestLine } from "@/components/HonestLine/HonestLine";
 import { SessionListItem } from "@/components/SessionListItem/SessionListItem";
 import { TableRowSkeleton } from "@/components/skeletons/Skeletons";
 import { Button } from "@/components/ui/button";
@@ -8,11 +9,11 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { useT } from "@/i18n";
 
 /**
- * `/sessions` — A2A session list (component-inventory §9). Honesty note: the
- * 501 "unavailable" state is adapter-aware — mnemos 4.1 has no list endpoint,
- * and the board merge-API (the production default) declares the whole
- * mnemos-side view unsupported. Both render the explicit empty state below
- * instead of pretending or looking like a failure.
+ * `/sessions` — A2A session list (component-inventory §9). The route stays
+ * alive for bookmarks/legacy redirects, but UX-overhaul §6 (Ф1, П1) removes
+ * the fullscreen 501 dead-end: the unsupported state is ONE HonestLine
+ * («Сессии появятся позже»), matching the nav disabled-slot. Raw adapter
+ * error text rides `techDetail`, never open copy.
  */
 export function SessionsPage() {
   const t = useT();
@@ -31,25 +32,18 @@ export function SessionsPage() {
         </div>
       ) : sessions.isError ? (
         isApiError(sessions.error) && sessions.error.status === 501 ? (
-          <EmptyState
-            variant="empty"
-            title={t(
+          <HonestLine>
+            {t(
               adapterMode === "board"
-                ? "sessions.unavailableBoard"
+                ? "nav.soonSessions"
                 : "sessions.unavailableMnemos",
             )}
-            message={
-              adapterMode === "board"
-                ? t("sessions.unavailableBoardMessage")
-                : t("sessions.unavailableMnemosMessage")
-            }
-            detail={sessions.error.message}
-          />
+          </HonestLine>
         ) : (
           <EmptyState
             variant="error"
             title={t("sessions.loadFailed")}
-            message={sessions.error.message}
+            techDetail={sessions.error.message}
             action={
               <Button variant="outline" onClick={() => void sessions.refetch()}>
                 {t("common.retry")}

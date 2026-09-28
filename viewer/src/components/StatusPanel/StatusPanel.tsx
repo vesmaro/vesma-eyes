@@ -15,6 +15,12 @@ import type { HealthStatus, Metrics } from "@/gateway/types";
  * (component-inventory §7). Honesty rules: anything the mnemos 4.1 payload
  * does not carry (latency, DLQ depth) is shown as "not reported", never as a
  * fabricated zero.
+ *
+ * UX-overhaul §6 (Ф1): with `metrics` ABSENT the panel renders ONLY the
+ * health card — a grid of eight "not reported" tiles would be counter
+ * furniture (anti-dashification) next to the metrics HonestLine. Until this
+ * wave the health-only panel was never rendered (both call sites passed
+ * metrics), so the new branch changes no existing state.
  */
 export interface StatusPanelProps {
   health?: HealthStatus;
@@ -66,6 +72,22 @@ export function StatusPanel({ health, metrics }: StatusPanelProps) {
   ]);
   const version = typeof health?.version === "string" ? health.version : undefined;
   const state = healthState(health);
+
+  if (metrics === undefined) {
+    return (
+      <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="rounded-md border border-border-subtle bg-well p-6 shadow-well">
+          <dt className="text-xs text-foreground-secondary">{t("status.apiStatus")}</dt>
+          <dd className="mt-2">
+            <StatusIndicator status={state} label={t(HEALTH_STATE_KEY[state])} />
+            {version ? (
+              <span className="ml-2 text-xs text-foreground-muted">{version}</span>
+            ) : null}
+          </dd>
+        </div>
+      </dl>
+    );
+  }
 
   return (
     <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
