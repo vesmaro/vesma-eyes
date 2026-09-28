@@ -66,6 +66,13 @@ export function fenceExceedsSizeCap(code: string): boolean {
  * exact-equality counter would undercount that shape back into the P1 the
  * review flagged (ME-013 review NF1). `&#32;mermaid` (leading space) splits
  * to an empty first word on BOTH sides — inert, consistently.
+ *
+ * REVIEW CHECKLIST (residual risk, security audit round 2): the equivalence
+ * holds for the pipeline AS SHIPPED, whose untrusted remark layer is pinned
+ * to [remarkGfm]. A future remark plugin setting data.hName/hProperties on
+ * code nodes could override the className into a rendering the lang
+ * predicate cannot see — any PR adding a remark plugin to the escape-only
+ * pipeline must re-verify this counter against the new handler chain.
  */
 const FENCE_COUNTER = unified().use(remarkParse);
 
