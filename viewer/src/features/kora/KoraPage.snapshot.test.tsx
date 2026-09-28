@@ -8,6 +8,9 @@ import { KoraMockAdapter } from "./KoraMockAdapter";
 import { KoraGatewayContext } from "./koraGatewayContext";
 import { koraKeys } from "./useKora";
 import { KORA_FIXTURE_COVERAGE, KORA_FIXTURE_SESSIONS } from "./koraFixtures";
+import { MockAdapter } from "@/gateway/MockAdapter";
+import { GatewayContext } from "@/gateway/GatewayContext";
+import { keys } from "@/lib/queryKeys";
 import { I18nProvider, type Lang } from "@/i18n";
 
 /**
@@ -23,7 +26,7 @@ import { I18nProvider, type Lang } from "@/i18n";
 
 const PAGE_SIZE = 50;
 
-function renderKoraPage(lang: Lang, path = "/kora"): string {
+async function renderKoraPage(lang: Lang, path = "/kora"): Promise<string> {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -41,49 +44,73 @@ function renderKoraPage(lang: Lang, path = "/kora"): string {
     ],
     pageParams: [0],
   });
+  // The §9.3 branching reads the executor registry — prefill it so the
+  // synchronous data branch stays byte-deterministic (the MockAdapter's
+  // REAL registry page, one seed for every render below).
+  await queryClient.prefetchQuery({
+    queryKey: keys.agents.executors.list(),
+    queryFn: async () => new MockAdapter({ latency: false }).listExecutors(),
+  });
   return renderToString(
-    <KoraGatewayContext.Provider value={new KoraMockAdapter({ latency: false })}>
-      <QueryClientProvider client={queryClient}>
-        <I18nProvider initialLang={lang}>
-          <MemoryRouter initialEntries={[path]}>
-            <KoraPage />
-          </MemoryRouter>
-        </I18nProvider>
-      </QueryClientProvider>
-    </KoraGatewayContext.Provider>,
+    <GatewayContext.Provider value={new MockAdapter({ latency: false })}>
+      <KoraGatewayContext.Provider value={new KoraMockAdapter({ latency: false })}>
+        <QueryClientProvider client={queryClient}>
+          <I18nProvider initialLang={lang}>
+            <MemoryRouter initialEntries={[path]}>
+              <KoraPage />
+            </MemoryRouter>
+          </I18nProvider>
+        </QueryClientProvider>
+      </KoraGatewayContext.Provider>
+    </GatewayContext.Provider>,
   );
 }
 
 describe("Kora slice-2 list screen snapshots", () => {
-  it("pins the Russian screen (coverage + onboarding + rows)", () => {
-    const html = renderKoraPage("ru");
-    // The honest slice plate is part of the contract.
-    expect(html).toContain("Кора · срез 2");
-    expect(html).toContain("Что вижу / чего нет");
-    expect(html).toContain("Зачем Кора");
+  it("pins the Russian screen (session list first, meta folded + rows)", async () => {
+    const html = await renderKoraPage("ru");
+    // UX-overhaul §5 (Ф1, П2/П4): the registry is the FIRST screen, the
+    // demo chip says «Демо-данные» (no internal slices), the meta block
+    // (coverage/onboarding) folds below the data, the rows promise their
+    // action («Открыть →»).
+    expect(html).toContain("Демо-данные");
+    expect(html).not.toContain("Кора · срез 2");
+    expect(html).not.toContain("контракт-мок");
+    expect(html).toContain("Демо-данные");
+    expect(html).toContain("Сессии"); // the list title leads
+    // П2: the LIST comes BEFORE the folded meta block in the DOM.
+    expect(html.indexOf("Демо-данные")).toBeLessThan(
+      html.indexOf("Что такое Кора и чего в ней пока нет"),
+    );
+    expect(html.indexOf('href="/kora/exec')).toBeLessThan(
+      html.indexOf("Что такое Кора и чего в ней пока нет"),
+    );
+    expect(html).toContain("Что такое Кора и чего в ней пока нет"); // folded meta
+    expect(html).toContain("Открыть"); // the row affordance
     expect(html).toMatchSnapshot();
   });
 
-  it("pins the English screen", () => {
-    const html = renderKoraPage("en");
-    expect(html).toContain("Kora · slice 2");
+  it("pins the English screen", async () => {
+    const html = await renderKoraPage("en");
+    expect(html).toContain("Demo data");
+    expect(html).not.toContain("Kora · slice 2");
     expect(html).toMatchSnapshot();
   });
 
-  it("marks the relay row steerable and the local rows read-only", () => {
-    const html = renderKoraPage("ru");
+  it("marks the relay row steerable and the local rows read-only", async () => {
+    const html = await renderKoraPage("ru");
     expect(html).toContain("можно рулить"); // relay-origin row badge
     expect(html).toContain("реле");
     expect(html).toContain("локальная");
     expect(html).toContain("процесс мёртв"); // dead pi row, honest state
   });
 
-  it("links each row into the transcript mock route", () => {
-    const html = renderKoraPage("ru");
+  it("links each row into the transcript mock route", async () => {
+    const html = await renderKoraPage("ru");
     expect(html).toContain('href="/kora/exec-zcode-main%3Asess_7f3a91"');
   });
 
-  it("shows the full-page load-more button only when a page is full", () => {
+  it("shows the full-page load-more button only when a page is full", async () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -104,16 +131,22 @@ describe("Kora slice-2 list screen snapshots", () => {
       ],
       pageParams: [0],
     });
+    await queryClient.prefetchQuery({
+      queryKey: keys.agents.executors.list(),
+      queryFn: () => Promise.resolve(new MockAdapter({ latency: false }).listExecutors()),
+    });
     const html = renderToString(
-      <KoraGatewayContext.Provider value={new KoraMockAdapter({ latency: false })}>
-        <QueryClientProvider client={queryClient}>
-          <I18nProvider initialLang="ru">
-            <MemoryRouter initialEntries={["/kora"]}>
-              <KoraPage />
-            </MemoryRouter>
-          </I18nProvider>
-        </QueryClientProvider>
-      </KoraGatewayContext.Provider>,
+      <GatewayContext.Provider value={new MockAdapter({ latency: false })}>
+        <KoraGatewayContext.Provider value={new KoraMockAdapter({ latency: false })}>
+          <QueryClientProvider client={queryClient}>
+            <I18nProvider initialLang="ru">
+              <MemoryRouter initialEntries={["/kora"]}>
+                <KoraPage />
+              </MemoryRouter>
+            </I18nProvider>
+          </QueryClientProvider>
+        </KoraGatewayContext.Provider>
+      </GatewayContext.Provider>,
     );
     expect(html).toContain("Показать ещё");
   });
