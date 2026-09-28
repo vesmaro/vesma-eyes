@@ -50,22 +50,16 @@ describe("normalizeMermaidSvgXml", () => {
   });
 
   it("closes <br> with attributes and mixed-case forms, preserves attrs", () => {
-    expect(normalizeMermaidSvgXml("<text>a<br>b</text>")).toBe(
-      "<text>a<br/>b</text>",
-    );
+    expect(normalizeMermaidSvgXml("<text>a<br>b</text>")).toBe("<text>a<br/>b</text>");
     expect(normalizeMermaidSvgXml('<text>a<BR CLASS="x">b</text>')).toBe(
       '<text>a<br CLASS="x"/>b</text>',
     );
-    expect(normalizeMermaidSvgXml("<text>a<br/>b</text>")).toBe(
-      "<text>a<br/>b</text>",
-    );
+    expect(normalizeMermaidSvgXml("<text>a<br/>b</text>")).toBe("<text>a<br/>b</text>");
     expect(normalizeMermaidSvgXml("<text>a<br />b</text>")).toBe(
       "<text>a<br />b</text>",
     );
     // `<brx>` is NOT a br tag — untouched.
-    expect(normalizeMermaidSvgXml("<text>a<brx>b</text>")).toBe(
-      "<text>a<brx>b</text>",
-    );
+    expect(normalizeMermaidSvgXml("<text>a<brx>b</text>")).toBe("<text>a<brx>b</text>");
   });
 
   it("rewrites non-XML named entities (nbsp) to numeric references", () => {
@@ -77,8 +71,7 @@ describe("normalizeMermaidSvgXml", () => {
   });
 
   it("NEVER touches the five XML predefined entities (they carry escaping)", () => {
-    const raw =
-      "<svg><text>a&amp;b&lt;c&gt;d&quot;e&apos;f</text></svg>";
+    const raw = "<svg><text>a&amp;b&lt;c&gt;d&quot;e&apos;f</text></svg>";
     expect(normalizeMermaidSvgXml(raw)).toBe(raw);
   });
 
@@ -144,8 +137,7 @@ describe("normalizeMermaidSvgXml — smuggling vectors stay closed", () => {
     // NAMES with numerics — assert no new element/handler surface is
     // reachable: feed markup that would become dangerous IF the transform
     // could create elements; it must stay inert text.
-    const raw =
-      '<svg><text>&lt;script&gt;alert(1)&lt;/script&gt;&nbsp;</text></svg>';
+    const raw = "<svg><text>&lt;script&gt;alert(1)&lt;/script&gt;&nbsp;</text></svg>";
     const normalized = normalizeMermaidSvgXml(raw);
     expect(normalized).not.toContain("<script");
     expect(normalized.toLowerCase()).not.toContain("onerror");

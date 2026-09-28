@@ -105,7 +105,9 @@ export function MermaidDiagram({ code }: { code: string }) {
         // mermaid leaves a temp mount node behind on failure — clean it.
         if (tempId !== null) document.getElementById(`d${tempId}`)?.remove();
         if (!cancelled) {
-          console.warn(diagramWarning(error instanceof Error ? error.message : String(error)));
+          console.warn(
+            diagramWarning(error instanceof Error ? error.message : String(error)),
+          );
           setStatus("error");
         }
       }
@@ -131,10 +133,7 @@ export function MermaidDiagram({ code }: { code: string }) {
       aria-busy={status !== "ok"}
     >
       {status === "error" ? (
-        <p
-          role="status"
-          className="mb-3 text-sm text-foreground-secondary"
-        >
+        <p role="status" className="mb-3 text-sm text-foreground-secondary">
           {t("docs.mermaid.renderFailed")}
         </p>
       ) : null}

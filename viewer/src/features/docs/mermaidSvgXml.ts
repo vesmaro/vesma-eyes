@@ -55,12 +55,10 @@ const XML_PREDEFINED = new Set(["amp", "lt", "gt", "quot", "apos"]);
  * byte-for-byte; attribute values are copied verbatim.
  */
 function closeBrTags(svg: string): string {
-  return svg.replace(
-    /<br((?:\s[^<>]*?)?)>/gi,
-    (match, attrs: string | undefined) =>
-      attrs !== undefined && attrs.trimEnd().endsWith("/")
-        ? match
-        : `<br${attrs ?? ""}/>`,
+  return svg.replace(/<br((?:\s[^<>]*?)?)>/gi, (match, attrs: string | undefined) =>
+    attrs !== undefined && attrs.trimEnd().endsWith("/")
+      ? match
+      : `<br${attrs ?? ""}/>`,
   );
 }
 
@@ -70,14 +68,12 @@ function closeBrTags(svg: string): string {
  * strict parser keeps rejecting them (fail-closed).
  */
 function rewriteNamedEntities(svg: string): string {
-  return svg.replace(
-    /&([a-zA-Z][a-zA-Z0-9]*);/g,
-    (match, name: string) =>
-      XML_PREDEFINED.has(name)
-        ? match
-        : (NAMED_ENTITY_CODEPOINTS[name] !== undefined
-          ? `&#${NAMED_ENTITY_CODEPOINTS[name]};`
-          : match),
+  return svg.replace(/&([a-zA-Z][a-zA-Z0-9]*);/g, (match, name: string) =>
+    XML_PREDEFINED.has(name)
+      ? match
+      : NAMED_ENTITY_CODEPOINTS[name] !== undefined
+        ? `&#${NAMED_ENTITY_CODEPOINTS[name]};`
+        : match,
   );
 }
 
