@@ -1,9 +1,14 @@
 # mnemos-eyes — Design System Spec
 
-> Status: **Accepted** (P0.1 deliverable).
+> Status: **v2 «Живая кора»** (И0 token wave merged 2026-09-29, АРХКОМ
+> 2026-09-28 verdict). Values below are the v2 canon; the full token spec
+> (inventory, neuro layer, contrast pairs, v1→v2 delta table) lives in
+> [design/02-TOKENS.md](design/02-TOKENS.md).
 > Owner: `@GCW: Senior Frontend Developer`.
-> Lore grounding: [design-brief.md](design-brief.md).
-> Implementation: tokens live in `src/styles/tokens.css` (authored in Phase 1).
+> Lore grounding: [design-brief.md](design-brief.md), [design/01-CHARTER.md](design/01-CHARTER.md).
+> Implementation: tokens live in `viewer/src/styles/tokens.css` and
+> `web/styles/tokens.css` (kept in parity per ADR 0006; enforced by
+> `tokens.test.ts`).
 
 ---
 
@@ -26,83 +31,117 @@ pairing semantically meaningful rather than decorative.
 
 ## 2. Color tokens
 
-### Dark theme (default — "obsidian well")
+### v2 delta (И0 — 2026-09-29)
+
+The v1 values evolved (legal per ADR 0006 §8 — names stay frozen, values
+recomputed to WCAG 2.2 AA): surfaces moved from the blue-violet bias to
+**charcoal**; `--color-iris-bright` `#22b5c4` → `#4fc2ce` (~9:1 on base);
+statuses recomputed (`success` live-anchor, `warning`/`error` research
+anchors, `info` = bright iris — the v1 value failed AA on `elevated`);
+`--duration-iris` 3000 ms → 5000 ms (4–6 s ambient window). The complete
+delta table with rationale: [design/02-TOKENS.md](design/02-TOKENS.md) §5.
+On top of the frozen names the **neuro layer** adds names only:
+`--color-well-canvas`, `--color-focus` + focus-ring geometry, myelin
+hairlines, `--strata-*` washes, `--synapse-*` pulse palette, `--glow-*`
+ladder, the 11/13/15/17 px micro type scale, `--ease-enter/--ease-exit`
+and `--duration-impulse`. No component consumes the neuro layer yet —
+that is what waves И1+ are for.
+
+### Dark theme (default — "phosphor well")
 
 ```css
 /* src/styles/tokens.css — dark theme (default) */
 :root {
-  /* ── Backgrounds / surfaces ──────────────────────────────────── */
-  --color-bg-base:        #0d0f14;  /* deepest void — page background */
-  --color-bg-well:        #111520;  /* well surface — cards, panels */
-  --color-bg-elevated:    #1a1f2e;  /* elevated surface — popovers, dropdowns */
-  --color-bg-overlay:     #22283a;  /* modal / sheet backdrop tint */
+  /* ── Strata ladder (charcoal; never #000) ───────────────────── */
+  --color-well-canvas:    #090b0f;  /* NEW v2 — graph/hero canvas floor */
+  --color-bg-base:        #0d0f14;  /* page background */
+  --color-bg-well:        #12161d;  /* cards, panels, sidebar */
+  --color-bg-elevated:    #161b23;  /* popovers, drawers, inputs */
+  --color-bg-overlay:     #1c222c;  /* modal sheets + backdrop tint */
+  --color-scroll-bg:      #151a22;  /* memory scroll "parchment" */
+  --color-scroll-border:  #242931;
 
-  /* ── Iris accent (teal / cyan — depth) ──────────────────────── */
-  --color-iris-dim:       #0e4a52;  /* muted iris — inactive states */
-  --color-iris:           #1a8a96;  /* primary iris accent */
-  --color-iris-bright:    #22b5c4;  /* focused / hover iris */
-  --color-iris-glow:      #22b5c440; /* iris halo / ambient glow (40% opacity) */
+  /* ── Iris accent (teal — depth) ──────────────────────────────── */
+  --color-iris-dim:       #0e4a52;  /* inactive iris states */
+  --color-iris:           #1a8a96;  /* brand anchor, solid fills */
+  --color-iris-bright:    #4fc2ce;  /* interactive text accent, ~9:1 on base */
+  --color-iris-glow:      #4fc2ce40;/* halo; layer opacity ≤0.35 */
+  --color-iris-solid:     #1a8a96;  /* fill under inverse text 4.7:1 */
+  --color-iris-solid-hover: #4fc2ce;/* fill hover, inverse text 9.1:1 */
 
   /* ── Confidence accent (amber / gold — warmth, value) ────────── */
   --color-confidence:     #c9933a;  /* high-confidence memory highlight */
   --color-confidence-dim: #7a5520;  /* muted confidence */
 
-  /* ── Semantic status ─────────────────────────────────────────── */
-  --color-success:        #2a8a5c;
-  --color-warning:        #b8852a;
-  --color-error:          #a83232;
-  --color-info:           #1a8a96;  /* same as iris — informational = curious */
+  /* ── Semantic status (never color-only) ──────────────────────── */
+  --color-success:        #3fbf7f;  /* live */
+  --color-warning:        #d9a03f;
+  --color-error:          #e0655c;
+  --color-info:           #4fc2ce;  /* informational = bright iris */
 
   /* ── Text ────────────────────────────────────────────────────── */
-  --color-text-primary:   #e8eaf2;  /* main reading text */
-  --color-text-secondary: #8a90a8;  /* labels, captions, timestamps */
-  --color-text-muted:     #4a5068;  /* disabled, placeholder */
+  --color-text-primary:   #e6edf3;  /* main reading text */
+  --color-text-secondary: #9aa7b4;  /* labels, captions, timestamps */
+  --color-text-muted:     #7c8894;  /* worst-case 4.8:1 on elevated */
   --color-text-inverse:   #0d0f14;  /* text on light surfaces */
 
   /* ── Border / separator ──────────────────────────────────────── */
-  --color-border-subtle:  #1e2438;
-  --color-border:         #2a3050;
-  --color-border-iris:    #1a8a9640; /* iris-tinted focus ring */
+  --color-border-subtle:  #1c232e;  /* decorative separators only */
+  --color-border:         #5e687e;  /* functional edge, ≥3:1 (1.4.11) */
+  --color-border-iris:    #4fc2ce40;/* iris hover edge tint */
 
-  /* ── Scroll / memory content surface ────────────────────────── */
-  --color-scroll-bg:      #161b28;  /* the "parchment" of a memory scroll */
-  --color-scroll-border:  #1e2438;
+  /* ── Neuro layer (new names — see design/02-TOKENS.md §2) ────── */
+  --color-focus: #4fc2ce;  --focus-ring-width: 2px;  --focus-ring-offset: 2px;
+  --myelin-hairline: rgb(230 237 243 / 0.07);  --myelin-strong: rgb(230 237 243 / 0.14);
+  --strata-memory: rgb(79 194 206 / 0.05);     --strata-tasks: rgb(122 138 158 / 0.05);
+  --strata-agents: rgb(201 147 58 / 0.05);     --strata-docs: rgb(186 176 158 / 0.05);
+  --strata-system: rgb(122 138 158 / 0.035);
+  --synapse-idle: rgb(122 138 158 / 0.35);     --synapse-recall: #4fc2ce;
+  --synapse-write: #c9933a;                    --synapse-error: #e0655c;
+  --glow-iris: 0 0 24px rgb(79 194 206 / 0.35); --glow-gold: 0 0 24px rgb(201 147 58 / 0.30);
+  --glow-live: 0 0 16px rgb(63 191 127 / 0.30); --glow-error: 0 0 16px rgb(224 101 92 / 0.30);
 }
 ```
 
-### Light theme
+### Light theme («береста» — defined in И0, ACTIVATED in И5)
 
 ```css
 [data-theme="light"] {
+  --color-well-canvas:    #e6eaed;
   --color-bg-base:        #f5f6f8;
   --color-bg-well:        #ffffff;
   --color-bg-elevated:    #eff1f5;
   --color-bg-overlay:     #e4e7ef;
+  --color-scroll-bg:      #fafbfc;
+  --color-scroll-border:  #dee1ea;
 
   --color-iris-dim:       #9dd4db;
   --color-iris:           #1a8a96;
-  --color-iris-bright:    #136e79;
+  --color-iris-bright:    #136e79;  /* "bright" flips darker in light — AA text */
   --color-iris-glow:      #1a8a9620;
+  --color-iris-solid:     #136e79;  /* inverse text 7.5:1 */
+  --color-iris-solid-hover: #0f5f6a;/* inverse text 8.6:1 */
 
-  --color-confidence:     #b07a28;
+  --color-confidence:     #8a5a17;  /* 5.9:1 on white */
   --color-confidence-dim: #e8c98a;
 
   --color-success:        #1d6e48;
-  --color-warning:        #946018;
+  --color-warning:        #8a5a17;
   --color-error:          #8a2020;
-  --color-info:           #1a8a96;
+  --color-info:           #136e79;
 
   --color-text-primary:   #1a1e2e;
   --color-text-secondary: #4a5268;
-  --color-text-muted:     #9298b0;
+  --color-text-muted:     #636a80;  /* 4.8:1 on elevated */
   --color-text-inverse:   #f5f6f8;
 
   --color-border-subtle:  #dee1ea;
-  --color-border:         #c8ccd8;
-  --color-border-iris:    #1a8a9640;
+  --color-border:         #6a7488;  /* 4.7:1 on white */
+  --color-border-iris:    #1a8a9633;
 
-  --color-scroll-bg:      #fafbfc;
-  --color-scroll-border:  #dee1ea;
+  /* Neuro layer — light values: dark myelin, dark strata tints of the
+     same hues, glow alpha ×~0.7 (light surfaces scatter less). */
+  --color-focus: #0f5f6a;
 }
 ```
 
@@ -140,6 +179,14 @@ pairing semantically meaningful rather than decorative.
   --weight-regular: 400;
   --weight-medium:  500;
   --weight-semibold:600;
+
+  /* ── Neuro micro scale (v2 — instrument density) ─────────────── */
+  --text-caps: 0.6875rem;   /* 11px caps labels (+ --tracking-caps) */
+  --text-data: 0.8125rem;   /* 13px dense operational data */
+  --text-ui:   0.9375rem;   /* 15px base UI */
+  --text-body: 1.0625rem;   /* 17px comfortable lists/cards */
+  --tracking-caps: 0.04em;
+  --numeric-tnum: tabular-nums;  /* all numbers: ids, counters, timers */
 }
 ```
 
@@ -210,12 +257,16 @@ In light mode, shadow opacity values halve (applied via CSS custom property over
   --duration-fast:      150ms;
   --duration-normal:    250ms;
   --duration-slow:      400ms;
-  --duration-iris:      3000ms; /* breathing cycle */
+  --duration-stagger:   40ms;   /* per-item step (max 8 in chain) */
+  --duration-impulse:   240ms;  /* v2 — synapse pulse lifetime */
+  --duration-iris:      5000ms; /* v2 — breathing cycle, 4–6s window (was 3s) */
 
   /* ── Easing ──────────────────────────────────────────────────── */
   --ease-in-out:  cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out:     cubic-bezier(0, 0, 0.2, 1);
-  --ease-spring:  cubic-bezier(0.34, 1.56, 0.64, 1); /* micro-interactions */
+  --ease-enter:   cubic-bezier(0.16, 1, 0.3, 1); /* v2 — entries */
+  --ease-exit:    cubic-bezier(0.4, 0, 1, 1);    /* v2 — exits */
+  --ease-spring:  cubic-bezier(0.34, 1.56, 0.64, 1); /* drag/reorder only */
   --ease-breath:  cubic-bezier(0.45, 0.05, 0.55, 0.95); /* slow iris breathing */
 }
 
@@ -226,15 +277,20 @@ In light mode, shadow opacity values halve (applied via CSS custom property over
     --duration-slow:   0ms;
     --duration-normal: 0ms;
     --duration-fast:   80ms; /* keep instant micro-feedback */
+    --duration-impulse: 0ms; /* pulses → static tint */
   }
 }
 ```
+
+The forced user regime `vesmaro.motion="reduced"` mirrors the OS media
+query declaration-for-declaration via `[data-motion="reduced"]` (applied by
+`lib/motionStore.ts`). Full motion canon: [design/06-MOTION.md](design/06-MOTION.md).
 
 ### Motion budget
 
 | Animation | Token | Notes |
 | --- | --- | --- |
-| Breathing iris (idle) | `--duration-iris` 3 s | Single `@keyframes breathe` on `IrisLogo`. Disabled at `prefers-reduced-motion`. |
+| Breathing iris (idle) | `--duration-iris` 5 s | Single `@keyframes breathe` on `IrisLogo`. Disabled at `prefers-reduced-motion`. v2: 3 s → 5 s (4–6 s ambient window; the T4 pupil keeps its own 4.8 s derived cycle). |
 | Result card surface | `--duration-slow` 400 ms | `opacity 0→1` + `translateY 8px→0`. Staggered per-item (max 5 items). |
 | Search pupil focus | `--duration-normal` 250 ms | Border-color + shadow expand on focus. |
 | Tab / route transition | `--duration-fast` 150 ms | `opacity` only — no layout shift. |

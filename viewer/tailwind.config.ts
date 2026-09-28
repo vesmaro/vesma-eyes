@@ -50,6 +50,35 @@ export default {
         border: "var(--color-border)",
         "border-subtle": "var(--color-border-subtle)",
         "border-iris": "var(--color-border-iris)",
+        // Neuro layer (И0, docs/design/02-TOKENS.md §2) — additive mappings;
+        // no component consumes them yet (И1+ does), so the generated CSS
+        // is unchanged until the utilities appear in markup.
+        canvas: "var(--color-well-canvas)",
+        focus: "var(--color-focus)",
+        myelin: {
+          hairline: "var(--myelin-hairline)",
+          strong: "var(--myelin-strong)",
+        },
+        synapse: {
+          idle: "var(--synapse-idle)",
+          recall: "var(--synapse-recall)",
+          write: "var(--synapse-write)",
+          error: "var(--synapse-error)",
+        },
+      },
+      // Neuro strata washes (canvas/hero surfaces only — never on text cards).
+      backgroundImage: {
+        "strata-memory": "var(--strata-memory)",
+        "strata-tasks": "var(--strata-tasks)",
+        "strata-agents": "var(--strata-agents)",
+        "strata-docs": "var(--strata-docs)",
+        "strata-system": "var(--strata-system)",
+      },
+      // Neuro glow ladder (activity = light; ≤2 sources per viewport).
+      borderWidth: {
+        hairline: "var(--line-hairline)",
+        myelin: "var(--line-myelin)",
+        focus: "var(--focus-ring-width)",
       },
       fontFamily: {
         ui: "var(--font-ui)",
@@ -73,6 +102,14 @@ export default {
         lg: "var(--text-lg)",
         xl: "var(--text-xl)",
         "2xl": "var(--text-2xl)",
+        // Neuro micro scale (И0): caps labels, dense data, shell UI, body.
+        caps: "var(--text-caps)",
+        data: "var(--text-data)",
+        ui: "var(--text-ui)",
+        body: "var(--text-body)",
+      },
+      letterSpacing: {
+        caps: "var(--tracking-caps)",
       },
       borderRadius: {
         sm: "var(--radius-sm)",
@@ -87,6 +124,11 @@ export default {
         float: "var(--shadow-float)",
         modal: "var(--shadow-modal)",
         iris: "var(--shadow-iris)",
+        // Neuro glow ladder (activity = light; ≤2 sources per viewport).
+        "glow-iris": "var(--glow-iris)",
+        "glow-gold": "var(--glow-gold)",
+        "glow-live": "var(--glow-live)",
+        "glow-error": "var(--glow-error)",
       },
       transitionDuration: {
         instant: "var(--duration-instant)",
@@ -94,12 +136,17 @@ export default {
         normal: "var(--duration-normal)",
         slow: "var(--duration-slow)",
         iris: "var(--duration-iris)",
+        // Neuro: synapse pulse lifetime (reduced-motion zeroes it in CSS).
+        impulse: "var(--duration-impulse)",
       },
       transitionTimingFunction: {
         "in-out": "var(--ease-in-out)",
         out: "var(--ease-out)",
         spring: "var(--ease-spring)",
         breath: "var(--ease-breath)",
+        // Neuro pair: whatever enters with `enter` leaves with `exit`.
+        enter: "var(--ease-enter)",
+        exit: "var(--ease-exit)",
       },
     },
   },
