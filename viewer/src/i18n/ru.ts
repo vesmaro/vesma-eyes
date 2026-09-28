@@ -111,8 +111,10 @@ export const ru = {
   // и говорит одной строкой, что ещё не живо (персона-ревью: формулировка).
   "overview.tasksHintLink": "канбан · список · входящие",
   "overview.agentsHintLink": "исполнение · подключение",
+  // Review P3-4: Sessions/Traces left the nav in Ф1 — the line tells the
+  // owner where they live (they are reachable, just later).
   "overview.honestyLater":
-    "Хранилища и метрики ещё в работе — появятся позже",
+    "Хранилища и метрики — в работе; сессии и трассировки появятся позже",
   "overview.storesTitle": "Хранилища",
   "overview.storesLoading": "Загружаем состояние хранилищ",
   "overview.storesError": "Состояние хранилищ недоступно: {{message}}",
@@ -831,8 +833,8 @@ export const ru = {
     "Исполнение — доска-нативный домен (ADR 0011); переключитесь в режим board или mock.",
   "agents.strip.label": "Исполнители",
   "agents.strip.empty": "Нет подключённых исполнителей",
-  "agents.strip.emptyHint":
-    "Запустите поллер — см. «Как подключить агента» в разделе Подключение.",
+  "agents.strip.emptyHint": "Исполнители появятся, когда агент подключится",
+  "agents.strip.emptyAction": "Подключить агента",
   "agents.strip.transportLocal": "локальный",
   "agents.strip.transportMesh": "через mesh",
   "agents.strip.lastSeen": "последняя связь",
@@ -1682,9 +1684,6 @@ export const ru = {
   "kora.list.loadFailed": "Не удалось загрузить список сессий",
   "kora.list.inactiveTitle": "Сессия не активна",
   "kora.list.inactiveHint": "Войдите — и сессии хостов появятся здесь",
-  "kora.list.empty": "Сессий пока нет",
-  "kora.list.emptyMessage":
-    "Подключите исполнителя — его сессии появятся сами: реестр производный, отдельных церемоний регистрации нет.",
   // UX-overhaul §5/§9.3 (Ф1): честное пустое — ветвление по числу исполнителей.
   // Вариант A (исполнителей 0) — призыв подключить; вариант B (исполнители
   // есть, сканер ещё не приносил сессии) — без обещания «появятся сами».

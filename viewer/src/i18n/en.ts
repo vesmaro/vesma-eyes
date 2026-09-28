@@ -98,8 +98,10 @@ export const en: Record<TranslationKey, string> = {
   // states what is not live yet in one honest line.
   "overview.tasksHintLink": "kanban · list · inbox",
   "overview.agentsHintLink": "execution · connect",
+  // Review P3-4: Sessions/Traces left the nav in Ф1 — the line tells the
+  // owner where they live (they are reachable, just later).
   "overview.honestyLater":
-    "Stores and metrics are still in the works — coming later",
+    "Stores and metrics are in the works; sessions and traces are coming later",
   "overview.storesTitle": "Stores",
   "overview.storesLoading": "Loading store health",
   "overview.storesError": "Store health unavailable: {{message}}",
@@ -811,8 +813,8 @@ export const en: Record<TranslationKey, string> = {
     "Execution is a board-native domain (ADR 0011); switch to board or mock mode.",
   "agents.strip.label": "Executors",
   "agents.strip.empty": "No executors connected",
-  "agents.strip.emptyHint":
-    "Start the poller — see “How to connect an agent” under Connect.",
+  "agents.strip.emptyHint": "Executors appear when an agent connects",
+  "agents.strip.emptyAction": "Connect an agent",
   "agents.strip.transportLocal": "local",
   "agents.strip.transportMesh": "via mesh",
   "agents.strip.lastSeen": "last seen",
@@ -1649,9 +1651,6 @@ export const en: Record<TranslationKey, string> = {
   "kora.list.loadFailed": "Failed to load the session list",
   "kora.list.inactiveTitle": "Session not active",
   "kora.list.inactiveHint": "Sign in — host sessions will appear here",
-  "kora.list.empty": "No sessions yet",
-  "kora.list.emptyMessage":
-    "Connect an executor — its sessions appear on their own: the registry is derived, no registration ceremonies.",
   // UX-overhaul §5/§9.3 (Ф1): honest empty, branched by the executor count.
   "kora.list.emptyNoExecutors": "Connect an agent — its sessions will appear here",
   "kora.list.emptyNoSessions":

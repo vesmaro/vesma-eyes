@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router";
 import { useT } from "@/i18n";
 import type { AssignmentItem, ExecutorItem, ExecutorListMeta } from "@/gateway/boardTypes";
 import {
@@ -88,13 +89,22 @@ export function ExecutorStrip({
   if (executors.length === 0) {
     return (
       <div
-        className="flex min-h-16 items-center gap-3 rounded-md border border-dashed border-border-subtle px-3 text-sm"
+        className="flex min-h-16 flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-dashed border-border-subtle px-3 text-sm"
         aria-label={t("agents.strip.label")}
       >
         <span className="text-foreground-secondary">{t("agents.strip.empty")}</span>
+        {/* UX-overhaul §8 (review P3-1): owner copy + the connect CTA —
+         * operator instructions (poller/pip) live in the Connect guide,
+         * not in the strip's empty line. */}
         <span className="text-xs text-foreground-muted">
           {t("agents.strip.emptyHint")}
         </span>
+        <Link
+          to="/agents/harnesses"
+          className="ml-auto inline-flex min-h-6 shrink-0 items-center text-xs font-medium text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+        >
+          {t("agents.strip.emptyAction")}
+        </Link>
       </div>
     );
   }
