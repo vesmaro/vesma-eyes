@@ -169,8 +169,12 @@
         <b>4 · Чистый вход</b>
         <span>стереть все vesmaro.kora* и версию. Ждём: без тоста, версия 2 записана молча</span>
       </button>
+      <button class="seed-btn" type="button" data-seed="owner">
+        <b>6 · Засеять сессию владельца (abyss) → index.html</b>
+        <span>пишет vesmaro.authSession (вход владельцем) для инструментальных прогонов и ведёт на index.html; ?to=имя.html ведёт на другую страницу стенда. Ключи vesmaro.kora* не трогает</span>
+      </button>
       <button class="seed-btn" type="button" data-seed="crash">
-        <b>6 · Самопроверка экрана ошибки</b>
+        <b>7 · Самопроверка экрана ошибки</b>
         <span>флаг vesmaro.koraSelfTest — init падает намеренно (07l §10). Ждём: экран «Не удалось отрисовать журнал», «Сбросить вид» чинит</span>
       </button>
     </div>
@@ -183,7 +187,7 @@
     <h2 id="seed-checklist">Чек-лист приёмки P0 (07l §5.4) — на каждом сценарии</h2>
     <ol class="seed-check">
       <li>(а) центр не пуст: рабочая зона отрисована или показан экран ошибки с действиями;</li>
-      <li>(б) тост «Настройки вида Коры обновлены» показан ровно один раз и не возвращается при следующем входе (на сценарии 4 — не показан вовсе);</li>
+      <li>(б) тост «Вид Коры сброшен после обновления» показан ровно один раз и не возвращается при следующем входе (на сценарии 4 — не показан вовсе);</li>
       <li>(в) после сценариев 1–3 ключи vesmaro.koraDock и старая схема не возвращаются, в storage — версия 2;</li>
       <li>(г) «Сбросить вид» на экране ошибки чистит только vesmaro.kora* — vesmaro.authSession выживает, вход не слетает;</li>
       <li>(д) переход «Агенты → Исполнение → Кора» больше не меняет состояние Коры — симптом владельца устранён.</li>
@@ -226,7 +230,29 @@
       try { sessionStorage.setItem("vesmaro.koraSelfTest", "1"); }
       catch (e) { /* сессия недоступна — сценарий неосуществим, сообщим */ window.alert("sessionStorage недоступен: сценарий самопроверки нельзя засеять"); }
     },
+    /* сценарий 6 — auth-seed для инструментальных прогонов: headless-профиль
+     * чист, без этой кнопки «авторизованные» скриншоты снимают гейты анонима.
+     * Пишет ровно тот же контракт, что auth.js (07k §5.1): модель сессии
+     * vesmaro.authSession + handoff-тост; vesmaro.kora* не трогает. */
+    owner: function () {
+      localStorage.setItem("vesmaro.authSession", JSON.stringify({
+        user: "abyss",
+        role: "owner",
+        since: new Date().toISOString(),
+      }));
+      try { sessionStorage.setItem("stand-auth-handoff", "Вы вошли: abyss"); }
+      catch (e) { /* тост не переживёт redirect — сессия всё равно записана */ }
+    },
   };
+  /* цель сценария 6: ?to=имя.html — только относительные страницы стенда,
+   * тот же белый список, что у return в auth.js (07k §9) */
+  function seedTarget() {
+    try {
+      var t = new URLSearchParams(window.location.search).get("to") || "";
+      if (/^[A-Za-z0-9._~-]+\.html(\?.*)?$/.test(t)) return t;
+    } catch (e) { /* file:// без URLSearchParams — дефолт ниже */ }
+    return "index.html";
+  }
   function wipeKora() {
     var killed = [];
     [window.localStorage, window.sessionStorage].forEach(function (st) {
@@ -248,7 +274,7 @@
       window.alert("Сценарий не записан: хранилище недоступно (" + e.message + ")");
       return;
     }
-    window.location.href = "kora.html";
+    window.location.href = name === "owner" ? seedTarget() : "kora.html";
   }
   document.querySelectorAll("[data-seed]").forEach(function (b) {
     b.addEventListener("click", function () { run(b.dataset.seed); });

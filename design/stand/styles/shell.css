@@ -328,6 +328,10 @@
 
 /* Sidebar footer */
 .side-foot {
+  /* v7-раунд: футер сайдбара не сжимается — иначе на низких вьюпортах он
+   * отъедает высоту у .side-nav и последний пункт («Подключить телефон»)
+   * уезжает за обрез прокрутки, «пропадая» в рендерах */
+  flex: none;
   border-top: var(--line-hairline) solid var(--myelin-hairline);
   padding: var(--space-2);
   display: flex;

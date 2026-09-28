@@ -158,6 +158,9 @@
   <div class="main">
 
     <nav class="crumbs" aria-label="Хлебные крошки">
+      <!-- v7-раунд: индикатор и здесь, и в шапке каркаса — у анонима вместо
+           каркаса гейт (крошки видны), у авторизованного крошки прячет каркас;
+           shell.js переключает все .gprefix, виден ровно один -->
       <span class="gprefix" aria-hidden="true">g→</span>
       <ol>
         <li><a href="index.html">Обзор</a></li>
@@ -181,6 +184,9 @@
             <span class="kc-sep" aria-hidden="true">/</span>
           </nav>
           <h1 id="kora-title" tabindex="-1" title="Кора — журнал сессий: что агенты делали и что говорили. Записи только для чтения">Кора · сессии хостов</h1>
+          <!-- v7-раунд: индикатор g-префикса здесь, а не в крошках шелла —
+               каркас крошки прячет (см. .main:has(.kora-page) .crumbs) -->
+          <span class="gprefix" aria-hidden="true">g→</span>
           <!-- сводка считается из фикстур рантаймом (07j §2.2.3): число в разметке = баг.
                Спрятанные при сужении числа остаются в tooltip сводки (07l §1.3). -->
           <p class="kora-summary" id="kora-summary"></p>
@@ -230,11 +236,16 @@
             <div class="empty-state" id="wz-noreports" hidden></div>
           </div>
 
-          <!-- выбрана сессия: транскрипт-свиток (07j §3.1 Б, канон 07d §3) -->
+          <!-- выбрана сессия: транскрипт-свиток (07j §3.1 Б, канон 07d §3).
+               v7-раунд (плотность): «Покрытие этой сессии» слито в шапку после
+               статуса (caps-мелким, высота шапки не растёт), честная строка
+               «Управлять сессией» сворачиваемая и свёрнута по умолчанию —
+               свиток получает высоту. -->
           <div class="wz-session" id="wz-session" hidden>
             <div class="wz-head">
               <h2 id="wz-title" tabindex="-1"></h2>
               <span id="wz-state"></span>
+              <span class="wz-cov" id="wz-cov"></span>
             </div>
             <div class="wz-tools">
               <button class="wz-tool" type="button" id="wz-follow" aria-pressed="true">
@@ -247,7 +258,6 @@
               </div>
               <span class="wz-count" id="wz-count" role="status"></span>
             </div>
-            <p class="wz-cov" id="wz-cov"></p>
             <div class="wz-scrollwrap">
               <div class="wz-scroll" id="wz-scroll" role="log" aria-label="Транскрипт сессии" aria-live="off" tabindex="0"></div>
               <button class="wz-tail" type="button" id="wz-tail" hidden>
@@ -255,7 +265,15 @@
                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
               </button>
             </div>
-            <p class="wz-honest">Управлять сессией отсюда пока нельзя — только читать. Это в планах</p>
+            <div class="collapse-block wz-honest-block" id="wz-honest-block">
+              <button class="cb-toggle" type="button" id="wz-honest-toggle" aria-expanded="false" aria-controls="wz-honest-body">
+                <svg class="chev icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                Управлять сессией…
+              </button>
+              <div class="cb-body" id="wz-honest-body" hidden>
+                <p class="wz-honest">Управлять сессией отсюда пока нельзя — только читать. Это в планах</p>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -283,7 +301,9 @@
                 <button class="chip" type="button" id="qf-running" aria-pressed="false">идущие</button>
                 <button class="chip" type="button" id="qf-day" aria-pressed="false">за 24 ч</button>
               </div>
-              <div class="collapse-block about-block">
+              <!-- v7-раунд: блок виден только когда сессия выбрана — без
+                   «Выберите сессию…»-мебели (скрытие в fillAbout) -->
+              <div class="collapse-block about-block" id="about-block">
                 <button class="cb-toggle" type="button" id="about-toggle" aria-expanded="false" aria-controls="about-body">
                   <svg class="chev icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
                   О сессии
@@ -384,8 +404,9 @@
           <tr><td><kbd class="kbd">Ctrl</kbd> <kbd class="kbd">K</kbd></td><td>палитра команд</td></tr>
           <tr><td><kbd class="kbd">?</kbd></td><td>эта шпаргалка</td></tr>
           <tr><td><kbd class="kbd">g</kbd> → <kbd class="kbd">o</kbd> / <kbd class="kbd">m</kbd> / <kbd class="kbd">a</kbd> / <kbd class="kbd">k</kbd> / <kbd class="kbd">d</kbd> / <kbd class="kbd">w</kbd></td><td>Обзор / Память / Агенты / Кора / Документы / Рабочий стол</td></tr>
-          <tr><td><kbd class="kbd">g</kbd> → <kbd class="kbd">t</kbd> / <kbd class="kbd">b</kbd> / <kbd class="kbd">i</kbd> / <kbd class="kbd">p</kbd> / <kbd class="kbd">e</kbd> / <kbd class="kbd">s</kbd></td><td>Задачи / Канбан / Входящие · Пульс — тост (вне стенда) / Исполнение / Проводник</td></tr>
-          <tr><td><kbd class="kbd">j</kbd> / <kbd class="kbd">k</kbd></td><td>вниз / вверх по списку (в продуктовой версии)</td></tr>
+          <tr><td><kbd class="kbd">g</kbd> → <kbd class="kbd">t</kbd> / <kbd class="kbd">b</kbd> / <kbd class="kbd">i</kbd> / <kbd class="kbd">p</kbd> / <kbd class="kbd">e</kbd> / <kbd class="kbd">s</kbd></td><td>Задачи / Канбан / Входящие / Память (второй вход) / Исполнение / Проводник</td></tr>
+          <tr><td><kbd class="kbd">j</kbd> / <kbd class="kbd">k</kbd></td><td>вниз / вверх по списку сессий (Блок 2 справа)</td></tr>
+          <tr><td><kbd class="kbd">Enter</kbd></td><td>открыть выбранную сессию · следующее совпадение в поиске по сессии</td></tr>
           <tr><td><kbd class="kbd">x</kbd></td><td>выделить строку (bulk, в продукте)</td></tr>
           <tr><td><kbd class="kbd">Esc</kbd></td><td>закрыть верхний оверлей</td></tr>
           <tr><td><kbd class="kbd">[</kbd></td><td>свернуть / развернуть сайдбар</td></tr>
@@ -550,9 +571,10 @@
       catch (e) { console.warn("[kora] версия хранилища не записалась — персист недоступен, работаем без него"); }
     }
     function migrationToast() {
-      /* тост — канон 05 §3; дублируем polite-объявлением (4.1.3) */
-      if (toast) toast("Настройки вида Коры обновлены", "info");
-      announce("Настройки вида Коры обновлены");
+      /* тост — канон 05 §3; дублируем polite-объявлением (4.1.3).
+       * v7-раунд: честная формулировка — старый вид сброшен, не «обновлён» */
+      if (toast) toast("Вид Коры сброшен после обновления", "info");
+      announce("Вид Коры сброшен после обновления");
     }
     function migrateStorage() {
       var ver = NaN;
@@ -609,12 +631,15 @@
     var wzCov = doc.getElementById("wz-cov");
     var wzScroll = doc.getElementById("wz-scroll");
     var tailBtn = doc.getElementById("wz-tail");
+    var honestToggle = doc.getElementById("wz-honest-toggle");
+    var honestBody = doc.getElementById("wz-honest-body");
 
     var tree = doc.getElementById("host-tree");
     var ctxTitle = doc.getElementById("ctx-title");
     var ctxCount = doc.getElementById("ctx-count");
     var qfRunning = doc.getElementById("qf-running");
     var qfDay = doc.getElementById("qf-day");
+    var aboutBlock = doc.getElementById("about-block");
     var aboutToggle = doc.getElementById("about-toggle");
     var aboutBody = doc.getElementById("about-body");
     var ctxOpenline = doc.getElementById("ctx-openline");
@@ -664,6 +689,7 @@
     var noReports = false;
     var followOn = false;
     var query = "";
+    var matchCursor = -1;      /* позиция «следующее совпадение» (Enter в поиске) */
     var scrollHist = {};                                  /* id → {offset, follow} — память страницы */
     var pultOpen = false;
     var drawerOpen = false;
@@ -1089,11 +1115,11 @@
     }
     function fillAbout() {
       var s = findS(selectedId);
+      /* v7-раунд: «О сессии» живёт только при выбранной сессии —
+       * без приглашения-мебели в списке */
+      aboutBlock.hidden = !s;
       aboutBody.innerHTML = "";
-      if (!s) {
-        aboutBody.appendChild(el("p", "about-empty", "Выберите сессию — здесь появятся её детали"));
-        return;
-      }
+      if (!s) return;
       aboutBody.appendChild(el("p", "about-name", s.name));
       aboutBody.appendChild(el("p", "about-topic", s.topic));
       var facts = el("dl", "about-facts");
@@ -1181,10 +1207,12 @@
       wzState.innerHTML = "";
       wzState.appendChild(stateSpan(s, "head"));
       followBtn.hidden = s.state !== "live";
+      /* v7-раунд (плотность): «Покрытие этой сессии» — в шапке сессии,
+       * caps-мелким после статуса; полный текст дублируется в title */
       wzCov.innerHTML = "";
-      var caps = el("span", "cov-caps", "Покрытие этой сессии");
-      wzCov.appendChild(caps);
-      wzCov.appendChild(el("span", null, covText(s)));
+      wzCov.appendChild(el("span", "cov-caps", "Покрытие этой сессии"));
+      wzCov.appendChild(el("span", "cov-text", covText(s)));
+      wzCov.title = covText(s);
       renderTranscript(s);
       restoreScroll(s);
     }
@@ -1575,6 +1603,7 @@
       if (prev) saveScroll();
       selectedId = s.id;
       query = "";
+      matchCursor = -1;
       searchInput.value = "";
       searchCount.textContent = "";
       pultOpen = true;
@@ -1615,6 +1644,7 @@
       var prev = selectedId;
       selectedId = null;
       query = "";
+      matchCursor = -1;
       searchInput.value = "";
       searchCount.textContent = "";
       pultOpen = false;
@@ -1892,6 +1922,13 @@
         aboutBody.hidden = open;
         store.set("vesmaro.koraAbout", open ? "0" : "1");
       });
+      /* v7-раунд (плотность): «Управлять сессией…» — раскрытие без персиста,
+       * по умолчанию свёрнуто на каждом визите */
+      honestToggle.addEventListener("click", function () {
+        var open = honestToggle.getAttribute("aria-expanded") === "true";
+        honestToggle.setAttribute("aria-expanded", open ? "false" : "true");
+        honestBody.hidden = open;
+      });
       legendToggle.addEventListener("click", function () {
         var open = legendToggle.getAttribute("aria-expanded") === "true";
         legendToggle.setAttribute("aria-expanded", open ? "false" : "true");
@@ -1917,6 +1954,7 @@
         if (searchTimer) clearTimeout(searchTimer);
         searchTimer = setTimeout(guarded("поиск в сессии", wzScroll, function () {
           query = searchInput.value.trim().toLowerCase();
+          matchCursor = -1; /* новый запрос — курсор совпадений с нуля */
           var s = findS(selectedId);
           if (s) renderTranscript(s);
           if (followOn) scrollToTail();
@@ -1927,10 +1965,51 @@
           e.stopPropagation();
           searchInput.value = "";
           query = "";
+          matchCursor = -1;
           var s = findS(selectedId);
           if (s) renderTranscript(s);
           searchCount.textContent = "";
+          return;
         }
+        /* v7-раунд: Enter — следующее совпадение, циклично; счётчик
+         * (role=status) объявляет позицию — AT видит, где курсор */
+        if (e.key === "Enter") {
+          e.preventDefault();
+          var rows = wzScroll.querySelectorAll(".t-line");
+          if (!query || !rows.length) return;
+          matchCursor = (matchCursor + 1) % rows.length;
+          rows[matchCursor].scrollIntoView({
+            block: "center",
+            behavior: reduced() ? "auto" : "smooth",
+          });
+          searchCount.textContent = "Найдено: " + rows.length +
+            " · совпадение " + (matchCursor + 1) + " из " + rows.length;
+        }
+      });
+
+      /* v7-раунд: j/k — по строкам сессий Блока 2 (список справа), циклично.
+       * Enter на строке открывает сессию сама кнопка (нативно). Правила
+       * 03 §7 соблюдены: в полях ввода и открытых оверлеях j/k глушатся. */
+      function b2Rows() {
+        return Array.prototype.slice.call(ctxList.querySelectorAll(".b2-row"));
+      }
+      function b2Focus(delta) {
+        var rows = b2Rows();
+        if (!rows.length) return;
+        var i = rows.indexOf(doc.activeElement);
+        var next = i < 0
+          ? (delta > 0 ? 0 : rows.length - 1)
+          : (i + delta + rows.length) % rows.length;
+        rows[next].focus();
+        rows[next].scrollIntoView({ block: "nearest" });
+      }
+      doc.addEventListener("keydown", function (e) {
+        if (e.key !== "j" && e.key !== "k") return;
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        var t = e.target;
+        if (t && t.closest && t.closest('input, textarea, select, [contenteditable="true"]')) return;
+        if (doc.querySelector(".overlay:not([hidden])")) return; /* палитра/шпаргалка — владеет shell */
+        b2Focus(e.key === "j" ? 1 : -1);
       });
 
       /* малая высота (зум/малый вьюпорт): Пульт принудительно свёрнут,
@@ -2019,7 +2098,7 @@
        * должно быть проверено, а не описано); ключ в пространстве vesmaro.kora*,
        * поэтому «Сбросить вид» его снимает */
       if (sstore("vesmaro.koraSelfTest") === "1") {
-        throw new Error("kora: самопроверка экрана ошибки (seed-страница, сценарий 6)");
+        throw new Error("kora: самопроверка экрана ошибки (seed-страница, сценарий 7)");
       }
       applySideW(sideW);
       /* «О сессии» и легенда: персист раскрытия */

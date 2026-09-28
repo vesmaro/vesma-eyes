@@ -293,6 +293,18 @@
       lock.innerHTML = LOCK_SVG;
       row.appendChild(lock);
     });
+    /* v7-раунд: разделы внутри замкнутого домена («Хосты 4», «Входящие 2»)
+     * тоже раскрывают содержимое — у анонима цифры нет вовсе: родительский
+     * замок уже говорит «после входа», дубль замка в подrow шума даёт */
+    doc.querySelectorAll(".side-section[href]").forEach(function (a) {
+      var page = (a.getAttribute("href") || "").split("?")[0];
+      if (!GATED[page]) return;
+      var c = a.querySelector(".side-count[data-side-count]");
+      if (c) {
+        c.textContent = "";
+        c.setAttribute("data-gated", "true");
+      }
+    });
   }
   var GATE_DOMAINS = {
     "Память": "Память",
@@ -533,6 +545,16 @@
       });
     }
   }
+  /* v7-раунд: полное имя домена в подсказке — узкий сайдбар режет подпись
+   * до «Раб…», пилюля «эксп» раскрывается словами. Ставится ДО хука аутентичности:
+   * у анонима renderSidebarLocks перезапишет на «откроется после входа». */
+  doc.querySelectorAll(".side-link").forEach(function (row) {
+    var lab = row.querySelector(".side-label");
+    if (!lab || lab.textContent.trim() !== "Рабочий стол") return;
+    row.title = "Рабочий стол — экспериментальный раздел";
+    row.setAttribute("aria-label", "Рабочий стол — экспериментальный раздел");
+  });
+
   applyAuthEverywhere(readSession());
   doc.addEventListener("stand:authchange", function () {
     applyAuthEverywhere(readSession());
@@ -630,6 +652,10 @@
       inbox: (D.taskInbox || []).length,
     };
     doc.querySelectorAll("[data-side-count]").forEach(function (el) {
+      /* v7-раунд: на замок цифра не возвращается — порядок init такой, что
+       * замки (applyAuthEverywhere выше) уже стоят; анониму счётчик не пишем
+       * вовсе (07k §2.2: под замком ноль цифр) */
+      if (el.getAttribute("data-gated") === "true") return;
       var v = sideCounts[el.getAttribute("data-side-count")];
       if (typeof v === "number") el.textContent = String(v);
     });
@@ -975,17 +1001,19 @@
 
   /* ── Global hotkeys ─────────────────────────────────────────────────── */
   var gArmed = null;
-  var gIndicator = doc.querySelector(".gprefix");
+  /* v7-раунд: индикаторов может быть несколько (на Корее — в крошках для
+   * гейта анонима и в шапке каркаса); видим в каждый момент ровно один */
+  var gIndicators = Array.prototype.slice.call(doc.querySelectorAll(".gprefix"));
   var gTimer = null;
   function armG() {
     gArmed = true;
-    if (gIndicator) gIndicator.classList.add("on");
+    gIndicators.forEach(function (el) { el.classList.add("on"); });
     if (gTimer) clearTimeout(gTimer);
     gTimer = setTimeout(disarmG, 1500);
   }
   function disarmG() {
     gArmed = null;
-    if (gIndicator) gIndicator.classList.remove("on");
+    gIndicators.forEach(function (el) { el.classList.remove("on"); });
   }
   var gMap = {
     o: "index.html",
