@@ -24,9 +24,4 @@ export { themeComponents } from "./theme";
 export type { TextEngineTheme } from "./theme";
 export { isElement, languageOf, nodeText } from "./hast";
 export type { HastishNode } from "./hast";
-export {
-  LINK_CLASS,
-  MONO,
-  isAllowedHref,
-  isAllowedImageSrc,
-} from "./constants";
+export { LINK_CLASS, MONO, isAllowedHref, isAllowedImageSrc } from "./constants";

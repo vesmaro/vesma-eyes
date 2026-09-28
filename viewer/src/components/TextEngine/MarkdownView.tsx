@@ -1,11 +1,7 @@
 import { memo } from "react";
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
-import {
-  buildPipeline,
-  themeComponents,
-  type TextEngineTheme,
-} from "./core";
+import { buildPipeline, themeComponents, type TextEngineTheme } from "./core";
 
 /**
  * The markdown renderer behind TextEngine (UI-27) — ONE react-markdown +
@@ -56,7 +52,12 @@ export interface MarkdownViewProps {
  * map is rebuilt only when the variant actually changes (core/theme.tsx
  * caches one map per theme and returns it by reference).
  */
-function MarkdownViewImpl({ source, variant = "full", className, style }: MarkdownViewProps) {
+function MarkdownViewImpl({
+  source,
+  variant = "full",
+  className,
+  style,
+}: MarkdownViewProps) {
   const components = themeComponents(variant as TextEngineTheme);
   return (
     <div

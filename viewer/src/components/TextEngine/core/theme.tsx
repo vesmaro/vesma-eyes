@@ -58,22 +58,50 @@ function buildThemeComponents(theme: TextEngineTheme): Components {
 function buildCompactFullComponents(compact: boolean): Components {
   return {
     h1: ({ children }) => (
-      <h1 className={cn(compact ? "mb-1 mt-2 text-sm font-semibold" : "mb-2 mt-4 text-lg font-semibold", "text-foreground")}>
+      <h1
+        className={cn(
+          compact
+            ? "mb-1 mt-2 text-sm font-semibold"
+            : "mb-2 mt-4 text-lg font-semibold",
+          "text-foreground",
+        )}
+      >
         {children}
       </h1>
     ),
     h2: ({ children }) => (
-      <h2 className={cn(compact ? "mb-1 mt-2 text-sm font-semibold" : "mb-2 mt-4 text-md font-semibold", "text-foreground")}>
+      <h2
+        className={cn(
+          compact
+            ? "mb-1 mt-2 text-sm font-semibold"
+            : "mb-2 mt-4 text-md font-semibold",
+          "text-foreground",
+        )}
+      >
         {children}
       </h2>
     ),
     h3: ({ children }) => (
-      <h3 className={cn(compact ? "mb-1 mt-2 text-sm font-medium" : "mb-1.5 mt-3 text-base font-semibold", "text-foreground")}>
+      <h3
+        className={cn(
+          compact
+            ? "mb-1 mt-2 text-sm font-medium"
+            : "mb-1.5 mt-3 text-base font-semibold",
+          "text-foreground",
+        )}
+      >
         {children}
       </h3>
     ),
     h4: ({ children }) => (
-      <h4 className={cn(compact ? "mb-1 mt-2 text-sm font-medium" : "mb-1.5 mt-3 text-sm font-semibold", "text-foreground")}>
+      <h4
+        className={cn(
+          compact
+            ? "mb-1 mt-2 text-sm font-medium"
+            : "mb-1.5 mt-3 text-sm font-semibold",
+          "text-foreground",
+        )}
+      >
         {children}
       </h4>
     ),
@@ -81,10 +109,14 @@ function buildCompactFullComponents(compact: boolean): Components {
       <h5 className="mb-1 mt-2 text-sm font-medium text-foreground">{children}</h5>
     ),
     h6: ({ children }) => (
-      <h6 className="mb-1 mt-2 text-sm font-medium text-foreground-secondary">{children}</h6>
+      <h6 className="mb-1 mt-2 text-sm font-medium text-foreground-secondary">
+        {children}
+      </h6>
     ),
     p: ({ children }) => (
-      <p className={compact ? "my-1 leading-snug" : "my-2 leading-relaxed"}>{children}</p>
+      <p className={compact ? "my-1 leading-snug" : "my-2 leading-relaxed"}>
+        {children}
+      </p>
     ),
     ul: ({ children }) => (
       <ul className="my-2 list-disc space-y-1 pl-5 marker:text-foreground-muted">
