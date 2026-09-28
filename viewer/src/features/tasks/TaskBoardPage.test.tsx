@@ -83,9 +83,11 @@ describe("TaskBoardPage (mock adapter — 7 WF-1 columns)", () => {
       expect(html).toContain(title);
     }
     // Column counters come from the wire counts (whole-board, never filtered).
+    // (ME-013: TB-15 — the smoke's untrusted-mermaid fixture — joined
+    // in-progress, so the lane carries 4 cards.)
     expect(html).toMatch(/backlog.*>1</s);
     expect(html).toMatch(/validating.*>2</s);
-    expect(html).toMatch(/in progress.*>3</s);
+    expect(html).toMatch(/in progress.*>4</s);
   });
 
   it("renders project-group accordions inside columns with aria-expanded", async () => {

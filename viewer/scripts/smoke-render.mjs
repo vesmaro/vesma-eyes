@@ -135,10 +135,10 @@ const UNTRUSTED_MERMAID_TASK = {
   id: "TB-15",
   col: "in-progress",
   position: 2,
-  title: "ME-011 smoke: untrusted mermaid fixture on the task page",
-  summary: "Fixture for the browser render smoke (not for the board).",
+  title: "ME-013 smoke: untrusted mermaid fixture",
+  summary: "Browser render smoke fixture.",
   spec:
-    "## Diagram (untrusted surface)\n\n```mermaid\nflowchart LR\n  UNTRUSTED[fixture] --> GATE\n```\n\nThe fence above must stay an inert code block at F0.",
+    "## Diagram (untrusted surface)\n\n```mermaid\nflowchart LR\n  UNTRUSTED[fixture] --> GATE\n```",
   agents: ["zcode"],
   specialists: ["@GCW: Senior Frontend Developer"],
   env: "laptop",
@@ -146,7 +146,7 @@ const UNTRUSTED_MERMAID_TASK = {
   memory_ids: [],
   mnemos_tags: ["project:vesmaro"],
   created_at: "2026-09-19T10:00:00+00:00",
-  updated_at: "2026-09-19T10:00:00+00:00",
+  updated_at: "2026-09-28T00:00:00+00:00",
   archived: 0,
   status: "in-progress",
   priority: "normal",
@@ -355,43 +355,43 @@ async function runSmoke(page) {
   );
 
   // -- 7. UNTRUSTED mermaid: fixture through the task detail surface ------
-  // CURRENT contract (Ф0): inert code-block fallback — source visible, NO
-  // svg. THE ASSERT IS WRITTEN TO BE FLIPPED IN Ф2 (ME-013 activates the
-  // svg expectation per ADR 0020 Amendment 1): flip the two marked lines.
+  // RATIFIED contract (ADR 0020 Amendment 1, ME-013 — flipped from the Ф0
+  // honest skip/inert assert): a valid diagram in an untrusted agent/task
+  // text renders AS A DIAGRAM (svg) on the task page. The mermaid chunk is
+  // lazy — wait for the svg explicitly; caps/errors fall back to source and
+  // would fail this assert loudly (never a fake green).
   console.log("\n[7/7] untrusted-surface mermaid fence (task detail fixture)");
   await page.goto(`${base}/app/tasks/TB-15?tab=details`, {
     waitUntil: "domcontentloaded",
   });
   await page.waitForSelector("main", { timeout: 20_000 });
   await page.waitForLoadState("networkidle").catch(() => {});
-  await page.waitForTimeout(1500); // mermaid lazy chunk would need to fail LOUD
   const untrustedText = await mainText(page);
-  const untrustedSvg = await page
-    .locator("main .mermaid-diagram svg")
-    .count();
   // The details pane must actually be served (some deployments render the
   // reports pane regardless of ?tab=): otherwise there is nothing to
-  // assert here — an honest SKIP, never a fake green.
-  const detailsServed = (untrustedText ?? "").includes("UNTRUSTED[fixture]");
+  // assert here — an honest SKIP, never a fake green. The marker is the
+  // spec's PROSE heading, NOT the fence source: since the flip the source
+  // hides once the diagram renders, so keying on the fence text would race
+  // (and then always skip) — the heading is plain text, always present.
+  const detailsServed = (untrustedText ?? "").includes("Diagram (untrusted surface)");
   if (!detailsServed) {
     skip(
       "untrusted-surface mermaid asserts",
       "this deployment renders the reports pane for ?tab=details — fixture spec never mounts (surface covered in local mode)",
     );
   } else {
-    // Ф0 assert — FLIP TO `>= 1` IN Ф2 (ME-013).
+    // Amendment 1 acceptance criterion: the diagram renders on the
+    // untrusted surface (ME-013 flipped this from the Ф0 inert assert).
+    const untrustedSvgAttached = await page
+      .waitForSelector("main .mermaid-diagram svg", {
+        timeout: 25_000,
+        state: "attached",
+      })
+      .then(() => true)
+      .catch(() => false);
     assert(
-      untrustedSvg === 0,
-      "untrusted mermaid stays an INERT code block at F0 — flip to >=1 in F2 (ME-013)",
-    );
-    assert(
-      !(untrustedText ?? "").includes("<svg"),
-      "no diagram svg leaks from untrusted text at F0 — flip in F2",
-    );
-    // The fence SOURCE stays visible (honest fallback, never a silent drop).
-    assert(
-      (untrustedText ?? "").includes("UNTRUSTED[fixture]"),
-      "untrusted fence source stays visible (auditable fallback)",
+      untrustedSvgAttached,
+      "untrusted mermaid fence renders as <svg> on the task page (ADR 0020 Amendment 1)",
     );
   }
 }
