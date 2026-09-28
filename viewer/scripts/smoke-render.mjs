@@ -233,7 +233,7 @@ async function runSmoke(page) {
   const docs = `${base}${DOCS_BASE}`;
 
   // -- 1. docs hub renders -------------------------------------------------
-  console.log("\n[1/7] docs hub renders");
+  console.log("\n[1/8] docs hub renders");
   await page.goto(docs, { waitUntil: "domcontentloaded" });
   await page.waitForSelector("main", { timeout: 20_000 });
   await page.waitForLoadState("networkidle").catch(() => {});
@@ -254,7 +254,7 @@ async function runSmoke(page) {
 
   // -- 2. category page renders, NO «GENERATED» in card previews ----------
   // (post-ME-009 regression guard — banner cut lives in the excerpt path).
-  console.log("\n[2/7] category page: no GENERATED banner in card previews");
+  console.log("\n[2/8] category page: no GENERATED banner in card previews");
   await page.goto(`${docs}/vesmaro-eyes/c/getting-started`, {
     waitUntil: "domcontentloaded",
   });
@@ -271,7 +271,7 @@ async function runSmoke(page) {
   );
 
   // -- 3. article page renders (mnemos architecture overview: 2 mermaid) --
-  console.log("\n[3/7] article page renders (provenance badge, heading slugs)");
+  console.log("\n[3/8] article page renders (provenance badge, heading slugs)");
   await page.goto(`${docs}/mnemos/architecture/overview`, {
     waitUntil: "domcontentloaded",
   });
@@ -306,7 +306,7 @@ async function runSmoke(page) {
   );
 
   // -- 4. mermaid fence → <svg> in the DOM (REAL BROWSER required) --------
-  console.log("\n[4/7] mermaid fences produce <svg> in DOM (ADR-0017 debt)");
+  console.log("\n[4/8] mermaid fences produce <svg> in DOM (ADR-0017 debt)");
   try {
     await page
       .waitForSelector("main .mermaid-diagram svg", {
@@ -328,7 +328,7 @@ async function runSmoke(page) {
   }
 
   // -- 5. TextEngine surfaces: pulse page ---------------------------------
-  console.log("\n[5/7] TextEngine surface: pulse page fragments render");
+  console.log("\n[5/8] TextEngine surface: pulse page fragments render");
   await page.goto(`${base}/app/memory/pulse`, { waitUntil: "domcontentloaded" });
   await page.waitForSelector("main", { timeout: 20_000 });
   await page.waitForLoadState("networkidle").catch(() => {});
@@ -340,7 +340,7 @@ async function runSmoke(page) {
   );
 
   // -- 6. TextEngine surface: task detail page ----------------------------
-  console.log("\n[6/7] TextEngine surface: task detail page renders");
+  console.log("\n[6/8] TextEngine surface: task detail page renders");
   const taskId = process.env.__SMOKE_TASK_ID ?? "TB-1";
   await page.goto(`${base}/app/tasks/${taskId}?tab=details`, {
     waitUntil: "domcontentloaded",
@@ -360,7 +360,7 @@ async function runSmoke(page) {
   // text renders AS A DIAGRAM (svg) on the task page. The mermaid chunk is
   // lazy — wait for the svg explicitly; caps/errors fall back to source and
   // would fail this assert loudly (never a fake green).
-  console.log("\n[7/7] untrusted-surface mermaid fence (task detail fixture)");
+  console.log("\n[7/8] untrusted-surface mermaid fence (task detail fixture)");
   await page.goto(`${base}/app/tasks/TB-15?tab=details`, {
     waitUntil: "domcontentloaded",
   });
@@ -392,6 +392,32 @@ async function runSmoke(page) {
     assert(
       untrustedSvgAttached,
       "untrusted mermaid fence renders as <svg> on the task page (ADR 0020 Amendment 1)",
+    );
+  }
+
+  // -- 8. UNTRUSTED mermaid, the HONEST FALLBACK (ME-013 review P3-6) ------
+  // Board acceptance parenthetical: a hostile diagram (over-cap) falls back
+  // to its source, never a silent drop. The fixture memory carries SIX
+  // fences in one text — one over the per-surface cap — so the memory page
+  // must show EVERY fence as a plain code block: no diagram mount, no svg
+  // (scoped to the .mermaid-diagram mount — the page's own lucide chrome
+  // legitimately contains svgs), all six sources visible.
+  console.log("\n[8/8] untrusted mermaid over-cap: honest inert fallback");
+  await page.goto(`${base}/app/memory/mem-mermaid-overcap-fixture`, {
+    waitUntil: "domcontentloaded",
+  });
+  await page.waitForSelector("main", { timeout: 20_000 });
+  await page.waitForLoadState("networkidle").catch(() => {});
+  await page.waitForTimeout(1500); // a lazy diagram would need to fail LOUD
+  const overcapFigures = await page.locator("main figure").count();
+  const overcapSvgs = await page.locator("main .mermaid-diagram svg").count();
+  assert(overcapFigures === 0, `over-cap surface mounts no diagram figure (got ${overcapFigures})`);
+  assert(overcapSvgs === 0, `over-cap surface renders no diagram svg (got ${overcapSvgs})`);
+  const overcapText = await mainText(page);
+  for (let i = 1; i <= 6; i += 1) {
+    assert(
+      (overcapText ?? "").includes(`F${i}-->R${i}`),
+      `over-cap fence #${i} source stays visible (auditable fallback)`,
     );
   }
 }

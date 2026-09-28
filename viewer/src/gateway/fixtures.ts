@@ -44,6 +44,41 @@ export const MOCK_INBOX_MEMORY: Memory = {
   metadata: {},
 };
 
+/**
+ * ME-013 smoke: the per-surface fence-cap fixture (ADR 0020 Amendment 1
+ * honest-fallback acceptance). SIX mermaid fences in ONE text — one over
+ * MERMAID_UNTRUSTED_MAX_FENCES_PER_SURFACE — so the memory detail page must
+ * render EVERY fence as a plain code block (source visible, no diagram).
+ * Same delivery pattern as MOCK_INBOX_MEMORY: served ONLY by getMemory(id)
+ * — outside MOCK_MEMORIES, so no list/count/index assertion moves.
+ */
+export const MOCK_MERMAID_OVERCAP_MEMORY: Memory = {
+  id: "mem-mermaid-overcap-fixture",
+  content:
+    "Отчёт: шесть мелких диаграмм в одной памяти — над потолком фенсов на " +
+    "поверхность, все должны остаться исходным кодом.\n\n" +
+    "```mermaid\nF1-->R1\n```\n\n" +
+    "```mermaid\nF2-->R2\n```\n\n" +
+    "```mermaid\nF3-->R3\n```\n\n" +
+    "```mermaid\nF4-->R4\n```\n\n" +
+    "```mermaid\nF5-->R5\n```\n\n" +
+    "```mermaid\nF6-->R6\n```",
+  title: "Mermaid over-cap fixture (smoke)",
+  tags: ["project:vesmaro"],
+  source: "mcp",
+  memory_type: "note",
+  project: "vesmaro",
+  agent: "zcode",
+  status: "raw",
+  quality_score: null,
+  confidence: null,
+  raw_content: null,
+  created_at: "2026-09-28T00:00:00Z",
+  updated_at: "2026-09-28T00:00:00Z",
+  marker_version: 1,
+  metadata: {},
+};
+
 export const MOCK_MEMORIES: Memory[] = [
   {
     id: "mem-0001",
