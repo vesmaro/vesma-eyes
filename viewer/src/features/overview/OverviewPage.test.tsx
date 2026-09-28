@@ -75,8 +75,11 @@ describe("OverviewPage (mock gateway — capable)", () => {
     expect(html).toContain('href="/agents/execution"');
     expect(html).toContain('href="/memory/search"');
     expect(html).toContain('href="/memory/tags"');
-    // The honesty line names the not-yet-live surfaces in one sentence.
-    expect(html).toContain("Stores and metrics are still in the works");
+    // The honesty line names the not-yet-live surfaces in one sentence —
+    // including the Ф1-removed nav items (review P3-4).
+    expect(html).toContain(
+      "Stores and metrics are in the works; sessions and traces are coming later",
+    );
     // Mock adapter: control is available (no auth wall) — the ACTIVE mode
     // line, never the read-only one (fix/login-feedback).
     expect(html).toContain("session active");
