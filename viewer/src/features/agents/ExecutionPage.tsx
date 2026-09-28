@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { Search, WifiOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -54,7 +54,19 @@ export function ExecutionPage() {
   const board = useBoardTasks();
   const mutations = useAssignmentMutations();
 
-  const [executorFilter, setExecutorFilter] = useState<string | null>(null);
+  // UX-overhaul §4.3 (Ф1, review P2-1): the ExecutorSheet's «Все задачи»
+  // deep-links here as /agents/execution?executor=<id> — the param seeds
+  // the executor filter ONCE on mount (a reading init, the same contract
+  // as the task list's URL-first filters). The strip stays the filter's
+  // live UI (never a dropdown, §4.1): the seeded row renders selected and
+  // a click re-targets it as before. The filter is intentionally NOT
+  // written back to the URL — the existing list filters own URL state;
+  // this read must not turn every strip click into a history entry.
+  const [searchParams] = useSearchParams();
+  const [executorFilter, setExecutorFilter] = useState<string | null>(() => {
+    const seeded = searchParams.get("executor");
+    return seeded === null || seeded === "" ? null : seeded;
+  });
   const [stateFilter, setStateFilter] = useState<AssignmentLifecycleState | null>(null);
   const [query, setQuery] = useState("");
   const [specialistQuery, setSpecialistQuery] = useState("");
