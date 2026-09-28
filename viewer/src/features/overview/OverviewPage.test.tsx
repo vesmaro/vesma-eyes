@@ -67,10 +67,19 @@ describe("OverviewPage (mock gateway — capable)", () => {
     expect(html).toContain("mock-store");
   });
 
-  it("always offers the three quick links and the session mode line", async () => {
+  it("always offers the quick links (Tasks/Agents first) and the session mode line", async () => {
     const html = await renderOverview(new MockAdapter({ latency: false }));
+    // UX-overhaul §3 (Ф1): the cockpit leads into the working domains —
+    // «Задачи → канбан» and «Агенты → исполнение» before the memory trio.
+    expect(html).toContain('href="/tasks"');
+    expect(html).toContain('href="/agents/execution"');
     expect(html).toContain('href="/memory/search"');
     expect(html).toContain('href="/memory/tags"');
+    // The honesty line names the not-yet-live surfaces in one sentence —
+    // including the Ф1-removed nav items (review P3-4).
+    expect(html).toContain(
+      "Stores and metrics are in the works; sessions and traces are coming later",
+    );
     // Mock adapter: control is available (no auth wall) — the ACTIVE mode
     // line, never the read-only one (fix/login-feedback).
     expect(html).toContain("session active");
@@ -81,7 +90,10 @@ describe("OverviewPage (mock gateway — capable)", () => {
 describe("OverviewPage (mnemos gateway — capabilities absent)", () => {
   it("hides the store and pulse blocks instead of faking them", async () => {
     const html = await renderOverview(new HttpAdapter("/api"));
-    expect(html).not.toContain("Stores");
+    // The STORE BLOCK (section title) is hidden on incapable gateways; the
+    // honesty line still NAMES the stores domain honestly (it says the
+    // registry is still in the works — that is true on every gateway).
+    expect(html).not.toContain('id="overview-stores"');
     expect(html).not.toContain("Fresh pulse");
     expect(html).toContain('href="/memory/search"'); // quick links stay
     // The mnemos adapter has no mutation surface — the read-only mode line

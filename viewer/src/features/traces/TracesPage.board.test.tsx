@@ -52,10 +52,14 @@ describe("traces board-mode 501", () => {
         "BoardAdapter.listTraces: the board merge-API does not expose the mnemos /traces view (ADR 0011 §6).",
       ),
     );
-    expect(html).toContain("Трассировки недоступны в board-режиме");
+    // UX-overhaul §6 (Ф1, П1): the 501 is ONE HonestLine matching the nav
+    // disabled slot — the filter input stays, the dead-end screen is gone.
+    expect(html).toContain("Трассировки появятся позже");
+    expect(html).not.toContain("Трассировки недоступны в board-режиме");
     expect(html).toContain('role="status"');
     expect(html).not.toContain('role="alert"');
-    expect(html).toContain("501");
+    // П4: the raw 501 wire text is gone from open copy.
+    expect(html).not.toContain("501");
   });
 
   it("keeps the plain error state on the mnemos adapter (501 there is an anomaly)", () => {

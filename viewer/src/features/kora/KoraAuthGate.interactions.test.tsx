@@ -9,6 +9,8 @@ import { KoraPage } from "./KoraPage";
 import { KoraSessionPage } from "./KoraSessionPage";
 import type { KoraGateway } from "./koraGateway";
 import { KoraGatewayContext } from "./koraGatewayContext";
+import { MockAdapter } from "@/gateway/MockAdapter";
+import { GatewayContext } from "@/gateway/GatewayContext";
 import { ApiError } from "@/lib/errors";
 import { UiTokenContext } from "@/features/ui-token/UiTokenContext";
 import { I18nProvider } from "@/i18n";
@@ -66,8 +68,9 @@ function mountAuthGate(
   const openLogin = vi.fn();
   const render = (tokenPresent: boolean) => {
     root.render(
-      <KoraGatewayContext.Provider value={gateway}>
-        <QueryClientProvider client={client}>
+      <GatewayContext.Provider value={new MockAdapter({ latency: false })}>
+        <KoraGatewayContext.Provider value={gateway}>
+          <QueryClientProvider client={client}>
           <UiTokenContext.Provider
             value={{
               tokenPresent,
@@ -88,7 +91,8 @@ function mountAuthGate(
             </I18nProvider>
           </UiTokenContext.Provider>
         </QueryClientProvider>
-      </KoraGatewayContext.Provider>,
+        </KoraGatewayContext.Provider>
+      </GatewayContext.Provider>,
     );
   };
   act(() => {

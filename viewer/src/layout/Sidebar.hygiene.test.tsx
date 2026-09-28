@@ -39,6 +39,29 @@ function renderSidebar(path: string, collapsed: boolean, lang: "ru" | "en" = "ru
   );
 }
 
+describe("Sidebar section disabled-slots (UX-overhaul §6, Ф1)", () => {
+  it("renders Sessions/Traces as inert slots with a «later» badge — never links", () => {
+    // On the System domain page the sections render; the two dead items
+    // are disabled slots: inert spans with the "soon" badge + tooltip.
+    const html = renderSidebar("/system/status", false);
+    expect(html).toContain("Сессии появятся позже"); // tooltip promise
+    expect(html).toContain("Трассировки появятся позже");
+    expect(html).toContain("cursor-not-allowed");
+    // The slot is NOT a link — no href to the placeholder route.
+    expect(html).not.toContain('href="/system/sessions"');
+    expect(html).not.toContain('href="/system/traces"');
+    // The badge says "soon" in words (never colour-only, WCAG 1.4.1).
+    expect(html).toContain(">скоро<");
+  });
+
+  it("keeps the LIVE System sections as links next to the slots", () => {
+    const html = renderSidebar("/system/status", false);
+    expect(html).toContain('href="/system/status"');
+    expect(html).toContain('href="/system/settings"');
+    expect(html).toContain('href="/system/devices"');
+  });
+});
+
 describe("Sidebar overflow hygiene (UI-19)", () => {
   it("expanded: labels truncate, no nowrap on label spans, nav clips overflow-x", () => {
     const html = renderSidebar("/docs/c/devices", false);

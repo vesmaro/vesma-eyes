@@ -79,10 +79,16 @@ function renderStatus(adapterMode: AdapterKind): string {
 describe("status board-mode 501 (metrics)", () => {
   it("shows the honest board-mode empty state, not an error alert", () => {
     const html = renderStatus("board");
-    expect(html).toContain("Метрики недоступны в board-режиме");
+    // UX-overhaul §6 (Ф1): health renders FIRST (the live system never
+    // looks broken), the 501 degrades to one HonestLine under the panel.
+    expect(html).toContain("Состояние API");
+    expect(html).toContain("работает");
+    expect(html).toContain("Метрики появятся позже — сейчас доступен статус служб");
+    expect(html).not.toContain("Метрики недоступны в board-режиме");
     expect(html).toContain('role="status"');
     expect(html).not.toContain('role="alert"');
-    expect(html).toContain("501");
+    // П4: the raw 501 wire text is gone from open copy (techDetail only).
+    expect(html).not.toContain("501");
     // The board copy — not the mnemos "health fine, metrics broken" error.
     expect(html).not.toContain("Со здоровьем порядок, с метриками — нет");
   });

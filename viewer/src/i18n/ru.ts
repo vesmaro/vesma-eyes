@@ -23,6 +23,10 @@ export const ru = {
   "nav.soon": "скоро",
   "nav.soonAgents": "домен «Агенты» появится в Фазе 4",
   "nav.soonStores": "домен «Хранилища» появится в Фазе 4",
+  // UX-overhaul §6/§8: Сессии/Трассировки сняты с навигации в disabled-слоты —
+  // тултип слота обещает ровно «появятся позже», ничего больше.
+  "nav.soonSessions": "Сессии появятся позже",
+  "nav.soonTraces": "Трассировки появятся позже",
   // Section labels (level 2 pages).
   "nav.search": "Поиск",
   "nav.memories": "Записи",
@@ -103,6 +107,14 @@ export const ru = {
   "overview.searchHintLink": "FTS · смысловой · гибрид",
   "overview.recordsHintLink": "список и свитки-детали",
   "overview.tagsHintLink": "инспектор и дриллдаун",
+  // UX-overhaul §3/§8 (Ф1): Обзор ведёт в рабочие домены (Задачи/Агенты)
+  // и говорит одной строкой, что ещё не живо (персона-ревью: формулировка).
+  "overview.tasksHintLink": "канбан · список · входящие",
+  "overview.agentsHintLink": "исполнение · подключение",
+  // Review P3-4: Sessions/Traces left the nav in Ф1 — the line tells the
+  // owner where they live (they are reachable, just later).
+  "overview.honestyLater":
+    "Хранилища и метрики — в работе; сессии и трассировки появятся позже",
   "overview.storesTitle": "Хранилища",
   "overview.storesLoading": "Загружаем состояние хранилищ",
   "overview.storesError": "Состояние хранилищ недоступно: {{message}}",
@@ -292,9 +304,12 @@ export const ru = {
   "status.avgQuality": "Средний балл качества",
   "status.generated": "Метрики собраны",
   "status.notReported": "не сообщается",
-  "status.metricsBoardUnavailable": "Метрики недоступны в board-режиме",
-  "status.metricsBoardMessage":
-    "Merge-API борды не отдаёт mnemos-вид /metrics (501) — board-native замена планируется в Ф1.",
+  // UX-overhaul §6/§8 (Ф1): health показывается всегда, метрики — одна честная
+  // строка (HonestLine) вместо полноэкранного EmptyState; «Борд» больше не
+  // первичный текст статуса — владелец знает сервис как «сервер приложения».
+  "status.metricsLater": "Метрики появятся позже — сейчас доступен статус служб",
+  "status.unreachableMessage":
+    "Не удалось получить состояние служб — сервер приложения не отвечает.",
   "status.healthOk": "работает",
   "status.healthDegraded": "деградация",
   "status.healthError": "ошибка",
@@ -308,9 +323,6 @@ export const ru = {
   "sessions.unavailableMnemos": "Список сессий недоступен в mnemos 4.1",
   "sessions.unavailableMnemosMessage":
     "У mnemos нет эндпоинта списка сессий — только POST /v1/sessions (создать) и GET /v1/sessions/{id}. Открывайте сессию по id, когда он известен.",
-  "sessions.unavailableBoard": "Сессии недоступны в board-режиме",
-  "sessions.unavailableBoardMessage":
-    "Merge-API борды не отдаёт mnemos-вид /v1/sessions (501) — board-native замена планируется в Ф1.",
   "sessions.empty": "Сессий A2A пока нет",
   "sessions.emptyMessage":
     "Сессии появятся, когда агенты начнут говорить через mnemos.",
@@ -702,9 +714,6 @@ export const ru = {
   "traces.filterPlaceholder": "напр. l1-t2-gateway",
   "traces.loading": "Загружаем трассировки",
   "traces.loadFailed": "Не удалось загрузить трассировки",
-  "traces.unavailableBoard": "Трассировки недоступны в board-режиме",
-  "traces.unavailableBoardMessage":
-    "Merge-API борды не отдаёт mnemos-вид /traces (501) — board-native замена планируется в Ф1.",
   "traces.empty": "Трассировок нет",
   "traces.emptyFiltered": "Нет трассировок с меткой «{{label}}».",
   "traces.emptyPlain": "Конвейер ещё не записал ни одной трассировки.",
@@ -824,10 +833,10 @@ export const ru = {
     "Исполнение — доска-нативный домен (ADR 0011); переключитесь в режим board или mock.",
   "agents.strip.label": "Исполнители",
   "agents.strip.empty": "Нет подключённых исполнителей",
-  "agents.strip.emptyHint":
-    "Запустите поллер: deploy/poller/README.md — pip install httpx pyyaml, конфиг ~/.config/mnemos-eyes/poller.yaml, systemd unit vesmaro-assignment-poller",
-  "agents.strip.transportLocal": "local",
-  "agents.strip.transportMesh": "mesh",
+  "agents.strip.emptyHint": "Исполнители появятся, когда агент подключится",
+  "agents.strip.emptyAction": "Подключить агента",
+  "agents.strip.transportLocal": "локальный",
+  "agents.strip.transportMesh": "через mesh",
   "agents.strip.lastSeen": "последняя связь",
   "agents.strip.error": "Не удалось загрузить реестр исполнителей",
   "agents.presence.online": "онлайн",
@@ -894,8 +903,6 @@ export const ru = {
   "agents.registry.title": "Подключение агентов",
   "agents.registry.loading": "Загружаем реестр исполнителей",
   "agents.registry.failed": "Не удалось загрузить реестр исполнителей",
-  "agents.registry.empty":
-    "Исполнителей пока нет — подключите первого по инструкции ниже.",
   "agents.registry.band.pending": "Ожидают подтверждения",
   "agents.registry.band.active": "Подключённые",
   "agents.registry.band.revoked": "Отозванные",
@@ -982,8 +989,11 @@ export const ru = {
   "agents.menu.label": "Меню исполнителя {{name}}",
   "agents.menu.copyId": "Копировать id ({{id}})",
   "agents.menu.openRegistry": "Открыть реестр",
-  // AGW-6 A: проверка связи (outbound-only честность)
-  "agents.linkcheck.trigger": "Проверить связь",
+  // AGW-6 A: проверка связи (outbound-only честность). UX-overhaul §4.4/§8 (Ф1):
+  // «связь» обещало ping, которого нет — «пульс» обещает ровно то, что
+  // происходит; хинт говорит, что именно сделает кнопка.
+  "agents.linkcheck.trigger": "Обновить пульс",
+  "agents.linkcheck.triggerHint": "Проверить, когда агент был на связи",
   "agents.linkcheck.checkForReal": "Проверить по-настоящему",
   "agents.linkcheck.verdict.never": "ещё не отвечал на опрос",
   "agents.linkcheck.verdict.online": "на связи — ответил на опрос {{age}} назад",
@@ -1018,6 +1028,14 @@ export const ru = {
   "agents.card.sectionAccess": "Доступ",
   "agents.card.sectionCaps": "Возможности (заявленные)",
   "agents.card.sectionDanger": "Опасная зона",
+  // UX-overhaul §4.3/§8 (Ф1): работа сверху — чем исполнитель занят СЕЙЧАС
+  // (первый блок карточки), пустой ответ тоже состояние, не отсутствие блока.
+  "agents.card.nowWorking": "Сейчас выполняет",
+  "agents.card.nowIdle": "Свободен — задач в работе нет",
+  "agents.card.allTasks": "Все задачи",
+  // Служебные facts-поля уходят под свёрнутое раскрытие (персона-ревью:
+  // «Служебное: харнес…» — не первичный текст карточки).
+  "agents.card.techDetails": "Технические данные",
   "agents.card.nameLabel": "Имя",
   "agents.card.copyId": "Скопировать id ({{id}})",
   "agents.card.harnessLabel": "харнес",
@@ -1123,8 +1141,12 @@ export const ru = {
   "agents.provision.authKey": "SSH-ключ",
   "agents.provision.authAlias": "Алиас из ssh-config борда",
   "agents.provision.authPassword": "Пароль",
+  // UX-overhaul §4.1 (Ф1): карточка подключения уходит под свёрнутое
+  // раскрытие (П2 — конфигурация после рабочего состояния); заголовок
+  // обещает действие, а не технологию.
+  "agents.provision.enrollTitle": "Подключить нового агента",
   "agents.provision.authPasswordNote":
-    "Вход по паролю по умолчанию ВЫКЛЮЧЕН на борде: включается флагом развёртывания provisioner.passwordAuth. Пока он не включён, сервер честно откажет (422).",
+    "Вход по паролю сейчас выключен на сервере — используйте ключ.",
   "agents.provision.authAliasNote":
     "Борд войдёт по алиасу из своего ssh-config: пользователь, ключ и порт определяет конфиг. Имя пользователя отдельным полем сервер пока не принимает — используйте алиас.",
   "agents.provision.keySecret": "Приватный ключ (вставьте целиком)",
@@ -1495,6 +1517,8 @@ export const ru = {
 
   // --- shared empty/error ----------------------------------------------------------
   "common.retry": "Повторить",
+  // UX-overhaul §7.2 (Ф1): сырой текст ошибки — только под раскрытием.
+  "common.techDetails": "Технические подробности",
 
   // --- UI-27: TextEngine (авторский текст — markdown-движок) ------------------------
   "text.showFull": "Показать полностью",
@@ -1631,10 +1655,13 @@ export const ru = {
   "pair.errGeneric": "Подключить не удалось",
 
   // --- Кора (ADR 0019 rev.2 — week-0 contract mocks) -----------------------------
+  // UX-overhaul §5/§8 (Ф1): корень = реестр сессий (П2), мета — свёрнутым
+  // блоком внизу; словарь разработчика уходит (П4).
   "kora.title": "Кора — сессии всех хостов",
-  "kora.week0Badge": "Кора · срез 2",
+  "kora.week0Badge": "Демо-данные",
   "kora.week0Note":
-    "Сессии ноут-стора: списки zcode/vscode/pi (read-only сканеры, реестр на борде) и read-only транскрипты zcode. Руление — срез 3; контракт заморожен в docs/kora/openapi.yaml.",
+    "Сейчас в Коре демо-данные: списки и транскрипты — примеры, а не живые сессии. Настоящие сессии появятся, когда сканер хостов начнёт работу.",
+  "kora.metaToggle": "Что такое Кора и чего в ней пока нет",
   "kora.coverage.title": "Что вижу / чего нет",
   "kora.coverage.support.full": "полностью",
   "kora.coverage.support.lists-only": "только списки",
@@ -1657,9 +1684,15 @@ export const ru = {
   "kora.list.loadFailed": "Не удалось загрузить список сессий",
   "kora.list.inactiveTitle": "Сессия не активна",
   "kora.list.inactiveHint": "Войдите — и сессии хостов появятся здесь",
-  "kora.list.empty": "Сессий пока нет",
-  "kora.list.emptyMessage":
-    "Подключите исполнителя — его сессии появятся сами: реестр производный, отдельных церемоний регистрации нет.",
+  // UX-overhaul §5/§9.3 (Ф1): честное пустое — ветвление по числу исполнителей.
+  // Вариант A (исполнителей 0) — призыв подключить; вариант B (исполнители
+  // есть, сканер ещё не приносил сессии) — без обещания «появятся сами».
+  "kora.list.emptyNoExecutors": "Подключите агента — его сессии появятся здесь",
+  "kora.list.emptyNoSessions":
+    "Сессии появятся, когда сканер хостов начнёт работу",
+  "kora.list.emptyAction": "Подключить агента",
+  "kora.list.emptyStatusLink": "Открыть статус системы",
+  "kora.session.open": "Открыть",
   "kora.session.age": "возраст: {{age}}",
   "kora.session.noPreview": "Нет превью последней строки",
   "kora.session.steerable": "можно рулить",
@@ -1687,13 +1720,20 @@ export const ru = {
   "kora.transcript.redacted": "маскировано",
   "kora.transcript.redactedNote":
     "Часть строки скрыта единым redaction-модулем при выдаче",
-  "kora.chat.title": "Чат (срез 3)",
+  // UX-overhaul П4 (Ф1): строки транскрипта без таймстемпа показывают
+  // нейтральную метку; курсор seq — служебная метрика, живёт в тултипе.
+  "kora.transcript.line": "строка транскрипта",
+  "kora.chat.title": "Чат",
   "kora.chat.placeholder": "Промпт в сессию…",
   "kora.chat.send": "Отправить",
   "kora.chat.confirmMode": "Confirm-режим: промпт подтверждается на хосте",
   "kora.chat.delivery.ok": "Доставлено в реле",
   "kora.chat.delivery.failed": "Не доставлено — повторите",
   "kora.chat.freshness": "Свежесть: хвост стора перечитывается, цель ≤60 с",
+  // UX-overhaul П4 (Ф1): внутренний SLA (≤60 с) уходит в тултип; видимая
+  // строка говорит только то, что важно владельцу после отправки.
+  "kora.chat.freshnessHint":
+    "После отправки ответ перечитывается из сессии автоматически",
   "kora.chat.unavailable":
     "Руление недоступно: сессия локальная. Только чтение — инвариант NO-DRIFT.",
   "kora.chat.stepUp.label": "PIN руления",

@@ -21,6 +21,9 @@ export const en: Record<TranslationKey, string> = {
   "nav.soon": "soon",
   "nav.soonAgents": "the Agents domain arrives in Phase 4",
   "nav.soonStores": "the Stores domain arrives in Phase 4",
+  // UX-overhaul §6/§8 (Ф1): Sessions/Traces leave the nav as disabled slots.
+  "nav.soonSessions": "Sessions coming later",
+  "nav.soonTraces": "Traces coming later",
   // Section labels (level 2 pages).
   "nav.search": "Search",
   "nav.memories": "Records",
@@ -91,6 +94,14 @@ export const en: Record<TranslationKey, string> = {
   "overview.searchHintLink": "FTS · semantic · hybrid",
   "overview.recordsHintLink": "list and detail scrolls",
   "overview.tagsHintLink": "inspector and drilldown",
+  // UX-overhaul §3/§8 (Ф1): the overview leads into the working domains and
+  // states what is not live yet in one honest line.
+  "overview.tasksHintLink": "kanban · list · inbox",
+  "overview.agentsHintLink": "execution · connect",
+  // Review P3-4: Sessions/Traces left the nav in Ф1 — the line tells the
+  // owner where they live (they are reachable, just later).
+  "overview.honestyLater":
+    "Stores and metrics are in the works; sessions and traces are coming later",
   "overview.storesTitle": "Stores",
   "overview.storesLoading": "Loading store health",
   "overview.storesError": "Store health unavailable: {{message}}",
@@ -280,9 +291,11 @@ export const en: Record<TranslationKey, string> = {
   "status.avgQuality": "Avg quality score",
   "status.generated": "Metrics generated",
   "status.notReported": "not reported",
-  "status.metricsBoardUnavailable": "Metrics are not available in board mode",
-  "status.metricsBoardMessage":
-    "The board merge-API does not expose the mnemos /metrics view (501) — a board-native replacement lands in Ф1.",
+  // UX-overhaul §6/§8 (Ф1): health always renders; metrics degrade to one
+  // honest HonestLine instead of a fullscreen empty state.
+  "status.metricsLater": "Metrics will come later — service status is available",
+  "status.unreachableMessage":
+    "Could not load the service status — the application server is not responding.",
   "status.healthOk": "ok",
   "status.healthDegraded": "degraded",
   "status.healthError": "error",
@@ -296,9 +309,6 @@ export const en: Record<TranslationKey, string> = {
   "sessions.unavailableMnemos": "Session list is unavailable in mnemos 4.1",
   "sessions.unavailableMnemosMessage":
     "mnemos exposes no session-list endpoint — only POST /v1/sessions (create) and GET /v1/sessions/{id}. Open a session by id once you know it.",
-  "sessions.unavailableBoard": "Sessions are not available in board mode",
-  "sessions.unavailableBoardMessage":
-    "The board merge-API does not expose the mnemos /v1/sessions view (501) — a board-native replacement lands in Ф1.",
   "sessions.empty": "No A2A sessions yet",
   "sessions.emptyMessage": "Sessions appear once agents talk through mnemos.",
   "sessions.noId": "No session id in route",
@@ -682,9 +692,6 @@ export const en: Record<TranslationKey, string> = {
   "traces.filterPlaceholder": "e.g. l1-t2-gateway",
   "traces.loading": "Loading traces",
   "traces.loadFailed": "Could not load traces",
-  "traces.unavailableBoard": "Traces are not available in board mode",
-  "traces.unavailableBoardMessage":
-    "The board merge-API does not expose the mnemos /traces view (501) — a board-native replacement lands in Ф1.",
   "traces.empty": "No traces found",
   "traces.emptyFiltered": "No pipeline traces carry the label “{{label}}”.",
   "traces.emptyPlain": "The pipeline has not recorded any traces yet.",
@@ -806,10 +813,10 @@ export const en: Record<TranslationKey, string> = {
     "Execution is a board-native domain (ADR 0011); switch to board or mock mode.",
   "agents.strip.label": "Executors",
   "agents.strip.empty": "No executors connected",
-  "agents.strip.emptyHint":
-    "Start the poller: deploy/poller/README.md — pip install httpx pyyaml, config ~/.config/mnemos-eyes/poller.yaml, systemd unit vesmaro-assignment-poller",
+  "agents.strip.emptyHint": "Executors appear when an agent connects",
+  "agents.strip.emptyAction": "Connect an agent",
   "agents.strip.transportLocal": "local",
-  "agents.strip.transportMesh": "mesh",
+  "agents.strip.transportMesh": "via mesh",
   "agents.strip.lastSeen": "last seen",
   "agents.strip.error": "Failed to load the executor registry",
   "agents.presence.online": "online",
@@ -876,8 +883,6 @@ export const en: Record<TranslationKey, string> = {
   "agents.registry.title": "Agent connections",
   "agents.registry.loading": "Loading the executor registry",
   "agents.registry.failed": "Failed to load the executor registry",
-  "agents.registry.empty":
-    "No executors yet — connect the first one with the guide below.",
   "agents.registry.band.pending": "Awaiting approval",
   "agents.registry.band.active": "Connected",
   "agents.registry.band.revoked": "Revoked",
@@ -962,7 +967,10 @@ export const en: Record<TranslationKey, string> = {
   "agents.menu.copyId": "Copy id ({{id}})",
   "agents.menu.openRegistry": "Open registry",
   // AGW-6 A: link check (outbound-only honesty)
-  "agents.linkcheck.trigger": "Check connection",
+  // UX-overhaul §4.4/§8 (Ф1): «link» promised a ping that never happens —
+  // «pulse» promises exactly what the button does; the hint names the effect.
+  "agents.linkcheck.trigger": "Refresh pulse",
+  "agents.linkcheck.triggerHint": "Check when the agent last reported in",
   "agents.linkcheck.checkForReal": "Check for real",
   "agents.linkcheck.verdict.never": "has never answered a poll",
   "agents.linkcheck.verdict.online": "online — answered a poll {{age}} ago",
@@ -997,6 +1005,12 @@ export const en: Record<TranslationKey, string> = {
   "agents.card.sectionAccess": "Access",
   "agents.card.sectionCaps": "Capabilities (declared)",
   "agents.card.sectionDanger": "Danger zone",
+  // UX-overhaul §4.3/§8 (Ф1): work first — what the executor is doing NOW.
+  "agents.card.nowWorking": "Working on now",
+  "agents.card.nowIdle": "Idle — nothing in progress",
+  "agents.card.allTasks": "All tasks",
+  // Service facts collapse under a disclosure (persona-review feedback).
+  "agents.card.techDetails": "Technical data",
   "agents.card.nameLabel": "Name",
   "agents.card.copyId": "Copy id ({{id}})",
   "agents.card.harnessLabel": "harness",
@@ -1100,8 +1114,12 @@ export const en: Record<TranslationKey, string> = {
   "agents.provision.authKey": "SSH key",
   "agents.provision.authAlias": "Alias from the board's ssh-config",
   "agents.provision.authPassword": "Password",
+  // UX-overhaul §4.1 (Ф1): the connect card folds under a disclosure
+  // (П2 — configuration after the working state); the title names the
+  // outcome, not the technology.
+  "agents.provision.enrollTitle": "Connect a new agent",
   "agents.provision.authPasswordNote":
-    "Password auth is OFF by default on the board: it needs the provisioner.passwordAuth deployment flag. Until it is on, the server honestly refuses (422).",
+    "Password sign-in is currently off on the server — use a key instead.",
   "agents.provision.authAliasNote":
     "The board connects via an alias from its own ssh-config: user, key and port come from the config. A separate username field is not accepted by the server yet — use an alias.",
   "agents.provision.keySecret": "Private key (paste in full)",
@@ -1468,6 +1486,8 @@ export const en: Record<TranslationKey, string> = {
 
   // --- shared empty/error ----------------------------------------------------------
   "common.retry": "Retry",
+  // UX-overhaul §7.2 (Ф1): raw error text lives only under a disclosure.
+  "common.techDetails": "Technical details",
 
   // --- UI-27: TextEngine (author text — markdown engine) ----------------------------
   "text.showFull": "Show full text",
@@ -1605,9 +1625,10 @@ export const en: Record<TranslationKey, string> = {
 
   // --- Kora (ADR 0019 rev.2 — week-0 contract mocks) -----------------------------
   "kora.title": "Kora — sessions across all hosts",
-  "kora.week0Badge": "Kora · slice 2",
+  "kora.week0Badge": "Demo data",
   "kora.week0Note":
-    "Laptop-store sessions: zcode/vscode/pi lists (read-only scanners, registry on the board) plus read-only zcode transcripts. Steering arrives with slice 3; the contract stays frozen in docs/kora/openapi.yaml.",
+    "Kora currently shows demo data: the lists and transcripts are samples, not live sessions. Real sessions will appear once the host scanner starts.",
+  "kora.metaToggle": "About Kora — and what it cannot see yet",
   "kora.coverage.title": "What I see / what I don't",
   "kora.coverage.support.full": "full",
   "kora.coverage.support.lists-only": "lists only",
@@ -1630,9 +1651,13 @@ export const en: Record<TranslationKey, string> = {
   "kora.list.loadFailed": "Failed to load the session list",
   "kora.list.inactiveTitle": "Session not active",
   "kora.list.inactiveHint": "Sign in — host sessions will appear here",
-  "kora.list.empty": "No sessions yet",
-  "kora.list.emptyMessage":
-    "Connect an executor — its sessions appear on their own: the registry is derived, no registration ceremonies.",
+  // UX-overhaul §5/§9.3 (Ф1): honest empty, branched by the executor count.
+  "kora.list.emptyNoExecutors": "Connect an agent — its sessions will appear here",
+  "kora.list.emptyNoSessions":
+    "Sessions will appear once the host scanner starts",
+  "kora.list.emptyAction": "Connect an agent",
+  "kora.list.emptyStatusLink": "Open system status",
+  "kora.session.open": "Open",
   "kora.session.age": "age: {{age}}",
   "kora.session.noPreview": "No last-line preview",
   "kora.session.steerable": "steerable",
@@ -1660,13 +1685,20 @@ export const en: Record<TranslationKey, string> = {
   "kora.transcript.redacted": "redacted",
   "kora.transcript.redactedNote":
     "Part of the line was masked by the single redaction module on serving",
-  "kora.chat.title": "Chat (slice 3)",
+  // UX-overhaul П4 (Ф1): timestamp-less transcript lines get a neutral
+  // label; the seq cursor is an internal metric — it lives in the tooltip.
+  "kora.transcript.line": "transcript line",
+  "kora.chat.title": "Chat",
   "kora.chat.placeholder": "Prompt into the session…",
   "kora.chat.send": "Send",
   "kora.chat.confirmMode": "Confirm-mode: the prompt is confirmed on the host",
   "kora.chat.delivery.ok": "Delivered to the relay",
   "kora.chat.delivery.failed": "Not delivered — please retry",
   "kora.chat.freshness": "Freshness: the store tail is re-read, target ≤60s",
+  // UX-overhaul П4 (Ф1): the internal SLA (≤60s) moves to the tooltip; the
+  // visible line says only what matters to the owner after a send.
+  "kora.chat.freshnessHint":
+    "After a send, the answer is re-read from the session automatically",
   "kora.chat.unavailable":
     "Steering unavailable: local session. Read-only — the NO-DRIFT invariant.",
   "kora.chat.stepUp.label": "Steering PIN",

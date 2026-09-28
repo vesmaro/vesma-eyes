@@ -63,9 +63,13 @@ async function mountPage(
   // wait for the skeleton to resolve into bands or the honest empty state.
   await actWaitUntil(() => {
     const text = container.textContent ?? "";
-    expect(text.includes("Awaiting approval") || text.includes("No executors connected")).toBe(
-      true,
-    );
+    // UX-overhaul §4.1 (Ф1): a NON-empty registry resolves into bands; an
+    // EMPTY one resolves into the connect guide (the one legal meta-first
+    // case — the empty domain's answer).
+    expect(
+      text.includes("Awaiting approval") ||
+        text.includes("How to connect an external agent"),
+    ).toBe(true);
   });
   return { root, container, gateway };
 }
@@ -243,16 +247,17 @@ describe("Registry management (gated write path)", () => {
 });
 
 describe("Empty registry and the connect guide", () => {
-  it("empty registry: honest empty state + the guide below it", async () => {
+  it("empty registry: the guide IS the first screen (UX-overhaul §4.1)", async () => {
     const { root, container } = await mountPage(true);
-    expect(container.textContent).toContain("No executors connected");
-    expect(container.textContent).toContain("connect the first one");
+    // The guide leads; the old "No executors connected" empty plate is gone.
+    expect(container.textContent).toContain("How to connect an external agent");
+    expect(container.textContent).not.toContain("No executors connected");
     // No bands render for an empty registry (no zero furniture).
     expect(band(container, "Awaiting approval")).toBeNull();
     await actUnmount(root);
   });
 
-  it("the connect guide is always available; it expands into 5 steps", async () => {
+  it("a non-empty registry keeps the guide at the bottom; it expands into 5 steps", async () => {
     const { root, container } = await mountPage();
     expect(container.textContent).not.toContain("poller.example.yaml");
     const toggle = [...container.querySelectorAll<HTMLButtonElement>("button")].find(
@@ -284,7 +289,7 @@ describe("AGW-6 link check + settings card", () => {
       );
     });
     const item = [...row.querySelectorAll<HTMLButtonElement>("[role='menuitem']")].find(
-      (button) => button.textContent?.includes("Check connection"),
+      (button) => button.textContent?.includes("Refresh pulse"),
     );
     expect(item).toBeDefined();
     await act(async () => {
@@ -312,7 +317,7 @@ describe("AGW-6 link check + settings card", () => {
       );
     });
     const items = [...row.querySelectorAll<HTMLButtonElement>("[role='menuitem']")];
-    expect(items.some((button) => button.textContent?.includes("Check connection"))).toBe(false);
+    expect(items.some((button) => button.textContent?.includes("Refresh pulse"))).toBe(false);
     const card = items.find((button) => button.textContent?.includes("Settings card"));
     expect(card).toBeDefined();
     await act(async () => {
@@ -334,6 +339,14 @@ describe("AGW-6 link check + settings card", () => {
     );
     await actWaitUntil(() => {
       expect(document.body.textContent).toContain("Executor card");
+    });
+    // UX-overhaul §4.3 (Ф1): the harness WHY-note moved under the folded
+    // «Technical data» disclosure — open it and pin the honest refusal.
+    const techToggle = [...document.querySelectorAll<HTMLButtonElement>("button")].find(
+      (button) => button.textContent?.includes("Technical data"),
+    )!;
+    await act(async () => {
+      techToggle.click();
     });
     expect(document.body.textContent).toContain("silently desync the board from poller.yaml");
     // The scroll-into-view hash (#executor-<id>) must NOT open the card.

@@ -48,6 +48,13 @@ export interface NavSection {
    * The Sidebar renders the matching counter component; undefined = none.
    */
   counter?: NavCounterId;
+  /**
+   * UX-overhaul §6/§9.4 (Ф1): honest disabled slot for not-yet-shipped
+   * SECTIONS — the section-level twin of the domain `soonKey`. The route
+   * itself stays alive (bookmarks/legacy redirects keep working); the
+   * sidebar row becomes a disabled button with a "soon" badge.
+   */
+  soonKey?: TranslationKey;
 }
 
 export interface NavDomain {
@@ -173,8 +180,24 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
       // Устройства (CV-7, ADR 0012 Consequences): the paired-device list
       // + QR pairing, in the Система domain per the IA design concept.
       { to: "/system/devices", key: "nav.devices", icon: Smartphone, end: true },
-      { to: "/system/sessions", key: "nav.sessions", icon: Users },
-      { to: "/system/traces", key: "nav.traces", icon: Layers, end: true },
+      // UX-overhaul §6 (Ф1): Sessions/Traces are dead MENU items — they
+      // promised a live surface and delivered a 501 screen (audit #2, J8).
+      // They stay as honest disabled slots (soonKey); the ROUTES survive
+      // untouched (legacyRedirects + bookmarks keep working, the pages
+      // render an HonestLine placeholder instead of a fullscreen dead-end).
+      {
+        to: "/system/sessions",
+        key: "nav.sessions",
+        icon: Users,
+        soonKey: "nav.soonSessions",
+      },
+      {
+        to: "/system/traces",
+        key: "nav.traces",
+        icon: Layers,
+        end: true,
+        soonKey: "nav.soonTraces",
+      },
     ],
   },
 ];

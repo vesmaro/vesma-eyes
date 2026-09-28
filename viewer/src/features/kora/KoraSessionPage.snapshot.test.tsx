@@ -69,19 +69,30 @@ describe("Kora slice-2/3 session screen snapshots", () => {
 
   it("pins the relay session with the chat panel (step-up PIN + send)", () => {
     const html = renderKoraSessionPage(RELAY);
-    expect(html).toContain("Чат (срез 3)");
+    expect(html).toContain("Чат");
     expect(html).toContain("PIN руления");
     expect(html).toContain("Включить руление");
     expect(html).toContain("Промпт в сессию");
     expect(html).not.toContain("Чужая сессия — только чтение");
+    // П4: the visible chat note is the OWNER line; the internal ≤60 s SLA
+    // stays in the TOOLTIP (the title attribute), never the visible copy.
+    expect(html).toContain("После отправки ответ перечитывается из сессии автоматически");
+    expect(html).toContain('title="Свежесть: хвост стора');
+    expect(html).not.toMatch(/>[^<]*хвост стора/);
     expect(html).toMatchSnapshot();
   });
 
   it("renders the redaction mark on the masked transcript entry", () => {
     const html = renderKoraSessionPage(RELAY);
     expect(html).toContain("маскировано");
-    // JSX separates text nodes with <!-- --> — match around it.
-    expect(html).toMatch(/seq\s*<!-- -->3/);
+    // UX-overhaul П4 (Ф1): the seq cursor is an internal metric — it rides
+    // the timestamp line's TOOLTIP now, never the visible copy. JSX
+    // separates text nodes with <!-- --> — match around it.
+    // The tooltip carries the cursor: title="seq 3" (renderToString may
+    // keep a JSX comment between the text and the number).
+    expect(html).toMatch(/title="seq[^"]*3"/);
+    // The visible copy never shows the raw cursor.
+    expect(html).not.toMatch(/>seq\s*<!-- -->3</);
   });
 
   it("shows the honest not-found state for an unknown session", () => {

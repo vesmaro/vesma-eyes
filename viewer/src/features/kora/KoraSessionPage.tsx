@@ -170,7 +170,16 @@ function ChatPanel({ sessionId }: { sessionId: string }) {
               : t("kora.chat.delivery.failed")}
           </p>
         ) : null}
-        <p className="text-xs text-foreground-muted">{t("kora.chat.freshness")}</p>
+        {/* UX-overhaul П4 (Ф1): the store-tail freshness target (≤60 s) is
+         * an internal SLA, not owner copy — the tooltip keeps it available
+         * on demand, the visible line says only what it means for the
+         * owner: the answer re-reads the session after a send. */}
+        <p
+          className="text-xs text-foreground-muted"
+          title={t("kora.chat.freshness")}
+        >
+          {t("kora.chat.freshnessHint")}
+        </p>
       </CardContent>
     </Card>
   );
@@ -326,8 +335,14 @@ export function KoraSessionPage() {
                     <div className="min-w-0">
                       <p className="whitespace-pre-wrap break-words">{item.content}</p>
                       <p className="mt-0.5 flex flex-wrap gap-2 text-xs text-foreground-muted">
-                        <span className="font-mono">seq {item.seq}</span>
-                        {item.ts ? <span>{item.ts}</span> : null}
+                        {/* UX-overhaul П4 (Ф1): the seq cursor is an internal
+                         * store metric — it moves to the timestamp line's
+                         * tooltip, out of the owner's primary reading. */}
+                        {item.ts ? (
+                          <span title={`seq ${item.seq}`}>{item.ts}</span>
+                        ) : (
+                          <span title={`seq ${item.seq}`}>{t("kora.transcript.line")}</span>
+                        )}
                         {item.redaction_applied ? (
                           <span title={t("kora.transcript.redactedNote")}>
                             {t("kora.transcript.redacted")}

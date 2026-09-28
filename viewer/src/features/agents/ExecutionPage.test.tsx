@@ -120,6 +120,7 @@ function assignmentsPage(items: AssignmentItem[]) {
 
 async function mountPage(
   assignments: AssignmentItem[],
+  path = "/agents/execution",
 ): Promise<{ root: Root; container: HTMLElement; gateway: MockAdapter }> {
   const gateway = new MockAdapter({ latency: false });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -139,7 +140,7 @@ async function mountPage(
           <ToastProvider>
             <UiTokenProvider>
               <I18nProvider initialLang="en">
-                <MemoryRouter initialEntries={["/agents/execution"]}>
+                <MemoryRouter initialEntries={[path]}>
                   <ExecutionPage />
                 </MemoryRouter>
               </I18nProvider>
@@ -211,7 +212,14 @@ describe("ExecutorStrip (layer 1)", () => {
       );
     });
     expect(container.textContent).toContain("No executors connected");
-    expect(container.textContent).toContain("deploy/poller/README.md");
+    // UX-overhaul §8 (review P3-1): owner copy + the connect CTA — no
+    // operator instructions (poller/pip) in the strip's empty line.
+    expect(container.textContent).toContain(
+      "Executors appear when an agent connects",
+    );
+    expect(container.querySelector('a[href="/agents/harnesses"]')).not.toBeNull();
+    expect(container.textContent).toContain("Connect an agent");
+    expect(container.textContent).not.toContain("pip install");
     await actUnmount(root);
   });
 
@@ -234,6 +242,46 @@ describe("ExecutorStrip (layer 1)", () => {
     });
     expect(container.textContent).toContain("TB-3");
     await actUnmount(root);
+  });
+
+  it("UX-overhaul review P2-1: ?executor= seeds the filter on mount (the sheet deep-link)", async () => {
+    const rows = [
+      assignment({ id: 1, state: "running", claimed_by_executor: "exec-live", claimed_by: "z:laptop", started_at: ago(60), heartbeat_at: ago(30) }),
+      assignment({ id: 2, state: "queued", task_id: "TB-3" }),
+    ];
+    // The ExecutorSheet's «Все задачи» builds exactly this URL.
+    const { root, container } = await mountPage(
+      rows,
+      "/agents/execution?executor=exec-live",
+    );
+    // The seeded row is pre-selected: only its assignments render.
+    expect(container.textContent).toContain("TB-1");
+    expect(container.textContent).not.toContain("TB-3");
+    // The strip shows the seeded executor as the ACTIVE chip.
+    const liveChip = [...container.querySelectorAll<HTMLButtonElement>("button[aria-pressed]")].find(
+      (chip) => chip.textContent?.includes("zcode@laptop"),
+    )!;
+    expect(liveChip.getAttribute("aria-pressed")).toBe("true");
+    // A strip click still re-targets the filter (the strip is the live UI).
+    await act(async () => {
+      liveChip.click(); // toggle the seeded chip off
+    });
+    expect(container.textContent).toContain("TB-3");
+    await actUnmount(root);
+  });
+
+  it("P2-1: a garbage/empty ?executor= seeds NOTHING (no fake selection)", async () => {
+    const rows = [assignment({ id: 1, state: "queued", task_id: "TB-1" })];
+    for (const path of ["/agents/execution?executor=", "/agents/execution"]) {
+      const { root, container } = await mountPage(rows, path);
+      expect(container.textContent).toContain("TB-1");
+      // No chip is pressed without a real seed.
+      const pressed = [...container.querySelectorAll("button[aria-pressed]")].filter(
+        (chip) => chip.getAttribute("aria-pressed") === "true",
+      );
+      expect(pressed).toHaveLength(0);
+      await actUnmount(root);
+    }
   });
 });
 

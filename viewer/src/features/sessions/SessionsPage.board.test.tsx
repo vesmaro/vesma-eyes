@@ -62,13 +62,18 @@ describe("board mode honest 501 states (sessions)", () => {
         "BoardAdapter.listSessions: the board merge-API does not expose the mnemos /v1/sessions view (ADR 0011 §6).",
       ),
     );
-    expect(html).toContain("Сессии недоступны в board-режиме");
-    expect(html).toContain("board-native");
-    // Empty-state semantics: status, not alert — the page is fine, the view is unsupported.
+    // UX-overhaul §6 (Ф1, П1): the 501 is ONE HonestLine matching the nav
+    // disabled slot — no fullscreen dead-end, no internal "board-mode"
+    // vocabulary in the primary copy.
+    expect(html).toContain("Сессии появятся позже");
+    expect(html).not.toContain("board-native");
+    expect(html).not.toContain("Сессии недоступны в board-режиме");
+    // HonestLine semantics: status, not alert — the page is fine.
     expect(html).toContain('role="status"');
     expect(html).not.toContain('role="alert"');
-    // The wire reason stays visible as the detail line.
-    expect(html).toContain("501");
+    // The raw wire reason is GONE from open copy (П4) — it does not render
+    // anywhere on this line.
+    expect(html).not.toContain("501");
   });
 
   it("keeps the mnemos 4.1 explanation on the mnemos adapter", () => {

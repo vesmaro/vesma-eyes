@@ -110,7 +110,7 @@ describe("ExecutorLinkCheck — the honest check", () => {
     const callsBefore = spy.mock.calls.length;
     const trigger = mount
       .query<HTMLButtonElement>("[role='menuitem']")
-      .find((button) => button.textContent?.includes("Check connection"));
+      .find((button) => button.textContent?.includes("Refresh pulse"));
     expect(trigger).toBeDefined();
     await act(async () => {
       trigger!.click();
@@ -128,7 +128,7 @@ describe("ExecutorLinkCheck — the honest check", () => {
     const html = mount.text();
     expect(html).toContain("revoked — presence is gone");
     expect(html).toContain("The board never pings agents (outbound-only)");
-    expect(html).not.toContain("Check connection");
+    expect(html).not.toContain("Refresh pulse");
     expect(html).not.toContain("Check for real");
     await actUnmount(mount.root);
   });
@@ -139,7 +139,7 @@ describe("ExecutorLinkCheck — the honest check", () => {
     const html = mount.text();
     // The verdict is honest without any check: «has never answered a poll».
     expect(html).toContain("has never answered a poll");
-    expect(html).toContain("Check connection");
+    expect(html).toContain("Refresh pulse");
     // The real probe needs a routable pin — pending cannot take one.
     expect(html).not.toContain("Check for real");
     await actUnmount(mount.root);
