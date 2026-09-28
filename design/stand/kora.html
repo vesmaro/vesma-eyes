@@ -112,7 +112,7 @@
       </div>
       <div class="side-group">
         <button type="button" class="side-link side-domain" aria-expanded="false">
-          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0-.73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
           <span class="side-label">Настройки</span>
           <svg class="side-chevron icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </button>
@@ -168,99 +168,218 @@
     </nav>
 
     <main class="content" id="main">
+      <div class="kora-page" id="kora-page" data-kora="none">
 
-      <div class="page-head">
-        <div>
-          <h1 tabindex="-1">Кора · сессии хостов</h1>
-          <p class="page-sub">Кора — журнал сессий: что агенты делали и что говорили. Записи только для чтения.</p>
-          <p class="status-line" style="margin-top: var(--space-1)">
-            <span><span class="mono">2</span> <button class="btn ghost sm" type="button" style="padding: 0 var(--space-1)" data-demo-action="Фильтр по хостам на связи — в стенде фильтр ниже">хоста на связи</button></span>
-            · <span><span class="mono">1</span> <button class="btn ghost sm" style="padding: 0 var(--space-1)" type="button" id="flt-live">сессия идёт</button></span>
-            · последние 24 ч: <span class="mono">3</span> сессии
-          </p>
-        </div>
-        <div class="page-actions">
-          <div class="field" style="min-width: 200px">
-            <label for="host-filter" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%)">Фильтр по хосту</label>
-            <div class="input-wrap">
-              <select class="input" id="host-filter">
-                <option value="">Все хосты</option>
-                <option value="laptop-go-1">laptop-go-1</option>
-                <option value="vpnus-1">vpnus-1</option>
-                <option value="laptop-zcode-1">laptop-zcode-1</option>
-              </select>
+        <div class="page-head">
+          <div>
+            <h1 tabindex="-1">Кора · сессии хостов</h1>
+            <p class="page-sub">Кора — журнал сессий: что агенты делали и что говорили. Записи только для чтения.</p>
+            <p class="status-line" style="margin-top: var(--space-1)">
+              <span><span class="mono">2</span> <button class="btn ghost sm" type="button" style="padding: 0 var(--space-1)" data-demo-action="Фильтр по хостам на связи — в стенде фильтр ниже">хоста на связи</button></span>
+              · <span><span class="mono">1</span> <button class="btn ghost sm" style="padding: 0 var(--space-1)" type="button" id="flt-live">сессия идёт</button></span>
+              · последние 24 ч: <span class="mono">3</span> сессии
+            </p>
+          </div>
+          <div class="page-actions">
+            <div class="field" style="min-width: 200px">
+              <label for="host-filter" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%)">Фильтр по хосту</label>
+              <div class="input-wrap">
+                <select class="input" id="host-filter">
+                  <option value="">Все хосты</option>
+                  <option value="laptop-go-1">laptop-go-1</option>
+                  <option value="vpnus-1">vpnus-1</option>
+                  <option value="laptop-zcode-1">laptop-zcode-1</option>
+                </select>
+              </div>
             </div>
-          </div>
-          <button class="btn secondary sm" type="button" id="kora-check">Проверить связь</button>
-        </div>
-      </div>
-
-      <div class="status-line" id="stale-note" hidden style="margin: 0 var(--space-2) var(--space-2); color: var(--color-warning)">
-        данные на 14:07 — переподключаемся…
-      </div>
-
-      <section class="panel" aria-label="Сессии">
-        <div class="panel-head">Сессии <span class="count" id="sess-count"></span></div>
-        <div class="panel-body" style="padding: 0">
-          <div id="sess-list" role="list"></div>
-          <div id="sess-empty" hidden></div>
-        </div>
-      </section>
-
-      <section class="collapse-block" style="margin-top: var(--space-4)">
-        <button class="cb-toggle" type="button" id="cov-toggle" aria-expanded="false" aria-controls="cov-body">
-          <svg class="chev icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-          Покрытие
-        </button>
-        <div class="cb-body" id="cov-body" hidden>
-          <div class="panel-body" style="display: grid; gap: var(--space-2); font-size: var(--text-data); color: var(--color-text-secondary)">
-            <div class="status-line"><span style="min-width: 64px; color: var(--color-text-primary)">zcode</span> полный ход сессии: что делали и что говорили</div>
-            <div class="status-line"><span style="min-width: 64px; color: var(--color-text-primary)">vscode</span> видим начало сессий; полный ход — скоро</div>
-            <div class="status-line"><span style="min-width: 64px; color: var(--color-text-primary)">pi</span> видим начало сессий; полный ход — скоро</div>
-            <div class="status-line"><span style="min-width: 64px; color: var(--color-text-primary)">hermes</span> пока не сканируем</div>
-            <p class="status-line" style="margin: 0">Покрытие растёт по мере готовности сканеров — список обновим.</p>
-            <p class="status-line" style="margin: 0">Кора читает сессии с ваших машин, пока вы работаете. Ничего отправлять и регистрировать не нужно — сессии появляются сами, как только харнес работает.</p>
+            <button class="btn secondary sm" type="button" id="kora-check">Проверить связь</button>
           </div>
         </div>
-      </section>
 
+        <div class="status-line" id="stale-note" hidden style="margin: 0 var(--space-2) var(--space-2); color: var(--color-warning)">
+          данные на 14:07 — переподключаемся…
+        </div>
+
+        <div class="kora-body">
+
+          <!-- ── центр: список + покрытие + док (07i §2) ── -->
+          <div class="kora-center">
+
+            <section class="panel kora-list-panel" id="list-panel" aria-label="Сессии">
+              <div class="panel-head">Сессии <span class="count" id="sess-count"></span></div>
+              <div class="panel-body" style="padding: 0">
+                <div id="sess-list" role="list"></div>
+                <div id="sess-empty" hidden></div>
+              </div>
+            </section>
+
+            <section class="collapse-block kora-cov">
+              <button class="cb-toggle" type="button" id="cov-toggle" aria-expanded="false" aria-controls="cov-body">
+                <svg class="chev icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                Покрытие
+              </button>
+              <div class="cb-body" id="cov-body" hidden>
+                <div class="panel-body" style="display: grid; gap: var(--space-2); font-size: var(--text-data); color: var(--color-text-secondary)">
+                  <div class="status-line"><span style="min-width: 64px; color: var(--color-text-primary)">zcode</span> полный ход сессии: что делали и что говорили</div>
+                  <div class="status-line"><span style="min-width: 64px; color: var(--color-text-primary)">vscode</span> видим начало сессий; полный ход — в планах</div>
+                  <div class="status-line"><span style="min-width: 64px; color: var(--color-text-primary)">pi</span> видим начало сессий; полный ход — в планах</div>
+                  <div class="status-line"><span style="min-width: 64px; color: var(--color-text-primary)">hermes</span> пока не сканируем</div>
+                  <p class="status-line" style="margin: 0">Покрытие растёт по мере готовности сканеров — список обновим.</p>
+                  <p class="status-line" style="margin: 0">Кора читает сессии с ваших машин, пока вы работаете. Ничего отправлять и регистрировать не нужно — сессии появляются сами, как только харнес работает.</p>
+                </div>
+              </div>
+            </section>
+
+            <!-- ── док: полоса 48px → рабочая область ~55vh (07i §2–4) ── -->
+            <section class="kora-dock" id="kora-dock" role="region" aria-label="Рабочая область сессии" data-open="false">
+
+              <!-- (а) сессия не выбрана: некликабельное приглашение с caps-легендой на кромке (07i §2.1) -->
+              <div class="dock-bar dock-invite" id="dock-invite">
+                <span class="dock-caps" aria-hidden="true">Рабочая область</span>
+                <span class="dock-invite-text" id="dock-invite-text">Рабочая область — выберите сессию</span>
+              </div>
+
+              <!-- (б) выбрано, док свёрнут: пилюля + имя + «Развернуть» -->
+              <div class="dock-bar" id="dock-bar" hidden>
+                <span id="dock-bar-pill"></span>
+                <span class="dock-name" id="dock-bar-name"></span>
+                <button class="dock-btn" type="button" id="dock-expand" aria-expanded="false" aria-controls="kora-dock">
+                  Развернуть
+                  <svg class="chev icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+              </div>
+
+              <!-- (в) шапка развёрнутого дока: имя H2 + пилюля + покрытие + инструменты -->
+              <div class="dock-fullhead" id="dock-fullhead" hidden>
+                <div class="dock-hrow">
+                  <h2 id="dock-title" tabindex="-1"></h2>
+                  <span id="dock-head-pill"></span>
+                  <span class="dock-cov" id="dock-head-cov"></span>
+                  <button class="dock-btn" type="button" id="dock-collapse" aria-expanded="true" aria-controls="kora-dock">
+                    Свернуть
+                    <svg class="chev icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m18 15-6-6-6 6"/></svg>
+                  </button>
+                </div>
+                <div class="dock-tools">
+                  <button class="dock-tool" type="button" id="dock-follow" aria-pressed="true">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+                    Следить за хвостом
+                  </button>
+                  <div class="dock-searchwrap">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+                    <input class="dock-search" id="dock-search" type="search" placeholder="Найти в сессии…" aria-label="Найти в сессии" aria-describedby="dock-count">
+                  </div>
+                  <span class="dock-count" id="dock-count" role="status"></span>
+                  <button class="dock-tool narrow-only" type="button" id="dock-side-btn" aria-label="Сессии — открыть панель переключения">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/></svg>
+                    Сессии
+                  </button>
+                </div>
+              </div>
+
+              <!-- тело дока: транскрипт-свиток + честный подвал (07i §4–5) -->
+              <div class="dock-lower" id="dock-lower">
+                <div class="dock-scrollwrap">
+                  <div class="dock-scroll" id="dock-scroll" role="log" aria-label="Транскрипт сессии" aria-live="off" tabindex="0"></div>
+                  <button class="dock-tail" type="button" id="dock-tail" hidden>
+                    Вернуться к хвосту
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+                  </button>
+                </div>
+                <div class="dock-foot">
+                  <p class="dock-honest">Управлять сессией отсюда пока нельзя — только читать. Это в планах</p>
+                  <span class="dock-deadwrap" title="Управление сессией появится со срезом 3 — сейчас только чтение">
+                    <input class="input dock-dead" type="text" placeholder="Ввод появится позже" disabled aria-describedby="dock-dead-note">
+                    <span class="sr-only" id="dock-dead-note">Управление сессией появится со срезом 3 — сейчас только чтение</span>
+                  </span>
+                </div>
+              </div>
+
+            </section>
+          </div>
+
+          <!-- ── правая панель: (б) инфо-карточка / (в) переключение (07i §1–2) ── -->
+          <div class="kora-scrim" id="kora-scrim" hidden></div>
+          <aside class="kora-side" id="kora-side" aria-label="Панель сессии">
+
+            <!-- (б) инфо-карточка выбранной сессии — без транскрипта -->
+            <div class="side-card" id="side-info" hidden>
+              <div class="side-head">
+                <h2 id="side-title" tabindex="-1"></h2>
+                <button class="iconbtn" type="button" id="side-deselect" aria-label="Снять выбор сессии">
+                  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+              </div>
+              <div class="side-body">
+                <div class="status-line" style="gap: var(--space-2)">
+                  <span id="side-pill"></span>
+                  <span id="side-line"></span>
+                </div>
+                <div>
+                  <p class="side-caps">Покрытие этой сессии</p>
+                  <p class="side-cov" id="side-cov"></p>
+                </div>
+                <div class="collapse-block">
+                  <button class="cb-toggle" type="button" aria-expanded="false" aria-controls="side-tech">
+                    <svg class="chev icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                    Технические детали
+                  </button>
+                  <div class="cb-body" id="side-tech" hidden>
+                    <table class="tech-table">
+                      <tbody>
+                        <tr><th scope="row">id сессии</th><td class="mono" id="st-id"></td></tr>
+                        <tr><th scope="row">источник</th><td id="st-src"></td></tr>
+                        <tr><th scope="row">границы</th><td id="st-bounds"></td></tr>
+                        <tr><th scope="row">управление</th><td id="st-ctrl"></td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div class="side-actions">
+                  <button class="btn primary" type="button" id="side-expand">Развернуть рабочую область</button>
+                  <a class="btn ghost sm" id="side-full-link" href="kora.html">Открыть полностью →</a>
+                </div>
+              </div>
+            </div>
+
+            <!-- (в) переключение сессий + «О выбранной сессии» -->
+            <div class="side-card" id="side-switch" hidden>
+              <div class="side-head">
+                <h2 class="side-caps-h">Сессии · переключение</h2>
+              </div>
+              <div class="side-body" style="padding: 0; gap: 0">
+                <div id="switch-list" role="list"></div>
+                <div class="collapse-block side-about">
+                  <button class="cb-toggle" type="button" aria-expanded="false" aria-controls="side-about">
+                    <svg class="chev icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                    О выбранной сессии
+                  </button>
+                  <div class="cb-body" id="side-about" hidden style="padding: 0 var(--space-4) var(--space-3)">
+                    <p class="side-caps" style="margin-top: 0">Покрытие этой сессии</p>
+                    <p class="side-cov" id="ab-cov"></p>
+                    <table class="tech-table">
+                      <tbody>
+                        <tr><th scope="row">id сессии</th><td class="mono" id="ab-id"></td></tr>
+                        <tr><th scope="row">источник</th><td id="ab-src"></td></tr>
+                        <tr><th scope="row">границы</th><td id="ab-bounds"></td></tr>
+                        <tr><th scope="row">управление</th><td id="ab-ctrl"></td></tr>
+                      </tbody>
+                    </table>
+                    <p style="margin: var(--space-2) 0 0"><a class="btn ghost sm" id="ab-full-link" href="kora.html">Открыть полностью →</a></p>
+                  </div>
+                </div>
+                <div class="side-foot-actions">
+                  <button class="btn secondary dock-tall" type="button" id="side-collapse">Свернуть рабочую область</button>
+                </div>
+              </div>
+            </div>
+
+          </aside>
+        </div>
+      </div>
     </main>
   </div>
 </div>
-
-<!-- Транскрипт-панель (07d §3): read-only drawer -->
-<div class="drawer-overlay" id="tr-ov" hidden></div>
-<aside class="drawer" id="tr-drawer" hidden role="dialog" aria-modal="true" aria-labelledby="tr-title" style="width: min(560px, 100vw)">
-  <div class="drawer-head">
-    <div>
-      <h2 id="tr-title" tabindex="-1" style="font-size: var(--text-md)"></h2>
-      <div class="status-line" id="tr-state"></div>
-      <p class="status-line" style="margin: var(--space-1) 0 0; color: var(--color-text-primary)" id="tr-cov"></p>
-      <p class="status-line" style="margin: var(--space-1) 0 0" id="tr-ro">Управлять сессией отсюда пока нельзя — только читать. Это в планах.</p>
-    </div>
-    <button class="iconbtn" type="button" id="tr-close" aria-label="Закрыть транскрипт">
-      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-    </button>
-  </div>
-  <div class="drawer-body">
-    <div class="transcript" id="tr-body"></div>
-    <div class="collapse-block">
-      <button class="cb-toggle" type="button" aria-expanded="false" aria-controls="tr-tech">
-        <svg class="chev icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-        Технические детали
-      </button>
-      <div class="cb-body" id="tr-tech" hidden>
-        <table class="tech-table">
-          <tbody>
-            <tr><th scope="row">id сессии</th><td class="mono" id="tr-id"></td></tr>
-            <tr><th scope="row">источник</th><td id="tr-src"></td></tr>
-            <tr><th scope="row">границы</th><td id="tr-bounds"></td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</aside>
 
 <div class="overlay" id="palette" hidden role="dialog" aria-modal="true" aria-label="Командная палитра">
   <div class="palette">
@@ -313,30 +432,116 @@
     var doc = document;
     var toast = window.standToast;
 
+    /* ── утилиты ─────────────────────────────────────────────────────── */
+    var store = {
+      get: function (k, d) { try { return localStorage.getItem(k) || d; } catch (e) { return d; } },
+      set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) { /* file:// */ } },
+    };
+    function reduced() {
+      return window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+        doc.documentElement.getAttribute("data-motion") === "reduced";
+    }
+    var live = doc.getElementById("kora-live");
+    var liveTimer = null;
+    function announce(text) {
+      if (!live) return;
+      if (liveTimer) clearTimeout(liveTimer);
+      live.textContent = "";
+      liveTimer = setTimeout(function () { live.textContent = text; }, 50);
+    }
+
+    /* ── dom ─────────────────────────────────────────────────────────── */
+    var page = doc.getElementById("kora-page");
+    var listPanel = doc.getElementById("list-panel");
     var list = doc.getElementById("sess-list");
     var emptyBox = doc.getElementById("sess-empty");
     var countEl = doc.getElementById("sess-count");
     var filter = doc.getElementById("host-filter");
-    var q = new URLSearchParams(window.location.search);
-    var preHost = q.get("host");
-    if (preHost) {
-      filter.value = preHost;
+
+    var dock = doc.getElementById("kora-dock");
+    var invite = doc.getElementById("dock-invite");
+    var inviteText = doc.getElementById("dock-invite-text");
+    var bar = doc.getElementById("dock-bar");
+    var barPill = doc.getElementById("dock-bar-pill");
+    var barName = doc.getElementById("dock-bar-name");
+    var dockExpand = doc.getElementById("dock-expand");
+    var fullhead = doc.getElementById("dock-fullhead");
+    var dockTitle = doc.getElementById("dock-title");
+    var headPill = doc.getElementById("dock-head-pill");
+    var headCov = doc.getElementById("dock-head-cov");
+    var dockCollapse = doc.getElementById("dock-collapse");
+    var followBtn = doc.getElementById("dock-follow");
+    var searchInput = doc.getElementById("dock-search");
+    var searchCount = doc.getElementById("dock-count");
+    var sideBtn = doc.getElementById("dock-side-btn");
+    var lower = doc.getElementById("dock-lower");
+    var dockScroll = doc.getElementById("dock-scroll");
+    var tailBtn = doc.getElementById("dock-tail");
+
+    var scrim = doc.getElementById("kora-scrim");
+    var side = doc.getElementById("kora-side");
+    var sideInfo = doc.getElementById("side-info");
+    var sideTitle = doc.getElementById("side-title");
+    var sidePill = doc.getElementById("side-pill");
+    var sideLine = doc.getElementById("side-line");
+    var sideCov = doc.getElementById("side-cov");
+    var sideExpand = doc.getElementById("side-expand");
+    var sideDeselect = doc.getElementById("side-deselect");
+    var sideFullLink = doc.getElementById("side-full-link");
+    var sideSwitch = doc.getElementById("side-switch");
+    var switchList = doc.getElementById("switch-list");
+    var abCov = doc.getElementById("ab-cov");
+    var abFullLink = doc.getElementById("ab-full-link");
+    var sideCollapse = doc.getElementById("side-collapse");
+
+    var narrowMq = window.matchMedia("(max-width: 1023px)");
+
+    /* ── состояние (07i §2, §7) ──────────────────────────────────────── */
+    var sessions = D.koraSessions;
+    var state = "none";            /* none | info | open — (а) (б) (в) */
+    var selectedId = null;
+    var noReports = false;
+    var followOn = false;
+    var query = "";
+    var scrollHist = {};           /* id → {offset, follow} — только память страницы */
+    var dockPref = store.get("vesmaro.koraDock", "auto");
+    if (dockPref !== "open" && dockPref !== "auto") dockPref = "auto";
+    var hintShown = false;
+    try { hintShown = sessionStorage.getItem("vesmaro.koraHint") === "1"; } catch (e) { /* file:// */ }
+    var sideOpen = false;
+    var sideOpener = null;
+
+    function findS(id) {
+      for (var i = 0; i < sessions.length; i++) if (sessions[i].id === id) return sessions[i];
+      return null;
     }
-    /* демо-режим «показать состояние без докладов» — честное пустое (07d §4) */
-    var demoNoReports = q.get("demo") === "empty";
 
     var pillMap = {
       live: '<span class="pill busy" title="Сессия идёт"><span class="dot" aria-hidden="true"></span>идёт</span>',
       done: '<span class="pill ended" title="Сессия завершена"><span class="dot" aria-hidden="true"></span>завершена</span>',
       interrupted: '<span class="pill stagnant"><span class="dot" aria-hidden="true"></span>прервалась</span>',
     };
+    /* честная coverage-строка (07d §3); «скоро» запрещено — только «в планах» (07i §5) */
+    function covText(s) {
+      if (s.coverage === "full") return "полный транскрипт (" + s.harness + ")";
+      if (s.coverage === "partial") return "видно только начало: кто открыл и когда. Полный ход — в планах";
+      return "этот терминал пока не сканируем";
+    }
+    function fullLink(s) {
+      return "kora.html?session=" + encodeURIComponent(s.id) + "&open=1";
+    }
+    function shortTime(s) {
+      return s.state === "live" ? "сейчас" : s.line.split(" · ")[0];
+    }
 
+    /* ── центральный список (07d §1–2, §4) ───────────────────────────── */
     function render() {
       var host = filter.value;
-      var rows = D.koraSessions.filter(function (s) { return !host || s.host === host; });
+      var rows = sessions.filter(function (s) { return !host || s.host === host; });
       list.innerHTML = "";
       countEl.textContent = "· " + rows.length;
       emptyBox.hidden = true;
+      if (noReports) return;
       if (!rows.length) {
         emptyBox.hidden = false;
         emptyBox.innerHTML = "";
@@ -369,42 +574,473 @@
       rows.forEach(function (s) {
         var row = doc.createElement("button");
         row.type = "button";
-        row.className = "session-row";
+        row.className = "session-row" + (s.id === selectedId ? " selected" : "");
         row.dataset.state = s.state;
+        row.dataset.sid = s.id;
         row.setAttribute("role", "listitem");
         row.innerHTML =
           '<span class="s-dot" aria-hidden="true"></span>' +
           "<span>" + s.host + " · " + s.harness + "</span>" +
           '<span class="s-meta">' + s.line + "</span>" +
           '<span class="s-go" aria-hidden="true">→</span>';
-        row.addEventListener("click", function () { openTranscript(s); });
+        row.addEventListener("click", function () { selectSession(s); });
         list.appendChild(row);
+      });
+    }
+    function updateSelectedRows() {
+      list.querySelectorAll(".session-row").forEach(function (r) {
+        r.classList.toggle("selected", r.dataset.sid === selectedId);
+      });
+      switchList.querySelectorAll(".kswitch-row").forEach(function (r) {
+        r.classList.toggle("selected", r.dataset.sid === selectedId);
       });
     }
     filter.addEventListener("change", render);
     doc.getElementById("flt-live").addEventListener("click", function () {
+      if (state === "open") { /* центральный список скрыт — фокусовать нечего (07i §2.3) */
+        toast("Список сессий сейчас в правой панели", "info");
+        return;
+      }
       render();
-      var live = list.querySelector('.session-row[data-state="live"]');
-      if (live) live.focus();
+      var row = list.querySelector('.session-row[data-state="live"]');
+      if (row) row.focus();
+      else toast("Идущих сессий сейчас нет", "info");
     });
 
-    /* честное состояние «без докладов» — один переключатель (07d §4) */
-    var noReportsShown = false;
-    doc.addEventListener("keydown", function (e) {
-      /* демо-переключатель вынесен в страницу: кнопка ниже */
+    /* ── машина состояний (а)→(б)→(в) (07i §2) ───────────────────────── */
+    function applyState(next) {
+      var was = state;
+      state = next;
+      page.setAttribute("data-kora", next);
+      var open = next === "open";
+      var selected = !!selectedId;
+      dock.setAttribute("data-open", open ? "true" : "false");
+      dockExpand.setAttribute("aria-expanded", open ? "true" : "false");
+      dockCollapse.setAttribute("aria-expanded", open ? "true" : "false");
+      invite.hidden = selected;
+      bar.hidden = !selected || open;
+      fullhead.hidden = !open;
+      sideInfo.hidden = !selected || open;
+      sideSwitch.hidden = !open;
+      if (open && was !== "open") {
+        departList();
+        /* каскад переезда списка центр → право (07i §8): stagger ≤8, потом класс снять,
+           чтобы смена сессии не переигрывала анимацию списка */
+        switchList.classList.add("casc-in");
+        setTimeout(function () { switchList.classList.remove("casc-in"); }, 700);
+      }
+      if (!open && was === "open") {
+        arriveList();
+        switchList.classList.remove("casc-in");
+      }
+    }
+    function departList() {
+      if (reduced()) { listPanel.hidden = true; return; }
+      listPanel.classList.add("departing");
+      setTimeout(function () {
+        listPanel.hidden = true;
+        listPanel.classList.remove("departing");
+      }, 160);
+    }
+    function arriveList() {
+      listPanel.hidden = false;
+      if (reduced()) return;
+      listPanel.classList.add("arriving");
+      setTimeout(function () { listPanel.classList.remove("arriving"); }, 170);
+    }
+
+    function selectSession(s) {
+      if (selectedId === s.id) return; /* повторный клик по выбранной строке — ничего не переигрываем */
+      if (selectedId && selectedId !== s.id) saveScroll();
+      selectedId = s.id;
+      applyState(dockPref === "open" ? "open" : "info");
+      renderBar();
+      renderSide();
+      renderDockContent();
+      updateSelectedRows();
+      announce("Сессия выбрана: " + s.harness + " · " + s.host);
+      if (narrowMq.matches) openSide(null);
+    }
+    function deselectSession(focusRow) {
+      if (!selectedId) return;
+      saveScroll();
+      var prev = selectedId;
+      selectedId = null;
+      query = "";
+      applyState("none");
+      closeSide(false);
+      updateSelectedRows();
+      if (focusRow) {
+        var r = list.querySelector('[data-sid="' + prev + '"]');
+        if (r) r.focus();
+      }
+    }
+
+    /* разворот / сворот дока; персист только явным действием (07i §7):
+     * клики и Esc меняют pref, глубокая ссылка ?open=1 — нет */
+    function expandDock(focusTitle, persist) {
+      if (persist === undefined) persist = true;
+      if (persist) {
+        dockPref = "open";
+        store.set("vesmaro.koraDock", "open");
+      }
+      applyState("open");
+      renderSide();
+      renderDockContent();
+      if (!hintShown) {
+        hintShown = true;
+        try { sessionStorage.setItem("vesmaro.koraHint", "1"); } catch (e) { /* file:// */ }
+        announce("Список сессий переехал в правую панель");
+      }
+      if (focusTitle) dockTitle.focus();
+    }
+    function collapseDock(focusBar) {
+      saveScroll();
+      dockPref = "auto";
+      store.set("vesmaro.koraDock", "auto");
+      applyState("info");
+      renderSide();
+      if (focusBar) dockExpand.focus();
+    }
+
+    dockExpand.addEventListener("click", function () { expandDock(true, true); });
+    dockCollapse.addEventListener("click", function () { collapseDock(true); });
+    sideExpand.addEventListener("click", function () { expandDock(true, true); });
+    sideCollapse.addEventListener("click", function () { collapseDock(true); });
+    sideDeselect.addEventListener("click", function () { deselectSession(true); });
+
+    /* ── полоса и шапка дока ─────────────────────────────────────────── */
+    function renderBar() {
+      var s = findS(selectedId);
+      if (!s) return;
+      barPill.innerHTML = pillMap[s.state];
+      barName.textContent = s.harness + " · " + s.host;
+    }
+    function renderHead() {
+      var s = findS(selectedId);
+      if (!s) return;
+      dockTitle.textContent = s.harness + " · " + s.host;
+      headPill.innerHTML = pillMap[s.state];
+      headCov.textContent = covText(s);
+    }
+
+    /* ── правая панель: инфо-карточка (б) / переключение (в) (07i §1–2) ─ */
+    function fillTech(prefix, s) {
+      doc.getElementById(prefix + "-id").textContent = s.id;
+      doc.getElementById(prefix + "-src").textContent = "сессии-сканер · реестр на сервере";
+      doc.getElementById(prefix + "-bounds").textContent = s.coverage === "full" ? "полный транскрипт" : "усечённое начало";
+      doc.getElementById(prefix + "-ctrl").textContent = "срез 3 (ADR 0019)";
+    }
+    function renderSide() {
+      var s = findS(selectedId);
+      if (!s) return;
+      if (state === "open") {
+        renderSwitcher();
+        abCov.textContent = covText(s);
+        fillTech("ab", s);
+        abFullLink.href = fullLink(s);
+      } else {
+        sideTitle.textContent = s.harness + " · " + s.host;
+        sidePill.innerHTML = pillMap[s.state];
+        sideLine.textContent = s.line;
+        sideCov.textContent = covText(s);
+        fillTech("st", s);
+        sideFullLink.href = fullLink(s);
+      }
+    }
+    function renderSwitcher() {
+      switchList.innerHTML = "";
+      sessions.forEach(function (s, i) {
+        var b = doc.createElement("button");
+        b.type = "button";
+        b.className = "kswitch-row" + (s.id === selectedId ? " selected" : "");
+        b.dataset.sid = s.id;
+        b.setAttribute("role", "listitem");
+        b.style.setProperty("--i", Math.min(i, 8));
+        b.innerHTML =
+          '<span class="s-dot" aria-hidden="true"></span>' +
+          '<span class="ks-name">' + s.host + " · " + s.harness + "</span>" +
+          '<span class="ks-time">' + shortTime(s) + "</span>";
+        b.addEventListener("click", function () { switchSession(s); });
+        switchList.appendChild(b);
+      });
+    }
+    function switchSession(s) {
+      if (s.id === selectedId) {
+        var act = switchList.querySelector(".kswitch-row.selected");
+        if (act) act.scrollIntoView({ block: "nearest" });
+        return;
+      }
+      saveScroll();
+      selectedId = s.id;
+      query = "";
+      searchInput.value = "";
+      renderBar();
+      renderSide();
+      updateSelectedRows();
+      announce("Сессия изменена: " + s.harness + " · " + s.host);
+      var act = switchList.querySelector(".kswitch-row.selected");
+      if (act) act.scrollIntoView({ block: "nearest" });
+      if (reduced()) { renderDockContent(); return; }
+      lower.classList.add("swap-out");
+      setTimeout(function () {
+        renderDockContent();
+        lower.classList.remove("swap-out");
+        lower.classList.add("swap-in");
+        setTimeout(function () { lower.classList.remove("swap-in"); }, 170);
+      }, 150);
+    }
+
+    /* ── транскрипт в доке (07d §3 дословно + 07i §4) ────────────────── */
+    function renderDockContent() {
+      var s = findS(selectedId);
+      if (!s) return;
+      renderHead();
+      searchCount.textContent = "";
+      followBtn.hidden = s.state !== "live";
+      renderTranscript(s);
+      restoreScroll(s);
+    }
+    function lineMatches(l) {
+      return !query || (l.who + " " + l.text).toLowerCase().indexOf(query) !== -1;
+    }
+    function buildText(target, text) {
+      if (!query) { target.textContent = text; return; }
+      var safe = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      var re = new RegExp("(" + safe + ")", "gi");
+      text.split(re).forEach(function (p) {
+        if (!p) return;
+        if (p.toLowerCase() === query) {
+          var m = doc.createElement("mark");
+          m.className = "t-hl";
+          m.textContent = p;
+          target.appendChild(m);
+        } else {
+          target.appendChild(doc.createTextNode(p));
+        }
+      });
+    }
+    function renderTranscript(s) {
+      dockScroll.innerHTML = "";
+      var lines = s.coverage === "full" ? D.transcript.lines : D.transcript.lines.slice(0, 2);
+      var visible = lines.filter(lineMatches);
+      if (query) searchCount.textContent = "Найдено: " + visible.length;
+      if (!lines.length) {
+        var p0 = doc.createElement("p");
+        p0.className = "dock-noresult";
+        p0.textContent = "В этой сессии пока нет реплик: агент начал работу и ещё не говорил. Первая появится с первым ходом — обычно до 2 минут";
+        dockScroll.appendChild(p0);
+      } else if (query && !visible.length) {
+        var p1 = doc.createElement("p");
+        p1.className = "dock-noresult";
+        p1.textContent = "Ничего. В этой сессии таких реплик нет";
+        dockScroll.appendChild(p1);
+      } else {
+        visible.forEach(function (l) {
+          var row = doc.createElement("div");
+          row.className = "t-line";
+          var tm = doc.createElement("span");
+          tm.className = "t-time";
+          tm.textContent = l.time;
+          var main = doc.createElement("div");
+          main.className = "t-main";
+          var who = doc.createElement("span");
+          who.className = "t-who";
+          buildText(who, l.who + ": ");
+          var tx = doc.createElement("span");
+          tx.className = "t-text";
+          buildText(tx, l.text);
+          main.appendChild(who);
+          main.appendChild(tx);
+          var cp = doc.createElement("button");
+          cp.type = "button";
+          cp.className = "t-copy";
+          cp.setAttribute("aria-label", "Копировать реплику от " + l.time);
+          cp.innerHTML = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+          cp.addEventListener("click", function () {
+            copyText(l.time + "  " + l.who + ": " + l.text);
+          });
+          row.appendChild(tm);
+          row.appendChild(main);
+          row.appendChild(cp);
+          dockScroll.appendChild(row);
+        });
+        if (s.coverage !== "full") {
+          var end = doc.createElement("p");
+          end.className = "t-end";
+          end.textContent = "— на этом данные заканчиваются";
+          dockScroll.appendChild(end);
+        }
+      }
+    }
+    function copyText(t) {
+      function ok() { toast("Реплика скопирована", "success"); }
+      function fail() { toast("Не скопировалось — выделите текст вручную", "error"); }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(t).then(ok, function () { legacyCopy(t) ? ok() : fail(); });
+      } else {
+        legacyCopy(t) ? ok() : fail();
+      }
+    }
+    function legacyCopy(t) {
+      try {
+        var ta = doc.createElement("textarea");
+        ta.value = t;
+        ta.setAttribute("readonly", "");
+        ta.style.cssText = "position: fixed; left: -9999px";
+        doc.body.appendChild(ta);
+        ta.select();
+        var done = doc.execCommand("copy");
+        doc.body.removeChild(ta);
+        return done;
+      } catch (e) { return false; }
+    }
+
+    /* ── «Следить за хвостом» (07i §4) ───────────────────────────────── */
+    function setFollow(on) {
+      followOn = on;
+      followBtn.setAttribute("aria-pressed", on ? "true" : "false");
+      tailBtn.hidden = on;
+      if (on) scrollToTail();
+    }
+    function scrollToTail() {
+      dockScroll.scrollTo({ top: dockScroll.scrollHeight, behavior: reduced() ? "auto" : "smooth" });
+    }
+    followBtn.addEventListener("click", function () { setFollow(!followOn); });
+    tailBtn.addEventListener("click", function () { setFollow(true); });
+    /* ручной скролл вверх → авто-ВЫКЛ + «Вернуться к хвосту» (порог 48px — намерение уйти от хвоста) */
+    var scrollTick = false;
+    dockScroll.addEventListener("scroll", function () {
+      if (scrollTick) return;
+      scrollTick = true;
+      requestAnimationFrame(function () {
+        scrollTick = false;
+        if (!followOn) return;
+        if (dockScroll.scrollTop < dockScroll.scrollHeight - dockScroll.clientHeight - 48) {
+          setFollow(false);
+        }
+      });
     });
+    /* поиск-фильтр по репликам: debounce 300ms, Esc — очистить (07i §4, §9) */
+    var searchTimer = null;
+    searchInput.addEventListener("input", function () {
+      if (searchTimer) clearTimeout(searchTimer);
+      searchTimer = setTimeout(function () {
+        query = searchInput.value.trim().toLowerCase();
+        var s = findS(selectedId);
+        if (s) renderTranscript(s);
+        if (followOn) scrollToTail();
+      }, 300);
+    });
+    searchInput.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && searchInput.value) {
+        e.stopPropagation();
+        searchInput.value = "";
+        query = "";
+        var s = findS(selectedId);
+        if (s) renderTranscript(s);
+        searchCount.textContent = "";
+      }
+    });
+
+    /* ── scroll-история (07i §7): Map в памяти страницы, не между визитами ── */
+    function saveScroll() {
+      if (!selectedId) return;
+      scrollHist[selectedId] = { offset: dockScroll.scrollTop, follow: followOn };
+    }
+    function restoreScroll(s) {
+      var h = scrollHist[s.id];
+      if (s.state === "live") {
+        var on = h ? h.follow : true;
+        followOn = on;
+        followBtn.setAttribute("aria-pressed", on ? "true" : "false");
+        tailBtn.hidden = on;
+        if (on || !h) dockScroll.scrollTop = dockScroll.scrollHeight;
+        else dockScroll.scrollTop = h.offset;
+      } else {
+        followOn = false;
+        followBtn.setAttribute("aria-pressed", "false");
+        tailBtn.hidden = true;
+        dockScroll.scrollTop = h ? h.offset : 0;
+      }
+    }
+
+    /* ── правая панель как дровер <1024px (07i §10) ──────────────────── */
+    function openSide(opener) {
+      if (!narrowMq.matches || sideOpen) return;
+      sideOpen = true;
+      sideOpener = opener || null;
+      scrim.hidden = false;
+      side.classList.add("side-open");
+      side.setAttribute("role", "dialog");
+      side.setAttribute("aria-modal", "true");
+      if (state === "open") side.setAttribute("aria-label", "Сессии · переключение");
+      else {
+        side.setAttribute("aria-label", "Панель сессии");
+        sideTitle.focus();
+        return;
+      }
+      var act = switchList.querySelector(".kswitch-row.selected") || switchList.querySelector(".kswitch-row");
+      if (act) act.focus();
+      else sideCollapse.focus();
+    }
+    function closeSide(refocus) {
+      if (!sideOpen) return;
+      sideOpen = false;
+      scrim.hidden = true;
+      side.classList.remove("side-open");
+      side.removeAttribute("role");
+      side.removeAttribute("aria-modal");
+      if (refocus && sideOpener && sideOpener.focus) sideOpener.focus();
+      sideOpener = null;
+    }
+    scrim.addEventListener("click", function () { closeSide(true); });
+    sideBtn.addEventListener("click", function () { openSide(null); });
+
+    /* ── Esc-лестница (03 §7): (в)→(б)→(а); дровер → закрыть ─────────── */
+    doc.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") {
+        if (doc.querySelector(".overlay:not([hidden])")) return; /* палитра/шпаргалка — владеет shell */
+        if (narrowMq.matches && sideOpen) {
+          e.preventDefault();
+          closeSide(true);
+          return;
+        }
+        if (state === "open") {
+          e.preventDefault();
+          collapseDock(true);
+          return;
+        }
+        if (state === "info") {
+          e.preventDefault();
+          deselectSession(true);
+        }
+        return;
+      }
+      /* фокус-ловушка только для дровера узких экранов (док — не модальный) */
+      if (e.key === "Tab" && sideOpen && narrowMq.matches) {
+        var f = side.querySelectorAll("button, a[href], input, select, textarea");
+        if (!f.length) return;
+        var first = f[0], last = f[f.length - 1];
+        if (e.shiftKey && doc.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && doc.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    });
+
+    /* ── демо «показать состояние без докладов» (07d §4): честно и в доке ── */
     var demoBar = doc.createElement("div");
     demoBar.className = "status-line";
     demoBar.style.cssText = "padding: var(--space-2) var(--space-4); border-top: var(--line-hairline) solid var(--myelin-hairline)";
     demoBar.innerHTML =
       '<button class="btn ghost sm" type="button" id="demo-noreports" aria-pressed="false">показать состояние без докладов</button>' +
       '<span class="hc-meta" style="font-size: var(--text-xs)">демо</span>';
-    doc.querySelector(".panel[aria-label='Сессии']").appendChild(demoBar);
+    listPanel.appendChild(demoBar);
     demoBar.querySelector("#demo-noreports").addEventListener("click", function () {
-      noReportsShown = !noReportsShown;
-      this.setAttribute("aria-pressed", noReportsShown ? "true" : "false");
-      if (noReportsShown) {
-        list.hidden = true;
+      noReports = !noReports;
+      this.setAttribute("aria-pressed", noReports ? "true" : "false");
+      if (noReports) {
+        deselectSession(false);
+        list.innerHTML = "";
         countEl.textContent = "";
         emptyBox.hidden = false;
         emptyBox.innerHTML =
@@ -416,8 +1052,9 @@
         emptyBox.querySelector("#nr-check").addEventListener("click", function () {
           toast("Не отвечает: докладов нет 14 минут", "info");
         });
+        inviteText.textContent = "Сканеры ещё не доложили — доклад до 2 минут";
       } else {
-        list.hidden = false;
+        inviteText.textContent = "Рабочая область — выберите сессию";
         render();
       }
     });
@@ -436,75 +1073,6 @@
       }, 800);
     });
 
-    /* ── Транскрипт (07d §3): read-only, честная метка покрытия ── */
-    var ov = doc.getElementById("tr-ov");
-    var drawer = doc.getElementById("tr-drawer");
-    var opener = null;
-    function openTranscript(s) {
-      opener = doc.activeElement;
-      doc.getElementById("tr-title").textContent = s.harness + " · " + s.host;
-      doc.getElementById("tr-state").textContent = s.state === "live" ? D.transcript.state : s.line;
-      var covMap = {
-        full: "Покрытие этой сессии: полный транскрипт (zcode)",
-        partial: "Покрытие этой сессии: видно только начало сессии: кто открыл и когда. Полный ход — скоро",
-        none: "Покрытие этой сессии: этот терминал пока не сканируем",
-      };
-      doc.getElementById("tr-cov").textContent = covMap[s.coverage] || covMap.full;
-      var body = doc.getElementById("tr-body");
-      body.innerHTML = "";
-      var t = s.coverage === "full" ? D.transcript.lines : D.transcript.lines.slice(0, 2);
-      t.forEach(function (l) {
-        var line = doc.createElement("div");
-        line.className = "t-line";
-        var tm = doc.createElement("span");
-        tm.className = "t-time";
-        tm.textContent = l.time;
-        var who = doc.createElement("span");
-        who.className = "t-who";
-        who.textContent = l.who + ": ";
-        var tx = doc.createElement("span");
-        tx.textContent = l.text;
-        var right = doc.createElement("span");
-        right.appendChild(who);
-        right.appendChild(tx);
-        line.appendChild(tm);
-        line.appendChild(right);
-        body.appendChild(line);
-      });
-      if (s.coverage !== "full") {
-        var end = doc.createElement("p");
-        end.style.cssText = "margin: 0; color: var(--color-text-muted); font-size: var(--text-data)";
-        end.textContent = "— на этом данные заканчиваются";
-        body.appendChild(end);
-      }
-      doc.getElementById("tr-id").textContent = s.id;
-      doc.getElementById("tr-src").textContent = "сессии-сканер · реестр на сервере";
-      doc.getElementById("tr-bounds").textContent = s.coverage === "full" ? "полный транскрипт" : "усечённое начало";
-      ov.hidden = false;
-      drawer.hidden = false;
-      doc.getElementById("tr-title").focus();
-    }
-    function closeTr() {
-      ov.hidden = true;
-      drawer.hidden = true;
-      if (opener && opener.focus) opener.focus();
-    }
-    doc.getElementById("tr-close").addEventListener("click", closeTr);
-    ov.addEventListener("click", closeTr);
-    doc.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && !drawer.hidden) {
-        e.stopPropagation();
-        closeTr();
-      }
-      if (e.key === "Tab" && !drawer.hidden) {
-        var f = drawer.querySelectorAll("button, a[href], input, select, textarea");
-        if (!f.length) return;
-        var first = f[0], last = f[f.length - 1];
-        if (e.shiftKey && doc.activeElement === first) { e.preventDefault(); last.focus(); }
-        else if (!e.shiftKey && doc.activeElement === last) { e.preventDefault(); first.focus(); }
-      }
-    });
-
     /* «Покрытие» — персистентное раскрытие */
     var covT = doc.getElementById("cov-toggle");
     var covB = doc.getElementById("cov-body");
@@ -513,17 +1081,44 @@
         covT.setAttribute("aria-expanded", "true");
         covB.hidden = false;
       }
-    } catch (e) {}
+    } catch (e) { /* file:// */ }
     covT.addEventListener("click", function () {
       var open = covT.getAttribute("aria-expanded") === "true";
       covT.setAttribute("aria-expanded", open ? "false" : "true");
       covB.hidden = open;
-      try { localStorage.setItem("stand-kora-cov", open ? "0" : "1"); } catch (e) {}
+      try { localStorage.setItem("stand-kora-cov", open ? "0" : "1"); } catch (e) { /* file:// */ }
     });
 
+    /* ── старт: фильтр, демо, глубокая ссылка ?session=&open=1 (07i §7) ── */
+    var q = new URLSearchParams(window.location.search);
+    var preHost = q.get("host");
+    if (preHost) filter.value = preHost;
+    if (q.get("demo") === "empty") {
+      noReports = true;
+      var db = demoBar.querySelector("#demo-noreports");
+      if (db) db.setAttribute("aria-pressed", "true");
+      inviteText.textContent = "Сканеры ещё не доложили — доклад до 2 минут";
+    }
     render();
+    var preSession = q.get("session");
+    if (preSession) {
+      var s0 = findS(preSession);
+      if (s0) {
+        if (q.get("open") === "1") {
+          /* /kora/:sessionId — сразу рабочий режим; сам pref не трогаем (07i §7) */
+          var realPref = dockPref;
+          dockPref = "open";
+          selectSession(s0);
+          expandDock(false, false);
+          dockPref = realPref;
+        } else {
+          selectSession(s0); /* /kora?session=<id> — выбор без разворота */
+        }
+      }
+    }
   })();
 
 </script>
+<div id="kora-live" class="sr-only" role="status" aria-live="polite"></div>
 </body>
 </html>

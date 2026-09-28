@@ -2267,3 +2267,616 @@ button.chip:hover {
   animation: none;
   transition: none;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   v4 — kora workspace dock (07i): bar 48px → work area ~55vh.
+   Right panel = info (б) / switcher (в); center keeps list + coverage.
+   Tokens only; honest disabled input instead of a fake console (07i §5).
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.kora-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+/* dock lives at the very bottom edge: no dead padding under it */
+.content:has(.kora-page) {
+  padding-bottom: 0;
+}
+
+.kora-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  flex: 1;
+}
+.kora-page[data-kora="info"] .kora-body,
+.kora-page[data-kora="open"] .kora-body {
+  grid-template-columns: minmax(0, 1fr) 340px;
+}
+.kora-center {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.kora-list-panel.departing {
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-exit);
+}
+.kora-list-panel.arriving {
+  animation: k-fade-in var(--duration-fast) var(--ease-enter);
+}
+@keyframes k-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+.kora-cov {
+  margin-bottom: var(--space-5); /* fixed gap above the dock; dock itself pulls with margin-top:auto */
+}
+.session-row.selected {
+  box-shadow: inset 2px 0 0 var(--color-iris);
+  background: var(--strata-memory);
+}
+
+/* ── dock: one element, bar 48px ⇄ work area (07i §3) ────────────────── */
+.kora-dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 30;
+  margin-top: auto;
+  align-self: center;
+  width: min(920px, 100%);
+  display: flex;
+  flex-direction: column;
+  height: 48px;
+  background: var(--color-bg-well);
+  border: 1px solid var(--color-border);
+  border-bottom: none;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: var(--shadow-float);
+  overflow: hidden;
+  transition: height var(--duration-normal) var(--ease-exit);
+}
+.kora-dock[data-open="true"] {
+  height: clamp(320px, 55vh, 100dvh);
+  transition-timing-function: var(--ease-enter);
+}
+.kora-page[data-kora="none"] .kora-dock {
+  width: fit-content;
+  max-width: 100%;
+}
+/* (а) правой панели нет — не оставляем пустой грид-ряд под центром */
+.kora-page[data-kora="none"] .kora-side {
+  display: none;
+}
+
+/* (а) некликабельное приглашение: hover/focus нет (07i §9) */
+.dock-invite {
+  position: relative;
+}
+/* caps-легенда на верхней кромке полосы — как в схеме 07i §2.1 */
+.dock-caps {
+  position: absolute;
+  top: 0;
+  left: var(--space-4);
+  transform: translateY(-50%);
+  padding: 0 var(--space-2);
+  background: var(--color-bg-well);
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.dock-invite-text {
+  font-size: var(--text-ui);
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dock-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: 48px;
+  box-sizing: border-box;
+  padding: 0 var(--space-3) 0 var(--space-4);
+  min-width: 0;
+}
+.dock-name {
+  font-size: var(--text-ui);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dock-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 44px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-md);
+  color: var(--color-iris-bright);
+  font-size: var(--text-ui);
+  font-weight: var(--weight-medium);
+  flex: none;
+  transition: background var(--duration-instant) var(--ease-enter);
+}
+.dock-btn:hover {
+  background: var(--myelin-strong);
+}
+.dock-btn .chev {
+  transition: rotate var(--duration-fast) var(--ease-enter);
+}
+.dock-btn[aria-expanded="true"] .chev {
+  rotate: 180deg;
+}
+/* floating bar: ring offset 4px so it never hugs the edge (WCAG 2.4.11) */
+.kora-dock .dock-btn:focus-visible {
+  outline-offset: 4px;
+}
+
+/* (в) развёрнутая шапка: имя H2 + пилюля + coverage + инструменты */
+.dock-fullhead {
+  border-bottom: var(--line-hairline) solid var(--myelin-hairline);
+}
+.dock-hrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: 48px;
+  box-sizing: border-box;
+  padding: 0 var(--space-3) 0 var(--space-4);
+  min-width: 0;
+}
+.dock-fullhead h2 {
+  margin: 0;
+  font-size: var(--text-ui);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* programmatic focus target on expand (07i §7): ring visible, keyboard-only
+   via :focus-visible heuristics; bare :focus kept silent for mouse clicks */
+.dock-fullhead h2:focus-visible,
+.side-head h2:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-width);
+}
+.dock-cov {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-data);
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+}
+.dock-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding: 0 var(--space-3) var(--space-2) var(--space-4);
+}
+.dock-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 32px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border-subtle);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  flex: none;
+  transition: background var(--duration-instant) var(--ease-enter),
+    color var(--duration-instant) var(--ease-enter);
+}
+.dock-tool:hover {
+  background: var(--myelin-strong);
+  color: var(--color-text-primary);
+}
+/* независимый toggle: состояние объявлено рамкой + весом, не цветом одним */
+.dock-tool[aria-pressed="true"] {
+  background: var(--strata-memory);
+  border-color: transparent;
+  color: var(--color-iris-bright);
+  font-weight: var(--weight-medium);
+}
+.dock-tool[aria-pressed="true"]::after {
+  content: "✓";
+}
+.dock-searchwrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 160px;
+  max-width: 360px;
+}
+.dock-searchwrap > svg {
+  position: absolute;
+  left: var(--space-3);
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+.dock-search {
+  width: 100%;
+  height: 32px;
+  padding: 0 var(--space-3) 0 var(--space-8);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-full);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+}
+.dock-search::placeholder {
+  color: var(--color-text-muted);
+}
+.dock-search:focus-visible {
+  outline: none;
+  border-color: var(--color-iris-bright);
+  box-shadow: var(--shadow-iris);
+}
+.dock-count {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+/* тело дока: свиток-транскрипт + честный подвал */
+.dock-lower {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  visibility: hidden;
+}
+.kora-dock[data-open="true"] .dock-lower {
+  visibility: visible;
+}
+.dock-lower.swap-out {
+  animation: k-fade-out var(--duration-fast) var(--ease-exit) forwards;
+}
+@keyframes k-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+.dock-lower.swap-in {
+  animation: k-fade-in var(--duration-fast) var(--ease-enter);
+}
+.dock-scrollwrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.dock-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.dock-scroll:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: calc(-1 * var(--focus-ring-width));
+}
+/* строки-реплики: время mono + автор + текст Lora, копирование по hover/focus */
+.kora-dock .t-line {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: start;
+  border-radius: var(--radius-sm);
+}
+.t-copy {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  opacity: 0;
+  transition: opacity var(--duration-instant) var(--ease-enter);
+}
+.t-line:hover .t-copy,
+.t-line:focus-within .t-copy,
+.t-copy:focus-visible {
+  opacity: 1;
+}
+.t-copy:hover {
+  color: var(--color-text-primary);
+  background: var(--myelin-strong);
+}
+.t-hl {
+  background: color-mix(in srgb, var(--color-iris) 24%, transparent);
+  font-weight: var(--weight-semibold);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+.t-end,
+.dock-noresult {
+  margin: 0;
+  font-size: var(--text-data);
+  color: var(--color-text-muted);
+}
+/* «Вернуться к хвосту» — плавающая над свитком, 150ms enter/exit */
+.dock-tail {
+  position: absolute;
+  right: var(--space-4);
+  bottom: var(--space-3);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 36px;
+  padding: 0 var(--space-3);
+  background: var(--color-bg-overlay);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-raised);
+  color: var(--color-iris-bright);
+  font-size: var(--text-sm);
+  animation: k-tail-in var(--duration-fast) var(--ease-enter);
+}
+@keyframes k-tail-in {
+  from {
+    opacity: 0;
+    translate: 0 4px;
+  }
+}
+.dock-tail:hover {
+  background: var(--myelin-strong);
+  color: var(--color-text-primary);
+}
+.dock-tail[hidden] {
+  display: none;
+}
+.dock-foot {
+  border-top: var(--line-hairline) solid var(--myelin-hairline);
+  padding: var(--space-2) var(--space-4) var(--space-3);
+  display: grid;
+  gap: var(--space-2);
+}
+.dock-honest {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+/* честная мёртвая зона: disabled всегда, курсор not-allowed, вне tab-порядка */
+.dock-dead {
+  height: 44px;
+  cursor: not-allowed;
+}
+.dock-deadwrap {
+  display: block;
+}
+
+/* ── правая панель: инфо-карточка (б) / переключатель (в) ────────────── */
+.kora-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgb(9 11 15 / 0.55);
+}
+.kora-scrim[hidden] {
+  display: none;
+}
+.kora-side {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+  min-width: 0;
+}
+.side-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-well);
+  border: var(--line-hairline) solid var(--myelin-hairline);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.side-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
+  border-bottom: var(--line-hairline) solid var(--myelin-hairline);
+  min-height: 48px;
+}
+.side-head h2 {
+  margin: 0;
+  font-size: var(--text-ui);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.side-head h2.side-caps-h {
+  font-size: var(--text-caps);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.side-body {
+  padding: var(--space-4);
+  display: grid;
+  gap: var(--space-3);
+  overflow-y: auto;
+}
+.side-caps {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.side-cov {
+  margin: 0;
+  font-size: var(--text-data);
+  color: var(--color-text-primary);
+}
+.side-actions {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  padding-top: var(--space-2);
+  border-top: var(--line-hairline) solid var(--myelin-hairline);
+}
+.side-about {
+  border-top: var(--line-hairline) solid var(--myelin-hairline);
+}
+.side-about .tech-table {
+  margin-top: var(--space-2);
+}
+.side-foot-actions {
+  padding: var(--space-3) var(--space-4);
+  border-top: var(--line-hairline) solid var(--myelin-hairline);
+}
+.btn.dock-tall {
+  width: 100%;
+  min-height: 44px;
+}
+/* компактный переключатель сессий: точка + хост · харнес + время (--text-data) */
+.kswitch-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-1) var(--space-4);
+  border-bottom: var(--line-hairline) solid var(--myelin-hairline);
+  text-align: left;
+  font-size: var(--text-data);
+  color: var(--color-text-primary);
+  transition: background var(--duration-instant) var(--ease-enter);
+}
+.kswitch-row:hover {
+  background: var(--myelin-strong); /* hover-edge token (02 §3); selected bg wins below */
+}
+.kswitch-row:focus-visible {
+  outline: none;
+  box-shadow: inset var(--focus-ring-width) 0 0 var(--color-focus);
+}
+.kswitch-row.selected {
+  box-shadow: inset 2px 0 0 var(--color-iris);
+  background: var(--strata-memory);
+}
+.kswitch-row .ks-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kswitch-row .ks-time {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-caps);
+  color: var(--color-text-muted);
+  flex: none;
+}
+/* каскад переезда списка (06 §3): шаг stagger, максимум 8 */
+.casc-in > .kswitch-row {
+  animation: k-casc var(--duration-normal) var(--ease-enter) both;
+  animation-delay: calc(var(--i, 0) * var(--duration-stagger));
+}
+@keyframes k-casc {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+}
+
+/* ── narrow: правая панель → дровер поверх (07i §10) ─────────────────── */
+.narrow-only {
+  display: none;
+}
+@media (max-width: 1023px) {
+  .kora-page[data-kora="info"] .kora-body,
+  .kora-page[data-kora="open"] .kora-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .narrow-only {
+    display: inline-flex;
+  }
+  .kora-side {
+    position: fixed;
+    z-index: 95;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(560px, 100vw);
+    display: none;
+    background: var(--color-bg-elevated);
+    border-left: 1px solid var(--color-border-subtle);
+    box-shadow: var(--shadow-modal);
+  }
+  .kora-side.side-open {
+    display: grid;
+    align-content: start;
+    animation: drawer-in var(--duration-normal) var(--ease-enter);
+  }
+}
+/* ── mobile: док — bottom sheet на всю ширину, цели 44px (07i §10) ───── */
+@media (max-width: 767px) {
+  .kora-dock {
+    align-self: stretch;
+    width: 100%;
+  }
+  .t-copy {
+    width: 44px;
+    height: 44px;
+    opacity: 1; /* тач-сценарий: без hover — копирование всегда видно */
+  }
+  .session-row {
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    margin: var(--space-2);
+  }
+}
+
+/* ── reduced motion: раскрытия и каскады мгновенные (02 §7, 07i §8) ──── */
+@media (prefers-reduced-motion: reduce) {
+  .kora-dock,
+  .dock-btn .chev,
+  .dock-tail,
+  .kora-list-panel.arriving,
+  .dock-lower.swap-in,
+  .casc-in > .kswitch-row {
+    animation: none;
+    transition: none;
+  }
+}
+[data-motion="reduced"] .kora-dock,
+[data-motion="reduced"] .dock-btn .chev,
+[data-motion="reduced"] .dock-tail,
+[data-motion="reduced"] .kora-list-panel.arriving,
+[data-motion="reduced"] .kora-list-panel.departing,
+[data-motion="reduced"] .dock-lower.swap-in,
+[data-motion="reduced"] .dock-lower.swap-out,
+[data-motion="reduced"] .casc-in > .kswitch-row {
+  animation: none;
+  transition: none;
+}
+[data-motion="reduced"] .dock-tail {
+  animation: k-tail-in 80ms linear; /* появление ≤80ms opacity (07i §8) */
+}

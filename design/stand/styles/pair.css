@@ -42,6 +42,35 @@
   text-decoration: none;
 }
 
+/* ── v4: возврат «На борт» — заметный контур в одном слоте во всех фазах
+ * (07h §12). primary-outline: контур iris, текст iris-bright; первичное
+ * действие фазы остаётся главным. Высота 44px — страница и есть тач-сценарий
+ * (WCAG 2.5.8). Иконка не одна — текст-лейбл рядом (1.4.1). */
+.pair-back {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 44px;
+  padding: 0 var(--space-4);
+  border: 1.5px solid var(--color-iris);
+  border-radius: var(--radius-md);
+  color: var(--color-iris-bright);
+  font-size: var(--text-ui);
+  font-weight: var(--weight-medium);
+  transition: background var(--duration-instant) var(--ease-enter);
+}
+.pair-back:hover {
+  background: var(--myelin-strong);
+}
+.pair-back:active {
+  background: var(--strata-system);
+}
+.pair-back:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-width);
+}
+
 /* centered column */
 .pair-main {
   flex: 1;
