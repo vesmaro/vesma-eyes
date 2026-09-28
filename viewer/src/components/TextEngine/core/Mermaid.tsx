@@ -5,13 +5,24 @@ import { cn } from "@/lib/utils";
 import { normalizeMermaidSvgXml } from "./mermaidSvgXml";
 
 /**
- * Mermaid fences (АРХКОМ-8): `language-mermaid` code blocks render as
- * diagrams — ONLY through this module. The library arrives via a LAZY
+ * Mermaid fences (АРХКОМ-8, rehomed in ME-013 / ADR 0020 Amendment 1):
+ * `language-mermaid` code blocks render as diagrams on BOTH trust profiles —
+ * ONLY through this module, which stays the single mermaid import site in
+ * src (ESLint pin + architecture test; the ESLint invariant is «one mermaid
+ * import module», not «docs owns it»). The library arrives via a LAZY
  * dynamic import that first fires when a fence actually mounts on the page
  * (vite splits it into its own chunk; the budget gate
  * scripts/budget-docs-render.mjs holds that pool ≤450 KiB gzip and asserts
  * it is never statically reachable), so pages without diagrams never pay
  * for it.
+ *
+ * Trust profiles: the curated docs wrapper (features/docs/Markdown.tsx)
+ * mounts this component directly (no caps — build-time trusted content,
+ * corpus integrity gates). The untrusted profile (TextEngine) reaches it
+ * through the theme factory's fence interception behind the HARD SIZE CAPS
+ * of ./mermaidCaps (Amendment 1 protective condition 2: oversized fences
+ * fall back to their source BEFORE this component — and the chunk — even
+ * mount).
  *
  * Security posture (committee, Security position): `securityLevel: "strict"`
  * is set EXPLICITLY, no CDN, and click-links are neutralized by unwrapping

@@ -23,8 +23,9 @@ const DEV_ADAPTER = process.env.VITE_ADAPTER ?? "";
 // stable chunk names so scripts/budget-docs-render.mjs can measure and
 // CI-gate them. Returning undefined keeps vite's default placement for
 // everything else (app code, react, per-file content chunks). mermaid stays
-// lazy BECAUSE its only import site is the dynamic import in features/docs/
-// Mermaid.tsx — its pool must never become statically reachable (the budget
+// lazy BECAUSE its only import site is the dynamic import in
+// components/TextEngine/core/Mermaid.tsx (ME-013 rehome — serves both trust
+// profiles) — its pool must never become statically reachable (the budget
 // script asserts that, and since Ф2 it asserts the same for md-sanitize vs
 // the eager base set).
 const DOCS_RENDER_PACKAGE =
