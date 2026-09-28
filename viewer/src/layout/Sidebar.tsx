@@ -432,6 +432,33 @@ function SectionLink({
   const t = useT();
   const Icon = section.icon;
   const label = t(section.key);
+  // UX-overhaul §6/§9.4 (Ф1): a section with `soonKey` renders as the
+  // honest disabled slot — the same posture as the domain slot above
+  // (visible, explained, inert; the tooltip carries the "later" promise,
+  // the badge text says it for everyone — never colour-only, WCAG 1.4.1).
+  // Deliberately OUT of the tab order: the route behind it stays alive for
+  // bookmarks, but the menu must not walk into a placeholder page.
+  if (section.soonKey) {
+    const hint = t(section.soonKey);
+    const panelExpanded = hideLabels !== "hidden";
+    return (
+      <span
+        title={`${label} — ${hint}`}
+        className="flex min-w-0 cursor-not-allowed items-center gap-2 rounded-md px-2 py-1.5 text-sm text-foreground-muted opacity-70"
+      >
+        <Icon className="size-3.5 shrink-0" aria-hidden="true" />
+        <span className={hideLabels}>{label}</span>
+        <span
+          className={cn(
+            "shrink-0 rounded-full border border-border-subtle px-1.5 text-xs text-foreground-muted",
+            panelExpanded ? "inline-block" : "hidden",
+          )}
+        >
+          {t("nav.soon")}
+        </span>
+      </span>
+    );
+  }
   // Records ("/memory") must highlight on its detail route too
   // ("/memory/:id") — the list is the master of the master-detail pair.
   // The task list ("/tasks") likewise owns its detail route ("/tasks/:id").

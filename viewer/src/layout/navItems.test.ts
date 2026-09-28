@@ -37,6 +37,31 @@ describe("domain map", () => {
     expect(slots).toEqual(["/stores"]);
   });
 
+  it("UX-overhaul §6 (Ф1): Sessions/Traces are honest SECTION slots — disabled in the menu, routes alive", () => {
+    // The System domain keeps its live sections and gains two section-level
+    // soon-slots; the DOMAIN stays linkable (it still has live sections).
+    const system = NAV_DOMAINS.find((d) => d.to === "/system");
+    expect(system?.soonKey).toBeUndefined();
+    const sections = system?.sections ?? [];
+    const slotKeys = sections
+      .filter((section) => section.soonKey !== undefined)
+      .map((section) => ({ to: section.to, soonKey: section.soonKey }));
+    // The two dead menu items become disabled slots with "later" tooltips.
+    expect(slotKeys).toEqual([
+      { to: "/system/sessions", soonKey: "nav.soonSessions" },
+      { to: "/system/traces", soonKey: "nav.soonTraces" },
+    ]);
+    // The live sections stay live — no collateral soon-marks.
+    for (const live of ["/system/status", "/system/settings", "/system/automation", "/system/devices"]) {
+      expect(sections.find((section) => section.to === live)?.soonKey).toBeUndefined();
+    }
+    // The ROUTES stay alive for breadcrumbs/legacy redirects (§6): the
+    // crumbs and TopBar titles still resolve — bookmarks keep working.
+    expect(crumbsFor("/system/sessions")[1]).toEqual({ key: "nav.sessions" });
+    expect(crumbsFor("/system/traces")[1]).toEqual({ key: "nav.traces" });
+    expect(routeTitleKey("/system/sessions")).toBe("nav.sessions");
+  });
+
   it("never links a domain at a path without a route (no dead links)", () => {
     // Every domain link target must own breadcrumbs — a page that exists.
     // System has no /system index in Ф1, so its domain link targets the
