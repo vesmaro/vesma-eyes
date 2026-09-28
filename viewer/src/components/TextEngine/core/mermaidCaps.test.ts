@@ -66,6 +66,19 @@ describe("mermaidCaps (untrusted profile)", () => {
       expect(countMermaidFences("```ts mermaid\nconst x\n```\n")).toBe(0);
     });
 
+    it("counts entity-encoded whitespace in the info string (NF1 pins — decoded by micromark, rendered by the theme)", () => {
+      // Empirically pinned (remark-parse 11): raw spaces split lang/meta at
+      // tokenization, but character references are decoded INSIDE the lang
+      // token — ```mermaid&#32;x yields lang "mermaid x", and the renderer's
+      // mdast-util-to-hast handler takes split(/\s+/)[0] = "mermaid", so the
+      // diagram RENDERS. The counter mirrors that predicate exactly.
+      expect(countMermaidFences("```mermaid&#32;x\nA-->B\n```\n")).toBe(1);
+      expect(countMermaidFences("```mermaid&#9;y\nA-->B\n```\n")).toBe(1);
+      // Leading encoded space: lang " mermaid" → first word "" on BOTH sides
+      // (counter and renderer) — inert, consistently.
+      expect(countMermaidFences("```&#32;mermaid\nA-->B\n```\n")).toBe(0);
+    });
+
     it("counts CONTAINER-NESTED fences (P1-1 regression pins — the renderer intercepts these)", () => {
       // Blockquote-nested: CommonMark parses this into blockquote > code(mermaid)
       // — the theme pre-branch intercepts it, so the counter must see it too.

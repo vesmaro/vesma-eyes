@@ -58,9 +58,14 @@ export function fenceExceedsSizeCap(code: string): boolean {
  * modes. Same tokenization guarantees, minimal surface. `parse()` is
  * synchronous; the processor is frozen once at module scope.
  *
- * `lang === "mermaid"` is exact on purpose (case, first word only): that is
- * what the renderer intercepts — `language-MERMAID` renders as a plain code
- * block in both the theme branch and this counter, by construction.
+ * `lang` matching mirrors the renderer's predicate EXACTLY: mdast-util-to-hast
+ * builds `language-` + `node.lang.split(/\s+/)[0]` (case kept), so the first
+ * whitespace-separated word is the language. Whitespace can arrive from
+ * character references too — micromark decodes them in info strings
+ * (```mermaid&#32;x → lang "mermaid x"), which still RENDERS — an
+ * exact-equality counter would undercount that shape back into the P1 the
+ * review flagged (ME-013 review NF1). `&#32;mermaid` (leading space) splits
+ * to an empty first word on BOTH sides — inert, consistently.
  */
 const FENCE_COUNTER = unified().use(remarkParse);
 
@@ -75,7 +80,13 @@ export function countMermaidFences(source: string): number {
   const tree = FENCE_COUNTER.parse(source) as MdastNode;
   let count = 0;
   const walk = (node: MdastNode): void => {
-    if (node.type === "code" && node.lang === "mermaid") count += 1;
+    if (
+      node.type === "code" &&
+      typeof node.lang === "string" &&
+      node.lang.split(/\s+/)[0] === "mermaid"
+    ) {
+      count += 1;
+    }
     for (const child of node.children ?? []) walk(child);
   };
   walk(tree);
