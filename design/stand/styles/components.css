@@ -2278,6 +2278,11 @@ button.chip:hover {
   display: flex;
   flex-direction: column;
   min-height: 100%;
+  /* рабочая зона во всю высоту: 100dvh − topbar 48 − crumbs 40 − padding-top
+     контента (--space-6). Полоса дока (margin-top: auto) упирается точно в
+     нижнюю кромку вьюпорта и не уезжает за фолд — проверено на 900/768px */
+  min-height: calc(100vh - 48px - 40px - var(--space-6));
+  min-height: calc(100dvh - 48px - 40px - var(--space-6));
 }
 /* dock lives at the very bottom edge: no dead padding under it */
 .content:has(.kora-page) {
@@ -2335,7 +2340,9 @@ button.chip:hover {
   border-bottom: none;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   box-shadow: var(--shadow-float);
-  overflow: hidden;
+  /* без overflow: hidden — caps-легенда (а) стоит НА кромке полосы
+     (translateY(-50%)) и не должна срезаться собственным доком; углы чистые:
+     дети не красятся за радиус, свиток клипсируется своим overflow-y */
   transition: height var(--duration-normal) var(--ease-exit);
 }
 .kora-dock[data-open="true"] {
@@ -2421,7 +2428,8 @@ button.chip:hover {
   outline-offset: 4px;
 }
 
-/* (в) развёрнутая шапка: имя H2 + пилюля + coverage + инструменты */
+/* (в) развёрнутая шапка: три слота — [заголовок+пилюля] [coverage flex+ellipsis] [кнопка]
+   «Свернуть» — собственный слот flex: none,coverage не подползает к кнопке */
 .dock-fullhead {
   border-bottom: var(--line-hairline) solid var(--myelin-hairline);
 }
@@ -2433,6 +2441,16 @@ button.chip:hover {
   box-sizing: border-box;
   padding: 0 var(--space-3) 0 var(--space-4);
   min-width: 0;
+}
+.dock-hid {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.dock-pill {
+  flex: none;
 }
 .dock-fullhead h2 {
   margin: 0;
@@ -2451,14 +2469,18 @@ button.chip:hover {
   outline-offset: var(--focus-ring-width);
 }
 .dock-cov {
-  flex: 1;
+  flex: 1 1 0;
   min-width: 0;
   font-size: var(--text-data);
   color: var(--color-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  text-align: right;
+}
+/* reserved slot кнопки: ширина по содержимому, никогда не наезжает на coverage */
+.dock-hrow .dock-btn {
+  flex: none;
+  margin-left: 0;
 }
 .dock-tools {
   display: flex;

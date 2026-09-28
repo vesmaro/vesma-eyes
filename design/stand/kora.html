@@ -249,11 +249,13 @@
                 </button>
               </div>
 
-              <!-- (в) шапка развёрнутого дока: имя H2 + пилюля + покрытие + инструменты -->
+              <!-- (в) шапка развёрнутого дока: слоты [заголовок+пилюля] [coverage] [кнопка] (07i §3) -->
               <div class="dock-fullhead" id="dock-fullhead" hidden>
                 <div class="dock-hrow">
-                  <h2 id="dock-title" tabindex="-1"></h2>
-                  <span id="dock-head-pill"></span>
+                  <div class="dock-hid">
+                    <h2 id="dock-title" tabindex="-1"></h2>
+                    <span class="dock-pill" id="dock-head-pill"></span>
+                  </div>
                   <span class="dock-cov" id="dock-head-cov"></span>
                   <button class="dock-btn" type="button" id="dock-collapse" aria-expanded="true" aria-controls="kora-dock">
                     Свернуть
@@ -719,9 +721,13 @@
     function renderHead() {
       var s = findS(selectedId);
       if (!s) return;
-      dockTitle.textContent = s.harness + " · " + s.host;
+      var name = s.harness + " · " + s.host;
+      dockTitle.textContent = name;
+      dockTitle.title = name; /* h2 ellipsis — полный текст в title */
       headPill.innerHTML = pillMap[s.state];
-      headCov.textContent = covText(s);
+      var cov = covText(s);
+      headCov.textContent = cov;
+      headCov.title = cov; /* coverage ellipsis — полный текст в title */
     }
 
     /* ── правая панель: инфо-карточка (б) / переключение (в) (07i §1–2) ─ */
