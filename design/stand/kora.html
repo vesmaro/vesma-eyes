@@ -817,12 +817,14 @@
       announce("Список: " + contextLabel());
     }
     function sessionRow(s) {
+      /* список role=list → обёртка listitem, кнопка сохраняет роль button (WCAG 4.1.2) */
+      var li = el("div");
+      li.setAttribute("role", "listitem");
       var b = el("button", "session-row b2-row");
       b.type = "button";
       b.dataset.sid = s.id;
       b.dataset.state = s.state;
       if (s.id === selectedId) b.classList.add("selected");
-      b.setAttribute("role", "listitem");
       var dot = el("span", "s-dot");
       dot.setAttribute("aria-hidden", "true");
       b.appendChild(dot);
@@ -837,7 +839,8 @@
       if (s.shared && ctx.kind !== "all") b.appendChild(el("span", "b2-part", s.participants.join(" + ")));
       b.appendChild(stateSpan(s, "row"));
       b.addEventListener("click", function () { selectSession(s); });
-      return b;
+      li.appendChild(b);
+      return li;
     }
     function emptyBox(title, actions) {
       var es = el("div", "empty-state");
