@@ -2,20 +2,22 @@ import { describe, expect, it } from "vitest";
 import { isEditableTarget, resolveGlobalHotkey, resolveHotkey } from "./hotkeyActions";
 
 /**
- * Ф1 hotkey layer (ARCHCOM-3 verdict §2): the ai-brain canon — `/` opens the
- * command palette (Ф2: the palette keeps the search promise), `?` opens the
- * cheatsheet, and BOTH stay quiet inside editable surfaces (the `inInput`
- * guard) and under modifier combos. Ф2 adds the ONE global exception:
- * ⌘K / Ctrl+K opens the palette from anywhere — even inside form fields.
+ * Ф1 hotkey layer (ARCHCOM-3 verdict §2): the ai-brain canon — union И1
+ * (stand 03 §7): `/` focuses the TopBar global search, `[` flips the sidebar
+ * rail, `?` opens the cheatsheet; all three stay quiet inside editable
+ * surfaces (the `inInput` guard) and under modifier combos. The ONE global
+ * exception stays: ⌘K / Ctrl+K opens the palette from anywhere — even
+ * inside form fields.
  */
 function target(tag: string, editable = false): HTMLElement {
   return { tagName: tag, isContentEditable: editable } as unknown as HTMLElement;
 }
 
 describe("resolveHotkey", () => {
-  it("maps / to open-palette and ? to open-help", () => {
-    expect(resolveHotkey({ key: "/" })).toBe("open-palette");
+  it("maps / to focus-search, ? to open-help and [ to toggle-sidebar", () => {
+    expect(resolveHotkey({ key: "/" })).toBe("focus-search");
     expect(resolveHotkey({ key: "?" })).toBe("open-help");
+    expect(resolveHotkey({ key: "[" })).toBe("toggle-sidebar");
   });
 
   it("ignores every other bare key", () => {
@@ -35,8 +37,9 @@ describe("resolveHotkey", () => {
     for (const tag of ["INPUT", "TEXTAREA", "SELECT"]) {
       expect(resolveHotkey({ key: "/", target: target(tag) })).toBeNull();
       expect(resolveHotkey({ key: "?", target: target(tag) })).toBeNull();
+      expect(resolveHotkey({ key: "[", target: target(tag) })).toBeNull();
     }
-    expect(resolveHotkey({ key: "/", target: target("DIV") })).toBe("open-palette");
+    expect(resolveHotkey({ key: "/", target: target("DIV") })).toBe("focus-search");
   });
 
   it("applies the inInput guard to contentEditable surfaces", () => {
@@ -45,7 +48,7 @@ describe("resolveHotkey", () => {
   });
 
   it("tolerates non-element targets (window itself)", () => {
-    expect(resolveHotkey({ key: "/", target: null })).toBe("open-palette");
+    expect(resolveHotkey({ key: "/", target: null })).toBe("focus-search");
     expect(isEditableTarget(null)).toBe(false);
   });
 });
