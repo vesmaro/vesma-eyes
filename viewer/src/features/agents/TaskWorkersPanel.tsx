@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from "react";
+import { Link } from "react-router";
 import {
   useQuery,
   type QueryFunctionContext,
@@ -33,8 +34,11 @@ import { useExecutors } from "./useAgents";
  * hard cap) is enough: a task's own audit depth.
  *
  * Honesty ladder (spec §2.3: an absent actor is an honest absence):
+ * - gateway without the activity read → «журнал недоступен в этом режиме»
+ *   (a disabled query is pending FOREVER — never a skeleton there);
  * - feed rows exist and carry actors → the contributor list (resolved names,
- *   verb digest, last-seen stamp);
+ *   verb digest, last-seen stamp); `has_more`/`truncated` surfaces the
+ *   «последние 200 событий» window caveat — older contributors may exist;
  * - rows exist but NONE carries an actor → «атрибуция не велась до 1.35»
  *   (pre-1.35 audit records + stripped anonymous legs are indistinguishable
  *   by contract — one honest line covers both);
@@ -95,7 +99,23 @@ export function TaskWorkersPanel({
     gcTime: GC_TIMES.taskActivity,
   });
 
-  if (!capable || feed.isPending) {
+  if (!capable) {
+    // P2-1 (UI-31 review): a gateway WITHOUT the activity read leaves the
+    // query disabled — isPending forever. The honest unavailable state
+    // (the TasksUnsupported pattern, panel-sized) instead of a skeleton
+    // that would never resolve.
+    return (
+      <section aria-label={t("tasks.workersLabel")}>
+        <WorkersHeading />
+        <EmptyState
+          variant="empty"
+          title={t("tasks.workersUnavailableTitle")}
+          message={t("tasks.workersUnavailableMessage")}
+        />
+      </section>
+    );
+  }
+  if (feed.isPending) {
     return (
       <section aria-label={t("tasks.workersLabel")}>
         <WorkersHeading />
@@ -128,6 +148,10 @@ export function TaskWorkersPanel({
   // the pre-1.35 / stripped-legs case, zero rows is the never-executed case.
   const { contributors, attributed } = collectContributors(rows, executorNameOf);
   const noAttributionAtAll = rows.length > 0 && attributed === 0;
+  // P2-2 (UI-31 review): the one deep page is a WINDOW. A task with more
+  // events than the page carried may have older contributors we never saw —
+  // say so instead of implying the list is complete.
+  const windowPartial = feed.data?.has_more === true || feed.data?.truncated === true;
 
   return (
     <section aria-label={t("tasks.workersLabel")}>
@@ -177,6 +201,12 @@ export function TaskWorkersPanel({
         />
       )}
 
+      {windowPartial ? (
+        <p className="mt-1.5 text-xs text-foreground-muted">
+          {t("tasks.workersPartial", { limit: WORKERS_PAGE_LIMIT })}
+        </p>
+      ) : null}
+
       {/* The DECLARED side: the task's own agent chips (observed attribution
        * above is the activity feed's; the two are different facts). */}
       {(task.agents ?? []).length > 0 ? (
@@ -192,12 +222,14 @@ export function TaskWorkersPanel({
 
       {reportsHref !== undefined && reportsCount !== undefined ? (
         <p className="mt-2 text-xs">
-          <a
-            href={reportsHref}
+          {/* P3-1 (UI-31 review): a router Link, not a raw <a> — the jump
+           * stays an SPA transition, consistent with the tab links. */}
+          <Link
+            to={reportsHref}
             className="text-iris-bright underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
           >
             {t("tasks.workersReportsLink", { count: reportsCount })}
-          </a>
+          </Link>
         </p>
       ) : null}
     </section>

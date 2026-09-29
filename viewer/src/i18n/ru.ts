@@ -453,6 +453,11 @@ export const ru = {
   "tasks.workersLabel": "Кто работал",
   "tasks.workersLoading": "Загружаем журнал задачи",
   "tasks.workersFailed": "Не удалось загрузить журнал задачи",
+  "tasks.workersUnavailableTitle": "Журнал недоступен в этом режиме",
+  "tasks.workersUnavailableMessage":
+    "Этот источник данных не отдаёт журнал активности — кто работал, показать нельзя.",
+  "tasks.workersPartial":
+    "Показаны последние {{limit}} событий — состав может быть неполным.",
   "tasks.workersEmptyTitle": "Об исполнителе ничего не известно",
   "tasks.workersEmpty":
     "Событий по этой задаче в журнале нет — она не доходила до исполнения.",
@@ -550,7 +555,6 @@ export const ru = {
   "tasks.memoryOpenPrompt": "Открыть запись памяти",
   "tasks.memoryUnresolved": "Неразрешённые ссылки (нет на активных серверах):",
   "tasks.detailsSummaryLabel": "Сводка",
-  "tasks.detailsSpecLabel": "Спецификация",
   "tasks.detailsMetaLabel": "Метаданные",
   "tasks.detailsEnv": "Среда",
   "tasks.detailsProject": "Проект",

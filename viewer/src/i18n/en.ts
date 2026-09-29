@@ -433,6 +433,11 @@ export const en: Record<TranslationKey, string> = {
   "tasks.workersLabel": "Who worked on this",
   "tasks.workersLoading": "Loading the task audit log",
   "tasks.workersFailed": "Failed to load the task audit log",
+  "tasks.workersUnavailableTitle": "Audit log unavailable in this mode",
+  "tasks.workersUnavailableMessage":
+    "This data source does not serve the activity log — there is no way to show who worked on this.",
+  "tasks.workersPartial":
+    "Showing the latest {{limit}} events — the list may be incomplete.",
   "tasks.workersEmptyTitle": "No known executor",
   "tasks.workersEmpty":
     "No audit events for this task — it never reached execution.",
@@ -530,7 +535,6 @@ export const en: Record<TranslationKey, string> = {
   "tasks.memoryOpenPrompt": "Open the memory record",
   "tasks.memoryUnresolved": "Unresolved links (absent from active servers):",
   "tasks.detailsSummaryLabel": "Summary",
-  "tasks.detailsSpecLabel": "Specification",
   "tasks.detailsMetaLabel": "Metadata",
   "tasks.detailsEnv": "Environment",
   "tasks.detailsProject": "Project",
