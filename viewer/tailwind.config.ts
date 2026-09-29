@@ -90,6 +90,14 @@ export default {
         row: "var(--row-h)",
         "row-airy": "var(--row-h-airy)",
         "list-gap": "var(--list-gap)",
+        // Shell geometry (union И1 — stand 03 §2–§5): the one shell for all
+        // screens. Powers h-topbar/top-topbar, w-sidebar/w-sidebar-rail,
+        // h-crumbs/top-crumbs and w-search utilities.
+        topbar: "var(--shell-topbar-h)",
+        sidebar: "var(--shell-sidebar-w)",
+        "sidebar-rail": "var(--shell-sidebar-rail-w)",
+        crumbs: "var(--shell-crumbs-h)",
+        search: "var(--shell-search-w)",
       },
       maxWidth: {
         scroll: "var(--measure-scroll)",
