@@ -67,7 +67,21 @@ export interface paths {
             readonly path?: never;
             readonly cookie?: never;
         };
-        readonly get?: never;
+        /**
+         * Get Task
+         * @description Task detail by id (BE-16): one handler for BOTH active and archived
+         *     tasks. The store keeps them in a single ``tasks`` table split only by
+         *     the ``archived`` flag and ``store.task`` applies no archived filter, so
+         *     the response shape never diverges from the board/PATCH TaskOut — the
+         *     SPA may drop its archive-list probe (UI-18 pair 4) without adding a
+         *     single conditional beyond 404. Read-only: covered by the global device
+         *     read wildcard (``GET /api/tasks*``) and, like every other task read,
+         *     open without a token; DELETE hard-deny and archive/unarchive mutations
+         *     are untouched. Registered AFTER ``GET /api/tasks/inbox`` on purpose:
+         *     FastAPI matches routes in registration order and ``{task_id}`` would
+         *     otherwise swallow the static inbox path.
+         */
+        readonly get: operations["get_task_api_tasks__task_id__get"];
         readonly put?: never;
         readonly post?: never;
         /** Delete Task */
@@ -736,6 +750,58 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/api/activity": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Activity
+         * @description The task execution activity feed (UI-28 Ф1) and its hourly
+         *     histogram (Ф2) — one endpoint per spec §3.2. OPEN read like every
+         *     listing (the cluster ingress is the auth boundary); the actor-strip
+         *     policy is the ONE exception: for an unauthenticated leg (anonymous or
+         *     machine bearer — ui-bearer, ui-cookie and mnd_ legs are
+         *     authenticated, TL verdict 2) the ``actor`` attribution is ABSENT from
+         *     every row, indistinguishable from an event that has none.
+         *
+         *     Лента (default): ``limit`` (default 50, hard cap 200 — silent clamp +
+         *     ``truncated: true``) + ``before_id`` cursor (rows with id strictly
+         *     below it — pages stay stable while live events land). Filters:
+         *     ``type=`` (csv of families task|assignment|report or exact v1 kinds;
+         *     garbage → 422), ``task_id=`` (exact; an unknown task is an empty
+         *     page 200), ``agent=`` (declared identity or ``machine:<id>``),
+         *     ``host=`` (registry resolve at read time). A row:
+         *     {id, ts, kind, task_id, task_title?, actor?, executor_id?, host?,
+         *     report_kind?, detail?} — optional keys ABSENT, not null (additive
+         *     contract); ``report_kind`` rides task.report rows only
+         *     (intermediate | final). The envelope carries ``has_more`` — rows
+         *     exist below the last returned id under the same filters; false IS
+         *     the honest «Это вся глубина журнала».
+         *
+         *     Bucket form (``?bucket=hour``): ``hours`` (default 24, silently
+         *     clamped to 1..48) hourly buckets ending at the current hour,
+         *     zero-filled, oldest first (DENSE — reconciliation verdict: the
+         *     viewer merges/tolerates both shapes, dense keeps the contract
+         *     simpler): {ts, total, by_type:{task,assignment,report}} — the same
+         *     filters, the same access classes. Cursor parameters are meaningless
+         *     here and are ignored.
+         *
+         *     Retention is the audit table's own (TL verdict 1: the validation
+         *     sweep prunes non-task events at 90 days / 500k rows; task.* is
+         *     exempt — it feeds the per-task history).
+         */
+        readonly get: operations["activity_api_activity_get"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/api/assignments": {
         readonly parameters: {
             readonly query?: never;
@@ -755,6 +821,11 @@ export interface paths {
          *     - ``?executor_id=`` presence piggyback: a poller announcing itself
          *       ticks that executor's last_seen — but only when authenticated as
          *       that executor (its token) or with the machine token.
+         *     - ME-015 additive self-report on the same auth gate: non-empty
+         *       ``executor_version`` / ``executor_transport`` update the registry to
+         *       the last reported values (changed values only; an agent that sends
+         *       nothing — every client deployed before ME-015 — is unaffected). A
+         *       non-empty transport outside EXECUTOR_TRANSPORTS is an honest 422.
          *     - every item carries ``routing`` {resolved, reason} — the resolution
          *       chain (Amd 2 §5) computed per GET, stored nowhere: explicit pin →
          *       assignment specialist → task specialists → project default →
@@ -959,6 +1030,12 @@ export interface paths {
          *     travel in ``meta`` — clients must read them, never hardcode. The
          *     sweeper interval is exposed the same way. secret_hash never leaves
          *     the store.
+         *
+         *     UXE-2: every item also carries the honest ``status`` lifecycle object
+         *     (07a dictionary §4) — the same facts, one more owner-facing verdict
+         *     (awaiting-approval / awaiting-first-report / online / silent / offline
+         *     / disabled / revoked) with since, report age and next_action; the
+         *     state list rides ``meta.lifecycle.states``.
          */
         readonly get: operations["list_executors_api_executors_get"];
         readonly put?: never;
@@ -1003,6 +1080,9 @@ export interface paths {
          * @description Enrollment tokens for the owner panel (ui-token). Items carry NO
          *     token material — token_hash stays in the store (hash-only); the list
          *     shows live tokens plus terminal history for the TTL/used audit trail.
+         *     UXE-2: each item carries the computed ``status`` (07a §4) — a live
+         *     provision job refines the token state into provisioning /
+         *     awaiting-first-report.
          */
         readonly get: operations["list_enrollments_api_executors_enrollment_get"];
         readonly put?: never;
@@ -1015,7 +1095,9 @@ export interface paths {
          *     (pairing-create pattern); live tokens capped at ENROLLMENT_MAX_LIVE →
          *     409 with NO auto-revoke (the owner chooses, device-quota principle).
          *     422 unknown harness_hint (the hint feeds the bootstrap command — a
-         *     bogus hint would mislead the remote leg).
+         *     bogus hint would mislead the remote leg). ``ca_fingerprint`` rides
+         *     along (AGW-9): the UI bakes it into the bootstrap command as
+         *     --expect-fp, the installer then fail-closes on a wrong CA.
          */
         readonly post: operations["create_enrollment_api_executors_enrollment_post"];
         readonly delete?: never;
@@ -1109,8 +1191,138 @@ export interface paths {
          *     revoked may not (kill-switch — presence must decay to offline). Own
          *     rate budget 60/60 s. NO SSE: per-heartbeat events are forbidden (§11)
          *     — clients render age from GET + a local 1 Hz ticker.
+         *
+         *     ME-015: the body (agent protocol §3.1 — historically ignored) now
+         *     carries the honest self-report: non-empty ``version`` / ``transport``
+         *     update the registry to the LAST reported values; absent/empty fields
+         *     are never written (an agent that reports nothing — every client
+         *     deployed before ME-015 — leaves the row exactly as it was). Invalid
+         *     transport is an explicit 422; the tick itself is lost with it and the
+         *     agent retries next beat (never fatal, §3.1).
          */
         readonly post: operations["executor_heartbeat_api_executors__executor_id__heartbeat_post"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/executors/{executor_id}/discovery": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Executor Discovery
+         * @description Discovery ingest (agent protocol §3 — the board side of the leg the
+         *     agent v0.5+ posts hourly). EXECUTOR-token class, identity-match exactly
+         *     like the heartbeat: URL id MUST equal the token identity (mismatch →
+         *     403, an unknown id never 404s here); revoked are 403 (kill-switch);
+         *     pending MAY report (the approve panel reads the mirror before
+         *     approval). Shares the heartbeat rate budget (one machine self-report
+         *     family, 60/60 s; the real cadence is hourly).
+         *
+         *     Semantics (advisory mirror, never authority):
+         *     - entries whose ``name`` is not in the harness dictionary are DROPPED
+         *       and audited (discovery.rejected) — unknown values never auto-extend
+         *       the dictionary (ui-token owner act, wave 3C);
+         *     - capabilities stay owner-declared (never self-expanded, Amd 2 §4);
+         *     - the stored list is the LAST report (a snapshot of local fact); an
+         *       identical re-report is a silent no-op (hourly cadence, no churn);
+         *     - an authenticated report proves liveness as well as a poll (the
+         *       kora-scan precedent) — last_seen ticks.
+         *     The additive AGW-17 ``environments`` field is accepted and ignored.
+         */
+        readonly post: operations["executor_discovery_api_executors__executor_id__discovery_post"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/kora/sessions": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * List Kora Sessions
+         * @description Slice 1 listing (frozen contract GET /kora/sessions). AUTHED read
+         *     (owner decision on the slice-1 review): the ui class (owner session —
+         *     header or cookie leg) and the mnd_ device class (metadata tier; the
+         *     LIST is metadata, previews already pass the redaction choke-point —
+         *     the archcom position). Anonymous → 401; transcripts (slice 2) are
+         *     ui-only. Filters must be dictionary values (422, the same validation
+         *     grammar as assignments).
+         *
+         *     P4-7 (week-0 review, slice 2): OPTIONAL ``limit``/``offset`` for the
+         *     UI load-more. Additive QUERY surface — the frozen RESPONSE shape is
+         *     untouched (KoraSessionsOut carries no pagination fields; the client
+         *     derives has_more from count == limit). No limit → the legacy full
+         *     listing, count = all rows (backwards compatible).
+         */
+        readonly get: operations["list_kora_sessions_api_kora_sessions_get"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/executors/{executor_id}/kora-scan": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Ingest Kora Scan
+         * @description Scanner ingest (machine class, executor-bound). The host-side
+         *     scanner (scripts/kora/scan_zcode.py — the poller family) pushes its
+         *     read-only listing here. Auth: the executor's OWN token or the machine
+         *     token (the poller pattern); a token-backed executor may only push its
+         *     own id (403 identity mismatch, heartbeat pattern). ``drop_missing``
+         *     marks a FULL listing — the store is the authority and rows the scan
+         *     no longer sees are removed. Presence piggyback: the scan tick IS the
+         *     executor's last_seen (ARCH-9 — the scanner runs on the executor's
+         *     host, so a scan proves liveness as well as a poll would).
+         */
+        readonly post: operations["ingest_kora_scan_api_executors__executor_id__kora_scan_post"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/kora/sessions/{session_id}/transcript": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Get Kora Session Transcript
+         * @description Slice 2 transcript tail (frozen contract GET
+         *     /kora/sessions/{id}/transcript): ui-only, seq cursor, redaction
+         *     choke-point on every content byte, session.transcript_viewed audit
+         *     on every successful read. zcode sessions only — vscode (kind:1
+         *     known gap) and pi (lists-only in slice 2) answer 422 with an honest
+         *     explanation, not a fake empty page.
+         */
+        readonly get: operations["get_kora_session_transcript_api_kora_sessions__session_id__transcript_get"];
+        readonly put?: never;
+        readonly post?: never;
         readonly delete?: never;
         readonly options?: never;
         readonly head?: never;
@@ -1173,6 +1385,76 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/api/executors/provision": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Provision Executor
+         * @description Queue an install-time provisioning job (ui-token; wave 4). 202
+         *     carries the job id and the enrollment id — NEVER the mne_ token (the
+         *     worker consumes it transit-only). Anti-spray: a global cap of 2 live
+         *     jobs, one live job per host:port (409), a 90 s per-host cooldown
+         *     (429), and a dedicated 5/60 s rate limit. password auth answers 422
+         *     while the deployment flag is off.
+         */
+        readonly post: operations["provision_executor_api_executors_provision_post"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/executors/provision/{job_id}": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Provision Job Status
+         * @description Job progress for the owner UI (ui-token): state, steps, the pinned
+         *     host-key fingerprint and the linked enrollment. No secrets travel.
+         */
+        readonly get: operations["provision_job_status_api_executors_provision__job_id__get"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/executors/provision/host/{host}/repin": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Provision Repin
+         * @description Re-pin a host key (ui-token): a separate OWNER action with the
+         *     old→new pair in the audit (provisioning.host_key_repinned). Use after
+         *     a deliberate host reinstall — never to silence a mismatch. P2-1: the
+         *     pin identity is (host, port); live jobs of that identity are failed
+         *     (pin.invalidated) — they were authenticating against the old pin.
+         */
+        readonly post: operations["provision_repin_api_executors_provision_host__host__repin_post"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/api/poller/bootstrap.sh": {
         readonly parameters: {
             readonly query?: never;
@@ -1187,6 +1469,31 @@ export interface paths {
          *     a CLI argument on the VPS, everything else rides pinned TLS.
          */
         readonly get: operations["poller_bootstrap_script_api_poller_bootstrap_sh_get"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/poller/artifacts/bootstrap.sh.sha256": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Poller Bootstrap Script Sha256
+         * @description SHA256 (hex) of the EXACT installer bytes the sibling route serves
+         *     (AGW-9, АРХКОМ-8 В1): out-of-band verification of the installer TEXT
+         *     for the paranoid two-step (fetch, verify, read, run). Same resolution
+         *     order as /api/poller/bootstrap.sh — the hash can never describe a
+         *     different file than the one downloadable next to it. Open read: a
+         *     digest of a secret-free script is not secret material.
+         */
+        readonly get: operations["poller_bootstrap_script_sha256_api_poller_artifacts_bootstrap_sh_sha256_get"];
         readonly put?: never;
         readonly post?: never;
         readonly delete?: never;
@@ -1763,12 +2070,18 @@ export interface paths {
          * Probe Ui Session
          * @description Boot probe for the viewer's session hydration (ADR 0014 Ф2): 204 =
          *     a live ``vesmaro_ui`` cookie (hasUiToken() → true, no login window);
-         *     401 = none; 503 = login not configured (fail-closed). The viewer also
-         *     re-probes in its 401 branch BEFORE opening the window — a stale header
-         *     token beside a live cookie must replay, not re-prompt (the incident's
-         *     mid-flight beat). No limiter: it is a constant-time boolean oracle
-         *     with the same profile as the guards themselves; token entropy is the
-         *     defence, as everywhere.
+         *     200 ``{"live": false}`` = none; 503 = login not configured
+         *     (fail-closed). The viewer also re-probes in its 401 branch BEFORE
+         *     opening the window — a stale header token beside a live cookie must
+         *     replay, not re-prompt (the incident's mid-flight beat).
+         *     ME-028: the "none" answer is a 200-JSON, not a 401 — the probe runs on
+         *     EVERY page load and browsers paint any 4xx resource as a console
+         *     error, so an anonymous visit opened with red noise. The oracle profile
+         *     is unchanged (constant-time boolean; token entropy is the defence) and
+         *     so is the anti-spoof rule: the viewer's raw fetch pins 204 as the ONLY
+         *     live answer, so a proxied 200-JSON still reads as "no session".
+         *     No limiter: it is a constant-time boolean oracle with the same profile
+         *     as the guards themselves.
          */
         readonly get: operations["probe_ui_session_api_auth_ui_token_get"];
         readonly put?: never;
@@ -2002,6 +2315,99 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ActivityBucketOut */
+        readonly ActivityBucketOut: {
+            /** Ts */
+            readonly ts: string;
+            /** Total */
+            readonly total: number;
+            readonly by_type: components["schemas"]["ActivityBucketTypes"];
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /**
+         * ActivityBucketTypes
+         * @description Fixed by_type keys (§3.2 Ф2): the three v1 families — a bucket is a
+         *     counter block for the histogram, never a free-form dict.
+         */
+        readonly ActivityBucketTypes: {
+            /**
+             * Task
+             * @default 0
+             */
+            readonly task: number;
+            /**
+             * Assignment
+             * @default 0
+             */
+            readonly assignment: number;
+            /**
+             * Report
+             * @default 0
+             */
+            readonly report: number;
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /** ActivityBucketsOut */
+        readonly ActivityBucketsOut: {
+            /** Ok */
+            readonly ok: boolean;
+            /** Bucket */
+            readonly bucket: string;
+            /** Hours */
+            readonly hours: number;
+            /** Buckets */
+            readonly buckets: readonly components["schemas"]["ActivityBucketOut"][];
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /** ActivityEventOut */
+        readonly ActivityEventOut: {
+            /** Id */
+            readonly id: number;
+            /** Ts */
+            readonly ts: string;
+            /** Kind */
+            readonly kind: string;
+            /** Task Id */
+            readonly task_id?: string | null;
+            /** Task Title */
+            readonly task_title?: string | null;
+            /** Actor */
+            readonly actor?: string | null;
+            /** Executor Id */
+            readonly executor_id?: string | null;
+            /** Host */
+            readonly host?: string | null;
+            /** Report Kind */
+            readonly report_kind?: string | null;
+            /** Detail */
+            readonly detail?: string | null;
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /** ActivityOut */
+        readonly ActivityOut: {
+            /** Ok */
+            readonly ok: boolean;
+            /** Count */
+            readonly count: number;
+            /** Items */
+            readonly items: readonly components["schemas"]["ActivityEventOut"][];
+            /**
+             * Truncated
+             * @default false
+             */
+            readonly truncated: boolean;
+            /**
+             * Has More
+             * @default false
+             */
+            readonly has_more: boolean;
+        } & {
+            readonly [key: string]: unknown;
+        };
         /** ArchiveOut */
         readonly ArchiveOut: {
             /** Ok */
@@ -2392,6 +2798,24 @@ export interface components {
         } & {
             readonly [key: string]: unknown;
         };
+        /**
+         * DiscoveryEntry
+         * @description One harness fact (agent protocol §3, frozen v0.1 fields).
+         */
+        readonly DiscoveryEntry: {
+            /** Name */
+            readonly name: string;
+            /**
+             * Version
+             * @default
+             */
+            readonly version: string;
+            /**
+             * Path
+             * @default
+             */
+            readonly path: string;
+        };
         /** EnrollmentCreateBody */
         readonly EnrollmentCreateBody: {
             /**
@@ -2417,6 +2841,11 @@ export interface components {
             readonly enrollment: components["schemas"]["EnrollmentOut"];
             /** Token */
             readonly token: string;
+            /**
+             * Ca Fingerprint
+             * @default
+             */
+            readonly ca_fingerprint: string;
         } & {
             readonly [key: string]: unknown;
         };
@@ -2480,6 +2909,7 @@ export interface components {
              * @default
              */
             readonly executor_id: string;
+            readonly status?: components["schemas"]["LifecycleStatus"] | null;
         } & {
             readonly [key: string]: unknown;
         };
@@ -2548,6 +2978,63 @@ export interface components {
         } & {
             readonly [key: string]: unknown;
         };
+        /**
+         * ExecutorDiscoveryBody
+         * @description Discovery report body (agent protocol §3). The AGW-17 additive
+         *     ``environments`` field is accepted and IGNORED board-side — the
+         *     contract governs the ``harnesses`` list only.
+         */
+        readonly ExecutorDiscoveryBody: {
+            /**
+             * Harnesses
+             * @default []
+             */
+            readonly harnesses: readonly components["schemas"]["DiscoveryEntry"][];
+            /**
+             * Environments
+             * @default []
+             */
+            readonly environments: readonly {
+                readonly [key: string]: unknown;
+            }[];
+        };
+        /** ExecutorDiscoveryOut */
+        readonly ExecutorDiscoveryOut: {
+            /** Ok */
+            readonly ok: boolean;
+            readonly executor: components["schemas"]["ExecutorOut"];
+            /** Accepted */
+            readonly accepted: number;
+            /** Rejected */
+            readonly rejected: number;
+            /**
+             * Rejected Names
+             * @default []
+             */
+            readonly rejected_names: readonly string[];
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /**
+         * ExecutorHeartbeatBody
+         * @description Presence-tick body (agent protocol §3.1): the agent MAY send it,
+         *     the server historically ignored it. ME-015 makes the additive
+         *     self-report fields REAL: ``version`` / ``transport`` update the
+         *     registry to the last reported values (absent/empty = never written —
+         *     an old agent that reports nothing leaves the row untouched). ``note``
+         *     stays accept-and-ignore (wire symmetry, §3.1).
+         */
+        readonly ExecutorHeartbeatBody: {
+            /**
+             * Note
+             * @default
+             */
+            readonly note: string;
+            /** Version */
+            readonly version?: string | null;
+            /** Transport */
+            readonly transport?: string | null;
+        };
         /** ExecutorListOut */
         readonly ExecutorListOut: {
             /** Ok */
@@ -2592,6 +3079,13 @@ export interface components {
              */
             readonly version: string;
             /**
+             * Discovered
+             * @default []
+             */
+            readonly discovered: readonly {
+                readonly [key: string]: unknown;
+            }[];
+            /**
              * Enabled
              * @default false
              */
@@ -2611,6 +3105,7 @@ export interface components {
              * @default offline
              */
             readonly presence: string;
+            readonly status: components["schemas"]["LifecycleStatus"];
             /**
              * Registered Via
              * @default
@@ -2947,6 +3442,167 @@ export interface components {
         } & {
             readonly [key: string]: unknown;
         };
+        /** HostRepinBody */
+        readonly HostRepinBody: {
+            /** Fingerprint */
+            readonly fingerprint: string;
+        };
+        /** KoraCoverageHarnessOut */
+        readonly KoraCoverageHarnessOut: {
+            /** Harness */
+            readonly harness: string;
+            /** Support */
+            readonly support: string;
+            /** Note */
+            readonly note?: string | null;
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /** KoraCoverageOut */
+        readonly KoraCoverageOut: {
+            /** Harnesses */
+            readonly harnesses: readonly components["schemas"]["KoraCoverageHarnessOut"][];
+            /** Gaps */
+            readonly gaps: readonly string[];
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /**
+         * KoraScanIn
+         * @description Scanner ingest envelope. ``drop_missing``: a full-listing scan
+         *     (the zcode store is the authority) removes registry rows the scan no
+         *     longer sees; a delta push keeps them.
+         */
+        readonly KoraScanIn: {
+            /** Sessions */
+            readonly sessions: readonly components["schemas"]["KoraSessionIn"][];
+            /**
+             * Drop Missing
+             * @default false
+             */
+            readonly drop_missing: boolean;
+        };
+        /** KoraScanOut */
+        readonly KoraScanOut: {
+            /** Scanned */
+            readonly scanned: number;
+            /** Upserted */
+            readonly upserted: number;
+            /** Listed */
+            readonly listed: number;
+            /** Dropped */
+            readonly dropped: number;
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /**
+         * KoraSessionIn
+         * @description One scanner row (ingest body item). Validation mirrors the store's
+         *     kora_sessions CHECK constraints — unknown enum values 422 here.
+         */
+        readonly KoraSessionIn: {
+            /** Native Id */
+            readonly native_id: string;
+            /**
+             * Harness
+             * @enum {string}
+             */
+            readonly harness: "zcode" | "vscode" | "pi";
+            /**
+             * Project
+             * @default
+             */
+            readonly project: string;
+            /**
+             * Cwd
+             * @default
+             */
+            readonly cwd: string;
+            /**
+             * State
+             * @default idle
+             * @enum {string}
+             */
+            readonly state: "live" | "idle" | "dead";
+            /**
+             * Origin
+             * @default local
+             * @enum {string}
+             */
+            readonly origin: "relay" | "local";
+            /**
+             * Steerable
+             * @default false
+             */
+            readonly steerable: boolean;
+            /**
+             * Started At
+             * @default
+             */
+            readonly started_at: string;
+            /**
+             * Last Activity At
+             * @default
+             */
+            readonly last_activity_at: string;
+            /**
+             * Preview
+             * @default
+             */
+            readonly preview: string;
+        };
+        /**
+         * KoraSessionOut
+         * @description The frozen KoraSessionOut shape (docs/kora/openapi.yaml). The
+         *     opaque id is '<executor_id>:<native_id>' — derived from the registry
+         *     PK, stable across listings (slice-2/3 routes parse it back).
+         */
+        readonly KoraSessionOut: {
+            /** Id */
+            readonly id: string;
+            /** Executor Id */
+            readonly executor_id: string;
+            /** Native Id */
+            readonly native_id: string;
+            /** Harness */
+            readonly harness: string;
+            /** Project */
+            readonly project?: string | null;
+            /** Cwd */
+            readonly cwd?: string | null;
+            /** State */
+            readonly state: string;
+            /** Origin */
+            readonly origin: string;
+            /** Steerable */
+            readonly steerable: boolean;
+            /** Started At */
+            readonly started_at?: string | null;
+            /** Last Activity At */
+            readonly last_activity_at?: string | null;
+            /** Age Seconds */
+            readonly age_seconds: number;
+            /** Last Line Preview */
+            readonly last_line_preview?: string | null;
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /** KoraSessionsOut */
+        readonly KoraSessionsOut: {
+            /** Ok */
+            readonly ok: boolean;
+            /** Count */
+            readonly count: number;
+            /** Items */
+            readonly items: readonly components["schemas"]["KoraSessionOut"][];
+            readonly coverage: components["schemas"]["KoraCoverageOut"];
+            /** Meta */
+            readonly meta: {
+                readonly [key: string]: string;
+            };
+        } & {
+            readonly [key: string]: unknown;
+        };
         /** LaunchOut */
         readonly LaunchOut: {
             /** Id */
@@ -2999,6 +3655,44 @@ export interface components {
              * @default false
              */
             readonly truncated: boolean;
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /**
+         * LifecycleStatus
+         * @description UXE-2 honest connection lifecycle (07a dictionary §4). Computed on
+         *     read by the store (``executor_lifecycle_status`` /
+         *     ``enrollment_lifecycle_status``); never persisted. ``state`` is one of
+         *     provisioning | awaiting-approval | awaiting-first-report | online |
+         *     silent | offline | disabled | revoked; ``since`` is the timestamp of
+         *     the fact the state rests on; ``last_report_age_s`` is '' when no
+         *     report exists yet (honest absence) and an integer otherwise;
+         *     ``next_action`` is the owner-facing follow-up (UI renders it, the
+         *     board never hardcodes labels).
+         */
+        readonly LifecycleStatus: {
+            /** State */
+            readonly state: string;
+            /**
+             * Since
+             * @default
+             */
+            readonly since: string;
+            /**
+             * Last Report Age S
+             * @default
+             */
+            readonly last_report_age_s: number | string;
+            /**
+             * Reason
+             * @default
+             */
+            readonly reason: string;
+            /**
+             * Next Action
+             * @default
+             */
+            readonly next_action: string;
         } & {
             readonly [key: string]: unknown;
         };
@@ -3490,6 +4184,88 @@ export interface components {
         } & {
             readonly [key: string]: unknown;
         };
+        /** ProvisionAuth */
+        readonly ProvisionAuth: {
+            /** Kind */
+            readonly kind: string;
+            /**
+             * Secret
+             * @default
+             */
+            readonly secret: string;
+            /**
+             * Passphrase
+             * @default
+             */
+            readonly passphrase: string;
+        };
+        /** ProvisionBody */
+        readonly ProvisionBody: {
+            /**
+             * Name
+             * @default
+             */
+            readonly name: string;
+            /** Host */
+            readonly host: string;
+            /**
+             * Port
+             * @default 22
+             */
+            readonly port: number;
+            readonly auth: components["schemas"]["ProvisionAuth"];
+            /**
+             * Harness Hint
+             * @default zcode
+             */
+            readonly harness_hint: string;
+            /**
+             * Board Url For Host
+             * @default
+             */
+            readonly board_url_for_host: string;
+            /**
+             * Expected Host Key Fingerprint
+             * @default
+             */
+            readonly expected_host_key_fingerprint: string;
+            /**
+             * Reuse Enrollment Id
+             * @default
+             */
+            readonly reuse_enrollment_id: string;
+        };
+        /** ProvisionCreatedOut */
+        readonly ProvisionCreatedOut: {
+            /** Ok */
+            readonly ok: boolean;
+            /** Job Id */
+            readonly job_id: string;
+            /** Enrollment Id */
+            readonly enrollment_id: string;
+            /**
+             * State
+             * @default queued
+             */
+            readonly state: string;
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /** ProvisionJobOut */
+        readonly ProvisionJobOut: {
+            /** Ok */
+            readonly ok: boolean;
+            /** Job */
+            readonly job: {
+                readonly [key: string]: unknown;
+            };
+            /** Enrollment */
+            readonly enrollment: {
+                readonly [key: string]: unknown;
+            };
+        } & {
+            readonly [key: string]: unknown;
+        };
         /** ReflectBody */
         readonly ReflectBody: {
             /** Specialist */
@@ -3959,6 +4735,8 @@ export interface components {
              * @default []
              */
             readonly mnemos_tags: readonly string[];
+            /** Id */
+            readonly id?: string | null;
         };
         /**
          * TaskDraftBody
@@ -4151,6 +4929,8 @@ export interface components {
             readonly spec?: string | null;
             /** Status */
             readonly status?: string | null;
+            /** Col */
+            readonly col?: string | null;
             /**
              * Force
              * @default false
@@ -4170,6 +4950,19 @@ export interface components {
             readonly memory_ids?: readonly string[] | null;
             /** Mnemos Tags */
             readonly mnemos_tags?: readonly string[] | null;
+        };
+        /**
+         * UiTokenProbeOut
+         * @description The anonymous boot-probe verdict (ME-028): an explicit ``{"live":
+         *     false}`` 200 — same boolean the 401 used to carry, minus the console
+         *     noise on every page load. Never ``{"live": true}``: a live cookie
+         *     answers 204 with no body (the viewer's raw fetch pins that).
+         */
+        readonly UiTokenProbeOut: {
+            /** Live */
+            readonly live: boolean;
+        } & {
+            readonly [key: string]: unknown;
         };
         /**
          * UiTokenVerifyIn
@@ -4292,6 +5085,37 @@ export interface operations {
         readonly responses: {
             /** @description Successful Response */
             readonly 201: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["TaskOut"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly get_task_api_tasks__task_id__get: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly task_id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
                 headers: {
                     readonly [name: string]: unknown;
                 };
@@ -5530,6 +6354,44 @@ export interface operations {
             };
         };
     };
+    readonly activity_api_activity_get: {
+        readonly parameters: {
+            readonly query?: {
+                readonly limit?: number;
+                readonly before_id?: number | null;
+                readonly type?: string;
+                readonly task_id?: string;
+                readonly agent?: string;
+                readonly host?: string;
+                readonly bucket?: string;
+                readonly hours?: number;
+            };
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["ActivityOut"] | components["schemas"]["ActivityBucketsOut"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     readonly list_assignments_api_assignments_get: {
         readonly parameters: {
             readonly query?: {
@@ -5537,6 +6399,8 @@ export interface operations {
                 readonly task_id?: string;
                 readonly executor_id?: string;
                 readonly by?: string;
+                readonly executor_version?: string;
+                readonly executor_transport?: string;
             };
             readonly header?: never;
             readonly path?: never;
@@ -6050,7 +6914,11 @@ export interface operations {
             };
             readonly cookie?: never;
         };
-        readonly requestBody?: never;
+        readonly requestBody?: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["ExecutorHeartbeatBody"] | null;
+            };
+        };
         readonly responses: {
             /** @description Successful Response */
             readonly 200: {
@@ -6059,6 +6927,144 @@ export interface operations {
                 };
                 content: {
                     readonly "application/json": components["schemas"]["ExecutorStateChangeOut"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly executor_discovery_api_executors__executor_id__discovery_post: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly executor_id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["ExecutorDiscoveryBody"];
+            };
+        };
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["ExecutorDiscoveryOut"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly list_kora_sessions_api_kora_sessions_get: {
+        readonly parameters: {
+            readonly query?: {
+                readonly harness?: string;
+                readonly state?: string;
+                readonly limit?: number | null;
+                readonly offset?: number;
+            };
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["KoraSessionsOut"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly ingest_kora_scan_api_executors__executor_id__kora_scan_post: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly executor_id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["KoraScanIn"];
+            };
+        };
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["KoraScanOut"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly get_kora_session_transcript_api_kora_sessions__session_id__transcript_get: {
+        readonly parameters: {
+            readonly query?: {
+                readonly after_seq?: number;
+                readonly limit?: number;
+            };
+            readonly header?: never;
+            readonly path: {
+                readonly session_id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -6156,7 +7162,128 @@ export interface operations {
             };
         };
     };
+    readonly provision_executor_api_executors_provision_post: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["ProvisionBody"];
+            };
+        };
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 202: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["ProvisionCreatedOut"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly provision_job_status_api_executors_provision__job_id__get: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly job_id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["ProvisionJobOut"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly provision_repin_api_executors_provision_host__host__repin_post: {
+        readonly parameters: {
+            readonly query?: {
+                readonly port?: number;
+            };
+            readonly header?: never;
+            readonly path: {
+                readonly host: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["HostRepinBody"];
+            };
+        };
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["OkOut"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     readonly poller_bootstrap_script_api_poller_bootstrap_sh_get: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": unknown;
+                };
+            };
+        };
+    };
+    readonly poller_bootstrap_script_sha256_api_poller_artifacts_bootstrap_sh_sha256_get: {
         readonly parameters: {
             readonly query?: never;
             readonly header?: never;
@@ -6950,8 +8077,24 @@ export interface operations {
         };
         readonly requestBody?: never;
         readonly responses: {
-            /** @description Successful Response */
+            /** @description no live vesmaro_ui cookie (anonymous probe verdict) */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["UiTokenProbeOut"];
+                };
+            };
+            /** @description a live vesmaro_ui cookie (hasUiToken() -> true) */
             readonly 204: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description owner login is not configured (fail-closed) */
+            readonly 503: {
                 headers: {
                     readonly [name: string]: unknown;
                 };

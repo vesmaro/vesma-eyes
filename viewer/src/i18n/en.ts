@@ -160,7 +160,7 @@ export const en: Record<TranslationKey, string> = {
   "pulse.degradedStores": "Some stores did not answer: {{servers}}",
   "pulse.unavailableTitle": "Pulse is unavailable in mnemos mode",
   "pulse.unavailableMessage":
-    "The pulse is a merged merge-API view; the direct mnemos adapter does not expose it. Boot the board adapter to see the feed.",
+    "The pulse collects entries from every connected board. The app is currently talking to mnemos directly, so the feed has nowhere to come from yet — connect a board and the entries will appear.",
 
   // --- auth / connection --------------------------------------------------------
   "auth.localMock": "local (mock)",
@@ -377,8 +377,13 @@ export const en: Record<TranslationKey, string> = {
   "login.fieldLabel": "Token",
   "login.showValue": "Reveal the token value",
   "login.hideValue": "Hide the token value",
-  "login.hint":
-    "Where to get one: from your cluster admin — kubectl -n kube-agents get secret vesmaro-eyes-ui-token -o jsonpath='{.data.VESMARO_UI_TOKEN}' | base64 -d",
+  // ME-028: the guidance leads («ask the administrator»); the kubectl command
+  // is a disclosure below — still available, no longer the first thing a
+  // non-admin reads.
+  "login.hint": "Where to get one: ask your cluster administrator.",
+  "login.hintCommandSummary": "Command for the administrator (kubectl)",
+  "login.hintCommand":
+    "kubectl -n kube-agents get secret vesmaro-eyes-ui-token -o jsonpath='{.data.VESMARO_UI_TOKEN}' | base64 -d",
   "login.continueReadOnly": "Continue read-only",
   "login.submit": "Sign in",
   "login.verifying": "Verifying…",
@@ -405,7 +410,7 @@ export const en: Record<TranslationKey, string> = {
   "tasks.loadFailed": "Could not load tasks",
   "tasks.unavailableTitle": "The Tasks domain is unavailable in mnemos mode",
   "tasks.unavailableMessage":
-    "Tasks are a board-native merge-API view; the direct mnemos adapter does not serve them. Bring up the board adapter.",
+    "Tasks live on the board, and the app is currently talking to mnemos directly, so there are none here. Connect a board and the board with the list will appear.",
   "tasks.statsLabel": "Status counts across the whole board",
   "tasks.filterLabel": "Task filter",
   "tasks.searchLabel": "Search",
@@ -579,9 +584,9 @@ export const en: Record<TranslationKey, string> = {
   "tasks.inboxCount": "records — {{count}}",
   "tasks.inboxRefreshed": "scan: {{time}}",
   "tasks.inboxShowAdopted": "show adopted",
-  "tasks.inboxEmpty": "Stores scanned — no new task:queue records",
-  "tasks.inboxEmptyHint": "New records appear after a store scan (the “Scan” button).",
-  "tasks.inboxLabel": "task:queue records",
+  "tasks.inboxEmpty": "Scan finished — no new tasks found",
+  "tasks.inboxEmptyHint": "New tasks appear after a store scan (the “Scan” button).",
+  "tasks.inboxLabel": "Inbox task list",
   "tasks.inboxStaleNote": "Disappeared from the source (cannot be adopted):",
   "tasks.inboxStaleLabel": "Disappeared records",
   "tasks.inboxSource": "server: {{server}}",

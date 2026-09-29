@@ -378,8 +378,9 @@ class TestKeyRoutesReferenceSchemas:
     def test_auth_ui_token(self, spec):
         """ADR 0014 (owner session): the verify route must reference the
         login models — UiTokenVerifyOut pins ok + the honest
-        "ui"|"legacy" token_class enum; the DELETE/GET legs are 204s with
-        no body schema by contract."""
+        "ui"|"legacy" token_class enum; the DELETE leg is a 204 with no
+        body schema. The GET boot probe carries the full verdict set —
+        pinned separately in test_auth_ui_token_probe_status_set."""
         post = spec["paths"]["/api/auth/ui-token"]["post"]
         assert _ref_name(post["requestBody"]["content"]
                          ["application/json"]["schema"]) == "UiTokenVerifyIn"
@@ -390,3 +391,23 @@ class TestKeyRoutesReferenceSchemas:
         assert out["properties"]["token_class"].get("enum") == ["ui", "legacy"]
         assert "delete" in spec["paths"]["/api/auth/ui-token"]
         assert "get" in spec["paths"]["/api/auth/ui-token"]
+        delete = spec["paths"]["/api/auth/ui-token"]["delete"]
+        assert set(delete["responses"]) == {"204"}
+
+    def test_auth_ui_token_probe_status_set(self, spec):
+        """ME-028 / cascade SEC-1: the boot probe's machine-readable
+        contract carries the FULL verdict set — 200 {"live": false}
+        anonymous / 204 live cookie / 503 fail-closed — and NO 401 (a 401
+        here painted the browser console red on every anonymous page
+        load). The 200 body must reference UiTokenProbeOut and that
+        schema must be exactly the one-field ``live`` boolean; a live
+        cookie (204) must never document a body."""
+        get = spec["paths"]["/api/auth/ui-token"]["get"]
+        assert set(get["responses"]) == {"200", "204", "503"}
+        assert _ref_name(_response_schema(spec, "/api/auth/ui-token", "get")) \
+            == "UiTokenProbeOut"
+        probe = _components(spec)["UiTokenProbeOut"]
+        assert set(probe.get("properties", {})) == {"live"}
+        assert probe["properties"]["live"].get("type") == "boolean"
+        assert "content" not in get["responses"]["204"]
+        assert "content" not in get["responses"]["503"]

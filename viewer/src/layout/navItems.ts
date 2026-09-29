@@ -210,6 +210,34 @@ export function isPathActive(pathname: string, to: string, end = false): boolean
 }
 
 /**
+ * Section highlight (Sidebar). Exact/prefix via isPathActive, EXCEPT the two
+ * master-detail lists ("/memory", "/tasks"): the list owns its detail route
+ * (`/memory/:id`, `/tasks/:id`) but never the sibling sections' exact roots.
+ * ME-028: the old bare `/^\/memory\/[^/]+$/` matched `/memory/pulse` (and
+ * `/memory/search`, `/memory/tags`, `/tasks/inbox`, …) too, so on Пульс BOTH
+ * «Пульс» and «Записи» claimed aria-current="page" — two simultaneous
+ * "current pages" and a highlight that pointed at the wrong place.
+ */
+export function sectionActive(
+  pathname: string,
+  section: NavSection,
+  siblings: readonly NavSection[],
+): boolean {
+  const master = section.to === "/memory" || section.to === "/tasks";
+  if (!master) return isPathActive(pathname, section.to, section.end);
+  if (pathname === section.to) return true;
+  // A sibling exact section root never counts as the list's detail route.
+  if (
+    siblings.some(
+      (sibling) => sibling.to !== section.to && sibling.end && sibling.to === pathname,
+    )
+  ) {
+    return false;
+  }
+  return new RegExp(`^${section.to}/[^/]+$`).test(pathname);
+}
+
+/**
  * The distinct counter ids a domain's sections declare, in section order
  * (UI-30 aggregate inputs). Pure over the module data — when a section gains
  * a `counter`, the domain aggregate picks it up with no further wiring.

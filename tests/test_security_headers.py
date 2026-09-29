@@ -7,9 +7,46 @@ being superseded by no-store.
 
 from __future__ import annotations
 
-CSP = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; "
+import base64
+import hashlib
+import re
+from pathlib import Path
+
+# ME-028: the two inline pre-paint bootstraps of viewer/index.html (theme +
+# density) are hash-allowed in script-src — no server-side templating to
+# nonce with, and external/module scripts lose the before-first-paint
+# guarantee. test_inline_bootstrap_hashes_are_allowed pins the hashes to the
+# ACTUAL viewer/index.html bytes, so editing a bootstrap without rotating
+# the CSP fails here instead of silently re-breaking the page console.
+CSP = ("default-src 'self'; "
+       "script-src 'self' 'sha256-lWvSm/qC0E+3fvAgio+zTRYXuJIbLdL0gPc54G9Q2OU=' "
+       "'sha256-k85nuNkWNWz2VjD38EcDAkNliknfzuSNN6HBSJQjvkc='; "
+       "style-src 'self' 'unsafe-inline'; object-src 'none'; "
        "base-uri 'self'; frame-ancestors 'none'; connect-src 'self'; "
-       "img-src 'self' data:")
+       "img-src 'self' data:; font-src 'self' data:")
+
+_VIEWER_INDEX = Path(__file__).resolve().parents[1] / "viewer" / "index.html"
+
+
+def _inline_script_hashes() -> list[str]:
+    """sha256 (base64, CSP form) of every plain inline <script> in the
+    viewer's index.html — the exact bytes the browser hashes.
+
+    A2 (ME-028 cascade): the pattern also matches ATTRIBUTE-bearing inline
+    script tags (`<script data-x>`) — the browser hashes their content the
+    same way and a blocked attributed inline script breaks prod just as
+    visibly. Script tags carrying a `src=` are skipped (external files are
+    governed by `script-src 'self'`, not a hash), as are empty bodies."""
+    html = _VIEWER_INDEX.read_text(encoding="utf-8")
+    hashes: list[str] = []
+    for attrs, body in re.findall(r"<script\b([^>]*)>(.*?)</script>", html, re.S):
+        if "src=" in attrs or not body.strip():
+            continue
+        hashes.append(
+            "sha256-"
+            + base64.b64encode(hashlib.sha256(body.encode("utf-8")).digest()).decode("ascii")
+        )
+    return hashes
 
 
 class TestSecurityHeaders:
@@ -101,3 +138,24 @@ class TestSecurityHeaders:
         assert headers["x-accel-buffering"] == "no"
         assert b"retry:" in body
         assert b"hello" in body
+
+
+class TestInlineBootstrapHashes:
+    def test_inline_bootstrap_hashes_are_allowed(self, client):
+        """ME-028: every plain inline <script> in viewer/index.html is
+        hash-allowed by the served CSP — the pre-paint theme/density
+        bootstraps must never silently start getting blocked again (the
+        symptom was 2 CSP console errors on EVERY page). Editing a bootstrap
+        script without rotating the CSP fails here with the new hash in the
+        message."""
+        r = client.get("/api/health")
+        served = r.headers["Content-Security-Policy"]
+        hashes = _inline_script_hashes()
+        assert hashes, "viewer/index.html lost its inline bootstraps?"
+        for digest in hashes:
+            assert digest in served, (
+                f"{digest} (inline bootstrap) is not allowed by the CSP — "
+                "rotate the script-src hash in server/app.py"
+            )
+        # And the served CSP names every hash the viewer ships.
+        assert served == CSP

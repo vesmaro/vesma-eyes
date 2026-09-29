@@ -173,7 +173,7 @@ export const ru = {
   "pulse.degradedStores": "Часть хранилищ не ответила: {{servers}}",
   "pulse.unavailableTitle": "Пульс недоступен в mnemos-режиме",
   "pulse.unavailableMessage":
-    "Пульс — объединённый вид merge-API борда; прямой адаптер mnemos его не отдаёт. Поднимите board-адаптер, чтобы увидеть ленту.",
+    "Пульс собирает записи со всех подключённых бордов. Сейчас приложение связано с mnemos напрямую, поэтому ленте пока неоткуда взяться — подключите борд, и записи появятся.",
 
   // --- auth / connection --------------------------------------------------------
   "auth.localMock": "локально (mock)",
@@ -392,8 +392,13 @@ export const ru = {
   "login.fieldLabel": "Токен",
   "login.showValue": "Показать значение токена",
   "login.hideValue": "Скрыть значение токена",
-  "login.hint":
-    "Где взять: у администратора кластера — kubectl -n kube-agents get secret vesmaro-eyes-ui-token -o jsonpath='{.data.VESMARO_UI_TOKEN}' | base64 -d",
+  // ME-028: the guidance leads («спросите у администратора»); the kubectl
+  // command is a disclosure below — still available, no longer the first thing
+  // a non-admin reads.
+  "login.hint": "Где взять токен: спросите у администратора кластера.",
+  "login.hintCommandSummary": "Команда для администратора (kubectl)",
+  "login.hintCommand":
+    "kubectl -n kube-agents get secret vesmaro-eyes-ui-token -o jsonpath='{.data.VESMARO_UI_TOKEN}' | base64 -d",
   "login.continueReadOnly": "Продолжить только чтение",
   "login.submit": "Войти",
   "login.verifying": "Проверка…",
@@ -423,7 +428,7 @@ export const ru = {
   "tasks.loadFailed": "Не удалось загрузить задачи",
   "tasks.unavailableTitle": "Домен «Задачи» недоступен в mnemos-режиме",
   "tasks.unavailableMessage":
-    "Задачи — нативный вид merge-API борда; прямой адаптер mnemos их не отдаёт. Поднимите board-адаптер.",
+    "Задачи живут на борде, а приложение сейчас связано с mnemos напрямую, поэтому здесь их нет. Подключите борд — и доска со списком появятся.",
   "tasks.statsLabel": "Статистика статусов по всей доске",
   "tasks.filterLabel": "Фильтр задач",
   "tasks.searchLabel": "Поиск",
@@ -599,10 +604,10 @@ export const ru = {
   "tasks.inboxCount": "записей — {{count}}",
   "tasks.inboxRefreshed": "скан: {{time}}",
   "tasks.inboxShowAdopted": "показывать принятые",
-  "tasks.inboxEmpty": "Хранилища просканированы — новых записей task:queue нет",
+  "tasks.inboxEmpty": "Сканирование завершено — новых задач не нашлось",
   "tasks.inboxEmptyHint":
-    "Новые записи появятся после сканирования хранилищ (кнопка «Сканировать»).",
-  "tasks.inboxLabel": "Записи task:queue",
+    "Новые задачи появятся после сканирования хранилищ (кнопка «Сканировать»).",
+  "tasks.inboxLabel": "Список входящих задач",
   "tasks.inboxStaleNote": "Исчезли из источника (примятие невозможно):",
   "tasks.inboxStaleLabel": "Исчезнувшие записи",
   "tasks.inboxSource": "сервер: {{server}}",

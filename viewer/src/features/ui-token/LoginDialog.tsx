@@ -154,12 +154,25 @@ export function LoginDialog({
             </div>
           </div>
 
+          {/* ME-028: the guidance leads («спросите у администратора»); the
+           * kubectl command sits under a native disclosure — closed by
+           * default, so the dialog no longer opens with a wall of shell, but
+           * it stays one click away for the admin (content remains in the
+           * DOM and the a11y tree). */}
           <p
             id="login-token-hint"
-            className="whitespace-pre-line rounded-md bg-elevated p-2 text-xs text-foreground-muted"
+            className="rounded-md bg-elevated p-2 text-xs text-foreground-muted"
           >
             {t("login.hint")}
           </p>
+          <details className="rounded-md bg-elevated px-2 py-1.5 text-xs text-foreground-muted">
+            <summary className="cursor-pointer select-none rounded-sm py-0.5 text-foreground-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright">
+              {t("login.hintCommandSummary")}
+            </summary>
+            <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-foreground-muted">
+              {t("login.hintCommand")}
+            </pre>
+          </details>
 
           <div className="flex flex-wrap justify-end gap-2">
             <Button type="button" variant="outline" size="sm" onClick={dismiss} disabled={verifyPending}>

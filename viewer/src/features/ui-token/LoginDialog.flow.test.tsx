@@ -518,14 +518,67 @@ describe("login flow regression (owner repro)", () => {
     expect(document.body.textContent).toContain(
       "Sign in to continue — your action will run automatically",
     );
+    // ME-028: the guidance leads («ask the administrator»); the kubectl
+    // command lives under a closed-by-default disclosure that stays in the
+    // DOM (one click away for the admin).
     expect(document.body.textContent).toContain(
+      "Where to get one: ask your cluster administrator.",
+    );
+    const disclosure = document.querySelector("details");
+    expect(disclosure).not.toBeNull();
+    expect(disclosure?.open).toBe(false); // closed by default
+    expect(disclosure?.querySelector("summary")?.textContent).toContain(
+      "Command for the administrator",
+    );
+    expect(disclosure?.textContent).toContain(
       "kubectl -n kube-agents get secret vesmaro-eyes-ui-token",
     );
     // Regression (prod hotfix login-hint): the hint must teach the WORKING
     // value-extraction command (jsonpath + decode), never the `-o yaml`
     // form that hands the user a base64 blob → "invalid ui token".
-    expect(document.body.textContent).toContain("-o jsonpath='{.data.VESMARO_UI_TOKEN}'");
-    expect(document.body.textContent).toContain("| base64 -d");
+    expect(disclosure?.textContent).toContain("-o jsonpath='{.data.VESMARO_UI_TOKEN}'");
+    expect(disclosure?.textContent).toContain("| base64 -d");
+    expect(document.body.textContent).not.toContain("-o yaml");
+    expect(document.body.textContent).not.toContain("mnk_"); // no value examples
+  });
+
+  // A1 (ME-028 cascade): RU is the DEFAULT locale and the dictionary's
+  // source of truth — the disclosure copy must be pinned on the RU side
+  // too, so a corrupted ru.ts value cannot pass the gates while only the
+  // EN mirror is asserted.
+  it("the login disclosure copy is pinned in RU: summary leads, command intact, no -o yaml", async () => {
+    (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+    await act(async () => {
+      root.render(
+        <I18nProvider initialLang="ru">
+          <LoginDialog
+            open
+            reason="manual"
+            onSubmitToken={() => undefined}
+            onDismiss={() => undefined}
+          />
+        </I18nProvider>,
+      );
+    });
+    expect(document.body.textContent).toContain(
+      "Где взять токен: спросите у администратора кластера.",
+    );
+    const disclosure = document.querySelector("details");
+    expect(disclosure).not.toBeNull();
+    expect(disclosure?.open).toBe(false); // closed by default
+    expect(disclosure?.querySelector("summary")?.textContent).toContain(
+      "Команда для администратора (kubectl)",
+    );
+    expect(disclosure?.textContent).toContain(
+      "kubectl -n kube-agents get secret vesmaro-eyes-ui-token",
+    );
+    // The WORKING extraction command, never the base64-blob `-o yaml` form.
+    expect(disclosure?.textContent).toContain("-o jsonpath='{.data.VESMARO_UI_TOKEN}'");
+    expect(disclosure?.textContent).toContain("| base64 -d");
     expect(document.body.textContent).not.toContain("-o yaml");
     expect(document.body.textContent).not.toContain("mnk_"); // no value examples
   });

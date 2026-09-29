@@ -19,7 +19,7 @@ import { useBoardHealth } from "@/hooks/usePulse";
 import { DocsSidebarGroups } from "@/features/docs/DocsSidebarGroups";
 import { useFocusTrap } from "@/lib/useFocusTrap";
 import { setSidebarOverlayOpen } from "@/lib/sidebarOverlayState";
-import { NAV_DOMAINS, activeDomain, domainCounterIds, isPathActive } from "./navItems";
+import { NAV_DOMAINS, activeDomain, domainCounterIds, isPathActive, sectionActive } from "./navItems";
 import type { NavCounterId, NavDomain, NavSection } from "./navItems";
 import { cn } from "@/lib/utils";
 
@@ -81,10 +81,11 @@ function useIsDesktop(): boolean {
  * inside a `min-w-0` flex row, every row keeps the FULL name as its `title`
  * hover hint AND its `aria-label` (the SR name survives icon-only mode), and
  * the nav hard-clips horizontal overflow — however long a translation gets,
- * no horizontal scrollbar can appear. The expanded slot is w-64: wide enough
- * for every label but the longest RU docs category («Устройства и
- * подключение»), which ellipsizes its tail under the title tooltip instead
- * of pushing the layout.
+ * no horizontal scrollbar can appear. ME-028 exception: docs CATEGORY rows
+ * (the third layer, DocsSidebarGroups) wrap to a second line instead of
+ * truncating — the full RU category names («Устройства и подключение») stay
+ * readable without hover, and a wrapping block row still cannot push the
+ * fixed w-64 slot wider.
  */
 export interface SidebarProps {
   collapsed: boolean;
@@ -270,6 +271,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                       <li key={section.to}>
                         <SectionLink
                           section={section}
+                          siblings={domain.sections ?? []}
                           pathname={pathname}
                           hideLabels={hideLabels}
                         />
@@ -421,10 +423,14 @@ function DomainLink({
 
 function SectionLink({
   section,
+  siblings,
   pathname,
   hideLabels,
 }: {
   section: NavSection;
+  /** The domain's full section list — master-detail highlighting must know
+   * the sibling roots (sectionActive, ME-028). */
+  siblings: readonly NavSection[];
   pathname: string;
   /** Visibility classes for the label span — derived from the panel mode. */
   hideLabels: string;
@@ -462,13 +468,10 @@ function SectionLink({
   // Records ("/memory") must highlight on its detail route too
   // ("/memory/:id") — the list is the master of the master-detail pair.
   // The task list ("/tasks") likewise owns its detail route ("/tasks/:id").
+  // Sibling exact roots (/memory/pulse, /tasks/inbox, …) stay EXclusive to
+  // their own rows (sectionActive, ME-028).
   // (Docs sections moved to DocsSidebarGroups — projects → categories.)
-  const active =
-    section.to === "/memory"
-      ? pathname === "/memory" || /^\/memory\/[^/]+$/.test(pathname)
-      : section.to === "/tasks"
-        ? pathname === "/tasks" || /^\/tasks\/[^/]+$/.test(pathname)
-        : isPathActive(pathname, section.to, section.end);
+  const active = sectionActive(pathname, section, siblings);
   return (
     <Link
       to={section.to}
@@ -483,9 +486,10 @@ function SectionLink({
       )}
     >
       <Icon className="size-3.5 shrink-0" aria-hidden="true" />
-      {/* UI-19: truncate under the full-name title — the longest RU docs
-       * category («Устройства и подключение») may ellipsize its tail at
-       * w-64 but can never push the panel into a horizontal scroll. */}
+      {/* UI-19: truncate under the full-name title — a long section label
+       * may ellipsize at w-64 but can never push the panel into a horizontal
+       * scroll. (Docs categories, the third layer, wrap instead — see
+       * DocsSidebarGroups, ME-028.) */}
       <span className={hideLabels}>{label}</span>
       {section.counter === "inbox" ? <InboxCount /> : null}
     </Link>

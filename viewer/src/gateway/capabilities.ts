@@ -187,7 +187,7 @@ export function isTaskMutationSource(
 
 /**
  * ADR 0014 owner-session surface: server-verified login (verify at the
- * door), the boot/401 probe of the live `vesmaro_ui` cookie and the
+ * door), the boot probe of the live `vesmaro_ui` cookie and the
  * server-side logout (an HttpOnly cookie cannot be cleared from JS).
  * Structural like every guard above: the BoardAdapter grows these methods
  * (real wire), the mock adapter deliberately does not (the dev playground
