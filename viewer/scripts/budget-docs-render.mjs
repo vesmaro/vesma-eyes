@@ -4,14 +4,18 @@
  * ADR 0020 Ф2, budgets RE-BASELINED per ADR 0020 Ф3/ME-025): run AFTER
  * `npm run build`, exits non-zero on any breach.
  *
- * Re-baseline mechanics (Ф3, 2026-09-29 — measured on the 1.47.0-line tree):
+ * Re-baseline mechanics (Ф3, 2026-09-29 — measured on the 1.47.0-line tree;
+ * entry RE-BASELINED by ME-024, 2026-09-29, after the mock adapter + fixture
+ * corpus left the eager set):
  * budget = ceil(headroom × measured gzip), pools ×1.2 (~20%), entry ×1.1
  * (small tolerance — the entry gate is a drift alarm, not slack):
  *
  *   entry (eager base set: index.html scripts/preloads + static closure)
- *                                                    ≤ 297 KiB gzip
- *                   (measured 269.8: entry chunk 219.4 + md-core 49.8 +
- *                    preload-helper 0.6 — the ±0 entry guard, mechanical)
+ *                                                    ≤ 277 KiB gzip
+ *                   (ME-024 measured 251.1: entry chunk 200.7 + md-core
+ *                    49.8 + preload-helper 0.6; was Ф3's 297 over measured
+ *                    269.8 — the 23.2 KiB drop is the fixture corpus
+ *                    un-welded from the entry, see the canary gate below)
  *   md-core pool    dist/assets/md-core-*.js          ≤  60 KiB gzip
  *                   (react-markdown + remark-gfm and
  *                   the shared unified/micromark stack;
@@ -34,6 +38,9 @@
  *
  * Reachability gates (ADR 0020 Ф2, mechanical, unchanged):
  * - the eager base set must stay within the entry budget (NEW Ф3);
+ * - the eager base set must carry NO fixture canaries (NEW ME-024) — the
+ *   mock adapter + fixture corpus load only via the dynamic import in
+ *   adapterConfig.createGateway();
  * - md-sanitize must NOT be in the eager base set (the static closure of
  *   index.html) — the entry and every eager page stay sanitize-free;
  * - md-core must NOT statically import md-sanitize — the untrusted profile
@@ -47,7 +54,7 @@
  * uses more than one or two). The full on-demand closure (every diagram type
  * at once) is reported as info for ADR-0017.
  *
- * Usage: node scripts/budget-docs-render.mjs [--max-entry 297] [--max-md-core 60] [--max-md-sanitize 65] [--max-mermaid 379]
+ * Usage: node scripts/budget-docs-render.mjs [--max-entry 277] [--max-md-core 60] [--max-md-sanitize 65] [--max-mermaid 379]
  */
 
 import { readdirSync, readFileSync } from "node:fs";
@@ -63,7 +70,7 @@ function argValue(flag, fallback) {
   const index = args.indexOf(flag);
   return index !== -1 ? Number(args[index + 1]) : fallback;
 }
-const MAX_ENTRY_KIB = argValue("--max-entry", 297);
+const MAX_ENTRY_KIB = argValue("--max-entry", 277);
 const MAX_MD_CORE_KIB = argValue("--max-md-core", 60);
 const MAX_MD_SANITIZE_KIB = argValue("--max-md-sanitize", 65);
 const MAX_MERMAID_KIB = argValue("--max-mermaid", 379);
@@ -140,6 +147,39 @@ const baseSet = closure(eagerFromHtml, false);
     `${ok ? "ok  " : "FAIL"} entry (eager base set, ${baseSet.size} chunks): ${round1(entryGzip)} KiB gzip ` +
       `(budget ≤${MAX_ENTRY_KIB})`,
   );
+}
+
+// --- fixture-canary gate (ME-024, NEW) ---------------------------------------------
+// The mock adapter + its fixture corpus must stay out of the eager set: they
+// are reachable ONLY via the dynamic import inside
+// adapterConfig.createGateway(), so only mock-mode builds (dev, smoke) ever
+// fetch them. These are canary strings from the fixture modules themselves —
+// if one shows up in a base-set chunk, a static import welded test data back
+// into first paint (the failure ME-024 removed).
+const FIXTURE_CANARIES = [
+  "ME-013 smoke: untrusted mermaid fixture", // boardFixtures.ts (TB-15 task)
+  "mem-mermaid-overcap-fixture", // fixtures.ts (over-cap memory, ADR 0020 Am.1)
+];
+{
+  const offenders = [];
+  for (const name of baseSet) {
+    const source = readFileSync(join(assetsDir, name), "utf8");
+    for (const marker of FIXTURE_CANARIES) {
+      if (source.includes(marker)) offenders.push(`${name} ← "${marker}"`);
+    }
+  }
+  if (offenders.length > 0) {
+    failed = true;
+    report.push(
+      `FAIL fixture data in the eager base set (${offenders.join("; ")}) — ` +
+        `the mock/fixture boundary (ME-024) is broken`,
+    );
+  } else {
+    report.push(
+      `ok   no fixture canaries in the eager base set (${FIXTURE_CANARIES.length} probes; ` +
+        `mock corpus stays lazy per ME-024)`,
+    );
+  }
 }
 
 // --- md pools (ADR 0020 Ф2 split, budgets re-baselined Ф3) -------------------------
