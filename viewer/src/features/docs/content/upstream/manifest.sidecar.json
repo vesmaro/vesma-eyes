@@ -1,45 +1,21 @@
 {
   "version": 1,
-  "generated_by": "scripts/sync_docs.py",
+  "generated_by": "scripts/sync_docs.py + scripts/gen_api_ref.py",
   "source_shas": {
-    "mnemos": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-    "mnemos-mesh": "b428ea9b7ec9731fe4d53478702d0667cf3f53de"
+    "mnemos": "23f0fce42ea87c329d4049397292b3dca948773c",
+    "mnemos-mesh": "331ef3a785c1a74fb9f8972ff93cd6db5a8fc174",
+    "api/mnemos": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+    "api/mnemos-mesh": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
+    "api/vesmaro-agent": "b8a51498accff8af7b507746cf46a2d72af9fd86"
   },
   "pages": [
     {
-      "slug": "mnemos-mesh/admin/runbook",
+      "slug": "api/mnemos-mesh/index",
       "titles": {
-        "en": "mnemos-mesh Operations Runbook",
-        "ru": "Эксплуатационный ранбук mnemos-mesh"
+        "en": "mnemos-mesh — no public HTTP API",
+        "ru": "mnemos-mesh — публичного HTTP API нет"
       },
-      "category": "mesh-admin",
-      "order": 2,
-      "lastVerified": "2026-09-29",
-      "locales": [
-        "en",
-        "ru"
-      ],
-      "provenance": {
-        "repo": "mnemos-mesh",
-        "source_path": "docs/en/admin/runbook.md",
-        "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
-        "commit_date": "2026-09-29T19:55:12+03:00"
-      },
-      "contentClass": {
-        "en": "corpus",
-        "ru": "corpus"
-      },
-      "kinds": {
-        "ru": "curated-translation"
-      }
-    },
-    {
-      "slug": "mnemos-mesh/admin/security",
-      "titles": {
-        "en": "Security model for mnemos-mesh operators",
-        "ru": "Модель безопасности mnemos-mesh для оператора"
-      },
-      "category": "mesh-admin",
+      "category": "api-mesh",
       "order": 1,
       "lastVerified": "2026-09-29",
       "locales": [
@@ -48,79 +24,22 @@
       ],
       "provenance": {
         "repo": "mnemos-mesh",
-        "source_path": "docs/en/admin/security.md",
+        "source_path": "proto/federation.proto",
         "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
         "commit_date": "2026-09-29T19:55:12+03:00"
       },
       "contentClass": {
         "en": "corpus",
         "ru": "corpus"
-      },
-      "kinds": {
-        "ru": "curated-translation"
       }
     },
     {
-      "slug": "mnemos-mesh/user/configuration",
+      "slug": "api/mnemos/a2a-sessions",
       "titles": {
-        "en": "Configuration reference — `mesh.yaml`",
-        "ru": "Справочник конфигурации — `mesh.yaml`"
+        "en": "A2A Sessions API",
+        "ru": "A2A Sessions API"
       },
-      "category": "mesh-user",
-      "order": 2,
-      "lastVerified": "2026-09-29",
-      "locales": [
-        "en",
-        "ru"
-      ],
-      "provenance": {
-        "repo": "mnemos-mesh",
-        "source_path": "docs/en/user/configuration.md",
-        "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
-        "commit_date": "2026-09-29T19:55:12+03:00"
-      },
-      "contentClass": {
-        "en": "corpus",
-        "ru": "corpus"
-      },
-      "kinds": {
-        "ru": "curated-translation"
-      }
-    },
-    {
-      "slug": "mnemos-mesh/user/getting-started",
-      "titles": {
-        "en": "Getting started with mnemos-mesh",
-        "ru": "Первый запуск mnemos-mesh"
-      },
-      "category": "mesh-user",
-      "order": 1,
-      "lastVerified": "2026-09-29",
-      "locales": [
-        "en",
-        "ru"
-      ],
-      "provenance": {
-        "repo": "mnemos-mesh",
-        "source_path": "docs/en/user/getting-started.md",
-        "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
-        "commit_date": "2026-09-29T19:55:12+03:00"
-      },
-      "contentClass": {
-        "en": "corpus",
-        "ru": "corpus"
-      },
-      "kinds": {
-        "ru": "curated-translation"
-      }
-    },
-    {
-      "slug": "mnemos/admin/federation",
-      "titles": {
-        "en": "Federation — Phase 1 prerequisites (per-peer ACL + trigger codes + access log)",
-        "ru": "Федерация — предпосылки Phase 1 (per-peer ACL + триггер-коды + журнал доступа)"
-      },
-      "category": "mnemos-admin",
+      "category": "api-mnemos",
       "order": 2,
       "lastVerified": "2026-09-29",
       "locales": [
@@ -129,7 +48,7 @@
       ],
       "provenance": {
         "repo": "mnemos",
-        "source_path": "docs/en/admin/federation.md",
+        "source_path": "docs/en/architecture/a2a-sessions.md",
         "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
         "commit_date": "2026-09-29T12:16:19+03:00"
       },
@@ -139,205 +58,13 @@
       }
     },
     {
-      "slug": "mnemos/admin/runbooks/backup-restore",
+      "slug": "api/mnemos/http-api",
       "titles": {
-        "en": "Runbook: Backup & Restore",
-        "ru": "Runbook: Резервное копирование и восстановление"
+        "en": "mnemos HTTP API — map",
+        "ru": "HTTP API mnemos — карта"
       },
-      "category": "mnemos-admin",
-      "order": 4,
-      "lastVerified": "2026-09-29",
-      "locales": [
-        "en",
-        "ru"
-      ],
-      "provenance": {
-        "repo": "mnemos",
-        "source_path": "docs/en/admin/runbooks/backup-restore.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
-      },
-      "contentClass": {
-        "en": "corpus",
-        "ru": "corpus"
-      }
-    },
-    {
-      "slug": "mnemos/admin/runbooks/install",
-      "titles": {
-        "en": "Runbook: Install Mnemos",
-        "ru": "Runbook: Установка Mnemos"
-      },
-      "category": "mnemos-admin",
-      "order": 3,
-      "lastVerified": "2026-09-29",
-      "locales": [
-        "en",
-        "ru"
-      ],
-      "provenance": {
-        "repo": "mnemos",
-        "source_path": "docs/en/admin/runbooks/install.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
-      },
-      "contentClass": {
-        "en": "corpus",
-        "ru": "corpus"
-      }
-    },
-    {
-      "slug": "mnemos/admin/security",
-      "titles": {
-        "en": "Mnemos — Security Posture (M15.2)",
-        "ru": "Mnemos — Состояние безопасности (M15.2)"
-      },
-      "category": "mnemos-admin",
+      "category": "api-mnemos",
       "order": 1,
-      "lastVerified": "2026-09-29",
-      "locales": [
-        "en",
-        "ru"
-      ],
-      "provenance": {
-        "repo": "mnemos",
-        "source_path": "docs/en/admin/security.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
-      },
-      "contentClass": {
-        "en": "corpus",
-        "ru": "corpus"
-      }
-    },
-    {
-      "slug": "mnemos/architecture/overview",
-      "titles": {
-        "en": "Mnemos — System Architecture",
-        "ru": "Mnemos — Архитектура системы"
-      },
-      "category": "mnemos-architecture",
-      "order": 1,
-      "lastVerified": "2026-09-29",
-      "locales": [
-        "en",
-        "ru"
-      ],
-      "provenance": {
-        "repo": "mnemos",
-        "source_path": "docs/en/architecture/overview.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
-      },
-      "contentClass": {
-        "en": "corpus",
-        "ru": "corpus"
-      }
-    },
-    {
-      "slug": "mnemos/user/cli-reference",
-      "titles": {
-        "en": "CLI Reference",
-        "ru": "Справочник CLI"
-      },
-      "category": "mnemos-user",
-      "order": 8,
-      "lastVerified": "2026-09-29",
-      "locales": [
-        "en",
-        "ru"
-      ],
-      "provenance": {
-        "repo": "mnemos",
-        "source_path": "docs/en/user/cli-reference.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
-      },
-      "contentClass": {
-        "en": "corpus",
-        "ru": "corpus"
-      }
-    },
-    {
-      "slug": "mnemos/user/context-filter",
-      "titles": {
-        "en": "Context Filter Guide",
-        "ru": "Руководство по контекстному фильтру"
-      },
-      "category": "mnemos-user",
-      "order": 4,
-      "lastVerified": "2026-09-29",
-      "locales": [
-        "en",
-        "ru"
-      ],
-      "provenance": {
-        "repo": "mnemos",
-        "source_path": "docs/en/user/context-filter.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
-      },
-      "contentClass": {
-        "en": "corpus",
-        "ru": "corpus"
-      }
-    },
-    {
-      "slug": "mnemos/user/export-import",
-      "titles": {
-        "en": "Export & Import",
-        "ru": "Экспорт и импорт"
-      },
-      "category": "mnemos-user",
-      "order": 7,
-      "lastVerified": "2026-09-29",
-      "locales": [
-        "en",
-        "ru"
-      ],
-      "provenance": {
-        "repo": "mnemos",
-        "source_path": "docs/en/user/export-import.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
-      },
-      "contentClass": {
-        "en": "corpus",
-        "ru": "corpus"
-      }
-    },
-    {
-      "slug": "mnemos/user/getting-started",
-      "titles": {
-        "en": "Getting Started",
-        "ru": "Начало работы"
-      },
-      "category": "mnemos-user",
-      "order": 1,
-      "lastVerified": "2026-09-29",
-      "locales": [
-        "en",
-        "ru"
-      ],
-      "provenance": {
-        "repo": "mnemos",
-        "source_path": "docs/en/user/getting-started.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
-      },
-      "contentClass": {
-        "en": "corpus",
-        "ru": "corpus"
-      }
-    },
-    {
-      "slug": "mnemos/user/http-api",
-      "titles": {
-        "en": "HTTP API Reference",
-        "ru": "Справочник HTTP API"
-      },
-      "category": "mnemos-user",
-      "order": 9,
       "lastVerified": "2026-09-29",
       "locales": [
         "en",
@@ -355,12 +82,36 @@
       }
     },
     {
-      "slug": "mnemos/user/integration-guide",
+      "slug": "api/overview",
       "titles": {
-        "en": "Integration Guide",
-        "ru": "Руководство по интеграции"
+        "en": "Ecosystem APIs — overview",
+        "ru": "API экосистемы — обзор"
       },
-      "category": "mnemos-user",
+      "category": "api-overview",
+      "order": 1,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "en",
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesmaro-eyes",
+        "source_path": "docs/api",
+        "sha": "21092b0eb27b37405ed6aa704b62aee2cbe92bee",
+        "commit_date": "2026-09-29T20:33:44+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-agent/charter",
+      "titles": {
+        "en": "vesmaro-agent — service charter v2 (digest)",
+        "ru": "vesmaro-agent — service charter v2 (выжимка)"
+      },
+      "category": "api-agent",
       "order": 2,
       "lastVerified": "2026-09-29",
       "locales": [
@@ -368,10 +119,655 @@
         "ru"
       ],
       "provenance": {
+        "repo": "vesmaro-agent",
+        "source_path": "docs/decisions/CHARTER-v2.md",
+        "sha": "b8a51498accff8af7b507746cf46a2d72af9fd86",
+        "commit_date": "2026-09-29T13:36:02+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-agent/protocol",
+      "titles": {
+        "en": "Wire protocol: vesmaro-agent ↔ board"
+      },
+      "category": "api-agent",
+      "order": 1,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "en"
+      ],
+      "provenance": {
+        "repo": "vesmaro-agent",
+        "source_path": "docs/PROTOCOL.md",
+        "sha": "b8a51498accff8af7b507746cf46a2d72af9fd86",
+        "commit_date": "2026-09-29T13:36:02+03:00"
+      },
+      "contentClass": {
+        "en": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-eyes/assignments",
+      "titles": {
+        "ru": "Назначения исполнителям"
+      },
+      "category": "api-board",
+      "order": 4,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "3d969cb428ae1bdcd7272d5d7a658fd1d63badf3",
+        "commit_date": "2026-09-29T19:10:05+03:00"
+      },
+      "contentClass": {
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-eyes/automation",
+      "titles": {
+        "ru": "Автоматизация"
+      },
+      "category": "api-board",
+      "order": 6,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "3d969cb428ae1bdcd7272d5d7a658fd1d63badf3",
+        "commit_date": "2026-09-29T19:10:05+03:00"
+      },
+      "contentClass": {
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-eyes/devices",
+      "titles": {
+        "ru": "Устройства и пейринг"
+      },
+      "category": "api-board",
+      "order": 7,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "3d969cb428ae1bdcd7272d5d7a658fd1d63badf3",
+        "commit_date": "2026-09-29T19:10:05+03:00"
+      },
+      "contentClass": {
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-eyes/executors",
+      "titles": {
+        "ru": "Исполнители, харнессы, специалисты"
+      },
+      "category": "api-board",
+      "order": 5,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "3d969cb428ae1bdcd7272d5d7a658fd1d63badf3",
+        "commit_date": "2026-09-29T19:10:05+03:00"
+      },
+      "contentClass": {
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-eyes/feed",
+      "titles": {
+        "ru": "Уведомления, активность, отчёты"
+      },
+      "category": "api-board",
+      "order": 11,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "3d969cb428ae1bdcd7272d5d7a658fd1d63badf3",
+        "commit_date": "2026-09-29T19:10:05+03:00"
+      },
+      "contentClass": {
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-eyes/index",
+      "titles": {
+        "ru": "Обзор API борда"
+      },
+      "category": "api-board",
+      "order": 1,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "3d969cb428ae1bdcd7272d5d7a658fd1d63badf3",
+        "commit_date": "2026-09-29T19:10:05+03:00"
+      },
+      "contentClass": {
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-eyes/kora",
+      "titles": {
+        "ru": "Сессии Kora"
+      },
+      "category": "api-board",
+      "order": 8,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "3d969cb428ae1bdcd7272d5d7a658fd1d63badf3",
+        "commit_date": "2026-09-29T19:10:05+03:00"
+      },
+      "contentClass": {
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-eyes/memories",
+      "titles": {
+        "ru": "Память, теги и поиск mnemos"
+      },
+      "category": "api-board",
+      "order": 3,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "3d969cb428ae1bdcd7272d5d7a658fd1d63badf3",
+        "commit_date": "2026-09-29T19:10:05+03:00"
+      },
+      "contentClass": {
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-eyes/mesh",
+      "titles": {
+        "ru": "Узлы меша"
+      },
+      "category": "api-board",
+      "order": 9,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "3d969cb428ae1bdcd7272d5d7a658fd1d63badf3",
+        "commit_date": "2026-09-29T19:10:05+03:00"
+      },
+      "contentClass": {
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-eyes/poller",
+      "titles": {
+        "ru": "Артефакты poller"
+      },
+      "category": "api-board",
+      "order": 10,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "3d969cb428ae1bdcd7272d5d7a658fd1d63badf3",
+        "commit_date": "2026-09-29T19:10:05+03:00"
+      },
+      "contentClass": {
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-eyes/system",
+      "titles": {
+        "ru": "Борд и служебные эндпоинты"
+      },
+      "category": "api-board",
+      "order": 12,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "3d969cb428ae1bdcd7272d5d7a658fd1d63badf3",
+        "commit_date": "2026-09-29T19:10:05+03:00"
+      },
+      "contentClass": {
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-eyes/tasks",
+      "titles": {
+        "ru": "Задачи и входящие"
+      },
+      "category": "api-board",
+      "order": 2,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "3d969cb428ae1bdcd7272d5d7a658fd1d63badf3",
+        "commit_date": "2026-09-29T19:10:05+03:00"
+      },
+      "contentClass": {
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "mnemos-mesh/admin/runbook",
+      "titles": {
+        "en": "mnemos-mesh Operations Runbook",
+        "ru": "Эксплуатационный ранбук mnemos-mesh"
+      },
+      "category": "mesh-admin",
+      "order": 2,
+      "lastVerified": "2026-09-22",
+      "locales": [
+        "en",
+        "ru"
+      ],
+      "provenance": {
+        "repo": "mnemos-mesh",
+        "source_path": "docs/en/admin/runbook.md",
+        "sha": "331ef3a785c1a74fb9f8972ff93cd6db5a8fc174",
+        "commit_date": "2026-09-22T18:15:20+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
+      },
+      "kinds": {
+        "ru": "curated-translation"
+      }
+    },
+    {
+      "slug": "mnemos-mesh/admin/security",
+      "titles": {
+        "en": "Security model for mnemos-mesh operators",
+        "ru": "Модель безопасности mnemos-mesh для оператора"
+      },
+      "category": "mesh-admin",
+      "order": 1,
+      "lastVerified": "2026-09-22",
+      "locales": [
+        "en",
+        "ru"
+      ],
+      "provenance": {
+        "repo": "mnemos-mesh",
+        "source_path": "docs/en/admin/security.md",
+        "sha": "331ef3a785c1a74fb9f8972ff93cd6db5a8fc174",
+        "commit_date": "2026-09-22T18:15:20+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
+      },
+      "kinds": {
+        "ru": "curated-translation"
+      }
+    },
+    {
+      "slug": "mnemos-mesh/user/configuration",
+      "titles": {
+        "en": "Configuration reference — `mesh.yaml`",
+        "ru": "Справочник конфигурации — `mesh.yaml`"
+      },
+      "category": "mesh-user",
+      "order": 2,
+      "lastVerified": "2026-09-22",
+      "locales": [
+        "en",
+        "ru"
+      ],
+      "provenance": {
+        "repo": "mnemos-mesh",
+        "source_path": "docs/en/user/configuration.md",
+        "sha": "331ef3a785c1a74fb9f8972ff93cd6db5a8fc174",
+        "commit_date": "2026-09-22T18:15:20+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
+      },
+      "kinds": {
+        "ru": "curated-translation"
+      }
+    },
+    {
+      "slug": "mnemos-mesh/user/getting-started",
+      "titles": {
+        "en": "Getting started with mnemos-mesh",
+        "ru": "Первый запуск mnemos-mesh"
+      },
+      "category": "mesh-user",
+      "order": 1,
+      "lastVerified": "2026-09-22",
+      "locales": [
+        "en",
+        "ru"
+      ],
+      "provenance": {
+        "repo": "mnemos-mesh",
+        "source_path": "docs/en/user/getting-started.md",
+        "sha": "331ef3a785c1a74fb9f8972ff93cd6db5a8fc174",
+        "commit_date": "2026-09-22T18:15:20+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
+      },
+      "kinds": {
+        "ru": "curated-translation"
+      }
+    },
+    {
+      "slug": "mnemos/admin/federation",
+      "titles": {
+        "en": "Federation — Phase 1 prerequisites (per-peer ACL + trigger codes + access log)",
+        "ru": "Федерация — предпосылки Phase 1 (per-peer ACL + триггер-коды + журнал доступа)"
+      },
+      "category": "mnemos-admin",
+      "order": 2,
+      "lastVerified": "2026-09-23",
+      "locales": [
+        "en",
+        "ru"
+      ],
+      "provenance": {
+        "repo": "mnemos",
+        "source_path": "docs/en/admin/federation.md",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "mnemos/admin/runbooks/backup-restore",
+      "titles": {
+        "en": "Runbook: Backup & Restore",
+        "ru": "Runbook: Резервное копирование и восстановление"
+      },
+      "category": "mnemos-admin",
+      "order": 4,
+      "lastVerified": "2026-09-23",
+      "locales": [
+        "en",
+        "ru"
+      ],
+      "provenance": {
+        "repo": "mnemos",
+        "source_path": "docs/en/admin/runbooks/backup-restore.md",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "mnemos/admin/runbooks/install",
+      "titles": {
+        "en": "Runbook: Install Mnemos",
+        "ru": "Runbook: Установка Mnemos"
+      },
+      "category": "mnemos-admin",
+      "order": 3,
+      "lastVerified": "2026-09-23",
+      "locales": [
+        "en",
+        "ru"
+      ],
+      "provenance": {
+        "repo": "mnemos",
+        "source_path": "docs/en/admin/runbooks/install.md",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "mnemos/admin/security",
+      "titles": {
+        "en": "Mnemos — Security Posture (M15.2)",
+        "ru": "Mnemos — Состояние безопасности (M15.2)"
+      },
+      "category": "mnemos-admin",
+      "order": 1,
+      "lastVerified": "2026-09-23",
+      "locales": [
+        "en",
+        "ru"
+      ],
+      "provenance": {
+        "repo": "mnemos",
+        "source_path": "docs/en/admin/security.md",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "mnemos/architecture/overview",
+      "titles": {
+        "en": "Mnemos — System Architecture",
+        "ru": "Mnemos — Архитектура системы"
+      },
+      "category": "mnemos-architecture",
+      "order": 1,
+      "lastVerified": "2026-09-23",
+      "locales": [
+        "en",
+        "ru"
+      ],
+      "provenance": {
+        "repo": "mnemos",
+        "source_path": "docs/en/architecture/overview.md",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "mnemos/user/cli-reference",
+      "titles": {
+        "en": "CLI Reference",
+        "ru": "Справочник CLI"
+      },
+      "category": "mnemos-user",
+      "order": 8,
+      "lastVerified": "2026-09-23",
+      "locales": [
+        "en",
+        "ru"
+      ],
+      "provenance": {
+        "repo": "mnemos",
+        "source_path": "docs/en/user/cli-reference.md",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "mnemos/user/context-filter",
+      "titles": {
+        "en": "Context Filter Guide",
+        "ru": "Руководство по контекстному фильтру"
+      },
+      "category": "mnemos-user",
+      "order": 4,
+      "lastVerified": "2026-09-23",
+      "locales": [
+        "en",
+        "ru"
+      ],
+      "provenance": {
+        "repo": "mnemos",
+        "source_path": "docs/en/user/context-filter.md",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "mnemos/user/export-import",
+      "titles": {
+        "en": "Export & Import",
+        "ru": "Экспорт и импорт"
+      },
+      "category": "mnemos-user",
+      "order": 7,
+      "lastVerified": "2026-09-23",
+      "locales": [
+        "en",
+        "ru"
+      ],
+      "provenance": {
+        "repo": "mnemos",
+        "source_path": "docs/en/user/export-import.md",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "mnemos/user/getting-started",
+      "titles": {
+        "en": "Getting Started",
+        "ru": "Начало работы"
+      },
+      "category": "mnemos-user",
+      "order": 1,
+      "lastVerified": "2026-09-23",
+      "locales": [
+        "en",
+        "ru"
+      ],
+      "provenance": {
+        "repo": "mnemos",
+        "source_path": "docs/en/user/getting-started.md",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "mnemos/user/http-api",
+      "titles": {
+        "en": "HTTP API Reference",
+        "ru": "Справочник HTTP API"
+      },
+      "category": "mnemos-user",
+      "order": 9,
+      "lastVerified": "2026-09-23",
+      "locales": [
+        "en",
+        "ru"
+      ],
+      "provenance": {
+        "repo": "mnemos",
+        "source_path": "docs/en/user/http-api.md",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "mnemos/user/integration-guide",
+      "titles": {
+        "en": "Integration Guide",
+        "ru": "Руководство по интеграции"
+      },
+      "category": "mnemos-user",
+      "order": 2,
+      "lastVerified": "2026-09-23",
+      "locales": [
+        "en",
+        "ru"
+      ],
+      "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/user/integration-guide.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -386,7 +782,7 @@
       },
       "category": "mnemos-user",
       "order": 10,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-09-23",
       "locales": [
         "en",
         "ru"
@@ -394,8 +790,8 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/user/mcp-tools.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -410,7 +806,7 @@
       },
       "category": "mnemos-user",
       "order": 6,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-09-23",
       "locales": [
         "en",
         "ru"
@@ -418,8 +814,8 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/user/metrics.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -434,7 +830,7 @@
       },
       "category": "mnemos-user",
       "order": 3,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-09-23",
       "locales": [
         "en",
         "ru"
@@ -442,8 +838,8 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/user/sync.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -458,7 +854,7 @@
       },
       "category": "mnemos-user",
       "order": 5,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-09-23",
       "locales": [
         "en",
         "ru"
@@ -466,8 +862,8 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/user/tag-contract.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00"
       },
       "contentClass": {
         "en": "corpus",

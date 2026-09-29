@@ -47,19 +47,26 @@ function coverageKey(pages: readonly DocPage[]): "both" | "ru" | "en" | "mixed" 
   return hasRu ? "ru" : "en";
 }
 
-/** Provenance summary for the hub status line: first repo@sha, latest date. */
+/**
+ * Provenance summary for the hub status line: first repo@sha, latest date.
+ * Multi-source hubs (the api hub aggregates several pinned repositories)
+ * report the SOURCE COUNT instead — one repo@sha would claim a single
+ * origin the hub does not have; each page badge keeps the exact pin.
+ */
 function hubProvenance(pages: readonly DocPage[]) {
+  const repos = new Set<string>();
   let repo: string | null = null;
   let sha: string | null = null;
   let latest = "";
   for (const page of pages) {
     if (!page.provenance) continue;
+    repos.add(page.provenance.repo);
     repo ??= page.provenance.repo;
     sha ??= page.provenance.sha;
     if (page.provenance.syncedAt > latest) latest = page.provenance.syncedAt;
   }
   if (repo === null || sha === null || latest === "") return null;
-  return { repo, sha, syncedAt: latest };
+  return { repo, sha, syncedAt: latest, sourceCount: repos.size };
 }
 
 function HubSkeleton() {
@@ -99,25 +106,44 @@ function StatusBadges({ project, pages }: { project: DocProject; pages: readonly
         {t(`docs.hub.coverage.${coverageKey(pages)}`)}
       </Badge>
       {provenance ? (
-        <Badge
-          variant="outline"
-          title={t("docs.provenance.full", {
-            repo: provenance.repo,
-            sha: provenance.sha,
-            date: formatSyncDate(provenance.syncedAt, true),
-          })}
-          aria-label={t("docs.provenance.full", {
-            repo: provenance.repo,
-            sha: provenance.sha,
-            date: formatSyncDate(provenance.syncedAt, true),
-          })}
-        >
-          {t("docs.provenance.badge", {
-            repo: provenance.repo,
-            sha: provenance.sha.slice(0, 7),
-            date: formatSyncDate(provenance.syncedAt),
-          })}
-        </Badge>
+        provenance.sourceCount > 1 ? (
+          <Badge
+            variant="outline"
+            title={t("docs.provenance.multiSourceFull", {
+              count: provenance.sourceCount,
+              date: formatSyncDate(provenance.syncedAt, true),
+            })}
+            aria-label={t("docs.provenance.multiSourceFull", {
+              count: provenance.sourceCount,
+              date: formatSyncDate(provenance.syncedAt, true),
+            })}
+          >
+            {t("docs.provenance.multiSource", {
+              count: provenance.sourceCount,
+              date: formatSyncDate(provenance.syncedAt),
+            })}
+          </Badge>
+        ) : (
+          <Badge
+            variant="outline"
+            title={t("docs.provenance.full", {
+              repo: provenance.repo,
+              sha: provenance.sha,
+              date: formatSyncDate(provenance.syncedAt, true),
+            })}
+            aria-label={t("docs.provenance.full", {
+              repo: provenance.repo,
+              sha: provenance.sha,
+              date: formatSyncDate(provenance.syncedAt, true),
+            })}
+          >
+            {t("docs.provenance.badge", {
+              repo: provenance.repo,
+              sha: provenance.sha.slice(0, 7),
+              date: formatSyncDate(provenance.syncedAt),
+            })}
+          </Badge>
+        )
       ) : null}
     </div>
   );

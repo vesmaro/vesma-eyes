@@ -12,7 +12,8 @@ import { getManifestSync, localeForPage, titleFor } from "./manifest";
 
 /**
  * Docs navigation (contract §4, design spec §3/§5): the sidebar domain
- * «Документация» opens into THREE project groups (categories inside), plus
+ * «Документация» opens into the project groups — the three project hubs
+ * plus the cross-cutting API hub (ME-038) — categories inside, plus
  * the special-case crumbs for `/docs/*`. Pure data over the (possibly not
  * yet hydrated) manifest — `navItems.ts` imports from here, so this file
  * must never import layout components back (no cycle).

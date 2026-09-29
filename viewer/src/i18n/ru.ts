@@ -1530,6 +1530,21 @@ export const ru = {
   "docs.catDesc.meshUser": "Запуск узла mnemos-mesh и настройка федерации.",
   "docs.cat.meshAdmin": "Администратору",
   "docs.catDesc.meshAdmin": "Эксплуатация и безопасность узла mnemos-mesh.",
+  "docs.cat.apiOverview": "Обзор хаба",
+  "docs.catDesc.apiOverview":
+    "Что здесь живёт, карта API проектов и правило свежести.",
+  "docs.cat.apiBoard": "API борда",
+  "docs.catDesc.apiBoard":
+    "Референс HTTP API vesmaro-eyes, сгенерированный из OpenAPI-снапшота.",
+  "docs.cat.apiMnemos": "HTTP API mnemos",
+  "docs.catDesc.apiMnemos":
+    "Карта поверхностей сервера памяти и контракт A2A-сессий.",
+  "docs.cat.apiAgent": "Протокол vesmaro-agent",
+  "docs.catDesc.apiAgent":
+    "Проводной протокол агента и выжимка service charter v2.",
+  "docs.cat.apiMesh": "mnemos-mesh",
+  "docs.catDesc.apiMesh":
+    "Публичного HTTP API нет — внутренний протокол и поверхность оператора.",
   "docs.search.placeholder": "Поиск по документации",
   "docs.search.ariaLabel": "Поиск по документации",
   "docs.search.resultsLabel": "Результаты поиска",
@@ -1550,6 +1565,9 @@ export const ru = {
   "docs.provenance.badge": "из {{repo}}@{{sha}} · синхр. {{date}}",
   "docs.provenance.full":
     "Импортировано из репозитория {{repo}}, коммит {{sha}}, синхронизировано {{date}}",
+  "docs.provenance.multiSource": "источников: {{count}} · свежее {{date}}",
+  "docs.provenance.multiSourceFull":
+    "Страницы хаба синхронизированы из {{count}} репозиториев по пинам; самая свежая синхронизация {{date}} — пин каждой страницы на её бейдже",
   "docs.hub.start": "С чего начать",
   "docs.hub.categories": "Категории",
   "docs.hub.vesmaroEyes.lede":
@@ -1558,6 +1576,8 @@ export const ru = {
     "Сервер памяти для ИИ-агентов: колодец записей, поиск по смыслу и хранилище под контрактом тегов. Здесь — руководства пользователя и администратора и обзорная архитектура.",
   "docs.hub.mnemosMesh.lede":
     "Федерация хранилищ: поднять узел mnemos-mesh, настроить канал и эксплуатировать связку двух инстансов.",
+  "docs.hub.api.lede":
+    "API экосистемы в одном месте: референс борда из OpenAPI-снапшота, HTTP-поверхность mnemos, протокол vesmaro-agent и заметка про mesh. Каждая страница синхронизирована из источника — пин и дата на бейдже.",
   "docs.hub.coverage.both": "Доступно на русском и английском",
   "docs.hub.coverage.ru": "Доступно на русском",
   "docs.hub.coverage.en": "Доступно на английском",

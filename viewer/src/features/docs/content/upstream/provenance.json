@@ -1,39 +1,303 @@
 {
   "version": 1,
-  "generated_by": "scripts/sync_docs.py",
+  "generated_by": "scripts/sync_docs.py + scripts/gen_api_ref.py",
   "synced_at": "2026-09-29T19:55:12+03:00",
   "projects": {
     "mnemos": {
       "repo": "../mnemos",
-      "ref": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-      "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-      "commit_date": "2026-09-29T12:16:19+03:00"
+      "ref": "23f0fce42ea87c329d4049397292b3dca948773c",
+      "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+      "commit_date": "2026-09-23T00:19:30+03:00"
     },
     "mnemos-mesh": {
       "repo": "../mnemos-mesh",
-      "ref": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
-      "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
-      "commit_date": "2026-09-29T19:55:12+03:00"
+      "ref": "331ef3a785c1a74fb9f8972ff93cd6db5a8fc174",
+      "sha": "331ef3a785c1a74fb9f8972ff93cd6db5a8fc174",
+      "commit_date": "2026-09-22T18:15:20+03:00"
+    },
+    "api_hub": {
+      "board_api_spec": "viewer/board-openapi-snapshot.json",
+      "board_api_blob_sha": "3d969cb428ae1bdcd7272d5d7a658fd1d63badf3",
+      "sources": {
+        "mnemos": {
+          "repo": "../mnemos",
+          "ref": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+          "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a"
+        },
+        "mnemos-mesh": {
+          "repo": "../mnemos-mesh",
+          "ref": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
+          "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de"
+        },
+        "vesmaro-agent": {
+          "repo": "../vesmaro-agent",
+          "ref": "b8a51498accff8af7b507746cf46a2d72af9fd86",
+          "sha": "b8a51498accff8af7b507746cf46a2d72af9fd86"
+        }
+      }
     }
   },
   "files": {
+    "api/mnemos-mesh/index": {
+      "en": {
+        "repo": "mnemos-mesh",
+        "source_path": "proto/federation.proto",
+        "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
+        "commit_date": "2026-09-29T19:55:12+03:00",
+        "synced_at": "2026-09-29T19:55:12+03:00",
+        "locale": "en",
+        "kind": "curated"
+      },
+      "ru": {
+        "repo": "mnemos-mesh",
+        "source_path": "proto/federation.proto",
+        "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
+        "commit_date": "2026-09-29T19:55:12+03:00",
+        "synced_at": "2026-09-29T19:55:12+03:00",
+        "locale": "ru",
+        "kind": "curated"
+      }
+    },
+    "api/mnemos/a2a-sessions": {
+      "en": {
+        "repo": "mnemos",
+        "source_path": "docs/en/architecture/a2a-sessions.md",
+        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+        "commit_date": "2026-09-29T12:16:19+03:00",
+        "synced_at": "2026-09-29T12:16:19+03:00",
+        "locale": "en",
+        "kind": "upstream"
+      },
+      "ru": {
+        "repo": "mnemos",
+        "source_path": "docs/ru/architecture/a2a-sessions.md",
+        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+        "commit_date": "2026-09-29T12:16:19+03:00",
+        "synced_at": "2026-09-29T12:16:19+03:00",
+        "locale": "ru",
+        "kind": "upstream"
+      }
+    },
+    "api/mnemos/http-api": {
+      "en": {
+        "repo": "mnemos",
+        "source_path": "docs/en/user/http-api.md",
+        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+        "commit_date": "2026-09-29T12:16:19+03:00",
+        "synced_at": "2026-09-29T12:16:19+03:00",
+        "locale": "en",
+        "kind": "curated"
+      },
+      "ru": {
+        "repo": "mnemos",
+        "source_path": "docs/en/user/http-api.md",
+        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+        "commit_date": "2026-09-29T12:16:19+03:00",
+        "synced_at": "2026-09-29T12:16:19+03:00",
+        "locale": "ru",
+        "kind": "curated"
+      }
+    },
+    "api/overview": {
+      "en": {
+        "repo": "vesmaro-eyes",
+        "source_path": "docs/api",
+        "sha": "21092b0eb27b37405ed6aa704b62aee2cbe92bee",
+        "commit_date": "2026-09-29T20:33:44+03:00",
+        "synced_at": "2026-09-29T20:33:44+03:00",
+        "locale": "en",
+        "kind": "curated"
+      },
+      "ru": {
+        "repo": "vesmaro-eyes",
+        "source_path": "docs/api",
+        "sha": "21092b0eb27b37405ed6aa704b62aee2cbe92bee",
+        "commit_date": "2026-09-29T20:33:44+03:00",
+        "synced_at": "2026-09-29T20:33:44+03:00",
+        "locale": "ru",
+        "kind": "curated"
+      }
+    },
+    "api/vesmaro-agent/charter": {
+      "en": {
+        "repo": "vesmaro-agent",
+        "source_path": "docs/decisions/CHARTER-v2.md",
+        "sha": "b8a51498accff8af7b507746cf46a2d72af9fd86",
+        "commit_date": "2026-09-29T13:36:02+03:00",
+        "synced_at": "2026-09-29T13:36:02+03:00",
+        "locale": "en",
+        "kind": "curated"
+      },
+      "ru": {
+        "repo": "vesmaro-agent",
+        "source_path": "docs/decisions/CHARTER-v2.md",
+        "sha": "b8a51498accff8af7b507746cf46a2d72af9fd86",
+        "commit_date": "2026-09-29T13:36:02+03:00",
+        "synced_at": "2026-09-29T13:36:02+03:00",
+        "locale": "ru",
+        "kind": "curated"
+      }
+    },
+    "api/vesmaro-agent/protocol": {
+      "en": {
+        "repo": "vesmaro-agent",
+        "source_path": "docs/PROTOCOL.md",
+        "sha": "b8a51498accff8af7b507746cf46a2d72af9fd86",
+        "commit_date": "2026-09-29T13:36:02+03:00",
+        "synced_at": "2026-09-29T13:36:02+03:00",
+        "locale": "en",
+        "kind": "upstream"
+      }
+    },
+    "api/vesmaro-eyes/assignments": {
+      "ru": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "3d969cb428ae1bdcd7272d5d7a658fd1d63badf3",
+        "commit_date": "2026-09-29T19:10:05+03:00",
+        "synced_at": "2026-09-29T19:10:05+03:00",
+        "locale": "ru",
+        "kind": "openapi-generated"
+      }
+    },
+    "api/vesmaro-eyes/automation": {
+      "ru": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "3d969cb428ae1bdcd7272d5d7a658fd1d63badf3",
+        "commit_date": "2026-09-29T19:10:05+03:00",
+        "synced_at": "2026-09-29T19:10:05+03:00",
+        "locale": "ru",
+        "kind": "openapi-generated"
+      }
+    },
+    "api/vesmaro-eyes/devices": {
+      "ru": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "3d969cb428ae1bdcd7272d5d7a658fd1d63badf3",
+        "commit_date": "2026-09-29T19:10:05+03:00",
+        "synced_at": "2026-09-29T19:10:05+03:00",
+        "locale": "ru",
+        "kind": "openapi-generated"
+      }
+    },
+    "api/vesmaro-eyes/executors": {
+      "ru": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "3d969cb428ae1bdcd7272d5d7a658fd1d63badf3",
+        "commit_date": "2026-09-29T19:10:05+03:00",
+        "synced_at": "2026-09-29T19:10:05+03:00",
+        "locale": "ru",
+        "kind": "openapi-generated"
+      }
+    },
+    "api/vesmaro-eyes/feed": {
+      "ru": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "3d969cb428ae1bdcd7272d5d7a658fd1d63badf3",
+        "commit_date": "2026-09-29T19:10:05+03:00",
+        "synced_at": "2026-09-29T19:10:05+03:00",
+        "locale": "ru",
+        "kind": "openapi-generated"
+      }
+    },
+    "api/vesmaro-eyes/index": {
+      "ru": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "3d969cb428ae1bdcd7272d5d7a658fd1d63badf3",
+        "commit_date": "2026-09-29T19:10:05+03:00",
+        "synced_at": "2026-09-29T19:10:05+03:00",
+        "locale": "ru",
+        "kind": "openapi-generated"
+      }
+    },
+    "api/vesmaro-eyes/kora": {
+      "ru": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "3d969cb428ae1bdcd7272d5d7a658fd1d63badf3",
+        "commit_date": "2026-09-29T19:10:05+03:00",
+        "synced_at": "2026-09-29T19:10:05+03:00",
+        "locale": "ru",
+        "kind": "openapi-generated"
+      }
+    },
+    "api/vesmaro-eyes/memories": {
+      "ru": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "3d969cb428ae1bdcd7272d5d7a658fd1d63badf3",
+        "commit_date": "2026-09-29T19:10:05+03:00",
+        "synced_at": "2026-09-29T19:10:05+03:00",
+        "locale": "ru",
+        "kind": "openapi-generated"
+      }
+    },
+    "api/vesmaro-eyes/mesh": {
+      "ru": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "3d969cb428ae1bdcd7272d5d7a658fd1d63badf3",
+        "commit_date": "2026-09-29T19:10:05+03:00",
+        "synced_at": "2026-09-29T19:10:05+03:00",
+        "locale": "ru",
+        "kind": "openapi-generated"
+      }
+    },
+    "api/vesmaro-eyes/poller": {
+      "ru": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "3d969cb428ae1bdcd7272d5d7a658fd1d63badf3",
+        "commit_date": "2026-09-29T19:10:05+03:00",
+        "synced_at": "2026-09-29T19:10:05+03:00",
+        "locale": "ru",
+        "kind": "openapi-generated"
+      }
+    },
+    "api/vesmaro-eyes/system": {
+      "ru": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "3d969cb428ae1bdcd7272d5d7a658fd1d63badf3",
+        "commit_date": "2026-09-29T19:10:05+03:00",
+        "synced_at": "2026-09-29T19:10:05+03:00",
+        "locale": "ru",
+        "kind": "openapi-generated"
+      }
+    },
+    "api/vesmaro-eyes/tasks": {
+      "ru": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "3d969cb428ae1bdcd7272d5d7a658fd1d63badf3",
+        "commit_date": "2026-09-29T19:10:05+03:00",
+        "synced_at": "2026-09-29T19:10:05+03:00",
+        "locale": "ru",
+        "kind": "openapi-generated"
+      }
+    },
     "mnemos-mesh/admin/runbook": {
       "en": {
         "repo": "mnemos-mesh",
         "source_path": "docs/en/admin/runbook.md",
-        "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
-        "commit_date": "2026-09-29T19:55:12+03:00",
-        "synced_at": "2026-09-29T19:55:12+03:00",
+        "sha": "331ef3a785c1a74fb9f8972ff93cd6db5a8fc174",
+        "commit_date": "2026-09-22T18:15:20+03:00",
+        "synced_at": "2026-09-22T18:15:20+03:00",
         "locale": "en",
         "kind": "upstream"
       },
       "ru": {
         "repo": "mnemos-mesh",
         "source_path": "viewer/src/features/docs/curated/mnemos-mesh/ru/admin/runbook.md",
-        "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
-        "source_sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
-        "commit_date": "2026-09-29T19:55:12+03:00",
-        "synced_at": "2026-09-29T19:55:12+03:00",
+        "sha": "331ef3a785c1a74fb9f8972ff93cd6db5a8fc174",
+        "source_sha": "331ef3a785c1a74fb9f8972ff93cd6db5a8fc174",
+        "commit_date": "2026-09-22T18:15:20+03:00",
+        "synced_at": "2026-09-22T18:15:20+03:00",
         "locale": "ru",
         "kind": "curated-translation",
         "translator_note": "Кураторский перевод W3; оригинал en@331ef3a785c1"
@@ -43,19 +307,19 @@
       "en": {
         "repo": "mnemos-mesh",
         "source_path": "docs/en/admin/security.md",
-        "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
-        "commit_date": "2026-09-29T19:55:12+03:00",
-        "synced_at": "2026-09-29T19:55:12+03:00",
+        "sha": "331ef3a785c1a74fb9f8972ff93cd6db5a8fc174",
+        "commit_date": "2026-09-22T18:15:20+03:00",
+        "synced_at": "2026-09-22T18:15:20+03:00",
         "locale": "en",
         "kind": "upstream"
       },
       "ru": {
         "repo": "mnemos-mesh",
         "source_path": "viewer/src/features/docs/curated/mnemos-mesh/ru/admin/security.md",
-        "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
-        "source_sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
-        "commit_date": "2026-09-29T19:55:12+03:00",
-        "synced_at": "2026-09-29T19:55:12+03:00",
+        "sha": "331ef3a785c1a74fb9f8972ff93cd6db5a8fc174",
+        "source_sha": "331ef3a785c1a74fb9f8972ff93cd6db5a8fc174",
+        "commit_date": "2026-09-22T18:15:20+03:00",
+        "synced_at": "2026-09-22T18:15:20+03:00",
         "locale": "ru",
         "kind": "curated-translation",
         "translator_note": "Кураторский перевод W3; оригинал en@331ef3a785c1"
@@ -65,19 +329,19 @@
       "en": {
         "repo": "mnemos-mesh",
         "source_path": "docs/en/user/configuration.md",
-        "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
-        "commit_date": "2026-09-29T19:55:12+03:00",
-        "synced_at": "2026-09-29T19:55:12+03:00",
+        "sha": "331ef3a785c1a74fb9f8972ff93cd6db5a8fc174",
+        "commit_date": "2026-09-22T18:15:20+03:00",
+        "synced_at": "2026-09-22T18:15:20+03:00",
         "locale": "en",
         "kind": "upstream"
       },
       "ru": {
         "repo": "mnemos-mesh",
         "source_path": "viewer/src/features/docs/curated/mnemos-mesh/ru/user/configuration.md",
-        "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
-        "source_sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
-        "commit_date": "2026-09-29T19:55:12+03:00",
-        "synced_at": "2026-09-29T19:55:12+03:00",
+        "sha": "331ef3a785c1a74fb9f8972ff93cd6db5a8fc174",
+        "source_sha": "331ef3a785c1a74fb9f8972ff93cd6db5a8fc174",
+        "commit_date": "2026-09-22T18:15:20+03:00",
+        "synced_at": "2026-09-22T18:15:20+03:00",
         "locale": "ru",
         "kind": "curated-translation",
         "translator_note": "Кураторский перевод W3; оригинал en@331ef3a785c1"
@@ -87,19 +351,19 @@
       "en": {
         "repo": "mnemos-mesh",
         "source_path": "docs/en/user/getting-started.md",
-        "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
-        "commit_date": "2026-09-29T19:55:12+03:00",
-        "synced_at": "2026-09-29T19:55:12+03:00",
+        "sha": "331ef3a785c1a74fb9f8972ff93cd6db5a8fc174",
+        "commit_date": "2026-09-22T18:15:20+03:00",
+        "synced_at": "2026-09-22T18:15:20+03:00",
         "locale": "en",
         "kind": "upstream"
       },
       "ru": {
         "repo": "mnemos-mesh",
         "source_path": "viewer/src/features/docs/curated/mnemos-mesh/ru/user/getting-started.md",
-        "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
-        "source_sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
-        "commit_date": "2026-09-29T19:55:12+03:00",
-        "synced_at": "2026-09-29T19:55:12+03:00",
+        "sha": "331ef3a785c1a74fb9f8972ff93cd6db5a8fc174",
+        "source_sha": "331ef3a785c1a74fb9f8972ff93cd6db5a8fc174",
+        "commit_date": "2026-09-22T18:15:20+03:00",
+        "synced_at": "2026-09-22T18:15:20+03:00",
         "locale": "ru",
         "kind": "curated-translation",
         "translator_note": "Кураторский перевод W3; оригинал en@331ef3a785c1"
@@ -109,18 +373,18 @@
       "en": {
         "repo": "mnemos",
         "source_path": "docs/en/admin/federation.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "en",
         "kind": "upstream"
       },
       "ru": {
         "repo": "mnemos",
         "source_path": "docs/ru/admin/federation.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "ru",
         "kind": "upstream"
       }
@@ -129,18 +393,18 @@
       "en": {
         "repo": "mnemos",
         "source_path": "docs/en/admin/runbooks/backup-restore.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "en",
         "kind": "upstream"
       },
       "ru": {
         "repo": "mnemos",
         "source_path": "docs/ru/admin/runbooks/backup-restore.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "ru",
         "kind": "upstream"
       }
@@ -149,18 +413,18 @@
       "en": {
         "repo": "mnemos",
         "source_path": "docs/en/admin/runbooks/install.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "en",
         "kind": "upstream"
       },
       "ru": {
         "repo": "mnemos",
         "source_path": "docs/ru/admin/runbooks/install.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "ru",
         "kind": "upstream"
       }
@@ -169,18 +433,18 @@
       "en": {
         "repo": "mnemos",
         "source_path": "docs/en/admin/security.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "en",
         "kind": "upstream"
       },
       "ru": {
         "repo": "mnemos",
         "source_path": "docs/ru/admin/security.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "ru",
         "kind": "upstream"
       }
@@ -189,18 +453,18 @@
       "en": {
         "repo": "mnemos",
         "source_path": "docs/en/architecture/overview.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "en",
         "kind": "upstream"
       },
       "ru": {
         "repo": "mnemos",
         "source_path": "docs/ru/architecture/overview.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "ru",
         "kind": "upstream"
       }
@@ -209,18 +473,18 @@
       "en": {
         "repo": "mnemos",
         "source_path": "docs/en/user/cli-reference.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "en",
         "kind": "upstream"
       },
       "ru": {
         "repo": "mnemos",
         "source_path": "docs/ru/user/cli-reference.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "ru",
         "kind": "upstream"
       }
@@ -229,18 +493,18 @@
       "en": {
         "repo": "mnemos",
         "source_path": "docs/en/user/context-filter.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "en",
         "kind": "upstream"
       },
       "ru": {
         "repo": "mnemos",
         "source_path": "docs/ru/user/context-filter.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "ru",
         "kind": "upstream"
       }
@@ -249,18 +513,18 @@
       "en": {
         "repo": "mnemos",
         "source_path": "docs/en/user/export-import.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "en",
         "kind": "upstream"
       },
       "ru": {
         "repo": "mnemos",
         "source_path": "docs/ru/user/export-import.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "ru",
         "kind": "upstream"
       }
@@ -269,18 +533,18 @@
       "en": {
         "repo": "mnemos",
         "source_path": "docs/en/user/getting-started.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "en",
         "kind": "upstream"
       },
       "ru": {
         "repo": "mnemos",
         "source_path": "docs/ru/user/getting-started.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "ru",
         "kind": "upstream"
       }
@@ -289,18 +553,18 @@
       "en": {
         "repo": "mnemos",
         "source_path": "docs/en/user/http-api.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "en",
         "kind": "upstream"
       },
       "ru": {
         "repo": "mnemos",
         "source_path": "docs/ru/user/http-api.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "ru",
         "kind": "upstream"
       }
@@ -309,18 +573,18 @@
       "en": {
         "repo": "mnemos",
         "source_path": "docs/en/user/integration-guide.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "en",
         "kind": "upstream"
       },
       "ru": {
         "repo": "mnemos",
         "source_path": "docs/ru/user/integration-guide.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "ru",
         "kind": "upstream"
       }
@@ -329,18 +593,18 @@
       "en": {
         "repo": "mnemos",
         "source_path": "docs/en/user/mcp-tools.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "en",
         "kind": "upstream"
       },
       "ru": {
         "repo": "mnemos",
         "source_path": "docs/ru/user/mcp-tools.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "ru",
         "kind": "upstream"
       }
@@ -349,18 +613,18 @@
       "en": {
         "repo": "mnemos",
         "source_path": "docs/en/user/metrics.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "en",
         "kind": "upstream"
       },
       "ru": {
         "repo": "mnemos",
         "source_path": "docs/ru/user/metrics.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "ru",
         "kind": "upstream"
       }
@@ -369,18 +633,18 @@
       "en": {
         "repo": "mnemos",
         "source_path": "docs/en/user/sync.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "en",
         "kind": "upstream"
       },
       "ru": {
         "repo": "mnemos",
         "source_path": "docs/ru/user/sync.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "ru",
         "kind": "upstream"
       }
@@ -389,18 +653,18 @@
       "en": {
         "repo": "mnemos",
         "source_path": "docs/en/user/tag-contract.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "en",
         "kind": "upstream"
       },
       "ru": {
         "repo": "mnemos",
         "source_path": "docs/ru/user/tag-contract.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00",
-        "synced_at": "2026-09-29T12:16:19+03:00",
+        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
+        "commit_date": "2026-09-23T00:19:30+03:00",
+        "synced_at": "2026-09-23T00:19:30+03:00",
         "locale": "ru",
         "kind": "upstream"
       }
