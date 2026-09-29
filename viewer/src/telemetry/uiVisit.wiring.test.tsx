@@ -9,13 +9,21 @@ import { ToastProvider } from "@/components/Toast/ToastProvider";
 import { I18nProvider } from "@/i18n";
 import { UiTokenProvider } from "@/features/ui-token/UiTokenProvider";
 import { UiTokenContext } from "@/features/ui-token/UiTokenContext";
+import { initAuthSession } from "@/features/ui-token/authSession";
 import { __resetForTests, __stateForTests } from "./telemetry";
 
 /**
- * The ui.visit wiring (taxonomy §1.2 #1): the provider's boot probe of the
- * live `vesmaro_ui` cookie (ME-028) is the ONLY arm signal. Probe 204 →
- * armed + one ui.visit; probe 401 → silent; an adapter with no session
+ * The ui.visit wiring (taxonomy §1.2 #1): the boot probe of the live
+ * `vesmaro_ui` cookie (ME-028) is the ONLY arm signal. Probe 204 →
+ * armed + one ui.visit; probe refusal → silent; an adapter with no session
  * wire (the mock playground) → silent.
+ *
+ * И1 stitch note: the boot probe left the provider for the boot
+ * auth-session store (main.tsx fires it via initAuthSession BEFORE the
+ * first render; the provider only JOINS). The arm rides the store's probe
+ * resolution — so the test initializes the store exactly the way main.tsx
+ * does and then mounts the provider on top (the lazy-init fallback is
+ * covered by the provider's own boot join).
  */
 
 let container: HTMLDivElement | null = null;
@@ -23,7 +31,8 @@ let root: Root | null = null;
 
 beforeEach(() => {
   __resetForTests();
-  (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+  (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =
+    true;
 });
 
 afterEach(() => {
@@ -36,9 +45,11 @@ afterEach(() => {
   container = null;
 });
 
-/** The minimal session-source gateway (ADR 0014 Ф2 wire: verify/probe/logout). */
+/** The minimal session-source gateway (ADR 0014 Ф2 wire: verify/probe/logout
+ * + the synchronous token read the boot store performs first). */
 function sessionGateway(probeLive: boolean): MemoryGateway {
   return {
+    hasUiToken: () => false, // no stored token — the probe is the verdict
     verifyUiToken: async () => ({ ok: true, tokenClass: "ui" }),
     probeUiSession: async () => probeLive,
     logoutUiToken: async () => undefined,
@@ -46,6 +57,9 @@ function sessionGateway(probeLive: boolean): MemoryGateway {
 }
 
 async function mountProvider(gateway: MemoryGateway): Promise<void> {
+  // main.tsx mirror: settle the boot session BEFORE the tree renders —
+  // this is where the arm lives now (the store owns the probe).
+  initAuthSession(gateway);
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);

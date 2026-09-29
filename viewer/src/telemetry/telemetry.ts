@@ -7,9 +7,11 @@
  * Gate discipline (taxonomy §1.3): anonymous loads NEVER emit. The only
  * arm signal is the boot probe of the live `vesmaro_ui` cookie (ME-028:
  * `GET /api/auth/ui-token` → 204) — `startVisit()` is wired exactly
- * there (UiTokenProvider) and is idempotent, so a StrictMode double probe
- * or a re-mount still yields one visit. Everything a disarmed session
- * does is a no-op: no visit_id, no queue, no listeners, no wire calls.
+ * there (the boot auth-session store, features/ui-token/authSession.ts,
+ * which owns the probe since the И1 stitch; formerly the provider's own
+ * probe call) and is idempotent, so a StrictMode double probe or a
+ * re-mount still yields one visit. Everything a disarmed session does is
+ * a no-op: no visit_id, no queue, no listeners, no wire calls.
  *
  * In tests (`import.meta.env.MODE === "test"`) the singleton rides a
  * silent transport and no flush timer, so existing suites never see wire
@@ -86,7 +88,8 @@ function enqueue(kind: string, props: Record<string, unknown>): void {
 /**
  * Arm the battery for this SPA load: stamp the visit id, emit `ui.visit`
  * (§1.2 #1 — the denominator of numbers 1, 2, 4, 5) and start the
- * battery. Called ONLY from the live-probe path (UiTokenProvider); every
+ * battery. Called ONLY from the live-probe path (the boot auth-session
+ * store — the single owner of the boot probe since the И1 stitch); every
  * later call is a no-op.
  */
 export function startVisit(): void {

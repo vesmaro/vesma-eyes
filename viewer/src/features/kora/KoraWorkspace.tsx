@@ -16,6 +16,7 @@ import { NOOP_KORA_INTENT_EVENTS } from "./koraIntentEvents";
 import type { KoraCoverage } from "./koraTypes";
 import { buildKoraTree, koraSummary, type KoraQuickFilter } from "./koraWorkspaceModel";
 import { useKoraSessionPages, useKoraTranscriptPages } from "./useKora";
+import { useKoraEntered } from "@/telemetry/useKoraEntered"; // ME-041: kora.entered
 
 /**
  * The Kora workspace (union И1, 07j §3 / 07l §1–2): ONE composition for
@@ -39,6 +40,9 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
   const t = useT();
   const sessions = useKoraSessionPages(PAGE_SIZE);
   const transcript = useKoraTranscriptPages(sessionId ?? undefined, PAGE_SIZE);
+  // kora.entered (taxonomy §1.2 #3): settle = first honest verdict of the
+  // page the visit entered (list vs deep-linked transcript).
+  useKoraEntered(sessionId ? !transcript.isPending : !sessions.isPending);
   const executors = useExecutors();
 
   // §9.3 honest-empty branching: the connect CTA only shows when the

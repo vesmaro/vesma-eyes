@@ -1,5 +1,6 @@
 import type { MemoryGateway } from "@/gateway/MemoryGateway";
 import { isTaskMutationSource, isUiTokenSessionSource } from "@/gateway/capabilities";
+import { startVisit } from "@/telemetry/telemetry";
 
 /**
  * Boot auth-session store (union И1, gates v6 — 07k §5.1): the ONE answer to
@@ -75,7 +76,11 @@ function entryFor(gateway: MemoryGateway): AuthSessionEntry {
   const existing = entries.get(gateway);
   if (existing) return existing;
 
-  const entry: AuthSessionEntry = { status: "anonymous", listeners: new Set(), probe: null };
+  const entry: AuthSessionEntry = {
+    status: "anonymous",
+    listeners: new Set(),
+    probe: null,
+  };
   entries.set(gateway, entry);
 
   if (!isUiTokenSessionSource(gateway)) {
@@ -91,20 +96,26 @@ function entryFor(gateway: MemoryGateway): AuthSessionEntry {
   // (always fired, matching the historical provider boot) refreshes the
   // adapter's cookie flag and settles "pending" boots.
   entry.status = gateway.hasUiToken() ? "user" : "pending";
-  entry.probe = gateway
-    .probeUiSession()
-    .then(
-      (live) => {
-        settle(entry, live ? "user" : "anonymous");
-        return live;
-      },
-      // The adapter never rejects (it catches transport errors into `false`),
-      // but a throwing test double must not leave the boot pending forever.
-      () => {
-        settle(entry, "anonymous");
-        return false;
-      },
-    );
+  entry.probe = gateway.probeUiSession().then(
+    (live) => {
+      settle(entry, live ? "user" : "anonymous");
+      // ME-041 (taxonomy §1.2 #1): the probe's LIVE answer — the
+      // server-confirmed 204 — is the ONLY telemetry arm. ui.visit fires
+      // here, at the single point that owns the boot probe (formerly the
+      // provider's own probe call; the stitch moved the probe into this
+      // store, so the arm travels with it). startVisit is idempotent and
+      // anonymous/disarmed sessions never reach this line with live=true;
+      // a sync stored token does NOT arm — only the cookie's 204 does.
+      if (live) startVisit();
+      return live;
+    },
+    // The adapter never rejects (it catches transport errors into `false`),
+    // but a throwing test double must not leave the boot pending forever.
+    () => {
+      settle(entry, "anonymous");
+      return false;
+    },
+  );
   return entry;
 }
 
