@@ -42,14 +42,30 @@ export function GatedOutlet({
     return <>{children}</>;
   }
   if (status === "pending") {
-    // A held slot: polite, non-committal (no skeleton that promises
-    // content — the verdict may be a gate), invisible for the one probe
-    // round-trip it lasts.
+    // A held slot (cascade P3-5): polite AND VISIBLE — a hung probe (its
+    // own 10s abort) must not leave a sighted user staring at an empty
+    // main. One honest line, no skeleton that would promise content (the
+    // verdict may be a gate screen).
     return (
-      <p role="status" className="sr-only" data-testid="gate-pending">
+      <p
+        role="status"
+        data-testid="gate-pending"
+        className="mx-auto max-w-xl px-4 py-16 text-center text-sm text-foreground-muted"
+      >
         {t("auth.gate.checkingSession")}
       </p>
     );
   }
-  return <GateScreen domain={domain} pathname={pathname} search={search} />;
+  // key={domain.prefix} (cascade P2): a gate-domain CHANGE remounts the
+  // screen — the H1 focus effect and the entrance animation restart, so
+  // SR/keyboard users are told they arrived at a NEW gate instead of the
+  // text swapping silently under them (07k §8 focus discipline).
+  return (
+    <GateScreen
+      key={domain.prefix}
+      domain={domain}
+      pathname={pathname}
+      search={search}
+    />
+  );
 }

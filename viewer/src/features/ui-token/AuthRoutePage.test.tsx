@@ -156,7 +156,7 @@ describe("returnTo round trip (07k §4.2 + UI-18 transport, ME-026)", () => {
     const { router, container } = await mountAuth({
       initialUrl: "/auth?return=%2Fmemory%2Fsearch%3Fq%3Dproject%3Agcw",
     });
-    const tokenInput = document.getElementById("login-token-value") as HTMLInputElement;
+    const tokenInput = document.querySelector('[data-testid="login-token-value"]') as HTMLInputElement;
     expect(tokenInput).not.toBeNull();
     await act(async () => {
       setInputValue(tokenInput, "ui-route-secret");
@@ -170,7 +170,7 @@ describe("returnTo round trip (07k §4.2 + UI-18 transport, ME-026)", () => {
     expect(router.state.location.search).toBe("?q=project:gcw");
     expect(container.textContent).toContain("DEEP LINK LANDING");
     // The route left no stale form behind.
-    expect(document.getElementById("login-token-value")).toBeNull();
+    expect(document.querySelector('[data-testid="login-token-value"]')).toBeNull();
   });
 
   it("a rejected / foreign return shape falls back to the public Обзор", { timeout: 20000 }, async () => {
@@ -178,7 +178,7 @@ describe("returnTo round trip (07k §4.2 + UI-18 transport, ME-026)", () => {
     const { router } = await mountAuth({
       initialUrl: "/auth?return=" + encodeURIComponent("https://evil.example/x"),
     });
-    const tokenInput = document.getElementById("login-token-value") as HTMLInputElement;
+    const tokenInput = document.querySelector('[data-testid="login-token-value"]') as HTMLInputElement;
     await act(async () => {
       setInputValue(tokenInput, "ui-route-secret");
       (tokenInput.closest("form") as HTMLFormElement).requestSubmit();
@@ -200,10 +200,11 @@ describe("the register tab (honest stub, owner policy)", () => {
       "Accounts are created by the board owner. The first account created becomes the owner.",
     );
     // Exactly one field — the ui token input; no username/password pair
-    // pretending a registration flow exists.
+    // pretending a registration flow exists. Cascade P3: the id is
+    // useId-generated (unique per host), the testid is the stable hook.
     const inputs = container.querySelectorAll("input");
     expect(inputs).toHaveLength(1);
-    expect(inputs[0]?.id).toBe("login-token-value");
+    expect(inputs[0]?.getAttribute("data-testid")).toBe("login-token-value");
     // The honest back control rides in the form.
     expect(container.textContent).toContain("← Back to the board");
   });
@@ -232,7 +233,7 @@ describe("inline verdicts on the route itself", () => {
       initialUrl: "/auth?return=%2Ftasks",
       verifyStatus: 401,
     });
-    const tokenInput = document.getElementById("login-token-value") as HTMLInputElement;
+    const tokenInput = document.querySelector('[data-testid="login-token-value"]') as HTMLInputElement;
     await act(async () => {
       setInputValue(tokenInput, "ui-bad");
       (tokenInput.closest("form") as HTMLFormElement).requestSubmit();
@@ -253,7 +254,7 @@ describe("inline verdicts on the route itself", () => {
       initialUrl: "/auth",
       verifyStatus: 401,
     });
-    const tokenInput = document.getElementById("login-token-value") as HTMLInputElement;
+    const tokenInput = document.querySelector('[data-testid="login-token-value"]') as HTMLInputElement;
     await act(async () => {
       setInputValue(tokenInput, "ui-bad");
       (tokenInput.closest("form") as HTMLFormElement).requestSubmit();

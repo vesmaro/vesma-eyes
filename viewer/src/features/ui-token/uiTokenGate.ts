@@ -142,6 +142,12 @@ export class UiTokenGate {
   private readonly eventListeners = new Set<EventListener>();
   private state: UiTokenGateState;
   private pending: QueuedRun | null = null;
+  /**
+   * Cascade P2 (ME-043): the read-side 401 recovery may fire ONCE per gate
+   * lifetime — a second 401 after the cookie leg already answered 204
+   * cannot loop (the isReplay discipline of the mutation beat, read-side).
+   */
+  private readRecoveryUsed = false;
 
   constructor(options: UiTokenGateOptions) {
     this.hasToken = options.hasToken;
@@ -243,6 +249,53 @@ export class UiTokenGate {
    */
   refreshPresence(): void {
     this.setState({ tokenPresent: this.uiPresent() });
+  }
+
+  /**
+   * Cascade P2 (ME-043): a 401 landed on a READ — a request the UI did not
+   * route through runAuthorized (TanStack queries, not mutations). The boot
+   * verdict trusted a stored token (or a cookie) the server now refuses:
+   * stale, foreign or rotated away. This is the READ-side mirror of the
+   * mid-flight-401 beat, without a queued run:
+   *
+   *   re-probe FIRST — a live `vesmaro_ui` cookie beside a stale header
+   *   token keeps the session (the second-login-elsewhere rotation case):
+   *   the header value is stale BY DEFINITION, drop it and the reads
+   *   re-fly on the cookie leg ("recovered"; the caller owns the refetch).
+   *   ONE recovery per gate lifetime — a later 401 skips the probe.
+   *
+   *   otherwise the verdict flips to anonymous ("anonymous"): the token is
+   *   scrubbed, `tokenPresent` drops, the login window is NOT forced open
+   *   (a background read never interrupts with a modal — the gated
+   *   surfaces re-render behind the honest gate screen instead), and the
+   *   `tokenRejected` event fires so the provider can toast the beat.
+   */
+  async rebuildAfterReadUnauthorized(): Promise<"recovered" | "anonymous"> {
+    if (this.probe && !this.readRecoveryUsed && (await this.probe())) {
+      this.readRecoveryUsed = true;
+      clearUiToken(); // the stored header value is stale by definition
+      this.pending = null;
+      this.setState({ tokenPresent: this.uiPresent() });
+      return "recovered";
+    }
+    this.readRecoveryUsed = true;
+    clearUiToken();
+    this.pending = null;
+    // The window state is left as-is: closed stays closed (the gate screen
+    // takes over), open stays open with the session-expired line — the
+    // user is already mid-sign-in there.
+    // tokenPresent is set EXPLICITLY false (not re-sampled): the server's
+    // 401 is the authority that overrules the local cookie flag a previous
+    // probe may have left set — the mutation beat's 401 branch does the
+    // same (the stale-cookieLive class, cascade P3-2).
+    this.setState({
+      reason: "rejected",
+      tokenPresent: false,
+      rejectKind: "session",
+      rejectDetail: undefined,
+    });
+    this.emit({ type: "tokenRejected" });
+    return "anonymous";
   }
 
   private async verifyAndApply(value: string): Promise<void> {

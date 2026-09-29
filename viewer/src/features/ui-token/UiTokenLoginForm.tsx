@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n";
@@ -41,6 +41,12 @@ export function UiTokenLoginForm({
   onSecondary,
 }: UiTokenLoginFormProps) {
   const t = useT();
+  // Cascade P3 (ME-043): the dialog and the /auth route host this form —
+  // useId keeps the label/input/describedby wiring unique per host instance
+  // (fixed ids duplicated across the two mounted surfaces broke the
+  // label→control association). data-testid stays the stable test hook.
+  const valueId = useId();
+  const hintId = useId();
   const [value, setValue] = useState("");
   const [reveal, setReveal] = useState(false);
 
@@ -85,12 +91,13 @@ export function UiTokenLoginForm({
         }}
       >
         <div className="flex flex-col gap-1">
-          <label htmlFor="login-token-value" className="text-xs text-foreground-secondary">
+          <label htmlFor={valueId} className="text-xs text-foreground-secondary">
             {t("login.fieldLabel")}
           </label>
           <div className="flex items-center gap-1">
             <input
-              id="login-token-value"
+              id={valueId}
+              data-testid="login-token-value"
               // Masked by default — the value is a secret; the reveal
               // toggle is the explicit, user-driven exception.
               type={reveal ? "text" : "password"}
@@ -100,7 +107,7 @@ export function UiTokenLoginForm({
               spellCheck={false}
               autoFocus
               disabled={verifyPending}
-              aria-describedby="login-token-hint"
+              aria-describedby={hintId}
               className="h-9 min-w-0 flex-1 rounded-md border border-border bg-well px-2 font-mono text-sm text-foreground focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright disabled:opacity-60"
             />
             <Button
@@ -127,7 +134,7 @@ export function UiTokenLoginForm({
          * it stays one click away for the admin (content remains in the
          * DOM and the a11y tree). */}
         <p
-          id="login-token-hint"
+          id={hintId}
           className="rounded-md bg-elevated p-2 text-xs text-foreground-muted"
         >
           {t("login.hint")}

@@ -246,9 +246,7 @@ describe("login flow regression (owner repro)", () => {
 
     // 3. The LOGIN WINDOW opens (not the old token panel) with the queued
     //    contextual line, and the create button is still mounted.
-    const tokenInput = document.getElementById(
-      "login-token-value",
-    ) as HTMLInputElement | null;
+    const tokenInput = document.querySelector('[data-testid="login-token-value"]') as HTMLInputElement | null;
     expect(tokenInput).toBeDefined();
     expect(document.querySelector('[data-testid="login-dialog"]')).toBeDefined();
     expect(document.body.textContent).toContain(
@@ -276,7 +274,7 @@ describe("login flow regression (owner repro)", () => {
     // …the task is on the board, the dialogs are closed…
     expect(container.textContent).toContain("Repro task");
     expect(document.querySelector("textarea")).toBeNull();
-    expect(document.getElementById("login-token-value")).toBeNull();
+    expect(document.querySelector('[data-testid="login-token-value"]')).toBeNull();
     // …the «+ Задача» button is STILL in the header (the reported bug)…
     expect(createTaskButton(container)).toBeDefined();
     // …and the success toast (with its in-app link) renders without killing
@@ -342,7 +340,7 @@ describe("login flow regression (owner repro)", () => {
 
     // No token yet: no window, the accent «Sign in» is in the bar, and the
     // footer states the v6 anonymous word (07k §1.2, union И1).
-    expect(document.getElementById("login-token-value")).toBeNull();
+    expect(document.querySelector('[data-testid="login-token-value"]')).toBeNull();
     const signIn = Array.from(container.querySelectorAll("button")).find((button) =>
       button.textContent?.trim() === "Sign in",
     );
@@ -353,9 +351,7 @@ describe("login flow regression (owner repro)", () => {
     await act(async () => {
       signIn?.click();
     });
-    const tokenInput = document.getElementById(
-      "login-token-value",
-    ) as HTMLInputElement | null;
+    const tokenInput = document.querySelector('[data-testid="login-token-value"]') as HTMLInputElement | null;
     expect(tokenInput).toBeDefined();
     expect(document.body.textContent).not.toContain(
       "Sign in to continue — your action will run automatically",
@@ -371,7 +367,7 @@ describe("login flow regression (owner repro)", () => {
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
     });
-    expect(document.getElementById("login-token-value")).toBeNull();
+    expect(document.querySelector('[data-testid="login-token-value"]')).toBeNull();
     expect(
       Array.from(container.querySelectorAll("button")).some(
         (button) => button.textContent?.trim() === "Sign out",
@@ -459,7 +455,7 @@ describe("login flow regression (owner repro)", () => {
     await act(async () => {
       buttonByText(document.body, "Create task")?.click();
     });
-    let tokenInput = document.getElementById("login-token-value") as HTMLInputElement | null;
+    let tokenInput = document.querySelector('[data-testid="login-token-value"]') as HTMLInputElement | null;
     expect(tokenInput).not.toBeNull();
 
     // Paste a token the server will refuse: the retry 401s → the window
@@ -472,7 +468,7 @@ describe("login flow regression (owner repro)", () => {
       await new Promise((resolve) => setTimeout(resolve, 30));
     });
     expect(mutationCalls).toEqual([{ auth: "Bearer ui-bad-token" }]);
-    tokenInput = document.getElementById("login-token-value") as HTMLInputElement | null;
+    tokenInput = document.querySelector('[data-testid="login-token-value"]') as HTMLInputElement | null;
     expect(tokenInput).not.toBeNull();
     expect(document.querySelector('[data-testid="login-dialog"]')).not.toBeNull();
     // Scoped to the dialog: the error toast card also carries role="alert"
@@ -508,7 +504,7 @@ describe("login flow regression (owner repro)", () => {
         </I18nProvider>,
       );
     });
-    const input = document.getElementById("login-token-value") as HTMLInputElement | null;
+    const input = document.querySelector('[data-testid="login-token-value"]') as HTMLInputElement | null;
     expect(input).not.toBeNull();
     // Masked by default; the eye toggle is the explicit reveal.
     expect(input?.type).toBe("password");
@@ -669,7 +665,7 @@ describe("paired device (UI-22, read scope): mutation attempt → honest toast, 
     });
 
     // …the LOGIN WINDOW never opens (the 403 is not a 401)…
-    expect(document.getElementById("login-token-value")).toBeNull();
+    expect(document.querySelector('[data-testid="login-token-value"]')).toBeNull();
     expect(document.querySelector('[data-testid="login-dialog"]')).toBeNull();
     // …the honest refusal toast lands instead…
     expect(container.textContent).toContain("Actions from this device are closed");
@@ -891,7 +887,7 @@ describe("owner session (ADR 0014): boot hydration + server-side logout", () => 
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 30));
     });
-    expect(document.getElementById("login-token-value")).toBeNull();
+    expect(document.querySelector('[data-testid="login-token-value"]')).toBeNull();
     // The task landed (the server's createdTask echoes back) and the
     // success toast fired — the whole create ran with NO login window.
     expect(container.textContent).toContain("Task TB-42 created");
@@ -988,7 +984,7 @@ describe("owner session (ADR 0014): boot hydration + server-side logout", () => 
     await act(async () => {
       signIn?.click();
     });
-    const tokenInput = document.getElementById("login-token-value") as HTMLInputElement;
+    const tokenInput = document.querySelector('[data-testid="login-token-value"]') as HTMLInputElement;
     await act(async () => {
       setInputValue(tokenInput, "ui-logout-flow");
       (tokenInput.closest("form") as HTMLFormElement | null)?.requestSubmit();

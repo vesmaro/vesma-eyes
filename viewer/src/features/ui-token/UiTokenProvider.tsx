@@ -1,16 +1,19 @@
 import {
   useCallback,
+  useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
   useSyncExternalStore,
 } from "react";
+import { QueryClientContext } from "@tanstack/react-query";
 import {
   isTaskMutationSource,
   isUiTokenSessionSource,
 } from "@/gateway/capabilities";
 import { getDeviceScope, hasDeviceToken } from "@/gateway/deviceToken";
 import { useGateway } from "@/gateway/GatewayContext";
+import { isApiError } from "@/lib/errors";
 import { useToast } from "@/components/Toast/toastContext";
 import { useT } from "@/i18n";
 import { authSessionProbe } from "./authSession";
@@ -112,6 +115,45 @@ export function UiTokenProvider({ children }: { children: React.ReactNode }) {
       cancelled = true;
     };
   }, [gateway, gate]);
+
+  // Read-side 401s rebuild the session verdict (cascade P2, ME-043): every
+  // READ error lands in the TanStack query cache — a 401 there means the
+  // server refused a request the boot verdict trusted the stored token /
+  // cookie with (the mutation leg already owns its 401s through
+  // runAuthorized; the query cache is exactly the reads' seam). The
+  // handler mirrors the gate's mid-flight beat: re-probe → the session
+  // rides the cookie leg and the fallen queries re-fly ("recovered"), or
+  // the verdict flips to anonymous and the gated surfaces re-render behind
+  // the honest gate screen — never the eternal raw error state a stale
+  // token used to leave on screen.
+  //
+  // Fail-soft on the context (not useQueryClient, which throws): minimal
+  // harnesses mount the provider without a QueryClientProvider — without a
+  // cache there is no read seam and the beat simply does not wire.
+  const queryClient = useContext(QueryClientContext);
+  useEffect(() => {
+    if (!queryClient || !isUiTokenSessionSource(gateway)) return;
+    let rebuilding = false;
+    const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
+      if (event.type !== "updated") return;
+      const { action } = event;
+      if (action.type !== "error") return;
+      if (!isApiError(action.error) || action.error.status !== 401) return;
+      // Nothing to rebuild once the verdict is already anonymous, and one
+      // rebuild in flight absorbs the burst of queries that fell together.
+      if (rebuilding || !gate.getState().tokenPresent) return;
+      rebuilding = true;
+      void gate.rebuildAfterReadUnauthorized().then((outcome) => {
+        rebuilding = false;
+        if (outcome === "recovered") {
+          // The header token is gone; the cookie leg carries the session —
+          // re-fly everything that fell (and mark the rest stale).
+          void queryClient.invalidateQueries();
+        }
+      });
+    });
+    return unsubscribe;
+  }, [gateway, gate, queryClient]);
 
   // Login feedback toasts: success is confirmed once the value actually
   // lands in the tab (with an honest note in legacy mode — the board token

@@ -182,6 +182,55 @@ describe("createGateway", () => {
   });
 });
 
+/**
+ * Cascade P3-4 (ME-043): the adapter pin. The mock playground has no auth
+ * wall and the gates-v6 public surface is inactive there BY DESIGN — a
+ * production build booted with VITE_ADAPTER=mock would silently ship
+ * without the gates, so createGateway must refuse the combo LOUDLY. The
+ * single opt-in is the render-smoke harness's own dist-smoke build
+ * (VITE_SMOKE_ALLOW_MOCK=1), never a deployment.
+ */
+describe("adapter pin: prod + mock is forbidden (ME-043 P3-4)", () => {
+  async function importFresh() {
+    const config = await import("./adapterConfig");
+    return config;
+  }
+
+  it("the pure predicate bars exactly prod+mock without the smoke opt-in", async () => {
+    const { isForbiddenAdapterCombo } = await importFresh();
+    expect(isForbiddenAdapterCombo(true, "mock", false)).toBe(true);
+    expect(isForbiddenAdapterCombo(false, "mock", false)).toBe(false);
+    expect(isForbiddenAdapterCombo(true, "board", false)).toBe(false);
+    expect(isForbiddenAdapterCombo(true, "mnemos", false)).toBe(false);
+    expect(isForbiddenAdapterCombo(true, "mock", true)).toBe(false); // smoke opt-in
+  });
+
+  it("createGateway REJECTS a production boot with VITE_ADAPTER=mock (loud, not silent)", async () => {
+    vi.resetModules();
+    vi.stubEnv("PROD", true);
+    vi.stubEnv("VITE_ADAPTER", "mock");
+    vi.stubEnv("VITE_SMOKE_ALLOW_MOCK", "");
+    const { createGateway } = await importFresh();
+    await expect(createGateway()).rejects.toThrow(/VITE_ADAPTER=mock cannot boot/);
+  });
+
+  it("the smoke-harness opt-in releases the combo for the dist-smoke build only", async () => {
+    vi.resetModules();
+    vi.stubEnv("PROD", true);
+    vi.stubEnv("VITE_ADAPTER", "mock");
+    vi.stubEnv("VITE_SMOKE_ALLOW_MOCK", "1");
+    const {
+      config: { createGateway },
+      mock: { MockAdapter: FreshMockAdapter },
+    } = await (async () => {
+      const config = await import("./adapterConfig");
+      const mock = await import("./MockAdapter");
+      return { config, mock };
+    })();
+    expect(await createGateway()).toBeInstanceOf(FreshMockAdapter);
+  });
+});
+
 describe("routerBasename", () => {
   it("follows the runtime location: /app pages keep the prefix, root pages mount at /", async () => {
     // node-env (no window): root mount
