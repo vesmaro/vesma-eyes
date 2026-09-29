@@ -97,6 +97,10 @@ export default defineConfig(({ mode }) => ({
           "/api": {
             target: BOARD_DEV_TARGET,
             changeOrigin: true,
+            // Dev stands proxying to a self-signed LAN deployment
+            // (e.g. the prod board) need the TLS check opted out —
+            // NODE_TLS_REJECT_UNAUTHORIZED is NOT honored by the proxy.
+            secure: process.env.VITE_BOARD_DEV_SECURE !== "0",
           },
         }
       : {
