@@ -60,6 +60,8 @@ function mount(
                 openLogin: () => undefined,
                 runAuthorized: (run) => void run(),
                 logout: () => undefined,
+                submitToken: () => undefined,
+                verifyPending: false,
               }}
             >
               <I18nProvider initialLang="en">

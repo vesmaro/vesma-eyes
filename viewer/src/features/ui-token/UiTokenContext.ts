@@ -29,6 +29,25 @@ export interface UiTokenContextValue {
   runAuthorized: (run: () => Promise<void>, onDeferred?: () => void) => void;
   /** Drop the stored token and flip to read-only (TopBar logout, board mode). */
   logout: () => void;
+  /**
+   * Union И1 (/auth route): submit a pasted token through the SAME gate
+   * state machine the login window uses (verify at the door — ADR 0014 Ф1 —
+   * queued-run retry, storage). The route hosts the form; the machine stays
+   * single.
+   */
+  submitToken: (value: string) => void;
+  /** Union И1 (/auth route): a server verify is in flight — the submit and
+   * the field disable for its duration. */
+  verifyPending: boolean;
+  /**
+   * Union И1 (/auth route): the gate's last refusal beat (the window's
+   * inline error) — "verify" = refused at the door, "session" = the
+   * mid-flight «сессия истекла». May reflect a refusal that predates the
+   * route mount; the route keys its display on its own submit.
+   */
+  rejectKind?: "verify" | "session";
+  /** Server-provided detail for the rejected case (optional). */
+  rejectDetail?: string;
 }
 
 export const UiTokenContext = createContext<UiTokenContextValue | null>(null);
