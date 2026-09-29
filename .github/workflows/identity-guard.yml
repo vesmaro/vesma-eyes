@@ -5,6 +5,23 @@ name: identity-guard
 # (scripts/githooks/pre-commit, core.hooksPath) enforces it at commit time;
 # this workflow is the server-side net for pushes that bypass a local hook
 # (e.g. --no-verify) and for PRs from any other source.
+#
+# Identity canon (ME-042): only the AUTHOR email (%ae) is checked — the
+# canonical owner identity from .mailmap. The COMMITTER email (%ce) is
+# deliberately not part of the canon: GitHub rewrites it to
+# <noreply@github.com> on web/API merges, and those are this project's own
+# merges (see main history: squash merges carry committer=noreply@github.com).
+#
+# Scan range (ME-042):
+# - pull_request: base.sha..head.sha — exactly the PR's own commits. Never
+#   github.sha: on pull_request events it is the refs/pull/N/merge test-merge
+#   commit authored by GitHub <noreply@github.com>, which would fail every
+#   PR structurally.
+# - push (branch update): before..after — only the newly pushed commits.
+# - push (new branch, before = 000..0): merge-base(origin/main, after)..after
+#   — the branch's own commits; if there is no common history with main,
+#   the full branch (honest cut of the first-push case).
+# - push (branch deletion, after = 000..0): nothing to scan, job is skipped.
 on:
   push:
     branches: ['**']
@@ -16,6 +33,8 @@ permissions:
 jobs:
   authors:
     runs-on: ubuntu-latest
+    # Branch-deletion push events carry a dangling ref and no new commits.
+    if: ${{ !github.event.deleted }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,21 +43,26 @@ jobs:
         run: |
           ALLOWED="153223100+Korrnals@users.noreply.github.com"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            RANGE="origin/${{ github.base_ref }}..${{ github.sha }}"
+            RANGE="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
           else
             BEFORE="${{ github.event.before }}"
+            AFTER="${{ github.event.after }}"
             if [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
-              RANGE="${{ github.sha }} -1"   # branch creation: newest commit only
-              RANGE="${{ github.sha }}"
+              # new branch: cut at merge-base with main (full scan if unrelated)
+              BEFORE="$(git merge-base origin/main "$AFTER" || true)"
+            fi
+            if [ -n "$BEFORE" ]; then
+              RANGE="$BEFORE..$AFTER"
             else
-              RANGE="$BEFORE..${{ github.sha }}"
+              RANGE="$AFTER"
             fi
           fi
           echo "Scanning $RANGE"
-          BAD=$(git log --format='%H %ae %ce' $RANGE 2>/dev/null \
-            | grep -v "$ALLOWED" || true)
+          # A bad range must fail the step loudly, not silently scan nothing.
+          LOG="$(git log --format='%H %ae' "$RANGE")"
+          BAD="$(printf '%s' "$LOG" | grep -v "$ALLOWED" || true)"
           if [ -n "$BAD" ]; then
-            echo "✖ Non-canonical commit identities found:"
+            echo "✖ Non-canonical commit authors found (canon: $ALLOWED):"
             echo "$BAD"
             exit 1
           fi
