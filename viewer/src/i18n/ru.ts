@@ -62,6 +62,11 @@ export const ru = {
   // UI-30: the domain-row aggregate badge («Задачи») — live tooltip/SR name.
   // Deliberately noun-free (works for any future counter joined to the sum).
   "nav.newCount": "новых: {{count}}",
+  // Union И1 (stand 03 §2–§3): the shell landmark label and the sidebar
+  // footer affordances («Палитра» / «Шпаргалка» ride below the nav).
+  "nav.sections": "Разделы",
+  "nav.palette": "Палитра",
+  "nav.cheatsheet": "Шпаргалка",
   "shell.skipToContent": "Перейти к содержимому",
   "shell.viewFell": "Этот вид упал в колодец",
   // Update banner (owner feedback: остывшие вкладки должны «чиниться сами»
@@ -83,7 +88,11 @@ export const ru = {
   "topbar.themeLight": "Светлая тема",
   "topbar.themeDark": "Тёмная тема",
   "topbar.langLabel": "Язык интерфейса",
-  "topbar.searchPlaceholder": "Поиск",
+  // Union И1 (stand 03 §4): the topbar global search — a REAL input now;
+  // Enter carries the query to /memory/search, `/` focuses the field.
+  "topbar.searchPlaceholder": "Поиск по памяти и задачам…",
+  "topbar.searchLabel": "Глобальный поиск по памяти и задачам",
+  "topbar.openSidebar": "Открыть разделы",
   "topbar.densityToCompact": "Переключить плотность на компактную",
   "topbar.densityToComfortable": "Переключить плотность на комфортную",
   "topbar.densityCompact": "Компактная плотность",
@@ -93,8 +102,12 @@ export const ru = {
   "hotkeys.title": "Горячие клавиши",
   "hotkeys.subtitle":
     "Клавиатурный слой оболочки. ⌘K работает и в полях ввода — остальные хоткеи там отключены.",
-  "hotkeys.openPalette": "Открыть поиск (палитру)",
+  "hotkeys.openPalette": "Открыть палитру",
   "hotkeys.openPaletteAnywhere": "Палитра — откуда угодно, даже из поля ввода",
+  // Union И1 (stand 03 §7): `/` focuses the global search, `[` flips the
+  // sidebar rail — both with the inInput guard (see hotkeyActions.ts).
+  "hotkeys.focusSearch": "Фокус глобального поиска",
+  "hotkeys.toggleSidebar": "Свернуть или развернуть сайдбар",
   "hotkeys.cheatsheet": "Эта шпаргалка",
   "hotkeys.closeDialog": "Закрыть диалог",
   "hotkeys.escKey": "Esc",
@@ -1374,6 +1387,18 @@ export const ru = {
   "settings.hub.motionReduced": "Минимум",
   "settings.hub.motionHint":
     "«Минимум» отключает движение и мерцания независимо от настроек ОС.",
+  // Union И1: «Живой слой» placeholder (roadmap И1 шаг 3) — visually the
+  // future control, functionally INERT until И3 wires the living engine.
+  // Honest caption: what it will do and when. Value pinned to «Спокойный»
+  // (the post-enable default, АРХКОМ union rule §1.6).
+  "settings.hub.livingLabel": "Живой слой",
+  "settings.hub.livingFull": "Полный",
+  "settings.hub.livingCalm": "Спокойный",
+  "settings.hub.livingOff": "Выключен",
+  "settings.hub.livingHint":
+    "Нейра и жилы оживут позже — сейчас интерфейс статичен. Когда слой включится, по умолчанию будет «Спокойный».",
+  "settings.hub.livingAriaNote":
+    "Настройка появится вместе с Живым слоем — сейчас интерфейс статичен",
   "settings.hub.sidebarLabel": "Сайдбар",
   "settings.hub.sidebarExpanded": "Развёрнут",
   "settings.hub.sidebarCollapsed": "Свёрнут",

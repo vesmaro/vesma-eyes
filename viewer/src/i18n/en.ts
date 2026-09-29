@@ -51,6 +51,9 @@ export const en: Record<TranslationKey, string> = {
   "nav.versionAria": "App version {{version}}",
   // UI-30: the domain-row aggregate badge («Задачи») — see ru.ts.
   "nav.newCount": "new: {{count}}",
+  "nav.sections": "Sections",
+  "nav.palette": "Palette",
+  "nav.cheatsheet": "Cheatsheet",
   "shell.skipToContent": "Skip to content",
   "shell.viewFell": "This view fell into the well",
   // Update banner (stale-tab self-healing) — see ru.ts.
@@ -70,7 +73,9 @@ export const en: Record<TranslationKey, string> = {
   "topbar.themeLight": "Light theme",
   "topbar.themeDark": "Dark theme",
   "topbar.langLabel": "Interface language",
-  "topbar.searchPlaceholder": "Search",
+  "topbar.searchPlaceholder": "Search memory and tasks…",
+  "topbar.searchLabel": "Global search across memory and tasks",
+  "topbar.openSidebar": "Open sections",
   "topbar.densityToCompact": "Switch density to compact",
   "topbar.densityToComfortable": "Switch density to comfortable",
   "topbar.densityCompact": "Compact density",
@@ -80,8 +85,10 @@ export const en: Record<TranslationKey, string> = {
   "hotkeys.title": "Keyboard shortcuts",
   "hotkeys.subtitle":
     "The shell hotkey layer. ⌘K works inside form fields too — the rest stay quiet there.",
-  "hotkeys.openPalette": "Open search (the palette)",
+  "hotkeys.openPalette": "Open the palette",
   "hotkeys.openPaletteAnywhere": "The palette — from anywhere, even inside a form field",
+  "hotkeys.focusSearch": "Focus the global search",
+  "hotkeys.toggleSidebar": "Collapse or expand the sidebar",
   "hotkeys.cheatsheet": "This cheatsheet",
   "hotkeys.closeDialog": "Close the dialog",
   "hotkeys.escKey": "Esc",
@@ -1346,6 +1353,14 @@ export const en: Record<TranslationKey, string> = {
   "settings.hub.motionReduced": "Minimal",
   "settings.hub.motionHint":
     "“Minimal” disables motion and shimmer regardless of the OS setting.",
+  "settings.hub.livingLabel": "Living layer",
+  "settings.hub.livingFull": "Full",
+  "settings.hub.livingCalm": "Calm",
+  "settings.hub.livingOff": "Off",
+  "settings.hub.livingHint":
+    "Neura and the veins come alive later — the interface is static for now. Once the layer ships, “Calm” is the default.",
+  "settings.hub.livingAriaNote":
+    "The setting arrives together with the living layer — the interface is static for now",
   "settings.hub.sidebarLabel": "Sidebar",
   "settings.hub.sidebarExpanded": "Expanded",
   "settings.hub.sidebarCollapsed": "Collapsed",
