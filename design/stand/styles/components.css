@@ -3954,6 +3954,12 @@ body.seam-grab {
   padding: var(--space-3) 0;
   border-top: var(--line-hairline) solid var(--myelin-hairline);
 }
+.set-row--stack {
+  grid-template-columns: minmax(0, 1fr);
+}
+.set-row--stack .set-ctl {
+  width: 100%;
+}
 .set-row:first-of-type {
   border-top: none;
 }
