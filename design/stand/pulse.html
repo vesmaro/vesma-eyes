@@ -255,6 +255,7 @@
 
 <script src="js/data.js"></script>
 <script src="js/shell.js"></script>
+<script src="js/living.js"></script>
 <script>
 
   (function () {
@@ -498,10 +499,10 @@
       trimFeed();
       updateCount();
     }
-    function scheduleNext() {
-      if (stale) return; /* разрыв: лента честно замирает, новые не имитируются */
-      setTimeout(function () { rotate(); scheduleNext(); }, 15000 + Math.floor(Math.random() * 15000));
-    }
+    /* v10 (08 §3.1): ротация из единой шины stand:feed-event (data.js);
+     * разрыв (?demo=stale) — лента честно замирает, шина не слушается */
+    function onFeedEvent(e) { rotate(e.detail); }
+    if (!stale) document.addEventListener("stand:feed-event", onFeedEvent);
 
     /* ── состояние разрыва (07m §3.5): плашка с честной границей данных ── */
     if (stale) {
@@ -537,7 +538,7 @@
       sk.style.margin = "var(--space-3) var(--space-4)";
       feed.appendChild(sk);
     }
-    requestAnimationFrame(function () { renderFeed(); scheduleNext(); });
+    requestAnimationFrame(renderFeed);
   })();
 
 </script>

@@ -239,6 +239,29 @@
               </button>
             </div>
           </div>
+
+          <!-- v10 (08 §4): персонажный слой — вторая ось после движения -->
+          <div class="set-row set-row--stack">
+            <div>
+              <p class="set-name" id="row-living">Живой слой</p>
+              <p class="set-hint">Нейра и жилы: полный — характер и дыхание; спокойный — только события; выключен — чистая кора без персонажа. Системное «уменьшить движение» ограничивает режим до спокойного — выбор сохраняется</p>
+            </div>
+            <fieldset class="opt-group set-ctl">
+              <legend class="sr-only">Живой слой</legend>
+              <label class="opt">
+                <input type="radio" name="living" value="full">
+                <span class="opt-card"><span class="opt-name">Полный</span><span class="opt-note">характер и дыхание</span></span>
+              </label>
+              <label class="opt">
+                <input type="radio" name="living" value="calm">
+                <span class="opt-card"><span class="opt-name">Спокойный</span><span class="opt-note">только события, без дыхания</span></span>
+              </label>
+              <label class="opt">
+                <input type="radio" name="living" value="off">
+                <span class="opt-card"><span class="opt-name">Выключен</span><span class="opt-note">чистая кора без персонажа</span></span>
+              </label>
+            </fieldset>
+          </div>
         </section>
 
         <!-- ── Навигация: сайдбар и горячие клавиши ── -->
@@ -388,6 +411,7 @@
 
 <script src="js/data.js"></script>
 <script src="js/shell.js"></script>
+<script src="js/living.js"></script>
 <script>
 
   (function () {
@@ -470,6 +494,15 @@
       r.addEventListener("change", function () {
         if (!r.checked) return;
         P.setSidebar(r.value); /* вид меняется тут же — тост не нужен */
+      });
+    });
+    /* v10 (08 §4): Живой слой — full | calm | off; тост подтверждает смену */
+    doc.querySelectorAll('[name="living"]').forEach(function (r) {
+      r.checked = r.value === P.living();
+      r.addEventListener("change", function () {
+        if (!r.checked) return;
+        P.setLiving(r.value);
+        toast("Живой слой: " + (r.value === "full" ? "полный" : r.value === "calm" ? "спокойный" : "выключен"), "info");
       });
     });
     doc.getElementById("sw-motion").addEventListener("click", function () {

@@ -1244,7 +1244,7 @@
    * duplicate it — footer status lines (sidebar, pair, auth) and the gallery
    * caption all read STAND.version / STAND.slice. */
   const version = "1.41.0";
-  const slice = "v8";
+  const slice = "v10";
 
   window.STAND = {
     version,
@@ -1280,4 +1280,39 @@
     tagDictionary,
     tagMeta,
   };
+
+  /* ── v10 (08 §3.1): единая шина событий стенда ─────────────────────────
+   * stand:feed-event (CustomEvent на document) — единственный источник
+   * «жизни» демо-стенда: из него питаются колодец Обзора (synapse.js),
+   * журнал Пульса (pulse.html) и живой слой (living.js). Вторые таймеры
+   * запрещены (канон 06 §5: импульс без события в шине — блокер ревью).
+   * Гейт демо-гигиены: ?demo=0 — демо-жизни нет вовсе. */
+  (function () {
+    try {
+      if (new URLSearchParams(window.location.search).get("demo") === "0") return;
+    } catch (e) { return; /* нет URLSearchParams — стенд остаётся статичным */ }
+    var busPool = feedPool || [];
+    if (!busPool.length) return;
+    var busIdx = 0;
+    function busEmit() {
+      if (document.hidden) { busSchedule(); return; } /* фон: жизнь стоит */
+      var src = busPool[busIdx % busPool.length];
+      busIdx++;
+      document.dispatchEvent(new CustomEvent("stand:feed-event", {
+        detail: {
+          ev: src.ev,
+          mem: src.mem || null,
+          text: src.text,
+          who: src.who || null,
+          srv: src.srv || "mnemos-01",
+          at: Date.now(),
+        },
+      }));
+      busSchedule();
+    }
+    function busSchedule() {
+      setTimeout(busEmit, 6000 + Math.floor(Math.random() * 4000));
+    }
+    setTimeout(busEmit, 3500 + Math.floor(Math.random() * 2000));
+  })();
 })();

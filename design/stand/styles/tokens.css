@@ -83,6 +83,12 @@
   --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
   --duration-impulse: 240ms;            /* synapse pulse lifetime ≤240ms */
+
+  /* v10 НЕЙРО-слой (08 §8): только имена, палитра не расширена */
+  --duration-neura: 8000ms;             /* вздох Нейры + тик ambient-планировщика */
+  --duration-courier: 1000ms;           /* база пробега В2; clamp(путь/600px/s; 400ms; 1600ms) */
+  --neura-breath-alpha: 0.18;           /* потолок вздоха (≤ glow-бюджета 0.35) */
+  --vein-breath-alpha: 0.10;            /* пик дыхания жилы (покой 0.07) */
 }
 
 /* ── Frozen core (names & values stable) ────────────────────────────── */
@@ -170,6 +176,10 @@
 
   --color-success: #1d6e48;
   --color-warning: #8a5a17;
+
+  /* v10 НЕЙРО-слой, light («береста», 08 §3.4): дыхание ×~1.1, вздох ×0.7 */
+  --neura-breath-alpha: 0.12;
+  --vein-breath-alpha: 0.11;
   --color-error: #8a2020;
   --color-info: #136e79;
 
@@ -211,6 +221,8 @@
 @media (prefers-reduced-motion: reduce) {
   :root {
     --duration-iris: 0ms;      /* breath off → static canvas tint */
+    --duration-neura: 0ms;     /* v10: вздохи/курьеры → статичные тинты (08 §8) */
+    --duration-courier: 0ms;
     --duration-slow: 0ms;
     --duration-normal: 0ms;
     --duration-fast: 80ms;     /* opacity-only ≤80ms */
@@ -219,6 +231,8 @@
 }
 [data-motion="reduced"] {
   --duration-iris: 0ms;
+  --duration-neura: 0ms;
+  --duration-courier: 0ms;
   --duration-slow: 0ms;
   --duration-normal: 0ms;
   --duration-fast: 80ms;

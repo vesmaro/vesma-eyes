@@ -243,6 +243,7 @@
 
 <script src="js/data.js"></script>
 <script src="js/shell.js"></script>
+<script src="js/living.js"></script>
 <script>
 
   (function () {
@@ -320,14 +321,39 @@
       var found = search(query.trim(), mode);
       var words = tokens(query);
       if (!found.length) {
-        res.innerHTML =
-          '<div class="empty-state"><p class="es-title">Ничего. Смягчите запрос</p>' +
-          (mode !== "semantic"
-            ? '<p>или смените режим на «смысл» — память ищет и по значению.</p><button class="btn secondary sm" type="button" data-to-semantic>Сменить на «смысл»</button>'
-            : "<p>Попробуйте режим «полный текст» — ищет по точной подстроке.</p>") +
-          "</div>";
-        var sw = res.querySelector("[data-to-semantic]");
-        if (sw) sw.addEventListener("click", function () { setMode("semantic"); q.value = query; run(query); });
+        /* v10 (08 §1.5, В3-территория «пустота»): Нейра говорит рядом с
+         * действием; реплика с запросом экранируется (textContent, не innerHTML) */
+        var empty = document.createElement("div");
+        empty.className = "empty-state living-empty";
+        var v3 = document.createElement("canvas");
+        v3.className = "living-v3";
+        v3.setAttribute("aria-hidden", "true");
+        empty.appendChild(v3);
+        var esTitle = document.createElement("p");
+        esTitle.className = "es-title";
+        esTitle.textContent = "Ничего. Смягчите запрос";
+        empty.appendChild(esTitle);
+        var neuraLine = document.createElement("p");
+        neuraLine.className = "neura-line";
+        neuraLine.textContent = "По «" + query.trim() + "» в памяти пусто. Спросите короче — одного-двух слов.";
+        empty.appendChild(neuraLine);
+        var hint = document.createElement("p");
+        if (mode !== "semantic") {
+          hint.textContent = "или смените режим на «смысл» — память ищет и по значению.";
+          empty.appendChild(hint);
+          var sw = document.createElement("button");
+          sw.type = "button"; sw.className = "btn secondary sm";
+          sw.setAttribute("data-to-semantic", "");
+          sw.textContent = "Сменить на «смысл»";
+          empty.appendChild(sw);
+        } else {
+          hint.textContent = "Попробуйте режим «полный текст» — ищет по точной подстроке.";
+          empty.appendChild(hint);
+        }
+        res.appendChild(empty);
+        var swb = res.querySelector("[data-to-semantic]");
+        if (swb) swb.addEventListener("click", function () { setMode("semantic"); q.value = query; run(query); });
+        if (window.Living && Living.mountV3) Living.mountV3(res.querySelector(".living-v3"));
         note.textContent = "";
         return;
       }

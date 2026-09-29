@@ -662,6 +662,17 @@
       setSidebarCollapsed(s === "collapsed");
       prefsChanged();
     },
+    living: function () {
+      var v = store.get("vesmaro.livingLayer", "full");
+      return v === "calm" || v === "off" ? v : "full"; /* мусор → дефолт */
+    },
+    setLiving: function (v) {
+      var val = v === "calm" || v === "off" ? v : "full";
+      store.set("vesmaro.livingLayer", val);
+      root.setAttribute("data-living", val);
+      doc.dispatchEvent(new CustomEvent("stand:living-change")); /* living.js перекладывает режим */
+      prefsChanged();
+    },
     hotkeys: function () {
       return store.get("hotkeys", "on") === "off" ? "off" : "on";
     },

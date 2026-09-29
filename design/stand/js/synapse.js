@@ -526,7 +526,7 @@
   /* ── Demo feed: events drive pulses AND the live feed (honest demo) ── */
   var feedEl = document.querySelector(".feed");
   var pool = D.feedPool || [];
-  var pi = 0;
+
   function fmtNow() {
     var d = new Date();
     return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
@@ -555,19 +555,11 @@
     var c = document.getElementById("pulses-hour");
     if (c) c.textContent = String(parseInt(c.textContent.replace(/\s/g, ""), 10) + 1).replace(/(\d)(?=(\d{3})+$)/g, "$1 ");
   }
-  function nextEvent() {
-    pushEvent(pool[pi % pool.length]);
-    pi++;
-  }
-  var feedTimer = null; /* v6: cancelled on anonymous authchange (below) */
+  /* v10 (08 §3.1): лента и колодец питаются единой шиной stand:feed-event
+   * (публикует data.js) — локальный таймер удалён как второй источник */
+  function onFeedEvent(e) { pushEvent(e.detail); }
   if (feedEl && pool.length) {
-    feedTimer = setTimeout(nextEvent, 2500);
-    (function schedule() {
-      feedTimer = setTimeout(function () {
-        if (!document.hidden) nextEvent();
-        schedule();
-      }, 5000 + Math.random() * 4000);
-    })();
+    document.addEventListener("stand:feed-event", onFeedEvent);
   }
 
   /* v6 (07k §6): sign-out on a public page hides the well without a reload —
@@ -580,7 +572,6 @@
       cancelAnimationFrame(raf);
       raf = null;
     }
-    if (feedTimer != null) clearTimeout(feedTimer);
-    feedTimer = null;
+    document.removeEventListener("stand:feed-event", onFeedEvent);
   });
 })();

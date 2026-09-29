@@ -4651,3 +4651,18 @@ a.pulse-row:focus-visible {
   animation: none;
   transition: none;
 }
+
+/* ── v10 (08): В3 «Ирис» встроенно в empty-блоки (территория «пустота») ── */
+.living-empty {
+  justify-items: start;
+}
+.living-v3 {
+  display: block;
+  margin-bottom: var(--space-3);
+}
+.neura-line {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-iris-bright);
+}
