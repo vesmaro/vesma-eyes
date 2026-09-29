@@ -474,6 +474,32 @@ export const ru = {
   "tasks.tabDetails": "Детали",
   "tasks.tabExecution": "Исполнение",
 
+  // --- UI-31 карточка задачи: описание, связи, «Кто работал» -----------------
+  "tasks.descriptionLabel": "Описание",
+  "tasks.descriptionEmpty": "Описания пока нет.",
+  "tasks.descriptionEmptyHint": "Добавьте его через «Изменить».",
+  "tasks.relatedLabel": "Связанное",
+  "tasks.relatedActivity": "Активность по задаче",
+  "tasks.relatedKora": "Рабочие сессии (Кора)",
+  "tasks.relatedMemory": "Память задачи",
+  "tasks.workersLabel": "Кто работал",
+  "tasks.workersLoading": "Загружаем журнал задачи",
+  "tasks.workersFailed": "Не удалось загрузить журнал задачи",
+  "tasks.workersUnavailableTitle": "Журнал недоступен в этом режиме",
+  "tasks.workersUnavailableMessage":
+    "Этот источник данных не отдаёт журнал активности — кто работал, показать нельзя.",
+  "tasks.workersPartial":
+    "Показаны последние {{limit}} событий — состав может быть неполным.",
+  "tasks.workersEmptyTitle": "Об исполнителе ничего не известно",
+  "tasks.workersEmpty":
+    "Событий по этой задаче в журнале нет — она не доходила до исполнения.",
+  "tasks.workersNoAttribution":
+    "Атрибуция не велась: журнал до версии 1.35 не записывал, кто работал над задачей.",
+  "tasks.workersEvents": "событий: {{count}}",
+  "tasks.workersLast": "последнее: {{time}}",
+  "tasks.workersAgents": "Заявленные агенты",
+  "tasks.workersReportsLink": "Отчёты по задаче: {{count}}",
+
   // --- UI-28 «Активность» (spec 2026-09-27 §6 + row grammar §2) --------------
   "nav.taskActivity": "Активность",
   "activity.title": "Активность",
@@ -561,7 +587,6 @@ export const ru = {
   "tasks.memoryOpenPrompt": "Открыть запись памяти",
   "tasks.memoryUnresolved": "Неразрешённые ссылки (нет на активных серверах):",
   "tasks.detailsSummaryLabel": "Сводка",
-  "tasks.detailsSpecLabel": "Спецификация",
   "tasks.detailsMetaLabel": "Метаданные",
   "tasks.detailsEnv": "Среда",
   "tasks.detailsProject": "Проект",

@@ -142,19 +142,28 @@ describe("TaskDetailPage (mock adapter)", () => {
     expect(html).toContain("86ce17e7");
   });
 
-  it("?tab=details: readable summary, spec in pre-wrap, metadata table", async () => {
+  it("?tab=details: readable summary, metadata table; the spec lives on the card top (UI-31)", async () => {
     const html = await renderTask(
       new MockAdapter({ latency: false }),
       "/tasks/TB-1?tab=details",
       seedAll,
     );
-    expect(html).toContain("Specification");
+    // UI-31: the description is the FIRST screen of the card (before the
+    // tab nav) — the details tab keeps summary + metadata only, no second
+    // copy of the spec.
+    const descriptionAt = html.indexOf("Description");
+    const navAt = html.indexOf('aria-label="Task sections"');
+    const specAt = html.indexOf("Acceptance criteria");
+    expect(descriptionAt).toBeGreaterThan(-1);
+    expect(navAt).toBeGreaterThan(descriptionAt);
+    expect(specAt).toBeGreaterThan(-1);
+    expect(specAt).toBeLessThan(navAt);
+    expect(html).not.toContain("Specification");
     // UI-27: the spec renders through TextEngine — this mock spec is plain
     // prose (em-dash dashes, no markdown syntax), so the plain path keeps
     // the verbatim pre-wrap output inside the well box (no <pre> anymore).
     expect(html).toContain("whitespace-pre-wrap");
     expect(html).toContain("Metadata");
-    expect(html).toContain("Acceptance criteria");
     expect(html).toContain("mnemos:decision");
   });
 

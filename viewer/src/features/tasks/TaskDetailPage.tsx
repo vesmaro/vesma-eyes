@@ -1,6 +1,16 @@
 import { useState } from "react";
 import { Link, useLocation, useParams, useSearchParams } from "react-router";
-import { Cog, FileText, History, Layers, PencilLine, Play, ScrollText } from "lucide-react";
+import {
+  Cog,
+  FileText,
+  History,
+  Layers,
+  Activity as ActivityIcon,
+  PencilLine,
+  Play,
+  Radio,
+  ScrollText,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState/EmptyState";
@@ -86,6 +96,8 @@ export function TaskDetailPage() {
   const { resumeTask } = useTaskMutations();
   const [editOpen, setEditOpen] = useState(false);
   const [searchParams] = useSearchParams();
+  // UI-31 «Связанное» links: return= carries THIS card's pathname+search.
+  const location = useLocation();
   const tabParam = searchParams.get("tab") ?? "reports";
   const tab: TaskTabId = isTaskTabId(tabParam) ? tabParam : "reports";
   // Tabs inherit the WHOLE current query (return=, …) and swap only `tab`
@@ -247,6 +259,70 @@ export function TaskDetailPage() {
         </p>
       </header>
 
+      {/* UI-31: the description IS the first screen — the owner opens a task
+       * to read WHAT it is, everything else hangs off the tabs. The spec is
+       * author markdown → the TextEngine primitive (clamped: a long document
+       * must not push the tabs below the fold; «показать полностью» opens).
+       * An empty spec is an honest empty — with the edit hint while the row
+       * is mutable (archived rows are read-only, ME-005). */}
+      <section aria-label={t("tasks.descriptionLabel")}>
+        <h2 className="text-sm font-medium text-foreground-secondary">
+          {t("tasks.descriptionLabel")}
+        </h2>
+        {current.spec ? (
+          <div className="mt-1 rounded-md border border-border-subtle bg-well p-3">
+            <TextEngine text={current.spec} variant="full" clamp className="text-sm" />
+          </div>
+        ) : (
+          <p className="mt-1 text-sm text-foreground-muted">
+            {t("tasks.descriptionEmpty")}
+            {canEdit ? ` ${t("tasks.descriptionEmptyHint")}` : ""}
+          </p>
+        )}
+      </section>
+
+      {/* UI-31 «Связанное»: the task's cross-surface context, one honest row.
+       * Активность deep-links WITH the task filter; Кора lists the work
+       * sessions (slice-1 has no executor filter — the link says so, no
+       * silent pretend-filter); Память is the in-card memory tab (the tab
+       * swap keeps `return=` like every other tab link). All links carry
+       * `return=` back to THIS card state (UI-18 §2.2 rule 3). */}
+      <nav aria-label={t("tasks.relatedLabel")}>
+        <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+          <li>
+            <Link
+              to={withReturn(
+                `/tasks/activity?task_id=${encodeURIComponent(current.id)}`,
+                location.pathname,
+                location.search,
+              )}
+              className="flex items-center gap-1.5 text-iris-bright underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+            >
+              <ActivityIcon className="size-3.5" aria-hidden="true" />
+              {t("tasks.relatedActivity")}
+            </Link>
+          </li>
+          <li>
+            <Link
+              to={withReturn("/kora", location.pathname, location.search)}
+              className="flex items-center gap-1.5 text-iris-bright underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+            >
+              <Radio className="size-3.5" aria-hidden="true" />
+              {t("tasks.relatedKora")}
+            </Link>
+          </li>
+          <li>
+            <Link
+              to={tabHref("memory")}
+              className="flex items-center gap-1.5 text-iris-bright underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+            >
+              <Layers className="size-3.5" aria-hidden="true" />
+              {t("tasks.relatedMemory")}
+            </Link>
+          </li>
+        </ul>
+      </nav>
+
       {/* Content edit (BE-12 lock + force path lives inside); archived rows
        * offer no editor at all (ME-005). */}
       {canEdit ? (
@@ -297,6 +373,10 @@ export function TaskDetailPage() {
             /* AGW-6 A.3 link-test deep-link (?assign=<executorId>): the
              * sheet auto-opens with the executor pinned. */
             autoAssignExecutorId={searchParams.get("assign") ?? undefined}
+            /* UI-31: the reports query is already loaded for the header —
+             * «Кто работал» reuses its count + the tab-swap href. */
+            reportsHref={tabHref("reports")}
+            reportsCount={reports.data?.count}
           />
         ) : null}
       </div>
@@ -593,9 +673,11 @@ function MemoryTab({ taskId, lang }: { taskId: string; lang: "ru" | "en" }) {
   );
 }
 
-/** «Детали»: summary readable, spec pre-wrap, honest metadata table. The row
- * arrives as a prop so ARCHIVED tasks (UI-18 pair 4 — no board row) render
- * too; the old inner useTask() re-query silently hid their details tab. */
+/** «Детали»: summary readable, honest metadata table. The spec lives on the
+ * card top since UI-31 (the description IS the first screen) — duplicating
+ * it here would be two copies of one document. The row arrives as a prop so
+ * ARCHIVED tasks (UI-18 pair 4 — no board row) render too; the old inner
+ * useTask() re-query silently hid their details tab. */
 function DetailsTab({ task, lang }: { task: BoardTask; lang: "ru" | "en" }) {
   const t = useT();
   const current = task;
@@ -614,21 +696,6 @@ function DetailsTab({ task, lang }: { task: BoardTask; lang: "ru" | "en" }) {
             variant="compact"
             className="mt-1 text-sm"
           />
-        ) : (
-          <p className="mt-1 text-sm">—</p>
-        )}
-      </section>
-      <section aria-label={t("tasks.detailsSpecLabel")}>
-        <h2 className="text-sm font-medium text-foreground-secondary">
-          {t("tasks.detailsSpecLabel")}
-        </h2>
-        {current.spec ? (
-          /* UI-27: the spec is the task's markdown document (headings,
-           * checklists, code) — formatted in the well box; plain specs keep
-           * the legacy pre-wrap look inside the same box. */
-          <div className="mt-1 rounded-md border border-border-subtle bg-well p-3">
-            <TextEngine text={current.spec} variant="full" className="text-sm" />
-          </div>
         ) : (
           <p className="mt-1 text-sm">—</p>
         )}

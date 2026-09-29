@@ -454,6 +454,32 @@ export const en: Record<TranslationKey, string> = {
   "tasks.tabDetails": "Details",
   "tasks.tabExecution": "Execution",
 
+  // --- UI-31 task card: description, related links, «who worked» -------------
+  "tasks.descriptionLabel": "Description",
+  "tasks.descriptionEmpty": "No description yet.",
+  "tasks.descriptionEmptyHint": "Add one via «Edit».",
+  "tasks.relatedLabel": "Related",
+  "tasks.relatedActivity": "Task activity",
+  "tasks.relatedKora": "Work sessions (Kora)",
+  "tasks.relatedMemory": "Task memory",
+  "tasks.workersLabel": "Who worked on this",
+  "tasks.workersLoading": "Loading the task audit log",
+  "tasks.workersFailed": "Failed to load the task audit log",
+  "tasks.workersUnavailableTitle": "Audit log unavailable in this mode",
+  "tasks.workersUnavailableMessage":
+    "This data source does not serve the activity log — there is no way to show who worked on this.",
+  "tasks.workersPartial":
+    "Showing the latest {{limit}} events — the list may be incomplete.",
+  "tasks.workersEmptyTitle": "No known executor",
+  "tasks.workersEmpty":
+    "No audit events for this task — it never reached execution.",
+  "tasks.workersNoAttribution":
+    "No attribution: the audit log did not record who worked on tasks before version 1.35.",
+  "tasks.workersEvents": "events: {{count}}",
+  "tasks.workersLast": "last: {{time}}",
+  "tasks.workersAgents": "Declared agents",
+  "tasks.workersReportsLink": "Task reports: {{count}}",
+
   // --- UI-28 «Activity» (spec 2026-09-27 §6 + row grammar §2) ----------------
   "nav.taskActivity": "Activity",
   "activity.title": "Activity",
@@ -541,7 +567,6 @@ export const en: Record<TranslationKey, string> = {
   "tasks.memoryOpenPrompt": "Open the memory record",
   "tasks.memoryUnresolved": "Unresolved links (absent from active servers):",
   "tasks.detailsSummaryLabel": "Summary",
-  "tasks.detailsSpecLabel": "Specification",
   "tasks.detailsMetaLabel": "Metadata",
   "tasks.detailsEnv": "Environment",
   "tasks.detailsProject": "Project",
