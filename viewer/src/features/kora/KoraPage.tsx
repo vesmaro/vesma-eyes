@@ -19,6 +19,7 @@ import { useExecutors } from "@/features/agents/useAgents";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { useKoraSessionPages } from "./useKora";
+import { useKoraEntered } from "@/telemetry/useKoraEntered";
 import { isKoraUnauthorized } from "./koraGateway";
 import { KoraSignInCta } from "./KoraSignInCta";
 import type { KoraCoverageHarness, KoraSession } from "./koraTypes";
@@ -276,6 +277,9 @@ export function KoraPage() {
   // P4-7 (slice 2): paged listing — 50 rows per page, «Показать ещё»
   // appends while full pages keep coming.
   const sessions = useKoraSessionPages(50);
+  // ME-041 (taxonomy §1.2 #3): kora.entered on the first honest verdict —
+  // the list rendered, or the error state that replaced it.
+  useKoraEntered(!sessions.isPending);
   // §9.3 honest-empty branching: the executor registry is an EXISTING read
   // (no new API). undefined count (query pending/failed or a gateway without
   // the agents capability) resolves to the scanner variant — it promises

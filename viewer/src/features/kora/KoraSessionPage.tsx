@@ -16,6 +16,7 @@ import {
   useKoraTranscript,
 } from "./useKora";
 import { KoraError, koraErrorCode, isKoraUnauthorized } from "./koraGateway";
+import { useKoraEntered } from "@/telemetry/useKoraEntered";
 import { KoraSignInCta } from "./KoraSignInCta";
 
 /**
@@ -191,6 +192,9 @@ export function KoraSessionPage() {
   const decoded = sessionId ? decodeURIComponent(sessionId) : undefined;
   const sessions = useKoraSessions();
   const transcript = useKoraTranscript(decoded);
+  // ME-041 (taxonomy §1.2 #3): a deep link INTO the transcript is an entry
+  // too — the hook's domain-entry rule suppresses list→transcript moves.
+  useKoraEntered(!transcript.isPending);
   const session = sessions.data?.items.find((item) => item.id === decoded);
 
   if (!decoded) {

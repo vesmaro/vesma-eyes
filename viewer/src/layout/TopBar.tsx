@@ -40,7 +40,7 @@ export function TopBar({ title }: TopBarProps) {
        * and navigation — J3), the kbd affordance mirrors ⌘K. */}
       <button
         type="button"
-        onClick={openPalette}
+        onClick={() => openPalette("button")}
         aria-label={t("cmdk.openAria")}
         aria-haspopup="dialog"
         aria-expanded={false}

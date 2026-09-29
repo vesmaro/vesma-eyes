@@ -5,6 +5,7 @@ import {
 } from "@/gateway/capabilities";
 import { getDeviceScope, hasDeviceToken } from "@/gateway/deviceToken";
 import { useGateway } from "@/gateway/GatewayContext";
+import { startVisit } from "@/telemetry/telemetry";
 import { useToast } from "@/components/Toast/toastContext";
 import { useT } from "@/i18n";
 import { UiTokenContext } from "./UiTokenContext";
@@ -87,11 +88,15 @@ export function UiTokenProvider({ children }: { children: React.ReactNode }) {
   // tokenPresent without any user action, so a second tab (or a reload
   // past the 6h sliding window's refresh) opens signed-in or stays
   // read-only, never stuck with a dead prompt.
+  // ME-041 (taxonomy §1.2 #1): the SAME 204 is the only telemetry arm —
+  // ui.visit fires on a live-owner load; anonymous boots never emit.
   useEffect(() => {
     if (!isUiTokenSessionSource(gateway)) return;
     let cancelled = false;
-    void gateway.probeUiSession().then(() => {
-      if (!cancelled) gate.refreshPresence();
+    void gateway.probeUiSession().then((live) => {
+      if (cancelled) return;
+      gate.refreshPresence();
+      if (live) startVisit();
     });
     return () => {
       cancelled = true;

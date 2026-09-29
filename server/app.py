@@ -24,7 +24,7 @@ import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, AsyncIterator, Literal
+from typing import Annotated, Any, AsyncIterator, Literal
 
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.routing import APIRoute
@@ -3223,7 +3223,20 @@ async def notifications_read(
 ) -> NotificationReadOut:
     _guard_write(request, classes=("ui",))
     # no body or {"id": null} marks ALL as read (previous contract kept)
+    one = bool(body and body.id)
     store.mark_read(body.id if body else None)
+    # ME-037 (events-taxonomy-v0 §1.2 #11): the one auditable «пинок» for
+    # baseline number 4 («входы без пинка»). One audit row per read action
+    # with the server-stamped envelope; the scope is the server's fact
+    # (one/all), never a client value. The mnd_ device leg legitimately
+    # drives this route too — its reads carry actor_class="device" so the
+    # numbers stay honest about which surface answered the owner.
+    store.log_board_event("notifications.read", {
+        "scope": "one" if one else "all",
+    } | _telemetry_envelope(
+        request,
+        "device" if getattr(request.state, "device", None) is not None
+        else "ui"))
     return {"ok": True, "unread": store.unread_count()}
 
 
@@ -7288,6 +7301,314 @@ async def set_device_grants(device_id: str, body: DeviceGrantsBody,
             f"«{row['name']}» ({device_id}): гранулы "
             f"{row['grants'] or '— ничего —'}")
     return {"ok": True, "device": row}
+
+
+# ------------------------------------------- UI telemetry ingest (ME-037, П3)
+# Union «Живая кора» pre-flight П3 (docs/union/events-taxonomy-v0.md §3.1,
+# frozen v0 taxonomy): the additive POST leg beside the SSE GET. The owner's
+# SPA batches surface telemetry; the server validates it against the frozen
+# kind registry, stamps the envelope and appends into the EXISTING events
+# audit table (retention = the standing UI-28 sweep, no new policy).
+#
+# Verdict policy (TL instruction for ME-037, stricter than taxonomy §3.3's
+# drop-with-counter): an unknown kind or an off-taxonomy payload is a 4xx
+# for the WHOLE batch — all-or-nothing. Rationale: the client emitters
+# (ME-031/032) are still unwritten, so a strict contract catches kind typos
+# and schema drift at development time instead of silently sinking valid
+# events around them. The response keeps the taxonomy §3.1 shape
+# ({"ok", "accepted", "dropped"}); under all-or-nothing a 200 always
+# carries dropped=0 — the field stays because the taxonomy froze the shape
+# and a future soft-drop policy must not be a breaking change.
+#
+# Privacy boundary (taxonomy §3.4, hard): the request schema accepts ONLY
+# the taxonomy fields — kind, visit_id, per-kind enums and bucket classes.
+# No free-text field exists in any model and every model is extra="forbid",
+# so intent text / palette queries / exact sizes can neither ride a known
+# field nor smuggle in as an extra key. Envelope fields (ts/actor_class/
+# client_class/release) are server-stamped: a client value is a 422, not an
+# override. Anonymous loads never reach the store — the guard below is a
+# 403 boundary for every non-ui leg.
+_TELEMETRY_RATE_LIMIT = 60         # requests per client ...
+_TELEMETRY_RATE_WINDOW = 60.0      # ... per sliding window (seconds)
+_TELEMETRY_BATCH_MAX = 50          # events per request (taxonomy §3.1)
+_telemetry_limiter = RateLimiter(
+    limit=_TELEMETRY_RATE_LIMIT, window=_TELEMETRY_RATE_WINDOW)
+
+# Cascade C1 (1.52.0 release security audit, P2 / CWE-400): the ingest's
+# 403/413/429 verdicts all fired only AFTER Starlette had buffered the
+# whole body and pydantic had parsed every element — an unauthenticated
+# leg could POST hundreds of MB of VALID events and burn CPU/memory
+# before the first refusal. A pydantic max_length (or a route dependency)
+# cannot close that: FastAPI reads ``request.body()`` before any handler
+# or dependency code runs. The cap below is a PRE-PARSE gate — a
+# middleware reading Content-Length from the ASGI scope (never the body)
+# and answering 413 before routing, so not a single body byte is read.
+# 1 MiB is ~100x the largest legal batch (50 events x ~200 B); scoped to
+# this one route on purpose — a global body cap would change every other
+# endpoint's contract in one move (a separate owner-level decision). A
+# body WITHOUT Content-Length (chunked) rides the post-parse batch 413
+# below: the 60/60s limiter bounds such legs' frequency and the LAN
+# ingress is the trust boundary (residual risk accepted for v0).
+_TELEMETRY_BODY_MAX_BYTES = 1_048_576   # 1 MiB pre-parse Content-Length cap
+
+
+@app.middleware("http")
+async def telemetry_body_cap(request: Request, call_next):
+    """C1 pre-parse gate (CWE-400): refuse an oversized DECLARED body on
+    the telemetry ingest before the body is read — the same contract 413
+    the batch cap answers, just at the earliest possible point. Header
+    only: no body buffering, no parsing; every other route passes through
+    untouched (one method+path string compare)."""
+    if (request.method == "POST"
+            and request.url.path == "/api/events/ui"):
+        declared = request.headers.get("Content-Length", "")
+        if (declared.isdigit()
+                and int(declared) > _TELEMETRY_BODY_MAX_BYTES):
+            logging.getLogger("vesmaro.telemetry").warning(
+                "ui telemetry body over pre-parse cap declared=%s",
+                declared)
+            return JSONResponse(
+                status_code=413,
+                content={"detail": "request body exceeds "
+                                   f"{_TELEMETRY_BODY_MAX_BYTES} bytes "
+                                   "(pre-parse Content-Length cap)"})
+    return await call_next(request)
+
+# The frozen v0 kind registry (taxonomy §1.2) — the single dictionary the
+# ingest validates against and the tests lock. Kinds are additive by
+# contract (SSE dictionary rule, ui-contract §11): new kinds extend this
+# map through a taxonomy revision, never a rename.
+_TELEMETRY_KINDS: tuple[str, ...] = (
+    "ui.visit", "ui.nav", "ui.surface_error",
+    "kora.entered", "kora.intent_started", "kora.intent_completed",
+    "kora.intent_abandoned",
+    "cmdk.palette_opened", "cmdk.item_selected",
+    "living.layer_toggled",
+    "notifications.read",
+)
+
+# One taxonomy kind = one model variant (discriminated by ``kind``): each
+# carries visit_id plus EXACTLY its §1.2 property set — enums and bucket
+# classes only, all mandatory, extra keys forbidden.
+class _UiEventBase(BaseModel):
+    """Common client envelope (taxonomy §1.1): the visit id links the
+    events of one SPA load. Slug charset + length cap: an id, never a
+    content channel (§3.4)."""
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+    visit_id: str = Field(min_length=8, max_length=64,
+                          pattern=r"^[0-9A-Za-z][0-9A-Za-z-]*$")
+
+
+# v0 deliberately has NO surface enum (the taxonomy names the field, not
+# its values) — a slug charset still makes free-text smuggling impossible
+# while letting ME-031 add surfaces without a vocabulary revision.
+_TelemetrySurface = Annotated[str, Field(
+    min_length=1, max_length=40, pattern=r"^[a-z][a-z0-9_-]*$")]
+
+
+class UiVisitEvent(_UiEventBase):
+    kind: Literal["ui.visit"]
+
+
+class UiNavEvent(_UiEventBase):
+    kind: Literal["ui.nav"]
+    surface: _TelemetrySurface
+    via: Literal["route", "link", "palette"]
+
+
+class KoraEnteredEvent(_UiEventBase):
+    kind: Literal["kora.entered"]
+    entry: Literal["route", "palette"]
+    latency_class: Literal["a", "b", "c"]
+
+
+class KoraIntentStartedEvent(_UiEventBase):
+    kind: Literal["kora.intent_started"]
+    entry_point: Literal["focus", "button"]
+
+
+class KoraIntentCompletedEvent(_UiEventBase):
+    kind: Literal["kora.intent_completed"]
+    chars_class: Literal["s", "m", "l"]
+    latency_class: Literal["a", "b", "c"]
+
+
+class KoraIntentAbandonedEvent(_UiEventBase):
+    kind: Literal["kora.intent_abandoned"]
+    had_text: bool
+    dwell_class: Literal["s", "m", "l"]
+
+
+class CmdkPaletteOpenedEvent(_UiEventBase):
+    kind: Literal["cmdk.palette_opened"]
+    trigger: Literal["hotkey", "button"]
+
+
+class CmdkItemSelectedEvent(_UiEventBase):
+    kind: Literal["cmdk.item_selected"]
+    group: Literal["memory", "tasks", "agents", "nav", "action"]
+    via: Literal["enter", "click"]
+
+
+class LivingLayerToggledEvent(_UiEventBase):
+    kind: Literal["living.layer_toggled"]
+    from_: Literal["off", "calm", "full"] = Field(alias="from")
+    to: Literal["off", "calm", "full"]
+    where: Literal["settings", "quick"]
+
+
+class UiSurfaceErrorEvent(_UiEventBase):
+    kind: Literal["ui.surface_error"]
+    surface: _TelemetrySurface
+    status_class: Literal["e401", "e403", "e404", "e429", "e5xx", "network"]
+    op: Literal["read", "write"]
+
+
+class NotificationsReadEvent(_UiEventBase):
+    """notifications.read via the ingest carries visit_id only — the
+    canonical emitter is the server (POST /api/notifications/read stamps
+    ``scope`` itself); this variant exists so the registry covers the whole
+    §1.2 dictionary and a mis-routed client event fails loudly, not
+    silently."""
+    kind: Literal["notifications.read"]
+
+
+_UiTelemetryEvent = Annotated[
+    UiVisitEvent | UiNavEvent | KoraEnteredEvent | KoraIntentStartedEvent
+    | KoraIntentCompletedEvent | KoraIntentAbandonedEvent
+    | CmdkPaletteOpenedEvent | CmdkItemSelectedEvent
+    | LivingLayerToggledEvent | UiSurfaceErrorEvent | NotificationsReadEvent,
+    Field(discriminator="kind"),
+]
+
+
+class UiTelemetryBatch(BaseModel):
+    """Ingest body (taxonomy §3.1): a flat batch of taxonomy events. No
+    max on the list here — an oversized batch is the handler's honest 413,
+    not pydantic's generic 422. The earlier C1 gate (a pre-parse
+    Content-Length cap in ``telemetry_body_cap``) already refused
+    multi-MB bodies before this model is ever reached; the batch-count 413
+    stays for size-legal bodies with too many events."""
+    model_config = ConfigDict(extra="forbid")
+    events: list[_UiTelemetryEvent] = Field(min_length=1)
+
+
+class UiTelemetryOut(_ApiModel):
+    ok: bool
+    accepted: int
+    dropped: int = 0   # taxonomy §3.1 shape; always 0 while verdicts are
+                       # all-or-nothing (see the section header)
+
+
+def _client_class(request: Request) -> str:
+    """Envelope ``client_class`` (taxonomy §1.1): a coarse desktop/mobile
+    UA split — the «телефон vs десктоп» friction signal (ADR 0019), never
+    a fingerprint. The raw UA is NOT stored."""
+    ua = request.headers.get("User-Agent", "").lower()
+    markers = ("mobile", "android", "iphone", "ipad", "ipod")
+    return "mobile" if any(m in ua for m in markers) else "desktop"
+
+
+def _telemetry_envelope(request: Request, actor_class: str) -> dict[str, str]:
+    """The server-stamped envelope fields (taxonomy §1.1): every number is
+    computed per the OWNER, segmented by client class and release. ``ts``
+    is not here — the events table's ts column is server-stamped by
+    store._log, and a client ts is rejected by the extra="forbid" models."""
+    return {
+        "actor_class": actor_class,
+        "client_class": _client_class(request),
+        "release": app.version,
+    }
+
+
+def _guard_telemetry_ui(request: Request) -> None:
+    """Telemetry ingest guard (taxonomy §3.1): the ui class ONLY — the
+    owner's ``vesmaro_ui`` cookie or ui-class bearer. Unlike _guard_write
+    this is a 403 boundary, not 401: telemetry is not a mutation the
+    client must re-authenticate for (the SPA battery drops refusals
+    silently by design), and the taxonomy pins the verdict — anonymous,
+    machine and mnd_ legs are not telemetry legs (single-tenant numbers
+    describe the owner).
+
+    The device check is defense-in-depth: the scope middleware 403s an
+    mnd_ bearer on this route before it ever reaches a handler (the route
+    is in no grant table), so a future grant addition must still refuse
+    here — telemetry stays ui-only across vocabulary growth."""
+    if getattr(request.state, "device", None) is not None:
+        raise HTTPException(
+            403, "device legs are not telemetry legs (ui class only)")
+    if request.headers.get("Authorization", ""):
+        if _bearer_is_class(request, "ui"):
+            return
+        raise HTTPException(
+            403, "telemetry ingest is ui-class only (owner session)")
+    if _cookie_ui_ok(request):
+        _schedule_ui_cookie_reissue(request)
+        return
+    raise HTTPException(
+        403, "telemetry ingest is ui-class only (owner session)")
+
+
+@app.post(
+    "/api/events/ui",
+    # The machine-readable verdict set (ME-028 SEC-1 pattern): 200 accepted /
+    # 403 non-ui leg / 413 oversize (pre-parse Content-Length cap, or batch
+    # > 50) / 422 off-taxonomy event (unknown kind, free-text or extra
+    # field, client-stamped envelope key) / 429 rate limit. Pinned by
+    # tests/test_me037_ui_telemetry.py so drift cannot regenerate cleanly.
+    responses={
+        200: {"model": UiTelemetryOut,
+              "description": "batch accepted (all-or-nothing)"},
+        403: {"description": "not a ui-class leg (anonymous / machine / mnd_)"},
+        413: {"description": "declared body over the 1 MiB pre-parse cap "
+                             "(C1, refused before the body is read) or a "
+                             "batch larger than 50 events"},
+        422: {"description": "unknown kind, payload outside the taxonomy "
+                             "schema, or a free-text/extra field (rejected, "
+                             "not dropped)"},
+        429: {"description": "rate limit exceeded (60 per 60s per client)"},
+    },
+)
+async def ingest_ui_telemetry(body: UiTelemetryBatch,
+                              request: Request) -> UiTelemetryOut:
+    """UI telemetry ingest (ME-037, taxonomy §3.1) — the additive POST leg
+    beside the SSE GET (the GET contract is untouched and this route NEVER
+    broadcasts: telemetry is not live UI state, and a fan-out would leak it
+    into the unauthenticated SSE leg).
+
+    Batch ≤ 50 events, all-or-nothing validation against the frozen kind
+    registry; the server stamps ts (events table column) / actor_class /
+    client_class / release on every row. Rows land in the existing events
+    table with task_id NULL: the /api/activity whitelist
+    (ACTIVITY_FAMILIES) never surfaces telemetry families, the UI-28
+    retention sweep owns them like any non-task audit row."""
+    _guard_telemetry_ui(request)
+    client_ip = request.client.host if request.client else "unknown"
+    if not _telemetry_limiter.acquire(client_ip):
+        retry_after = max(_telemetry_limiter.retry_after(client_ip), 1)
+        logging.getLogger("vesmaro.telemetry").warning(
+            "ui telemetry rate limit exceeded client=%s retry_after=%ss",
+            client_ip, retry_after)
+        raise HTTPException(
+            429,
+            f"ui telemetry rate limit exceeded "
+            f"({_TELEMETRY_RATE_LIMIT} per {_TELEMETRY_RATE_WINDOW:.0f}s "
+            f"per client)",
+            headers={"Retry-After": str(retry_after)},
+        )
+    if len(body.events) > _TELEMETRY_BATCH_MAX:
+        logging.getLogger("vesmaro.telemetry").warning(
+            "ui telemetry batch too large client=%s n=%d",
+            client_ip, len(body.events))
+        raise HTTPException(
+            413, f"telemetry batch exceeds {_TELEMETRY_BATCH_MAX} events")
+    envelope = _telemetry_envelope(request, "ui")
+    rows = [(ev.kind, ev.model_dump(by_alias=True, exclude={"kind"})
+             | envelope) for ev in body.events]
+    store.log_ui_telemetry(rows)
+    logging.getLogger("vesmaro.telemetry").info(
+        "ui telemetry accepted client=%s n=%d", client_ip, len(rows))
+    return {"ok": True, "accepted": len(rows), "dropped": 0}
 
 
 # ------------------------------------------------------------------------ SSE

@@ -2294,6 +2294,36 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/api/events/ui": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Ingest Ui Telemetry
+         * @description UI telemetry ingest (ME-037, taxonomy §3.1) — the additive POST leg
+         *     beside the SSE GET (the GET contract is untouched and this route NEVER
+         *     broadcasts: telemetry is not live UI state, and a fan-out would leak it
+         *     into the unauthenticated SSE leg).
+         *
+         *     Batch ≤ 50 events, all-or-nothing validation against the frozen kind
+         *     registry; the server stamps ts (events table column) / actor_class /
+         *     client_class / release on every row. Rows land in the existing events
+         *     table with task_id NULL: the /api/activity whitelist
+         *     (ACTIVITY_FAMILIES) never surfaces telemetry families, the UI-28
+         *     retention sweep owns them like any non-task audit row.
+         */
+        readonly post: operations["ingest_ui_telemetry_api_events_ui_post"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/api/events": {
         readonly parameters: {
             readonly query?: never;
@@ -2689,6 +2719,41 @@ export interface components {
             };
         } & {
             readonly [key: string]: unknown;
+        };
+        /** CmdkItemSelectedEvent */
+        readonly CmdkItemSelectedEvent: {
+            /** Visit Id */
+            readonly visit_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            readonly kind: "cmdk.item_selected";
+            /**
+             * Group
+             * @enum {string}
+             */
+            readonly group: "memory" | "tasks" | "agents" | "nav" | "action";
+            /**
+             * Via
+             * @enum {string}
+             */
+            readonly via: "enter" | "click";
+        };
+        /** CmdkPaletteOpenedEvent */
+        readonly CmdkPaletteOpenedEvent: {
+            /** Visit Id */
+            readonly visit_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            readonly kind: "cmdk.palette_opened";
+            /**
+             * Trigger
+             * @enum {string}
+             */
+            readonly trigger: "hotkey" | "button";
         };
         /**
          * ConditionItem
@@ -3467,6 +3532,78 @@ export interface components {
         } & {
             readonly [key: string]: unknown;
         };
+        /** KoraEnteredEvent */
+        readonly KoraEnteredEvent: {
+            /** Visit Id */
+            readonly visit_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            readonly kind: "kora.entered";
+            /**
+             * Entry
+             * @enum {string}
+             */
+            readonly entry: "route" | "palette";
+            /**
+             * Latency Class
+             * @enum {string}
+             */
+            readonly latency_class: "a" | "b" | "c";
+        };
+        /** KoraIntentAbandonedEvent */
+        readonly KoraIntentAbandonedEvent: {
+            /** Visit Id */
+            readonly visit_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            readonly kind: "kora.intent_abandoned";
+            /** Had Text */
+            readonly had_text: boolean;
+            /**
+             * Dwell Class
+             * @enum {string}
+             */
+            readonly dwell_class: "s" | "m" | "l";
+        };
+        /** KoraIntentCompletedEvent */
+        readonly KoraIntentCompletedEvent: {
+            /** Visit Id */
+            readonly visit_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            readonly kind: "kora.intent_completed";
+            /**
+             * Chars Class
+             * @enum {string}
+             */
+            readonly chars_class: "s" | "m" | "l";
+            /**
+             * Latency Class
+             * @enum {string}
+             */
+            readonly latency_class: "a" | "b" | "c";
+        };
+        /** KoraIntentStartedEvent */
+        readonly KoraIntentStartedEvent: {
+            /** Visit Id */
+            readonly visit_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            readonly kind: "kora.intent_started";
+            /**
+             * Entry Point
+             * @enum {string}
+             */
+            readonly entry_point: "focus" | "button";
+        };
         /**
          * KoraScanIn
          * @description Scanner ingest envelope. ``drop_missing``: a full-listing scan
@@ -3695,6 +3832,31 @@ export interface components {
             readonly next_action: string;
         } & {
             readonly [key: string]: unknown;
+        };
+        /** LivingLayerToggledEvent */
+        readonly LivingLayerToggledEvent: {
+            /** Visit Id */
+            readonly visit_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            readonly kind: "living.layer_toggled";
+            /**
+             * From
+             * @enum {string}
+             */
+            readonly from: "off" | "calm" | "full";
+            /**
+             * To
+             * @enum {string}
+             */
+            readonly to: "off" | "calm" | "full";
+            /**
+             * Where
+             * @enum {string}
+             */
+            readonly where: "settings" | "quick";
         };
         /** MemoryItem */
         readonly MemoryItem: {
@@ -3976,6 +4138,23 @@ export interface components {
             readonly items: readonly components["schemas"]["NotificationOut"][];
         } & {
             readonly [key: string]: unknown;
+        };
+        /**
+         * NotificationsReadEvent
+         * @description notifications.read via the ingest carries visit_id only — the
+         *     canonical emitter is the server (POST /api/notifications/read stamps
+         *     ``scope`` itself); this variant exists so the registry covers the whole
+         *     §1.2 dictionary and a mis-routed client event fails loudly, not
+         *     silently.
+         */
+        readonly NotificationsReadEvent: {
+            /** Visit Id */
+            readonly visit_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            readonly kind: "notifications.read";
         };
         /** OkNoteOut */
         readonly OkNoteOut: {
@@ -4951,6 +5130,72 @@ export interface components {
             /** Mnemos Tags */
             readonly mnemos_tags?: readonly string[] | null;
         };
+        /** UiNavEvent */
+        readonly UiNavEvent: {
+            /** Visit Id */
+            readonly visit_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            readonly kind: "ui.nav";
+            /** Surface */
+            readonly surface: string;
+            /**
+             * Via
+             * @enum {string}
+             */
+            readonly via: "route" | "link" | "palette";
+        };
+        /** UiSurfaceErrorEvent */
+        readonly UiSurfaceErrorEvent: {
+            /** Visit Id */
+            readonly visit_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            readonly kind: "ui.surface_error";
+            /** Surface */
+            readonly surface: string;
+            /**
+             * Status Class
+             * @enum {string}
+             */
+            readonly status_class: "e401" | "e403" | "e404" | "e429" | "e5xx" | "network";
+            /**
+             * Op
+             * @enum {string}
+             */
+            readonly op: "read" | "write";
+        };
+        /**
+         * UiTelemetryBatch
+         * @description Ingest body (taxonomy §3.1): a flat batch of taxonomy events. No
+         *     max on the list here — an oversized batch is the handler's honest 413,
+         *     not pydantic's generic 422. The earlier C1 gate (a pre-parse
+         *     Content-Length cap in ``telemetry_body_cap``) already refused
+         *     multi-MB bodies before this model is ever reached; the batch-count 413
+         *     stays for size-legal bodies with too many events.
+         */
+        readonly UiTelemetryBatch: {
+            /** Events */
+            readonly events: readonly (components["schemas"]["UiVisitEvent"] | components["schemas"]["UiNavEvent"] | components["schemas"]["KoraEnteredEvent"] | components["schemas"]["KoraIntentStartedEvent"] | components["schemas"]["KoraIntentCompletedEvent"] | components["schemas"]["KoraIntentAbandonedEvent"] | components["schemas"]["CmdkPaletteOpenedEvent"] | components["schemas"]["CmdkItemSelectedEvent"] | components["schemas"]["LivingLayerToggledEvent"] | components["schemas"]["UiSurfaceErrorEvent"] | components["schemas"]["NotificationsReadEvent"])[];
+        };
+        /** UiTelemetryOut */
+        readonly UiTelemetryOut: {
+            /** Ok */
+            readonly ok: boolean;
+            /** Accepted */
+            readonly accepted: number;
+            /**
+             * Dropped
+             * @default 0
+             */
+            readonly dropped: number;
+        } & {
+            readonly [key: string]: unknown;
+        };
         /**
          * UiTokenProbeOut
          * @description The anonymous boot-probe verdict (ME-028): an explicit ``{"live":
@@ -4986,6 +5231,16 @@ export interface components {
             readonly token_class: "ui" | "legacy";
         } & {
             readonly [key: string]: unknown;
+        };
+        /** UiVisitEvent */
+        readonly UiVisitEvent: {
+            /** Visit Id */
+            readonly visit_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            readonly kind: "ui.visit";
         };
         /** UnarchiveOut */
         readonly UnarchiveOut: {
@@ -8408,6 +8663,58 @@ export interface operations {
                 content: {
                     readonly "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    readonly ingest_ui_telemetry_api_events_ui_post: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["UiTelemetryBatch"];
+            };
+        };
+        readonly responses: {
+            /** @description batch accepted (all-or-nothing) */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["UiTelemetryOut"];
+                };
+            };
+            /** @description not a ui-class leg (anonymous / machine / mnd_) */
+            readonly 403: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description declared body over the 1 MiB pre-parse cap (C1, refused before the body is read) or a batch larger than 50 events */
+            readonly 413: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description unknown kind, payload outside the taxonomy schema, or a free-text/extra field (rejected, not dropped) */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description rate limit exceeded (60 per 60s per client) */
+            readonly 429: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

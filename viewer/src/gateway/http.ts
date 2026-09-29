@@ -46,6 +46,44 @@ export const DEFAULT_TIMEOUT_MS = 10_000;
  */
 export const SEARCH_TIMEOUT_MS = 30_000;
 
+// --- UI telemetry failure seam (ME-041, taxonomy §1.2 #10) ------------------
+// A tiny pub-sub, not an import: this module stays dependency-free (see
+// the HttpEndpointOptions note); the telemetry singleton subscribes at
+// its init and decides alone whether anyone is listening (anonymous gate).
+
+/** What a failure listener learns: statuses and intent only — the request
+ * path and body never cross this seam (taxonomy §3.4). */
+export interface RequestFailureNotice {
+  /** HTTP status; 0 = transport failure / timeout. */
+  status: number;
+  method: HttpMethod;
+}
+
+type RequestFailureListener = (notice: RequestFailureNotice) => void;
+
+const failureListeners = new Set<RequestFailureListener>();
+
+/** Subscribe to request failures (telemetry). Returns an unsubscriber. */
+export function onRequestFailure(listener: RequestFailureListener): () => void {
+  failureListeners.add(listener);
+  return () => {
+    failureListeners.delete(listener);
+  };
+}
+
+/** Fan a failure out; a broken listener must never break the request. */
+function notifyRequestFailure(status: number, config: RequestConfig): void {
+  if (failureListeners.size === 0) return;
+  const notice: RequestFailureNotice = { status, method: config.method ?? "GET" };
+  for (const listener of [...failureListeners]) {
+    try {
+      listener(notice);
+    } catch {
+      // Telemetry is a passenger, never a dependency.
+    }
+  }
+}
+
 /** Join base URL, path and query map into a request URL. */
 export function buildUrl(
   baseUrl: string,
@@ -88,12 +126,20 @@ export async function requestJson<T>(
   // caller's external signal. Whichever fires first wins.
   const controller = new AbortController();
   let timedOut = false;
+  // The non-ok branch throws INSIDE this try, so the catch below would see
+  // it again — this flag keeps every failure notified exactly once (ME-041).
+  let failureNotified = false;
   const timer = setTimeout(() => {
     timedOut = true;
     controller.abort();
   }, timeoutMs);
   const onExternalAbort = () => controller.abort();
-  config.signal?.addEventListener("abort", onExternalAbort);
+  // A PRE-aborted caller signal never fires the listener (abort events do
+  // not replay), so propagate it eagerly — the composed signal must never
+  // outlive the caller's cancellation (ME-041: an aborted query is not a
+  // failed request and must not emit ui.surface_error).
+  if (config.signal?.aborted) controller.abort();
+  else config.signal?.addEventListener("abort", onExternalAbort);
 
   try {
     const response = await fetchImpl(url, {
@@ -104,6 +150,8 @@ export async function requestJson<T>(
     });
 
     if (!response.ok) {
+      failureNotified = true;
+      notifyRequestFailure(response.status, config);
       if (response.status === 401) endpoint.onUnauthorized?.();
       const body = await response.text().catch(() => "");
       throw new ApiError(response.status, extractErrorMessage(response, body), {
@@ -121,12 +169,18 @@ export async function requestJson<T>(
     // recognises the abort and silently drops the cancelled query.
     if (config.signal?.aborted) throw error;
     if (timedOut) {
+      notifyRequestFailure(0, config);
       throw new ApiError(0, `Request to ${path} timed out after ${timeoutMs} ms`, {
         url,
         cause: error,
       });
     }
-    throw toApiError(error);
+    if (!failureNotified) {
+      const apiError = toApiError(error);
+      notifyRequestFailure(apiError.status, config);
+      throw apiError;
+    }
+    throw error;
   } finally {
     clearTimeout(timer);
     config.signal?.removeEventListener("abort", onExternalAbort);
