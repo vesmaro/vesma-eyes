@@ -83,39 +83,69 @@ export const ru = {
   "topbar.themeLight": "Светлая тема",
   "topbar.themeDark": "Тёмная тема",
   "topbar.langLabel": "Язык интерфейса",
-  "topbar.searchLabel": "Поиск по памяти",
-  "topbar.searchPlaceholder": "Поиск по памяти…",
+  "topbar.searchPlaceholder": "Поиск",
   "topbar.densityToCompact": "Переключить плотность на компактную",
   "topbar.densityToComfortable": "Переключить плотность на комфортную",
   "topbar.densityCompact": "Компактная плотность",
   "topbar.densityComfortable": "Комфортная плотность",
 
-  // --- hotkeys (Ф1: `/` and `?` only — no not-yet-existing keys advertised) -----
+  // --- hotkeys (Ф1 `/`+`?`; Ф2 adds the palette's ⌘K/Ctrl+K) ---------------------
   "hotkeys.title": "Горячие клавиши",
-  "hotkeys.subtitle": "Клавиатурный слой оболочки. В полях ввода хоткеи отключены.",
-  "hotkeys.focusSearch": "Фокус на глобальный поиск",
+  "hotkeys.subtitle":
+    "Клавиатурный слой оболочки. ⌘K работает и в полях ввода — остальные хоткеи там отключены.",
+  "hotkeys.openPalette": "Открыть поиск (палитру)",
+  "hotkeys.openPaletteAnywhere": "Палитра — откуда угодно, даже из поля ввода",
   "hotkeys.cheatsheet": "Эта шпаргалка",
   "hotkeys.closeDialog": "Закрыть диалог",
   "hotkeys.escKey": "Esc",
   "hotkeys.openAria": "Шпаргалка горячих клавиш",
 
+  // --- command palette (UX-overhaul §7.3, Ф2) ------------------------------------
+  "cmdk.title": "Поиск",
+  "cmdk.placeholder": "Память, задачи, агенты, переход — начните вводить",
+  "cmdk.openAria": "Открыть поиск",
+  "cmdk.groupMemory": "Память",
+  "cmdk.groupTasks": "Задачи",
+  "cmdk.groupAgents": "Агенты",
+  "cmdk.groupNav": "Переход",
+  "cmdk.resultsLabel": "Результаты",
+  "cmdk.noResults": "Ничего не найдено",
+  "cmdk.searching": "Ищем…",
+  "cmdk.searchFailed": "Поиск памяти недоступен",
+  "cmdk.extendedSearch": "Расширенный поиск",
+  "cmdk.hintNavigate": "↑↓ — выбор",
+  "cmdk.hintOpen": "Enter — открыть",
+  "cmdk.hintClose": "Esc — закрыть",
+
+  // --- overview cockpit (UX-overhaul §3, Ф2 — live blocks) ------------------------
+  "cockpit.busyTitle": "Кто занят",
+  "cockpit.busyAll": "Все агенты",
+  "cockpit.busyOnline": "исполнителей на связи: {{online}} из {{total}}",
+  "cockpit.busyWorking": "задач в работе: {{count}}",
+  "cockpit.busyQueued": "в очереди: {{count}}",
+  "cockpit.agentsNone": "Агентов пока нет — подключите первого",
+  "cockpit.agentsNoneAction": "Подключить агента",
+  "cockpit.busyError": "Не удалось получить занятость",
+  "cockpit.waitingTitle": "Что ждёт меня",
+  "cockpit.waitingSummary": "ждут вас: {{count}}",
+  "cockpit.waitingSummaryTitle": "Открыть самое срочное",
+  "cockpit.waitingInbox": "Входящие: {{count}}",
+  "cockpit.waitingReview": "На проверке: {{count}}",
+  "cockpit.waitingQueued": "В очереди: {{count}}",
+  "cockpit.waitingError": "Не удалось посчитать, что ждёт",
+  "cockpit.memoryTitle": "Что в памяти",
+  "cockpit.retry": "Повторить",
+
   // --- overview (concept §2.4 — honest Ф1 cut) -----------------------------------
   "overview.title": "Обзор",
   "overview.tagline": "взгляд внутрь себя",
-  "overview.searchHint": "Нажмите / для поиска по памяти",
-  "overview.quickLinks": "Быстрые ссылки",
-  "overview.searchHintLink": "FTS · смысловой · гибрид",
-  "overview.recordsHintLink": "список и свитки-детали",
-  "overview.tagsHintLink": "инспектор и дриллдаун",
+  "overview.searchHint": "Нажмите / или ⌘K для поиска",
   // UX-overhaul §3/§8 (Ф1): Обзор ведёт в рабочие домены (Задачи/Агенты)
   // и говорит одной строкой, что ещё не живо (персона-ревью: формулировка).
-  "overview.tasksHintLink": "канбан · список · входящие",
-  "overview.agentsHintLink": "исполнение · подключение",
   // Review P3-4: Sessions/Traces left the nav in Ф1 — the line tells the
   // owner where they live (they are reachable, just later).
   "overview.honestyLater":
     "Хранилища и метрики — в работе; сессии и трассировки появятся позже",
-  "overview.storesTitle": "Хранилища",
   "overview.storesLoading": "Загружаем состояние хранилищ",
   "overview.storesError": "Состояние хранилищ недоступно: {{message}}",
   "overview.storeOk": "работает",
@@ -127,6 +157,8 @@ export const ru = {
   "overview.pulseTitle": "Свежий пульс",
   "overview.pulseAll": "весь пульс",
   "overview.pulseError": "Пульс недоступен: {{message}}",
+  // SCHED-1-UI: the auto-launch counter lives INSIDE the busy block now.
+  "overview.autoLaunchesToday": "авто-запусков сегодня: {{count}}",
 
   // --- memory pulse (Ф1) ---------------------------------------------------------
   "pulse.title": "Пульс памяти",
@@ -1430,8 +1462,6 @@ export const ru = {
     "поручение в очереди задачи {{id}} — смотрите «Исполнение»",
   "automation.mutation.skipped": "«{{name}}»: пропущено",
   "automation.mutation.skippedDetail": "запуск отказан — причина в журнале",
-  "overview.agentsAll": "Исполнение",
-  "overview.autoLaunchesToday": "авто-запусков сегодня: {{count}}",
 
   // --- docs section (ADR 0015/0016, contract 2026-09-23 §§4–6) ---------------------
   "nav.docs": "Документация",

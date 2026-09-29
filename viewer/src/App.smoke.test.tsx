@@ -80,11 +80,12 @@ describe("App (smoke)", () => {
 
   it("mounts the global search entry in the top bar (every route)", () => {
     const html = renderAppAt("/");
-    expect(html).toContain('role="search"');
-    expect(html).toContain('placeholder="Search memory…"');
-    expect(html).toContain('id="topbar-global-search"');
-    // The `/` hotkey affordance sits inside the search form.
+    // UX-overhaul §7.3 (Ф2): the oval is the command palette's TRIGGER —
+    // a dialog-opening button (⌘K affordance), not a committing input.
+    expect(html).toContain('aria-label="Open search"');
+    expect(html).toContain('aria-haspopup="dialog"');
     expect(html).toContain("<kbd");
+    expect(html).toContain("⌘K");
   });
 
   it("serves the eager search page under the memory domain", () => {

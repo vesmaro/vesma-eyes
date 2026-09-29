@@ -1,16 +1,17 @@
 import { Link } from "react-router";
-import { ArrowRight, Bot, Search, Files, Tag, KanbanSquare, Workflow } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { IrisLogo } from "@/components/IrisLogo/IrisLogo";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { HonestLine } from "@/components/HonestLine/HonestLine";
-import { isAutomationSource, isBoardHealthSource, isPulseSource } from "@/gateway/capabilities";
+import { isBoardHealthSource, isPulseSource } from "@/gateway/capabilities";
 import type { BoardHealthServer } from "@/gateway/boardTypes";
 import { useGateway } from "@/gateway/GatewayContext";
 import { usePulse, useBoardHealth } from "@/hooks/usePulse";
 import { PulseFeed } from "@/features/memory-pulse/PulseFeed";
-import { useAutomationStatus } from "@/features/automation/useAutomation";
+import { CockpitBusy } from "./CockpitBusy";
+import { CockpitWaiting } from "./CockpitWaiting";
 import {
   sessionModeI18nKey,
   useSessionMode,
@@ -18,18 +19,15 @@ import {
 import { useT } from "@/i18n";
 
 /**
- * `/` — «Обзор» (redesign concept §2.4): the well hero + the honest Ф1 cut of
- * the domain summary. Anti-dashification rules apply: no counters for the
- * sake of counters, and a block with nothing to say does not render —
- * store/pulse sections appear only when the gateway speaks those views
- * (board / mock adapters) and only when they have content. The session-aware
- * mode line states the app's current contract plainly (read-only / active).
+ * `/` — «Обзор» (UX-overhaul §3, Ф2): the working cockpit. The well stays
+ * the signature (one breathing iris, nothing else moves); below it the
+ * blocks read in the J1 order — «кто занят → что ждёт меня → что в памяти →
+ * строка честности». Anti-dashification rules apply unchanged: a block with
+ * nothing to say does not render, and every figure LEADS somewhere.
  *
- * UX-overhaul §3 (Ф1): the cockpit's first steps into the WORKING domains —
- * «Задачи → канбан» and «Агенты → исполнение» join the quick-links (J1
- * walks without hunting); the honest line at the bottom names what is not
- * live yet in one sentence (persona-review wording). The full cockpit
- * blocks («Кто занят» / «Что ждёт меня») are Ф2 — no live tiles here yet.
+ * Ф2 removals: the quick-links trio (search/records/tags — memory lives in
+ * «Что в памяти» and in the palette now) and the solo agents auto-launch
+ * line (the counter moved inside «Кто занят»).
  */
 export function OverviewPage() {
   const t = useT();
@@ -37,21 +35,16 @@ export function OverviewPage() {
   const sessionMode = useSessionMode();
   const pulseCapable = isPulseSource(gateway);
   const healthCapable = isBoardHealthSource(gateway);
-  const automationCapable = isAutomationSource(gateway);
   // Top of the recency feed — the "what just happened" strip (limit 5).
   const pulse = usePulse({ scope: "all", limit: 5 });
   const health = useBoardHealth();
-  // SCHED-1-UI: the Agents block's auto-launch line — the server's OWN
-  // daily_used counter (non-manual launches today; provably 0 while the
-  // engine is off — the line then does not render, anti-dashification).
-  const automation = useAutomationStatus();
-  const autoLaunchesToday = automation.data?.daily_used ?? 0;
-  const showAgentsLine =
-    automationCapable && automation.isSuccess && autoLaunchesToday > 0;
 
   const showStores =
     healthCapable && !(health.isSuccess && health.data.servers.length === 0);
   const showPulse = pulseCapable && !(pulse.isSuccess && pulse.data.items.length === 0);
+  // The memory block exists only when at least one of its two halves speaks
+  // (otherwise the honest state is absence — no empty section frame).
+  const showMemory = showStores || showPulse;
 
   return (
     <section aria-labelledby="overview-title" className="mx-auto max-w-4xl space-y-8">
@@ -66,132 +59,88 @@ export function OverviewPage() {
         <p className="text-xs text-foreground-muted">{t("overview.searchHint")}</p>
       </div>
 
-      {/* Quick links — the daily entrances of the memory domain (UX-overhaul
-       * §3 Ф1: Tasks → kanban and Agents → execution lead first). */}
-      <nav aria-label={t("overview.quickLinks")} className="grid gap-4 sm:grid-cols-3">
-        <QuickLink
-          to="/tasks"
-          icon={<KanbanSquare className="size-5" aria-hidden="true" />}
-          label={t("nav.taskBoard")}
-          hint={t("overview.tasksHintLink")}
-        />
-        <QuickLink
-          to="/agents/execution"
-          icon={<Workflow className="size-5" aria-hidden="true" />}
-          label={t("nav.agentsExecution")}
-          hint={t("overview.agentsHintLink")}
-        />
-        <QuickLink
-          to="/memory/search"
-          icon={<Search className="size-5" aria-hidden="true" />}
-          label={t("nav.search")}
-          hint={t("overview.searchHintLink")}
-        />
-        <QuickLink
-          to="/memory"
-          icon={<Files className="size-5" aria-hidden="true" />}
-          label={t("nav.records")}
-          hint={t("overview.recordsHintLink")}
-        />
-        <QuickLink
-          to="/memory/tags"
-          icon={<Tag className="size-5" aria-hidden="true" />}
-          label={t("nav.tags")}
-          hint={t("overview.tagsHintLink")}
-        />
-      </nav>
+      {/* КТО ЗАНЯТ (§3.1): executors' presence + the work counts, leading to
+       * the agents/tasks surfaces. Renders its own honest states (zero
+       * agents → the connect line; errors → HonestLine + retry). */}
+      <CockpitBusy />
 
-      {/* Agents block (SCHED-1-UI, ADR 0013 §8): the auto-launches line ONLY
-       * when the server's own counter says launches happened today — a
-       * zero-count block does not render (no counters for the sake of it). */}
-      {showAgentsLine ? (
-        <section aria-labelledby="overview-agents" className="space-y-3">
-          <div className="flex items-baseline justify-between gap-4">
-            <h2 id="overview-agents" className="text-lg font-semibold text-foreground">
-              {t("nav.agents")}
-            </h2>
-            <Link
-              to="/agents/execution"
-              className="inline-flex min-h-6 items-center gap-1 text-sm text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
-            >
-              <Bot className="size-4" aria-hidden="true" />
-              {t("overview.agentsAll")}
-            </Link>
-          </div>
-          <p className="text-sm text-foreground-secondary">
-            {t("overview.autoLaunchesToday", { count: autoLaunchesToday })}
-          </p>
-        </section>
-      ) : null}
+      {/* ЧТО ЖДЁТ МЕНЯ (§3.1 + persona round 1): ONE summary number-action —
+       * the click leads to the most urgent list; quiet source rows under it.
+       * Renders nothing while nothing waits. */}
+      <CockpitWaiting />
 
-      {showStores ? (
-        <section aria-labelledby="overview-stores" className="space-y-3">
-          <h2 id="overview-stores" className="text-lg font-semibold text-foreground">
-            {t("overview.storesTitle")}
+      {/* ЧТО В ПАМЯТИ (§3.1): the store cards + the fresh-pulse strip — the
+       * same live data as before, now under one cockpit title. */}
+      {showMemory ? (
+        <section aria-labelledby="overview-memory" className="space-y-3">
+          <h2 id="overview-memory" className="text-lg font-semibold text-foreground">
+            {t("cockpit.memoryTitle")}
           </h2>
-          {health.isPending ? (
-            <div role="status" aria-label={t("overview.storesLoading")}>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-24 w-full" />
-              </div>
-            </div>
-          ) : health.isError ? (
-            <p role="status" className="text-sm text-foreground-secondary">
-              {t("overview.storesError", { message: health.error.message })}
-            </p>
-          ) : (
-            <ul className="grid gap-list-gap sm:grid-cols-2">
-              {health.data.servers.map((server) => (
-                <li key={server.name}>
-                  <StoreCard server={server} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      ) : null}
 
-      {showPulse ? (
-        <section aria-labelledby="overview-pulse" className="space-y-3">
-          <div className="flex items-baseline justify-between gap-4">
-            <h2 id="overview-pulse" className="text-lg font-semibold text-foreground">
-              {t("overview.pulseTitle")}
-            </h2>
-            <Link
-              to="/memory/pulse"
-              className="inline-flex min-h-6 items-center gap-1 text-sm text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
-            >
-              {t("overview.pulseAll")}{" "}
-              <ArrowRight className="size-4" aria-hidden="true" />
-            </Link>
-          </div>
-          {pulse.isPending ? (
-            <div
-              role="status"
-              aria-label={t("pulse.loading")}
-              className="text-sm text-foreground-secondary"
-            >
-              {t("pulse.loading")}…
+          {showStores ? (
+            health.isPending ? (
+              <div role="status" aria-label={t("overview.storesLoading")}>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Skeleton className="h-24 w-full" />
+                  <Skeleton className="h-24 w-full" />
+                </div>
+              </div>
+            ) : health.isError ? (
+              <p role="status" className="text-sm text-foreground-secondary">
+                {t("overview.storesError", { message: health.error.message })}
+              </p>
+            ) : (
+              <ul className="grid gap-list-gap sm:grid-cols-2">
+                {health.data.servers.map((server) => (
+                  <li key={server.name}>
+                    <StoreCard server={server} />
+                  </li>
+                ))}
+              </ul>
+            )
+          ) : null}
+
+          {showPulse ? (
+            <div className="space-y-3">
+              <div className="flex items-baseline justify-between gap-4">
+                <h3 className="text-sm font-medium text-foreground-secondary">
+                  {t("overview.pulseTitle")}
+                </h3>
+                <Link
+                  to="/memory/pulse"
+                  className="inline-flex min-h-6 items-center gap-1 text-sm text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+                >
+                  {t("overview.pulseAll")}{" "}
+                  <ArrowRight className="size-4" aria-hidden="true" />
+                </Link>
+              </div>
+              {pulse.isPending ? (
+                <div
+                  role="status"
+                  aria-label={t("pulse.loading")}
+                  className="text-sm text-foreground-secondary"
+                >
+                  {t("pulse.loading")}…
+                </div>
+              ) : pulse.isError ? (
+                <p role="status" className="text-sm text-foreground-secondary">
+                  {t("overview.pulseError", { message: pulse.error.message })}
+                </p>
+              ) : (
+                <PulseFeed
+                  items={pulse.data.items}
+                  perServer={pulse.data.per_server}
+                  compact
+                />
+              )}
             </div>
-          ) : pulse.isError ? (
-            <p role="status" className="text-sm text-foreground-secondary">
-              {t("overview.pulseError", { message: pulse.error.message })}
-            </p>
-          ) : (
-            <PulseFeed
-              items={pulse.data.items}
-              perServer={pulse.data.per_server}
-              compact
-            />
-          )}
+          ) : null}
         </section>
       ) : null}
 
       {/* UX-overhaul §3/§8 (Ф1): the honesty line — one sentence naming the
-       * not-yet-live surfaces (persona-review wording: «Хранилища и Метрики
-       * ещё в работе»). Ф2 folds the removed nav domains into the same
-       * line; the sentence stays single. */}
+       * not-yet-live surfaces (persona-review wording). Не рендерится, когда
+       * всё живое (сегодня — всегда: хранилища-реестр и метрики в работе). */}
       <HonestLine>{t("overview.honestyLater")}</HonestLine>
 
       {/* Session-aware mode line (fix/login-feedback) — same derivation as
@@ -201,31 +150,6 @@ export function OverviewPage() {
         {t(sessionModeI18nKey(sessionMode))}
       </p>
     </section>
-  );
-}
-
-function QuickLink({
-  to,
-  icon,
-  label,
-  hint,
-}: {
-  to: string;
-  icon: React.ReactNode;
-  label: string;
-  hint: string;
-}) {
-  return (
-    <Link
-      to={to}
-      className="group flex min-h-row-airy flex-col justify-center gap-1 rounded-md border border-border-subtle bg-well p-4 shadow-well transition-colors duration-instant hover:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
-    >
-      <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
-        {icon}
-        {label}
-      </span>
-      <span className="text-xs text-foreground-secondary">{hint}</span>
-    </Link>
   );
 }
 

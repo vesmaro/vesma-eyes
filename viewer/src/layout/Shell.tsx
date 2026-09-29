@@ -13,6 +13,7 @@ import {
 } from "@/lib/sidebarState";
 import { useSidebarOverlayOpen } from "@/lib/sidebarOverlayState";
 import { ErrorBoundary } from "./ErrorBoundary";
+import { CommandPalette } from "./CommandPalette";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { UpdateBanner } from "./UpdateBanner";
@@ -123,6 +124,10 @@ export function Shell() {
        * router's ScrollRestoration, never a hand-rolled cache). */}
       <ScrollRestoration />
       <FocusMain pathname={location.pathname} />
+      {/* The command palette (UX-overhaul §7.3 Ф2) — mounted inside the
+       * data router so its rows navigate with router context; the open
+       * state lives in lib/paletteState (hotkeys + TopBar drive it). */}
+      <CommandPalette />
       {/* Toast region — mounted INSIDE the router (toast actions are in-app
        * Links; a Link outside Router context throws). Shell is the persistent
        * root layout, so toasts survive every route change. */}
