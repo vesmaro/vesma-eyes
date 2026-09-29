@@ -52,7 +52,11 @@ describe("TopBar i18n (ru default, en switch)", () => {
     expect(html).toContain("Язык интерфейса");
     expect(html).toContain("Светлая тема");
     expect(html).toContain('aria-label="Переключить на светлую тему"');
-    expect(html).toContain('placeholder="Поиск по памяти…"');
+    // UX-overhaul §7.3 (Ф2): the oval is the palette TRIGGER — a button with
+    // dialog semantics, not a committing input; the honest one-word promise.
+    expect(html).toContain('aria-label="Открыть поиск"');
+    expect(html).toContain('aria-haspopup="dialog"');
+    expect(html).toContain(">Поиск</span>");
     expect(html).toContain("Переключить плотность на компактную");
     // Segmented control: RU is the pressed segment, EN is not.
     expect(html).toMatch(/aria-pressed="true"[^>]*>ru</);
@@ -65,7 +69,8 @@ describe("TopBar i18n (ru default, en switch)", () => {
     expect(html).toContain("Interface language");
     expect(html).toContain("Light theme");
     expect(html).toContain('aria-label="Switch to light theme"');
-    expect(html).toContain('placeholder="Search memory…"');
+    expect(html).toContain('aria-label="Open search"');
+    expect(html).toContain(">Search</span>");
     expect(html).toContain("Switch density to compact");
     expect(html).toMatch(/aria-pressed="false"[^>]*>ru</);
     expect(html).toMatch(/aria-pressed="true"[^>]*>en</);

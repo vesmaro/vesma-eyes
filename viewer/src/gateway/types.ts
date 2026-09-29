@@ -73,6 +73,14 @@ export interface SearchResult {
   tags: string[];
   score: number;
   search_type: "fts" | "semantic" | "hybrid";
+  /**
+   * Provenance — which store the hit lives in (`it["server"]`, stamped by the
+   * board's merged search over every active server; UX-overhaul §7.3 Ф2 the
+   * palette shows «где лежит»). OPTIONAL: mock/direct-mnemos adapters serve a
+   * single unnamed store and omit the field — the UI renders provenance only
+   * when the wire named it (honest absence).
+   */
+  server?: string;
 }
 
 /** Memory list filters (mnemos list endpoint). */

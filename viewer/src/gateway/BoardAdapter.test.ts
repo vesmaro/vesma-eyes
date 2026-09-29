@@ -53,7 +53,8 @@ describe("BoardAdapter wire contract", () => {
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("/api/mnemos/search?q=gateway&limit=5&project=x");
     expect(init.method).toBe("GET");
-    // Provenance `server` is board-only and not part of SearchResult yet.
+    // UX-overhaul §7.3 (Ф2): the board-stamped `server` provenance passes
+    // through — the palette answers «где лежит».
     expect(hits).toEqual([
       {
         id: "hit-1",
@@ -62,6 +63,7 @@ describe("BoardAdapter wire contract", () => {
         tags: ["project:x"],
         score: 0.87,
         search_type: "semantic",
+        server: "mnemos-main",
       },
     ]);
   });

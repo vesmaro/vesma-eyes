@@ -1408,7 +1408,8 @@ function unsupported(method: string, mnemosPath: string): ApiError {
 /**
  * Normalise an anonymous proxied mnemos search hit into the pinned UI shape
  * (same honest-defaults policy as the HttpAdapter mapping; the board-added
- * `server` provenance field is not part of the viewer SearchResult yet).
+ * `server` provenance field IS part of the viewer SearchResult now — UX-overhaul
+ * §7.3 Ф2 the palette answers «где лежит» — and passes through when named).
  */
 function normalizeSearchHit(hit: unknown, index: number): SearchResult {
   const source = (hit ?? {}) as Record<string, unknown>;
@@ -1423,6 +1424,7 @@ function normalizeSearchHit(hit: unknown, index: number): SearchResult {
       searchType === "fts" || searchType === "semantic" || searchType === "hybrid"
         ? searchType
         : "fts",
+    server: typeof source.server === "string" ? source.server : undefined,
   };
 }
 

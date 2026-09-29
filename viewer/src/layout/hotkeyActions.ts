@@ -3,8 +3,13 @@
  * canon with the `inInput` guard). Kept DOM-free and React-free so the guard
  * rules are exhaustively unit-testable; the provider wiring lives in
  * Hotkeys.tsx.
+ *
+ * UX-overhaul §7.3 (Ф2): the search entry is the COMMAND PALETTE — the
+ * bare `/` opens it (memory is the first section, keeping the old
+ * focus-search promise) and ⌘K/Ctrl+K opens it from anywhere, INCLUDING
+ * editable surfaces (the palette's own input is the point).
  */
-export type HotkeyAction = "focus-search" | "open-help";
+export type HotkeyAction = "open-palette" | "open-help";
 
 /** Minimal event shape resolveHotkey needs (pure, DOM-free — unit-testable). */
 export interface HotkeyEvent {
@@ -12,6 +17,7 @@ export interface HotkeyEvent {
   metaKey?: boolean;
   ctrlKey?: boolean;
   altKey?: boolean;
+  shiftKey?: boolean;
   target?: EventTarget | null;
 }
 
@@ -29,16 +35,27 @@ export function isEditableTarget(target: EventTarget | null | undefined): boolea
 }
 
 /**
- * Map a keydown to a hotkey action, or null. Guards: no modifier combos
- * (those belong to the browser/OS), and the inInput rule above.
+ * Map a BARE keydown to a hotkey action, or null. Guards: no modifier combos
+ * (those belong to the browser/OS — see resolveGlobalHotkey), and the
+ * inInput rule above.
  */
 export function resolveHotkey(event: HotkeyEvent): HotkeyAction | null {
   if (event.metaKey || event.ctrlKey || event.altKey) return null;
   if (isEditableTarget(event.target)) return null;
-  if (event.key === "/") return "focus-search";
+  if (event.key === "/") return "open-palette";
   if (event.key === "?") return "open-help";
   return null;
 }
 
-/** DOM id of the top-bar search input (see TopBar) — the `/` target. */
-export const GLOBAL_SEARCH_INPUT_ID = "topbar-global-search";
+/**
+ * Modifier combos that stay hot EVERYWHERE (even inside editable surfaces):
+ * ⌘K / Ctrl+K is the palette's canonical key, and the palette IS an input —
+ * the inInput guard would make it unreachable exactly where it is needed.
+ * Alt/Shift variants stay with the browser/OS.
+ */
+export function resolveGlobalHotkey(event: HotkeyEvent): HotkeyAction | null {
+  if (event.altKey || event.shiftKey) return null;
+  if (!(event.metaKey || event.ctrlKey)) return null;
+  if (event.key.toLowerCase() === "k") return "open-palette";
+  return null;
+}

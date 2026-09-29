@@ -70,39 +70,68 @@ export const en: Record<TranslationKey, string> = {
   "topbar.themeLight": "Light theme",
   "topbar.themeDark": "Dark theme",
   "topbar.langLabel": "Interface language",
-  "topbar.searchLabel": "Search memory",
-  "topbar.searchPlaceholder": "Search memory…",
+  "topbar.searchPlaceholder": "Search",
   "topbar.densityToCompact": "Switch density to compact",
   "topbar.densityToComfortable": "Switch density to comfortable",
   "topbar.densityCompact": "Compact density",
   "topbar.densityComfortable": "Comfortable density",
 
-  // --- hotkeys (Ф1: `/` and `?` only — no not-yet-existing keys advertised) -----
+  // --- hotkeys (Ф1 `/`+`?`; Ф2 adds the palette's ⌘K/Ctrl+K) ---------------------
   "hotkeys.title": "Keyboard shortcuts",
-  "hotkeys.subtitle": "The shell hotkey layer. Hotkeys stay quiet inside inputs.",
-  "hotkeys.focusSearch": "Focus the global search",
+  "hotkeys.subtitle":
+    "The shell hotkey layer. ⌘K works inside form fields too — the rest stay quiet there.",
+  "hotkeys.openPalette": "Open search (the palette)",
+  "hotkeys.openPaletteAnywhere": "The palette — from anywhere, even inside a form field",
   "hotkeys.cheatsheet": "This cheatsheet",
   "hotkeys.closeDialog": "Close the dialog",
   "hotkeys.escKey": "Esc",
   "hotkeys.openAria": "Keyboard shortcuts cheatsheet",
 
+  // --- command palette (UX-overhaul §7.3, Ф2) ------------------------------------
+  "cmdk.title": "Search",
+  "cmdk.placeholder": "Memory, tasks, agents, navigation — start typing",
+  "cmdk.openAria": "Open search",
+  "cmdk.groupMemory": "Memory",
+  "cmdk.groupTasks": "Tasks",
+  "cmdk.groupAgents": "Agents",
+  "cmdk.groupNav": "Go to",
+  "cmdk.resultsLabel": "Results",
+  "cmdk.noResults": "Nothing found",
+  "cmdk.searching": "Searching…",
+  "cmdk.extendedSearch": "Advanced search",
+  "cmdk.hintNavigate": "↑↓ — navigate",
+  "cmdk.hintOpen": "Enter — open",
+  "cmdk.hintClose": "Esc — close",
+
+  // --- overview cockpit (UX-overhaul §3, Ф2 — live blocks) ------------------------
+  "cockpit.busyTitle": "Who is busy",
+  "cockpit.busyAll": "All agents",
+  "cockpit.busyOnline": "executors connected: {{online}} of {{total}}",
+  "cockpit.busyWorking": "tasks in progress: {{count}}",
+  "cockpit.busyQueued": "queued: {{count}}",
+  "cockpit.agentsNone": "No agents yet — connect the first one",
+  "cockpit.agentsNoneAction": "Connect an agent",
+  "cockpit.busyError": "Could not load who is busy",
+  "cockpit.waitingTitle": "Waiting for you",
+  "cockpit.waitingSummary": "waiting for you: {{count}}",
+  "cockpit.waitingSummaryTitle": "Open the most urgent",
+  "cockpit.waitingInbox": "Inbox: {{count}}",
+  "cockpit.waitingReview": "In review: {{count}}",
+  "cockpit.waitingQueued": "Queued: {{count}}",
+  "cockpit.waitingError": "Could not count what is waiting",
+  "cockpit.memoryTitle": "In memory",
+  "cockpit.retry": "Retry",
+
   // --- overview (concept §2.4 — honest Ф1 cut) -----------------------------------
   "overview.title": "Overview",
   "overview.tagline": "a gaze into oneself",
-  "overview.searchHint": "Press / to search memory",
-  "overview.quickLinks": "Quick links",
-  "overview.searchHintLink": "FTS · semantic · hybrid",
-  "overview.recordsHintLink": "list and detail scrolls",
-  "overview.tagsHintLink": "inspector and drilldown",
+  "overview.searchHint": "Press / or ⌘K to search",
   // UX-overhaul §3/§8 (Ф1): the overview leads into the working domains and
   // states what is not live yet in one honest line.
-  "overview.tasksHintLink": "kanban · list · inbox",
-  "overview.agentsHintLink": "execution · connect",
   // Review P3-4: Sessions/Traces left the nav in Ф1 — the line tells the
   // owner where they live (they are reachable, just later).
   "overview.honestyLater":
     "Stores and metrics are in the works; sessions and traces are coming later",
-  "overview.storesTitle": "Stores",
   "overview.storesLoading": "Loading store health",
   "overview.storesError": "Store health unavailable: {{message}}",
   "overview.storeOk": "healthy",
@@ -114,6 +143,8 @@ export const en: Record<TranslationKey, string> = {
   "overview.pulseTitle": "Fresh pulse",
   "overview.pulseAll": "full pulse",
   "overview.pulseError": "Pulse unavailable: {{message}}",
+  // SCHED-1-UI: the auto-launch counter lives INSIDE the busy block now.
+  "overview.autoLaunchesToday": "auto-launches today: {{count}}",
 
   // --- memory pulse (Ф1) ---------------------------------------------------------
   "pulse.title": "Memory pulse",
@@ -1400,8 +1431,6 @@ export const en: Record<TranslationKey, string> = {
     "assignment queued for task {{id}} — see «Execution»",
   "automation.mutation.skipped": "«{{name}}»: skipped",
   "automation.mutation.skippedDetail": "the run was refused — reason in the journal",
-  "overview.agentsAll": "Execution",
-  "overview.autoLaunchesToday": "auto-launches today: {{count}}",
 
   // --- docs section (ADR 0015/0016, contract 2026-09-23 §§4–6) ---------------------
   "nav.docs": "Documentation",
