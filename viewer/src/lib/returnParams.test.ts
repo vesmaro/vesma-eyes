@@ -135,3 +135,26 @@ describe("resolveReturnTarget (read + validate, spec §2.2 rule 2)", () => {
     expect(read(encodeReturn("/"))).toBe("/");
   });
 });
+
+describe("gates v6 (ME-043): the /auth route's return targets", () => {
+  it("accepts kora deep links — a gated session route is a valid return", () => {
+    expect(read(encodeReturn("/kora"))).toBe("/kora");
+    expect(read(encodeReturn("/kora/s-20260929?harness=zcode"))).toBe(
+      "/kora/s-20260929?harness=zcode",
+    );
+  });
+
+  it("keeps the query of a gated deep link intact through the wire shape", () => {
+    // The full gate-screen shape: withReturn builds /auth?return=…, the
+    // route reads it back through URLSearchParams (ME-026: query survives).
+    const href = withReturn("/auth", "/memory/search", "?q=project:gcw");
+    const search = href.slice(href.indexOf("?"));
+    expect(
+      resolveReturnTarget({
+        searchParams: new URLSearchParams(search),
+        currentPathname: "/auth",
+        currentSearch: search,
+      }),
+    ).toBe("/memory/search?q=project:gcw");
+  });
+});

@@ -25,6 +25,10 @@ const RETURN_ROUTE_PREFIXES: readonly string[] = [
   "/agents",
   "/docs",
   "/system",
+  // Gates v6 (ME-043): the /auth route may send the user back to a gated
+  // Кора deep link (`/kora/:sessionId` — the gate screen's «Войти» carries
+  // the whole pathname+search, ME-026: the query must survive).
+  "/kora",
 ];
 
 /**
