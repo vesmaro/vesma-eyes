@@ -740,7 +740,79 @@ def test_check_drift_detects_new_commits(tmp_path, config, upstream_repo) -> Non
     assert sync_docs.check_drift(repin)["projects"]["fakeproj"]["drift"] is False
 
 
-# --- config sanity -------------------------------------------------------------
+# --- pin guard: HEAD==ref, fail loud (ME-046, incident 2026-09-29) --------------
+
+
+def test_sync_fails_when_clone_head_behind_the_pin(
+    tmp_path, config, upstream_repo
+) -> None:
+    """The incident shape: the clone stayed checked out at the OLD commit
+    while the config pin moved forward — sync reads the working tree, so it
+    must FAIL LOUD instead of publishing stale content under the new pin."""
+    moved = tmp_path / "stale-clone"
+    shutil.copytree(str(upstream_repo["repo"]), moved)
+    (moved / "docs/en/user/cli-reference.md").write_text(
+        "# CLI reference\n\nEvery command. Updated.\n", encoding="utf-8"
+    )
+    _git(moved, "config", "user.email", "153223100+Korrnals@users.noreply.github.com")
+    _git(moved, "config", "user.name", "Korrnals")
+    _git(moved, "commit", "-qam", "docs: upstream moved on")
+    new_pin = _git(moved, "rev-parse", "HEAD")
+    # the incident: the new pin IS fetched (object exists in the clone),
+    # but the checkout stays detached at the OLD commit
+    _git(moved, "checkout", "-q", str(upstream_repo["sha"]))
+    stale = copy.deepcopy(config)
+    for project in stale["projects"].values():
+        project["repo"] = str(moved)
+        project["ref"] = new_pin
+    content_out = tmp_path / "c-stale"
+    with pytest.raises(SyncError, match="is at HEAD .* but config pins"):
+        sync_docs.sync(stale, content_out=content_out, assets_out=tmp_path / "a-stale")
+    # fail-fast: the guard fires in the pin phase, before any output write
+    assert not content_out.exists()
+
+
+def test_pin_guard_message_carries_the_detach_recipe(
+    tmp_path, config, upstream_repo
+) -> None:
+    """The failure must be actionable: both SHAs plus the exact checkout
+    command (the operator copies it verbatim)."""
+    moved = tmp_path / "ahead-clone"
+    shutil.copytree(str(upstream_repo["repo"]), moved)
+    (moved / "docs/en/user/getting-started.md").write_text(
+        EN_GETTING_STARTED + "\nuncommitted-but-committed edit\n", encoding="utf-8"
+    )
+    _git(moved, "config", "user.email", "153223100+Korrnals@users.noreply.github.com")
+    _git(moved, "config", "user.name", "Korrnals")
+    _git(moved, "commit", "-qam", "docs: clone ran ahead of the pin")
+    ahead = _git(moved, "rev-parse", "HEAD")
+    # mirror case: clone AHEAD of the pin (working tree shows content the
+    # pin does not have) — equally dishonest provenance
+    ahead_cfg = copy.deepcopy(config)
+    for project in ahead_cfg["projects"].values():
+        project["repo"] = str(moved)  # ref stays at the fixture (old) pin
+    with pytest.raises(SyncError) as excinfo:
+        sync_docs.sync(
+            ahead_cfg, content_out=tmp_path / "c-ahead", assets_out=tmp_path / "a-ahead"
+        )
+    message = str(excinfo.value)
+    assert ahead[:7] in message  # the clone's actual HEAD
+    assert str(upstream_repo["sha"]) in message  # full pin + recipe
+    assert f"git -C {moved} checkout {upstream_repo['sha']}" in message
+
+
+def test_sync_fails_loud_when_pin_absent_from_clone(tmp_path, config) -> None:
+    """Fetch-incompleteness: a pin the clone never fetched must fail with a
+    fetch hint, not git's cryptic 'Needed a single revision'."""
+    broken = copy.deepcopy(config)
+    broken["projects"]["fakeproj"]["ref"] = "1" * 40
+    with pytest.raises(SyncError, match="fetch-incomplete.*fetch --all"):
+        sync_docs.sync(
+            broken, content_out=tmp_path / "c-fetch", assets_out=tmp_path / "a-fetch"
+        )
+
+
+
 
 
 def test_include_exclude_overlap_is_refused(tmp_path, config) -> None:

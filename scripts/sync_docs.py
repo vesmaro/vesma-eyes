@@ -27,8 +27,9 @@ Usage:
   python3 scripts/sync_docs.py --check-drift  compare pins with clone HEADs
   python3 scripts/sync_docs.py check-drift    (same, subcommand form)
 
-Exit codes: 0 ok, 1 sync/drift error (bad pin, dirty clone, overlay drift,
-config sanity).
+Exit codes: 0 ok, 1 sync/drift error (bad pin, dirty clone, clone HEAD off
+the pin — ME-046 guard, fetch-incomplete clone, overlay drift, config
+sanity).
 """
 
 from __future__ import annotations
@@ -125,6 +126,42 @@ def assert_pristine(repo: Path, project: str) -> None:
             f"{project}: clone {repo} has tracked modifications — refusing to "
             f"sync so the pinned SHA stays honest. Clean or commit there "
             f"first:\n{preview}"
+        )
+
+
+def resolve_pin(repo: Path, where: str, ref: str) -> str:
+    """Resolve a pinned ref with an actionable error (ME-046).
+
+    A pin whose object is absent from the clone (fetch-incomplete wt/
+    mirror) makes `git rev-parse` fail with a generic "Needed a single
+    revision" — wrap it so the operator is told to FETCH the clone first.
+    Used by both sync_docs and gen_api_ref (object access there).
+    """
+    try:
+        return resolve_sha(repo, ref)
+    except SyncError as error:
+        raise SyncError(
+            f"{where}: pin {ref!r} does not resolve in clone {repo} — the "
+            f"clone is fetch-incomplete for this pin. Update it first: "
+            f"git -C {repo} fetch --all --tags. git said: {error}"
+        ) from error
+
+
+def assert_head_at_pin(repo: Path, project: str, ref: str, pinned: str) -> None:
+    """HEAD==pin guard (ME-046, incident 2026-09-29).
+
+    sync() reads the clone's WORKING TREE (not git objects), so provenance
+    is honest only when the checkout sits exactly at the pinned commit.
+    A clone left at a previous commit while the config pin moved forward
+    would silently publish stale content under the new pin — refuse that.
+    """
+    head = resolve_sha(repo, "HEAD")
+    if head != pinned:
+        raise SyncError(
+            f"{project}: clone {repo} is at HEAD {head[:7]} but config pins "
+            f"{ref} ({pinned[:7]}) — sync reads the clone's working tree, so "
+            f"the corpus would not match its provenance. Detach the clone: "
+            f"git -C {repo} checkout {pinned}"
         )
 
 
@@ -520,7 +557,8 @@ def sync(
         if not (repo / ".git").exists():
             raise SyncError(f"{name}: clone not found at {repo}")
         assert_pristine(repo, name)
-        sha = resolve_sha(repo, project["ref"])
+        sha = resolve_pin(repo, name, project["ref"])
+        assert_head_at_pin(repo, name, project["ref"], sha)
         pins[name] = {
             "repo_path": str(repo),
             "sha": sha,
@@ -898,7 +936,7 @@ def check_drift(config: dict[str, Any]) -> dict[str, Any]:
     report: dict[str, Any] = {"projects": {}}
     for name, project in config["projects"].items():
         repo = (REPO_ROOT / project["repo"]).resolve()
-        pinned = resolve_sha(repo, project["ref"])
+        pinned = resolve_pin(repo, name, project["ref"])
         head = resolve_sha(repo, "HEAD")
         dirty = tracked_dirty(repo)
         new_docs: list[str] = []

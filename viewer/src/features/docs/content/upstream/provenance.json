@@ -102,18 +102,18 @@
       "en": {
         "repo": "vesmaro-eyes",
         "source_path": "docs/api",
-        "sha": "ea94ab7c7487b7f63fddf408c8276466818d1fbe",
-        "commit_date": "2026-09-29T22:07:46+03:00",
-        "synced_at": "2026-09-29T22:07:46+03:00",
+        "sha": "aa2a4c815a564e80f84ae1a1294895b1a398ee65",
+        "commit_date": "2026-09-29T22:50:53+03:00",
+        "synced_at": "2026-09-29T22:50:53+03:00",
         "locale": "en",
         "kind": "curated"
       },
       "ru": {
         "repo": "vesmaro-eyes",
         "source_path": "docs/api",
-        "sha": "ea94ab7c7487b7f63fddf408c8276466818d1fbe",
-        "commit_date": "2026-09-29T22:07:46+03:00",
-        "synced_at": "2026-09-29T22:07:46+03:00",
+        "sha": "aa2a4c815a564e80f84ae1a1294895b1a398ee65",
+        "commit_date": "2026-09-29T22:50:53+03:00",
+        "synced_at": "2026-09-29T22:50:53+03:00",
         "locale": "ru",
         "kind": "curated"
       }
