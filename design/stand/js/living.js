@@ -60,7 +60,10 @@
     C.veinA = parseFloat(v("--vein-breath-alpha", "0.10")) || 0.10;
   }
   readColors();
-  new MutationObserver(readColors).observe(root, { attributes: true, attributeFilter: ["data-theme"] });
+  new MutationObserver(function () {
+    readColors();
+    if (typeof paintStaticSvg === "function") paintStaticSvg();
+  }).observe(root, { attributes: true, attributeFilter: ["data-theme"] });
 
   /* цвет события словаря 06 §5: recall — ирис, write — золото, error — красный;
    * index (переиндексация) — семья ириса */
@@ -90,19 +93,21 @@
     dotIdx: [0, 1, 2, 3, 6],
   };
 
-  function dendritePath(ctx, cx, cy, tier, scale, membraneR) {
+  function dendritePath(ctx, cx, cy, tier, scale, membraneR, folded) {
+    /* v10-раунд: пауза — дендриты сложены, контур без ветвлений (08 §5.1) */
     ctx.strokeStyle = C.membrane;
     ctx.lineWidth = 1;
     tier.dend.forEach(function (d) {
       var rad = d.a * Math.PI / 180;
       var x1 = cx + Math.cos(rad) * membraneR;
       var y1 = cy + Math.sin(rad) * membraneR;
-      var x2 = cx + Math.cos(rad) * (membraneR + d.len * scale);
-      var y2 = cy + Math.sin(rad) * (membraneR + d.len * scale);
+      var len = d.len * (folded ? 0.35 : scale);
+      var x2 = cx + Math.cos(rad) * (membraneR + len);
+      var y2 = cy + Math.sin(rad) * (membraneR + len);
       ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-      if (d.branch) { /* ветвление 2-го порядка: развилка на 60% длины */
+      if (d.branch && !folded) { /* ветвление 2-го порядка: развилка на 60% длины */
         var bx = x1 + (x2 - x1) * 0.6, by = y1 + (y2 - y1) * 0.6;
-        var half = d.len * scale * 0.45;
+        var half = len * 0.45;
         [-28, 28].forEach(function (da) {
           var br = (d.a + da) * Math.PI / 180;
           ctx.beginPath(); ctx.moveTo(bx, by);
@@ -118,7 +123,7 @@
     var cx = size / 2, cy = size / 2;
     ctx.clearRect(0, 0, size, size);
     /* дендриты (под мембраной) */
-    dendritePath(ctx, cx, cy, tier, state.dendScale, tier.membrane);
+    dendritePath(ctx, cx, cy, tier, state.dendScale, tier.membrane, state.folded);
     /* точки-миелин: золото только при write (словарная роль, 08 §1.2) */
     ctx.fillStyle = state.dotGold ? C.gold : C.myelin;
     tier.dotIdx.forEach(function (i) {
@@ -182,6 +187,7 @@
   var flash = null;              /* { color, t0, gold } — вспышка события */
   var errorHoldUntil = 0;        /* error-hold: до первого успеха или 10s */
   var breathUntil = 0;           /* окно вздоха (ambient-билет у Нейры) */
+  var breathStart = 0;           /* v10-раунд: фаза вздоха от старта окна */
   var lastEventColor = null;     /* «Спокойный»: цвет = последнее событие */
 
   function neuraFlash(ev, at) {
@@ -192,21 +198,50 @@
     } else {
       errorHoldUntil = 0;
     }
+    if (typeof paintStaticSvg === "function") paintStaticSvg();
     if (effectiveMode() === "calm") {
       lastEventColor = color; /* Спокойный: цвет = последнее событие (08 §5.1) */
       return;
     }
     flash = { color: color, t0: performance.now(), gold: ev === "write" };
+    eventTooltip(ev);
+  }
+
+  /* v10-раунд: тултип вспышки словами — «запись в память · 15:27» (08 §1.2
+   * через 07a: цвет получает расшифровку). Через 4s — базовый тултип */
+  var tooltipTimer = null;
+  function eventTooltip(ev) {
+    if (paused || effectiveMode() !== "full") return;
+    var labels = {
+      write: "запись в память",
+      recall: "обращение к памяти",
+      index: "переиндексация",
+      error: "ошибка связи",
+    };
+    var d = new Date();
+    var hhmm = ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
+    neuraBtn.title = (labels[ev] || "событие памяти") + " · " + hhmm;
+    clearTimeout(tooltipTimer);
+    tooltipTimer = setTimeout(function () {
+      if (effectiveMode() === "off") return; /* режим сменился — applyMode уже поставил свой title */
+      neuraBtn.title = paused ? "Живой слой на паузе — клик, чтобы вернуть" : "Клик — пауза живого слоя";
+    }, 4000);
   }
 
   function neuraState(now) {
     var mode = effectiveMode();
     if (mode === "off") return null;
     if (mode === "calm" || paused) {
-      /* Спокойный/пауза: статичный индикатор, цвет = последнее событие */
+      /* Спокойный/пауза: статичный индикатор, цвет = последнее событие.
+       * Пауза видна глазами: дендриты сложены, зрачок собран (08 §5.1) */
+      var folded = paused;
       var st = C.iris;
-      if (mode === "calm" && lastEventColor) st = lastEventColor;
-      return { iris: st, pupilR: TIER_V1.pupil, dendScale: 1, glow: 0, dotGold: false };
+      if (mode === "calm" && lastEventColor && !paused) st = lastEventColor;
+      return {
+        iris: st,
+        pupilR: folded ? TIER_V1.pupil - 1 : TIER_V1.pupil,
+        dendScale: 1, glow: 0, dotGold: false, folded: folded,
+      };
     }
     var iris = C.iris, pupilR = TIER_V1.pupil, dend = 1, gold = false, glow = 0;
     if (now < errorHoldUntil) {
@@ -225,9 +260,11 @@
         gold = flash.gold;
       }
     }
-    if (now < breathUntil && !flash) {
-      var phase = (now % 8000) / 8000;      /* --duration-neura */
-      glow = Math.max(glow, Math.sin(Math.PI * phase) * C.breathA);
+    if (now < breathUntil && !flash && now >= breathStart) {
+      /* v10-раунд: фаза от старта окна — вздох всегда открывается с нуля,
+       * полный вдох-выдох за окно (08 §1.2: период --duration-neura) */
+      var phase = (now - breathStart) / 8000;
+      if (phase <= 1) glow = Math.max(glow, Math.sin(Math.PI * phase) * C.breathA);
     }
     return { iris: iris, pupilR: pupilR, dendScale: dend, glow: glow, dotGold: gold };
   }
@@ -265,13 +302,21 @@
   var j4 = koraSeamPult ? makeVein("j4", koraSeamPult, "h") : null;
 
   var resizeTimer = null;
-  window.addEventListener("resize", function () {
+  function repositionVeins() {
     if (resizeTimer) return;
     resizeTimer = setTimeout(function () {
       resizeTimer = null;
       Object.keys(veins).forEach(function (k) { positionVein(veins[k]); });
-    }, 150);
-  });
+    }, 100);
+  }
+  window.addEventListener("resize", repositionVeins);
+  /* v10-раунд: drag швов/сворачивание сайдбара меняют геометрию без
+   * window-resize — следим за хостами швов (08 §2.5) */
+  if ("ResizeObserver" in window) {
+    var seamRO = new ResizeObserver(repositionVeins);
+    [doc.querySelector(".topbar"), sidebar, koraSeamSide, koraSeamPult]
+      .filter(Boolean).forEach(function (h) { seamRO.observe(h); });
+  }
 
   /* шов вне вьюпорта не живёт (08 §2.5) */
   if ("IntersectionObserver" in window) {
@@ -375,8 +420,7 @@
   /* прибытие = вспышка Нейры (сток; 08 §0: события стекаются к администратору) */
   function scheduleArrival(ev, color, delay) {
     setTimeout(function () { neuraFlash(ev, performance.now()); }, delay);
-    if (ev === "error") showErrorCard();
-    else hideErrorCard(); /* связь восстановилась — карточка уходит (08 §5.3) */
+    if (ev !== "error") hideErrorCard(); /* связь восстановилась (08 §5.3) */
   }
 
   /* ── маршруты (08 §2.3): узел-источник → ближайшая жила → Нейра ───── */
@@ -442,18 +486,28 @@
   /* ── агрегация 600ms, приоритет error > write > recall (08 §2.4) ──── */
   var pending = [], flushTimer = null;
   var COLOR_RANK = { error: 3, write: 2, recall: 1, index: 1 };
+  var errorStreak = 0; /* v10-раунд: карточка только после 2 ошибок ПОДРЯД */
   function onBusEvent(e) {
     var ev = e.detail || {};
     if (effectiveMode() === "off") return;
     /* аноним (07k): В1 — только статус-индикатор; курьеров контентных
      * событий и В3-карточек нет (08 §0) */
     if (root.getAttribute("data-auth") === "anon") return;
+    /* v10-раунд (демо-гигиена): единичная ошибка с самовосстановлением —
+     * только строка ленты; карточка — после 2 ошибок ПОДРЯД (счётчик
+     * сбрасывается первым успехом) */
+    if (ev.ev === "error") {
+      errorStreak++;
+      if (errorStreak >= 2) showErrorCard();
+    } else {
+      errorStreak = 0;
+      hideErrorCard();
+    }
     if (effectiveMode() !== "full") {
       /* Спокойный: событие = мгновенный тинт + статичный цвет Нейры */
       var color = colorOf(ev.ev);
       veinTint(ev.ev === "error" ? j1 : (j2 || j1), color);
       neuraFlash(ev.ev, performance.now());
-      if (ev.ev === "error") showErrorCard(); else hideErrorCard();
       return;
     }
     pending.push(ev);
@@ -482,14 +536,17 @@
     if (now < ambientNext) return;
     var tissues = [neuraBtn, j1, j2, j3, j4].filter(Boolean);
     var pick = tissues[ambientRotation++ % tissues.length];
-    var active = 3000 + Math.random() * 2000;   /* duty: активность 3–5s */
-    if (pick === neuraBtn) breathUntil = now + active;
+    /* Нейра: полный вздох — окно = период --duration-neura (8s, 08 §1.2);
+     * жилы: duty 3–5s */
+    var active = pick === neuraBtn ? 8000 : 3000 + Math.random() * 2000;
+    if (pick === neuraBtn) { breathStart = now; breathUntil = now + active; }
     else veinBreath(pick, active);
     ambientNext = now + active + 10000 + Math.random() * 20000; /* сон 10–30s */
   }
 
   /* ── пауза по клику (08 §1.4): не персистится, меню нет ───────────── */
   neuraBtn.addEventListener("click", function () {
+    if (effectiveMode() === "off") return; /* выключенному слою пауза не нужна */
     paused = !paused;
     neuraBtn.setAttribute("aria-pressed", paused ? "true" : "false");
     neuraBtn.title = paused ? "Живой слой на паузе — клик, чтобы вернуть" : "Клик — пауза живого слоя";
@@ -617,25 +674,45 @@
     else if (raf != null) { cancelAnimationFrame(raf); raf = null; }
   });
 
-  /* статичный SVG вместо canvas при <45fps (кроссфейд — CSS, 08 §2.5) */
-  (function staticFallbackCss() {
-    var st = neuraState(performance.now()) || { iris: C.iris };
-    var svg = doc.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute("viewBox", "0 0 28 28");
-    svg.setAttribute("class", "living-neura-svg");
-    svg.setAttribute("aria-hidden", "true");
-    svg.innerHTML =
+  /* статичный SVG вместо canvas при <45fps (кроссфейд — CSS, 08 §2.5);
+   * v10-раунд: перекрашивается при смене темы и error-hold */
+  var neuraSvg = doc.createElementNS("http://www.w3.org/2000/svg", "svg");
+  neuraSvg.setAttribute("viewBox", "0 0 28 28");
+  neuraSvg.setAttribute("class", "living-neura-svg");
+  neuraSvg.setAttribute("aria-hidden", "true");
+  neuraBtn.appendChild(neuraSvg); /* видим только в .living-static (CSS) */
+  function paintStaticSvg() {
+    var st = neuraState(performance.now()) || { iris: C.iris, folded: false };
+    var lines = "";
+    TIER_V1.dend.forEach(function (d) {
+      var rad = d.a * Math.PI / 180;
+      var len = d.len * (st.folded ? 0.35 : 1);
+      lines += '<line x1="' + (14 + Math.cos(rad) * 13) + '" y1="' + (14 + Math.sin(rad) * 13) +
+        '" x2="' + (14 + Math.cos(rad) * (13 + len)) + '" y2="' + (14 + Math.sin(rad) * (13 + len)) +
+        '" stroke="' + C.membrane + '" stroke-width="1"/>';
+    });
+    neuraSvg.innerHTML =
+      lines +
       '<circle cx="14" cy="14" r="13" fill="none" stroke="' + C.membrane + '"/>' +
       '<circle cx="14" cy="14" r="8" fill="' + st.iris + '"/>' +
-      '<circle cx="14" cy="14" r="3" fill="' + C.pupil + '"/>';
-    neuraBtn.appendChild(svg); /* видим только в .living-static (CSS) */
-  })();
+      '<circle cx="14" cy="14" r="' + (st.pupilR || TIER_V1.pupil) + '" fill="' + C.pupil + '"/>';
+  }
+  paintStaticSvg();
 
   /* ── смена режима из Настроек (08 §4) ─────────────────────────────── */
   function applyMode() {
     var mode = effectiveMode();
     neuraBtn.classList.toggle("is-calm", mode === "calm");
     neuraBtn.classList.toggle("is-off-mode", mode === "off");
+    /* v10-раунд: при «Выключен» кнопка не мёртвая — честно называет,
+     * где слой включается (disabled не бывает: путь назад всегда, 08 §5.1) */
+    if (mode === "off") {
+      neuraBtn.title = "Живой слой выключен — включить в Настройках";
+      neuraBtn.setAttribute("aria-label", "Живой слой выключен — включить можно в Настройках");
+    } else {
+      neuraBtn.title = paused ? "Живой слой на паузе — клик, чтобы вернуть" : "Клик — пауза живого слоя";
+      neuraBtn.setAttribute("aria-label", "Нейра: пауза живого слоя");
+    }
     if (mode !== "full") {
       breathUntil = 0; flash = null;
       Object.keys(veins).forEach(function (k) {
