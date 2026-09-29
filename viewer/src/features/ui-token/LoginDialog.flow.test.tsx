@@ -341,13 +341,13 @@ describe("login flow regression (owner repro)", () => {
     });
 
     // No token yet: no window, the accent «Sign in» is in the bar, and the
-    // footer states the read-only contract.
+    // footer states the v6 anonymous word (07k §1.2, union И1).
     expect(document.getElementById("login-token-value")).toBeNull();
     const signIn = Array.from(container.querySelectorAll("button")).find((button) =>
       button.textContent?.trim() === "Sign in",
     );
     expect(signIn).toBeDefined();
-    expect(container.textContent).toContain("read-only");
+    expect(container.textContent).toContain("anonymous");
 
     // Click «Sign in»: the window opens WITHOUT the queued-action line.
     await act(async () => {
@@ -378,10 +378,10 @@ describe("login flow regression (owner repro)", () => {
       ),
     ).toBe(true);
     // fix/login-feedback: the login is CONFIRMED by a toast, and the footer
-    // flips to the active-session line in the SAME render — no reload.
+    // flips to the owner-session word in the SAME render — no reload.
     expect(container.textContent).toContain("Signed in — control available");
-    expect(container.textContent).toContain("session active");
-    expect(container.textContent).not.toContain("read-only");
+    expect(container.textContent).toContain("you: owner");
+    expect(container.textContent).not.toContain("anonymous");
     // Reads may fly (board/inbox queries) and the verify POST is the login
     // itself; a manual login must fire NO MUTATION POST.
     const mutationPosts = fetchImpl.mock.calls.filter(
