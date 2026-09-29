@@ -127,6 +127,28 @@ describe("translation", () => {
     const { en } = await import("./en");
     expect(Object.keys(en).sort()).toEqual(Object.keys(ru).sort());
   });
+
+  it("the auth.* gates-v6 family interpolates the SAME placeholders in ru and en", async () => {
+    const { ru } = await import("./ru");
+    const { en } = await import("./en");
+    const placeholder = (value: string) =>
+      (value.match(/\{\{\w+\}\}/g) ?? []).sort().join(",");
+    for (const [key, value] of Object.entries(ru)) {
+      if (!key.startsWith("auth.")) continue;
+      expect(placeholder(value), key).toBe(placeholder(en[key as keyof typeof en]));
+    }
+  });
+
+  it("no dictionary string leaks internal phase codes (union review gate, карта И1 §1.3)", async () => {
+    const { ru } = await import("./ru");
+    const { en } = await import("./en");
+    // «И1…И5», «срез», «slice», «ADR» are roadmap language — the user
+    // sees «появится позже», never a phase code (07a §3.5).
+    const banned = /И[1-5]|срез|slice|ADR/;
+    for (const [key, value] of Object.entries({ ...ru, ...en })) {
+      expect(banned.test(value), `${key}: ${value}`).toBe(false);
+    }
+  });
 });
 
 describe("React wiring (useT / useI18n / I18nProvider)", () => {
