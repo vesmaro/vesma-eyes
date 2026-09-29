@@ -30,13 +30,23 @@ _VIEWER_INDEX = Path(__file__).resolve().parents[1] / "viewer" / "index.html"
 
 def _inline_script_hashes() -> list[str]:
     """sha256 (base64, CSP form) of every plain inline <script> in the
-    viewer's index.html — the exact bytes the browser hashes."""
+    viewer's index.html — the exact bytes the browser hashes.
+
+    A2 (ME-028 cascade): the pattern also matches ATTRIBUTE-bearing inline
+    script tags (`<script data-x>`) — the browser hashes their content the
+    same way and a blocked attributed inline script breaks prod just as
+    visibly. Script tags carrying a `src=` are skipped (external files are
+    governed by `script-src 'self'`, not a hash), as are empty bodies."""
     html = _VIEWER_INDEX.read_text(encoding="utf-8")
-    return [
-        "sha256-"
-        + base64.b64encode(hashlib.sha256(body.encode("utf-8")).digest()).decode("ascii")
-        for body in re.findall(r"<script>(.*?)</script>", html, re.S)
-    ]
+    hashes: list[str] = []
+    for attrs, body in re.findall(r"<script\b([^>]*)>(.*?)</script>", html, re.S):
+        if "src=" in attrs or not body.strip():
+            continue
+        hashes.append(
+            "sha256-"
+            + base64.b64encode(hashlib.sha256(body.encode("utf-8")).digest()).decode("ascii")
+        )
+    return hashes
 
 
 class TestSecurityHeaders:
