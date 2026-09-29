@@ -7,6 +7,7 @@ import {
   isPathActive,
   routeTitle,
   routeTitleKey,
+  sectionActive,
 } from "./navItems";
 import { docsLocationFor } from "@/features/docs/docsNav";
 import { getManifest } from "@/features/docs/manifest";
@@ -146,6 +147,45 @@ describe("domain map", () => {
       "/agents/execution",
       "/agents/harnesses",
     ]);
+  });
+});
+
+describe("sectionActive (ME-028: one current section, not two)", () => {
+  const memory = NAV_DOMAINS.find((d) => d.to === "/memory")!;
+  const tasks = NAV_DOMAINS.find((d) => d.to === "/tasks")!;
+  const records = memory.sections!.find((s) => s.to === "/memory")!;
+  const pulse = memory.sections!.find((s) => s.to === "/memory/pulse")!;
+  const board = tasks.sections!.find((s) => s.to === "/tasks")!;
+  const inbox = tasks.sections!.find((s) => s.to === "/tasks/inbox")!;
+
+  it("on /memory/pulse only Пульс is current — Записи does not swallow sibling roots", () => {
+    expect(sectionActive("/memory/pulse", pulse, memory.sections!)).toBe(true);
+    expect(sectionActive("/memory/pulse", records, memory.sections!)).toBe(false);
+    // The same exclusivity for the other exact siblings.
+    expect(sectionActive("/memory/search", records, memory.sections!)).toBe(false);
+    expect(sectionActive("/memory/tags", records, memory.sections!)).toBe(false);
+  });
+
+  it("on /tasks/inbox only Входящие is current — Канбан does not swallow sibling roots", () => {
+    expect(sectionActive("/tasks/inbox", inbox, tasks.sections!)).toBe(true);
+    expect(sectionActive("/tasks/inbox", board, tasks.sections!)).toBe(false);
+    expect(sectionActive("/tasks/list", board, tasks.sections!)).toBe(false);
+    expect(sectionActive("/tasks/archive", board, tasks.sections!)).toBe(false);
+  });
+
+  it("the master lists keep their detail routes (/memory/:id, /tasks/:id)", () => {
+    expect(sectionActive("/memory/m-42", records, memory.sections!)).toBe(true);
+    expect(sectionActive("/tasks/TB-15", board, tasks.sections!)).toBe(true);
+    expect(sectionActive("/memory", records, memory.sections!)).toBe(true);
+    expect(sectionActive("/tasks", board, tasks.sections!)).toBe(true);
+  });
+
+  it("non-master sections stay exact/prefix via isPathActive", () => {
+    expect(sectionActive("/memory/pulse", pulse, memory.sections!)).toBe(true);
+    expect(sectionActive("/memory/pulse/x", pulse, memory.sections!)).toBe(false);
+    const hosts = NAV_DOMAINS.find((d) => d.to === "/agents")!.sections![0]!;
+    expect(sectionActive("/agents/hosts", hosts, [])).toBe(true);
+    expect(sectionActive("/agents/hosts/x", hosts, [])).toBe(false);
   });
 });
 
