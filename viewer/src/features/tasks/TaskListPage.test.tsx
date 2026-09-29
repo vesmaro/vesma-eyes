@@ -78,9 +78,10 @@ describe("TaskListPage (mock adapter)", () => {
     // Group toggles are disclosed via aria-expanded.
     expect(html).toContain('aria-expanded="true"');
     // Ф3: the create button and the per-row action menu render. SSR emits
-    // BOTH layouts (desktop table + mobile card-rows): 15 tasks × 2.
+    // BOTH layouts (desktop table + mobile card-rows): 16 tasks × 2
+    // (ME-013: TB-15 — the smoke's untrusted-mermaid fixture — is row 16).
     expect(html).toContain("Actions for task TB-1");
-    expect(html.match(/Actions for task /g)?.length).toBe(30);
+    expect(html.match(/Actions for task /g)?.length).toBe(32);
   });
 
   it("keeps the list state in the URL: ?status=blocked narrows to blocked rows", async () => {

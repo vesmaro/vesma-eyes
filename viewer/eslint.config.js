@@ -98,10 +98,16 @@ export default tseslint.config(
   },
   {
     // The app-wide single site for the privileged corpus pipeline (ADR 0020
-    // Ф2 + review P2-2). TWO restrictions live here:
+    // Ф2 + review P2-2) and, since ME-013 (Amendment 1), for the mermaid
+    // library too. THREE restrictions live here:
     // - rehype-raw/rehype-sanitize: the untrusted profile's import graph must
     //   stay statically free of the sanitize stack — the md-core/md-sanitize
     //   chunk split is only as real as this import rule.
+    // - mermaid: since Amendment 1 the capability serves BOTH trust profiles
+    //   and is rehomed to TextEngine/core/Mermaid.tsx — the ESLint invariant
+    //   is «one mermaid import module», not «docs owns it». The lazy-chunk
+    //   budget (ADR-0015, pool ≤450 KiB, never statically reachable) depends
+    //   on this single dynamic import site.
     // - the pipeline.corpus MODULE itself: buildCorpusPipeline must be
     //   imported only by the curated wrapper (Markdown.tsx). A future lazy
     //   feature importing it would silently re-weld the md-sanitize pool into
@@ -110,8 +116,9 @@ export default tseslint.config(
     //   boundary is lint-enforced. The group covers every specifier form:
     //   alias ("@/components/..."), relative ("./pipeline.corpus"), and the
     //   ".ts"-extension form. Exempt: the module itself, its test (identity
-    //   pins), all other *.test files, and Markdown.tsx (gets its own union
-    //   in the blocks below — later blocks win per flat-config merge).
+    //   pins), all other *.test files, Markdown.tsx and core/Mermaid.tsx
+    //   (each gets its own union in the blocks below — later blocks win per
+    //   flat-config merge).
     // This block is deliberately EARLY: feature blocks below override it with
     // UNIONS of their own pins (a later no-restricted-imports replaces, not
     // extends, for the files it matches).
@@ -119,6 +126,7 @@ export default tseslint.config(
     ignores: [
       "src/components/TextEngine/core/pipeline.corpus.ts",
       "src/components/TextEngine/core/pipeline.corpus.test.ts",
+      "src/components/TextEngine/core/Mermaid.tsx",
       "src/features/docs/Markdown.tsx",
       "src/**/*.test.{ts,tsx}",
     ],
@@ -136,6 +144,11 @@ export default tseslint.config(
               name: "rehype-sanitize",
               message:
                 "ADR 0020 Ф2: rehype-sanitize is imported ONLY in TextEngine/core/pipeline.corpus.ts — the single sanitize gate is a chunk boundary, not just a lint nicety.",
+            },
+            {
+              name: "mermaid",
+              message:
+                "ADR 0020 Amendment 1 (ME-013): mermaid is imported ONLY in TextEngine/core/Mermaid.tsx (its dynamic import IS the lazy chunk boundary) — import the MermaidDiagram component instead.",
             },
           ],
           patterns: [
@@ -158,12 +171,12 @@ export default tseslint.config(
     // core/pipeline.corpus.ts (the md-sanitize chunk boundary) — NO docs file
     // except the wrapper may touch the sanitize stack or import the corpus
     // pipeline module: the wrapper supplies the config (drop list + schema),
-    // core assembles the order. The mermaid library stays allowed ONLY in
-    // Mermaid.tsx (the single lazy chunk boundary, ADR-0015 budget). This
-    // block REPLACES the app-wide block above for docs files — the union of
-    // pins is repeated here on purpose (flat config: last match wins).
+    // core assembles the order. Since ME-013 (Amendment 1) the mermaid
+    // library lives in TextEngine/core/Mermaid.tsx — docs files import the
+    // MermaidDiagram COMPONENT, never the library. This block REPLACES the
+    // app-wide block above for docs files — the union of pins is repeated
+    // here on purpose (flat config: last match wins).
     files: ["src/features/docs/**/*.{ts,tsx}"],
-    ignores: ["src/features/docs/Mermaid.tsx"],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -182,7 +195,7 @@ export default tseslint.config(
             {
               name: "mermaid",
               message:
-                "Docs gate (АРХКОМ-8): mermaid is allowed only in Mermaid.tsx — the lazy chunk boundary (≤450 KiB pool) depends on this single import site.",
+                "Docs gate (АРХКОМ-8 + Amendment 1): mermaid is imported only in TextEngine/core/Mermaid.tsx — mount the MermaidDiagram component, never the library.",
             },
           ],
           patterns: [
@@ -226,7 +239,7 @@ export default tseslint.config(
             {
               name: "mermaid",
               message:
-                "Docs gate (АРХКОМ-8): mermaid must stay behind Mermaid.tsx's dynamic import — never import it here.",
+                "Docs gate (АРХКОМ-8 + Amendment 1): mermaid must stay behind TextEngine/core/Mermaid.tsx's dynamic import — this file imports the MermaidDiagram component only.",
             },
           ],
         },
@@ -234,11 +247,14 @@ export default tseslint.config(
     },
   },
   {
-    // Mermaid.tsx owns diagrams only — it must not grow its own raw-HTML
-    // pipeline or import the corpus pipeline module (that would weld the
-    // md-sanitize pool into the mermaid lazy chunk). Union restated: this
-    // block overrides the app-wide block above for this file.
-    files: ["src/features/docs/Mermaid.tsx"],
+    // TextEngine/core/Mermaid.tsx is the SINGLE mermaid import site (ADR 0020
+    // Amendment 1, ME-013 — the capability serves both trust profiles). It
+    // owns diagrams only: it must not grow its own raw-HTML pipeline or
+    // import the corpus pipeline module (that would weld the md-sanitize
+    // pool into the mermaid lazy chunk, and the budget gate cannot see it).
+    // Union restated: this block overrides the app-wide block above for this
+    // file (mermaid itself is obviously allowed here — the one exemption).
+    files: ["src/components/TextEngine/core/Mermaid.tsx"],
     rules: {
       "no-restricted-imports": [
         "error",

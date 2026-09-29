@@ -8,7 +8,13 @@ import {
 } from "./activityQuery";
 import { resolveRoutingAnnotation } from "./routing";
 import { ApiError } from "@/lib/errors";
-import { MOCK_INBOX_MEMORY, MOCK_MEMORIES, MOCK_SESSIONS, MOCK_TRACES } from "./fixtures";
+import {
+  MOCK_INBOX_MEMORY,
+  MOCK_MEMORIES,
+  MOCK_MERMAID_OVERCAP_MEMORY,
+  MOCK_SESSIONS,
+  MOCK_TRACES,
+} from "./fixtures";
 import {
   buildMockActivityCorpus,
   MOCK_ARCHIVED_TASK,
@@ -372,6 +378,10 @@ export class MockAdapter implements MemoryGateway {
     await this.delay(signal);
     const memory =
       (id === MOCK_INBOX_MEMORY.id ? MOCK_INBOX_MEMORY : undefined) ??
+      // ME-013 smoke fixture (per-surface fence cap): served by id only.
+      (id === MOCK_MERMAID_OVERCAP_MEMORY.id
+        ? MOCK_MERMAID_OVERCAP_MEMORY
+        : undefined) ??
       MOCK_MEMORIES.find((candidate) => candidate.id === id);
     if (!memory) {
       throw new ApiError(404, `Memory "${id}" not found`, {

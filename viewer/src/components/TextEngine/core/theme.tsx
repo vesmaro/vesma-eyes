@@ -10,6 +10,8 @@ import {
   isAllowedHref,
   isAllowedImageSrc,
 } from "./constants";
+import { MermaidDiagram } from "./Mermaid";
+import { fenceExceedsSizeCap } from "./mermaidCaps";
 
 /**
  * Typography themes of the unified text engine (ADR 0020, layer 2 — «одна
@@ -21,9 +23,13 @@ import {
  * strings moved here verbatim from features/docs/Markdown.tsx (zero DOM
  * drift; the golden files are the gate). Docs-OWNED capabilities stay behind
  * `ArticleThemeHooks` and are injected by the wrapper (features/docs/
- * Markdown.tsx): heading slugs, link policy, image resolution, the mermaid
- * lazy-chunk boundary and the copyable code-block chrome never enter core —
- * core owns the TYPOGRAPHY, the docs feature owns the corpus capabilities.
+ * Markdown.tsx): heading slugs, link policy, image resolution and the
+ * copyable code-block chrome never enter core — core owns the TYPOGRAPHY,
+ * the docs feature owns the corpus capabilities. ME-013 (Amendment 1)
+ * moved ONE capability INTO the engine: mermaid is no longer docs-owned —
+ * the compact/full `pre` branch intercepts mermaid fences for BOTH
+ * untrusted themes behind the hard caps (./mermaidCaps), sharing the same
+ * strict lazy component (./Mermaid) the curated wrapper mounts directly.
  *
  * SECURITY (SEC-4 — author content is untrusted, never instructions), pinned
  * per theme (untrusted profile): hrefs whitelisted to http(s)/mailto, image
@@ -40,9 +46,25 @@ export type TextEngineTheme = "compact" | "full" | "article";
  * per-theme map keeps the element trees referentially stable across
  * re-renders of the same theme.
  */
-const themeComponentsCache = new Map<TextEngineTheme, Components>();
+const themeComponentsCache = new Map<string, Components>();
 
-export function themeComponents(theme: TextEngineTheme): Components {
+/**
+ * Untrusted-profile theme maps. `options.mermaidFencesInert` (ME-013, ADR
+ * 0020 Amendment 1 protective condition 2) renders every mermaid fence of
+ * the surface as a plain code block — the honest fallback when the SOURCE
+ * exceeds the fences-per-surface cap (the verdict is computed once per text
+ * by the caller and delivered as a build option, because per-instance
+ * counting at render time would race with React's render order). Cache key
+ * includes the flag, so both map identities stay stable by reference.
+ */
+export interface ThemeOptions {
+  mermaidFencesInert?: boolean;
+}
+
+export function themeComponents(
+  theme: TextEngineTheme,
+  options: ThemeOptions = {},
+): Components {
   if (theme === "article") {
     // The article typography needs per-document hooks (heading slugs restart
     // per document; link policy needs the page slug) — a hookless map cannot
@@ -52,19 +74,23 @@ export function themeComponents(theme: TextEngineTheme): Components {
       "themeComponents(article) requires per-document hooks — use articleComponents(hooks) from core/theme",
     );
   }
-  const cached = themeComponentsCache.get(theme);
+  const key = `${theme}:${options.mermaidFencesInert === true ? "inert-mermaid" : "default"}`;
+  const cached = themeComponentsCache.get(key);
   if (cached) return cached;
-  const built = buildThemeComponents(theme);
-  themeComponentsCache.set(theme, built);
+  const built = buildThemeComponents(theme, options);
+  themeComponentsCache.set(key, built);
   return built;
 }
 
-function buildThemeComponents(theme: TextEngineTheme): Components {
+function buildThemeComponents(
+  theme: TextEngineTheme,
+  options: ThemeOptions,
+): Components {
   switch (theme) {
     case "compact":
-      return buildCompactFullComponents(true);
+      return buildCompactFullComponents(true, options);
     case "full":
-      return buildCompactFullComponents(false);
+      return buildCompactFullComponents(false, options);
     case "article":
       // Unreachable (guarded in themeComponents) — kept for exhaustiveness.
       throw new Error("article theme is built by articleComponents(hooks)");
@@ -247,8 +273,30 @@ function asHast(node: unknown): HastishNode | undefined {
 /**
  * The CURRENT TextEngine typography (compact/full), extracted verbatim from
  * MarkdownView.tsx — class strings byte-identical.
+ *
+ * ME-013 (ADR 0020 Amendment 1): mermaid fences are an ENGINE capability on
+ * the untrusted profile too. `pre` intercepts `language-mermaid` fences and
+ * mounts the shared diagram component (core/Mermaid.tsx — strict, lazy)
+ * behind the per-fence SIZE cap of ./mermaidCaps; a fence over the cap, or
+ * any fence at all when the caller declared the surface inert (over the
+ * fences-per-surface cap), falls back to the theme's OWN plain code block —
+ * the honest inert fallback: source fully visible, no diagram, no crash.
+ * No caps and no interception exist on the article (curated) branch — the
+ * wrapper owns that profile's policy.
  */
-function buildCompactFullComponents(compact: boolean): Components {
+function buildCompactFullComponents(
+  compact: boolean,
+  options: ThemeOptions,
+): Components {
+  /** The theme's plain code block — also the honest cap fallback shape. */
+  const inertPre = (code: string) => (
+    <pre
+      style={MONO}
+      className="my-2 overflow-x-auto rounded-md border border-border-subtle bg-elevated p-3 text-xs leading-relaxed text-foreground"
+    >
+      <code>{code}</code>
+    </pre>
+  );
   return {
     h1: ({ children }) => (
       <h1
@@ -349,17 +397,23 @@ function buildCompactFullComponents(compact: boolean): Components {
       </blockquote>
     ),
     // Block code short-circuits here — the inner `code` never renders
-    // (extraction keeps the text exact, like the docs renderer).
+    // (extraction keeps the text exact, like the docs renderer). Mermaid
+    // fences go to the diagram component behind the Amendment 1 caps
+    // (docblock above); everything else keeps the plain code block.
     pre: ({ node }) => {
       const hast = node as unknown as HastishNode | undefined;
-      return (
-        <pre
-          style={MONO}
-          className="my-2 overflow-x-auto rounded-md border border-border-subtle bg-elevated p-3 text-xs leading-relaxed text-foreground"
-        >
-          <code>{nodeText(hast)}</code>
-        </pre>
-      );
+      const code = nodeText(hast);
+      if (
+        languageOf((hast?.children ?? []).find(isElement)) === "mermaid" &&
+        !options.mermaidFencesInert
+      ) {
+        return fenceExceedsSizeCap(code) ? (
+          inertPre(code)
+        ) : (
+          <MermaidDiagram code={code} />
+        );
+      }
+      return inertPre(code);
     },
     // Only INLINE code reaches `code` (block was short-circuited by pre).
     code: ({ children }) => (

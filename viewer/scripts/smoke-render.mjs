@@ -135,10 +135,10 @@ const UNTRUSTED_MERMAID_TASK = {
   id: "TB-15",
   col: "in-progress",
   position: 2,
-  title: "ME-011 smoke: untrusted mermaid fixture on the task page",
-  summary: "Fixture for the browser render smoke (not for the board).",
+  title: "ME-013 smoke: untrusted mermaid fixture",
+  summary: "Browser render smoke fixture.",
   spec:
-    "## Diagram (untrusted surface)\n\n```mermaid\nflowchart LR\n  UNTRUSTED[fixture] --> GATE\n```\n\nThe fence above must stay an inert code block at F0.",
+    "## Diagram (untrusted surface)\n\n```mermaid\nflowchart LR\n  UNTRUSTED[fixture] --> GATE\n```",
   agents: ["zcode"],
   specialists: ["@GCW: Senior Frontend Developer"],
   env: "laptop",
@@ -146,7 +146,7 @@ const UNTRUSTED_MERMAID_TASK = {
   memory_ids: [],
   mnemos_tags: ["project:vesmaro"],
   created_at: "2026-09-19T10:00:00+00:00",
-  updated_at: "2026-09-19T10:00:00+00:00",
+  updated_at: "2026-09-28T00:00:00+00:00",
   archived: 0,
   status: "in-progress",
   priority: "normal",
@@ -233,7 +233,7 @@ async function runSmoke(page) {
   const docs = `${base}${DOCS_BASE}`;
 
   // -- 1. docs hub renders -------------------------------------------------
-  console.log("\n[1/7] docs hub renders");
+  console.log("\n[1/8] docs hub renders");
   await page.goto(docs, { waitUntil: "domcontentloaded" });
   await page.waitForSelector("main", { timeout: 20_000 });
   await page.waitForLoadState("networkidle").catch(() => {});
@@ -254,7 +254,7 @@ async function runSmoke(page) {
 
   // -- 2. category page renders, NO «GENERATED» in card previews ----------
   // (post-ME-009 regression guard — banner cut lives in the excerpt path).
-  console.log("\n[2/7] category page: no GENERATED banner in card previews");
+  console.log("\n[2/8] category page: no GENERATED banner in card previews");
   await page.goto(`${docs}/vesmaro-eyes/c/getting-started`, {
     waitUntil: "domcontentloaded",
   });
@@ -271,7 +271,7 @@ async function runSmoke(page) {
   );
 
   // -- 3. article page renders (mnemos architecture overview: 2 mermaid) --
-  console.log("\n[3/7] article page renders (provenance badge, heading slugs)");
+  console.log("\n[3/8] article page renders (provenance badge, heading slugs)");
   await page.goto(`${docs}/mnemos/architecture/overview`, {
     waitUntil: "domcontentloaded",
   });
@@ -306,7 +306,7 @@ async function runSmoke(page) {
   );
 
   // -- 4. mermaid fence → <svg> in the DOM (REAL BROWSER required) --------
-  console.log("\n[4/7] mermaid fences produce <svg> in DOM (ADR-0017 debt)");
+  console.log("\n[4/8] mermaid fences produce <svg> in DOM (ADR-0017 debt)");
   try {
     await page
       .waitForSelector("main .mermaid-diagram svg", {
@@ -328,7 +328,7 @@ async function runSmoke(page) {
   }
 
   // -- 5. TextEngine surfaces: pulse page ---------------------------------
-  console.log("\n[5/7] TextEngine surface: pulse page fragments render");
+  console.log("\n[5/8] TextEngine surface: pulse page fragments render");
   await page.goto(`${base}/app/memory/pulse`, { waitUntil: "domcontentloaded" });
   await page.waitForSelector("main", { timeout: 20_000 });
   await page.waitForLoadState("networkidle").catch(() => {});
@@ -340,7 +340,7 @@ async function runSmoke(page) {
   );
 
   // -- 6. TextEngine surface: task detail page ----------------------------
-  console.log("\n[6/7] TextEngine surface: task detail page renders");
+  console.log("\n[6/8] TextEngine surface: task detail page renders");
   const taskId = process.env.__SMOKE_TASK_ID ?? "TB-1";
   await page.goto(`${base}/app/tasks/${taskId}?tab=details`, {
     waitUntil: "domcontentloaded",
@@ -355,43 +355,69 @@ async function runSmoke(page) {
   );
 
   // -- 7. UNTRUSTED mermaid: fixture through the task detail surface ------
-  // CURRENT contract (Ф0): inert code-block fallback — source visible, NO
-  // svg. THE ASSERT IS WRITTEN TO BE FLIPPED IN Ф2 (ME-013 activates the
-  // svg expectation per ADR 0020 Amendment 1): flip the two marked lines.
-  console.log("\n[7/7] untrusted-surface mermaid fence (task detail fixture)");
+  // RATIFIED contract (ADR 0020 Amendment 1, ME-013 — flipped from the Ф0
+  // honest skip/inert assert): a valid diagram in an untrusted agent/task
+  // text renders AS A DIAGRAM (svg) on the task page. The mermaid chunk is
+  // lazy — wait for the svg explicitly; caps/errors fall back to source and
+  // would fail this assert loudly (never a fake green).
+  console.log("\n[7/8] untrusted-surface mermaid fence (task detail fixture)");
   await page.goto(`${base}/app/tasks/TB-15?tab=details`, {
     waitUntil: "domcontentloaded",
   });
   await page.waitForSelector("main", { timeout: 20_000 });
   await page.waitForLoadState("networkidle").catch(() => {});
-  await page.waitForTimeout(1500); // mermaid lazy chunk would need to fail LOUD
   const untrustedText = await mainText(page);
-  const untrustedSvg = await page
-    .locator("main .mermaid-diagram svg")
-    .count();
   // The details pane must actually be served (some deployments render the
   // reports pane regardless of ?tab=): otherwise there is nothing to
-  // assert here — an honest SKIP, never a fake green.
-  const detailsServed = (untrustedText ?? "").includes("UNTRUSTED[fixture]");
+  // assert here — an honest SKIP, never a fake green. The marker is the
+  // spec's PROSE heading, NOT the fence source: since the flip the source
+  // hides once the diagram renders, so keying on the fence text would race
+  // (and then always skip) — the heading is plain text, always present.
+  const detailsServed = (untrustedText ?? "").includes("Diagram (untrusted surface)");
   if (!detailsServed) {
     skip(
       "untrusted-surface mermaid asserts",
       "this deployment renders the reports pane for ?tab=details — fixture spec never mounts (surface covered in local mode)",
     );
   } else {
-    // Ф0 assert — FLIP TO `>= 1` IN Ф2 (ME-013).
+    // Amendment 1 acceptance criterion: the diagram renders on the
+    // untrusted surface (ME-013 flipped this from the Ф0 inert assert).
+    const untrustedSvgAttached = await page
+      .waitForSelector("main .mermaid-diagram svg", {
+        timeout: 25_000,
+        state: "attached",
+      })
+      .then(() => true)
+      .catch(() => false);
     assert(
-      untrustedSvg === 0,
-      "untrusted mermaid stays an INERT code block at F0 — flip to >=1 in F2 (ME-013)",
+      untrustedSvgAttached,
+      "untrusted mermaid fence renders as <svg> on the task page (ADR 0020 Amendment 1)",
     );
+  }
+
+  // -- 8. UNTRUSTED mermaid, the HONEST FALLBACK (ME-013 review P3-6) ------
+  // Board acceptance parenthetical: a hostile diagram (over-cap) falls back
+  // to its source, never a silent drop. The fixture memory carries SIX
+  // fences in one text — one over the per-surface cap — so the memory page
+  // must show EVERY fence as a plain code block: no diagram mount, no svg
+  // (scoped to the .mermaid-diagram mount — the page's own lucide chrome
+  // legitimately contains svgs), all six sources visible.
+  console.log("\n[8/8] untrusted mermaid over-cap: honest inert fallback");
+  await page.goto(`${base}/app/memory/mem-mermaid-overcap-fixture`, {
+    waitUntil: "domcontentloaded",
+  });
+  await page.waitForSelector("main", { timeout: 20_000 });
+  await page.waitForLoadState("networkidle").catch(() => {});
+  await page.waitForTimeout(1500); // a lazy diagram would need to fail LOUD
+  const overcapFigures = await page.locator("main figure").count();
+  const overcapSvgs = await page.locator("main .mermaid-diagram svg").count();
+  assert(overcapFigures === 0, `over-cap surface mounts no diagram figure (got ${overcapFigures})`);
+  assert(overcapSvgs === 0, `over-cap surface renders no diagram svg (got ${overcapSvgs})`);
+  const overcapText = await mainText(page);
+  for (let i = 1; i <= 6; i += 1) {
     assert(
-      !(untrustedText ?? "").includes("<svg"),
-      "no diagram svg leaks from untrusted text at F0 — flip in F2",
-    );
-    // The fence SOURCE stays visible (honest fallback, never a silent drop).
-    assert(
-      (untrustedText ?? "").includes("UNTRUSTED[fixture]"),
-      "untrusted fence source stays visible (auditable fallback)",
+      (overcapText ?? "").includes(`F${i}-->R${i}`),
+      `over-cap fence #${i} source stays visible (auditable fallback)`,
     );
   }
 }

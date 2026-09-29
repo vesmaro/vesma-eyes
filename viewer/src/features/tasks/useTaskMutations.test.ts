@@ -195,10 +195,12 @@ describe("task mutations on the mock adapter", () => {
   it("archive: row leaves the board, counts drop, archive queries invalidated", async () => {
     const { mutations, queryClient, toasts } = await makeHarness();
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
-    expect(boardCounts(queryClient)["in-progress"]).toBe(3);
+    // (ME-013: TB-15 joined in-progress — the smoke's untrusted-mermaid
+    // fixture — so the lane starts at 4.)
+    expect(boardCounts(queryClient)["in-progress"]).toBe(4);
     mutations.archiveTask(boardRow(queryClient, "TB-1")!);
     await vi.waitFor(() => expect(boardRow(queryClient, "TB-1")).toBeUndefined());
-    expect(boardCounts(queryClient)["in-progress"]).toBe(2);
+    expect(boardCounts(queryClient)["in-progress"]).toBe(3);
     expect(toasts.at(-1)?.title).toBe("TB-1: archived");
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: keys.tasks.archiveAll });
   });
@@ -245,7 +247,7 @@ describe("task mutations on the mock adapter", () => {
     expect(boardCounts(queryClient).open).toBe(4);
     expect(toasts.at(-1)?.title).toBe(`Task ${createdId} created`);
     expect(toasts.at(-1)?.action?.to).toBe(`/tasks/${createdId}`);
-    expect(before).toBe(15); // 15 WF-1 fixture rows
+    expect(before).toBe(16); // 16 fixture rows (WF-1 + TB-15, ME-013)
   });
 
   it("adopt: creates the native task, invalidates the inbox; 409 double-adopt links the existing task", async () => {

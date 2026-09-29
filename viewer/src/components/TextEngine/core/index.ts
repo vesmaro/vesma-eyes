@@ -27,7 +27,7 @@ export type {
   PipelineMode,
 } from "./pipeline";
 export { themeComponents, articleComponents } from "./theme";
-export type { ArticleThemeHooks, TextEngineTheme } from "./theme";
+export type { ArticleThemeHooks, TextEngineTheme, ThemeOptions } from "./theme";
 export { isElement, languageOf, nodeText } from "./hast";
 export type { HastishNode } from "./hast";
 export {

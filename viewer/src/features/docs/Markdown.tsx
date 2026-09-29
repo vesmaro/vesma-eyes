@@ -10,11 +10,15 @@ import { cn } from "@/lib/utils";
 // the single rehype-raw/rehype-sanitize site in src).
 import { buildCorpusPipeline } from "@/components/TextEngine/core/pipeline.corpus";
 import { articleComponents, LINK_CLASS, MONO } from "@/components/TextEngine/core";
+// ME-013 (ADR 0020 Amendment 1): the diagram component is an ENGINE
+// capability now — TextEngine/core/Mermaid.tsx is the single mermaid import
+// site and serves both trust profiles; the curated profile mounts it with
+// NO caps (build-time trusted corpus, integrity gates).
+import { MermaidDiagram } from "@/components/TextEngine/core/Mermaid";
 import { createHeadingSlugger } from "./headingSlug";
 import { resolveDocImageUrl } from "./docsAssets";
 import { resolveDocLink } from "./docsLinks";
 import { sanitizeSchema } from "./sanitizeSchema";
-import { MermaidDiagram } from "./Mermaid";
 
 /**
  * The curated docs renderer — a THIN wrapper over text-engine/core (ADR 0020

@@ -2,7 +2,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { renderToString } from "react-dom/server";
@@ -28,7 +28,9 @@ import { I18nProvider } from "@/i18n";
  * - the CURATED pipeline (`features/docs/Markdown.tsx` — raw-HTML → sanitize,
  *   mermaid component, heading slugs, banner cut);
  * - the UNTRUSTED pipeline (`components/TextEngine/MarkdownView` — escape-only,
- *   no slugs, mermaid fence = inert code block, schemes whitelisted).
+ *   no slugs, schemes whitelisted; since ME-013 / Amendment 1 a mermaid
+ *   fence renders as a DIAGRAM behind the hard caps — the re-baselined
+ *   golden pins that shape).
  *
  * Negative control: a MUTATED render must fail the golden gate — proves the
  * comparison is load-bearing (an always-green gate would let an F1 regression
@@ -37,7 +39,22 @@ import { I18nProvider } from "@/i18n";
  * Baselining: GOLDEN_UPDATE=1 npx vitest run src/features/docs/golden.pipelines.test.tsx
  * rewrites the goldens. Never mix a render-behavior change and a golden
  * update into an unrelated commit.
+ *
+ * ME-013: `mermaid` is MOCKED (fixed valid svg) so the mounted untrusted
+ * golden is deterministic — happy-dom has no SVG layout engine (recorded
+ * deviation in core/mermaid.render.smoke.test.tsx), and a real render would
+ * make the fallback state timing-dependent. The curated SSR golden never
+ * fires effects, so the mock cannot touch it.
  */
+
+vi.mock("mermaid", () => ({
+  default: {
+    initialize: vi.fn(),
+    render: vi.fn().mockResolvedValue({
+      svg: '<svg viewBox="0 0 4 4" width="40" height="40"><text x="1" y="1">diagram</text></svg>',
+    }),
+  },
+}));
 
 const FIXTURE_DIR = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -238,14 +255,20 @@ describe("golden — untrusted pipeline (TextEngine/MarkdownView)", () => {
     expect(el.querySelector("table > tbody > tr > td")).not.toBeNull();
     // NO heading slugs on the untrusted profile.
     expect(el.querySelector("h2[id]")).toBeNull();
-    // Mermaid fence = INERT CODE BLOCK (current contract; Amendment 1 moves
-    // this to svg in Ф2 — the Playwright smoke carries the flippable assert).
-    const mermaidPre = [...el.querySelectorAll("pre")].find((pre) =>
-      (pre.querySelector("code")?.textContent ?? "").includes("flowchart LR"),
-    );
-    expect(mermaidPre, "mermaid fence must be an inert code block").not.toBeNull();
-    expect(el.querySelector("svg")).toBeNull();
-    expect(el.querySelector("figure")).toBeNull();
+    // ME-013 (Amendment 1): the mermaid fence renders as a DIAGRAM on the
+    // untrusted profile too — figure + svg (mocked render), with the caps of
+    // core/mermaidCaps enforced upstream (the corpus's fences are small).
+    // Curated-only chrome (copy button, code label) stays absent.
+    const figures = [...el.querySelectorAll("figure")];
+    expect(
+      figures.length,
+      "mermaid fences must mount the diagram figure",
+    ).toBe(2);
+    const contentSvgs = figures.map((figure) => figure.querySelector("svg"));
+    for (const svg of contentSvgs) {
+      expect(svg, "mocked mermaid svg must reach the DOM").not.toBeNull();
+    }
+    expect(el.querySelectorAll("figure button").length).toBe(0);
   });
 
   it("degrades raw HTML to ESCAPED TEXT — no elements, no handlers, no schemes", async () => {
@@ -261,10 +284,18 @@ describe("golden — untrusted pipeline (TextEngine/MarkdownView)", () => {
       "kbd",
       "sub",
       "sup",
-      "svg",
     ]) {
       expect(el.querySelector(tag), `<${tag}> became an element`).toBeNull();
     }
+    // The corpus's hostile raw <svg><use> degrades to text: every svg in the
+    // container must be a MERMAID diagram (inside the figure mount) — no
+    // source-borne svg/use/circle element (ME-013 scoping: diagrams are
+    // engine output now, raw HTML still never becomes markup).
+    for (const svg of [...el.querySelectorAll("svg")]) {
+      expect(svg.closest("figure"), "svg outside the mermaid figure mount").not.toBeNull();
+    }
+    expect(el.querySelector("use")).toBeNull();
+    expect(el.querySelector("circle")).toBeNull();
     // The dangerous vectors are inert text; nothing executes.
     expect(el.querySelector('a[href^="javascript:"]')).toBeNull();
     expect(el.querySelector('a[href^="data:"]')).toBeNull();

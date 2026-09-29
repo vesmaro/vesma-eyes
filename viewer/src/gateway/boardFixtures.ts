@@ -384,6 +384,39 @@ export const MOCK_TASKS: BoardTask[] = [
     // Overdue clock: >24h before the corpus reference point (sweep output).
     validating_since: "2026-09-17T09:30:00+00:00",
   },
+  // ME-013 (ADR 0020 Amendment 1): the UNTRUSTED-surface mermaid fixture,
+  // restored for the render-smoke FLIP (Ф0 shipped it with an honest skip;
+  // review B1 dropped the fixture until the svg assert went live). The smoke
+  // opens /app/tasks/TB-15?tab=details and the spec renders through the
+  // TextEngine primitive — the fence MUST render as a diagram now
+  // (scripts/smoke-render.mjs step 7 carries its own mirrored copy for the
+  // remote mode's network interception). Deliberately the LAST row,
+  // "vesmaro" project. NOTE for fixture changes: exactly these unit pins
+  // move with the row count and in-progress count — TaskBoardPage.test
+  // («in progress» counter), TaskListPage.test (15→16 tasks × 2 layouts),
+  // useTaskMutations.test (in-progress 3→4, board rows 15→16).
+  {
+    id: "TB-15",
+    col: "in-progress",
+    position: 2,
+    title: "ME-013 smoke: untrusted mermaid fixture",
+    summary: "Browser render smoke fixture.",
+    spec:
+      "## Diagram (untrusted surface)\n\n```mermaid\nflowchart LR\n  UNTRUSTED[fixture] --> GATE\n```",
+    agents: ["zcode"],
+    specialists: ["@GCW: Senior Frontend Developer"],
+    env: "laptop",
+    project: "vesmaro",
+    memory_ids: [],
+    mnemos_tags: ["project:vesmaro"],
+    created_at: "2026-09-19T10:00:00+00:00",
+    updated_at: "2026-09-28T00:00:00+00:00",
+    archived: 0,
+    status: "in-progress",
+    priority: "normal",
+    archived_from: "",
+    validating_since: "",
+  },
 ];
 
 /** Archived row (the board projection never carries archived=1 rows). */

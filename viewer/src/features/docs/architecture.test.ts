@@ -11,6 +11,8 @@ import { describe, expect, it } from "vitest";
  */
 
 const DOCS_DIR = join(import.meta.dirname);
+/** Engine-wide scan root (ME-013): the mermaid invariant is engine-wide. */
+const SRC_DIR = join(DOCS_DIR, "..", "..");
 
 function listSources(dir: string): string[] {
   const entries = readdirSync(dir);
@@ -50,19 +52,41 @@ describe("docs feature architecture gates", () => {
     expect(offenders.map((file) => file.replace(`${DOCS_DIR}/`, ""))).toEqual([]);
   });
 
-  it("keeps mermaid imports in exactly one module (Mermaid.tsx, АРХКОМ-8)", () => {
-    // The lazy-chunk budget (ADR-0015: mermaid pool ≤450 KiB, loaded only on
-    // fence pages) depends on the library being behind Mermaid.tsx's single
-    // dynamic import — static or duplicate imports weld it into base chunks.
-    // Test files are out of scope (they mock or smoke the real package).
-    const offenders = sources.filter(
+  it("keeps mermaid imports in exactly ONE engine module (core/Mermaid.tsx, Amendment 1)", () => {
+    // ME-013 (ADR 0020 Amendment 1): mermaid is an engine capability on BOTH
+    // trust profiles, rehomed to TextEngine/core/Mermaid.tsx. The lazy-chunk
+    // budget (ADR-0015: mermaid pool ≤450 KiB, loaded only on fence pages)
+    // depends on the library being behind that ONE dynamic import — static
+    // or duplicate imports weld it into base chunks. The scan is ENGINE-WIDE
+    // (components + features, not just docs): the invariant is «one mermaid
+    // import module», not «docs owns it». Test files are out of scope (they
+    // mock or smoke the real package).
+    // Scan scope note (ME-013 review P3-4): features + components carry all
+    // app code that could plausibly import a markdown stack; src/lib,
+    // src/gateway, src/layout and friends are covered by the app-wide ESLint
+    // no-restricted-imports block (which fires on every src/** file).
+    const engineSrc = [
+      ...listSources(join(SRC_DIR, "features")),
+      ...listSources(join(SRC_DIR, "components")),
+    ];
+    const exempt = join(SRC_DIR, "components", "TextEngine", "core", "Mermaid.tsx");
+    const offenders = engineSrc.filter(
       (file) =>
-        !file.endsWith("Mermaid.tsx") &&
+        // Exact-path exemption only (P3-3): a basename match would let a
+        // future features/*/Mermaid.tsx escape this grep-test.
+        file !== exempt &&
         !file.includes(".test.") &&
         /(from\s+["']mermaid["'])|(import\s*\(\s*["']mermaid["']\s*\))/.test(
           readFileSync(file, "utf8"),
         ),
     );
-    expect(offenders.map((file) => file.replace(`${DOCS_DIR}/`, ""))).toEqual([]);
+    expect(
+      offenders.map((file) => file.replace(`${DOCS_DIR}/../`, "")),
+    ).toEqual([]);
+    // And the one sanctioned site is exactly the rehomed engine module.
+    expect(statSync(exempt).isFile()).toBe(true);
+    expect(
+      /(import\s*\(\s*["']mermaid["']\s*\))/.test(readFileSync(exempt, "utf8")),
+    ).toBe(true);
   });
 });
