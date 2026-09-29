@@ -19,6 +19,7 @@ import {
 import { AssignmentStateBadge } from "./AssignmentStateBadge";
 import { AssignExecutorSheet } from "./AssignExecutorSheet";
 import type { AssignPrefill } from "./AssignExecutorSheet";
+import { TaskWorkersPanel } from "./TaskWorkersPanel";
 import { useAssignments, useExecutors } from "./useAgents";
 import { useAssignmentMutations } from "./useAssignmentMutations";
 
@@ -51,11 +52,18 @@ function assignmentOrder(a: AssignmentItem, b: AssignmentItem): number {
 export function TaskExecutionTab({
   task,
   autoAssignExecutorId,
+  reportsHref,
+  reportsCount,
 }: {
   task: BoardTask;
   /** AGW-6 A.3 deep-link pin (`?assign=<id>`): auto-open the sheet with
    * this executor pre-selected (the link-check «проверить по-настоящему»). */
   autoAssignExecutorId?: string;
+  /** UI-31: the detail page's reports query is already loaded there — the
+   * «Кто работал» block reuses its count and the tab-swap href for the
+   * «отчётов: N» jump. Absent on standalone mounts → no jump rendered. */
+  reportsHref?: string;
+  reportsCount?: number;
 }) {
   const t = useT();
   const { lang } = useI18n();
@@ -129,19 +137,29 @@ export function TaskExecutionTab({
           }
         />
       ) : items.length === 0 ? (
-        <EmptyState
-          variant="empty"
-          title={t("agents.empty.title")}
-          message={t("agents.empty.message")}
-          action={
-            accepts ? (
-              <Button onClick={openFreshSheet}>
-                <Play className="size-4" aria-hidden="true" />
-                {t("agents.assign.open")}
-              </Button>
-            ) : undefined
-          }
-        />
+        <>
+          <EmptyState
+            variant="empty"
+            title={t("agents.empty.title")}
+            message={t("agents.empty.message")}
+            action={
+              accepts ? (
+                <Button onClick={openFreshSheet}>
+                  <Play className="size-4" aria-hidden="true" />
+                  {t("agents.assign.open")}
+                </Button>
+              ) : undefined
+            }
+          />
+          {/* UI-31: an empty assignments queue is NOT «nobody worked this».
+           * The task's activity attribution (who, what, when) renders under
+           * the honest empty state; live assignments keep the queue view. */}
+          <TaskWorkersPanel
+            task={task}
+            reportsHref={reportsHref}
+            reportsCount={reportsCount}
+          />
+        </>
       ) : (
         <ul className="space-y-1.5" aria-label={t("agents.list.label")}>
           {items.map((row) => (

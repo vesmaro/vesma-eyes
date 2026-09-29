@@ -164,11 +164,13 @@ describe("TaskDetailPage × TextEngine (UI-27)", () => {
     expect(el.querySelector("details")?.textContent).not.toContain("## Итог");
   });
 
-  it("details tab: markdown spec renders formatted inside the well box", async () => {
+  it("card description (UI-31): markdown spec renders formatted as the first section", async () => {
     const el = await mountTask("details");
+    // UI-31: the spec left the details tab — the card's Description section
+    // (BEFORE the tab nav) is its single home.
     const specSection = () =>
       [...el.querySelectorAll("section")].find((section) =>
-        section.getAttribute("aria-label") === "Specification",
+        section.getAttribute("aria-label") === "Description",
       );
     await waitFor("spec markdown heading", () =>
       Boolean(
@@ -185,6 +187,18 @@ describe("TaskDetailPage × TextEngine (UI-27)", () => {
     expect(specSection()?.querySelector("input[type='checkbox']")).not.toBeNull();
     // No raw leakage of the spec markdown.
     expect(specSection()?.textContent).not.toContain("## Критерий");
+    // The description section precedes the tab nav in document order.
+    const description = el.querySelector('section[aria-label="Description"]');
+    const nav = el.querySelector('nav[aria-label="Task sections"]');
+    expect(description).not.toBeNull();
+    expect(nav).not.toBeNull();
+    expect(description!.compareDocumentPosition(nav!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // And the details pane no longer duplicates the spec.
+    expect(
+      [...el.querySelectorAll("section")].some(
+        (section) => section.getAttribute("aria-label") === "Specification",
+      ),
+    ).toBe(false);
   });
 
   it("details tab: markdown summary renders formatted", async () => {
@@ -199,9 +213,9 @@ describe("TaskDetailPage × TextEngine (UI-27)", () => {
     );
   });
 
-  it("details tab: plain spec stays plain prose (no invented elements)", async () => {
+  it("card description (UI-31): plain spec stays plain prose (no invented elements)", async () => {
     // The unpatched mock board carries plain specs (e.g. TB-3) — the plain
-    // path must keep them verbatim.
+    // path must keep them verbatim, now in the card's Description section.
     const gateway = new MockAdapter({ latency: false });
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
@@ -241,7 +255,7 @@ describe("TaskDetailPage × TextEngine (UI-27)", () => {
         ),
       ),
     );
-    // The section labels (Summary/Specification/Metadata) are the only h2s;
+    // The section labels (Description/Summary/Metadata) are the only h2s;
     // the plain author text invents no markdown elements. Only the labeled
     // tab sections count (the outer shell section also wraps the tab nav).
     const labeledSections = [...container!.querySelectorAll("section")].filter(
@@ -250,7 +264,7 @@ describe("TaskDetailPage × TextEngine (UI-27)", () => {
     const mdHeadings = labeledSections.flatMap((section) =>
       [...section.querySelectorAll("h2")].filter(
         (heading) =>
-          !["Summary", "Specification", "Metadata"].includes(heading.textContent ?? ""),
+          !["Description", "Summary", "Specification", "Metadata"].includes(heading.textContent ?? ""),
       ),
     );
     expect(mdHeadings).toEqual([]);
