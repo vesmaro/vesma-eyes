@@ -192,7 +192,8 @@ function AppearanceSection() {
   );
 }
 
-/** «Поведение»: the new `vesmaro.motion` regime + the onboarding replay. */
+/** «Поведение»: the `vesmaro.motion` regime, the living-layer placeholder
+ *  (union И1 шаг 3) and the onboarding replay. */
 function BehaviorSection() {
   const t = useT();
   const motion = useMotion();
@@ -215,6 +216,26 @@ function BehaviorSection() {
               : "settings.hub.motionReduced",
           ),
         }))}
+      />
+      {/* Union И1 (roadmap шаг 3): the «Живой слой» / «Спокойный режим»
+       * PLACEHOLDER — visually the future control (07m §1: Полный /
+       * Спокойный / Выключен, «Спокойный» pinned — the post-enable default,
+       * АРХКОМ union rule §1.6), functionally INERT until И3 wires the
+       * living engine; the hint says so honestly. */}
+      <SegmentedControl
+        label={t("settings.hub.livingLabel")}
+        labelId="settings-living-label"
+        hint={t("settings.hub.livingHint")}
+        hintId="settings-living-hint"
+        value={"calm" as const}
+        onChange={() => undefined}
+        disabled
+        ariaNote={t("settings.hub.livingAriaNote")}
+        options={[
+          { value: "full", label: t("settings.hub.livingFull") },
+          { value: "calm", label: t("settings.hub.livingCalm") },
+          { value: "off", label: t("settings.hub.livingOff") },
+        ]}
       />
       <div className="space-y-1">
         <Button
