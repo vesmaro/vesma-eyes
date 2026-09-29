@@ -211,6 +211,41 @@ export const ru = {
   "auth.signingIn": "Входим…",
   "auth.verify": "Подтвердить",
 
+  // --- auth session + gates v6 (union И1, 07k §1–§4; копии — карта И1 §1.3) ----
+  "auth.status.anonymous": "аноним",
+  "auth.status.signedIn": "вы: владелец",
+  "auth.lock.why": "откроется после входа",
+  "auth.gate.heading": "Раздел „{{domain}}“ откроется после входа",
+  "auth.gate.inside.memory": "Записи, поиск по смыслу, пульс и теги — содержимое памяти",
+  "auth.gate.inside.tasks": "Канбан, список, входящие и архив — работа и поручения",
+  "auth.gate.inside.agents": "Исполнение, хосты и подключение новых машин",
+  "auth.gate.inside.kora": "Журнал сессий всех хостов: что агент делал и говорил",
+  "auth.gate.inside.system": "Статус, устройства и трассировки — служебная зона",
+  "auth.gate.elsewhere": "Статистика открыта всем — она на Обзоре.",
+  "auth.gate.goOverview": "Открыть Обзор",
+  "auth.gate.signUp": "Создать аккаунт",
+  "auth.gate.signUpNote":
+    "Аккаунты создаёт владелец борта. Первый созданный аккаунт становится владельцем.",
+  "auth.gate.seeMore": "Что я увижу после входа",
+  "auth.gate.seeMore.memoryRecords": "Записи памяти: список, фильтры, теги",
+  "auth.gate.seeMore.memorySearch": "Поиск по смыслу по всем записям",
+  "auth.gate.seeMore.memoryPulse": "Пульс памяти: что добавилось и когда",
+  "auth.gate.seeMore.tasksBoard": "Канбан и список ваших задач",
+  "auth.gate.seeMore.tasksInbox": "Входящие: что ждёт вашего решения",
+  "auth.gate.seeMore.tasksArchive": "Архив и история изменений",
+  "auth.gate.seeMore.agentsHosts": "Хосты: какие машины на связи и чем заняты",
+  "auth.gate.seeMore.agentsExecution": "Исполнение: кто какую работу ведёт",
+  "auth.gate.seeMore.agentsConnect": "Подключение новой машины к борту",
+  "auth.gate.seeMore.koraJournal": "Сессии всех хостов в одном журнале",
+  "auth.gate.seeMore.koraTranscripts": "Транскрипты: что агент делал и говорил",
+  "auth.gate.seeMore.koraCoverage": "Покрытие: что видно с ваших машин",
+  "auth.gate.seeMore.systemStatus": "Статус борта и хранилищ памяти",
+  "auth.gate.seeMore.systemSettings": "Настройки и автоматизация",
+  "auth.gate.seeMore.systemDevices": "Подключённые устройства",
+  "auth.gate.checkingSession": "Проверяем сессию…",
+  "auth.route.back": "← На борт",
+  "auth.route.alreadySignedIn": "Вы уже вошли",
+
   // --- search -------------------------------------------------------------------
   "search.title": "Поиск",
   "search.tagline": "взгляд внутрь себя",
@@ -301,7 +336,7 @@ export const ru = {
   "tags.all": "Все теги",
   "tags.drilldownTitle": "Воспоминания с тегом",
   "tags.drilldownNote":
-    "Фильтрация на клиенте — у mnemos нет выборки по тегу (ADR 0003 §9).",
+    "Фильтрация на клиенте — mnemos не умеет выбирать по тегу.",
   "tags.nothingCarries": "Под этим тегом ничего нет",
   "tags.nothingCarriesMessage": "Сейчас нет воспоминаний с тегом {{tag}}.",
   // --- tags cloud (UI-17, spec 2026-09-21 §9; owner-approved copy) -----------
@@ -431,7 +466,7 @@ export const ru = {
   // mutates; closed routes refuse with the server's own honest detail.
   "login.deviceForbidden": "Действия с устройства закрыты",
   "login.deviceForbiddenDetail":
-    "Скоуп этого устройства — только чтение: мутации выполняются в сессии владельца (ADR 0012).",
+    "Скоуп этого устройства — только чтение: мутации выполняются в сессии владельца.",
   "login.logoutFailed":
     "Не удалось завершить сессию на сервере — вы всё ещё вошли. Проверьте связь и повторите.",
 
@@ -905,7 +940,7 @@ export const ru = {
     "Активных попыток исполнения сейчас нет — возьмите задачу в работу на её странице.",
   "agents.unavailableTitle": "Раздел недоступен в режиме mnemos",
   "agents.unavailableMessage":
-    "Исполнение — доска-нативный домен (ADR 0011); переключитесь в режим board или mock.",
+    "Исполнение — доска-нативный домен; переключитесь в режим board или mock.",
   "agents.strip.label": "Исполнители",
   "agents.strip.empty": "Нет подключённых исполнителей",
   "agents.strip.emptyHint": "Исполнители появятся, когда агент подключится",
@@ -1326,7 +1361,7 @@ export const ru = {
   "automation.title": "Автоматизация",
   "automation.unavailableTitle": "Раздел недоступен в режиме mnemos",
   "automation.unavailableMessage":
-    "Автоматизация — контракт S1 борда (ADR 0013); переключитесь в режим board или mock.",
+    "Автоматизация — контракт борда; переключитесь в режим board или mock.",
   "automation.statusLoading": "Загружаем статус движка",
   "automation.statusFailed": "Не удалось загрузить статус",
   "automation.tabSchedules": "Расписания",
@@ -1700,7 +1735,7 @@ export const ru = {
   "pairing.devices.grantsFailed": "Не удалось обновить доступы",
   "pairing.unsupportedTitle": "Пейринг недоступен в этом режиме",
   "pairing.unsupportedMessage":
-    "Домен устройств говорит на merge-API борда (ADR 0012); в режиме прямого mnemos этой страницы нет.",
+    "Домен устройств говорит на merge-API борда; в режиме прямого mnemos этой страницы нет.",
 
   // Страница устройства (/pair, §2.3 — без аутентификации).
   "pair.title": "Подключение устройства",

@@ -192,6 +192,41 @@ export const en: Record<TranslationKey, string> = {
   "auth.signingIn": "Signing in…",
   "auth.verify": "Verify",
 
+  // --- auth session + gates v6 (union И1, 07k §1–§4; копии — карта И1 §1.3) ----
+  "auth.status.anonymous": "anonymous",
+  "auth.status.signedIn": "you: owner",
+  "auth.lock.why": "opens after you sign in",
+  "auth.gate.heading": "The “{{domain}}” section opens after you sign in",
+  "auth.gate.inside.memory": "Records, search by meaning, pulse and tags — the contents of memory",
+  "auth.gate.inside.tasks": "Kanban, list, inbox and archive — your work and assignments",
+  "auth.gate.inside.agents": "Execution, hosts and connecting new machines",
+  "auth.gate.inside.kora": "A journal of sessions from every host: what the agent did and said",
+  "auth.gate.inside.system": "Status, devices and traces — the service area",
+  "auth.gate.elsewhere": "The statistics are open to everyone — they live on the Overview.",
+  "auth.gate.goOverview": "Open the Overview",
+  "auth.gate.signUp": "Create an account",
+  "auth.gate.signUpNote":
+    "Accounts are created by the board owner. The first account created becomes the owner.",
+  "auth.gate.seeMore": "What will I see after signing in",
+  "auth.gate.seeMore.memoryRecords": "Memory records: the list, filters, tags",
+  "auth.gate.seeMore.memorySearch": "Search by meaning across every record",
+  "auth.gate.seeMore.memoryPulse": "Memory pulse: what was added and when",
+  "auth.gate.seeMore.tasksBoard": "Kanban and the list of your tasks",
+  "auth.gate.seeMore.tasksInbox": "Inbox: what awaits your decision",
+  "auth.gate.seeMore.tasksArchive": "Archive and change history",
+  "auth.gate.seeMore.agentsHosts": "Hosts: which machines are online and busy",
+  "auth.gate.seeMore.agentsExecution": "Execution: who is running what",
+  "auth.gate.seeMore.agentsConnect": "Connecting a new machine to the board",
+  "auth.gate.seeMore.koraJournal": "Every host's sessions in one journal",
+  "auth.gate.seeMore.koraTranscripts": "Transcripts: what the agent did and said",
+  "auth.gate.seeMore.koraCoverage": "Coverage: what is visible from your machines",
+  "auth.gate.seeMore.systemStatus": "Board status and memory stores",
+  "auth.gate.seeMore.systemSettings": "Settings and automation",
+  "auth.gate.seeMore.systemDevices": "Connected devices",
+  "auth.gate.checkingSession": "Checking your session…",
+  "auth.route.back": "← Back to the board",
+  "auth.route.alreadySignedIn": "You are already signed in",
+
   // --- search -------------------------------------------------------------------
   "search.title": "Search",
   "search.tagline": "a gaze into oneself",
@@ -282,7 +317,7 @@ export const en: Record<TranslationKey, string> = {
   "tags.all": "All tags",
   "tags.drilldownTitle": "Memories tagged",
   "tags.drilldownNote":
-    "Filtered client-side — mnemos has no by-tag list filter (ADR 0003 §9).",
+    "Filtered client-side — mnemos has no by-tag list filter.",
   "tags.nothingCarries": "Nothing carries this tag",
   "tags.nothingCarriesMessage": "No memory is tagged {{tag}} right now.",
   // --- tags cloud (UI-17, spec 2026-09-21 §9; owner-approved copy) -----------
@@ -407,7 +442,7 @@ export const en: Record<TranslationKey, string> = {
   // UI-22 device beat — see ru.ts (scope v1: read-scope devices only).
   "login.deviceForbidden": "Actions from this device are closed",
   "login.deviceForbiddenDetail":
-    "This device's scope is read-only: mutations run in an owner session (ADR 0012).",
+    "This device's scope is read-only: mutations run in an owner session.",
   "login.logoutFailed":
     "Could not end the server session — you are still signed in. Check the connection and try again.",
 
@@ -879,7 +914,7 @@ export const en: Record<TranslationKey, string> = {
     "No execution attempts right now — take a task into work from its page.",
   "agents.unavailableTitle": "Section unavailable in mnemos mode",
   "agents.unavailableMessage":
-    "Execution is a board-native domain (ADR 0011); switch to board or mock mode.",
+    "Execution is a board-native domain; switch to board or mock mode.",
   "agents.strip.label": "Executors",
   "agents.strip.empty": "No executors connected",
   "agents.strip.emptyHint": "Executors appear when an agent connects",
@@ -1293,7 +1328,7 @@ export const en: Record<TranslationKey, string> = {
   "automation.title": "Automation",
   "automation.unavailableTitle": "Section unavailable in mnemos mode",
   "automation.unavailableMessage":
-    "Automation is the board's S1 contract (ADR 0013); switch to board or mock mode.",
+    "Automation is the board's contract; switch to board or mock mode.",
   "automation.statusLoading": "Loading engine status",
   "automation.statusFailed": "Failed to load the status",
   "automation.tabSchedules": "Schedules",
@@ -1659,7 +1694,7 @@ export const en: Record<TranslationKey, string> = {
   "pairing.devices.grantsFailed": "Could not update the grants",
   "pairing.unsupportedTitle": "Pairing is unavailable in this mode",
   "pairing.unsupportedMessage":
-    "The devices domain speaks the board merge-API (ADR 0012); the direct-mnemos mode has no such page.",
+    "The devices domain speaks the board merge-API; the direct-mnemos mode has no such page.",
 
   // The device page (/pair, §2.3 — no authentication).
   "pair.title": "Connect this device",
