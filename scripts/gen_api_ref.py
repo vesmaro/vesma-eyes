@@ -75,6 +75,7 @@ from sync_docs import (
     commit_iso,
     first_h1,
     normalize_mermaid_labels,
+    resolve_pin,
     resolve_sha,
     run_git,
     split_frontmatter,
@@ -169,7 +170,9 @@ def pin_source(name: str, source: dict[str, Any]) -> dict[str, Any]:
     tree — one clone may legitimately sit checked out at ANOTHER pin (the
     sync_docs projects share ../mnemos with a different ref), so the
     checkout state must not leak into api-hub content. No pristine check:
-    dirty worktrees cannot affect object reads."""
+    dirty worktrees cannot affect object reads. ME-046: the pin must
+    resolve (fetch-completeness) — an object the clone never fetched fails
+    LOUD with a fetch hint, never falls through to empty output."""
     repo = (REPO_ROOT / source["repo"]).resolve()
     if not (repo / ".git").exists():
         raise SyncError(
@@ -177,7 +180,7 @@ def pin_source(name: str, source: dict[str, Any]) -> dict[str, Any]:
             f"need the wt/ mirror (see wt/README.md), the main checkout "
             f"resolves ../{name} directly"
         )
-    sha = resolve_sha(repo, source["ref"])
+    sha = resolve_pin(repo, f"api_hub.sources.{name}", source["ref"])
     return {"repo_path": str(repo), "sha": sha, "commit_date": commit_iso(repo, sha)}
 
 
@@ -922,7 +925,7 @@ def check_drift(hub: dict[str, Any]) -> None:
     projects, whose pins legitimately own the checkout state."""
     for name, source in sorted(hub["sources"].items()):
         repo = (REPO_ROOT / source["repo"]).resolve()
-        pinned = resolve_sha(repo, source["ref"])
+        pinned = resolve_pin(repo, f"api/{name}", source["ref"])
         head = resolve_sha(repo, "HEAD")
         same = "OK" if head == pinned else "checkout differs (shared clone; content unaffected)"
         print(f"[api/{name}] pin {pinned[:12]}, clone HEAD {head[:12]}: {same}")
