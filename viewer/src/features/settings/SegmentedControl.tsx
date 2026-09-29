@@ -25,6 +25,14 @@ interface SegmentedControlProps<T extends string> {
   /** Optional hint line, wired to the group via aria-describedby. */
   hint?: string;
   hintId?: string;
+  /**
+   * Inert preview (union И1): the control renders its future shape but
+   * changes nothing — buttons disabled, the group aria-disabled. Used by
+   * the «Живой слой» placeholder until the living engine lands (И3).
+   */
+  disabled?: boolean;
+  /** Extra text SR users hear INSTEAD of the disabled affordance. */
+  ariaNote?: string;
 }
 
 export function SegmentedControl<T extends string>({
@@ -35,6 +43,8 @@ export function SegmentedControl<T extends string>({
   onChange,
   hint,
   hintId,
+  disabled = false,
+  ariaNote,
 }: SegmentedControlProps<T>) {
   return (
     <div className="space-y-1">
@@ -46,6 +56,7 @@ export function SegmentedControl<T extends string>({
           role="group"
           aria-labelledby={labelId}
           aria-describedby={hint ? hintId : undefined}
+          aria-disabled={disabled || undefined}
           className="inline-flex overflow-hidden rounded-md border border-border-subtle"
         >
           {options.map((option, index) => {
@@ -55,6 +66,7 @@ export function SegmentedControl<T extends string>({
                 key={option.value}
                 type="button"
                 aria-pressed={active}
+                disabled={disabled}
                 onClick={() => {
                   if (!active) onChange(option.value);
                 }}
@@ -65,6 +77,7 @@ export function SegmentedControl<T extends string>({
                   active
                     ? "bg-iris/15 text-iris-bright"
                     : "text-foreground-secondary hover:bg-elevated hover:text-foreground",
+                  disabled && "cursor-default opacity-70 hover:bg-transparent",
                 )}
               >
                 {option.label}
@@ -73,6 +86,7 @@ export function SegmentedControl<T extends string>({
           })}
         </div>
       </div>
+      {ariaNote && disabled ? <p className="sr-only">{ariaNote}</p> : null}
       {hint ? (
         <p id={hintId} className="text-xs text-foreground-secondary">
           {hint}

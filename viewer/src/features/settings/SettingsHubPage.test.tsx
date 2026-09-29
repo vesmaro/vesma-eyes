@@ -334,4 +334,30 @@ describe("Verdict blocks (spec §3.4, acceptance §8.10)", () => {
     expect(fonts).toBeDefined(); // present in the DOM while collapsed
     await actUnmount(root);
   });
+  it("union И1: the «Живой слой» placeholder is INERT and honest (roadmap шаг 3)", async () => {
+    const { container } = await mountHub();
+    // The three future options render with «Спокойный» visually pinned…
+    const group = container.querySelector(
+      '#settings-living-label',
+    )?.parentElement?.querySelector('[role="group"]');
+    expect(group).not.toBeNull();
+    expect(group?.getAttribute("aria-disabled")).toBe("true");
+    const buttons = Array.from(group?.querySelectorAll("button") ?? []);
+    expect(buttons.map((b) => b.textContent)).toEqual([
+      "Full",
+      "Calm",
+      "Off",
+    ]);
+    expect(
+      buttons.find((b) => b.getAttribute("aria-pressed") === "true")?.textContent,
+    ).toBe("Calm");
+    // …but INERT: nothing is clickable (the engine lands in И3).
+    for (const button of buttons) {
+      expect(button.disabled).toBe(true);
+    }
+    // The honest caption says it arrives later.
+    expect(container.textContent).toContain("come alive later");
+    expect(container.textContent).toContain("static for now");
+  });
+
 });
