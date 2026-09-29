@@ -518,14 +518,26 @@ describe("login flow regression (owner repro)", () => {
     expect(document.body.textContent).toContain(
       "Sign in to continue — your action will run automatically",
     );
+    // ME-028: the guidance leads («ask the administrator»); the kubectl
+    // command lives under a closed-by-default disclosure that stays in the
+    // DOM (one click away for the admin).
     expect(document.body.textContent).toContain(
+      "Where to get one: ask your cluster administrator.",
+    );
+    const disclosure = document.querySelector("details");
+    expect(disclosure).not.toBeNull();
+    expect(disclosure?.open).toBe(false); // closed by default
+    expect(disclosure?.querySelector("summary")?.textContent).toContain(
+      "Command for the administrator",
+    );
+    expect(disclosure?.textContent).toContain(
       "kubectl -n kube-agents get secret vesmaro-eyes-ui-token",
     );
     // Regression (prod hotfix login-hint): the hint must teach the WORKING
     // value-extraction command (jsonpath + decode), never the `-o yaml`
     // form that hands the user a base64 blob → "invalid ui token".
-    expect(document.body.textContent).toContain("-o jsonpath='{.data.VESMARO_UI_TOKEN}'");
-    expect(document.body.textContent).toContain("| base64 -d");
+    expect(disclosure?.textContent).toContain("-o jsonpath='{.data.VESMARO_UI_TOKEN}'");
+    expect(disclosure?.textContent).toContain("| base64 -d");
     expect(document.body.textContent).not.toContain("-o yaml");
     expect(document.body.textContent).not.toContain("mnk_"); // no value examples
   });
