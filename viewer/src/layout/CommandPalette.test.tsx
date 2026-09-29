@@ -24,8 +24,8 @@ import type { SearchResult } from "@/gateway/types";
  * route table in a real DOM:
  *   1. ⌘K / Ctrl+K opens the dialog (from anywhere — the global hotkey);
  *      Esc closes;
- *   2. the bare `/` opens it with Память as the FIRST section (the old
- *      focus-search promise, J3) and the empty query shows navigation only;
+ *   2. ⌘K opens it and the empty query shows navigation only (union И1: the
+ *      bare `/` now focuses the TopBar global search — stand 03 §7);
  *   3. typing raises the honest sections — memory hits carry their store
  *      provenance («где лежит»), the registry answers with APPROVED agents
  *      only (pending/revoked never surface);
@@ -252,9 +252,9 @@ describe("CommandPalette (Ф2, UX-overhaul §7.3)", () => {
     await waitFor("palette dialog (ru layout)", () => dialog() !== null);
   });
 
-  it("the bare `/` opens the palette; the empty query shows navigation only", async () => {
+  it("⌘K opens the palette; the empty query shows navigation only", async () => {
     await mount();
-    await pressKey({ key: "/" });
+    await pressKey({ key: "k", metaKey: true });
     await waitFor("palette dialog", () => dialog() !== null);
 
     // Honest empty state: no fake sections — only the route index speaks.
@@ -263,13 +263,23 @@ describe("CommandPalette (Ф2, UX-overhaul §7.3)", () => {
     expect(document.body.textContent).toContain("/memory/pulse");
   });
 
+  it("union И1: the bare `/` focuses the TopBar global search instead (stand 03 §7)", async () => {
+    await mount();
+    await pressKey({ key: "/" });
+    // The field took focus (Enter carries the query to /memory/search).
+    const field = document.getElementById("global-search-input");
+    expect(document.activeElement).toBe(field);
+    // The palette stayed closed.
+    expect(dialog()).toBeNull();
+  });
+
   it("typing raises the honest sections: memory with PROVENANCE, tasks by id", async () => {
     const gateway = await mount(async (client, mock) => {
       await seedPaletteData(client, mock);
       mock.search = vi.fn(async () => PROVENANCE_HITS);
     });
 
-    await pressKey({ key: "/" });
+    await pressKey({ key: "k", metaKey: true });
     await waitFor("palette dialog", () => dialog() !== null);
     await type("TB");
     await waitFor(
@@ -321,7 +331,7 @@ describe("CommandPalette (Ф2, UX-overhaul §7.3)", () => {
       await seedPaletteData(client, mock);
       mock.search = vi.fn(async () => PROVENANCE_HITS);
     });
-    await pressKey({ key: "/" });
+    await pressKey({ key: "k", metaKey: true });
     await waitFor("palette dialog", () => dialog() !== null);
     await type("TB-1"); // memory hit + the TB-1*/tasks rows
     // The nav rows render instantly (the route index needs no wire) — the
@@ -384,7 +394,7 @@ describe("CommandPalette (Ф2, UX-overhaul §7.3)", () => {
     });
     gateway.search = vi.fn(async () => []);
 
-    await pressKey({ key: "/" });
+    await pressKey({ key: "k", metaKey: true });
     await waitFor("palette dialog", () => dialog() !== null);
     await type("zzzz-nothing");
     await waitFor(
@@ -407,7 +417,7 @@ describe("CommandPalette (Ф2, UX-overhaul §7.3)", () => {
       throw new Error("boom");
     });
 
-    await pressKey({ key: "/" });
+    await pressKey({ key: "k", metaKey: true });
     await waitFor("palette dialog", () => dialog() !== null);
     await type("zzzz-nothing");
     await waitFor(

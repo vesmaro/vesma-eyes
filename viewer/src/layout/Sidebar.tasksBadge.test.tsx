@@ -11,6 +11,7 @@ import { MockAdapter } from "@/gateway/MockAdapter";
 import { GatewayContext } from "@/gateway/GatewayContext";
 import { keys } from "@/lib/queryKeys";
 import { I18nProvider } from "@/i18n";
+import { HotkeysProvider } from "@/layout/Hotkeys";
 import type { TaskInbox } from "@/gateway/boardTypes";
 
 /**
@@ -59,12 +60,14 @@ async function renderSidebarWithInbox(options: {
     <GatewayContext.Provider value={adapter}>
       <QueryClientProvider client={queryClient}>
         <I18nProvider initialLang={options.lang ?? "ru"}>
-          <MemoryRouter initialEntries={[options.path ?? "/memory"]}>
-            <Sidebar
-              collapsed={options.collapsed ?? false}
-              onToggle={() => undefined}
-            />
-          </MemoryRouter>
+          <HotkeysProvider>
+            <MemoryRouter initialEntries={[options.path ?? "/memory"]}>
+              <Sidebar
+                collapsed={options.collapsed ?? false}
+                onToggle={() => undefined}
+              />
+            </MemoryRouter>
+          </HotkeysProvider>
         </I18nProvider>
       </QueryClientProvider>
     </GatewayContext.Provider>,
@@ -98,12 +101,14 @@ async function mountLiveSidebar(
       <GatewayContext.Provider value={adapter}>
         <QueryClientProvider client={queryClient}>
           <I18nProvider initialLang={options.lang ?? "ru"}>
-            <MemoryRouter initialEntries={[options.path ?? "/memory"]}>
-              <Sidebar
-                collapsed={options.collapsed ?? false}
-                onToggle={() => undefined}
-              />
-            </MemoryRouter>
+            <HotkeysProvider>
+              <MemoryRouter initialEntries={[options.path ?? "/memory"]}>
+                <Sidebar
+                  collapsed={options.collapsed ?? false}
+                  onToggle={() => undefined}
+                />
+              </MemoryRouter>
+            </HotkeysProvider>
           </I18nProvider>
         </QueryClientProvider>
       </GatewayContext.Provider>,
@@ -154,9 +159,11 @@ describe("Tasks domain aggregate badge (UI-30)", () => {
       <GatewayContext.Provider value={adapter}>
         <QueryClientProvider client={queryClient}>
           <I18nProvider initialLang="ru">
-            <MemoryRouter initialEntries={["/memory"]}>
-              <Sidebar collapsed={false} onToggle={() => undefined} />
-            </MemoryRouter>
+            <HotkeysProvider>
+              <MemoryRouter initialEntries={["/memory"]}>
+                <Sidebar collapsed={false} onToggle={() => undefined} />
+              </MemoryRouter>
+            </HotkeysProvider>
           </I18nProvider>
         </QueryClientProvider>
       </GatewayContext.Provider>,
@@ -165,47 +172,39 @@ describe("Tasks domain aggregate badge (UI-30)", () => {
     expect(html).not.toContain("новых:");
   });
 
-  it("expanded panel: the badge is the «Входящие» pill (same tokens, ml-auto)", async () => {
+  it("expanded panel: the badge is the stand's mono side-count (03 §3, zero new colours)", async () => {
     const html = await renderSidebarWithInbox({ inbox: { count: 3 } });
     const match = html.match(
       /<span title="новых: 3"[^>]*class="([^"]+)"[^>]*>3<\/span>/,
     );
     expect(match).not.toBeNull();
     const classes = match![1];
-    // Identical token set to the InboxCount pill — zero new colours.
-    expect(classes).toContain("ml-auto");
-    expect(classes).toContain("rounded-full");
-    expect(classes).toContain("bg-iris/15");
+    // Stand side-count: mono caps, muted — never colour-only (the row's
+    // aria-label names the live sum).
     expect(classes).toContain("font-mono");
-    expect(classes).toContain("text-xs");
-    expect(classes).toContain("text-iris-bright");
+    expect(classes).toContain("text-caps");
+    expect(classes).toContain("tracking-caps");
+    expect(classes).toContain("text-foreground-muted");
     expect(classes).toContain("shrink-0");
   });
 
-  it("collapsed rail: a compact corner pill INSIDE the row (UI-19 — no overflow)", async () => {
+  it("collapsed rail: the badge hides with the labels (stand 03 §3 collapsed)", async () => {
     const html = await renderSidebarWithInbox({
       collapsed: true,
       inbox: { count: 3 },
     });
-    // The rail variant is pinned to the row (relative) and width-bounded.
-    expect(html).toMatch(/aria-label="Задачи"[^>]*class="[^"]*\brelative\b/);
-    expect(html).toContain("absolute right-1 top-1");
-    expect(html).toContain("новых: 3");
-    // The rail never shows the wide ml-auto pill.
-    expect(html).not.toContain("ml-auto inline-flex");
+    // The rail carries icons only — counters return with the labels.
+    expect(html).toContain('aria-label="Задачи"');
+    expect(html).not.toContain("новых:");
+    expect(html).not.toContain(">3</span>");
   });
 
-  it("rail caps three-digit sums at 99+ (bounded width); expanded shows the raw count", async () => {
-    const rail = await renderSidebarWithInbox({
-      collapsed: true,
-      inbox: { count: 150 },
-    });
-    expect(rail).toContain("новых: 150"); // accessible name keeps the truth
-    expect(rail).toContain(">99+</span>");
+  it("expanded shows the raw count, however large (no rail cap needed — it hides)", async () => {
     const expanded = await renderSidebarWithInbox({
       inbox: { count: 150 },
     });
     expect(expanded).toContain(">150</span>");
+    expect(expanded).toContain("новых: 150");
   });
 
   it("en parity: the badge tooltip/name translates", async () => {

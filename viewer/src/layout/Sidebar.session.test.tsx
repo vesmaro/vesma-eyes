@@ -10,6 +10,7 @@ import { HttpAdapter } from "@/gateway/HttpAdapter";
 import { MockAdapter } from "@/gateway/MockAdapter";
 import { GatewayContext } from "@/gateway/GatewayContext";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
+import { HotkeysProvider } from "@/layout/Hotkeys";
 import { I18nProvider } from "@/i18n";
 import { clearUiToken, UI_TOKEN_STORAGE_KEY } from "@/gateway/uiToken";
 import {
@@ -80,7 +81,9 @@ function renderSidebar(gateway: AnyGateway, withGate: boolean): string {
           })
         }
       >
-        <I18nProvider initialLang="en">{inner}</I18nProvider>
+        <I18nProvider initialLang="en">
+        <HotkeysProvider>{inner}</HotkeysProvider>
+      </I18nProvider>
       </QueryClientProvider>
     </GatewayContext.Provider>,
   );
