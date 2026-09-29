@@ -14,12 +14,15 @@ import { MockAdapter } from "@/gateway/MockAdapter";
 import { I18nProvider, type Lang } from "@/i18n";
 
 /**
- * TopBar i18n + Ф1 controls regression: RU|EN segmented control, the density
- * toggle, the global search field — rendered copy pinned per language via
- * snapshots (renderToString keeps this DOM-free, project pattern).
+ * TopBar i18n regression (union И1, stand 03 §4): the RU|EN pill, the
+ * density and theme toggles, the brand link and the GLOBAL SEARCH FIELD —
+ * rendered copy pinned per language via snapshots (renderToString keeps
+ * this DOM-free, project pattern).
  *
  * Node env ⇒ ThemeProvider falls back to the system default "dark", so the
- * theme toggle label is deterministically the "switch to light" branch.
+ * theme toggle label is deterministically the "switch to light" branch. The
+ * search <input> is hidden below md in CSS but ALWAYS in the markup —
+ * renderToString pins the server frame (the desktop chrome).
  */
 function renderTopBar(lang: Lang): string {
   const queryClient = new QueryClient({
@@ -34,7 +37,7 @@ function renderTopBar(lang: Lang): string {
               <DensityProvider initialDensity="comfortable">
                 <HotkeysProvider>
                   <MemoryRouter>
-                    <TopBar title={lang === "ru" ? "Поиск" : "Search"} />
+                    <TopBar />
                   </MemoryRouter>
                 </HotkeysProvider>
               </DensityProvider>
@@ -50,14 +53,16 @@ describe("TopBar i18n (ru default, en switch)", () => {
   it("renders Russian copy with RU pressed by default", () => {
     const html = renderTopBar("ru");
     expect(html).toContain("Язык интерфейса");
-    expect(html).toContain("Светлая тема");
     expect(html).toContain('aria-label="Переключить на светлую тему"');
-    // UX-overhaul §7.3 (Ф2): the oval is the palette TRIGGER — a button with
-    // dialog semantics, not a committing input; the honest one-word promise.
-    expect(html).toContain('aria-label="Открыть поиск"');
-    expect(html).toContain('aria-haspopup="dialog"');
-    expect(html).toContain(">Поиск</span>");
     expect(html).toContain("Переключить плотность на компактную");
+    // Union И1: the global search is a REAL input (stand 03 §4) — a labelled
+    // search box with the `/` hint, not the palette-trigger oval.
+    expect(html).toContain('aria-label="Глобальный поиск по памяти и задачам"');
+    expect(html).toContain('placeholder="Поиск по памяти и задачам…"');
+    expect(html).toContain('id="global-search-input"');
+    // The brand rides the bar now (03 §2) — mark + wordmark link to the root.
+    expect(html).toContain('href="/"');
+    expect(html).toContain("mnemos-eyes");
     // Segmented control: RU is the pressed segment, EN is not.
     expect(html).toMatch(/aria-pressed="true"[^>]*>ru</);
     expect(html).toMatch(/aria-pressed="false"[^>]*>en</);
@@ -67,10 +72,9 @@ describe("TopBar i18n (ru default, en switch)", () => {
   it("renders English copy with EN pressed when switched", () => {
     const html = renderTopBar("en");
     expect(html).toContain("Interface language");
-    expect(html).toContain("Light theme");
     expect(html).toContain('aria-label="Switch to light theme"');
-    expect(html).toContain('aria-label="Open search"');
-    expect(html).toContain(">Search</span>");
+    expect(html).toContain('aria-label="Global search across memory and tasks"');
+    expect(html).toContain('placeholder="Search memory and tasks…"');
     expect(html).toContain("Switch density to compact");
     expect(html).toMatch(/aria-pressed="false"[^>]*>ru</);
     expect(html).toMatch(/aria-pressed="true"[^>]*>en</);
@@ -85,7 +89,6 @@ describe("TopBar i18n (ru default, en switch)", () => {
     );
     expect(html).toContain('role="group"');
     expect(html).toContain('aria-label="Язык интерфейса"');
-    expect(html).toContain("focus-visible:outline-iris-bright");
     // Both segments are real buttons (keyboard reachable, no roving tabindex).
     expect(html.match(/<button /g)?.length).toBe(2);
   });

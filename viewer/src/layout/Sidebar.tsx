@@ -1,14 +1,13 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from "react";
+import { useState, useSyncExternalStore } from "react";
 import { Link, useLocation } from "react-router";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
-import { IrisLogo } from "@/components/IrisLogo/IrisLogo";
-import { Button } from "@/components/ui/button";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import {
+  ChevronRight,
+  Command,
+  Keyboard,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from "lucide-react";
 import { useT } from "@/i18n";
 import { useTaskInbox } from "@/features/tasks/useTasks";
 import {
@@ -16,12 +15,45 @@ import {
   useSessionMode,
 } from "@/features/ui-token/useSessionControl";
 import { useBoardHealth } from "@/hooks/usePulse";
+import { openPalette } from "@/lib/paletteState";
+import { useHotkeys } from "./Hotkeys";
 import { DocsSidebarGroups } from "@/features/docs/DocsSidebarGroups";
-import { useFocusTrap } from "@/lib/useFocusTrap";
-import { setSidebarOverlayOpen } from "@/lib/sidebarOverlayState";
-import { NAV_DOMAINS, activeDomain, domainCounterIds, isPathActive, sectionActive } from "./navItems";
+import {
+  NAV_DOMAINS,
+  activeDomain,
+  domainCounterIds,
+  isPathActive,
+  sectionActive,
+} from "./navItems";
 import type { NavCounterId, NavDomain, NavSection } from "./navItems";
 import { cn } from "@/lib/utils";
+
+/**
+ * Primary navigation (union И1, stand 03 §3 over the И0 token layer): the
+ * two-layer domain sidebar — «Обзор» root + domains, sections revealing
+ * under their domain. Domains with sections are COLLAPSIBLE groups (chevron,
+ * ONE domain open at a time — the active route's domain auto-opens); the
+ * active domain carries the 2px iris strip + its strata wash, the active
+ * section the 6px recall dot. Phase-2+ domains stay honest disabled slots.
+ *
+ * Geometry (03 §3): 232px panel / 56px icon rail, both from the shell tokens
+ * (--shell-sidebar-w / --shell-sidebar-rail-w). The collapsed rail hides
+ * labels, chevrons, sections and counters (03 §3 «collapsed» state); every
+ * row keeps the full name as `title` + `aria-label` (recognition over
+ * recall).
+ *
+ * Expansion modes (UI-22 owner feedback, kept): >= md the inline sticky
+ * panel flips with `collapsed` (persisted under vesmaro.sidebarCollapsed —
+ * Shell owns the storage, `[` hotkey and the footer row share it); < md the
+ * sidebar is the stand's OFF-CANVAS drawer — a Radix Dialog (И1: the
+ * hand-rolled focus trap is retired; Radix owns the trap, Esc, the backdrop
+ * and the focus return to the TopBar trigger). The overlay state is
+ * SESSION-ONLY (a mobile toggle never touches the persisted desktop
+ * intent), and the covered page still leaves the accessibility tree (ME-002
+ * `inert` off lib/sidebarOverlayState — the store is driven by Shell).
+ *
+ * Labels via useT(); the brand lives in the TopBar now (03 §2).
+ */
 
 /**
  * The md breakpoint of the sidebar (Tailwind md = 768px). Kept in ONE place:
@@ -37,10 +69,10 @@ function subscribeDesktop(onChange: () => void): () => void {
 }
 
 /**
- * Viewport seam for the sidebar expansion mode (UI-22 owner feedback). This
- * is a client-only SPA: matchMedia is available on the FIRST client render,
- * so the phone never sees a wrong-viewport frame; the SSR/test snapshot
- * renders the desktop chrome (the historical renderToString behaviour).
+ * Viewport seam for the sidebar mode (UI-22). This is a client-only SPA:
+ * matchMedia is available on the FIRST client render, so the phone never
+ * sees a wrong-viewport frame; the SSR/test snapshot renders the desktop
+ * panel (the historical renderToString behaviour).
  */
 function useIsDesktop(): boolean {
   return useSyncExternalStore(
@@ -50,319 +82,270 @@ function useIsDesktop(): boolean {
   );
 }
 
-/**
- * Primary navigation (redesign concept §2.2): domain sidebar — «Обзор» root +
- * 5 domains. Sections render under their domain only while it is active
- * (two-layer sidebar: domain → section, never three). Phase-2+ domains are
- * honest disabled slots: a disabled button carrying a "soon" badge and a
- * tooltip, never a dead link.
- *
- * Expansion modes (UI-22 owner feedback — the phone could not expand the
- * panel at all: the toggle was md-only and <md forced icon-only CSS):
- * - >= md (desktop): inline sticky panel, `collapsed` flips the rail and
- *   persists under vesmaro.sidebarCollapsed (Shell) — unchanged.
- * - < md (mobile): the toggle is VISIBLE on the rail header; expanding opens
- *   an OVERLAY — the panel floats fixed over the content with a translucent
- *   backdrop (click / Esc closes), focus moves into the panel and returns to
- *   the toggle on close, the body scroll locks while it is open, Tab
- *   cycles inside the panel (useFocusTrap — a modal dialog must not leak
- *   keyboard focus into the covered page), and the covered page leaves the
- *   accessibility tree (ME-002: Shell + chrome surfaces apply `inert` off
- *   the shared sidebarOverlayState store). The mobile
- *   overlay state is SESSION-ONLY: every entry/reload starts collapsed
- *   regardless of the stored flag, and a mobile toggle click never touches
- *   the persisted desktop intent.
- *
- * Labels are translated via useT(); the "mnemos-eyes" brand is
- * language-independent.
- *
- * Horizontal-overflow hygiene (UI-19 owner feedback): labels never force the
- * panel wider than its fixed slot. Every label span is `min-w-0 truncate`
- * inside a `min-w-0` flex row, every row keeps the FULL name as its `title`
- * hover hint AND its `aria-label` (the SR name survives icon-only mode), and
- * the nav hard-clips horizontal overflow — however long a translation gets,
- * no horizontal scrollbar can appear. ME-028 exception: docs CATEGORY rows
- * (the third layer, DocsSidebarGroups) wrap to a second line instead of
- * truncating — the full RU category names («Устройства и подключение») stay
- * readable without hover, and a wrapping block row still cannot push the
- * fixed w-64 slot wider.
- */
+/** Panel presentation modes: the inline desktop panel is expanded or the
+ * 56px icon rail; the mobile drawer is always the full panel. */
+type PanelMode = "expanded" | "rail" | "overlay";
+
 export interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
 }
 
+/** The inline DESKTOP panel (>= md). Below md the sidebar is the drawer —
+ * {@link MobileSidebar}, mounted by the Shell inside its Radix Dialog root. */
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const t = useT();
-  const { pathname } = useLocation();
-  const sessionMode = useSessionMode();
-  const openDomain = activeDomain(pathname);
   const isDesktop = useIsDesktop();
-  // Mobile expansion is session-only state (see the docblock): it starts
-  // closed on every mount and never reaches Shell's persisted flag.
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const toggleRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLElement>(null);
-
-  const expanded = isDesktop ? !collapsed : mobileOpen;
-  // The overlay exists only on mobile: a resize across the breakpoint while
-  // the overlay is open degrades back to the inline panel.
-  const overlay = expanded && !isDesktop;
-
-  /** Close the overlay; `refocus` returns focus to the toggle (Esc/backdrop —
-   * the open affordance). A toggle-click close keeps focus where it already
-   * is; a nav-link close hands focus to the routed content (FocusMain). */
-  const closeOverlay = useCallback((refocus: boolean) => {
-    setMobileOpen(false);
-    if (refocus) toggleRef.current?.focus();
-  }, []);
-
-  // One toggle, two policies: desktop flips the PERSISTED intent (Shell),
-  // mobile flips the session-only overlay.
-  const handleToggle = useCallback(() => {
-    if (isDesktop) onToggle();
-    else setMobileOpen((value) => !value);
-  }, [isDesktop, onToggle]);
-
-  // Crossing to desktop while the overlay is open needs no reset: `expanded`
-  // ignores mobileOpen above, and returning to mobile reopens the panel the
-  // user explicitly expanded — one less effect, one consistent story.
-
-  // Overlay a11y mechanics: focus moves into the panel on open, Esc closes
-  // (focus back to the toggle), the document scroll locks while the overlay
-  // covers it, and the covered page leaves the accessibility tree — the
-  // overlay flag rides the shared store (ME-002), whose consumers (Shell's
-  // skip link + content column, the toast region, the update banner) apply
-  // `inert` to themselves. The dialog subtree — this aside, the toggle
-  // INCLUDED — never goes inert, so the focus return to the toggle below
-  // keeps working (programmatic focus cannot cross an inert ancestor).
-  // Effects never run on the server — SSR harnesses are safe.
-  useEffect(() => {
-    setSidebarOverlayOpen(overlay);
-    if (!overlay) return;
-    panelRef.current?.focus({ preventScroll: true });
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeOverlay(true);
-    };
-    document.addEventListener("keydown", onKey);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      setSidebarOverlayOpen(false);
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [overlay, closeOverlay]);
-
-  // Modal keyboard containment (a dialog without a trap leaks Tab into the
-  // covered page): cycles only while the OVERLAY is the active panel. The
-  // desktop inline panel and the icon rail stay untrapped — they are page
-  // chrome, not a dialog.
-  useFocusTrap(panelRef, overlay);
-
-  // Label visibility (UI-19 root cause): derived from the expansion mode in
-  // one place and passed down — the icon rail hides them, the expanded panel
-  // (inline OR overlay) shows them.
-  const hideLabels = expanded ? "min-w-0 truncate" : "hidden";
-
+  if (!isDesktop) return null;
   return (
-    <>
-      {/* Translucent backdrop (mobile overlay only): click closes with the
-       * focus return; it is aria-hidden decoration — Esc is the keyboard
-       * path. Same overlay token as the Radix dialogs. */}
-      {overlay ? (
-        <div
-          aria-hidden="true"
-          className="fixed inset-0 z-40 bg-overlay/80"
-          onClick={() => closeOverlay(true)}
-        />
-      ) : null}
-      <aside
-        id="app-sidebar"
-        ref={panelRef}
-        tabIndex={-1}
-        role={overlay ? "dialog" : undefined}
-        aria-modal={overlay ? true : undefined}
-        aria-label={overlay ? t("nav.primary") : undefined}
-        className={cn(
-          "flex h-dvh shrink-0 flex-col border-r border-border-subtle bg-well",
-          "transition-[width] duration-fast ease-out",
-          expanded ? "w-64" : "w-14",
-          // Overlay box on mobile; the inline panel is sticky on desktop.
-          overlay
-            ? "fixed inset-y-0 left-0 z-50 shadow-float"
-            : "sticky top-0 z-30",
-        )}
-      >
-        {/* The ONE collapse control rides the header (UI-19 owner feedback —
-         * the old footer corner went unnoticed; UI-22: visible at EVERY
-         * width, so the phone can expand the panel too). Expanded =
-         * right-aligned «close» icon; collapsed = the solo header control,
-         * centered, «open» icon. Collapsed inner width is w-14 minus px-2 —
-         * exactly one icon button. */}
-        <div
-          className={cn(
-            "flex items-center gap-2 py-4",
-            expanded ? "px-3 md:px-4" : "justify-center px-2",
-          )}
-        >
-          {expanded && <IrisLogo size={28} />}
-          <span
-            className={cn(
-              "min-w-0 truncate text-sm font-semibold tracking-wide",
-              hideLabels,
-            )}
-          >
-            mnemos-eyes
-          </span>
-          <Button
-            ref={toggleRef}
-            variant="ghost"
-            size="icon"
-            onClick={handleToggle}
-            title={t(expanded ? "nav.collapse" : "nav.expand")}
-            aria-label={t(expanded ? "nav.collapse" : "nav.expand")}
-            aria-expanded={expanded}
-            aria-controls="app-sidebar"
-            className={expanded ? "ml-auto" : undefined}
-          >
-            {expanded ? (
-              <PanelLeftClose className="size-4" aria-hidden="true" />
-            ) : (
-              <PanelLeftOpen className="size-4" aria-hidden="true" />
-            )}
-          </Button>
-        </div>
-
-        {/* overflow-x-hidden closes the horizontal-scroll class entirely: with
-         * `overflow-y-auto` alone the implicit visible-x computes to auto and
-         * any stray wide child would surface a scrollbar. On the mobile
-         * overlay ANY click inside the nav is a navigation (or a no-op) — the
-         * overlay closes so the content is never left covered. */}
-        <nav
-          aria-label={t("nav.primary")}
-          onClick={() => {
-            if (overlay) setMobileOpen(false);
-          }}
-          className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-2"
-        >
-          <ul className="space-y-1">
-            {NAV_DOMAINS.map((domain) => (
-              <li key={domain.to}>
-                <DomainLink
-                  domain={domain}
-                  expanded={openDomain?.to === domain.to}
-                  hideLabels={hideLabels}
-                  panelExpanded={expanded}
-                />
-                {openDomain?.to === domain.to && domain.sections ? (
-                  <ul
-                    className={cn(
-                      "mt-1 space-y-1",
-                      // Icon rail: shallow indent, no border — the second icon
-                      // column must fit w-14. Expanded: the deeper indented
-                      // rail with the hairline border (inline or overlay).
-                      expanded
-                        ? "ml-7 border-l border-border-subtle pl-2"
-                        : "ml-4",
-                    )}
-                  >
-                    {domain.sections.map((section) => (
-                      <li key={section.to}>
-                        <SectionLink
-                          section={section}
-                          siblings={domain.sections ?? []}
-                          pathname={pathname}
-                          hideLabels={hideLabels}
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-                {openDomain?.to === domain.to && domain.to === "/docs" ? (
-                  // The docs domain's THIRD layer (ADR 0016 / design spec §3):
-                  // project groups with nested categories, expanded from the
-                  // pathname alone. Owns its rail geometry + icon-rail fallback.
-                  <DocsSidebarGroups
-                    collapsed={!expanded}
-                    hideLabels={hideLabels}
-                  />
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        <div className={cn("min-w-0 pb-3", expanded ? "px-3 md:px-4" : "px-2")}>
-          {/* Session-aware mode line (fix/login-feedback): the old static
-           * «L1 · только чтение» kept claiming read-only AFTER a login. The
-           * line states the live contract — three honest states (UI-22):
-           * a ui token = active session; no ui token but a paired device
-           * identity = «устройство подключено» (read-only by DEVICE scope,
-           * ADR 0012 §5); neither = read-only. Owner feedback: the live
-           * server version rides the same footer line («какая версия перед
-           * глазами») — hidden when the gateway does not expose it
-           * (mock/legacy). One cached boardHealth read, no new polling. */}
-          <p
-            className={cn(
-              "min-w-0 truncate px-2 py-2 text-xs text-foreground-muted",
-              expanded ? "block" : "hidden",
-            )}
-          >
-            {t(sessionModeI18nKey(sessionMode))}
-            <VersionLabel />
-          </p>
-        </div>
-      </aside>
-    </>
+    <aside
+      aria-label={t("nav.sections")}
+      className={cn(
+        "sticky top-topbar z-30 flex h-[calc(100dvh-var(--shell-topbar-h))] shrink-0 flex-col",
+        // Order matters under tailwind-merge: the border COLOUR first, the
+        // hairline WIDTH second (the reverse order gets merged away).
+        "border-myelin-hairline border-r-hairline bg-well",
+        "transition-[width] duration-normal ease-enter",
+        collapsed ? "w-sidebar-rail" : "w-sidebar",
+      )}
+    >
+      <SidebarPanel mode={collapsed ? "rail" : "expanded"} onToggle={onToggle} />
+    </aside>
   );
 }
 
 /**
- * Live server version (owner feedback): rides the mode line — «сессия
- * активна · 1.12.1». One cached boardHealth read (the Overview shares the
- * same key — no extra traffic); hidden while loading, on error, or when
- * the gateway serves no version (mock/legacy board).
+ * The mobile drawer (< md): a Radix Dialog PORTAL piece — renders ONLY the
+ * Portal/Overlay/Content and must sit INSIDE the Shell's DialogPrimitive.Root
+ * (the Root also hosts the TopBar Trigger, so Radix returns focus to it on
+ * close). Radix owns the focus trap, Esc, the backdrop click and the focus
+ * return; ME-002 (`inert` for the covered page) and the body scroll lock are
+ * driven by the Shell off `open`. Controlled rendering: nothing mounts while
+ * closed.
  */
-function VersionLabel() {
+export function MobileSidebar({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const t = useT();
-  const health = useBoardHealth();
-  const version = health.data?.app_version;
-  if (!version) return null;
+  if (!open) return null;
   return (
-    <span
-      title={t("nav.versionAria", { version })}
-      className="ml-1 shrink-0 font-mono text-[10px] text-foreground-muted/70"
-    >
-      {" · "}
-      {version}
-    </span>
+    <DialogPrimitive.Portal>
+      <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-overlay/80" />
+      <DialogPrimitive.Content className="fixed inset-y-0 left-0 z-50 flex w-sidebar flex-col border-r border-border-subtle bg-well shadow-float">
+        <DialogPrimitive.Title className="sr-only">
+          {t("nav.sections")}
+        </DialogPrimitive.Title>
+        <SidebarPanel
+          mode="overlay"
+          onToggle={() => onOpenChange(false)}
+          onRequestClose={() => onOpenChange(false)}
+        />
+      </DialogPrimitive.Content>
+    </DialogPrimitive.Portal>
   );
 }
 
-function DomainLink({
-  domain,
-  expanded,
-  hideLabels,
-  panelExpanded,
+/**
+ * The panel itself, shared by the inline aside and the mobile drawer.
+ * `onRequestClose` (drawer only) fires when an auxiliary action (palette,
+ * cheatsheet) takes over the screen.
+ */
+function SidebarPanel({
+  mode,
+  onToggle,
+  onRequestClose,
 }: {
-  domain: NavDomain;
-  expanded: boolean;
-  /** Visibility classes for the label span — derived from the panel mode. */
-  hideLabels: string;
-  /** The PANEL expansion (distinct from the domain-open `expanded`): the
-   * "soon" badge rides it — the label spans carry truncate, which a badge
-   * must not, so its display is derived here directly. */
-  panelExpanded: boolean;
+  mode: PanelMode;
+  onToggle: () => void;
+  onRequestClose?: () => void;
 }) {
   const t = useT();
+  const { openHelp } = useHotkeys();
   const { pathname } = useLocation();
+  const active = activeDomain(pathname);
+  const expanded = mode !== "rail";
+
+  // One domain open at a time (03 §3): the active route's domain auto-opens;
+  // a click opens a chosen domain and closes the previous one. The sync is
+  // the canonical render-time adjustment (no effect, no cascading commit).
+  const [activeKey, setActiveKey] = useState<string | null>(active?.to ?? null);
+  const [openKey, setOpenKey] = useState<string | null>(active?.to ?? null);
+  if ((active?.to ?? null) !== activeKey) {
+    setActiveKey(active?.to ?? null);
+    setOpenKey(active?.to ?? null);
+  }
+
+  const hideLabels = expanded ? "min-w-0 truncate" : "hidden";
+
+  return (
+    <>
+      {/* overflow-x-hidden closes the horizontal-scroll class entirely (UI-19):
+       * however long a translation gets, no horizontal scrollbar can appear. */}
+      <nav
+        aria-label={t("nav.primary")}
+        className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-2 py-2"
+      >
+        <ul className="space-y-0.5">
+          {NAV_DOMAINS.map((domain) => (
+            <li key={domain.to}>
+              <DomainRow
+                domain={domain}
+                open={openKey === domain.to}
+                onOpenChange={(next) => setOpenKey(next ? domain.to : null)}
+                activeDomain={active?.to === domain.to}
+                expanded={expanded}
+                hideLabels={hideLabels}
+                pathname={pathname}
+              />
+              {/* The docs domain's THIRD layer (ADR 0016 / design spec §3):
+               * project groups with nested categories, expanded from the
+               * pathname alone. Owns its rail geometry + icon-rail fallback. */}
+              {domain.to === "/docs" && active?.to === "/docs" && expanded ? (
+                <DocsSidebarGroups collapsed={false} hideLabels={hideLabels} />
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      <div className="flex shrink-0 flex-col gap-0.5 border-myelin-hairline border-t-hairline p-2">
+        <FooterRow
+          icon={Command}
+          label={t("nav.palette")}
+          hint="Ctrl K"
+          expanded={expanded}
+          onClick={() => {
+            onRequestClose?.();
+            openPalette();
+          }}
+        />
+        <FooterRow
+          icon={Keyboard}
+          label={t("nav.cheatsheet")}
+          hint="?"
+          expanded={expanded}
+          onClick={() => {
+            onRequestClose?.();
+            openHelp();
+          }}
+        />
+        {mode === "overlay" ? (
+          // The drawer's «Свернуть» closes the dialog — Radix returns focus
+          // to the TopBar trigger; no key hint (its `[` toggles the rail).
+          <DialogPrimitive.Close asChild>
+            <FooterRow
+              icon={PanelLeftClose}
+              label={t("nav.collapse")}
+              expanded
+            />
+          </DialogPrimitive.Close>
+        ) : (
+          <FooterRow
+            icon={expanded ? PanelLeftClose : PanelLeftOpen}
+            label={t(expanded ? "nav.collapse" : "nav.expand")}
+            hint="["
+            expanded={expanded}
+            ariaExpanded={expanded}
+            onClick={onToggle}
+          />
+        )}
+        <SidebarStatusLine expanded={expanded} />
+      </div>
+    </>
+  );
+}
+
+/** A sidebar footer row (03 §3 «подвал»): Палитра / Шпаргалка / Свернуть. */
+function FooterRow({
+  icon: Icon,
+  label,
+  hint,
+  expanded,
+  ariaExpanded,
+  onClick,
+}: {
+  icon: typeof Command;
+  label: string;
+  /** The trailing key hint (mono, muted) — advertised keys all exist. */
+  hint?: string;
+  expanded: boolean;
+  /** Panel state disclosure for the collapse row (stand 03 §3 footer). */
+  ariaExpanded?: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      aria-expanded={ariaExpanded}
+      className={cn(
+        "flex h-10 w-full min-w-0 items-center rounded-md text-sm text-foreground-secondary",
+        "transition-colors duration-instant",
+        "hover:bg-myelin-strong hover:text-foreground",
+        "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
+        expanded ? "gap-3 px-3" : "justify-center px-0",
+      )}
+    >
+      <Icon className="size-5 shrink-0" aria-hidden="true" />
+      {expanded ? (
+        <>
+          <span className="min-w-0 flex-1 truncate text-left">{label}</span>
+          {hint ? (
+            <span className="shrink-0 font-mono text-caps tracking-caps text-foreground-muted">
+              {hint}
+            </span>
+          ) : null}
+        </>
+      ) : null}
+    </button>
+  );
+}
+
+/** Strata wash class per domain (03 §3 «активное состояние» + 02-TOKENS):
+ * keyed by the domain root path; leaf domains carry no wash. */
+const STRATA_CLASS: Partial<Record<string, string>> = {
+  "/memory": "bg-strata-memory",
+  "/tasks": "bg-strata-tasks",
+  "/agents": "bg-strata-agents",
+  "/docs": "bg-strata-docs",
+  "/system": "bg-strata-system",
+};
+
+/**
+ * One domain row: a plain LINK for leaf domains (Обзор, Кора, docs), a
+ * GROUP TOGGLE (chevron, aria-expanded) for domains with sections, and the
+ * honest disabled slot for phase-2+ domains (soonKey). The active domain
+ * carries the 2px iris strip + its strata wash; the rail keeps icons only.
+ */
+function DomainRow({
+  domain,
+  open,
+  onOpenChange,
+  activeDomain,
+  expanded,
+  hideLabels,
+  pathname,
+}: {
+  domain: NavDomain;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** The ACTIVE route's domain (visual strip + wash), distinct from `open`. */
+  activeDomain: boolean;
+  expanded: boolean;
+  hideLabels: string;
+  pathname: string;
+}) {
+  const t = useT();
   const Icon = domain.icon;
   const label = t(domain.key);
 
-  // Honest disabled slot (Phase 2+): visible, explained, inert — a disabled
-  // button with a "soon" badge; the tooltip (title) carries the phase hint
-  // for pointer users, the badge text for everyone else.
+  // Honest disabled slot (Phase 2+): visible, explained, inert.
   if (domain.soonKey) {
     const hint = t(domain.soonKey);
     return (
@@ -371,53 +354,119 @@ function DomainLink({
         disabled
         title={`${label} — ${hint}`}
         className={cn(
-          "flex w-full min-w-0 cursor-not-allowed items-center gap-3 rounded-md px-3 py-2 text-sm",
+          "flex h-10 w-full min-w-0 cursor-not-allowed items-center rounded-md px-3 text-sm",
           "text-foreground-muted opacity-70",
+          expanded ? "gap-3" : "justify-center px-0",
         )}
       >
-        <Icon className="size-4 shrink-0" aria-hidden="true" />
-        <span className={hideLabels}>{label}</span>
-        <span
-          className={cn(
-            "shrink-0 rounded-full border border-border-subtle px-1.5 text-xs text-foreground-muted",
-            panelExpanded ? "inline-block" : "hidden",
-          )}
-        >
-          {t("nav.soon")}
-        </span>
+        <Icon className="size-5 shrink-0" aria-hidden="true" />
+        {expanded ? (
+          <>
+            <span className={hideLabels}>{label}</span>
+            <span className="shrink-0 rounded-sm border border-border-subtle px-1 text-caps tracking-caps text-foreground-muted">
+              {t("nav.soon")}
+            </span>
+          </>
+        ) : null}
       </button>
     );
   }
 
-  const active = isPathActive(pathname, domain.to, domain.end);
-  // UI-30: the aggregate badge sums the sections' counters (inbox today).
-  // The ids come from the static nav data — stable per domain across renders.
   const counterIds = domain.aggregateCounters ? domainCounterIds(domain) : [];
-  return (
-    <Link
-      to={domain.linkTo ?? domain.to}
-      title={label}
-      aria-label={label}
-      aria-current={active ? "page" : undefined}
-      className={cn(
-        "flex min-w-0 items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors duration-instant",
-        "hover:bg-elevated hover:text-foreground",
-        "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
-        active
-          ? "bg-elevated font-medium text-iris-bright"
-          : "text-foreground-secondary",
-        expanded && !active && "text-foreground",
-        // The collapsed-rail corner badge (UI-30) anchors to the row; the
-        // expanded panel's ml-auto pill needs no positioning context.
-        !panelExpanded && "relative",
-      )}
-    >
-      <Icon className="size-4 shrink-0" aria-hidden="true" />
-      <span className={hideLabels}>{label}</span>
-      {counterIds.length > 0 ? (
-        <AggregateCountBadge ids={counterIds} panelExpanded={panelExpanded} />
+  const hasSections = (domain.sections?.length ?? 0) > 0;
+  const active = isPathActive(pathname, domain.to, domain.end);
+
+  const rowClass = cn(
+    "flex h-10 w-full min-w-0 items-center rounded-md text-sm transition-colors duration-instant",
+    "hover:bg-myelin-strong hover:text-foreground",
+    "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
+    activeDomain ? "font-medium text-foreground" : "text-foreground-secondary",
+    activeDomain && STRATA_CLASS[domain.to],
+    expanded ? "gap-3 px-3" : "justify-center px-0",
+  );
+
+  const inner = (
+    <>
+      {/* The 2px iris strip of the active domain (03 §3) — sits in the nav's
+       * px-2 gutter, like the stand's ::before. */}
+      {activeDomain ? (
+        <span
+          aria-hidden="true"
+          className="absolute -left-2 top-2 bottom-2 w-0.5 rounded-full bg-iris"
+        />
       ) : null}
-    </Link>
+      <Icon className="size-5 shrink-0" aria-hidden="true" />
+      {expanded ? <span className={cn("flex-1", hideLabels)}>{label}</span> : null}
+      {expanded && counterIds.length > 0 ? (
+        <AggregateCountBadge ids={counterIds} />
+      ) : null}
+      {hasSections && expanded ? (
+        <ChevronRight
+          className={cn(
+            "size-3.5 shrink-0 text-foreground-muted transition-transform duration-normal ease-enter",
+            open && "rotate-90",
+          )}
+          aria-hidden="true"
+        />
+      ) : null}
+    </>
+  );
+
+  return (
+    <div className="relative">
+      {/* Rail mode (03 §3 collapsed): sections are hidden, so a group domain
+       * NAVIGATES to its root instead of toggling — the icon never dead-ends.
+       * Expanded: the group toggles (chevron + aria-expanded). */}
+      {hasSections && expanded ? (
+        <button
+          type="button"
+          onClick={() => onOpenChange(!open)}
+          aria-expanded={open}
+          title={label}
+          aria-label={label}
+          className={rowClass}
+        >
+          {inner}
+        </button>
+      ) : (
+        <Link
+          to={domain.linkTo ?? domain.to}
+          title={label}
+          aria-label={label}
+          aria-current={active ? "page" : undefined}
+          className={rowClass}
+        >
+          {inner}
+        </Link>
+      )}
+      {hasSections && expanded ? (
+        // The reveal (03 §3): 240ms grid-rows animation. Closed sections
+        // leave the tab order (visibility) — the stand's hidden-but-tabbable
+        // flaw is not carried over. The RAIL renders no sections at all
+        // (icons only, stand collapsed state).
+        <div
+          className={cn(
+            "grid transition-[grid-template-rows,visibility] duration-normal ease-enter",
+            open ? "grid-rows-[1fr] visible" : "grid-rows-[0fr] invisible",
+          )}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <ul className="ml-9 space-y-0.5 py-0.5">
+              {domain.sections?.map((section) => (
+                <li key={section.to}>
+                  <SectionLink
+                    section={section}
+                    siblings={domain.sections ?? []}
+                    pathname={pathname}
+                    hideLabels={hideLabels}
+                  />
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -432,45 +481,30 @@ function SectionLink({
    * the sibling roots (sectionActive, ME-028). */
   siblings: readonly NavSection[];
   pathname: string;
-  /** Visibility classes for the label span — derived from the panel mode. */
   hideLabels: string;
 }) {
   const t = useT();
-  const Icon = section.icon;
   const label = t(section.key);
-  // UX-overhaul §6/§9.4 (Ф1): a section with `soonKey` renders as the
-  // honest disabled slot — the same posture as the domain slot above
-  // (visible, explained, inert; the tooltip carries the "later" promise,
-  // the badge text says it for everyone — never colour-only, WCAG 1.4.1).
-  // Deliberately OUT of the tab order: the route behind it stays alive for
-  // bookmarks, but the menu must not walk into a placeholder page.
+  // Honest disabled slot (UX-overhaul §6/§9.4 Ф1): visible, explained,
+  // inert; the route behind it stays alive for bookmarks.
   if (section.soonKey) {
     const hint = t(section.soonKey);
-    const panelExpanded = hideLabels !== "hidden";
     return (
-      <span
+      <button
+        type="button"
+        disabled
         title={`${label} — ${hint}`}
-        className="flex min-w-0 cursor-not-allowed items-center gap-2 rounded-md px-2 py-1.5 text-sm text-foreground-muted opacity-70"
+        className="flex h-9 w-full min-w-0 cursor-not-allowed items-center gap-2 rounded-md px-3 text-sm text-foreground-muted opacity-70"
       >
-        <Icon className="size-3.5 shrink-0" aria-hidden="true" />
         <span className={hideLabels}>{label}</span>
-        <span
-          className={cn(
-            "shrink-0 rounded-full border border-border-subtle px-1.5 text-xs text-foreground-muted",
-            panelExpanded ? "inline-block" : "hidden",
-          )}
-        >
+        <span className="shrink-0 rounded-sm border border-border-subtle px-1 text-caps tracking-caps text-foreground-muted">
           {t("nav.soon")}
         </span>
-      </span>
+      </button>
     );
   }
-  // Records ("/memory") must highlight on its detail route too
-  // ("/memory/:id") — the list is the master of the master-detail pair.
-  // The task list ("/tasks") likewise owns its detail route ("/tasks/:id").
-  // Sibling exact roots (/memory/pulse, /tasks/inbox, …) stay EXclusive to
-  // their own rows (sectionActive, ME-028).
-  // (Docs sections moved to DocsSidebarGroups — projects → categories.)
+  // ME-028: master-detail lists own their detail routes; sibling exact roots
+  // stay exclusive to their own rows (sectionActive).
   const active = sectionActive(pathname, section, siblings);
   return (
     <Link
@@ -479,17 +513,19 @@ function SectionLink({
       aria-label={label}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors duration-instant",
-        "hover:bg-elevated hover:text-foreground",
-        "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
+        "relative flex h-9 w-full min-w-0 items-center rounded-md px-3 text-sm transition-colors duration-instant",
+        "hover:bg-myelin-strong hover:text-foreground",
+        "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
         active ? "font-medium text-iris-bright" : "text-foreground-secondary",
       )}
     >
-      <Icon className="size-3.5 shrink-0" aria-hidden="true" />
-      {/* UI-19: truncate under the full-name title — a long section label
-       * may ellipsize at w-64 but can never push the panel into a horizontal
-       * scroll. (Docs categories, the third layer, wrap instead — see
-       * DocsSidebarGroups, ME-028.) */}
+      {/* The 6px recall dot of the active section (03 §3). */}
+      {active ? (
+        <span
+          aria-hidden="true"
+          className="absolute -left-3 top-1/2 size-1.5 -translate-y-1/2 rounded-full bg-synapse-recall"
+        />
+      ) : null}
       <span className={hideLabels}>{label}</span>
       {section.counter === "inbox" ? <InboxCount /> : null}
     </Link>
@@ -500,7 +536,7 @@ function SectionLink({
  * Live inbox counter (Ф2): the count of NOT-yet-adopted queue records. One
  * cached read (no polling — the mirror changes via the server scanner);
  * hidden while unknown, zero or on incapable gateways (honest absence
- * instead of a dead "0").
+ * instead of a dead "0"). Stand look: mono caps, muted (side-count).
  */
 function InboxCount() {
   const t = useT();
@@ -510,7 +546,7 @@ function InboxCount() {
     <span
       title={t("tasks.inboxCount", { count })}
       aria-label={t("tasks.inboxCount", { count })}
-      className="ml-auto inline-flex shrink-0 items-center rounded-full bg-iris/15 px-1.5 font-mono text-xs text-iris-bright"
+      className="ml-auto inline-flex shrink-0 font-mono text-caps tracking-caps text-foreground-muted"
     >
       {count}
     </span>
@@ -519,22 +555,11 @@ function InboxCount() {
 
 // --- Live counter sources (UI-30) ---------------------------------------------
 //
-// The sidebar counters all read the SAME TanStack cache entries the pages
-// use — one wire per source, and a cache patch (an SSE bridge handler or an
-// invalidation) re-renders every badge that shows it, no refetch involved.
-// The inbox source is the `tasks.inbox` key (`useTaskInbox`); the /tasks SSE
-// bridge (taskEvents.ts) and the server-side inbox events are the writers.
+// The sidebar counters read the SAME TanStack cache entries the pages use —
+// one wire per source; a cache patch re-renders every badge that shows it.
 
-/**
- * One live reading per counter id. The record shape is FIXED, not a dynamic
- * loop: every source hook runs unconditionally on every render, so the hook
- * order is stable by construction. Adding a counter = one `NavCounterId`
- * member, one field here, one line in `useNavCounterValues` — the aggregate
- * (`domainCounterIds`) picks new section counters up automatically.
- *
- * `null` = the source is unknown (pending / error / incapable gateway) —
- * honest absence; callers never render a guessed number.
- */
+/** `null` = the source is unknown (pending / error / incapable gateway) —
+ * honest absence; callers never render a guessed number. */
 interface NavCounterValues {
   inbox: number | null;
 }
@@ -551,12 +576,8 @@ function useInboxCounterValue(): number | null {
   return inbox.data?.count ?? null;
 }
 
-/**
- * Sum the requested counters. `null` when ANY requested source is unknown —
- * a partial sum would understate the badge (and flash wrong numbers while
- * sources load); 0 and below render nothing (same honest absence as the
- * child badges).
- */
+/** Sum the requested counters; `null` when ANY source is unknown — a partial
+ * sum would understate the badge. */
 function navCounterSum(
   values: NavCounterValues,
   ids: readonly NavCounterId[],
@@ -570,51 +591,71 @@ function navCounterSum(
   return sum;
 }
 
-/** Display cap of the collapsed-rail corner badge: the rail variant must
- * stay width-bounded (UI-19 hygiene), so three-digit sums show "99+". The
- * expanded pill mirrors the child badges and shows the raw count. */
-const RAIL_BADGE_CAP = 99;
-
 /**
  * UI-30 (owner directive): the domain row's live badge = the AGGREGATE of
- * its sections' counters. Expanded panel: the exact pill of the «Входящие»
- * badge (same tokens, zero new colours), pushed right by `ml-auto`.
- * Collapsed rail: a compact corner pill pinned inside the row (`relative`
- * on the row) — the count survives, nothing can push the fixed w-14 slot
- * into a horizontal scroll. Hidden while the sum is unknown or zero.
+ * its sections' counters. Stand look (expanded): the mono caps side-count.
+ * The rail hides counters (03 §3 collapsed) — the count returns with the
+ * labels. Hidden while the sum is unknown or zero.
  */
-function AggregateCountBadge({
-  ids,
-  panelExpanded,
-}: {
-  ids: readonly NavCounterId[];
-  /** The PANEL expansion (not the domain-open flag): the rail shows the
-   * corner variant, the expanded panel the standard pill. */
-  panelExpanded: boolean;
-}) {
+function AggregateCountBadge({ ids }: { ids: readonly NavCounterId[] }) {
   const t = useT();
   const values = useNavCounterValues();
   const count = navCounterSum(values, ids);
   if (count === null || count <= 0) return null;
   const label = t("nav.newCount", { count });
-  if (!panelExpanded) {
-    return (
-      <span
-        title={label}
-        aria-label={label}
-        className="absolute right-1 top-1 inline-flex shrink-0 items-center justify-center rounded-full bg-iris/15 px-1 font-mono text-[10px] leading-4 text-iris-bright"
-      >
-        {count > RAIL_BADGE_CAP ? `${RAIL_BADGE_CAP}+` : count}
-      </span>
-    );
-  }
   return (
     <span
       title={label}
       aria-label={label}
-      className="ml-auto inline-flex shrink-0 items-center rounded-full bg-iris/15 px-1.5 font-mono text-xs text-iris-bright"
+      className="shrink-0 font-mono text-caps tracking-caps text-foreground-muted"
     >
       {count}
     </span>
+  );
+}
+
+/**
+ * Footer status line (07k §1.2): 6px dot + «mnemos-eyes <version> · <session
+ * status>» in caps-muted — NOT a link/button, never competing with the nav.
+ * Authorized session → success dot (never colour-only — the text carries the
+ * status). The rail collapses to dot + short version (07k §1.2); the version
+ * comes from the live board health (hidden when the gateway serves none —
+ * mock/legacy, the same honest absence as before the union).
+ */
+function SidebarStatusLine({ expanded }: { expanded: boolean }) {
+  const t = useT();
+  const sessionMode = useSessionMode();
+  const health = useBoardHealth();
+  const version = health.data?.app_version;
+  const mode = t(sessionModeI18nKey(sessionMode));
+  const authorized = sessionMode !== "readOnly";
+  const full = version ? `mnemos-eyes ${version} · ${mode}` : `mnemos-eyes · ${mode}`;
+  // Short version for the rail (07k §1.2 «1.41»): major.minor of either
+  // "1.51.0" or "v1.51.0".
+  const short = version?.replace(/^v?(\d+\.\d+).*/, "$1");
+  if (!expanded && !short) return null;
+  return (
+    <p
+      title={full}
+      className={cn(
+        "flex min-w-0 items-center gap-2 px-2 pb-1 pt-2",
+        expanded ? "text-caps tracking-caps text-foreground-muted" : "justify-center",
+      )}
+    >
+      <span
+        aria-hidden="true"
+        className={cn(
+          "size-1.5 shrink-0 rounded-full",
+          authorized ? "bg-success" : "bg-foreground-muted",
+        )}
+      />
+      {expanded ? (
+        <span className="min-w-0 truncate">{full}</span>
+      ) : (
+        <span className="font-mono text-caps tracking-caps text-foreground-muted">
+          {short}
+        </span>
+      )}
+    </p>
   );
 }

@@ -115,7 +115,7 @@ describe("AuthScreen", () => {
 
 describe("TopBar auth slot (AuthStatus)", () => {
   it("renders the connection indicator and Sign in when anonymous", () => {
-    const html = renderWithProviders(<TopBar title="Search" />);
+    const html = renderWithProviders(<TopBar />);
     expect(html).toContain("local (mock)"); // mock adapter label
     expect(html).toContain("Sign in");
     expect(html).not.toContain("Sign out");
@@ -123,7 +123,7 @@ describe("TopBar auth slot (AuthStatus)", () => {
 
   it("renders Sign out for an authenticated session", () => {
     const html = renderWithProviders(
-      <TopBar title="Search" />,
+      <TopBar />,
       authValue([{ type: "SESSION_RESTORED" }]),
     );
     expect(html).toContain("Sign out");
@@ -132,7 +132,7 @@ describe("TopBar auth slot (AuthStatus)", () => {
 
   it("reports the live connection label on the mnemos adapter", () => {
     const html = renderWithProviders(
-      <TopBar title="Search" />,
+      <TopBar />,
       authValue([], { adapterMode: "mnemos", endpoint: "/api" }),
     );
     // Queries are disabled in this harness → still connecting (honest state).
