@@ -1854,6 +1854,18 @@ class Store:
             ).fetchone()
         return int(row["m"])
 
+    def log_ui_telemetry(self, rows: list[tuple[str, dict[str, Any]]]) -> None:
+        """ME-037 (events-taxonomy-v0 §3.1): append one UI-telemetry batch
+        into the EXISTING events audit table — one lock/transaction for the
+        whole batch. The kinds are pre-validated by the API layer (the
+        server-side registry); ``task_id`` is None because telemetry
+        describes surfaces and visits, never a task. Retention is the
+        standing UI-28 sweep: every telemetry kind is non-``task.*``, so
+        the 90-day/500k passes apply unchanged, no new policy."""
+        with self._lock, self._conn() as db:
+            for kind, payload in rows:
+                self._log(db, kind, None, payload)
+
     # ------------------------------------------------- UI-28 activity feed
     def _activity_where(self, *, kinds: list[str] | None,
                         task_id: str | None, agent: str | None,
