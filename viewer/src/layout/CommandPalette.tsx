@@ -282,12 +282,23 @@ function PaletteBody() {
         aria-label={t("cmdk.resultsLabel")}
         className="min-h-0 flex-1 overflow-y-auto p-2"
       >
-        {flat.length === 0 ? (
+        {/* Review P3-4: a FAILED memory wire is not "nothing found" — the
+         * honest line states the unavailability and stays visible even when
+         * the local sections still have rows to show. */}
+        {searchReady && search.isError ? (
+          <p
+            role="status"
+            className="px-2 py-1.5 text-sm text-foreground-secondary"
+          >
+            {t("cmdk.searchFailed")}
+          </p>
+        ) : null}
+        {flat.length === 0 && !(searchReady && search.isError) ? (
           <p
             role="status"
             className="px-2 py-6 text-center text-sm text-foreground-secondary"
           >
-            {search.isPending && searchReady ? t("cmdk.searching") : t("cmdk.noResults")}
+            {searchReady && search.isPending ? t("cmdk.searching") : t("cmdk.noResults")}
           </p>
         ) : (
           (() => {
@@ -362,12 +373,11 @@ function PaletteGroupBlock({
               <button
                 type="button"
                 onClick={() => onChoose(item)}
-                // Pointer support: clicking needs the row active — sync the
-                // selection on intent only; a stray hover does NOT steal
-                // the keyboard highlight while it just passes through.
-                onMouseMove={() => {
-                  if (!isActive) onHover(offset + position);
-                }}
+                // Standard palette pointer behaviour (review P3-7): the
+                // highlight FOLLOWS the mouse (onMouseMove selects the row),
+                // so a plain click always lands on the active row and stays
+                // a one-step action.
+                onMouseMove={() => onHover(offset + position)}
                 className={
                   "flex w-full items-baseline gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors duration-instant " +
                   (isActive

@@ -67,7 +67,19 @@ export function CockpitBusy() {
 
   // Zero agents: the honest absence line WITH the connect action — the
   // block is not rendered, the line leads somewhere (§9.1 empty/zero).
+  // Review P3-3: a FAILED queue must not be swallowed by that line — with
+  // the registry empty AND the queue erroring, the render is the error's
+  // HonestLine (the connect line would claim an emptiness we cannot prove).
   if (executors.isSuccess && approved.length === 0) {
+    if (assignments.isError) {
+      return (
+        <CockpitSection id="overview-busy" title={t("cockpit.busyTitle")}>
+          <HonestLine tone="warning" action={<RetryButton queries={[assignments]} />}>
+            {t("cockpit.busyError")}
+          </HonestLine>
+        </CockpitSection>
+      );
+    }
     return (
       <CockpitSection id="overview-busy" title={t("cockpit.busyTitle")}>
         <HonestLine

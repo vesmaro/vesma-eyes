@@ -98,6 +98,7 @@ export const en: Record<TranslationKey, string> = {
   "cmdk.resultsLabel": "Results",
   "cmdk.noResults": "Nothing found",
   "cmdk.searching": "Searching…",
+  "cmdk.searchFailed": "Memory search is unavailable",
   "cmdk.extendedSearch": "Advanced search",
   "cmdk.hintNavigate": "↑↓ — navigate",
   "cmdk.hintOpen": "Enter — open",

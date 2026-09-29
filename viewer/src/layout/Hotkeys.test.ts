@@ -67,6 +67,23 @@ describe("resolveGlobalHotkey (⌘K / Ctrl+K — the palette, Ф2)", () => {
     ).toBe("open-palette");
   });
 
+  it("matches the PHYSICAL key: a Russian layout's Ctrl+Л (code KeyK) opens too (review P3-6)", () => {
+    expect(resolveGlobalHotkey({ key: "л", code: "KeyK", ctrlKey: true })).toBe(
+      "open-palette",
+    );
+    expect(
+      resolveGlobalHotkey({
+        key: "л",
+        code: "KeyK",
+        metaKey: true,
+        target: target("INPUT"),
+      }),
+    ).toBe("open-palette");
+    // A different physical key with the same fallback key stays quiet —
+    // the fallback is exactly "k", the code path is exactly KeyK.
+    expect(resolveGlobalHotkey({ key: "л", code: "KeyL", ctrlKey: true })).toBeNull();
+  });
+
   it("stays quiet without the modifier or with extra ones", () => {
     expect(resolveGlobalHotkey({ key: "k" })).toBeNull();
     expect(resolveGlobalHotkey({ key: "k", altKey: true, metaKey: true })).toBeNull();

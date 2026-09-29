@@ -14,6 +14,9 @@ export type HotkeyAction = "open-palette" | "open-help";
 /** Minimal event shape resolveHotkey needs (pure, DOM-free — unit-testable). */
 export interface HotkeyEvent {
   key: string;
+  /** Physical key code — ⌘K matches by it so a Russian layout's Ctrl+Л
+   * (key="л", code="KeyK") opens the palette too (review P3-6, RU-first). */
+  code?: string;
   metaKey?: boolean;
   ctrlKey?: boolean;
   altKey?: boolean;
@@ -51,11 +54,16 @@ export function resolveHotkey(event: HotkeyEvent): HotkeyAction | null {
  * Modifier combos that stay hot EVERYWHERE (even inside editable surfaces):
  * ⌘K / Ctrl+K is the palette's canonical key, and the palette IS an input —
  * the inInput guard would make it unreachable exactly where it is needed.
- * Alt/Shift variants stay with the browser/OS.
+ * The match is by PHYSICAL key (event.code "KeyK") with the key fallback —
+ * a Russian layout's Ctrl+Л must open the palette (review P3-6, RU-first).
+ * Alt/Shift variants stay with the browser/OS. («/» and «?» keep the
+ * inherited key-based matching — a known limitation, left as is.)
  */
 export function resolveGlobalHotkey(event: HotkeyEvent): HotkeyAction | null {
   if (event.altKey || event.shiftKey) return null;
   if (!(event.metaKey || event.ctrlKey)) return null;
-  if (event.key.toLowerCase() === "k") return "open-palette";
+  if (event.code === "KeyK" || event.key.toLowerCase() === "k") {
+    return "open-palette";
+  }
   return null;
 }

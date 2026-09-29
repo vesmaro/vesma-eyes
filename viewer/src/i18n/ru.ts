@@ -111,6 +111,7 @@ export const ru = {
   "cmdk.resultsLabel": "Результаты",
   "cmdk.noResults": "Ничего не найдено",
   "cmdk.searching": "Ищем…",
+  "cmdk.searchFailed": "Поиск памяти недоступен",
   "cmdk.extendedSearch": "Расширенный поиск",
   "cmdk.hintNavigate": "↑↓ — выбор",
   "cmdk.hintOpen": "Enter — открыть",

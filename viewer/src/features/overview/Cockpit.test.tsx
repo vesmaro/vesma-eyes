@@ -213,6 +213,47 @@ describe("CockpitBusy (§9.1 matrix)", () => {
     expect(document.body.textContent).toContain("Who is busy");
   });
 
+  it("partial (§10.12): executors ok + assignments error — live half renders, the failed half is an HonestLine", async () => {
+    class RejectingQueue extends MockAdapter {
+      override listAssignments(): Promise<never> {
+        return Promise.reject(new Error("boom"));
+      }
+    }
+    await mountCockpitDom(new RejectingQueue());
+    await waitForDom(
+      "the partial error line",
+      () => document.body.textContent?.includes("Could not load who is busy") === true,
+    );
+    // The LIVE half still speaks (the registry side of the aggregate).
+    expect(document.body.textContent).toContain("executors connected: 2 of 4");
+    // The failed half is the honest line with a retry — not a silent gap.
+    expect(document.body.textContent).toContain("Retry");
+  });
+
+  it("zero agents + failed queue (review P3-3): the error line wins over the connect line", async () => {
+    class EmptyRegistryRejectingQueue extends MockAdapter {
+      override listExecutors() {
+        return Promise.resolve({
+          ok: true,
+          count: 0,
+          items: [],
+          meta: MOCK_EXECUTORS_META,
+        });
+      }
+      override listAssignments(): Promise<never> {
+        return Promise.reject(new Error("boom"));
+      }
+    }
+    await mountCockpitDom(new EmptyRegistryRejectingQueue());
+    await waitForDom(
+      "the queue error line",
+      () => document.body.textContent?.includes("Could not load who is busy") === true,
+    );
+    // The empty-registry line claims an emptiness we cannot prove while the
+    // queue is down — the error is the honest render, «Агентов пока нет» stays out.
+    expect(document.body.textContent).not.toContain("No agents yet");
+  });
+
   it("capability absence (mnemos adapter): nothing renders at all", async () => {
     const html = await renderCockpit(new HttpAdapter("/api"));
     expect(html).not.toContain("Who is busy");
@@ -240,6 +281,26 @@ describe("CockpitWaiting (§3.1 + persona round 1)", () => {
     const html = await renderCockpit(new EmptyCockpitAdapter());
     expect(html).not.toContain("Waiting for you");
     expect(html).not.toContain("waiting for you:");
+  });
+
+  it("source error (§10.12): the WHOLE block becomes one HonestLine — no partial sum (review P3-2/P3-5)", async () => {
+    class RejectingInbox extends MockAdapter {
+      override inbox(): Promise<never> {
+        return Promise.reject(new Error("boom"));
+      }
+    }
+    await mountCockpitDom(new RejectingInbox());
+    await waitForDom(
+      "the waiting error line",
+      () =>
+        document.body.textContent?.includes("Could not count what is waiting") ===
+        true,
+    );
+    // No partial sum beside the error: the honest state replaces the count
+    // (a partial "waiting: N" would silently undercount).
+    expect(document.body.textContent).not.toContain("waiting for you:");
+    expect(document.body.textContent).not.toContain("Inbox:");
+    expect(document.body.textContent).toContain("Retry");
   });
 
   it("capability absence (mnemos adapter): nothing renders at all", async () => {

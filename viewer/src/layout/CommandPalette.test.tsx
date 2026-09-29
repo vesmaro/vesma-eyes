@@ -114,6 +114,7 @@ async function waitFor(
 /** Dispatch a keydown on the window (the hotkey listener's surface). */
 async function pressKey(init: {
   key: string;
+  code?: string;
   metaKey?: boolean;
   ctrlKey?: boolean;
 }): Promise<void> {
@@ -121,6 +122,7 @@ async function pressKey(init: {
     window.dispatchEvent(
       new KeyboardEvent("keydown", {
         key: init.key,
+        code: init.code,
         metaKey: init.metaKey ?? false,
         ctrlKey: init.ctrlKey ?? false,
         bubbles: true,
@@ -238,10 +240,16 @@ describe("CommandPalette (Ф2, UX-overhaul §7.3)", () => {
     expect(getPaletteOpen()).toBe(false);
   });
 
-  it("Ctrl+K opens it too (non-mac hosts)", async () => {
+  it("Ctrl+K opens it too (non-mac hosts), and so does the RUSSIAN layout's Ctrl+Л (code KeyK — review P3-6)", async () => {
     await mount();
     await pressKey({ key: "k", ctrlKey: true });
     await waitFor("palette dialog", () => dialog() !== null);
+    await pressInInput("Escape");
+    await waitFor("palette closed", () => dialog() === null);
+
+    // RU-first: the physical key decides — key="л", code="KeyK".
+    await pressKey({ key: "л", code: "KeyK", ctrlKey: true });
+    await waitFor("palette dialog (ru layout)", () => dialog() !== null);
   });
 
   it("the bare `/` opens the palette; the empty query shows navigation only", async () => {
@@ -389,5 +397,27 @@ describe("CommandPalette (Ф2, UX-overhaul §7.3)", () => {
     );
     expect(row).toBeDefined();
     expect(row!.textContent).toContain("/memory/search?q=zzzz-nothing");
+  });
+
+  it("a FAILED memory search says so honestly — never «nothing found» (review P3-4)", async () => {
+    const gateway = await mount(async (client, mock) => {
+      await seedPaletteData(client, mock);
+    });
+    gateway.search = vi.fn(async () => {
+      throw new Error("boom");
+    });
+
+    await pressKey({ key: "/" });
+    await waitFor("palette dialog", () => dialog() !== null);
+    await type("zzzz-nothing");
+    await waitFor(
+      "the honest failure line",
+      () => document.body.textContent!.includes("Memory search is unavailable"),
+      3000,
+    );
+    // The lie is out: an unavailable wire is not an empty result, and the
+    // extended-search escape hatch does not pretend the wire answered.
+    expect(document.body.textContent).not.toContain("Nothing found");
+    expect(document.body.textContent).not.toContain("Advanced search");
   });
 });

@@ -22,6 +22,13 @@ import { useT } from "@/i18n";
  * disappearance. The block needs BOTH capabilities (task + agents): with
  * fewer, the honest state is absence (the real adapter matrix always has
  * both or neither).
+ *
+ * Review P3-2/P3-5 (conscious spec deviation, report to the spec): a source
+ * error renders the WHOLE block as one HonestLine — no §9.1-style partial
+ * rendering. A partial sum here would be a SILENT UNDERCOUNT (the owner
+ * sees "waiting: 2" while the wire just failed to say 5), which is exactly
+ * the dishonesty the cockpit exists to prevent; the error line with a
+ * retry is the honest state instead.
  */
 export function CockpitWaiting() {
   const t = useT();
