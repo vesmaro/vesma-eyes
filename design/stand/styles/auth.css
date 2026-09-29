@@ -66,6 +66,12 @@
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
 }
+/* целевой раунд: продолжение истории — роли следующих аккаунтов */
+.auth-story-sub {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-data);
+  color: var(--color-text-muted);
+}
 
 /* ── поле пароля + eye-переключатель (24px клик-цель, 07k §4.4) ───────── */
 .pass-wrap {

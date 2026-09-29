@@ -88,10 +88,10 @@
         <div class="side-sections"><div>
           <a class="side-section" href="agents.html">Исполнение</a>
           <a class="side-section" href="hosts.html">Хосты<span class="side-count" data-side-count="hosts">4</span></a>
-          <a class="side-section" href="connect.html">Подключить</a>
+          <a class="side-section" href="connect.html">Подключить машину</a>
         </div></div>
       </div>
-      <a class="side-link" href="kora.html">
+      <a class="side-link" href="kora.html" title="сессии и переписка агентов">
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
         <span class="side-label">Кора</span>
       </a>
@@ -305,9 +305,14 @@
     var board = doc.getElementById("st-board");
     var br = doc.createElement("div");
     br.className = "status-row";
+    /* целевой раунд: тултип именно на номере версии борды */
+    var boardLine = D.status.board.line.replace(
+      /(\d+\.\d+\.\d+)/,
+      '<span title="версия сервера (борда)">$1</span>'
+    );
     br.innerHTML =
       '<span class="st-dot" style="background: var(--color-success)" aria-hidden="true"></span>' +
-      "<span>" + D.status.board.line + "</span>";
+      "<span>" + boardLine + "</span>";
     board.appendChild(br);
 
     /* ── Хосты: lifecycle-пилюли 07a §4 ────────────────────────── */
@@ -328,6 +333,17 @@
         '<span class="st-note">' + h.line.replace(h.name, "").trim() + "</span>";
       hostsBox.appendChild(r);
     });
+    /* целевой раунд: полная картина — хосты в постановке, из тех же фикстур
+     * (D.hosts, lifecycle provisioning); счётчик «· N» считает только живые */
+    D.hosts.filter(function (h) { return h.lifecycle === "provisioning"; })
+      .forEach(function (h) {
+        var r = doc.createElement("a");
+        r.className = "status-row st-prov";
+        r.href = "hosts.html?host=" + encodeURIComponent(h.name);
+        r.innerHTML = "<span>+</span><span>" + h.name + "</span>" +
+          '<span class="st-note">' + (h.statusLine || "ставится…") + "</span>";
+        hostsBox.appendChild(r);
+      });
 
     /* ── Память / Задачи: счётчики с переходом ─────────────────── */
     doc.getElementById("st-memory").innerHTML =

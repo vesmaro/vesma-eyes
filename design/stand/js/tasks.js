@@ -1383,13 +1383,16 @@
     }
     var ex = t.execution;
     var pillCls = { running: "busy", queued: "queued", stagnant: "stagnant", failed: "ended", done: "ended" }[ex.state] || "queued";
-    var pillText = { running: "идёт", queued: "в очереди", stagnant: "очередь молчит", failed: "не вышло", done: "завершено" }[ex.state] || ex.state;
+    var pillText = { running: "идёт", queued: "в очереди", stagnant: "агент не берёт задачу", failed: "не вышло", done: "завершено" }[ex.state] || ex.state;
+    var pillTitle = ex.state === "stagnant" ? "агент не может взять задачу — стоит проверить связь" : "";
     var line = el("div", "status-line");
     var pill = el("span", "pill " + pillCls);
     var dot = el("span", "dot");
     dot.setAttribute("aria-hidden", "true");
     pill.appendChild(dot);
-    pill.appendChild(el("span", null, pillText));
+    var pillTx = el("span", null, pillText);
+    if (pillTitle) pillTx.title = pillTitle;
+    pill.appendChild(pillTx);
     line.appendChild(pill);
     line.appendChild(el("span", null, ex.line));
     w.appendChild(line);

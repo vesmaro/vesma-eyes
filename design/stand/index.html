@@ -88,10 +88,10 @@
         <div class="side-sections"><div>
           <a class="side-section" href="agents.html">Исполнение</a>
           <a class="side-section" href="hosts.html">Хосты<span class="side-count" data-side-count="hosts">4</span></a>
-          <a class="side-section" href="connect.html">Подключить</a>
+          <a class="side-section" href="connect.html">Подключить машину</a>
         </div></div>
       </div>
-      <a class="side-link" href="kora.html">
+      <a class="side-link" href="kora.html" title="сессии и переписка агентов">
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
         <span class="side-label">Кора</span>
       </a>
@@ -172,6 +172,8 @@
       <div class="page-head">
         <div>
           <h1 tabindex="-1">Память жива</h1>
+          <!-- целевой раунд: одна строка-пояснение назначения -->
+          <p class="page-hint">память ваших ИИ-помощников: записи, задачи и сессии агентов</p>
           <p class="page-sub"><span class="num">12 483</span> записи · импульсов за час: <span class="num" id="pulses-hour">37</span></p>
         </div>
         <div class="page-actions">
@@ -186,7 +188,7 @@
            Видна только анониму; авторизованный её не видит. -->
       <section class="anon-summary panel" data-anon-only aria-label="Публичная сводка: цифры открыты всем">
         <div class="anon-summary-row">
-          <span class="anon-line">Сводка открыта всем: <span class="num">12 483</span> записи · <span class="num">342</span> тега · <span class="num">5</span> активных задач · <span class="num">3</span> агента</span>
+          <span class="anon-line">Сводка открыта всем: <span class="num">12 483</span> записи · <span class="num" id="tags-anon">342</span> тега · <span class="num">5</span> активных задач · <span class="num">3</span> агента</span>
           <span class="anon-line" id="anon-stores">хранилища: 4 · 3 на связи · 1 с оговорками</span>
         </div>
       </section>
@@ -220,7 +222,7 @@
           <h2>Счётчики</h2>
           <div class="bento-num">12 483</div>
           <p class="bento-sub"><a href="memories.html" data-anon-gated>Записи памяти →</a></p>
-          <div class="bento-num" style="margin-top: var(--space-3)">342</div>
+          <div class="bento-num" style="margin-top: var(--space-3)" id="tags-active">342</div>
           <p class="bento-sub">активных тега</p>
           <p class="bento-sub" style="margin-top: var(--space-2)"><a href="memories.html" data-demo-action="Раздел «Теги» — вне стенда; ссылка — заглушка">Открыть теги →</a></p>
         </div>
@@ -233,7 +235,7 @@
           <p class="agent-session"><span class="as-num">1</span> идёт · <span class="as-num">2</span> в очереди</p>
           <p class="agent-session">агент agb · задача про UI-10 · доклад 40 с назад</p>
           <p class="agent-session">агент core · ждёт старта 4 мин</p>
-          <p class="agent-session">агент morph · в очереди — очередь молчит</p>
+          <p class="agent-session">агент morph · в очереди — агент не может взять задачу, стоит проверить связь</p>
           <p style="margin-top: var(--space-3)"><a class="btn ghost sm" href="agents.html">Открыть исполнение →</a></p>
         </div>
       </section>
@@ -322,6 +324,23 @@
         "хранилища: " + D.servers.length + " · " + okN + " " + (okN === 1 ? "живо" : "живы") +
         (warnN ? " · " + warnN + " с оговорками" : " · все отвечают");
     }
+    /* Целевой раунд: demo numbers from a single source — tags are counted
+       from fixtures as in tags.html (unique tags of the merged well+memories),
+       impulses per hour — from D.counters as in pulse.html. No hardcoded 342/37. */
+    var idxRecs = {};
+    (D.wellNodes || []).forEach(function (n) { if (n && n.id) idxRecs[n.id] = n; });
+    (D.memories || []).forEach(function (m) { if (m && m.id) idxRecs[m.id] = m; });
+    var idxSeen = {};
+    Object.keys(idxRecs).forEach(function (id) {
+      (idxRecs[id].tags || []).forEach(function (t) { idxSeen[t] = 1; });
+    });
+    var idxSet = function (id, v) {
+      var n = document.getElementById(id);
+      if (n && v != null) n.textContent = v;
+    };
+    idxSet("tags-active", Object.keys(idxSeen).length);
+    idxSet("tags-anon", Object.keys(idxSeen).length);
+    idxSet("pulses-hour", (D.counters || {}).pulsesHour);
     var wl = document.getElementById("waiting");
     D.waiting.forEach(function (w) {
       var row = document.createElement("div");

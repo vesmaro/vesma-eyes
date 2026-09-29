@@ -235,6 +235,23 @@
     }
     return base;
   }
+  /* целевой раунд: номер версии несёт свой тултип («версия интерфейса») —
+   * строка собирается узлами, не innerHTML (user не экранируется наугад) */
+  function fillFooterLine(el, session) {
+    var D = window.STAND || { version: "?", slice: "v?" };
+    el.textContent = "";
+    var name = doc.createElement("span");
+    name.textContent = "vesmaro-eyes ";
+    el.appendChild(name);
+    var ver = doc.createElement("span");
+    ver.className = "ver-num";
+    ver.title = "версия интерфейса";
+    ver.textContent = D.version;
+    el.appendChild(ver);
+    var rest = doc.createElement("span");
+    rest.textContent = " · " + (session ? "вы: " + session.user : "аноним");
+    el.appendChild(rest);
+  }
   function renderFooterStatus(session) {
     /* Sidebar slot: replaces the old stand-note (07k §1.2) */
     var foot = doc.querySelector(".side-foot .stand-note");
@@ -242,7 +259,7 @@
       foot.textContent = "";
       var full = doc.createElement("span");
       full.className = "ss-full";
-      full.textContent = footerText(session);
+      fillFooterLine(full, session);
       foot.appendChild(full);
       foot.title = footerTooltip(session);
       foot.classList.toggle("auth-user", !!session);
@@ -251,7 +268,7 @@
     /* Pages outside Shell (pair, auth): second line of the footer (07k §1.3) */
     doc.querySelectorAll("[data-stand-version-line]").forEach(function (el) {
       if (el === foot) return;
-      el.textContent = footerText(session);
+      fillFooterLine(el, session);
       el.title = footerTooltip(session);
       el.classList.toggle("auth-user", !!session);
     });

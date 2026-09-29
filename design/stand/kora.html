@@ -90,10 +90,10 @@
         <div class="side-sections"><div>
           <a class="side-section" href="agents.html">Исполнение</a>
           <a class="side-section" href="hosts.html">Хосты<span class="side-count" data-side-count="hosts">4</span></a>
-          <a class="side-section" href="connect.html">Подключить</a>
+          <a class="side-section" href="connect.html">Подключить машину</a>
         </div></div>
       </div>
-      <a class="side-link" href="kora.html" aria-current="page">
+      <a class="side-link" href="kora.html" title="сессии и переписка агентов" aria-current="page">
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
         <span class="side-label">Кора</span>
       </a>
@@ -203,7 +203,7 @@
               </select>
             </div>
             <button class="btn secondary sm narrow-only" type="button" id="side-open">Хосты и сессии</button>
-            <button class="btn ghost sm" type="button" id="kora-check">Проверить связь</button>
+            <button class="btn ghost sm" type="button" id="kora-check" title="опросить хосты: кто не докладывает">Проверить связь</button>
           </div>
           <!-- служебный тулбар стенда — вне продуктовой поверхности (07j §5-13) -->
           <div class="demo-toolbar" id="demo-toolbar">
@@ -230,6 +230,9 @@
           <!-- ничего не выбрано: приглашение + Эфир на сцене (07j §3.1 А) -->
           <div class="wz-empty" id="wz-empty">
             <p class="wz-invite" id="wz-invite">Выберите сессию из дерева справа — здесь откроется её ход. Пока идёт Эфир:</p>
+            <!-- целевой раунд: имя «Кора» объяснено на пустом экране; «выберите
+                 сессию» живёт в приглашении выше — без дублей слов (07a §1.3) -->
+            <p class="wz-kora-line">Кора — журнал сессий и переписка агентов</p>
             <div class="ether-card" id="wz-ether">
               <p class="ether-caps">Эфир — всё, что происходит в сессиях сейчас</p>
               <div class="ether-feed" id="ether-stage" role="log" aria-live="off"></div>
@@ -277,6 +280,12 @@
               <button class="wz-comp-send" id="wz-comp-send" type="button" aria-label="Отправить агенту">
                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
               </button>
+              <!-- целевой раунд: у неактивного поля мосты-действия вместо тупика
+                   «начните новую на хосте»; хост-ссылка ставится по сессии в JS -->
+              <div class="wz-comp-bridges" id="wz-comp-bridges">
+                <a class="btn ghost sm" id="wz-bridge-host" href="hosts.html">Открыть хост →</a>
+                <a class="btn ghost sm" href="tasks.html?wizard=1">Дать задачу</a>
+              </div>
               <p class="wz-comp-note" id="wz-comp-note">в продуктовой версии доставка — через релей хоста (план срез 3)</p>
             </div>
           </div>
@@ -300,6 +309,9 @@
             <div class="side-head ks-sticky">
               <h2 class="side-caps-h" id="ctx-title">Сессии · все хосты</h2>
               <span class="ctx-count mono" id="ctx-count"></span>
+              <!-- целевой раунд: клавиатурный маршрут списка Блока 2 — виден,
+                   пока шапка не сжата (на <768px прячется) -->
+              <span class="ctx-hint" aria-hidden="true">j/k — по списку, Enter — открыть</span>
             </div>
             <div class="side-body">
               <div class="qf-row">
@@ -611,15 +623,36 @@
           chip.setAttribute("data-chip", "delivered");
           chip.querySelector(".chip-tx").textContent = "доставлено";
         }
+        /* целевой раунд: после доставки — одна строка-пояснение, не спамим */
+        if (!relNoteShown[s.id]) {
+          relNoteShown[s.id] = true;
+          var row = chip ? chip.parentNode.parentNode : null;
+          var note = relNoteEl();
+          if (row && row.parentNode) row.parentNode.insertBefore(note, row.nextSibling);
+          else wzScroll.appendChild(note);
+        }
       }, 1500 + Math.round(Math.random() * 1000));
     }
+    /* целевой раунд: пояснение после «доставлено» — один показ на сессию
+     * за открытие страницы; при перерендере восстанавливается в хвосте */
+    var relNoteShown = {}; /* sessId -> true */
+    function relNoteEl() {
+      var n = el("div", "t-relnote");
+      var gap = el("span", "t-time");
+      gap.setAttribute("aria-hidden", "true");
+      n.appendChild(gap);
+      n.appendChild(el("span", "t-note-tx", "ответ агент напишет в своей сессии — здесь подсветим"));
+      return n;
+    }
     /* состояние поля по сессии: живая — можно писать; завершённая/прерванная —
-     * disabled + причина visible-строкой и title (не только tooltip, WCAG) */
+     * disabled + причина visible-строкой, title и мосты-действия (целевой
+     * раунд: «начните новую на хосте» больше не тупик) */
     function setComposerState(s) {
       var live = s && s.state === "live";
       compInput.disabled = !live;
       compSend.disabled = !live;
       compWrap.classList.toggle("is-off", !live);
+      if (s) bridgeHost.href = "hosts.html?host=" + encodeURIComponent(s.host);
       if (live) {
         compWrap.removeAttribute("title");
         compNote.textContent = "в продуктовой версии доставка — через релей хоста (план срез 3)";
@@ -725,6 +758,7 @@
     var compInput = doc.getElementById("wz-comp-input");
     var compSend = doc.getElementById("wz-comp-send");
     var compNote = doc.getElementById("wz-comp-note");
+    var bridgeHost = doc.getElementById("wz-bridge-host"); /* целевой раунд: мост к хосту */
 
     var tree = doc.getElementById("host-tree");
     var ctxTitle = doc.getElementById("ctx-title");
@@ -1437,6 +1471,10 @@
         row.appendChild(cp);
         wzScroll.appendChild(row);
       });
+      /* целевой раунд: пояснение уже показывалось — вернём его в хвост */
+      if (relNoteShown[s.id] && ownerLines.some(function (m) { return m.status === "delivered"; })) {
+        wzScroll.appendChild(relNoteEl());
+      }
     }
     function copyText(t, okMsg) {
       function ok() { toast(okMsg, "success"); }

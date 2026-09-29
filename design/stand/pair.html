@@ -59,7 +59,7 @@
                 <code id="pair-code">mne-4F2K-QRTX-7701</code>
                 <button class="btn secondary sm" type="button" id="copy-code">Копировать</button>
               </div>
-              <p class="pair-note" style="text-align: left">Нет камеры? Введите код вручную на странице vesmaro на телефоне</p>
+              <p class="pair-note" style="text-align: left">Нет камеры? Введите код вручную на странице vesmaro на телефоне (откроется сама после сканирования; вручную — адрес борда в браузере телефона)</p>
             </div>
           </div>
           <ol class="pair-steps">
@@ -92,6 +92,8 @@
           </div>
         </div>
 
+        <details class="demo-fold">
+          <summary>для стенда</summary>
         <div class="pair-manual">
           <p class="field-hint" style="margin: 0">Демо-переходы фаз (канон стенда):</p>
           <div class="pm-grid">
@@ -101,6 +103,7 @@
             <button class="btn ghost sm" type="button" data-demo-phase="manual">демо: ввести код вручную</button>
           </div>
         </div>
+        </details>
       </section>
 
       <!-- ═══ ФАЗА 2: ожидание подтверждения (07h §3) ═══ -->
@@ -119,6 +122,8 @@
         <div class="pair-actions">
           <button class="btn secondary sm" type="button" id="check-now">Проверить сейчас</button>
         </div>
+        <details class="demo-fold">
+          <summary>для стенда</summary>
         <div class="pair-manual">
           <div class="pm-grid">
             <button class="btn ghost sm" type="button" data-demo-phase="success">демо: владелец подтвердил</button>
@@ -126,6 +131,7 @@
             <button class="btn ghost sm" type="button" data-demo-phase="qr">вернуться к QR</button>
           </div>
         </div>
+        </details>
       </section>
 
       <!-- ═══ ФАЗА 3: успех (07h §4) ═══ -->
@@ -139,11 +145,14 @@
         <div class="pair-actions">
           <button class="btn primary sm" type="button" data-demo-phase="qr">Готово</button>
         </div>
+        <details class="demo-fold">
+          <summary>для стенда</summary>
         <div class="pair-manual">
           <div class="pm-grid">
             <button class="btn ghost sm" type="button" data-demo-phase="qr">демо: подключить ещё одно</button>
           </div>
         </div>
+        </details>
       </section>
 
       <!-- ═══ ФАЗА 4: отказ / ошибка — честные вердикты (07h §5) ═══ -->
@@ -156,11 +165,14 @@
           <button class="btn secondary sm" type="button" data-demo-phase="qr">Запросить новый код</button>
           <button class="btn ghost sm" type="button" id="fail-manual">Ввести код заново</button>
         </div>
+        <details class="demo-fold">
+          <summary>для стенда</summary>
         <div class="pair-manual">
           <div class="pm-grid">
             <button class="btn ghost sm" type="button" data-demo-phase="qr">демо: начать заново</button>
           </div>
         </div>
+        </details>
       </section>
 
       <!-- форма ручного ввода кода (равноправный путь, ADR §2 a11y) -->

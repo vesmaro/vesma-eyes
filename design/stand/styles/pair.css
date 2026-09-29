@@ -232,6 +232,27 @@
   align-items: center;
   justify-content: flex-start;
 }
+/* целевой раунд: демо-кнопки фаз убраны с видимой зоны — details «для стенда»
+ * под карточкой; закрыт по умолчанию, не мешает первому впечатлению (07h §2) */
+.demo-fold {
+  margin-top: var(--space-3);
+}
+.demo-fold > summary {
+  cursor: pointer;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  width: fit-content;
+}
+.demo-fold > summary:hover {
+  color: var(--color-text-secondary);
+}
+.demo-fold > summary:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+.demo-fold[open] > summary {
+  margin-bottom: var(--space-2);
+}
 /* expired state */
 .pair-expired {
   display: grid;
