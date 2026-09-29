@@ -91,6 +91,16 @@
   --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
   --duration-impulse: 240ms;            /* synapse pulse lifetime ≤240ms */
+
+  /* ── Shell geometry (union И1 — stand 03-IA-NAVIGATION §2–§5) ────────
+   * Viewer-shell geometry kept in parity with src/styles/tokens.css
+   * (ADR 0006 single source of truth; the board renders no shell but the
+   * canon set must stay identical across tracks). */
+  --shell-topbar-h: 48px;        /* topbar row (03 §2) */
+  --shell-sidebar-w: 232px;      /* expanded sidebar (03 §3) */
+  --shell-sidebar-rail-w: 56px;  /* collapsed icon rail (03 §3) */
+  --shell-crumbs-h: 40px;        /* breadcrumbs row (03 §5) */
+  --shell-search-w: clamp(320px, 34vw, 480px); /* global search (03 §4) */
 }
 
 /* ── Frozen core (names & values stable) ────────────────────────────── */
