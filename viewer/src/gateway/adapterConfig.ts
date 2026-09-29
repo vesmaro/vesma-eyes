@@ -1,7 +1,6 @@
 import type { MemoryGateway } from "./MemoryGateway";
 import { BoardAdapter } from "./BoardAdapter";
 import { HttpAdapter } from "./HttpAdapter";
-import { MockAdapter } from "./MockAdapter";
 import { clearToken } from "./auth";
 
 /**
@@ -51,11 +50,24 @@ export const ADAPTER: AdapterKind = resolveAdapterKind(
   import.meta.env.VITE_MNEMOS_ADAPTER,
 );
 
-/** Build the gateway for the selected adapter (pure selection + board purge). */
-export function createGateway(): MemoryGateway {
+/**
+ * Build the gateway for the selected adapter (pure selection + board purge).
+ *
+ * Async because of ME-024 (entry hygiene): the mock adapter statically
+ * imports the whole fixture corpus (boardFixtures + fixtures), and a static
+ * import here welded ~tens of KiB of test prose into the production entry
+ * chunk. The dynamic import below keeps the mock adapter + fixtures in their
+ * own lazy chunk that only builds which actually run in mock mode (dev,
+ * `VITE_ADAPTER=mock` smoke) ever fetch; production boots `board` and never
+ * requests it. The board/mnemos branches resolve synchronously — production
+ * bootstrap pays one microtask, nothing more.
+ */
+export async function createGateway(): Promise<MemoryGateway> {
   switch (ADAPTER) {
-    case "mock":
+    case "mock": {
+      const { MockAdapter } = await import("./MockAdapter");
       return new MockAdapter();
+    }
     case "board":
       // Security audit point Ф0 (ADR 0011 §7, security verdict §5.3): the
       // board mode must not carry mnemos credentials — purge any legacy

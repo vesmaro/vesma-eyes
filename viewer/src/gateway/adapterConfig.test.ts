@@ -75,7 +75,7 @@ describe("adapter default (owner feedback 1.4.0)", () => {
       board: { BoardAdapter: FreshBoardAdapter },
     } = await importFresh();
     expect(ADAPTER).toBe("board");
-    expect(createGateway()).toBeInstanceOf(FreshBoardAdapter);
+    expect(await createGateway()).toBeInstanceOf(FreshBoardAdapter);
   });
 
   it("dev/test with no knobs boots the MockAdapter (fixtures, no backend)", async () => {
@@ -88,7 +88,7 @@ describe("adapter default (owner feedback 1.4.0)", () => {
       mock: { MockAdapter: FreshMockAdapter },
     } = await importFresh();
     expect(ADAPTER).toBe("mock");
-    expect(createGateway()).toBeInstanceOf(FreshMockAdapter);
+    expect(await createGateway()).toBeInstanceOf(FreshMockAdapter);
   });
 
   it("VITE_ADAPTER=mnemos still opts a production build into the mnemos mode", async () => {
@@ -100,7 +100,7 @@ describe("adapter default (owner feedback 1.4.0)", () => {
       http: { HttpAdapter: FreshHttpAdapter },
     } = await importFresh();
     expect(ADAPTER).toBe("mnemos");
-    expect(createGateway()).toBeInstanceOf(FreshHttpAdapter);
+    expect(await createGateway()).toBeInstanceOf(FreshHttpAdapter);
   });
 });
 
@@ -124,7 +124,7 @@ describe("createGateway", () => {
       config: { createGateway },
       http: { HttpAdapter: FreshHttpAdapter },
     } = await importFresh();
-    expect(createGateway()).toBeInstanceOf(FreshHttpAdapter);
+    expect(await createGateway()).toBeInstanceOf(FreshHttpAdapter);
   });
 
   it("builds the MockAdapter via the legacy dev knob", async () => {
@@ -135,7 +135,7 @@ describe("createGateway", () => {
       config: { createGateway },
       mock: { MockAdapter: FreshMockAdapter },
     } = await importFresh();
-    expect(createGateway()).toBeInstanceOf(FreshMockAdapter);
+    expect(await createGateway()).toBeInstanceOf(FreshMockAdapter);
   });
 
   it("builds the BoardAdapter with the board base URL", async () => {
@@ -147,7 +147,7 @@ describe("createGateway", () => {
       board: { BoardAdapter: FreshBoardAdapter },
     } = await importFresh();
     expect(BOARD_BASE_URL).toBe("https://board.example/api");
-    expect(createGateway()).toBeInstanceOf(FreshBoardAdapter);
+    expect(await createGateway()).toBeInstanceOf(FreshBoardAdapter);
   });
 
   it("board mode purges a legacy stored mnemos token at bootstrap", async () => {
@@ -160,7 +160,7 @@ describe("createGateway", () => {
     vi.stubEnv("VITE_ADAPTER", "board");
 
     const { createGateway } = await import("./adapterConfig");
-    createGateway();
+    await createGateway();
 
     expect(localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull();
     expect(sessionStorage.getItem(AUTH_STORAGE_KEY)).toBeNull();
@@ -171,7 +171,7 @@ describe("createGateway", () => {
     vi.stubEnv("VITE_ADAPTER", "board");
 
     const { createGateway } = await import("./adapterConfig");
-    createGateway();
+    await createGateway();
 
     const allKeys = [...localStorage.keys(), ...sessionStorage.keys()];
     expect(allKeys).toEqual([]);
