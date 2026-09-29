@@ -1,20 +1,39 @@
 #!/usr/bin/env node
 /**
  * Docs-render budget gate (ADR-0015 as amended by АРХКОМ-8; pools split per
- * ADR 0020 Ф2): run AFTER `npm run build`, exits non-zero on any breach.
+ * ADR 0020 Ф2, budgets RE-BASELINED per ADR 0020 Ф3/ME-025): run AFTER
+ * `npm run build`, exits non-zero on any breach.
  *
- *   md-core pool    dist/assets/md-core-*.js          ≤  90 KiB gzip
+ * Re-baseline mechanics (Ф3, 2026-09-29 — measured on the 1.47.0-line tree):
+ * budget = ceil(headroom × measured gzip), pools ×1.2 (~20%), entry ×1.1
+ * (small tolerance — the entry gate is a drift alarm, not slack):
+ *
+ *   entry (eager base set: index.html scripts/preloads + static closure)
+ *                                                    ≤ 297 KiB gzip
+ *                   (measured 269.8: entry chunk 219.4 + md-core 49.8 +
+ *                    preload-helper 0.6 — the ±0 entry guard, mechanical)
+ *   md-core pool    dist/assets/md-core-*.js          ≤  60 KiB gzip
  *                   (react-markdown + remark-gfm and
- *                   the shared unified/micromark stack)
- *   md-sanitize     dist/assets/md-sanitize-*.js      ≤  60 KiB gzip
+ *                   the shared unified/micromark stack;
+ *                   measured 49.8)
+ *   md-sanitize     dist/assets/md-sanitize-*.js      ≤  65 KiB gzip
  *                   (rehype-raw + rehype-sanitize +
  *                   parse5/hast-util-raw — curated
- *                   docs path ONLY)
- *   mermaid pool    mermaid.core chunk + the heaviest    ≤ 450 KiB gzip
+ *                   docs path ONLY; measured 53.7)
+ *   mermaid pool    mermaid.core chunk + the heaviest    ≤ 379 KiB gzip
  *                   single on-demand branch (diagram
- *                   engines for ONE diagram type)
+ *                   engines for ONE diagram type;
+ *                   measured 315.6 = core 165.1 + heaviest 150.5)
  *
- * Reachability gates (ADR 0020 Ф2, mechanical):
+ * Ф2 budgets (md-core 90 / md-sanitize 60 / mermaid 450) were set per-pool
+ * before the pool contents settled; Ф3 re-baselines them to the ACTUAL
+ * pools. md-sanitize's Ф2 budget (60) was only 11% over the actual pool —
+ * the re-baseline to 65 is the honest ~20%, not a loosening of a drifting
+ * gate. The entry gate is NEW in Ф3: the md-core eagerness comment below
+ * relied on an informal «entry total stays ±0» — this gate is that guard.
+ *
+ * Reachability gates (ADR 0020 Ф2, mechanical, unchanged):
+ * - the eager base set must stay within the entry budget (NEW Ф3);
  * - md-sanitize must NOT be in the eager base set (the static closure of
  *   index.html) — the entry and every eager page stay sanitize-free;
  * - md-core must NOT statically import md-sanitize — the untrusted profile
@@ -28,7 +47,7 @@
  * uses more than one or two). The full on-demand closure (every diagram type
  * at once) is reported as info for ADR-0017.
  *
- * Usage: node scripts/budget-docs-render.mjs [--max-md-core 90] [--max-md-sanitize 60] [--max-mermaid 450]
+ * Usage: node scripts/budget-docs-render.mjs [--max-entry 297] [--max-md-core 60] [--max-md-sanitize 65] [--max-mermaid 379]
  */
 
 import { readdirSync, readFileSync } from "node:fs";
@@ -44,9 +63,10 @@ function argValue(flag, fallback) {
   const index = args.indexOf(flag);
   return index !== -1 ? Number(args[index + 1]) : fallback;
 }
-const MAX_MD_CORE_KIB = argValue("--max-md-core", 90);
-const MAX_MD_SANITIZE_KIB = argValue("--max-md-sanitize", 60);
-const MAX_MERMAID_KIB = argValue("--max-mermaid", 450);
+const MAX_ENTRY_KIB = argValue("--max-entry", 297);
+const MAX_MD_CORE_KIB = argValue("--max-md-core", 60);
+const MAX_MD_SANITIZE_KIB = argValue("--max-md-sanitize", 65);
+const MAX_MERMAID_KIB = argValue("--max-mermaid", 379);
 
 const KIB = 1024;
 const round1 = (value) => Math.round(value * 10) / 10;
@@ -105,10 +125,28 @@ const eagerFromHtml = [
   .filter((name) => jsFiles.includes(name));
 const baseSet = closure(eagerFromHtml, false);
 
-// --- md pools (ADR 0020 Ф2 split) -------------------------------------------------
+// --- entry gate (ADR 0020 Ф3 re-baseline, NEW) ------------------------------------
+// The eager base set (everything index.html pulls statically) is the first-
+// paint cost. The Ф2 header carried only an informal «entry total stays ±0»
+// note — this gate is its mechanical form, so fixture prose or an accidental
+// eager import cannot creep in silently. Fixtures/adapters may legitimately
+// move BETWEEN eager chunks without changing the total — that is exactly the
+// invariance we want from a drift alarm.
+{
+  const entryGzip = sumGzip(baseSet);
+  const ok = entryGzip <= MAX_ENTRY_KIB;
+  if (!ok) failed = true;
+  report.push(
+    `${ok ? "ok  " : "FAIL"} entry (eager base set, ${baseSet.size} chunks): ${round1(entryGzip)} KiB gzip ` +
+      `(budget ≤${MAX_ENTRY_KIB})`,
+  );
+}
+
+// --- md pools (ADR 0020 Ф2 split, budgets re-baselined Ф3) -------------------------
 // md-core has NO direct eager-exclusion assert (it is deliberately hoisted
 // into the entry by vite's transitive-import hoisting) — its eagerness is
-// guarded indirectly by the entry total staying ±0 between releases.
+// guarded by the entry budget above (a pool sneaking into the base set can
+// only grow it, and the budget is pinned to the measured total).
 const mdCoreChunks = jsFiles.filter((name) => name.startsWith("md-core-"));
 if (mdCoreChunks.length === 0) {
   report.push("FAIL md-core: no chunk found — named pool missing from the build");
@@ -226,6 +264,6 @@ if (mermaidEntries.length === 0) {
   }
 }
 
-console.log("docs-render budget (ADR-0015/АРХКОМ-8, pools split per ADR 0020 Ф2):");
+console.log("docs-render budget (ADR-0015/АРХКОМ-8, pools split per ADR 0020 Ф2, budgets re-baselined Ф3/ME-025):");
 for (const line of report) console.log("  " + line);
 process.exit(failed ? 1 : 0);

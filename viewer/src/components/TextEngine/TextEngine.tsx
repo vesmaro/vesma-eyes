@@ -10,6 +10,7 @@ import {
 import { lazy } from "react";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
+import { LINK_CLASS } from "./core/constants";
 import { looksLikeMarkdown } from "./looksLikeMarkdown";
 
 /**
@@ -144,7 +145,10 @@ function TextEngineImpl({
           type="button"
           aria-expanded={false}
           onClick={() => setExpanded(true)}
-          className="mt-1 text-xs text-iris-bright underline underline-offset-2 transition-colors duration-instant hover:decoration-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+          // The engine's own link constant — the string used to be re-inlined
+          // here verbatim (Ф3 dedup). "mt-1 text-xs" first keeps the exact
+          // class order of the previous literal.
+          className={cn("mt-1 text-xs", LINK_CLASS)}
         >
           {t("text.showFull")}
         </button>

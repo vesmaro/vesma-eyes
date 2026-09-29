@@ -35,4 +35,41 @@ fail() {
 
 [ "$name" = "$ALLOWED_NAME" ] || fail
 [ "$email" = "$ALLOWED_EMAIL" ] || fail
+
+# --- Golden/hostile render gate (ME-025, ADR 0020 Ф3) -----------------------------
+# The golden fixtures (golden.pipelines.test.tsx — byte-pins of BOTH trust
+# pipelines, with mutant-detection negative controls) and the hostile corpus
+# (sanitizeSchema / Markdown / mermaid-untrusted / pipeline.corpus tests) must
+# be BLOCKING, not advisory: a render regression or an XSS-vector escape must
+# fail the commit, not a report. GitHub Actions runs NO viewer suite for this
+# repo (only identity-guard + release/pytest) and is additionally billing-
+# locked — so the blocking has to live in the gates that actually run: the
+# vitest suite (`npm run test`) and THIS hook.
+#
+# Scope: fires only when viewer/ files are staged (docs/journal commits stay
+# instant). Caveat inherited from every pre-commit gate: vitest sees the
+# WORKING TREE, not the index. GOLDEN_UPDATE is force-unset — the hook always
+# VERIFIES; baselining stays a deliberate out-of-hook act (GOLDEN_UPDATE=1
+# npx vitest run ... + a dedicated golden-update commit).
+staged="$(git diff --cached --name-only | grep '^viewer/' || true)"
+if [ -n "$staged" ]; then
+  cd viewer || exit 1
+  if ! command -v npx >/dev/null 2>&1; then
+    echo >&2 "✖ golden gate: npx/node not on PATH — cannot verify the render goldens (fail-closed)"
+    exit 1
+  fi
+  if ! env -u GOLDEN_UPDATE npx vitest run \
+    src/features/docs/golden.pipelines.test.tsx \
+    src/features/docs/sanitizeSchema.test.ts \
+    src/features/docs/Markdown.test.tsx \
+    src/components/TextEngine/core/pipeline.corpus.test.ts \
+    src/components/TextEngine/core/mermaidUntrusted.test.tsx \
+    src/components/TextEngine/core/Mermaid.test.tsx \
+    src/components/TextEngine/core/mermaidSvgXml.test.ts; then
+    echo >&2 "✖ golden/hostile render gate FAILED — a pipeline mutation or hostile-vector escape is in this commit"
+    echo >&2 "  (deliberate golden re-baseline: GOLDEN_UPDATE=1 npx vitest run src/features/docs/golden.pipelines.test.tsx"
+    echo >&2 "   in viewer/, commit the new goldens — see the golden test header)"
+    exit 1
+  fi
+fi
 exit 0

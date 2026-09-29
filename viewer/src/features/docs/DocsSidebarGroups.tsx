@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
+import { FOCUS_RING } from "@/components/TextEngine/core/constants";
 import { docCategoriesForProject } from "./categories";
 import { docsLocationFor } from "./docsNav";
 import { categoryUrl, docProjectsSorted, hubUrl } from "./projects";
@@ -21,9 +22,6 @@ import { categoryUrl, docProjectsSorted, hubUrl } from "./projects";
  * as three icon rows (aria-label carries the project name), categories
  * disappear — the rail never pulls a second icon column.
  */
-
-const FOCUS_RING =
-  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright";
 
 export interface DocsSidebarGroupsProps {
   /** Icon-rail mode (no panel expansion): groups stay, categories vanish.

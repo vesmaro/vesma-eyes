@@ -1,10 +1,8 @@
 /**
- * Minimal structural hast utilities — THE shared copy for the unified text
- * engine (ADR 0020 Ф1, layer 2: "одна копия hast-утилит").
- *
- * `features/docs/Markdown.tsx` still carries its own duplicate until Ф2
- * drops the copy-paste (Ф1 moves ONLY TextEngine's copy — Markdown.tsx is
- * untouched in this phase).
+ * Minimal structural hast utilities — THE single copy for the unified text
+ * engine (ADR 0020 Ф1, layer 2: "одна копия hast-утилит"; Ф2 moved
+ * features/docs onto this module and Ф3 verified no copy remains — the
+ * grep for the duplicate signatures returns empty).
  *
  * Same approach as the historical copies: a structural subset of hast that
  * avoids importing transitive type packages while staying assignable from

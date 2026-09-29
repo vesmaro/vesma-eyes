@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { FOCUS_RING } from "@/components/TextEngine/core/constants";
 import { docCategory } from "./categories";
 import { extractHeadings, type TocItem } from "./headingSlug";
 import {
@@ -36,9 +37,6 @@ import {
  * from lg up, native <details> TOC above the h1 on narrow screens, prev/next
  * at the end confined to the page's OWN project (spec §9.7).
  */
-
-const FOCUS_RING =
-  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright";
 
 function ArticleSkeleton() {
   const t = useT();

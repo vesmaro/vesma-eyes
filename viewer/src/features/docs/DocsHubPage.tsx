@@ -4,6 +4,7 @@ import { useI18n, useT } from "@/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { FOCUS_RING, LINK_CLASS } from "@/components/TextEngine/core/constants";
 import { docCategoriesForProject } from "./categories";
 import { pagesLabel } from "./docsFormat";
 import {
@@ -31,9 +32,6 @@ import { DocsSearch } from "./DocsSearch";
  * + provenance for imported projects), «с чего начать» text links, then the
  * categories as ROWS (never a card grid — анти-слоп §14.10).
  */
-
-const FOCUS_RING =
-  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright";
 
 /** Honest locale-coverage wording, derived from the manifest (spec §4.1.3). */
 function coverageKey(pages: readonly DocPage[]): "both" | "ru" | "en" | "mixed" {
@@ -144,10 +142,9 @@ function StartHere({ project, manifest }: { project: DocProject; manifest: DocsM
             {index > 0 ? <span className="text-foreground-muted">{" · "}</span> : null}
             <Link
               to={docUrl(page.slug)}
-              className={cn(
-                "text-iris-bright underline underline-offset-2 transition-colors duration-instant hover:decoration-2",
-                FOCUS_RING,
-              )}
+              // The engine's link constant — the tail + focus ring used to be
+              // re-inlined here (Ф3 dedup, byte-identical class list).
+              className={LINK_CLASS}
             >
               {titleFor(page, localeForPage(page, lang))}
             </Link>

@@ -57,6 +57,21 @@ tokens in any `.env` file — authentication happens in the UI.
 | `npm run codegen`   | Fetch mnemos `/openapi.json` into the committed `openapi-snapshot.json` and regenerate `src/types/openapi.d.ts` from it |
 | `npm run codegen:offline` | Regenerate `src/types/openapi.d.ts` from the committed snapshot — no live mnemos needed |
 
+## Local gates (ADR 0020 Ф3)
+
+The viewer's quality gates are **local and blocking**; GitHub Actions for this
+repo runs only the identity guard and the release pipeline (pytest) — no
+viewer suite — and is additionally billing-locked (known owner-side issue).
+Do NOT assume a green CI means the viewer is verified; these are the gates
+that actually run:
+
+| Gate | Command | What blocks |
+| --- | --- | --- |
+| Unit suite | `npx vitest run` | 1514 tests incl. the golden render gates (`src/features/docs/golden.pipelines.test.tsx` — byte-pins of BOTH trust pipelines, with mutant-detection negative controls) and the hostile XSS corpus (`sanitizeSchema`, `Markdown`, `mermaidUntrusted`, `pipeline.corpus` tests). A render mutation or hostile-vector escape fails the run. |
+| Pre-commit hook | `git commit` (fires automatically when `viewer/` files are staged) | Same golden/hostile subset (~1 s) via `scripts/githooks/pre-commit` — fail-closed if node is unavailable. Runs in the canonical repo and its worktrees under the canonical root (the hook's existing scope); `GOLDEN_UPDATE` is force-unset inside the hook — baselining stays a deliberate out-of-hook act (`GOLDEN_UPDATE=1 npx vitest run src/features/docs/golden.pipelines.test.tsx`, then a dedicated golden-update commit). |
+| Render budget | `npm run build && node scripts/budget-docs-render.mjs` | Entry/eager-base-set, `md-core`, `md-sanitize`, mermaid pools (KiB gzip) + chunk-reachability invariants (sanitize never eager, mermaid never static). |
+| Browser render smoke | `npm run smoke:render` (local mock build) or `VESMARO_SMOKE_BASE_URL=… npm run smoke:render` (any deployment) | Real-chromium DOM asserts over surfaces unit tests cannot cover (mermaid fence → `<svg>` in DOM, honest caps fallback). Local gate by design — never wire into Actions. |
+
 ## Status
 
 L1 viewer: gateway (HTTP + mock), design system, pages, and the T6 auth flow

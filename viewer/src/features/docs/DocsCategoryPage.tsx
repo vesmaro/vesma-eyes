@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router";
 import { useI18n, useT } from "@/i18n";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { FOCUS_RING } from "@/components/TextEngine/core/constants";
 import { docCategory, docCategoriesForProject } from "./categories";
 import {
   firstParagraph,
@@ -21,9 +22,6 @@ import { DocsSearch } from "./DocsSearch";
  * LIST of page rows (never a second card grid — анти-слоп §14.5). The
  * category must belong to the URL's project — a cross-project URL is a miss.
  */
-
-const FOCUS_RING =
-  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright";
 
 interface RowInfo {
   slug: string;
