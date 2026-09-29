@@ -1500,6 +1500,21 @@ export const en: Record<TranslationKey, string> = {
   "docs.catDesc.meshUser": "Run a mnemos-mesh node and configure the federation.",
   "docs.cat.meshAdmin": "For administrators",
   "docs.catDesc.meshAdmin": "Day-2 operations and security for a mnemos-mesh node.",
+  "docs.cat.apiOverview": "Hub overview",
+  "docs.catDesc.apiOverview":
+    "What lives here, the project API map, and the freshness rule.",
+  "docs.cat.apiBoard": "Board API",
+  "docs.catDesc.apiBoard":
+    "The vesmaro-eyes HTTP API reference, generated from the OpenAPI snapshot.",
+  "docs.cat.apiMnemos": "mnemos HTTP API",
+  "docs.catDesc.apiMnemos":
+    "A map over the memory server surfaces and the A2A sessions contract.",
+  "docs.cat.apiAgent": "vesmaro-agent protocol",
+  "docs.catDesc.apiAgent":
+    "The agent wire protocol and the service charter v2 digest.",
+  "docs.cat.apiMesh": "mnemos-mesh",
+  "docs.catDesc.apiMesh":
+    "No public HTTP API — the internal protocol and the operator surface.",
   "docs.search.placeholder": "Search the docs",
   "docs.search.ariaLabel": "Search the docs",
   "docs.search.resultsLabel": "Search results",
@@ -1519,6 +1534,9 @@ export const en: Record<TranslationKey, string> = {
   "docs.provenance.badge": "from {{repo}}@{{sha}} · synced {{date}}",
   "docs.provenance.full":
     "Imported from the {{repo}} repository, commit {{sha}}, synced {{date}}",
+  "docs.provenance.multiSource": "{{count}} sources · latest {{date}}",
+  "docs.provenance.multiSourceFull":
+    "Hub pages are synced from {{count}} repositories by pins; the latest sync is {{date}} — every page carries its own pin on its badge",
   "docs.hub.start": "Start here",
   "docs.hub.categories": "Categories",
   "docs.hub.vesmaroEyes.lede":
@@ -1527,6 +1545,8 @@ export const en: Record<TranslationKey, string> = {
     "A memory server for AI agents: a well of entries, semantic search and storage governed by the tag contract. This hub carries the user and administrator guides plus the architecture overview.",
   "docs.hub.mnemosMesh.lede":
     "Federated storage: bring up a mnemos-mesh node, configure the channel and run two-instance operations.",
+  "docs.hub.api.lede":
+    "The ecosystem's APIs in one place: the board reference from the OpenAPI snapshot, the mnemos HTTP surface, the vesmaro-agent protocol, and an honest note on mesh. Every page is synced from its source — pin and date on the badge.",
   "docs.hub.coverage.both": "Available in Russian and English",
   "docs.hub.coverage.ru": "Available in Russian only",
   "docs.hub.coverage.en": "Available in English only",

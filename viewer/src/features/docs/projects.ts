@@ -1,10 +1,11 @@
 import type { LucideIcon } from "lucide-react";
-import { Brain, KanbanSquare, Network } from "lucide-react";
+import { Brain, KanbanSquare, Network, Webhook } from "lucide-react";
 import type { TranslationKey } from "@/i18n";
 
 /**
  * Docs projects (contract §4, design spec §1.3/§2): the /docs section hosts
- * THREE project hubs. The project name is the first URL segment and the slug
+ * the project hubs plus the cross-cutting API hub (owner directive
+ * 2026-09-29). The project name is the first URL segment and the slug
  * prefix of every imported page — a brand string, deliberately untranslated
  * (spec §2). vesmaro-eyes is the DEFAULT project: its pages keep their
  * unprefixed slugs (`tokens`), its hub is the section root, and old
@@ -63,6 +64,18 @@ export const DOC_PROJECTS: readonly DocProject[] = [
       "mnemos-mesh/user/getting-started",
       "mnemos-mesh/user/configuration",
     ],
+  },
+  {
+    // The cross-cutting FOURTH hub (ME-038): the ecosystem's API surfaces
+    // under one prefix. Not a repository project — its corpus is generated
+    // by scripts/gen_api_ref.py from several pinned sources at once.
+    slug: "api",
+    name: "API",
+    icon: Webhook,
+    upstream: true,
+    order: 3,
+    ledeKey: "docs.hub.api.lede",
+    startSlugs: ["api/overview", "api/vesmaro-eyes/index", "api/vesmaro-agent/protocol"],
   },
 ];
 

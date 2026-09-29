@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generated_by": "scripts/sync_docs.py",
-  "synced_at": "2026-09-29T19:55:12+03:00",
+  "generated_by": "scripts/sync_docs.py + scripts/gen_api_ref.py",
+  "synced_at": "2026-09-29T22:04:31+03:00",
   "projects": {
     "mnemos": {
       "repo": "../mnemos",
@@ -14,9 +14,273 @@
       "ref": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
       "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
       "commit_date": "2026-09-29T19:55:12+03:00"
+    },
+    "api_hub": {
+      "board_api_spec": "viewer/board-openapi-snapshot.json",
+      "board_api_blob_sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
+      "sources": {
+        "mnemos": {
+          "repo": "../mnemos",
+          "ref": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+          "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a"
+        },
+        "mnemos-mesh": {
+          "repo": "../mnemos-mesh",
+          "ref": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
+          "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de"
+        },
+        "vesmaro-agent": {
+          "repo": "../vesmaro-agent",
+          "ref": "b8a51498accff8af7b507746cf46a2d72af9fd86",
+          "sha": "b8a51498accff8af7b507746cf46a2d72af9fd86"
+        }
+      }
     }
   },
   "files": {
+    "api/mnemos-mesh/index": {
+      "en": {
+        "repo": "mnemos-mesh",
+        "source_path": "proto/federation.proto",
+        "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
+        "commit_date": "2026-09-29T19:55:12+03:00",
+        "synced_at": "2026-09-29T19:55:12+03:00",
+        "locale": "en",
+        "kind": "curated"
+      },
+      "ru": {
+        "repo": "mnemos-mesh",
+        "source_path": "proto/federation.proto",
+        "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
+        "commit_date": "2026-09-29T19:55:12+03:00",
+        "synced_at": "2026-09-29T19:55:12+03:00",
+        "locale": "ru",
+        "kind": "curated"
+      }
+    },
+    "api/mnemos/a2a-sessions": {
+      "en": {
+        "repo": "mnemos",
+        "source_path": "docs/en/architecture/a2a-sessions.md",
+        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+        "commit_date": "2026-09-29T12:16:19+03:00",
+        "synced_at": "2026-09-29T12:16:19+03:00",
+        "locale": "en",
+        "kind": "upstream"
+      },
+      "ru": {
+        "repo": "mnemos",
+        "source_path": "docs/ru/architecture/a2a-sessions.md",
+        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+        "commit_date": "2026-09-29T12:16:19+03:00",
+        "synced_at": "2026-09-29T12:16:19+03:00",
+        "locale": "ru",
+        "kind": "upstream"
+      }
+    },
+    "api/mnemos/http-api": {
+      "en": {
+        "repo": "mnemos",
+        "source_path": "docs/en/user/http-api.md",
+        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+        "commit_date": "2026-09-29T12:16:19+03:00",
+        "synced_at": "2026-09-29T12:16:19+03:00",
+        "locale": "en",
+        "kind": "curated"
+      },
+      "ru": {
+        "repo": "mnemos",
+        "source_path": "docs/en/user/http-api.md",
+        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+        "commit_date": "2026-09-29T12:16:19+03:00",
+        "synced_at": "2026-09-29T12:16:19+03:00",
+        "locale": "ru",
+        "kind": "curated"
+      }
+    },
+    "api/overview": {
+      "en": {
+        "repo": "vesmaro-eyes",
+        "source_path": "docs/api",
+        "sha": "ea94ab7c7487b7f63fddf408c8276466818d1fbe",
+        "commit_date": "2026-09-29T22:07:46+03:00",
+        "synced_at": "2026-09-29T22:07:46+03:00",
+        "locale": "en",
+        "kind": "curated"
+      },
+      "ru": {
+        "repo": "vesmaro-eyes",
+        "source_path": "docs/api",
+        "sha": "ea94ab7c7487b7f63fddf408c8276466818d1fbe",
+        "commit_date": "2026-09-29T22:07:46+03:00",
+        "synced_at": "2026-09-29T22:07:46+03:00",
+        "locale": "ru",
+        "kind": "curated"
+      }
+    },
+    "api/vesmaro-agent/charter": {
+      "en": {
+        "repo": "vesmaro-agent",
+        "source_path": "docs/decisions/CHARTER-v2.md",
+        "sha": "b8a51498accff8af7b507746cf46a2d72af9fd86",
+        "commit_date": "2026-09-29T13:36:02+03:00",
+        "synced_at": "2026-09-29T13:36:02+03:00",
+        "locale": "en",
+        "kind": "curated"
+      },
+      "ru": {
+        "repo": "vesmaro-agent",
+        "source_path": "docs/decisions/CHARTER-v2.md",
+        "sha": "b8a51498accff8af7b507746cf46a2d72af9fd86",
+        "commit_date": "2026-09-29T13:36:02+03:00",
+        "synced_at": "2026-09-29T13:36:02+03:00",
+        "locale": "ru",
+        "kind": "curated"
+      }
+    },
+    "api/vesmaro-agent/protocol": {
+      "en": {
+        "repo": "vesmaro-agent",
+        "source_path": "docs/PROTOCOL.md",
+        "sha": "b8a51498accff8af7b507746cf46a2d72af9fd86",
+        "commit_date": "2026-09-29T13:36:02+03:00",
+        "synced_at": "2026-09-29T13:36:02+03:00",
+        "locale": "en",
+        "kind": "upstream"
+      }
+    },
+    "api/vesmaro-eyes/assignments": {
+      "ru": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
+        "commit_date": "2026-09-29T22:04:31+03:00",
+        "synced_at": "2026-09-29T22:04:31+03:00",
+        "locale": "ru",
+        "kind": "openapi-generated"
+      }
+    },
+    "api/vesmaro-eyes/automation": {
+      "ru": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
+        "commit_date": "2026-09-29T22:04:31+03:00",
+        "synced_at": "2026-09-29T22:04:31+03:00",
+        "locale": "ru",
+        "kind": "openapi-generated"
+      }
+    },
+    "api/vesmaro-eyes/devices": {
+      "ru": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
+        "commit_date": "2026-09-29T22:04:31+03:00",
+        "synced_at": "2026-09-29T22:04:31+03:00",
+        "locale": "ru",
+        "kind": "openapi-generated"
+      }
+    },
+    "api/vesmaro-eyes/executors": {
+      "ru": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
+        "commit_date": "2026-09-29T22:04:31+03:00",
+        "synced_at": "2026-09-29T22:04:31+03:00",
+        "locale": "ru",
+        "kind": "openapi-generated"
+      }
+    },
+    "api/vesmaro-eyes/feed": {
+      "ru": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
+        "commit_date": "2026-09-29T22:04:31+03:00",
+        "synced_at": "2026-09-29T22:04:31+03:00",
+        "locale": "ru",
+        "kind": "openapi-generated"
+      }
+    },
+    "api/vesmaro-eyes/index": {
+      "ru": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
+        "commit_date": "2026-09-29T22:04:31+03:00",
+        "synced_at": "2026-09-29T22:04:31+03:00",
+        "locale": "ru",
+        "kind": "openapi-generated"
+      }
+    },
+    "api/vesmaro-eyes/kora": {
+      "ru": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
+        "commit_date": "2026-09-29T22:04:31+03:00",
+        "synced_at": "2026-09-29T22:04:31+03:00",
+        "locale": "ru",
+        "kind": "openapi-generated"
+      }
+    },
+    "api/vesmaro-eyes/memories": {
+      "ru": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
+        "commit_date": "2026-09-29T22:04:31+03:00",
+        "synced_at": "2026-09-29T22:04:31+03:00",
+        "locale": "ru",
+        "kind": "openapi-generated"
+      }
+    },
+    "api/vesmaro-eyes/mesh": {
+      "ru": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
+        "commit_date": "2026-09-29T22:04:31+03:00",
+        "synced_at": "2026-09-29T22:04:31+03:00",
+        "locale": "ru",
+        "kind": "openapi-generated"
+      }
+    },
+    "api/vesmaro-eyes/poller": {
+      "ru": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
+        "commit_date": "2026-09-29T22:04:31+03:00",
+        "synced_at": "2026-09-29T22:04:31+03:00",
+        "locale": "ru",
+        "kind": "openapi-generated"
+      }
+    },
+    "api/vesmaro-eyes/system": {
+      "ru": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
+        "commit_date": "2026-09-29T22:04:31+03:00",
+        "synced_at": "2026-09-29T22:04:31+03:00",
+        "locale": "ru",
+        "kind": "openapi-generated"
+      }
+    },
+    "api/vesmaro-eyes/tasks": {
+      "ru": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
+        "commit_date": "2026-09-29T22:04:31+03:00",
+        "synced_at": "2026-09-29T22:04:31+03:00",
+        "locale": "ru",
+        "kind": "openapi-generated"
+      }
+    },
     "mnemos-mesh/admin/runbook": {
       "en": {
         "repo": "mnemos-mesh",

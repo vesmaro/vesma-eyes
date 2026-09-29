@@ -1,0 +1,38 @@
+---
+title: mnemos HTTP API — map
+---
+
+# mnemos HTTP API — map
+
+Mnemos is the ecosystem's memory server: the board reads exactly this HTTP
+surface (the “Pulse” and “Overview” pages, memory records), and the CLI and
+MCP tools ride it too. This page maps the surfaces; the full reference
+lives in the mnemos hub and is not duplicated here.
+
+## Surfaces
+
+| Surface | What is inside | Where to read |
+|---|---|---|
+| Entries and search | memory entry CRUD, semantic search, tags under the tag contract | [the full HTTP API reference](mnemos/user/http-api) |
+| Pipeline and filters | the five-stage context cleanup, path-scoped rules | same page, Pipeline and Context filter sections |
+| DLQ and traces | the dead-letter queue of failed writes, request traces | same page, DLQ and Traces sections |
+| Authentication | TOTP login, session tokens (`Authorization: Bearer`), the non-loopback guard | same page, Authentication; background in [security.md](mnemos/admin/security) |
+| Metrics | `/health`, `/metrics`, the Prometheus exposition | same page + [metrics.md](mnemos/user/metrics) |
+| A2A sessions | the agent-to-agent session contract: lifecycle, envelopes | [A2A Sessions API](api/mnemos/a2a-sessions) — the spec body from the mnemos repository |
+
+## Conventions worth knowing before the first request
+
+- the server listens on `127.0.0.1` by default — a public port belongs
+  behind a reverse proxy with authentication;
+- with authentication enabled, every route except `/health`, `/auth/*`,
+  `/docs`, `/redoc`, `/openapi.json` requires a session token;
+- the live spec is always on the instance itself: Swagger UI at `/docs`,
+  ReDoc at `/redoc`, the schema at `/openapi.json`.
+
+## Why the full text is not duplicated here
+
+The full HTTP reference is already synced into the mnemos hub
+(`mnemos/user/http-api`, the same pin mechanism). A second copy in the api
+hub would mean two pins of one document and copy drift on every upstream
+change — the decision is on record in `sync-config.yaml`
+(`api_hub.sources.mnemos.exclude`).

@@ -260,9 +260,11 @@ describe("docs search combobox (design spec §8 + §7.3)", () => {
       expect(container.textContent).toContain("ничего не найдено");
     });
     expect(container.textContent).toContain("Попробуйте одно слово");
-    // Post-W3 the corpus is fully bilingual → the locale-gap hint stays
-    // silent (it names single-language pages, and none remain).
-    expect(container.textContent).not.toContain("только на одном языке");
+    // The corpus carries single-language pages again BY DESIGN (ME-038 api
+    // hub: the board reference is RU v1, the agent protocol is EN under
+    // the original-language badge) → the locale-gap hint legitimately
+    // shows alongside zero results.
+    expect(container.textContent).toContain("только на одном языке");
     const log = JSON.parse(localStorage.getItem(ZERO_RESULTS_KEY) ?? "[]");
     expect(log).toContain("квантомеханика");
     await actUnmount(root);

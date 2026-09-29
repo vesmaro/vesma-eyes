@@ -474,3 +474,245 @@ normalize:
   strip_html_comment_lines: true
   # 3+ пустые строки подряд схлопываются до одной пустой (value = число \n).
   collapse_blank_lines: 2
+
+# ============================================================================
+# API-хаб — /docs/api (директива владельца 2026-09-29, борд ME-038).
+#
+# Потребитель — scripts/gen_api_ref.py (НЕ sync_docs: один sync-проект = один
+# репозиторий, а api-хаб агрегирует ЧЕТЫРЕ источника под одним url-префиксом).
+# `npm run sync-docs` гоняет цепочку sync_docs → gen_api_ref: sync_docs
+# вытирает content/upstream/* (включая api/), генератор восстанавливает свою
+# зону и мержит страницы в provenance.json + manifest.sidecar.json.
+# Дисциплина та же, что у sync_docs: L2 генерируется (правка = регенерация),
+# пины — полные SHA честных клонов, настенных часов нет (двойной прогон
+# байт-в-байт).
+# ============================================================================
+api_hub:
+  url_prefix: api
+
+  # --- источники md-тел (L0: клон + пин; те же L1-правила, что у sync) -----
+  sources:
+    mnemos:
+      repo: ../mnemos
+      # Свежий main на момент волны ME-038 (2026-09-29). Пин НЕ пересекается
+      # с projects.mnemos (владение ME-039) — это отдельная выборка.
+      ref: 8bc139bf0749c0a50b9f1661e34d33b03ca78e3a
+      web_base: "https://github.com/vesmaro/vesmaro/blob/{sha}"
+      locale_dirs:
+        en: docs/en
+        ru: docs/ru
+      include:
+        # A2A Sessions API — единственный API-контракт mnemos, который не
+        # входил ни в одну селекцию («поверхность разработчика», решение W2
+        # по хабу mnemos). В api-хабе ему законное место; заголовки/тела —
+        # из апстрима, ссылки на project/adr уходят на GitHub @ пина.
+        - path: architecture/a2a-sessions.md
+          slug: mnemos/a2a-sessions
+          category: api-mnemos
+          order: 2
+          title:
+            en: A2A Sessions API
+            ru: A2A Sessions API
+          note:
+            en: >-
+              Curator: the A2A sessions contract of Mnemos — session
+              lifecycle, envelopes, and the design rationale behind the API.
+            ru: >-
+              Куратор: контракт A2A-сессий mnemos — жизненный цикл сессии,
+              конверты и обоснование дизайна API.
+      exclude:
+        - path: user/http-api.md
+          reason: >-
+            полный HTTP-справочник уже в корпусе хаба mnemos
+            (mnemos/user/http-api) — дубль в двух хабах = два пина одного
+            документа; api-хаб держит кураторскую карту-указатель
+            (curated api/mnemos/http-api)
+        - path: user/mcp-tools.md
+          reason: >-
+            2429 строк — не компактно (директива: CLI/MCP только если
+            компактно); инструментальный слой MCP, не HTTP; уже в хабе
+            mnemos
+        - path: user/cli-reference.md
+          reason: >-
+            869 строк, CLI-поверхность (не HTTP API); уже в хабе mnemos
+        - path: user/metrics.md
+          reason: >-
+            три метрических эндпоинта описаны внутри http-api-справочника
+            хаба mnemos; отдельная страница в api-хабе не добавляет знания
+
+    vesmaro-agent:
+      repo: ../vesmaro-agent
+      # Свежий main на момент волны ME-038 (2026-09-29), версия агента 0.6.0
+      # (ADR 0021 lineage).
+      ref: b8a51498accff8af7b507746cf46a2d72af9fd86
+      web_base: "https://github.com/vesmaro/vesmaro-agent/blob/{sha}"
+      locale_dirs:
+        en: docs
+      include:
+        - path: PROTOCOL.md
+          slug: vesmaro-agent/protocol
+          category: api-agent
+          order: 1
+          title:
+            en: "Wire protocol: vesmaro-agent ↔ board"
+          note: >-
+            Куратор: froze-контекст проводного протокола агента — регистрация
+            executor'а, клеймы назначений, отчёты, discovery v3, native
+            intake; текст апстрима (EN), статус v0.1-draft.
+
+    mnemos-mesh:
+      repo: ../mnemos-mesh
+      # Пин для ПРОВЕРКИ кураторской заметки (само тело из curated-слоя).
+      ref: b428ea9b7ec9731fe4d53478702d0667cf3f53de
+      web_base: "https://github.com/Korrnals/mnemos-mesh/blob/{sha}"
+      locale_dirs:
+        en: docs/en
+      include: []
+      exclude:
+        - path: docs/
+          reason: >-
+            публичного HTTP API у меша нет — внутренние gRPC-контракты
+            (proto/federation.proto, proto/mnemos_core_api.proto); вместо
+            выдумывания — честная кураторская заметка
+            (curated api/mnemos-mesh/index)
+
+  # --- vesmaro-eyes board API: OpenAPI-снапшот → RU-страницы ---------------
+  board_api:
+    spec: viewer/board-openapi-snapshot.json
+    category: api-board
+    index_slug: vesmaro-eyes/index
+    # Группировка по первому сегменту пути после /api/. Несмапленный
+    # префикс = DRIFT-FAIL генератора (новый эндпоинт требует осознанного
+    # решения — та же дисциплина, что у overlay-якорей sync_docs).
+    groups:
+      - slug: vesmaro-eyes/index
+        prefixes: []
+        title: Обзор API борда
+        order: 1
+        about: >-
+          Карта HTTP API борда vesmaro-eyes: все группы эндпоинтов, счётчики
+          операций и снимок OpenAPI, из которого справочник сгенерирован.
+      - slug: vesmaro-eyes/tasks
+        prefixes: [tasks, task-drafts]
+        title: Задачи и входящие
+        order: 2
+        about: >-
+          CRUD задач, перемещения, история, памяти и отчёты задачи, архив,
+          черновики и входящие из памяти (inbox).
+      - slug: vesmaro-eyes/memories
+        prefixes: [memories, tags, mnemos]
+        title: Память, теги и поиск mnemos
+        order: 3
+        about: >-
+          Серверы памяти и их настройки, группы памяти, пульс и статистика,
+          записи, теги и семантический поиск mnemos.
+      - slug: vesmaro-eyes/assignments
+        prefixes: [assignments]
+        title: Назначения исполнителям
+        order: 4
+        about: >-
+          Жизненный цикл назначения: создание, клейм, старт, сердцебиение,
+          завершение, отказ, отмена.
+      - slug: vesmaro-eyes/executors
+        prefixes: [executors, harnesses, agents, specialists]
+        title: Исполнители, харнессы, специалисты
+        order: 5
+        about: >-
+          Реестр исполнителей и enrollment, словарь харнессов, активность
+          агентов, профили специалистов и provision-задания.
+      - slug: vesmaro-eyes/automation
+        prefixes: [automation]
+        title: Автоматизация
+        order: 6
+        about: >-
+          Правила-хуки, расписания и их запуски, настройки автоматизации
+          и статус движка.
+      - slug: vesmaro-eyes/devices
+        prefixes: [devices, pairing]
+        title: Устройства и пейринг
+        order: 7
+        about: >-
+          Спаренные устройства, гранты, QR-пейринг: код, обмен, подтверждение.
+      - slug: vesmaro-eyes/kora
+        prefixes: [kora]
+        title: Сессии Kora
+        order: 8
+        about: Список сессий Kora и транскрипты, приём kora-scan.
+      - slug: vesmaro-eyes/mesh
+        prefixes: [mesh]
+        title: Узлы меша
+        order: 9
+        about: >-
+          Наблюдаемые узлы mnemos-mesh: добавление, правка, удаление,
+          список.
+      - slug: vesmaro-eyes/poller
+        prefixes: [poller]
+        title: Артефакты poller
+        order: 10
+        about: >-
+          Bootstrap-скрипт assignment-poller и его артефакты: CA-сертификат,
+          сервис-юнит, скрипт и контрольная сумма.
+      - slug: vesmaro-eyes/feed
+        prefixes: [notifications, activity, reports, archive]
+        title: Уведомления, активность, отчёты
+        order: 11
+        about: >-
+          Лента борда: уведомления и отметка прочтения, активность,
+          отчёты задач и лента отчётов, архив.
+      - slug: vesmaro-eyes/system
+        prefixes: [board, board-reflect, health, settings, auth, events]
+        title: Борд и служебные эндпоинты
+        order: 12
+        about: >-
+          Доска целиком и её отражение из памяти, health, настройки
+          исполнения, UI-токен аутентификации, поток событий.
+
+  # --- кураторские страницы (наш слой; тела в curated/api/<locale>/…) ------
+  curated:
+    - slug: overview
+      category: api-overview
+      order: 1
+      verified_against:
+        path: docs/api
+    - slug: mnemos/http-api
+      category: api-mnemos
+      order: 1
+      verified_against:
+        source: mnemos
+        path: docs/en/user/http-api.md
+        sha: pin
+    - slug: vesmaro-agent/charter
+      category: api-agent
+      order: 2
+      verified_against:
+        source: vesmaro-agent
+        path: docs/decisions/CHARTER-v2.md
+        sha: pin
+    - slug: mnemos-mesh/index
+      category: api-mesh
+      order: 1
+      verified_against:
+        source: mnemos-mesh
+        path: proto/federation.proto
+        sha: pin
+
+  # --- репозитории экосистемы, в api-хаб НЕ входящие (решения на записи) ---
+  excluded_repos:
+    - repo: vesmaro-cortex
+      reason: >-
+        исследовательский проект (локальная модель решений mnema-роутер,
+        волна A0); публичного API-контракта нет, включение — только по
+        директиве владельца
+    - repo: vesmaro-canon
+      reason: >-
+        внутренний канон форматов артефактов памяти; это стандарты данных,
+        не вызываемый API; без директивы владельца в хаб не входит
+    - repo: vesmaro-canon-data
+      reason: >-
+        закрытая репа датасетов калибровки (никогда не получает remote,
+        сырые записи памяти); публичных интерфейсов нет в принципе
+    - repo: mnemos-vitals
+      reason: >-
+        методология/инструментарий измерений (экспериментальная волна
+        vit-c); внешний API-поверхности нет, без директивы владельца
+        не включаем

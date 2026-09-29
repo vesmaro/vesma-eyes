@@ -1,11 +1,407 @@
 {
   "version": 1,
-  "generated_by": "scripts/sync_docs.py",
+  "generated_by": "scripts/sync_docs.py + scripts/gen_api_ref.py",
   "source_shas": {
     "mnemos": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-    "mnemos-mesh": "b428ea9b7ec9731fe4d53478702d0667cf3f53de"
+    "mnemos-mesh": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
+    "api/mnemos": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+    "api/mnemos-mesh": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
+    "api/vesmaro-agent": "b8a51498accff8af7b507746cf46a2d72af9fd86"
   },
   "pages": [
+    {
+      "slug": "api/mnemos-mesh/index",
+      "titles": {
+        "en": "mnemos-mesh — no public HTTP API",
+        "ru": "mnemos-mesh — публичного HTTP API нет"
+      },
+      "category": "api-mesh",
+      "order": 1,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "en",
+        "ru"
+      ],
+      "provenance": {
+        "repo": "mnemos-mesh",
+        "source_path": "proto/federation.proto",
+        "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
+        "commit_date": "2026-09-29T19:55:12+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/mnemos/a2a-sessions",
+      "titles": {
+        "en": "A2A Sessions API",
+        "ru": "A2A Sessions API"
+      },
+      "category": "api-mnemos",
+      "order": 2,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "en",
+        "ru"
+      ],
+      "provenance": {
+        "repo": "mnemos",
+        "source_path": "docs/en/architecture/a2a-sessions.md",
+        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+        "commit_date": "2026-09-29T12:16:19+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/mnemos/http-api",
+      "titles": {
+        "en": "mnemos HTTP API — map",
+        "ru": "HTTP API mnemos — карта"
+      },
+      "category": "api-mnemos",
+      "order": 1,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "en",
+        "ru"
+      ],
+      "provenance": {
+        "repo": "mnemos",
+        "source_path": "docs/en/user/http-api.md",
+        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+        "commit_date": "2026-09-29T12:16:19+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/overview",
+      "titles": {
+        "en": "Ecosystem APIs — overview",
+        "ru": "API экосистемы — обзор"
+      },
+      "category": "api-overview",
+      "order": 1,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "en",
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesmaro-eyes",
+        "source_path": "docs/api",
+        "sha": "ea94ab7c7487b7f63fddf408c8276466818d1fbe",
+        "commit_date": "2026-09-29T22:07:46+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-agent/charter",
+      "titles": {
+        "en": "vesmaro-agent — service charter v2 (digest)",
+        "ru": "vesmaro-agent — service charter v2 (выжимка)"
+      },
+      "category": "api-agent",
+      "order": 2,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "en",
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesmaro-agent",
+        "source_path": "docs/decisions/CHARTER-v2.md",
+        "sha": "b8a51498accff8af7b507746cf46a2d72af9fd86",
+        "commit_date": "2026-09-29T13:36:02+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-agent/protocol",
+      "titles": {
+        "en": "Wire protocol: vesmaro-agent ↔ board"
+      },
+      "category": "api-agent",
+      "order": 1,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "en"
+      ],
+      "provenance": {
+        "repo": "vesmaro-agent",
+        "source_path": "docs/PROTOCOL.md",
+        "sha": "b8a51498accff8af7b507746cf46a2d72af9fd86",
+        "commit_date": "2026-09-29T13:36:02+03:00"
+      },
+      "contentClass": {
+        "en": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-eyes/assignments",
+      "titles": {
+        "ru": "Назначения исполнителям"
+      },
+      "category": "api-board",
+      "order": 4,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
+        "commit_date": "2026-09-29T22:04:31+03:00"
+      },
+      "contentClass": {
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-eyes/automation",
+      "titles": {
+        "ru": "Автоматизация"
+      },
+      "category": "api-board",
+      "order": 6,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
+        "commit_date": "2026-09-29T22:04:31+03:00"
+      },
+      "contentClass": {
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-eyes/devices",
+      "titles": {
+        "ru": "Устройства и пейринг"
+      },
+      "category": "api-board",
+      "order": 7,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
+        "commit_date": "2026-09-29T22:04:31+03:00"
+      },
+      "contentClass": {
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-eyes/executors",
+      "titles": {
+        "ru": "Исполнители, харнессы, специалисты"
+      },
+      "category": "api-board",
+      "order": 5,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
+        "commit_date": "2026-09-29T22:04:31+03:00"
+      },
+      "contentClass": {
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-eyes/feed",
+      "titles": {
+        "ru": "Уведомления, активность, отчёты"
+      },
+      "category": "api-board",
+      "order": 11,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
+        "commit_date": "2026-09-29T22:04:31+03:00"
+      },
+      "contentClass": {
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-eyes/index",
+      "titles": {
+        "ru": "Обзор API борда"
+      },
+      "category": "api-board",
+      "order": 1,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
+        "commit_date": "2026-09-29T22:04:31+03:00"
+      },
+      "contentClass": {
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-eyes/kora",
+      "titles": {
+        "ru": "Сессии Kora"
+      },
+      "category": "api-board",
+      "order": 8,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
+        "commit_date": "2026-09-29T22:04:31+03:00"
+      },
+      "contentClass": {
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-eyes/memories",
+      "titles": {
+        "ru": "Память, теги и поиск mnemos"
+      },
+      "category": "api-board",
+      "order": 3,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
+        "commit_date": "2026-09-29T22:04:31+03:00"
+      },
+      "contentClass": {
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-eyes/mesh",
+      "titles": {
+        "ru": "Узлы меша"
+      },
+      "category": "api-board",
+      "order": 9,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
+        "commit_date": "2026-09-29T22:04:31+03:00"
+      },
+      "contentClass": {
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-eyes/poller",
+      "titles": {
+        "ru": "Артефакты poller"
+      },
+      "category": "api-board",
+      "order": 10,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
+        "commit_date": "2026-09-29T22:04:31+03:00"
+      },
+      "contentClass": {
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-eyes/system",
+      "titles": {
+        "ru": "Борд и служебные эндпоинты"
+      },
+      "category": "api-board",
+      "order": 12,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
+        "commit_date": "2026-09-29T22:04:31+03:00"
+      },
+      "contentClass": {
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-eyes/tasks",
+      "titles": {
+        "ru": "Задачи и входящие"
+      },
+      "category": "api-board",
+      "order": 2,
+      "lastVerified": "2026-09-29",
+      "locales": [
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesmaro-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
+        "commit_date": "2026-09-29T22:04:31+03:00"
+      },
+      "contentClass": {
+        "ru": "corpus"
+      }
+    },
     {
       "slug": "mnemos-mesh/admin/runbook",
       "titles": {

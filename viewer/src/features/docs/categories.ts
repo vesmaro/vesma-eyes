@@ -2,9 +2,13 @@ import type { LucideIcon } from "lucide-react";
 import {
   Bot,
   Boxes,
+  Brain,
+  Braces,
+  Compass,
   HelpCircle,
   KanbanSquare,
   Lightbulb,
+  Network,
   Rocket,
   ServerCog,
   Share2,
@@ -149,6 +153,48 @@ export const DOC_CATEGORIES: readonly DocCategory[] = [
     descriptionKey: "docs.catDesc.meshAdmin",
     icon: ServerCog,
     order: 13,
+  },
+  // --- api hub (ME-038, owner directive 2026-09-29): the ecosystem's API
+  // --- surfaces, one category per project section + the hub cover. ------
+  {
+    slug: "api-overview",
+    project: "api",
+    titleKey: "docs.cat.apiOverview",
+    descriptionKey: "docs.catDesc.apiOverview",
+    icon: Compass,
+    order: 14,
+  },
+  {
+    slug: "api-board",
+    project: "api",
+    titleKey: "docs.cat.apiBoard",
+    descriptionKey: "docs.catDesc.apiBoard",
+    icon: Braces,
+    order: 15,
+  },
+  {
+    slug: "api-mnemos",
+    project: "api",
+    titleKey: "docs.cat.apiMnemos",
+    descriptionKey: "docs.catDesc.apiMnemos",
+    icon: Brain,
+    order: 16,
+  },
+  {
+    slug: "api-agent",
+    project: "api",
+    titleKey: "docs.cat.apiAgent",
+    descriptionKey: "docs.catDesc.apiAgent",
+    icon: Bot,
+    order: 17,
+  },
+  {
+    slug: "api-mesh",
+    project: "api",
+    titleKey: "docs.cat.apiMesh",
+    descriptionKey: "docs.catDesc.apiMesh",
+    icon: Network,
+    order: 18,
   },
 ];
 

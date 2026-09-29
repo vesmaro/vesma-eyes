@@ -306,7 +306,8 @@ export function buildRoutes(): RouteObject[] {
               ),
             },
 
-            // Документация domain (ADR 0015 + ADR 0016): three project hubs.
+            // Документация domain (ADR 0015 + ADR 0016): three project hubs +
+        // the cross-cutting API hub (ME-038).
             // /docs answers with an instant replace-redirect into the default
             // hub (design spec §2/§8 — the section root is /docs/vesmaro-eyes);
             // legacy single-segment URLs resolve through the redirect map in
