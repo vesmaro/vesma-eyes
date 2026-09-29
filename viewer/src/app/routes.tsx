@@ -125,6 +125,15 @@ const DevicesPage = lazy(() =>
 const PairPage = lazy(() =>
   import("@/features/pairing/PairPage").then((m) => ({ default: m.PairPage })),
 );
+// The auth entry route (union И1, 07k §4 — gates v6): the sign-in form as a
+// PUBLIC page outside the Shell, same rule as /pair — no sidebar, no locks;
+// the deep-link back-transport is `?return=` (returnParams, ME-026: the
+// query must survive the round trip).
+const AuthRoutePage = lazy(() =>
+  import("@/features/ui-token/AuthRoutePage").then((m) => ({
+    default: m.AuthRoutePage,
+  })),
+);
 const DocsHubPage = lazy(() =>
   import("@/features/docs/DocsHubPage").then((m) => ({ default: m.DocsHubPage })),
 );
@@ -164,6 +173,17 @@ export function buildRoutes(): RouteObject[] {
       element: (
         <Page>
           <PairPage />
+        </Page>
+      ),
+    },
+    // /auth — the public sign-in page (ME-043, gates v6): outside the Shell
+    // BEFORE it, so it never inherits the sidebar/gate chrome; the page is
+    // self-contained (own header, the app's ONE login form).
+    {
+      path: "/auth",
+      element: (
+        <Page>
+          <AuthRoutePage />
         </Page>
       ),
     },
