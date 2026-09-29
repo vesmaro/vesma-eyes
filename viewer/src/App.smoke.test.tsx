@@ -80,12 +80,15 @@ describe("App (smoke)", () => {
 
   it("mounts the global search entry in the top bar (every route)", () => {
     const html = renderAppAt("/");
-    // UX-overhaul §7.3 (Ф2): the oval is the command palette's TRIGGER —
-    // a dialog-opening button (⌘K affordance), not a committing input.
-    expect(html).toContain('aria-label="Open search"');
-    expect(html).toContain('aria-haspopup="dialog"');
+    // Union И1 (stand 03 §4): the topbar carries a REAL search input (Enter
+    // → /memory/search, `/` focuses) plus the mobile palette icon button.
+    expect(html).toContain('aria-label="Global search across memory and tasks"');
+    expect(html).toContain('id="global-search-input"');
+    expect(html).toContain('placeholder="Search memory and tasks…"');
+    // The `/` key hint rides the field (the hotkey exists — Hotkeys.test.ts).
     expect(html).toContain("<kbd");
-    expect(html).toContain("⌘K");
+    expect(html).toContain('aria-label="Open search"'); // mobile palette icon
+    expect(html).toContain('aria-haspopup="dialog"');
   });
 
   it("serves the eager search page under the memory domain", () => {
@@ -99,8 +102,8 @@ describe("App (smoke)", () => {
   it("renders top-bar status indicator, density and theme toggles", () => {
     const html = renderAppAt("/");
     expect(html).toContain("status: ");
-    expect(html).toContain("Switch density to compact");
-    expect(html).toContain("Light theme");
+    expect(html).toContain('aria-label="Switch density to compact"');
+    expect(html).toContain('aria-label="Switch to light theme"');
   });
 
   it("renders a not-found EmptyState for unknown paths", () => {

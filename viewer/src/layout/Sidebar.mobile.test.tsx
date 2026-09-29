@@ -1,11 +1,12 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act } from "react";
+import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { MemoryRouter, createMemoryRouter, RouterProvider } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-import { Sidebar } from "./Sidebar";
+import { MobileSidebar, Sidebar } from "./Sidebar";
 import { buildRoutes } from "@/app/routes";
 import { BoardAdapter } from "@/gateway/BoardAdapter";
 import { MockAdapter } from "@/gateway/MockAdapter";
@@ -17,17 +18,17 @@ import { HotkeysProvider } from "@/layout/Hotkeys";
 import { I18nProvider } from "@/i18n";
 
 /**
- * UI-22 owner feedback («на телефоне не могу раскрыть левую панель»): the
- * sidebar expansion is STATE-driven (matchMedia seam), the toggle is visible
- * at EVERY width, and on <md the expanded panel is an OVERLAY — fixed over
- * the content with a translucent backdrop, Esc/backdrop close with the focus
- * returned to the toggle, body scroll locked while open, dialog semantics on
- * the panel. On >=md nothing changed: the toggle flips the persisted intent
- * (Shell owns the storage), the panel stays inline sticky.
+ * Union И1 (stand 03 §3–§4): the mobile sidebar is the OFF-CANVAS drawer —
+ * a Radix Dialog owned by the Shell (the hand-rolled focus trap is retired).
+ * Below md the inline <Sidebar> renders NOTHING; the drawer lives in a
+ * portal while open; Radix provides the trap, Esc, the backdrop click and
+ * the focus return to the TopBar trigger. The old UI-22 contract keeps its
+ * meaning: the drawer state is session-only (never the persisted desktop
+ * intent) and the covered page leaves the a11y tree (ME-002 — Shell wiring).
  *
  * happy-dom answers matchMedia "no match" by default — exactly the phone
- * viewport, so the mobile describes run unstumped; the desktop describe
- * stubs a matching query (same seam as LoginDialog.flow.test.tsx).
+ * viewport; the desktop describe stubs a matching query (same seam as
+ * LoginDialog.flow.test.tsx).
  */
 
 function stubMatchMedia(matches: boolean): void {
@@ -41,20 +42,10 @@ function stubMatchMedia(matches: boolean): void {
   (window as { matchMedia: unknown }).matchMedia = stub;
 }
 
-/**
- * ME-006: the health probe stand-in. The Sidebar mounts `useBoardHealth`
- * (capability-on with a real BoardAdapter — the hook's own `enabled` beats
- * the QueryClient's `enabled: false` default), but no test here observes the
- * health chip. The formerly live fetch flew at the happy-dom origin
- * (localhost:3000 — no listener) and died with ECONNRESET after the file
- * finished — 12 "socket hang up" dumps per full run. A never-settling fetch
- * keeps the query honestly in flight with NO socket and no late rejection.
- */
-const healthProbeNeverFetch = (): Promise<Response> => new Promise(() => undefined);
+/** ME-006: the health probe stand-in (see Sidebar.session.test.tsx). */
+const healthProbeNeverFetch: typeof fetch = () => new Promise(() => undefined);
 
-const mountedRoots: Root[] = [];
-
-function click(element: HTMLElement) {
+function click(element: HTMLElement): void {
   act(() => {
     element.dispatchEvent(
       new MouseEvent("click", { bubbles: true, cancelable: true }),
@@ -62,99 +53,14 @@ function click(element: HTMLElement) {
   });
 }
 
-/** Mount one Sidebar under the real chrome providers (fail-soft session —
- * no gate provider here, the mode line is not under test in this file). */
-async function mountSidebar(options: {
-  collapsed?: boolean;
-  onToggle?: () => void;
-  path?: string;
-} = {}) {
-  const container = document.createElement("div");
-  document.body.appendChild(container);
-  const root = createRoot(container);
-  mountedRoots.push(root);
+/** Let Radix's async settle (autofocus, unmount hooks) flush inside act. */
+async function flush(): Promise<void> {
   await act(async () => {
-    root.render(
-      <GatewayContext.Provider
-        value={new BoardAdapter({ baseUrl: "/api", fetchImpl: healthProbeNeverFetch })}
-      >
-        <QueryClientProvider
-          client={
-            new QueryClient({
-              defaultOptions: { queries: { enabled: false, retry: false } },
-            })
-          }
-        >
-          <I18nProvider initialLang="ru">
-            <MemoryRouter initialEntries={[options.path ?? "/memory"]}>
-              <Sidebar
-                collapsed={options.collapsed ?? false}
-                onToggle={options.onToggle ?? (() => undefined)}
-              />
-            </MemoryRouter>
-          </I18nProvider>
-        </QueryClientProvider>
-      </GatewayContext.Provider>,
-    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
   });
-  return { container };
 }
 
-function toggleButton(container: HTMLElement): HTMLButtonElement {
-  const button = container.querySelector<HTMLButtonElement>(
-    'button[aria-label="Свернуть панель"], button[aria-label="Развернуть панель"]',
-  );
-  if (!button) throw new Error("sidebar toggle not found");
-  return button;
-}
-
-function backdrop(container: HTMLElement): HTMLElement | null {
-  return container.querySelector<HTMLElement>("div[aria-hidden='true']");
-}
-
-/** The docs third-layer list (project groups): the ul that OWNS the
- * vesma-eyes group row (the outer DocsSidebarGroups list). */
-function docsGroupsList(container: HTMLElement): HTMLUListElement {
-  const link = container.querySelector<HTMLAnchorElement>(
-    'a[aria-label="vesma-eyes"]',
-  );
-  if (!link) throw new Error("docs project group not found");
-  const list = link.closest("ul");
-  if (!list) throw new Error("docs groups ul not found");
-  return list;
-}
-
-/** The active project's category rows list: the ul nested in the group's li
- * (null in the rail — the rows do not render there at all). */
-function docsCategoriesList(container: HTMLElement): HTMLUListElement | null {
-  const link = container.querySelector<HTMLAnchorElement>(
-    'a[aria-label="Устройства и подключение"]',
-  );
-  return link?.closest("ul") ?? null;
-}
-
-/** Focusables inside the sidebar panel (same attribute discipline as the
- * trap: no layout checks — happy-dom has none). */
-function panelFocusables(panel: HTMLElement): HTMLElement[] {
-  return Array.from(
-    panel.querySelectorAll<HTMLElement>(
-      "a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex='-1'])",
-    ),
-  ).filter((el) => el.closest("[hidden], [aria-hidden='true']") === null);
-}
-
-function pressTab(shift = false): KeyboardEvent {
-  const event = new KeyboardEvent("keydown", {
-    key: "Tab",
-    bubbles: true,
-    cancelable: true,
-    shiftKey: shift,
-  });
-  act(() => {
-    document.dispatchEvent(event);
-  });
-  return event;
-}
+const mountedRoots: Root[] = [];
 
 beforeEach(() => {
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -169,216 +75,290 @@ afterEach(async () => {
   document.body.innerHTML = "";
 });
 
-describe("Sidebar on a phone (<md, UI-22)", () => {
+function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <GatewayContext.Provider
+      value={new BoardAdapter({ baseUrl: "/api", fetchImpl: healthProbeNeverFetch })}
+    >
+      <QueryClientProvider
+        client={
+          new QueryClient({
+            defaultOptions: { queries: { enabled: false, retry: false } },
+          })
+        }
+      >
+        <I18nProvider initialLang="ru">
+          <HotkeysProvider>{children}</HotkeysProvider>
+        </I18nProvider>
+      </QueryClientProvider>
+    </GatewayContext.Provider>
+  );
+}
+
+describe("Sidebar below md (off-canvas drawer replaced the rail)", () => {
   beforeEach(() => stubMatchMedia(false));
 
-  it("the toggle is VISIBLE on the collapsed rail (the old md-only hide is gone)", async () => {
-    const { container } = await mountSidebar({ collapsed: false });
-    const toggle = toggleButton(container);
-    expect(toggle.className).not.toContain("hidden");
-    expect(toggle.getAttribute("aria-expanded")).toBe("false");
-    expect(toggle.getAttribute("aria-controls")).toBe("app-sidebar");
-    // The default state on a phone is the icon rail — stored desktop
-    // intent must not pre-open the overlay.
-    const aside = container.querySelector("aside");
-    expect(aside?.className).toContain("w-14");
-    expect(aside?.className).not.toContain("w-64");
+  it("the inline panel does not render at all below md", async () => {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+    await act(async () => {
+      root.render(
+        <Providers>
+          <MemoryRouter initialEntries={["/memory"]}>
+            <Sidebar collapsed={false} onToggle={() => undefined} />
+          </MemoryRouter>
+        </Providers>,
+      );
+    });
+    expect(container.querySelector("aside")).toBeNull();
+    expect(container.querySelector("nav")).toBeNull();
   });
+});
 
-  it("toggle click opens the OVERLAY: fixed box, dialog semantics, scroll lock, focus into the panel", async () => {
-    const { container } = await mountSidebar({ collapsed: false });
-    click(toggleButton(container));
-    const aside = container.querySelector("aside");
-    expect(aside?.className).toContain("fixed");
-    expect(aside?.className).toContain("w-64");
-    expect(aside?.getAttribute("role")).toBe("dialog");
-    expect(aside?.getAttribute("aria-modal")).toBe("true");
-    expect(aside?.getAttribute("aria-label")).toBe("Основная навигация");
-    expect(toggleButton(container).getAttribute("aria-expanded")).toBe("true");
-    // The translucent backdrop exists above the content.
-    expect(backdrop(container)).not.toBeNull();
-    // The document cannot scroll behind the overlay…
-    expect(document.body.style.overflow).toBe("hidden");
-    // …and focus moved INTO the panel (keyboard/SR land inside).
-    expect(document.activeElement).toBe(aside);
-  });
+describe("Sidebar on desktop (>=md, inline panel)", () => {
+  beforeEach(() => stubMatchMedia(true));
 
-  it("Esc closes the overlay and returns focus to the toggle", async () => {
-    const { container } = await mountSidebar({ collapsed: false });
-    click(toggleButton(container));
-    act(() => {
-      document.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+  it("expanded: sticky 232px panel with the footer affordances", async () => {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+    await act(async () => {
+      root.render(
+        <Providers>
+          <MemoryRouter initialEntries={["/memory"]}>
+            <Sidebar collapsed={false} onToggle={() => undefined} />
+          </MemoryRouter>
+        </Providers>,
       );
     });
     const aside = container.querySelector("aside");
+    expect(aside?.className).toContain("w-sidebar");
+    expect(aside?.className).toContain("sticky");
     expect(aside?.className).not.toContain("fixed");
+    // Page chrome, not a dialog.
     expect(aside?.getAttribute("role")).toBeNull();
-    expect(backdrop(container)).toBeNull();
-    expect(document.body.style.overflow).toBe("");
-    expect(document.activeElement).toBe(toggleButton(container));
-  });
-
-  it("a backdrop click closes the overlay (and returns focus to the toggle)", async () => {
-    const { container } = await mountSidebar({ collapsed: false });
-    click(toggleButton(container));
-    const shade = backdrop(container);
-    expect(shade).not.toBeNull();
-    click(shade as HTMLElement);
-    expect(container.querySelector("aside")?.className).not.toContain("fixed");
-    expect(document.activeElement).toBe(toggleButton(container));
-  });
-
-  it("a nav-link click closes the overlay — the content is never left covered", async () => {
-    const { container } = await mountSidebar({ collapsed: false });
-    click(toggleButton(container));
-    const link = container.querySelector<HTMLElement>("nav a");
-    expect(link).not.toBeNull();
-    click(link as HTMLElement);
-    expect(container.querySelector("aside")?.className).not.toContain("fixed");
-    expect(document.body.style.overflow).toBe("");
-  });
-
-  it("the mobile toggle NEVER flips the persisted desktop intent", async () => {
-    const onToggle = vi.fn();
-    const { container } = await mountSidebar({ collapsed: false, onToggle });
-    click(toggleButton(container)); // open
-    click(toggleButton(container)); // close
-    expect(onToggle).not.toHaveBeenCalled();
-  });
-});
-
-describe("Sidebar on desktop (>=md, unchanged contract)", () => {
-  beforeEach(() => stubMatchMedia(true));
-
-  it("the toggle flips the PERSISTED intent; the panel stays inline sticky (no overlay)", async () => {
-    const onToggle = vi.fn();
-    const { container } = await mountSidebar({ collapsed: false, onToggle });
-    expect(container.querySelector("aside")?.className).toContain("w-64");
-    expect(container.querySelector("aside")?.className).not.toContain("fixed");
-    expect(container.querySelector("aside")?.getAttribute("role")).toBeNull();
-    expect(backdrop(container)).toBeNull();
-    expect(document.body.style.overflow).toBe("");
-    click(toggleButton(container));
-    expect(onToggle).toHaveBeenCalledTimes(1);
-    // The rail variant keeps its geometry and the expand affordance.
-    const { container: rail } = await mountSidebar({ collapsed: true });
-    expect(rail.querySelector("aside")?.className).toContain("w-14");
-    expect(rail.querySelector("aside")?.className).toContain("sticky");
-    expect(rail.querySelector("aside")?.className).not.toContain("fixed");
-    expect(toggleButton(rail).getAttribute("aria-expanded")).toBe("false");
-    expect(toggleButton(rail).getAttribute("aria-label")).toBe(
-      "Развернуть панель",
+    // The footer carries Палитра / Шпаргалка / Свернуть (03 §3).
+    expect(container.querySelector('button[aria-label="Палитра"]')).not.toBeNull();
+    expect(container.querySelector('button[aria-label="Шпаргалка"]')).not.toBeNull();
+    const collapse = container.querySelector<HTMLButtonElement>(
+      'button[aria-label="Свернуть панель"]',
     );
+    expect(collapse).not.toBeNull();
+    expect(collapse?.getAttribute("aria-expanded")).toBe("true");
+  });
+
+  it("the footer «Свернуть» row flips the persisted intent; the rail keeps geometry", async () => {
+    const onToggle = vi.fn();
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+    await act(async () => {
+      root.render(
+        <Providers>
+          <MemoryRouter initialEntries={["/memory"]}>
+            <Sidebar collapsed={false} onToggle={onToggle} />
+          </MemoryRouter>
+        </Providers>,
+      );
+    });
+    click(
+      container.querySelector('button[aria-label="Свернуть панель"]') as HTMLElement,
+    );
+    expect(onToggle).toHaveBeenCalledTimes(1);
+
+    const rail = document.createElement("div");
+    document.body.appendChild(rail);
+    const railRoot = createRoot(rail);
+    mountedRoots.push(railRoot);
+    await act(async () => {
+      railRoot.render(
+        <Providers>
+          <MemoryRouter initialEntries={["/memory"]}>
+            <Sidebar collapsed onToggle={() => undefined} />
+          </MemoryRouter>
+        </Providers>,
+      );
+    });
+    const aside = rail.querySelector("aside");
+    expect(aside?.className).toContain("w-sidebar-rail");
+    expect(aside?.className).toContain("sticky");
+    expect(aside?.className).not.toContain("fixed");
+    const expand = rail.querySelector<HTMLButtonElement>(
+      'button[aria-label="Развернуть панель"]',
+    );
+    expect(expand).not.toBeNull();
+    expect(expand?.getAttribute("aria-expanded")).toBe("false");
+    // Rail = icons only: the docs third layer waits for the expand (И1).
+    expect(rail.querySelector('a[aria-label="vesmaro-eyes"]')).toBeNull();
   });
 });
 
-describe("docs categories across the sidebar states (third layer × UI-22)", () => {
+describe("MobileSidebar drawer (Radix Dialog, union И1)", () => {
   beforeEach(() => stubMatchMedia(false));
 
-  it("the phone rail shows the three groups WITHOUT category rows, ml-4 geometry", async () => {
-    const { container } = await mountSidebar({
-      collapsed: false,
-      path: "/docs/c/devices",
-    });
-    // Groups are reachable by name…
-    expect(container.querySelector('a[aria-label="vesma-eyes"]')).not.toBeNull();
-    expect(container.querySelector('a[aria-label="Vesma"]')).not.toBeNull();
-    // …categories are NOT (the rail never pulls a second icon column).
-    expect(
-      container.querySelector('a[aria-label="Устройства и подключение"]'),
-    ).toBeNull();
-    // State-driven rail geometry: shallow indent, no border, no md: classes.
-    const groups = docsGroupsList(container);
-    expect(groups.className).toContain("ml-4");
-    expect(groups.className).not.toContain("ml-7");
-    expect(groups.className).not.toContain("md:");
-    expect(groups.className).not.toContain("border-l");
-  });
-
-  it("the expanded mobile OVERLAY renders the active project's category rows (ml-7 bordered rail)", async () => {
-    const { container } = await mountSidebar({
-      collapsed: false,
-      path: "/docs/c/devices",
-    });
-    click(toggleButton(container));
-    // The active project's categories are visible to keyboard/SR users.
-    const devices = container.querySelector(
-      'a[aria-label="Устройства и подключение"]',
+  function DrawerHarness({ initialOpen = false } = {}) {
+    const [open, setOpen] = useState(initialOpen);
+    return (
+      <Providers>
+        <MemoryRouter initialEntries={["/memory"]}>
+          <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
+            <DialogPrimitive.Trigger asChild>
+              <button type="button" aria-label="Открыть разделы">
+                trigger
+              </button>
+            </DialogPrimitive.Trigger>
+            <MobileSidebar open={open} onOpenChange={setOpen} />
+          </DialogPrimitive.Root>
+        </MemoryRouter>
+      </Providers>
     );
-    expect(devices).not.toBeNull();
-    expect(devices?.getAttribute("title")).toBe("Устройства и подключение");
-    // Group rail switched to the expanded geometry — from STATE, not md:.
-    const groups = docsGroupsList(container);
-    expect(groups.className).toContain("ml-7");
-    expect(groups.className).toContain("border-l");
-    expect(groups.className).not.toContain("md:");
-    // The category list itself carries no CSS display toggling either.
-    const categories = docsCategoriesList(container);
-    expect(categories).not.toBeNull();
-    expect(categories!.className).not.toContain("hidden");
-    expect(categories!.className).not.toContain("md:");
+  }
+
+  function drawerPanel(): HTMLElement | null {
+    return document.body.querySelector('[role="dialog"]');
+  }
+
+  function drawerBackdrop(): HTMLElement | null {
+    // The portal pair: Overlay + Content both carry data-state; the overlay
+    // is the one WITHOUT the dialog role.
+    return document.body.querySelector<HTMLElement>(
+      'div[data-state="open"]:not([role="dialog"])',
+    );
+  }
+
+  function triggerButton(): HTMLButtonElement {
+    const button = document.body.querySelector<HTMLButtonElement>(
+      'button[aria-label="Открыть разделы"]',
+    );
+    if (!button) throw new Error("drawer trigger not found");
+    return button;
+  }
+
+  async function mountHarness(initialOpen = false): Promise<HTMLElement> {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+    await act(async () => {
+      root.render(<DrawerHarness initialOpen={initialOpen} />);
+    });
+    return container;
+  }
+
+  it("renders NOTHING while closed (controlled portal)", async () => {
+    await mountHarness();
+    expect(drawerPanel()).toBeNull();
+    expect(triggerButton().getAttribute("aria-expanded")).toBe("false");
+    expect(triggerButton().getAttribute("data-state")).toBe("closed");
   });
-});
 
-describe("sidebar focus trap (overlay only)", () => {
-  it("on mobile, Tab cycles INSIDE the overlay panel and never reaches the page behind", async () => {
-    stubMatchMedia(false);
-    const { container } = await mountSidebar({ collapsed: false });
-    click(toggleButton(container));
-    const aside = container.querySelector("aside") as HTMLElement;
-    const focusables = panelFocusables(aside);
-    expect(focusables.length).toBeGreaterThan(1);
+  it("open: dialog semantics, the 232px panel, the backdrop, focus inside", async () => {
+    await mountHarness();
+    click(triggerButton());
+    await flush();
+    const panel = drawerPanel();
+    expect(panel).not.toBeNull();
+    expect(panel?.getAttribute("data-state")).toBe("open");
+    expect(panel?.className).toContain("w-sidebar");
+    expect(panel?.className).toContain("fixed");
+    // The sr-only title names the dialog («Разделы»).
+    expect(panel?.textContent).toContain("Разделы");
+    // The full panel: nav groups with labels + footer affordances.
+    expect(panel?.querySelector('button[aria-label="Память"]')).not.toBeNull();
+    expect(panel?.querySelector('button[aria-label="Палитра"]')).not.toBeNull();
+    expect(drawerBackdrop()).not.toBeNull();
+    expect(triggerButton().getAttribute("aria-expanded")).toBe("true");
+    // Radix FocusScope pulled focus into the panel on open.
+    expect(panel!.contains(document.activeElement)).toBe(true);
+  });
 
-    // Focus opens on the panel itself; the first Tab hands it to the first
-    // focusable (the header toggle).
-    expect(document.activeElement).toBe(aside);
-    pressTab();
-    expect(document.activeElement).toBe(focusables[0]);
+  it("Esc closes the drawer and returns focus to the trigger", async () => {
+    await mountHarness();
+    click(triggerButton());
+    await flush();
+    const panel = drawerPanel() as HTMLElement;
+    act(() => {
+      panel.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }),
+      );
+    });
+    await flush();
+    expect(drawerPanel()).toBeNull();
+    expect(document.activeElement).toBe(triggerButton());
+  });
 
-    // Forward cycle: from the LAST focusable, Tab wraps to the first —
-    // the outside button stays untouched.
+  it("a backdrop click closes the drawer (and returns focus)", async () => {
+    await mountHarness();
+    click(triggerButton());
+    await flush();
+    const shade = drawerBackdrop();
+    expect(shade).not.toBeNull();
+    // Radix DismissableLayer: the full pointer sequence outside the content
+    // (pointerdown alone is not enough in this radix revision).
+    act(() => {
+      shade!.dispatchEvent(
+        new MouseEvent("pointerdown", { bubbles: true, cancelable: true }),
+      );
+      shade!.dispatchEvent(
+        new MouseEvent("pointerup", { bubbles: true, cancelable: true }),
+      );
+      shade!.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true }),
+      );
+    });
+    await flush();
+    expect(drawerPanel()).toBeNull();
+    expect(document.activeElement).toBe(triggerButton());
+  });
+
+  it("the footer «Свернуть» row is the Dialog.Close affordance", async () => {
+    await mountHarness();
+    click(triggerButton());
+    await flush();
+    const close = drawerPanel()?.querySelector<HTMLButtonElement>(
+      'button[aria-label="Свернуть панель"]',
+    );
+    expect(close).not.toBeNull();
+    click(close as HTMLElement);
+    await flush();
+    expect(drawerPanel()).toBeNull();
+  });
+
+  it("Tab cycles INSIDE the drawer and never reaches the page behind", async () => {
+    await mountHarness();
+    click(triggerButton());
+    await flush();
+    const panel = drawerPanel() as HTMLElement;
     const outside = document.createElement("button");
     outside.id = "outside-content";
     document.body.appendChild(outside);
-    focusables[focusables.length - 1].focus();
-    const wrapped = pressTab();
-    expect(wrapped.defaultPrevented).toBe(true);
-    expect(document.activeElement).toBe(focusables[0]);
+    // Radix FocusScope pulled focus into the panel on open.
+    expect(panel.contains(document.activeElement)).toBe(true);
+    for (let i = 0; i < 6; i += 1) {
+      act(() => {
+        document.dispatchEvent(
+          new KeyboardEvent("keydown", {
+            key: "Tab",
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      });
+    }
+    expect(panel.contains(document.activeElement)).toBe(true);
     expect(document.activeElement).not.toBe(outside);
-
-    // Backward cycle: Shift+Tab from the first lands on the last.
-    pressTab(true);
-    expect(document.activeElement).toBe(focusables[focusables.length - 1]);
-    expect(document.activeElement).not.toBe(outside);
-
-    // Leaked focus (programmatic or browser quirk) is pulled back inside.
-    outside.focus();
-    pressTab();
-    expect(aside.contains(document.activeElement)).toBe(true);
-  });
-
-  it("on desktop, the inline panel does NOT trap: Tab is left to the browser", async () => {
-    stubMatchMedia(true);
-    const { container } = await mountSidebar({ collapsed: false });
-    const aside = container.querySelector("aside");
-    expect(aside?.getAttribute("role")).toBeNull(); // page chrome, not dialog
-    const outside = document.createElement("button");
-    document.body.appendChild(outside);
-    outside.focus();
-    const event = pressTab();
-    expect(event.defaultPrevented).toBe(false);
-    expect(document.activeElement).toBe(outside); // nothing moved
   });
 });
 
 /**
- * ME-002 (background inert): the trap keeps TAB inside the dialog, but the
- * covered page also has to leave the ACCESSIBILITY tree (SR / virtual
- * cursor) — `inert` on everything except the dialog subtree. That wiring
- * lives in the Shell (skip link + content column) and the chrome surfaces,
- * so these tests mount the real Shell via buildRoutes — the Sidebar-only
- * harness above has no background to inert.
+ * ME-002 (background inert) + the Shell-level drawer wiring: the covered
+ * page must leave the ACCESSIBILITY tree (`inert`), the body scroll locks,
+ * and a route change (a nav click inside the drawer) closes it. The Shell
+ * owns all three — these cases mount the real router tree.
  */
 async function mountShell(path = "/memory") {
   const container = document.createElement("div");
@@ -417,53 +397,56 @@ async function mountShell(path = "/memory") {
   return { container };
 }
 
+function shellTrigger(container: HTMLElement): HTMLButtonElement {
+  const button = container.querySelector<HTMLButtonElement>(
+    'button[aria-label="Открыть разделы"]',
+  );
+  if (!button) throw new Error("shell drawer trigger not found");
+  return button;
+}
+
 function skipLink(container: HTMLElement): HTMLAnchorElement | null {
   return container.querySelector<HTMLAnchorElement>("a[href='#main']");
 }
 
-describe("sidebar overlay inerts the background (ME-002, full Shell)", () => {
+describe("Shell drawer wiring (ME-002 inert + scroll lock + nav close)", () => {
   beforeEach(() => {
     stubMatchMedia(false); // the phone viewport
     localStorage.clear();
   });
 
-  it("while the overlay is open the covered page is inert; closed — nothing is", async () => {
+  it("while the drawer is open the covered page is inert and locked; a nav click closes", async () => {
     const { container } = await mountShell();
-    await vi.waitFor(() => {
-      expect(container.querySelector("aside")).not.toBeNull();
-    });
     const main = container.querySelector("main");
     expect(main).not.toBeNull();
-    // Closed rail: page chrome is fully live — no stray inert anywhere.
+    // Closed: page chrome is fully live — no stray inert anywhere.
     expect(main!.closest("[inert]")).toBeNull();
     expect(skipLink(container)?.hasAttribute("inert")).toBe(false);
 
-    click(toggleButton(container));
-    const aside = container.querySelector("aside");
-    expect(aside?.getAttribute("role")).toBe("dialog");
+    click(shellTrigger(container));
     // Everything the dialog covers leaves the a11y tree (and the pointer):
-    // main, the skip link, the whole content column.
+    // main, the skip link, the whole content row.
     expect(main!.closest("[inert]")).not.toBeNull();
     expect(skipLink(container)?.hasAttribute("inert")).toBe(true);
-    expect(main!.parentElement?.hasAttribute("inert")).toBe(true);
-    // …while the DIALOG subtree — the panel and the toggle that owns the
-    // focus return — stays live (programmatic focus cannot enter an inert
-    // ancestor, so inerting them would break the close path).
-    expect(aside?.closest("[inert]")).toBeNull();
-    expect(toggleButton(container).closest("[inert]")).toBeNull();
+    // The document cannot scroll behind the overlay…
+    expect(document.body.style.overflow).toBe("hidden");
+    // …while the DIALOG subtree (portal) stays live, and the trigger that
+    // owns the focus return lives OUTSIDE the inerted row (in the TopBar).
+    const panel = document.body.querySelector('[role="dialog"]');
+    expect(panel).not.toBeNull();
+    expect(panel!.closest("[inert]")).toBeNull();
+    expect(shellTrigger(container).closest("[inert]")).toBeNull();
 
-    // Esc closes: the background comes back to the tree and focus lands on
-    // the toggle that opened the overlay.
-    act(() => {
-      document.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
-      );
+    // A nav-link click inside the drawer navigates → the drawer closes, the
+    // page comes back to the tree and the scroll unlock follows.
+    const link = panel!.querySelector<HTMLElement>("nav a");
+    expect(link).not.toBeNull();
+    click(link as HTMLElement);
+    await vi.waitFor(() => {
+      expect(document.body.querySelector('[role="dialog"]')).toBeNull();
     });
-    expect(aside?.getAttribute("role")).toBeNull();
     expect(main!.closest("[inert]")).toBeNull();
     expect(skipLink(container)?.hasAttribute("inert")).toBe(false);
-    expect(document.activeElement).toBe(toggleButton(container));
     expect(document.body.style.overflow).toBe("");
   });
 });
-

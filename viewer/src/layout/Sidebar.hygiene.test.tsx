@@ -7,15 +7,18 @@ import { Sidebar } from "./Sidebar";
 import { BoardAdapter } from "@/gateway/BoardAdapter";
 import { GatewayContext } from "@/gateway/GatewayContext";
 import { I18nProvider } from "@/i18n";
+import { HotkeysProvider } from "@/layout/Hotkeys";
 
 /**
  * Sidebar horizontal-overflow hygiene + collapse control placement (UI-19
- * owner feedback): long translations («Устройства и подключение», docs
- * domain) must NEVER force the fixed-width panel into a horizontal scroll —
- * labels truncate under a full-name title/aria-label and the nav clips
- * overflow-x. The collapse control lives in the sidebar HEADER (the old
- * footer corner went unnoticed), carries aria-expanded + a tooltip title,
- * and the icon-only mode keeps accessible names on every row.
+ * owner feedback, redressed by union И1 / stand 03 §3): long translations
+ * («Устройства и подключение», docs domain) must NEVER force the fixed-width
+ * panel into a horizontal scroll — labels truncate under a full-name
+ * title/aria-label and the nav clips overflow-x. The collapse control lives
+ * in the sidebar FOOTER («Свернуть», stand 03 §3 — the union moved it from
+ * the header), carries a tooltip title, and the icon-only rail keeps
+ * accessible names on every domain row (the docs third layer returns on
+ * expand — the rail is domain-icons only per the stand).
  * renderToString pattern: Sidebar.session.test.tsx (DOM-free, node env).
  */
 
@@ -30,9 +33,11 @@ function renderSidebar(path: string, collapsed: boolean, lang: "ru" | "en" = "ru
         }
       >
         <I18nProvider initialLang={lang}>
-          <MemoryRouter initialEntries={[path]}>
-            <Sidebar collapsed={collapsed} onToggle={() => undefined} />
-          </MemoryRouter>
+          <HotkeysProvider>
+            <MemoryRouter initialEntries={[path]}>
+              <Sidebar collapsed={collapsed} onToggle={() => undefined} />
+            </MemoryRouter>
+          </HotkeysProvider>
         </I18nProvider>
       </QueryClientProvider>
     </GatewayContext.Provider>,
@@ -70,10 +75,9 @@ describe("Sidebar overflow hygiene (UI-19)", () => {
     // whitespace-nowrap is irrelevant — it holds an icon only).
     expect(html.match(/<span class="[^"]*whitespace-nowrap/g)).toBeNull();
     expect(html).toContain("overflow-x-hidden");
-    // The widened expanded slot (w-56 → w-64 for the long RU docs labels).
-    // UI-22: the slot width is state-driven now (viewport via matchMedia),
-    // so the SSR string carries the plain w-64.
-    expect(html).toContain("w-64");
+    // Union И1 (stand 03 §3): the expanded panel is the 232px token slot;
+    // the SSR string carries the plain w-sidebar (desktop snapshot).
+    expect(html).toContain("w-sidebar");
   });
 
   it("every long label row keeps its FULL name as title AND aria-label", () => {
@@ -83,7 +87,7 @@ describe("Sidebar overflow hygiene (UI-19)", () => {
     expect(html).toContain('title="Устройства и подключение"');
     expect(html).toContain('aria-label="Устройства и подключение"');
     expect(html).toContain('title="Безопасность и токены"');
-    expect(html).toContain('title="vesma-eyes"'); // project group row
+    expect(html).toContain('title="vesmaro-eyes"'); // project group row
   });
 
   it("the same holds for the EN dictionary", () => {
@@ -93,35 +97,33 @@ describe("Sidebar overflow hygiene (UI-19)", () => {
     expect(html).toContain('aria-label="Security &amp; tokens"');
   });
 
-  it("icon-rail (collapsed): project groups keep their names, categories hide (spec §3.2)", () => {
+  it("icon-rail (collapsed): domain rows keep their names, the docs tree waits for expand (stand 03 §3)", () => {
     const html = renderSidebar("/docs/c/devices", true);
-    // The domain and the three PROJECT rows stay accessible by name.
+    // The rail is domain icons only — every row keeps its accessible name.
     expect(html).toContain('aria-label="Документация"');
-    expect(html).toContain('aria-label="vesma-eyes"');
-    expect(html).toContain('aria-label="Vesma"');
-    expect(html).toContain('aria-label="vesma-mesh"');
-    // Categories never render in the rail — no second icon column (UI-19).
+    // Union И1: the third layer (projects/categories) returns on expand —
+    // the rail carries no second icon column (stand collapsed state).
+    expect(html).toContain("w-sidebar-rail");
     expect(html).not.toContain("Устройства и подключение");
-    expect(html).toContain('<span class="hidden">vesma-eyes</span>');
-    expect(html).toContain('<span class="hidden">Документация</span>');
   });
 });
 
-describe("Sidebar collapse control (UI-19)", () => {
-  it("lives in the HEADER (before the nav), carries title + aria-expanded", () => {
+describe("Sidebar collapse control (UI-19; footer since union И1)", () => {
+  it("lives in the FOOTER (after the nav), the «Свернуть» row with the [ hint", () => {
     const html = renderSidebar("/docs/c/devices", false);
-    const toggle = html.indexOf("aria-expanded");
+    const toggle = html.indexOf('title="Свернуть панель"');
     const nav = html.indexOf("<nav");
     expect(toggle).toBeGreaterThan(-1);
     expect(nav).toBeGreaterThan(-1);
-    expect(toggle).toBeLessThan(nav); // header position, not the footer corner
-    expect(html).toContain('aria-expanded="true"'); // expanded by default
-    expect(html).toContain('title="Свернуть панель"'); // native tooltip
+    expect(toggle).toBeGreaterThan(nav); // footer position (stand 03 §3)
+    expect(html).toContain('aria-label="Свернуть панель"');
+    // The advertised key exists (honesty: no dead hints).
+    expect(html).toContain(">[<");
   });
 
-  it("collapsed: the control flips to «Развернуть панель» + aria-expanded=false", () => {
+  it("collapsed: the control flips to «Развернуть панель»", () => {
     const html = renderSidebar("/docs/c/devices", true);
-    expect(html).toContain('aria-expanded="false"');
     expect(html).toContain('title="Развернуть панель"');
+    expect(html).toContain('aria-label="Развернуть панель"');
   });
 });

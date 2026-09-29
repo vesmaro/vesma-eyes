@@ -14,6 +14,7 @@ import { UiTokenProvider } from "@/features/ui-token/UiTokenProvider";
 import { UiTokenSlot } from "@/features/ui-token/UiTokenSlot";
 import { LoginDialog } from "@/features/ui-token/LoginDialog";
 import { Sidebar } from "@/layout/Sidebar";
+import { HotkeysProvider } from "@/layout/Hotkeys";
 import { I18nProvider } from "@/i18n";
 import { keys } from "@/lib/queryKeys";
 import { clearUiToken, hasUiToken } from "@/gateway/uiToken";
@@ -323,7 +324,9 @@ describe("login flow regression (owner repro)", () => {
                     <TaskListPage />
                     {/* The session-aware footer (fix/login-feedback): the
                      * reactive flip is asserted below, no reload involved. */}
-                    <Sidebar collapsed={false} onToggle={() => undefined} />
+                    <HotkeysProvider>
+                      <Sidebar collapsed={false} onToggle={() => undefined} />
+                    </HotkeysProvider>
                     {/* The TopBar sign-in entry (board mode). */}
                     <UiTokenSlot />
                     {/* The visible toast region (same placement as Shell). */}
