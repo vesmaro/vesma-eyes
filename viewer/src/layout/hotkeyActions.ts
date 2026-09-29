@@ -4,12 +4,17 @@
  * rules are exhaustively unit-testable; the provider wiring lives in
  * Hotkeys.tsx.
  *
- * UX-overhaul §7.3 (Ф2): the search entry is the COMMAND PALETTE — the
- * bare `/` opens it (memory is the first section, keeping the old
- * focus-search promise) and ⌘K/Ctrl+K opens it from anywhere, INCLUDING
- * editable surfaces (the palette's own input is the point).
+ * Union И1 (stand 03 §7): the bare `/` focuses the TopBar GLOBAL SEARCH
+ * (a real field now — Enter carries the query to /memory/search), `[` flips
+ * the sidebar rail, and ⌘K/Ctrl+K stays the palette's canonical key from
+ * anywhere, INCLUDING editable surfaces (the palette's own input is the
+ * point).
  */
-export type HotkeyAction = "open-palette" | "open-help";
+export type HotkeyAction =
+  | "open-palette"
+  | "open-help"
+  | "focus-search"
+  | "toggle-sidebar";
 
 /** Minimal event shape resolveHotkey needs (pure, DOM-free — unit-testable). */
 export interface HotkeyEvent {
@@ -45,8 +50,9 @@ export function isEditableTarget(target: EventTarget | null | undefined): boolea
 export function resolveHotkey(event: HotkeyEvent): HotkeyAction | null {
   if (event.metaKey || event.ctrlKey || event.altKey) return null;
   if (isEditableTarget(event.target)) return null;
-  if (event.key === "/") return "open-palette";
+  if (event.key === "/") return "focus-search";
   if (event.key === "?") return "open-help";
+  if (event.key === "[") return "toggle-sidebar";
   return null;
 }
 
