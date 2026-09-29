@@ -18,6 +18,7 @@ import { CommandPalette } from "./CommandPalette";
 import { MobileSidebar, Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { UpdateBanner } from "./UpdateBanner";
+import { GatedOutlet } from "@/features/ui-token/GatedOutlet";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { useDocsManifest } from "@/features/docs/manifest";
 import { useT } from "@/i18n";
@@ -149,7 +150,16 @@ export function Shell() {
                     <MemoryCardSkeleton count={3} className="mx-auto max-w-3xl" />
                   }
                 >
-                  <Outlet />
+                  {/* Gates v6 (ME-043, 07k §2–§3): ONE interception for every
+                   * gated domain — an anonymous visitor gets the honest gate
+                   * screen instead of the page; the gated component never
+                   * mounts (no closed-content flash, URL-first). */}
+                  <GatedOutlet
+                    pathname={location.pathname}
+                    search={location.search}
+                  >
+                    <Outlet />
+                  </GatedOutlet>
                 </Suspense>
               </ErrorBoundary>
             </main>

@@ -57,3 +57,19 @@
 .docs-pop {
   animation: docs-pop var(--duration-fast) var(--ease-out);
 }
+
+/* Gate-screen entrance (union И1, 07k §7): opacity-dominant, no layout
+ * shift; duration/ease ride the motion tokens, so both reduced-motion
+ * regimes flatten it (250ms → 0ms) with no extra guard needed. */
+@keyframes gate-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.gate-enter {
+  animation: gate-enter var(--duration-normal) var(--ease-enter);
+}
