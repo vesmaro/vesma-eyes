@@ -179,6 +179,26 @@ hostNetwork-порт 8080 при откате снова займётся под
 6. Мультисерверный registry — SQLite на PVC (ConfigMap seed нужен только
    свежим инсталляциям: `memoryRegistry.configMap.create=true` + content в
    values, монтируется в `/config`, не затирая `/data`).
+7. **ghcr pull-секреты умирают незаметно (инцидент ghcr-403, 2026-09-29)** —
+   у ghcr PAT нет API, отдающего срок жизни, поэтому TTL-контроль только
+   канареечный: `scripts/check-ghcr-pull.sh` read-only повторяет ровно то,
+   что делает kubelet, — по каждому из секретов `ghcr-pull`/`ghcr-pull-w26`
+   (namespace `kube-agents`) Basic-рукопожатие с
+   `https://ghcr.io/token?scope=repository:korrnals/vesmaro-eyes:pull`
+   плюс GET манифеста текущего тега из чарта (полный pull-путь, не только
+   аутентификация); креды нигде не печатаются и не попадают в argv
+   (curl-конфиг через `-K`, тела ответов — во временных файлах 0600,
+   диагностика в stderr). Успех = exit 0 и по строке
+   `OK <secret>: token 200, manifest <тег> 200`; отказ = exit 1 и строка
+   `FAIL ...` — это и есть алерт-сигнал для cron:
+   `*/10 * * * * <repo>/scripts/check-ghcr-pull.sh`
+   (запуск с той машины, где kubectl видит кластер; на PATH нужны
+   kubectl/curl/python3/base64; параметры — env `GHCR_CHECK_*`).
+   Симптом инцидента 2026-09-29 (простой ~2ч): ImagePullBackOff + 403 на
+   token-endpoint ghcr, секрет `ghcr-pull` отозван со стороны ghcr; первая
+   диагностика — `scripts/check-ghcr-pull.sh`, лечение — ротация секрета
+   in place и/или обновление `ghcr-pull-w26` (kubelet перебирает оба
+   imagePullSecrets, переживает отказ одного).
 
 ## 7. Версии (archcom C5)
 

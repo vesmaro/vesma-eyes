@@ -82,6 +82,12 @@ GIT_BIN="${VESMARO_DEPLOY_GIT:-git}"
 HELM_BIN="${VESMARO_DEPLOY_HELM:-helm}"
 SYNC_VERSION="${VESMARO_DEPLOY_SYNC_VERSION:-$REPO_ROOT/scripts/sync-version.sh}"
 PODMAN_HOST="${VESMARO_DEPLOY_PODMAN_HOST:-distrobox-host-exec podman}"
+# ME-027: in this distrobox the in-box podman has a broken userns
+# (`newuidmap: Operation not permitted` at build time) — the 1.44/1.45/1.47
+# deploys all needed the ABSOLUTE host-exec path explicitly. If the
+# default transport is unusable, the executed path below falls back here
+# (one WARNING line); an explicit VESMARO_DEPLOY_PODMAN_HOST always wins.
+PODMAN_HOST_FALLBACK="/run/host/var/home/abyss/.local/bin/distrobox-host-exec podman"
 # NB (distrobox): the default LOCK below lives in /run, which is
 # NAMESPACE-LOCAL per distrobox container — two different containers (or
 # container vs host) each see their OWN /run and the flock does NOT
@@ -623,6 +629,28 @@ do_repair() {
 # Sourcing the script (unit tests) defines the gates WITHOUT running
 # any of them; executing it directly parses argv and dispatches.
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+
+  # ME-027 (incident finding): every git gate AND the journal add/commit/
+  # push must evaluate the repo THIS script belongs to — not the directory
+  # the operator happened to run it from. A rollback fired from a foreign
+  # directory was refused on a false preflight gate (git fetch/rev-parse
+  # saw the caller's cwd, not this repo). Anchoring the executed run to
+  # $REPO_ROOT fixes all git call sites at once. Deliberately NOT done
+  # when SOURCED: the unit tests source this script from fake repos and
+  # worktrees and anchor git themselves (tests/test_deploy_gates.py).
+  cd "$REPO_ROOT" || die "cannot cd into the deploy repo root: $REPO_ROOT" 1
+
+  # ME-027: probe the default podman transport ONCE, before anything can
+  # build. When the knob is unset and the in-box podman is unusable
+  # (broken userns — `podman info` fails, or podman is absent), fall back
+  # to the host podman via the absolute host-exec path; an explicit
+  # VESMARO_DEPLOY_PODMAN_HOST (set at the top) always wins and skips the
+  # probe.
+  if [[ -z "${VESMARO_DEPLOY_PODMAN_HOST:-}" ]] \
+     && ! podman info >/dev/null 2>&1; then
+    PODMAN_HOST="$PODMAN_HOST_FALLBACK"
+    echo "deploy: WARNING — in-box 'podman info' failed (broken userns? not installed?) — falling back to host podman: $PODMAN_HOST" >&2
+  fi
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
