@@ -149,7 +149,7 @@ hostNetwork-порт 8080 при откате снова займётся под
 | `vesmaro-eyes-board-token` | **чарт** (lookup+randAlphaNum 48, keep при uninstall) | `VESMARO_BOARD_TOKEN` | создаёт/переиспользует |
 | `vesmaro-eyes-ui-token` | **чарт**, только при `uiToken.enabled=true` (иначе не существует; ADR 0009 A1) | `VESMARO_UI_TOKEN` | создаёт/переиспользует |
 | `vesmaro-eyes-tls` | `scripts/gen-tls-secret.sh`, 825d | `tls.crt`/`tls.key` (self-signed) | только читает (ingress.tls) |
-| `ghcr-pull` | вне-helm (registry pull) | dockerconfigjson | только читает (imagePullSecrets) |
+| `ghcr-pull`, `ghcr-pull-w26` | вне-helm (registry pull) | dockerconfigjson | только читает (imagePullSecrets; kubelet перебирает оба — переживает отзыв одного, ghcr-403 от 2026-09-29) |
 
 Правила: секреты чартом никогда не печатаются в логи; `helm template`
 показывает СЛУЧАЙНЫЙ board-token (lookup вне кластера пуст) — rendered-вывод

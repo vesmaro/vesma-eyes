@@ -16,8 +16,13 @@ image:
   tag: "1.47.0"
   pullPolicy: Always
 
+# Both registry pull secrets are listed on purpose (ghcr-403 incident,
+# 2026-09-29, second occurrence): kubelet falls through the list until one
+# authenticates, so a revoked/expired credential in a single secret no
+# longer takes prod down. Rotate in place OR refresh ghcr-pull-w26.
 imagePullSecrets:
   - name: ghcr-pull
+  - name: ghcr-pull-w26
 
 serviceAccount:
   create: true
