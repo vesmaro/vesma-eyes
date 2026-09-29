@@ -17,8 +17,9 @@
 
 /*
  * Breathing pupil. T4 contract: one slow 4.8 s cycle (inside the 4–6 s
- * window); --duration-iris (3 s, §7) remains the design-system's generic
- * breathing token, so the slower pupil cycle gets its own derived property.
+ * window); --duration-iris (5 s since the И0 v2 token wave, §7) remains the
+ * design-system's generic breathing token, so the pupil cycle keeps its own
+ * derived property.
  */
 .iris-breathing .iris-pupil {
   --iris-breathe-duration: 4800ms;
