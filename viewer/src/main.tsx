@@ -5,6 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { GatewayContext } from "@/gateway/GatewayContext";
 import { createGateway } from "@/gateway/adapterConfig";
+import { initAuthSession } from "@/features/ui-token/authSession";
 import { ThemeProvider } from "@/components/theme-provider";
 import { DensityProvider } from "@/components/density-provider";
 import { HotkeysProvider } from "@/layout/Hotkeys";
@@ -42,6 +43,12 @@ if (!rootElement) {
  * fetch before the tree mounts.
  */
 void createGateway().then((gateway) => {
+  // Gates v6 (ME-043, 07k §5.1): settle the auth session BEFORE the first
+  // render — the ME-028 boot probe (GET /api/auth/ui-token) leaves with the
+  // gateway, so the first paint of a gated route already knows the verdict
+  // and closed content can never flash. Idempotent per gateway: the
+  // UiTokenProvider joins this same promise (no second request).
+  initAuthSession(gateway);
   createRoot(rootElement).render(
     <StrictMode>
       <GatewayContext.Provider value={gateway}>

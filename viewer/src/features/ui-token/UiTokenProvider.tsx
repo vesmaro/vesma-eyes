@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useSyncExternalStore,
+} from "react";
 import {
   isTaskMutationSource,
   isUiTokenSessionSource,
@@ -7,6 +13,7 @@ import { getDeviceScope, hasDeviceToken } from "@/gateway/deviceToken";
 import { useGateway } from "@/gateway/GatewayContext";
 import { useToast } from "@/components/Toast/toastContext";
 import { useT } from "@/i18n";
+import { authSessionProbe } from "./authSession";
 import { UiTokenContext } from "./UiTokenContext";
 import { LoginDialog } from "./LoginDialog";
 import { UiTokenGate } from "./uiTokenGate";
@@ -83,14 +90,22 @@ export function UiTokenProvider({ children }: { children: React.ReactNode }) {
     [gateway],
   );
 
-  // Boot hydration (ADR 0014 Ф2): one probe per gateway — 204 flips
+  // Boot hydration (ADR 0014 Ф2): ONE probe per gateway — 204 flips
   // tokenPresent without any user action, so a second tab (or a reload
   // past the 6h sliding window's refresh) opens signed-in or stays
-  // read-only, never stuck with a dead prompt.
+  // read-only, never stuck with a dead prompt. Union И1 (ME-043): the probe
+  // now lives in the boot auth-session store (authSession.ts) and main.tsx
+  // fires it BEFORE the first render — this effect JOINS that same promise
+  // (a standalone harness mount initializes the store itself, firing the
+  // probe exactly here as before). No second request, ever.
   useEffect(() => {
     if (!isUiTokenSessionSource(gateway)) return;
     let cancelled = false;
-    void gateway.probeUiSession().then(() => {
+    const probe = authSessionProbe(gateway);
+    // Already settled before this mount: the gate sampled the verdict at
+    // construction (the adapter's cookie flag was set before render).
+    if (!probe) return;
+    void probe.then(() => {
       if (!cancelled) gate.refreshPresence();
     });
     return () => {
@@ -143,6 +158,19 @@ export function UiTokenProvider({ children }: { children: React.ReactNode }) {
     gate.getState.bind(gate),
   );
 
+  // data-auth on the root (07k §5.1): "user" while the owner session is
+  // live, "anon" otherwise — the pending boot probe reads "anon" (the safe
+  // default; it can only flip up). A layout effect so the attribute lands
+  // before the browser's first paint; visual chrome never keys on it (the
+  // reactive state above drives the UI) — it is the audit/CSS seam.
+  useLayoutEffect(() => {
+    if (typeof document === "undefined") return;
+    const value = state.tokenPresent ? "user" : "anon";
+    if (document.documentElement.dataset.auth !== value) {
+      document.documentElement.dataset.auth = value;
+    }
+  }, [state.tokenPresent]);
+
   const runAuthorized = useCallback(
     (run: () => Promise<void>, onDeferred?: () => void) => {
       gate.runAuthorized(run, onDeferred);
@@ -178,7 +206,16 @@ export function UiTokenProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <UiTokenContext.Provider
-      value={{ tokenPresent: state.tokenPresent, openLogin, runAuthorized, logout }}
+      value={{
+        tokenPresent: state.tokenPresent,
+        openLogin,
+        runAuthorized,
+        logout,
+        submitToken,
+        verifyPending: state.verifyPending === true,
+        rejectKind: state.rejectKind,
+        rejectDetail: state.rejectDetail,
+      }}
     >
       {children}
       <LoginDialog
