@@ -71,26 +71,26 @@ function mountAuthGate(
       <GatewayContext.Provider value={new MockAdapter({ latency: false })}>
         <KoraGatewayContext.Provider value={gateway}>
           <QueryClientProvider client={client}>
-          <UiTokenContext.Provider
-            value={{
-              tokenPresent,
-              openLogin,
-              runAuthorized: (run) => void run(),
-              logout: () => undefined,
-            }}
-          >
-            <I18nProvider initialLang="ru">
-              {/* The route pattern is part of the harness: useParams on the
-               * session page only resolves against a declared path. */}
-              <MemoryRouter initialEntries={[path]}>
-                <Routes>
-                  <Route path="/kora" element={component} />
-                  <Route path="/kora/:sessionId" element={component} />
-                </Routes>
-              </MemoryRouter>
-            </I18nProvider>
-          </UiTokenContext.Provider>
-        </QueryClientProvider>
+            <UiTokenContext.Provider
+              value={{
+                tokenPresent,
+                openLogin,
+                runAuthorized: (run) => void run(),
+                logout: () => undefined,
+              }}
+            >
+              <I18nProvider initialLang="ru">
+                {/* The route pattern is part of the harness: useParams on the
+                 * session page only resolves against a declared path. */}
+                <MemoryRouter initialEntries={[path]}>
+                  <Routes>
+                    <Route path="/kora" element={component} />
+                    <Route path="/kora/:sessionId" element={component} />
+                  </Routes>
+                </MemoryRouter>
+              </I18nProvider>
+            </UiTokenContext.Provider>
+          </QueryClientProvider>
         </KoraGatewayContext.Provider>
       </GatewayContext.Provider>,
     );
@@ -166,9 +166,7 @@ describe("kora 401 gate — session list", () => {
   it("keeps the honest retry error block on 500 — no CTA", async () => {
     mountAuthGate(<KoraPage />, "/kora", 500);
     await actWaitUntil(() => {
-      expect(document.body.textContent).toContain(
-        "Не удалось загрузить список сессий",
-      );
+      expect(document.body.textContent).toContain("Не удалось загрузить список сессий");
     });
     expect(document.body.textContent).toContain("Повторить");
     expect(document.body.textContent).not.toContain("Сессия не активна");
@@ -184,19 +182,13 @@ describe("kora 401 gate — transcript page", () => {
     expect(document.body.textContent).toContain(
       "Войдите — и транскрипт этой сессии появится здесь",
     );
-    expect(document.body.textContent).not.toContain(
-      "Не удалось загрузить транскрипт",
-    );
+    expect(document.body.textContent).not.toContain("Не удалось загрузить транскрипт");
     // The way back to the list stays reachable.
     expect(document.body.textContent).toContain("К списку сессий");
   });
 
   it("refetches both reads once a login lands", async () => {
-    const { calls, signIn } = mountAuthGate(
-      <KoraSessionPage />,
-      "/kora/sess-1",
-      401,
-    );
+    const { calls, signIn } = mountAuthGate(<KoraSessionPage />, "/kora/sess-1", 401);
     await actWaitUntil(() => {
       expect(calls.sessions).toBe(1);
       expect(calls.transcript).toBe(1);

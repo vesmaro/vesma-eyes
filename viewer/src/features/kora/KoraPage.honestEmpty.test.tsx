@@ -35,7 +35,14 @@ const mountedRoots: Root[] = [];
 async function mountEmptyKora(
   executorsPage: ExecutorsPage,
 ): Promise<{ root: Root; container: HTMLElement }> {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  // staleTime: Infinity — the seeded EMPTY registry must stay authoritative:
+  // with the default staleTime a mount refetch would race the assertions
+  // and could land the mock adapter's fixture sessions mid-test (the
+  // workspace mounts more resolving queries — the Пульт inbox — than the
+  // old page did, which re-orders the act drain).
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  });
   // The EMPTY session list — the paged hook's first (only) page.
   queryClient.setQueryData(koraKeys.sessionsPaged(50), {
     pages: [
@@ -94,7 +101,10 @@ function executorsPage(count: number): ExecutorsPage {
       registered_at: "2026-09-27T09:00:00Z",
       updated_at: "2026-09-27T10:00:00Z",
     })),
-    meta: { presence: { online_max_age_s: 120, stale_max_age_s: 600 }, sweeper_interval_s: 60 },
+    meta: {
+      presence: { online_max_age_s: 120, stale_max_age_s: 600 },
+      sweeper_interval_s: 60,
+    },
   };
 }
 
@@ -129,13 +139,15 @@ describe("kora honest empty (UX-overhaul §9.3)", () => {
     await actUnmount(root);
   });
 
-  it("both variants keep the list title first (data before meta, П2)", async () => {
+  it("both variants keep data before the folded legend (data first, П2)", async () => {
     for (const count of [0, 2]) {
       const { root, container } = await mountEmptyKora(executorsPage(count));
       const html = container.innerHTML;
       expect(html.indexOf("Сессии")).toBeGreaterThanOrEqual(0);
-      expect(html.indexOf("Сессии")).toBeLessThan(
-        html.indexOf("Что такое Кора и чего в ней пока нет"),
+      // The honest empty line (work zone + Блок 2) precedes the folded
+      // coverage legend at the bottom of the panel (union И1 composition).
+      expect(html.indexOf("Здесь откроется её ход")).toBeLessThan(
+        html.indexOf("Что мы видим с ваших машин"),
       );
       await actUnmount(root);
     }

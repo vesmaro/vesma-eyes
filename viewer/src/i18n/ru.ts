@@ -1803,31 +1803,62 @@ export const ru = {
   "pair.err503": "Пейринг отключён на сервере",
   "pair.errGeneric": "Подключить не удалось",
 
-  // --- Кора (ADR 0019 rev.2 — week-0 contract mocks) -----------------------------
-  // UX-overhaul §5/§8 (Ф1): корень = реестр сессий (П2), мета — свёрнутым
-  // блоком внизу; словарь разработчика уходит (П4).
-  "kora.title": "Кора — сессии всех хостов",
-  "kora.week0Badge": "Демо-данные",
-  "kora.week0Note":
-    "Сейчас в Коре демо-данные: списки и транскрипты — примеры, а не живые сессии. Настоящие сессии появятся, когда сканер хостов начнёт работу.",
-  "kora.metaToggle": "Что такое Кора и чего в ней пока нет",
-  "kora.coverage.title": "Что вижу / чего нет",
+  // --- Кора (ADR 0019 rev.2; union И1 — рабочее пространство 07j/07l) ------------
+  // Развязка И1 (i1-dressing-map §1.2/§1.3): каркас v7 — рабочая зона +
+  // дерево + Пульт. Строки одной волной ru/en; внутренних кодов фаз
+  // («И1…И5», «срез», ADR) в пользовательских строках нет (07a §3.5).
+  "kora.workspace.title": "Кора · сессии хостов",
+  "kora.workspace.hint":
+    "Кора — журнал сессий всех хостов: что агент делал и что говорил. Записи только для чтения",
+  "kora.summary.hosts": "хостов: {{n}}",
+  "kora.summary.running": "идёт сессий: {{n}}",
+  "kora.summary.day": "за 24 ч: {{n}}",
+  "kora.filter.label": "Фильтр по хосту",
+  "kora.filter.all": "Все хосты",
+  "kora.side.region": "Хосты и сессии",
+  "kora.tree.title": "Хосты и агенты",
+  "kora.tree.explain":
+    "Агенты — программы, через которые на машине идёт работа: например, zcode",
+  "kora.tree.noAgents": "агентов ещё нет",
+  "kora.tree.emptyNoExecutors": "Хостов нет — подключите агента, и он появится здесь:",
+  "kora.tree.expand": "раскрыть",
+  "kora.tree.collapse": "свернуть",
+  "kora.block2.section": "Сессии",
+  "kora.block2.titleAll": "Сессии · все хосты",
+  "kora.block2.titleHost": "Сессии · {{host}}",
+  "kora.block2.titleAgent": "Сессии · {{harness}} на {{host}}",
+  "kora.block2.titleExecutor": "Сессии · {{name}}",
+  "kora.block2.qfRunning": "идущие",
+  "kora.block2.qfDay": "за 24 ч",
+  "kora.block2.emptyContext": "Здесь сессий нет",
+  "kora.block2.emptyFiltered": "Под этот фильтр сессий нет",
+  "kora.about.title": "О сессии",
+  "kora.about.started": "Начало",
+  "kora.about.lastActivity": "Активность",
+  "kora.about.coverage": "Покрытие этой сессии",
+  "kora.about.harness": "Источник",
+  "kora.about.copyLink": "Скопировать ссылку на сессию",
+  "kora.about.copied": "Ссылка скопирована",
+  "kora.about.copyFailed": "Не удалось скопировать — скопируйте из адресной строки",
+  // Два имени покрытия (07j §3.5): формулировка сессии — по строке покрытия
+  // харнеса из реестра; «unknown» — строки покрытия у харнеса нет.
+  "kora.sessionCov.full": "полный ход",
+  "kora.sessionCov.partial": "видим начало",
+  "kora.sessionCov.metadata-only": "только метаданные",
+  "kora.sessionCov.absent": "не сканируем",
+  "kora.sessionCov.unknown": "покрытие пока не названо",
+  "kora.pill.liveAge": "идёт · {{age}}",
+  "kora.age.min": "{{n}} мин",
+  "kora.age.hour": "{{n}} ч",
+  "kora.age.day": "{{n}} сут",
   "kora.coverage.support.full": "полностью",
   "kora.coverage.support.lists-only": "только списки",
   "kora.coverage.support.metadata-only": "только метаданные",
   "kora.coverage.support.absent": "не сканируется",
   "kora.coverage.gaps": "Известные пробелы",
-  "kora.onboarding.title": "Зачем Кора",
-  "kora.onboarding.case1.title": "Видеть всё",
-  "kora.onboarding.case1.body":
-    "Все сессии zcode, vscode и pi на подключённых хостах — одним списком, без прыжков по консолям.",
-  "kora.onboarding.case2.title": "Досмотреть",
-  "kora.onboarding.case2.body":
-    "Read-only транскрипт любой сессии: что происходило и на чём остановились, ничего не меняя.",
-  "kora.onboarding.case3.title": "Порулить с телефона",
-  "kora.onboarding.case3.body":
-    "Новая сессия или промпт в свою — через реле; телефон видит тот же интерфейс, что и рабочий стол.",
-  "kora.list.title": "Сессии",
+  "kora.legend.title": "Что мы видим с ваших машин",
+  "kora.legend.growNote":
+    "Покрытие растёт по мере готовности сканеров — список обновим",
   "kora.list.loading": "Загружаем сессии",
   "kora.list.loadMore": "Показать ещё",
   "kora.list.loadFailed": "Не удалось загрузить список сессий",
@@ -1840,16 +1871,12 @@ export const ru = {
   "kora.list.emptyNoSessions": "Сессии появятся, когда сканер хостов начнёт работу",
   "kora.list.emptyAction": "Подключить агента",
   "kora.list.emptyStatusLink": "Открыть статус системы",
-  "kora.session.open": "Открыть",
-  "kora.session.age": "возраст: {{age}}",
-  "kora.session.noPreview": "Нет превью последней строки",
   "kora.session.steerable": "можно рулить",
   "kora.session.origin.relay": "реле",
   "kora.session.origin.local": "локальная",
   "kora.session.state.live": "живая",
   "kora.session.state.idle": "ожидает",
   "kora.session.state.dead": "процесс мёртв",
-  "kora.session.noId": "В маршруте нет id сессии",
   "kora.session.notFound": "Сессия не найдена",
   "kora.session.notFoundMessage": "Сессии «{{id}}» нет в реестре Коры.",
   // ME-063: причина покрытия на 404-плашке — возврат из карточки задачи
@@ -1858,14 +1885,10 @@ export const ru = {
     "Хост недоступен для просмотра: борд читает транскрипты только хостов со сканером. Вернитесь к списку сессий или в карточку задачи — ссылка останется рабочей, когда хост станет читаемым.",
   "kora.session.backToList": "К списку сессий",
   "kora.session.inactiveTitle": "Сессия не активна",
-  "kora.session.readonlyPlate": "Чужая сессия — только чтение",
-  "kora.session.readonlyPlateNote":
-    "Продолжение доступно только для сессий relay-происхождения или после явного усыновления.",
-  "kora.transcript.title": "Транскрипт (только чтение)",
+  "kora.transcript.region": "Ход сессии",
   "kora.transcript.loading": "Загружаем транскрипт",
   "kora.transcript.loadFailed": "Не удалось загрузить транскрипт",
   "kora.transcript.inactiveHint": "Войдите — и транскрипт этой сессии появится здесь",
-  "kora.transcript.empty": "Записей нет",
   "kora.transcript.emptyMessage":
     "Сессия в реестре, но записей в сторе нет — или ридер ещё не дошёл до неё.",
   "kora.transcript.redacted": "маскировано",
@@ -1874,26 +1897,42 @@ export const ru = {
   // UX-overhaul П4 (Ф1): строки транскрипта без таймстемпа показывают
   // нейтральную метку; курсор seq — служебная метрика, живёт в тултипе.
   "kora.transcript.line": "строка транскрипта",
-  "kora.chat.title": "Чат",
-  "kora.chat.placeholder": "Промпт в сессию…",
-  "kora.chat.send": "Отправить",
-  "kora.chat.confirmMode": "Confirm-режим: промпт подтверждается на хосте",
-  "kora.chat.delivery.ok": "Доставлено в реле",
-  "kora.chat.delivery.failed": "Не доставлено — повторите",
-  "kora.chat.freshness": "Свежесть: хвост стора перечитывается, цель ≤60 с",
-  // UX-overhaul П4 (Ф1): внутренний SLA (≤60 с) уходит в тултип; видимая
-  // строка говорит только то, что важно владельцу после отправки.
-  "kora.chat.freshnessHint":
-    "После отправки ответ перечитывается из сессии автоматически",
-  "kora.chat.unavailable":
-    "Руление недоступно: сессия локальная. Только чтение — инвариант NO-DRIFT.",
-  "kora.chat.stepUp.label": "PIN руления",
-  "kora.chat.stepUp.enable": "Включить руление",
-  "kora.chat.stepUp.active": "Руление активно (TTL ≤ 15 минут)",
-  "kora.chat.stepUp.required": "Руление заблокировано — сначала введите PIN",
-  "kora.chat.stepUp.failed": "Не удалось включить руление",
-  "kora.chat.stepUp.note":
-    "Чтение — без PIN; руление — после короткого PIN-ритуала (step-up, TTL ≤ 15 минут).",
+  // Рабочая зона (07j §3.1): приглашение без выбора; инструменты чтения.
+  "kora.workzone.invite": "Выберите сессию — здесь откроется её ход",
+  "kora.workzone.openedAnnounce": "Открыта сессия: {{name}}",
+  "kora.workzone.followTail": "Следить за хвостом",
+  "kora.workzone.searchLabel": "Найти в сессии",
+  "kora.workzone.searchPlaceholder": "Найти в сессии…",
+  "kora.workzone.matches": "совпадений: {{n}}",
+  // Пульт (07j §4, И1-решение dressing map §1.2.3): стартует свёрнутым,
+  // содержимое вкладок честно называет, что появится.
+  "kora.pult.title": "Пульт",
+  "kora.pult.explain": "Пульт — лента событий и разбор сессии",
+  "kora.pult.tabsLabel": "Вкладки Пульта",
+  "kora.pult.digest": "Дайджест",
+  "kora.pult.ether": "Эфир",
+  "kora.pult.hint": "Выберите сессию — её разбор появится здесь",
+  "kora.pult.digestEmpty": "Разбор сессии собирается автоматически — появится позже",
+  "kora.pult.etherEmpty":
+    "Лента событий появится позже — пока читайте ход сессий в транскриптах",
+  "kora.pult.readTranscript": "Читать транскрипт",
+  "kora.pult.waiting": "ждут владельца: {{n}}",
+  "kora.pult.waitingHint": "Задачи, которые ждут вашего решения",
+  "kora.pult.expand": "Развернуть",
+  "kora.pult.collapse": "Свернуть",
+  // Композер (07j §4.6, И1-срез dressing map §1.2.4): поле и машина
+  // реальны, отправка честно отложена; фейк доставки запрещён (07a §1).
+  "kora.composer.label": "Написать агенту в эту сессию",
+  "kora.composer.placeholder": "Написать агенту…",
+  "kora.composer.send": "Отправить",
+  "kora.composer.sendLaterChip": "Отправка появится позже",
+  "kora.composer.sendLaterNote":
+    "Отправка сообщений агенту появится позже — пока Кора показывает ход сессий. Черновик живёт, пока вы на странице сессии.",
+  // «Завершена» в реестре сессий пока нет (live/idle/dead) — строка ждёт
+  // своего состояния; «прервана» = процесс мёртв.
+  "kora.composer.finishedNote":
+    "Сессия завершена — писать некому; начните новую на хосте",
+  "kora.composer.interruptedNote": "Сессия прервана — агент здесь уже не слушает",
 } as const;
 
 export type TranslationKey = keyof typeof ru;

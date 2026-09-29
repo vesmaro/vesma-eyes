@@ -92,7 +92,8 @@ export const en: Record<TranslationKey, string> = {
   "hotkeys.subtitle":
     "The shell hotkey layer. ⌘K works inside form fields too — the rest stay quiet there.",
   "hotkeys.openPalette": "Open the palette",
-  "hotkeys.openPaletteAnywhere": "The palette — from anywhere, even inside a form field",
+  "hotkeys.openPaletteAnywhere":
+    "The palette — from anywhere, even inside a form field",
   "hotkeys.focusSearch": "Focus the global search",
   "hotkeys.toggleSidebar": "Collapse or expand the sidebar",
   "hotkeys.cheatsheet": "This cheatsheet",
@@ -1764,29 +1765,58 @@ export const en: Record<TranslationKey, string> = {
   "pair.err503": "Pairing is disabled on the server",
   "pair.errGeneric": "Could not connect",
 
-  // --- Kora (ADR 0019 rev.2 — week-0 contract mocks) -----------------------------
-  "kora.title": "Kora — sessions across all hosts",
-  "kora.week0Badge": "Demo data",
-  "kora.week0Note":
-    "Kora currently shows demo data: the lists and transcripts are samples, not live sessions. Real sessions will appear once the host scanner starts.",
-  "kora.metaToggle": "About Kora — and what it cannot see yet",
-  "kora.coverage.title": "What I see / what I don't",
+  // --- Kora (ADR 0019 rev.2; union И1 — the 07j/07l workspace) -------------------
+  "kora.workspace.title": "Kora · host sessions",
+  "kora.workspace.hint":
+    "Kora — the journal of every host's sessions: what the agent did and said. Read-only records",
+  "kora.summary.hosts": "hosts: {{n}}",
+  "kora.summary.running": "running sessions: {{n}}",
+  "kora.summary.day": "in 24h: {{n}}",
+  "kora.filter.label": "Filter by host",
+  "kora.filter.all": "All hosts",
+  "kora.side.region": "Hosts and sessions",
+  "kora.tree.title": "Hosts and agents",
+  "kora.tree.explain":
+    "Agents are the programs work runs through on a machine: for example, zcode",
+  "kora.tree.noAgents": "no agents yet",
+  "kora.tree.emptyNoExecutors":
+    "No hosts yet — connect an agent and it will appear here:",
+  "kora.tree.expand": "expand",
+  "kora.tree.collapse": "collapse",
+  "kora.block2.section": "Sessions",
+  "kora.block2.titleAll": "Sessions · all hosts",
+  "kora.block2.titleHost": "Sessions · {{host}}",
+  "kora.block2.titleAgent": "Sessions · {{harness}} on {{host}}",
+  "kora.block2.titleExecutor": "Sessions · {{name}}",
+  "kora.block2.qfRunning": "running",
+  "kora.block2.qfDay": "in 24h",
+  "kora.block2.emptyContext": "No sessions here",
+  "kora.block2.emptyFiltered": "No sessions match this filter",
+  "kora.about.title": "About the session",
+  "kora.about.started": "Started",
+  "kora.about.lastActivity": "Last activity",
+  "kora.about.coverage": "This session's coverage",
+  "kora.about.harness": "Source",
+  "kora.about.copyLink": "Copy session link",
+  "kora.about.copied": "Link copied",
+  "kora.about.copyFailed": "Couldn't copy — copy it from the address bar",
+  "kora.sessionCov.full": "full run",
+  "kora.sessionCov.partial": "beginning only",
+  "kora.sessionCov.metadata-only": "metadata only",
+  "kora.sessionCov.absent": "not scanned",
+  "kora.sessionCov.unknown": "coverage not named yet",
+  "kora.pill.liveAge": "running · {{age}}",
+  "kora.age.min": "{{n}} min",
+  "kora.age.hour": "{{n}} h",
+  "kora.age.day": "{{n}} d",
   "kora.coverage.support.full": "full",
   "kora.coverage.support.lists-only": "lists only",
   "kora.coverage.support.metadata-only": "metadata only",
   "kora.coverage.support.absent": "not scanned",
   "kora.coverage.gaps": "Known gaps",
-  "kora.onboarding.title": "Why Kora",
-  "kora.onboarding.case1.title": "See everything",
-  "kora.onboarding.case1.body":
-    "All zcode, vscode and pi sessions on connected hosts — one list, no console hopping.",
-  "kora.onboarding.case2.title": "Catch up",
-  "kora.onboarding.case2.body":
-    "A read-only transcript of any session: what happened and where it stopped, changing nothing.",
-  "kora.onboarding.case3.title": "Steer from the phone",
-  "kora.onboarding.case3.body":
-    "A new session or a prompt into your own — via the relay; the phone sees the same UI as the desktop.",
-  "kora.list.title": "Sessions",
+  "kora.legend.title": "What we see from your machines",
+  "kora.legend.growNote":
+    "Coverage grows as scanners become ready — we'll update this list",
   "kora.list.loading": "Loading sessions",
   "kora.list.loadMore": "Load more",
   "kora.list.loadFailed": "Failed to load the session list",
@@ -1797,16 +1827,12 @@ export const en: Record<TranslationKey, string> = {
   "kora.list.emptyNoSessions": "Sessions will appear once the host scanner starts",
   "kora.list.emptyAction": "Connect an agent",
   "kora.list.emptyStatusLink": "Open system status",
-  "kora.session.open": "Open",
-  "kora.session.age": "age: {{age}}",
-  "kora.session.noPreview": "No last-line preview",
   "kora.session.steerable": "steerable",
   "kora.session.origin.relay": "relay",
   "kora.session.origin.local": "local",
   "kora.session.state.live": "live",
   "kora.session.state.idle": "idle",
   "kora.session.state.dead": "process dead",
-  "kora.session.noId": "No session id in the route",
   "kora.session.notFound": "Session not found",
   "kora.session.notFoundMessage": "Session '{{id}}' is not in the Kora registry.",
   // ME-063: the coverage reason on the 404 plate — a return from the task
@@ -1815,15 +1841,11 @@ export const en: Record<TranslationKey, string> = {
     "The host is not available for viewing: the board reads transcripts only from hosts with a scanner. Head back to the session list or the task card — the link will work once the host becomes readable.",
   "kora.session.backToList": "Back to the session list",
   "kora.session.inactiveTitle": "Session not active",
-  "kora.session.readonlyPlate": "Someone else's session — read-only",
-  "kora.session.readonlyPlateNote":
-    "Continuation is available only for relay-origin sessions or after explicit adoption.",
-  "kora.transcript.title": "Transcript (read-only)",
+  "kora.transcript.region": "Session run",
   "kora.transcript.loading": "Loading the transcript",
   "kora.transcript.loadFailed": "Failed to load the transcript",
   "kora.transcript.inactiveHint":
     "Sign in — the transcript of this session will appear here",
-  "kora.transcript.empty": "No entries",
   "kora.transcript.emptyMessage":
     "The session is in the registry but the store has no entries — or the reader has not reached it yet.",
   "kora.transcript.redacted": "redacted",
@@ -1832,24 +1854,35 @@ export const en: Record<TranslationKey, string> = {
   // UX-overhaul П4 (Ф1): timestamp-less transcript lines get a neutral
   // label; the seq cursor is an internal metric — it lives in the tooltip.
   "kora.transcript.line": "transcript line",
-  "kora.chat.title": "Chat",
-  "kora.chat.placeholder": "Prompt into the session…",
-  "kora.chat.send": "Send",
-  "kora.chat.confirmMode": "Confirm-mode: the prompt is confirmed on the host",
-  "kora.chat.delivery.ok": "Delivered to the relay",
-  "kora.chat.delivery.failed": "Not delivered — please retry",
-  "kora.chat.freshness": "Freshness: the store tail is re-read, target ≤60s",
-  // UX-overhaul П4 (Ф1): the internal SLA (≤60s) moves to the tooltip; the
-  // visible line says only what matters to the owner after a send.
-  "kora.chat.freshnessHint":
-    "After a send, the answer is re-read from the session automatically",
-  "kora.chat.unavailable":
-    "Steering unavailable: local session. Read-only — the NO-DRIFT invariant.",
-  "kora.chat.stepUp.label": "Steering PIN",
-  "kora.chat.stepUp.enable": "Enable steering",
-  "kora.chat.stepUp.active": "Steering active (TTL ≤ 15 minutes)",
-  "kora.chat.stepUp.required": "Steering is locked — enter the PIN first",
-  "kora.chat.stepUp.failed": "Failed to enable steering",
-  "kora.chat.stepUp.note":
-    "Reading needs no PIN; steering — after a short PIN ritual (step-up, TTL ≤ 15 minutes).",
+  "kora.workzone.invite": "Pick a session — its run opens here",
+  "kora.workzone.openedAnnounce": "Opened session: {{name}}",
+  "kora.workzone.followTail": "Follow the tail",
+  "kora.workzone.searchLabel": "Find in this session",
+  "kora.workzone.searchPlaceholder": "Find in this session…",
+  "kora.workzone.matches": "matches: {{n}}",
+  "kora.pult.title": "Console",
+  "kora.pult.explain": "The console — the event feed and the session digest",
+  "kora.pult.tabsLabel": "Console tabs",
+  "kora.pult.digest": "Digest",
+  "kora.pult.ether": "Feed",
+  "kora.pult.hint": "Pick a session — its digest will appear here",
+  "kora.pult.digestEmpty":
+    "The session digest is built automatically — it will arrive later",
+  "kora.pult.etherEmpty":
+    "The event feed will arrive later — for now read session transcripts",
+  "kora.pult.readTranscript": "Read the transcript",
+  "kora.pult.waiting": "awaiting owner: {{n}}",
+  "kora.pult.waitingHint": "Tasks waiting for your decision",
+  "kora.pult.expand": "Expand",
+  "kora.pult.collapse": "Collapse",
+  "kora.composer.label": "Write to the agent in this session",
+  "kora.composer.placeholder": "Write to the agent…",
+  "kora.composer.send": "Send",
+  "kora.composer.sendLaterChip": "Sending will arrive later",
+  "kora.composer.sendLaterNote":
+    "Sending messages to the agent will arrive later — for now Kora shows how sessions run. Your draft stays while you are on this page.",
+  "kora.composer.finishedNote":
+    "The session is finished — there is no one to write to; start a new one on the host",
+  "kora.composer.interruptedNote":
+    "The session was interrupted — the agent is no longer listening here",
 };
