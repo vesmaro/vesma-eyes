@@ -42,35 +42,46 @@ if (!rootElement) {
  * adapter, so first paint is unaffected there; mock builds pay one chunk
  * fetch before the tree mounts.
  */
-void createGateway().then((gateway) => {
-  // Gates v6 (ME-043, 07k §5.1): settle the auth session BEFORE the first
-  // render — the ME-028 boot probe (GET /api/auth/ui-token) leaves with the
-  // gateway, so the first paint of a gated route already knows the verdict
-  // and closed content can never flash. Idempotent per gateway: the
-  // UiTokenProvider joins this same promise (no second request).
-  initAuthSession(gateway);
-  createRoot(rootElement).render(
-    <StrictMode>
-      <GatewayContext.Provider value={gateway}>
-        <QueryClientProvider client={queryClient}>
-          <ThemeProvider>
-            {/* i18n (owner feedback 1.4.0): ru default, persisted choice in
-             * localStorage "vesmaro.lang", mirrored into <html lang>. */}
-            <I18nProvider>
-              {/* Density (Ф1, concept §3.3): [data-density] on <html> drives the
-               * --row-h/--list-gap operational tokens; persisted "vesmaro.density". */}
-              <DensityProvider>
-                {/* Hotkeys (Ф1): `/` search focus + `?` cheatsheet with the
-                 * inInput guard; the dialog renders from here, above routes.
-                 * App brings its own data router (createBrowserRouter). */}
-                <HotkeysProvider>
-                  <App />
-                </HotkeysProvider>
-              </DensityProvider>
-            </I18nProvider>
-          </ThemeProvider>
-        </QueryClientProvider>
-      </GatewayContext.Provider>
-    </StrictMode>,
-  );
-});
+void createGateway()
+  .then((gateway) => {
+    // Gates v6 (ME-043, 07k §5.1): settle the auth session BEFORE the first
+    // render — the ME-028 boot probe (GET /api/auth/ui-token) leaves with the
+    // gateway, so the first paint of a gated route already knows the verdict
+    // and closed content can never flash. Idempotent per gateway: the
+    // UiTokenProvider joins this same promise (no second request).
+    initAuthSession(gateway);
+    createRoot(rootElement).render(
+      <StrictMode>
+        <GatewayContext.Provider value={gateway}>
+          <QueryClientProvider client={queryClient}>
+            <ThemeProvider>
+              {/* i18n (owner feedback 1.4.0): ru default, persisted choice in
+               * localStorage "vesmaro.lang", mirrored into <html lang>. */}
+              <I18nProvider>
+                {/* Density (Ф1, concept §3.3): [data-density] on <html> drives
+                 * the --row-h/--list-gap operational tokens; persisted
+                 * "vesmaro.density". */}
+                <DensityProvider>
+                  {/* Hotkeys (Ф1): `/` search focus + `?` cheatsheet with the
+                   * inInput guard; the dialog renders from here, above routes.
+                   * App brings its own data router (createBrowserRouter). */}
+                  <HotkeysProvider>
+                    <App />
+                  </HotkeysProvider>
+                </DensityProvider>
+              </I18nProvider>
+            </ThemeProvider>
+          </QueryClientProvider>
+        </GatewayContext.Provider>
+      </StrictMode>,
+    );
+  })
+  .catch((error: unknown) => {
+    // A bootstrap refusal (e.g. the adapter pin, ME-043 P3-4) must be LOUD,
+    // never a silently degraded app: state the reason on the page and keep
+    // the rejection visible in the console.
+    rootElement.replaceChildren();
+    rootElement.textContent =
+      error instanceof Error ? error.message : String(error);
+    throw error;
+  });

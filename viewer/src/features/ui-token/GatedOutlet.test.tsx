@@ -151,7 +151,8 @@ describe("user (the live tokenPresent mirror)", () => {
 describe("pending boot (the probe still in flight)", () => {
   it("HOLDS the slot: neither the closed content nor the gate screen paints", () => {
     // A never-resolving probe keeps the boot verdict pending — exactly the
-    // window between main.tsx firing the probe and its answer.
+    // window between main.tsx firing the probe and its answer (bounded by
+    // the probe's own 10s abort).
     const gateway = new BoardAdapter({
       baseUrl: "/api",
       fetchImpl: (() => new Promise(() => undefined)) as never,
@@ -160,8 +161,12 @@ describe("pending boot (the probe still in flight)", () => {
     const html = renderGate("/memory", gateway, false);
     expect(html).not.toContain("SECRET PAGE CONTENT");
     expect(html).not.toContain('data-testid="gate-screen"');
-    // A polite marker instead (4.1.3 status messages) — invisible visually.
+    // Cascade P3-5: the hold is VISIBLE — a sighted user staring at a hung
+    // probe gets the honest «checking session» line, not an empty main
+    // (role=status keeps it polite for AT, 4.1.3).
     expect(html).toContain('data-testid="gate-pending"');
+    expect(html).toContain("Checking your session");
+    expect(html).not.toContain("sr-only"); // the line is on screen, not sr-only
   });
 });
 
