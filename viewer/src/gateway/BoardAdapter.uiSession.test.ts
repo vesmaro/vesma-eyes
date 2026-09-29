@@ -4,7 +4,7 @@ import { clearUiToken } from "./uiToken";
 
 /**
  * ADR 0014 owner-session wire of the BoardAdapter: verify at the door
- * (POST /api/auth/ui-token), the boot/401 probe of the `vesmaro_ui`
+ * (POST /api/auth/ui-token), the boot probe of the `vesmaro_ui`
  * cookie (GET → 204 is the ONLY live answer) and the server-side logout
  * (DELETE). hasUiToken() = stored token OR live cookie — one login per
  * browser, no per-tab re-prompt.
@@ -93,10 +93,15 @@ describe("BoardAdapter owner session (ADR 0014)", () => {
     });
   });
 
-  it("probeUiSession: 204 is the ONLY live answer; 401/200-JSON/network error are not", async () => {
+  it("probeUiSession: 204 is the ONLY live answer; the anonymous 200 {live:false} (ME-028), a proxy 200-JSON, a 401 and a network error are not", async () => {
     const live = adapterWith(() => new Response(null, { status: 204 }));
     expect(await live.adapter.probeUiSession()).toBe(true);
     expect(live.calls[0]).toEqual({ path: "/auth/ui-token", method: "GET" });
+
+    // ME-028: the server's explicit "none" answer — zero console noise, and
+    // still NOT a session (only 204 reads as live).
+    const anonymous = adapterWith(() => jsonResponse({ live: false }));
+    expect(await anonymous.adapter.probeUiSession()).toBe(false);
 
     const rejected = adapterWith(() => jsonResponse({ detail: "no session" }, 401));
     expect(await rejected.adapter.probeUiSession()).toBe(false);

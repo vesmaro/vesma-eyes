@@ -14,9 +14,11 @@ Pinned contract:
   Max-Age=21600, Secure only when the request is https (compose deploy is
   plain http 8090 — an unconditional Secure would silently loop login);
 - DELETE /api/auth/ui-token is the server-side logout (no guard by
-  design): Max-Age=0 + 204, after which the probe answers 401;
-- GET /api/auth/ui-token is the boot probe: 204 live / 401 none / 503
-  fail-closed;
+  design): Max-Age=0 + 204, after which the probe answers the explicit
+  "none" again;
+- GET /api/auth/ui-token is the boot probe: 204 live / 200 {"live": false}
+  none (ME-028: a 401 here painted the console red on every anonymous page
+  load — same verdict, zero console noise) / 503 fail-closed;
 - the cookie leg lives INSIDE the guards: a ui mutation with a valid
   cookie and NO Authorization header passes (including the
   _guard_ui_write pattern and the both-classes reports route); a machine
@@ -177,9 +179,10 @@ class TestCookieLifecycle:
         r = client.delete("/api/auth/ui-token")
         assert r.status_code == 204
         assert "max-age=0" in _set_cookie_header(r).lower()
-        # The browser dropped the cookie → the probe and the cookie leg
-        # both turn 401 again.
-        assert client.get("/api/auth/ui-token").status_code == 401
+        # The browser dropped the cookie → the probe turns to the explicit
+        # "none" answer again (ME-028: 200 {"live": false}, not a console-
+        # painting 401) and the cookie leg stays 401.
+        assert client.get("/api/auth/ui-token").status_code == 200
         assert client.post("/api/tasks",
                            json={"title": "after-logout"}).status_code == 401
 
@@ -189,8 +192,16 @@ class TestBootProbe:
         assert _verify(client, UI_TOKEN).status_code == 200
         assert client.get("/api/auth/ui-token").status_code == 204
 
-    def test_401_without_cookie(self, client, split_tokens):
-        assert client.get("/api/auth/ui-token").status_code == 401
+    def test_anonymous_answers_200_live_false_no_console_noise(self, client,
+                                                               split_tokens):
+        """ME-028: the boot probe runs on EVERY page load; an anonymous
+        visit must not paint the console red with a 401 resource error.
+        The explicit ``{"live": false}`` 200 carries the same verdict with
+        zero console noise — and sets no cookie (read-only oracle)."""
+        r = client.get("/api/auth/ui-token")
+        assert r.status_code == 200
+        assert r.json() == {"live": False}
+        assert "set-cookie" not in r.headers
 
     def test_503_fail_closed(self, client, no_board_token):
         assert client.get("/api/auth/ui-token").status_code == 503

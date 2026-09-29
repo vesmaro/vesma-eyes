@@ -1002,9 +1002,23 @@ async def device_scope_guard(request: Request, call_next):
 # Header-only middleware: no body buffering, so SSE (/api/events) keeps
 # streaming (its no-cache is deliberately superseded by no-store — an
 # EventSource never caches either way).
-_CSP = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; "
+#
+# ME-028 console hygiene, both deltas are deliberate and pinned by
+# tests/test_security_headers.py:
+# - script-src keeps the TWO inline pre-paint bootstraps of
+#   viewer/index.html (theme + density, byte-verified by hash) — there is
+#   no server-side templating to nonce with, and moving them to external
+#   files loses the before-first-paint guarantee (classic head scripts are
+#   parse-blocking; type=module is deferred → theme flash returns).
+# - font-src 'self' data: — the build inlines the smallest @fontsource
+#   subsets as data: URIs (vite assetsInlineLimit); img-src already allowed
+#   data: for the same build-pipeline reason.
+_CSP = ("default-src 'self'; "
+        "script-src 'self' 'sha256-lWvSm/qC0E+3fvAgio+zTRYXuJIbLdL0gPc54G9Q2OU=' "
+        "'sha256-k85nuNkWNWz2VjD38EcDAkNliknfzuSNN6HBSJQjvkc='; "
+        "style-src 'self' 'unsafe-inline'; object-src 'none'; "
         "base-uri 'self'; frame-ancestors 'none'; connect-src 'self'; "
-        "img-src 'self' data:")
+        "img-src 'self' data:; font-src 'self' data:")
 
 
 @app.middleware("http")
@@ -6778,16 +6792,22 @@ async def verify_ui_token(body: UiTokenVerifyIn, request: Request,
             "token_class": "legacy" if ui == effective.get("machine") else "ui"}
 
 
-@app.get("/api/auth/ui-token", status_code=204)
-async def probe_ui_session(request: Request) -> None:
+@app.get("/api/auth/ui-token")
+async def probe_ui_session(request: Request) -> Response:
     """Boot probe for the viewer's session hydration (ADR 0014 Ф2): 204 =
     a live ``vesmaro_ui`` cookie (hasUiToken() → true, no login window);
-    401 = none; 503 = login not configured (fail-closed). The viewer also
-    re-probes in its 401 branch BEFORE opening the window — a stale header
-    token beside a live cookie must replay, not re-prompt (the incident's
-    mid-flight beat). No limiter: it is a constant-time boolean oracle
-    with the same profile as the guards themselves; token entropy is the
-    defence, as everywhere."""
+    200 ``{"live": false}`` = none; 503 = login not configured
+    (fail-closed). The viewer also re-probes in its 401 branch BEFORE
+    opening the window — a stale header token beside a live cookie must
+    replay, not re-prompt (the incident's mid-flight beat).
+    ME-028: the "none" answer is a 200-JSON, not a 401 — the probe runs on
+    EVERY page load and browsers paint any 4xx resource as a console
+    error, so an anonymous visit opened with red noise. The oracle profile
+    is unchanged (constant-time boolean; token entropy is the defence) and
+    so is the anti-spoof rule: the viewer's raw fetch pins 204 as the ONLY
+    live answer, so a proxied 200-JSON still reads as "no session".
+    No limiter: it is a constant-time boolean oracle with the same profile
+    as the guards themselves."""
     if not _token_classes().get("ui"):
         raise HTTPException(
             503,
@@ -6795,8 +6815,9 @@ async def probe_ui_session(request: Request) -> None:
             "(or VESMARO_BOARD_TOKEN for single-token legacy mode) to "
             "enable it (fail-closed)",
         )
-    if not _cookie_ui_ok(request):
-        raise HTTPException(401, _ui_session_expired_detail(("ui",)))
+    if _cookie_ui_ok(request):
+        return Response(status_code=204)
+    return JSONResponse({"live": False})
 
 
 @app.delete("/api/auth/ui-token", status_code=204)

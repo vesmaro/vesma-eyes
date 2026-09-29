@@ -144,7 +144,10 @@ import type {
  * ADR 0014 owner session (one login per browser; cookie `vesmaro_ui` is
  * HttpOnly — set/reissued/cleared by the SERVER, never by this app):
  * - verifyUiToken  POST   /api/auth/ui-token → 200 {ok, token_class} | 401/429/503
- * - probeUiSession GET    /api/auth/ui-token → 204 live cookie | 401 none | 503
+ * - probeUiSession GET    /api/auth/ui-token → 204 live cookie | 200 {live:false} none | 503
+ *   (ME-028: the anonymous answer is an explicit 200-JSON, not a 401 — the
+ *   probe runs on every page load and a 401 painted the console red; only
+ *   204 ever reads as live, so the anti-spoof rule is untouched)
  * - logoutUiToken  DELETE /api/auth/ui-token → 204 (Set-Cookie Max-Age=0)
  *
  * AGW-1 agents domain (ARCH-9, ADR 0009 Amd 2 — reads open, writes ui-token):
@@ -837,8 +840,9 @@ export class BoardAdapter implements BoardGateway {
   }
 
   async probeUiSession(): Promise<boolean> {
-    // Raw fetch on purpose: 204 is the ONLY live answer (a stubbed/proxied
-    // 200-with-JSON must not read as a session); requestJson hides statuses.
+    // Raw fetch on purpose: 204 is the ONLY live answer (any 200-with-JSON —
+    // including the server's explicit {"live": false} none-answer, ME-028 —
+    // must not read as a session); requestJson hides statuses.
     const url = buildUrl(this.baseUrl, "/auth/ui-token");
     try {
       // A hung server must not hang boot hydration (review P3): the probe
