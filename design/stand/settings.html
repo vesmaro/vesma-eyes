@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Настройки · вид стенда и сессия — vesmaro-eyes · стенд «Живая кора»</title>
+  <link rel="stylesheet" href="styles/tokens.css">
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/shell.css">
+  <link rel="stylesheet" href="styles/components.css">
+</head>
+<body>
+<a class="skip-link" href="#main">К содержимому</a>
+<div class="app">
+
+  <header class="topbar">
+    <button class="iconbtn side-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-label="Открыть разделы">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
+    </button>
+    <a class="brand" href="index.html">
+      <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/></svg>
+      vesmaro-eyes
+    </a>
+    <div class="topsearch">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="search" placeholder="Поиск по памяти и задачам…" aria-label="Глобальный поиск по памяти и задачам">
+      <span class="kbd-hint" aria-hidden="true"><kbd class="kbd">/</kbd></span>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="topbar-status">
+      <button class="iconbtn search-expand" type="button" data-search-expand aria-label="Открыть поиск"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
+      <span class="pill live" title="Живое соединение с демо-лентой стенда"><span class="dot" aria-hidden="true"></span>live</span>
+      <a class="iconbtn" href="agents.html" data-exec-count aria-label="Активные исполнения: 1 — открыть «Исполнение»">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
+        <span class="badge-dot" aria-hidden="true">1</span>
+      </a>
+      <button class="iconbtn" type="button" data-bell aria-label="Уведомления: лента не подключена в стенде">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      </button>
+      <div class="langtoggle" role="group" aria-label="Язык интерфейса">
+        <button type="button" aria-pressed="true" data-lang-demo>RU</button>
+        <button type="button" data-lang-demo>EN</button>
+      </div>
+      <button class="iconbtn" type="button" data-theme-toggle aria-pressed="false" aria-label="Сменить тему: сейчас тёмная">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <aside class="sidebar" aria-label="Разделы">
+    <nav class="side-nav" aria-label="Домены">
+      <a class="side-link" href="index.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/></svg>
+        <span class="side-label">Обзор</span>
+      </a>
+      <div class="side-group">
+        <button type="button" class="side-link side-domain" aria-expanded="false">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>
+          <span class="side-label">Память</span>
+          <svg class="side-chevron icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <div class="side-sections"><div>
+          <a class="side-section" href="memories.html">Записи</a>
+          <a class="side-section" href="search.html">Поиск</a>
+          <a class="side-section" href="pulse.html">Пульс</a>
+          <a class="side-section" href="tags.html">Теги</a>
+        </div></div>
+      </div>
+      <div class="side-group">
+        <button type="button" class="side-link side-domain" aria-expanded="false">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v9"/></svg>
+          <span class="side-label">Задачи</span><span class="side-count" data-side-count="tasks">5</span>
+          <svg class="side-chevron icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <div class="side-sections"><div>
+          <a class="side-section" href="tasks.html">Канбан</a>
+          <a class="side-section" href="tasks.html?view=list">Список</a>
+          <a class="side-section" href="tasks.html?view=inbox">Входящие<span class="side-count" data-side-count="inbox">2</span></a>
+          <a class="side-section" href="tasks.html?view=archive">Архив</a>
+        </div></div>
+      </div>
+      <div class="side-group">
+        <button type="button" class="side-link side-domain" aria-expanded="false">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+          <span class="side-label">Агенты</span><span class="side-count" data-side-count="agents">1</span>
+          <svg class="side-chevron icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <div class="side-sections"><div>
+          <a class="side-section" href="agents.html">Исполнение</a>
+          <a class="side-section" href="hosts.html">Хосты<span class="side-count" data-side-count="hosts">4</span></a>
+          <a class="side-section" href="connect.html">Подключить</a>
+        </div></div>
+      </div>
+      <a class="side-link" href="docs.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+        <span class="side-label">Документы</span>
+      </a>
+      <div class="side-group">
+        <button type="button" class="side-link side-domain" aria-expanded="false">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+          <span class="side-label">Рабочий стол</span><span class="badge-exp">эксп</span>
+          <svg class="side-chevron icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <div class="side-sections"><div>
+          <a class="side-section" href="desktop.html">Терминал</a>
+          <a class="side-section" href="explorer.html">Проводник</a>
+        </div></div>
+      </div>
+      <div class="side-group" data-open>
+        <button type="button" class="side-link side-domain domain-current" aria-current="true" aria-expanded="true">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 .73 2.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1-1-1.74l.15-.09a2 2 0 0 0-.73-2.73l-.22-.38a2 2 0 0 0-.73-.73l.15.08a2 2 0 0 1-2 0l-.43.25a2 2 0 0 1-1 1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span class="side-label">Настройки</span>
+          <svg class="side-chevron icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <div class="side-sections"><div>
+          <a class="side-section" href="status.html">Статус</a>
+          <a class="side-section" href="settings.html" aria-current="page">Настройки</a>
+          <button class="side-section disabled" type="button" aria-disabled="true" data-demo-action="«Автоматизация» — раздел вне стенда">Автоматизация</button>
+          <button class="side-section disabled" type="button" aria-disabled="true" data-demo-action="«Устройства» — раздел вне стенда; подключение телефона — pair.html">Устройства</button>
+          <button class="side-section disabled" type="button" aria-disabled="true" data-demo-action="«Трассировки» — раздел вне стенда">Трассировки</button>
+        </div></div>
+      </div>
+      <a class="side-link" href="pair.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="12" x="2" y="6" rx="2"/><rect width="5" height="10" x="16" y="7" rx="2"/><path d="M9 12h7"/></svg>
+        <span class="side-label">Подключить телефон</span>
+      </a>
+    </nav>
+    <div class="side-foot">
+      <button class="side-link" type="button" data-palette-open>
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"/></svg>
+        <span class="side-label">Палитра</span>
+        <span class="side-count">Ctrl K</span>
+      </button>
+      <button class="side-link" type="button" data-cheatsheet-open>
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="M10 8h.01"/><path d="M12 12h.01"/><path d="M14 8h.01"/><path d="M16 12h.01"/><path d="M18 8h.01"/><path d="M6 8h.01"/><path d="M7 16h10"/><path d="M8 12h.01"/></svg>
+        <span class="side-label">Шпаргалка</span>
+        <span class="side-count">?</span>
+      </button>
+      <a class="side-link" href="gallery.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+        <span class="side-label">Галерея</span>
+        <span class="badge-stand">стенд</span>
+      </a>
+      <button class="side-link" type="button" data-sidebar-toggle aria-expanded="true">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
+        <span class="side-label">Свернуть</span>
+        <span class="side-count">[</span>
+      </button>
+      <p class="stand-note stand-status" data-stand-version-line></p>
+    </div>
+  </aside>
+
+  <div class="main">
+
+    <nav class="crumbs" aria-label="Хлебные крошки">
+      <span class="gprefix" aria-hidden="true">g→</span>
+      <ol>
+        <li><a href="index.html">Обзор</a></li>
+        <li><a href="status.html">Система</a></li>
+        <li><span aria-current="page">Настройки</span></li>
+      </ol>
+      <span class="crumbs-spacer"></span>
+      <button class="btn ghost sm" type="button" data-palette-open>
+        <kbd class="kbd">Ctrl</kbd><kbd class="kbd">K</kbd> Палитра
+      </button>
+    </nav>
+
+    <main class="content" id="main">
+
+      <div class="page-head">
+        <div>
+          <h1 tabindex="-1" title="Настройки — где меняется вид стенда и где видна сессия. Изменения применяются сразу">Настройки · вид стенда и сессия</h1>
+          <p class="page-sub">Каждое управление работает сразу; то, что пока заглушка, честно говорит об этом</p>
+        </div>
+      </div>
+
+      <div class="settings-page">
+        <nav class="settings-nav" aria-label="Разделы страницы">
+          <a href="#appearance">Внешний вид</a>
+          <a href="#navigation">Навигация</a>
+          <a href="#language">Язык</a>
+          <a href="#session">Сессия</a>
+          <a href="#about">О стенде</a>
+        </nav>
+
+        <!-- ── Внешний вид: тема, плотность, движение — все реальные ── -->
+        <section class="settings-section" id="appearance" aria-labelledby="h-appearance">
+          <h2 id="h-appearance">Внешний вид</h2>
+
+          <div class="set-row">
+            <div>
+              <p class="set-name" id="row-theme">Тема</p>
+              <p class="set-hint">Как выглядит колодец: глубина или береста. «Системная» следует за настройкой ОС и меняется вместе с ней</p>
+            </div>
+            <fieldset class="opt-group set-ctl">
+              <legend class="sr-only">Тема</legend>
+              <label class="opt">
+                <input type="radio" name="theme" value="dark">
+                <span class="opt-card"><span class="opt-name">Колодец</span><span class="opt-note">тёмная — свечение означает данные</span></span>
+              </label>
+              <label class="opt">
+                <input type="radio" name="theme" value="light">
+                <span class="opt-card"><span class="opt-name">Береста</span><span class="opt-note">светлая — чтение при дневном свете</span></span>
+              </label>
+              <label class="opt">
+                <input type="radio" name="theme" value="system">
+                <span class="opt-card"><span class="opt-name">Системная</span><span class="opt-note">как в системе</span></span>
+              </label>
+            </fieldset>
+          </div>
+
+          <div class="set-row">
+            <div>
+              <p class="set-name" id="row-density">Плотность</p>
+              <p class="set-hint">Сколько строк видно на экране: чтение или работа</p>
+            </div>
+            <fieldset class="opt-group set-ctl">
+              <legend class="sr-only">Плотность</legend>
+              <label class="opt">
+                <input type="radio" name="density" value="comfortable">
+                <span class="opt-card"><span class="opt-name">Созерцательная</span><span class="opt-note">строки от 56px, чтение</span></span>
+              </label>
+              <label class="opt">
+                <input type="radio" name="density" value="compact">
+                <span class="opt-card"><span class="opt-name">Операционная</span><span class="opt-note">строки 32px, работа</span></span>
+              </label>
+            </fieldset>
+          </div>
+
+          <div class="set-row">
+            <div>
+              <p class="set-name" id="row-motion">Сократить движение</p>
+              <p class="set-hint">Без импульсов и всплытий — состояния без анимации. Стенд также слушается системной настройки «уменьшить движение»</p>
+            </div>
+            <div class="set-ctl">
+              <button class="switch" type="button" role="switch" id="sw-motion" aria-checked="false" aria-labelledby="row-motion">
+                <span class="switch-track"><span class="switch-thumb"></span></span>
+                <span class="switch-state" aria-hidden="true" id="sw-motion-state">Обычное</span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ── Навигация: сайдбар и горячие клавиши ── -->
+        <section class="settings-section" id="navigation" aria-labelledby="h-navigation">
+          <h2 id="h-navigation">Навигация</h2>
+
+          <div class="set-row">
+            <div>
+              <p class="set-name" id="row-sidebar">Сайдбар</p>
+              <p class="set-hint">Ширина панели разделов; то же, что кнопка «Свернуть» и клавиша с квадратной скобкой</p>
+            </div>
+            <fieldset class="opt-group set-ctl">
+              <legend class="sr-only">Сайдбар</legend>
+              <label class="opt">
+                <input type="radio" name="sidebar" value="open">
+                <span class="opt-card"><span class="opt-name">Развёрнут</span><span class="opt-note">с подписями разделов</span></span>
+              </label>
+              <label class="opt">
+                <input type="radio" name="sidebar" value="collapsed">
+                <span class="opt-card"><span class="opt-name">Свёрнут</span><span class="opt-note">только иконки</span></span>
+              </label>
+            </fieldset>
+          </div>
+
+          <div class="set-row">
+            <div>
+              <p class="set-name" id="row-hotkeys">Горячие клавиши</p>
+              <p class="set-hint">Одноклавишные и g-серии. Палитра и закрытие окон работают всегда — это не ускорители</p>
+            </div>
+            <div class="set-ctl">
+              <button class="switch" type="button" role="switch" id="sw-hotkeys" aria-checked="true" aria-labelledby="row-hotkeys">
+                <span class="switch-track"><span class="switch-thumb"></span></span>
+                <span class="switch-state" aria-hidden="true" id="sw-hotkeys-state">Включены</span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ── Язык: честная заглушка (07m §1.4) ── -->
+        <section class="settings-section" id="language" aria-labelledby="h-language">
+          <h2 id="h-language">Язык</h2>
+
+          <div class="set-row">
+            <div>
+              <p class="set-name" id="row-lang"><label for="sel-lang">Язык интерфейса</label></p>
+              <p class="set-hint">Стенд русскоязычный; перевод появится в продуктовой версии</p>
+            </div>
+            <div class="set-ctl">
+              <select class="set-select" id="sel-lang">
+                <option value="ru" selected>Русский</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <!-- ── Сессия: живые данные vesmaro.authSession (07m §1.5) ── -->
+        <section class="settings-section" id="session" aria-labelledby="h-session">
+          <h2 id="h-session">Сессия</h2>
+
+          <div class="set-row">
+            <div class="set-facts" id="session-facts">
+              <p id="sess-user">Вы вошли как: <b>—</b></p>
+              <p id="sess-since">Вход: —</p>
+            </div>
+            <div class="set-ctl">
+              <button class="btn secondary" type="button" id="signout">Выйти</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ── О стенде: версия из data.js, служебные ссылки (07m §1.6) ── -->
+        <section class="settings-section" id="about" aria-labelledby="h-about">
+          <h2 id="h-about">О стенде</h2>
+
+          <div class="set-row">
+            <div>
+              <p class="set-name" id="row-version">Версия</p>
+              <p class="set-hint">Демо-данные; ничего не отправляется</p>
+            </div>
+            <div class="set-ctl">
+              <p class="set-facts mono" id="ver-line">—</p>
+            </div>
+          </div>
+
+          <div class="set-row">
+            <div>
+              <p class="set-name" id="row-links">Ссылки</p>
+            </div>
+            <div class="set-ctl">
+              <p class="set-facts">
+                <a href="gallery.html">Галерея дизайн-системы</a>
+                <a href="kora-seed.html" title="Пишет демо-состояния хранилища для проверки миграции">Демо-сеялка Коры</a>
+                <span class="badge-svc">служебное</span>
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+
+<div class="overlay" id="palette" hidden role="dialog" aria-modal="true" aria-label="Командная палитра">
+  <div class="palette">
+    <div class="palette-input-wrap">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input class="palette-input" type="text" role="combobox" aria-expanded="true" aria-controls="palette-results" aria-autocomplete="list" aria-label="Командная палитра" placeholder="Куда идём? Попробуйте: «настройки», «тема», «сессия»">
+    </div>
+    <div class="palette-results" id="palette-results" role="listbox" aria-label="Результаты"></div>
+    <div class="palette-foot">
+      <span><kbd class="kbd">↑</kbd><kbd class="kbd">↓</kbd> перемещение</span>
+      <span><kbd class="kbd">Enter</kbd> выполнить</span>
+      <span><kbd class="kbd">Esc</kbd> закрыть</span>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="cheatsheet" hidden role="dialog" aria-modal="true" aria-labelledby="cheatsheet-title">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="cheatsheet-title">Хоткеи</h2>
+      <button class="iconbtn" type="button" data-modal-close aria-label="Закрыть шпаргалку">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <table class="hotkeys-table">
+        <thead><tr><th scope="col">Клавиши</th><th scope="col">Действие</th></tr></thead>
+        <tbody>
+          <tr><td><kbd class="kbd">/</kbd></td><td>фокус глобального поиска</td></tr>
+          <tr><td><kbd class="kbd">Ctrl</kbd> <kbd class="kbd">K</kbd></td><td>палитра команд</td></tr>
+          <tr><td><kbd class="kbd">?</kbd></td><td>эта шпаргалка</td></tr>
+          <tr><td><kbd class="kbd">g</kbd> → <kbd class="kbd">o</kbd> / <kbd class="kbd">m</kbd> / <kbd class="kbd">a</kbd> / <kbd class="kbd">k</kbd> / <kbd class="kbd">d</kbd> / <kbd class="kbd">w</kbd></td><td>Обзор / Память / Агенты / Кора / Документы / Рабочий стол</td></tr>
+          <tr><td><kbd class="kbd">g</kbd> → <kbd class="kbd">t</kbd> / <kbd class="kbd">b</kbd> / <kbd class="kbd">i</kbd> / <kbd class="kbd">p</kbd> / <kbd class="kbd">e</kbd> / <kbd class="kbd">s</kbd></td><td>Задачи / Канбан / Входящие / Пульс / Исполнение / Настройки</td></tr>
+          <tr><td><kbd class="kbd">j</kbd> / <kbd class="kbd">k</kbd></td><td>вниз / вверх по списку (в продуктовой версии)</td></tr>
+          <tr><td><kbd class="kbd">x</kbd></td><td>выделить строку (bulk, в продукте)</td></tr>
+          <tr><td><kbd class="kbd">Esc</kbd></td><td>закрыть верхний оверлей</td></tr>
+          <tr><td><kbd class="kbd">[</kbd></td><td>свернуть / развернуть сайдбар</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/shell.js"></script>
+<script>
+
+  (function () {
+    /* v8 (07k §3): аноним видит гейт — каркас страницы не запускается */
+    if (document.getElementById("main") && document.getElementById("main").dataset.gated) return;
+    var P = window.standPrefs;
+    var D = window.STAND || {};
+    var toast = window.standToast;
+    var doc = document;
+
+    /* ── мини-навигация: плавный скролл + активная секция (07m §1.1) ── */
+    var navLinks = [].slice.call(doc.querySelectorAll(".settings-nav a"));
+    var sections = navLinks.map(function (a) { return doc.getElementById(a.getAttribute("href").slice(1)); });
+    function reduced() {
+      return window.matchMedia("(prefers-reduced-motion: reduce)").matches || P.motion() === "reduced";
+    }
+    navLinks.forEach(function (a, i) {
+      a.addEventListener("click", function (e) {
+        e.preventDefault();
+        sections[i].scrollIntoView({ behavior: reduced() ? "auto" : "smooth" });
+        syncCurrent();
+      });
+    });
+    function syncCurrent() {
+      var probe = window.scrollY + 96; /* крошки + подступ (2.4.11) */
+      var active = 0;
+      sections.forEach(function (sec, i) {
+        if (sec && sec.offsetTop <= probe) active = i;
+      });
+      if (window.innerHeight + window.scrollY >= doc.documentElement.scrollHeight - 24) {
+        active = sections.length - 1; /* доскроллил до конца — активен последний */
+      }
+      navLinks.forEach(function (a, i) {
+        if (i === active) a.setAttribute("aria-current", "true");
+        else a.removeAttribute("aria-current");
+      });
+    }
+    var scrollTick = false;
+    window.addEventListener("scroll", function () {
+      if (scrollTick) return;
+      scrollTick = true;
+      requestAnimationFrame(function () { scrollTick = false; syncCurrent(); });
+    });
+    syncCurrent();
+
+    /* ── контролы: рендер состояния + применение (одни set-функции шелла) ── */
+    function syncControls() {
+      doc.querySelectorAll('[name="theme"]').forEach(function (r) {
+        r.checked = r.value === P.theme();
+      });
+      doc.querySelectorAll('[name="density"]').forEach(function (r) {
+        r.checked = r.value === P.density();
+      });
+      doc.querySelectorAll('[name="sidebar"]').forEach(function (r) {
+        r.checked = r.value === P.sidebar();
+      });
+      var mOn = P.motion() === "reduced";
+      doc.getElementById("sw-motion").setAttribute("aria-checked", mOn ? "true" : "false");
+      doc.getElementById("sw-motion-state").textContent = mOn ? "Сокращено" : "Обычное";
+      var hOn = P.hotkeys() === "on";
+      doc.getElementById("sw-hotkeys").setAttribute("aria-checked", hOn ? "true" : "false");
+      doc.getElementById("sw-hotkeys-state").textContent = hOn ? "Включены" : "Выключены";
+    }
+    doc.querySelectorAll('[name="theme"]').forEach(function (r) {
+      r.addEventListener("change", function () {
+        if (!r.checked) return;
+        P.setTheme(r.value);
+        toast(r.value === "system" ? "Тема: как в системе"
+          : r.value === "light" ? "Тема: береста (светлая)" : "Тема: колодец (тёмная)", "info");
+      });
+    });
+    doc.querySelectorAll('[name="density"]').forEach(function (r) {
+      r.addEventListener("change", function () {
+        if (!r.checked) return;
+        P.setDensity(r.value);
+        toast(r.value === "compact" ? "Плотность: операционная (32px строки)" : "Плотность: созерцательная (56px строки)", "info");
+      });
+    });
+    doc.querySelectorAll('[name="sidebar"]').forEach(function (r) {
+      r.addEventListener("change", function () {
+        if (!r.checked) return;
+        P.setSidebar(r.value); /* вид меняется тут же — тост не нужен */
+      });
+    });
+    doc.getElementById("sw-motion").addEventListener("click", function () {
+      var on = P.motion() !== "reduced";
+      P.setMotion(on ? "reduced" : "auto");
+      toast(on ? "Движение сокращено (состояния без анимации)" : "Движение: канон «Живой коры»", "info");
+    });
+    doc.getElementById("sw-hotkeys").addEventListener("click", function () {
+      var on = P.hotkeys() !== "on";
+      P.setHotkeys(on ? "on" : "off");
+      if (!on) {
+        toast("Горячие клавиши выключены: одиночные клавиши и g-серии не действуют, палитра и закрытие окон остаются", "info");
+      }
+    });
+    /* чужие входы (топбар, палитра) перерисовывают карточки этой страницы */
+    doc.addEventListener("stand:prefs", syncControls);
+    P.systemDark.addEventListener
+      ? P.systemDark.addEventListener("change", syncControls)
+      : P.systemDark.addListener(syncControls);
+    syncControls();
+
+    /* ── язык: честная заглушка (07m §1.4) ── */
+    var lang = doc.getElementById("sel-lang");
+    lang.addEventListener("change", function () {
+      if (lang.value === "en") {
+        toast("Английский интерфейс появится в продуктовой версии — стенд остаётся на русском", "info");
+        lang.value = "ru";
+      }
+    });
+
+    /* ── сессия: живые данные, безопасный рендер «—» при сбое хранилища ── */
+    function humanInterval(ms) {
+      var m = Math.max(1, Math.round(ms / 60000));
+      if (m < 60) return m + " мин назад";
+      var h = Math.round(m / 60);
+      if (h < 24) return h + " ч назад";
+      return Math.round(h / 24) + " дн назад";
+    }
+    function renderSession() {
+      var s = window.standAuth.get();
+      var name = doc.getElementById("sess-user");
+      var since = doc.getElementById("sess-since");
+      if (!s || !s.user) {
+        name.innerHTML = "Вы вошли как: <b>—</b>";
+        since.textContent = "Вход: —";
+        return;
+      }
+      name.innerHTML = "Вы вошли как: <b></b> · " + (s.role === "owner" ? "владелец" : "участник");
+      name.querySelector("b").textContent = s.user;
+      since.textContent = "Вход: " + (s.since ? humanInterval(Date.now() - new Date(s.since).getTime()) : "—");
+      if (s.since) since.title = new Date(s.since).toLocaleString("ru-RU"); /* точный таймстемп — в tooltip */
+    }
+    renderSession();
+    doc.getElementById("signout").addEventListener("click", function () {
+      window.standHandoffToast("Вы вышли из аккаунта");
+      window.standAuth.signOut();
+      window.standGo("index.html"); /* Настройки — гейт-раздел: анониму здесь нечего читать (07k §5.3) */
+    });
+
+    /* ── о стенде: версия — единственный источник data.js (07m §1.6) ── */
+    doc.getElementById("ver-line").textContent =
+      "vesmaro-eyes " + (D.version || "?") + " · срез " + (D.slice || "?");
+  })();
+
+</script>
+</body>
+</html>

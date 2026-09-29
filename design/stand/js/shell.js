@@ -144,15 +144,18 @@
   window.standGo = go;
 
   /* ── v6 auth hook (07k §2–§5): session → view, before first paint ────── */
-  var GATED = { /* pages of gated domains (07k §2.1) */
+  var GATED = { /* pages of gated domains (07k §2.1; v8: 07m §4.4) */
     "memories.html": "Память",
     "search.html": "Память",
+    "tags.html": "Память",
+    "pulse.html": "Память",
     "tasks.html": "Задачи",
     "agents.html": "Агенты",
     "hosts.html": "Агенты",
     "connect.html": "Агенты",
     "kora.html": "Кора",
     "status.html": "Система",
+    "settings.html": "Система",
     "desktop.html": "Рабочий стол",
     "explorer.html": "Рабочий стол",
   };
@@ -161,7 +164,7 @@
     "Задачи": "Канбан, список, входящие и архив — работа и поручения",
     "Агенты": "Исполнение, хосты и подключение новых машин",
     "Кора": "Журнал сессий всех хостов: что агент делал и что говорил",
-    "Система": "Статус, устройства и трассировки — служебная зона",
+    "Система": "Статус, настройки вида, устройства и трассировки — служебная зона",
     "Рабочий стол": "Терминал и проводник — экспериментальная зона стенда",
   };
   var GATE_AFTER = { /* свёрнутый блок: конкретика раздела, без обещаний лишнего */
@@ -186,6 +189,7 @@
     ],
     "Система": [
       "Статус хранилищ и устройств с человеческими пояснениями.",
+      "Настройки вида: тема, плотность, движение, сессия.",
       "Трассировки — служебная зона для разбора инцидентов.",
     ],
     "Рабочий стол": [
@@ -570,55 +574,132 @@
   });
 
   /* ── Theme + density + motion ───────────────────────────────────────── */
-  function applyTheme(t) {
-    if (t === "light") root.setAttribute("data-theme", "light");
+  /* v8 (07m §1.2, §1.7): один источник правды вида — window.standPrefs.
+   * Тема ×3: dark / light / system (системная слушает prefers-color-scheme
+   * живьём). Любой вход (топбар, палитра, Настройки) зовёт одни set-функции;
+   * каждое изменение гонит "stand:prefs" — контролы Настроек перерисовываются. */
+  var systemDark = window.matchMedia("(prefers-color-scheme: dark)");
+  function readTheme() {
+    var t = store.get("theme", "dark");
+    return t === "light" || t === "system" ? t : "dark"; /* мусор → дефолт (07l §5.2) */
+  }
+  function resolvedTheme() {
+    var t = readTheme();
+    return t === "system" ? (systemDark.matches ? "dark" : "light") : t;
+  }
+  function applyTheme() {
+    if (resolvedTheme() === "light") root.setAttribute("data-theme", "light");
     else root.removeAttribute("data-theme");
     doc.querySelectorAll("[data-theme-toggle]").forEach(function (b) {
-      b.setAttribute("aria-pressed", t === "light" ? "true" : "false");
+      b.setAttribute("aria-pressed", resolvedTheme() === "light" ? "true" : "false");
     });
   }
-  applyTheme(store.get("theme", "dark"));
-  doc.addEventListener("click", function (e) {
-    var btn = e.target.closest("[data-theme-toggle]");
-    if (!btn) return;
-    var next = root.getAttribute("data-theme") === "light" ? "dark" : "light";
-    store.set("theme", next);
-    applyTheme(next);
-    toast(next === "light" ? "Тема: береста (светлая)" : "Тема: колодец (тёмная)", "info");
-  });
   function applyMotion(m) {
     if (m === "reduced") root.setAttribute("data-motion", "reduced");
     else root.removeAttribute("data-motion");
   }
+  function prefsChanged() {
+    doc.dispatchEvent(new CustomEvent("stand:prefs"));
+  }
+  /* системная тема живьём: сменилась тема ОС при stand-theme=system — применяем */
+  function onSystemDarkChange() {
+    if (readTheme() === "system") applyTheme();
+  }
+  if (systemDark.addEventListener) systemDark.addEventListener("change", onSystemDarkChange);
+  else systemDark.addListener(onSystemDarkChange);
+  applyTheme();
   applyMotion(store.get("motion", "auto"));
+  root.setAttribute("data-density", store.get("density", "comfortable"));
+
+  var standPrefs = {
+    theme: readTheme,
+    resolvedTheme: resolvedTheme,
+    systemDark: systemDark,
+    setTheme: function (t) {
+      store.set("theme", t === "light" || t === "system" ? t : "dark");
+      applyTheme();
+      prefsChanged();
+    },
+    density: function () {
+      return root.getAttribute("data-density") === "compact" ? "compact" : "comfortable";
+    },
+    setDensity: function (d) {
+      var v = d === "compact" ? "compact" : "comfortable";
+      store.set("density", v);
+      root.setAttribute("data-density", v);
+      prefsChanged();
+    },
+    motion: function () {
+      return root.getAttribute("data-motion") === "reduced" ? "reduced" : "auto";
+    },
+    setMotion: function (m) {
+      var v = m === "reduced" ? "reduced" : "auto";
+      store.set("motion", v);
+      applyMotion(v);
+      prefsChanged();
+    },
+    sidebar: function () {
+      return app && app.classList.contains("sidebar-collapsed") ? "collapsed" : "open";
+    },
+    setSidebar: function (s) {
+      setSidebarCollapsed(s === "collapsed");
+      prefsChanged();
+    },
+    hotkeys: function () {
+      return store.get("hotkeys", "on") === "off" ? "off" : "on";
+    },
+    setHotkeys: function (v) {
+      store.set("hotkeys", v === "off" ? "off" : "on");
+      syncCheatsheetNotice();
+      prefsChanged();
+    },
+  };
+  window.standPrefs = standPrefs;
+
+  doc.addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-theme-toggle]");
+    if (!btn) return;
+    var cur = readTheme();
+    if (cur === "system") {
+      /* выход из «системной» в явную тему — противоположность текущей (07m §1.2) */
+      var next = resolvedTheme() === "dark" ? "light" : "dark";
+      standPrefs.setTheme(next);
+      toast("Тема: теперь выбрана вручную — " + (next === "light" ? "береста (светлая)" : "колодец (тёмная)"), "info");
+    } else {
+      var flip = cur === "light" ? "dark" : "light";
+      standPrefs.setTheme(flip);
+      toast(flip === "light" ? "Тема: береста (светлая)" : "Тема: колодец (тёмная)", "info");
+    }
+  });
   doc.addEventListener("click", function (e) {
     var btn = e.target.closest("[data-motion-toggle]");
     if (!btn) return;
-    var next = root.getAttribute("data-motion") === "reduced" ? "auto" : "reduced";
-    store.set("motion", next);
-    applyMotion(next);
+    var next = standPrefs.motion() === "reduced" ? "auto" : "reduced";
+    standPrefs.setMotion(next);
     toast(next === "reduced" ? "Движение сокращено (состояния без анимации)" : "Движение: канон «Живой коры»", "info");
   });
   doc.addEventListener("click", function (e) {
     var btn = e.target.closest("[data-density-toggle]");
     if (!btn) return;
-    var next = root.getAttribute("data-density") === "compact" ? "comfortable" : "compact";
-    store.set("density", next);
-    root.setAttribute("data-density", next);
+    var next = standPrefs.density() === "compact" ? "comfortable" : "compact";
+    standPrefs.setDensity(next);
     toast(next === "compact" ? "Плотность: операционная (32px строки)" : "Плотность: созерцательная (56px строки)", "info");
   });
-  root.setAttribute("data-density", store.get("density", "comfortable"));
 
   /* ── Sidebar: collapse, one domain open (03 §3) ─────────────────────── */
   var app = doc.querySelector(".app");
-  if (store.get("sidebar", "open") === "collapsed") app.classList.add("sidebar-collapsed");
-  function toggleSidebar() {
-    var collapsed = app.classList.toggle("sidebar-collapsed");
+  function setSidebarCollapsed(collapsed) {
+    app.classList.toggle("sidebar-collapsed", collapsed);
     store.set("sidebar", collapsed ? "collapsed" : "open");
     doc.querySelectorAll("[data-sidebar-toggle]").forEach(function (b) {
       b.setAttribute("aria-expanded", collapsed ? "false" : "true");
     });
   }
+  function toggleSidebar() {
+    setSidebarCollapsed(!app.classList.contains("sidebar-collapsed"));
+    prefsChanged(); /* v8: контрол «Сайдбар» в Настройках следит за состоянием */
+  }
+  if (store.get("sidebar", "open") === "collapsed") setSidebarCollapsed(true);
   doc.addEventListener("click", function (e) {
     if (e.target.closest("[data-sidebar-toggle]")) toggleSidebar();
   });
@@ -737,6 +818,8 @@
       { title: "Обзор", href: "index.html", keys: "обзор главная home" },
       { title: "Записи", href: "memories.html", keys: "записи память memory" },
       { title: "Поиск по памяти", href: "search.html", keys: "поиск поиск search" },
+      { title: "Пульс · лента памяти", href: "pulse.html", keys: "пульс лента события память pulse" },
+      { title: "Теги · словарь памяти", href: "tags.html", keys: "теги тэги словарь облако tags" },
       { title: "Задачи · Канбан", href: "tasks.html", keys: "задачи канбан tasks борд" },
       { title: "Задачи · Список", href: "tasks.html?view=list", keys: "задачи список таблица list" },
       { title: "Задачи · Входящие", href: "tasks.html?view=inbox", keys: "задачи входящие предложения inbox" },
@@ -748,6 +831,7 @@
       { title: "Кора · сессии хостов", href: "kora.html", keys: "кора сессии kora транскрипты" },
       { title: "Подключить телефон", href: "pair.html", keys: "подключить телефон пейринг pair устройство qr" },
       { title: "Статус · живая сводка", href: "status.html", keys: "статус система здоровье status" },
+      { title: "Настройки · вид и сессия", href: "settings.html", keys: "настройки вид тема язык сессия settings" },
       { title: "Рабочий стол · Терминал", href: "desktop.html", keys: "терминал стол desk" },
       { title: "Проводник проектов", href: "explorer.html", keys: "проводник файлы explorer" },
       { title: "Галерея дизайн-системы", href: "gallery.html", keys: "галерея дизайн токены" },
@@ -988,6 +1072,30 @@
 
   /* ── Hotkeys cheat-sheet modal (03 §7) ──────────────────────────────── */
   var cheatsheet = doc.getElementById("cheatsheet");
+  /* v8 (07m §1.3/§4.3): при выключенных хоткеях шпаргалка предупреждает
+   * первой строкой; таблица не скрывается — справочник остаётся справочником */
+  function syncCheatsheetNotice() {
+    var sheet = doc.getElementById("cheatsheet");
+    if (!sheet) return;
+    var tbody = sheet.querySelector("tbody");
+    if (!tbody) return;
+    var old = doc.getElementById("hk-off-row");
+    if (old) old.parentNode.removeChild(old);
+    if (standPrefs.hotkeys() !== "off") return;
+    var tr = doc.createElement("tr");
+    tr.id = "hk-off-row";
+    var td = doc.createElement("td");
+    td.colSpan = 2;
+    var a = doc.createElement("a");
+    a.href = "settings.html#navigation";
+    a.className = "hk-off-link";
+    a.textContent = "Горячие клавиши выключены. Включить — в Настройках";
+    td.appendChild(a);
+    tr.appendChild(td);
+    tbody.insertBefore(tr, tbody.firstChild);
+  }
+  syncCheatsheetNotice();
+  doc.addEventListener("stand:prefs", syncCheatsheetNotice);
   if (cheatsheet) {
     doc.addEventListener("click", function (e) {
       if (e.target.closest("[data-cheatsheet-open]")) openOverlay(cheatsheet);
@@ -1015,6 +1123,9 @@
     gArmed = null;
     gIndicators.forEach(function (el) { el.classList.remove("on"); });
   }
+  /* v8 (07m §4.3): gMap выправлен по канону 03 §7 — p ведёт в Пульс,
+   * s в Настройки (прежние цели — дрейф от таблицы хоткеев). Проводник
+   * остаётся в домене «Рабочий стол» и палитре, одиночной буквы у него нет. */
   var gMap = {
     o: "index.html",
     m: "memories.html",
@@ -1024,8 +1135,8 @@
     a: "agents.html",
     d: "docs.html",
     w: "desktop.html",
-    s: "explorer.html",
-    p: "memories.html",
+    s: "settings.html",
+    p: "pulse.html",
     e: "agents.html",
     k: "kora.html",
   };
@@ -1067,6 +1178,10 @@
       return;
     }
     if (inInput(e)) return;
+    /* v8 (07m §1.3): выключатель хоткеев. Esc и Ctrl+K живут всегда — это
+     * доступность (выход из оверлея) и командный вход, до этой строки они
+     * уже обработаны. Глушатся одиночные (/, ?, [), g-серии и навигация. */
+    if (standPrefs.hotkeys() === "off") return;
     if (e.key === "/") {
       e.preventDefault();
       /* v6: global search is gated — it returns memory contents (07k §0) */

@@ -62,8 +62,8 @@
         <div class="side-sections"><div>
           <a class="side-section" href="memories.html" aria-current="page">Записи</a>
           <a class="side-section" href="search.html">Поиск</a>
-          <button class="side-section disabled" type="button" aria-disabled="true" data-demo-action="«Пульс» — раздел вне стенда">Пульс</button>
-          <button class="side-section disabled" type="button" aria-disabled="true" data-demo-action="«Теги» — раздел вне стенда">Теги</button>
+          <a class="side-section" href="pulse.html">Пульс</a>
+          <a class="side-section" href="tags.html">Теги</a>
         </div></div>
       </div>
       <div class="side-group">
@@ -118,6 +118,7 @@
         </button>
         <div class="side-sections"><div>
           <a class="side-section" href="status.html">Статус</a>
+          <a class="side-section" href="settings.html">Настройки</a>
           <button class="side-section disabled" type="button" aria-disabled="true" data-demo-action="«Автоматизация» — раздел вне стенда">Автоматизация</button>
           <button class="side-section disabled" type="button" aria-disabled="true" data-demo-action="«Устройства» — раздел вне стенда; подключение телефона — pair.html">Устройства</button>
           <button class="side-section disabled" type="button" aria-disabled="true" data-demo-action="«Трассировки» — раздел вне стенда">Трассировки</button>
@@ -299,7 +300,7 @@
           <tr><td><kbd class="kbd">Ctrl</kbd> <kbd class="kbd">K</kbd></td><td>палитра команд</td></tr>
           <tr><td><kbd class="kbd">?</kbd></td><td>эта шпаргалка</td></tr>
           <tr><td><kbd class="kbd">g</kbd> → <kbd class="kbd">o</kbd> / <kbd class="kbd">m</kbd> / <kbd class="kbd">a</kbd> / <kbd class="kbd">k</kbd> / <kbd class="kbd">d</kbd> / <kbd class="kbd">w</kbd></td><td>Обзор / Память / Агенты / Кора / Документы / Рабочий стол</td></tr>
-          <tr><td><kbd class="kbd">g</kbd> → <kbd class="kbd">t</kbd> / <kbd class="kbd">b</kbd> / <kbd class="kbd">i</kbd> / <kbd class="kbd">p</kbd> / <kbd class="kbd">e</kbd> / <kbd class="kbd">s</kbd></td><td>Задачи / Канбан / Входящие · Пульс — тост (вне стенда) / Исполнение / Проводник</td></tr>
+          <tr><td><kbd class="kbd">g</kbd> → <kbd class="kbd">t</kbd> / <kbd class="kbd">b</kbd> / <kbd class="kbd">i</kbd> / <kbd class="kbd">p</kbd> / <kbd class="kbd">e</kbd> / <kbd class="kbd">s</kbd></td><td>Задачи / Канбан / Входящие / Пульс / Исполнение / Настройки</td></tr>
           <tr><td><kbd class="kbd">j</kbd> / <kbd class="kbd">k</kbd></td><td>вниз / вверх по списку (в продуктовой версии)</td></tr>
           <tr><td><kbd class="kbd">x</kbd></td><td>выделить строку (bulk, в продукте)</td></tr>
           <tr><td><kbd class="kbd">Esc</kbd></td><td>закрыть верхний оверлей</td></tr>
@@ -473,7 +474,7 @@
       del.textContent = "Удалить" + (n ? " " + n : "");
     }
 
-    document.querySelectorAll("[data-tag]").forEach(function (b) {
+    function wireTagChip(b) {
       b.addEventListener("click", function () {
         var on = b.getAttribute("aria-pressed") === "true";
         document.querySelectorAll("[data-tag]").forEach(function (o) {
@@ -483,7 +484,28 @@
         if (!on) b.setAttribute("aria-pressed", "true");
         renderList();
       });
-    });
+    }
+    document.querySelectorAll("[data-tag]").forEach(wireTagChip);
+    /* v8 (07m §2.3): из Тегов приходят с ?tag= — донастраиваем текущий фильтр;
+     * у редкого тега чипа в панели нет — честно создаём его */
+    (function () {
+      var tagParam = null;
+      try { tagParam = new URLSearchParams(location.search).get("tag"); } catch (e) {}
+      if (!tagParam || !D.memories.some(function (m) { return m.tags.indexOf(tagParam) >= 0; })) return;
+      var chip = document.querySelector('[data-tag="' + tagParam + '"]');
+      if (!chip) {
+        chip = document.createElement("button");
+        chip.className = "chip";
+        chip.type = "button";
+        chip.dataset.tag = tagParam;
+        chip.setAttribute("aria-pressed", "false");
+        chip.textContent = "#" + tagParam;
+        var anchor = document.querySelector('[data-tag="memory"]');
+        if (anchor) anchor.parentElement.insertBefore(chip, anchor.nextSibling);
+        wireTagChip(chip);
+      }
+      if (chip.getAttribute("aria-pressed") !== "true") chip.click();
+    })();
     document.getElementById("f-server").addEventListener("change", function (e) {
       serverFilter = e.target.value;
       renderList();

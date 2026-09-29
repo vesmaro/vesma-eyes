@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Система · Статус — vesmaro-eyes · стенд «Живая кора»</title>
+  <title>Теги · словарь памяти — vesmaro-eyes · стенд «Живая кора»</title>
   <link rel="stylesheet" href="styles/tokens.css">
   <link rel="stylesheet" href="styles/base.css">
   <link rel="stylesheet" href="styles/shell.css">
@@ -53,8 +53,8 @@
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/></svg>
         <span class="side-label">Обзор</span>
       </a>
-      <div class="side-group">
-        <button type="button" class="side-link side-domain" aria-expanded="false">
+      <div class="side-group" data-open>
+        <button type="button" class="side-link side-domain domain-current" aria-current="true" aria-expanded="true">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>
           <span class="side-label">Память</span>
           <svg class="side-chevron icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
@@ -63,7 +63,7 @@
           <a class="side-section" href="memories.html">Записи</a>
           <a class="side-section" href="search.html">Поиск</a>
           <a class="side-section" href="pulse.html">Пульс</a>
-          <a class="side-section" href="tags.html">Теги</a>
+          <a class="side-section" href="tags.html" aria-current="page">Теги</a>
         </div></div>
       </div>
       <div class="side-group">
@@ -91,10 +91,6 @@
           <a class="side-section" href="connect.html">Подключить</a>
         </div></div>
       </div>
-      <a class="side-link" href="kora.html">
-        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-        <span class="side-label">Кора</span>
-      </a>
       <a class="side-link" href="docs.html">
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
         <span class="side-label">Документы</span>
@@ -110,14 +106,14 @@
           <a class="side-section" href="explorer.html">Проводник</a>
         </div></div>
       </div>
-      <div class="side-group" data-open>
-        <button type="button" class="side-link side-domain domain-current" aria-current="true" aria-expanded="true">
-          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+      <div class="side-group">
+        <button type="button" class="side-link side-domain" aria-expanded="false">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 .73 2.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1-1-1.74l.15-.09a2 2 0 0 0-.73-2.73l-.22-.38a2 2 0 0 0-.73-.73l.15.08a2 2 0 0 1-2 0l-.43.25a2 2 0 0 1-1 1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
           <span class="side-label">Настройки</span>
           <svg class="side-chevron icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </button>
         <div class="side-sections"><div>
-          <a class="side-section" href="status.html" aria-current="page">Статус</a>
+          <a class="side-section" href="status.html">Статус</a>
           <a class="side-section" href="settings.html">Настройки</a>
           <button class="side-section disabled" type="button" aria-disabled="true" data-demo-action="«Автоматизация» — раздел вне стенда">Автоматизация</button>
           <button class="side-section disabled" type="button" aria-disabled="true" data-demo-action="«Устройства» — раздел вне стенда; подключение телефона — pair.html">Устройства</button>
@@ -160,8 +156,8 @@
       <span class="gprefix" aria-hidden="true">g→</span>
       <ol>
         <li><a href="index.html">Обзор</a></li>
-        <li><span>Система</span></li>
-        <li><span aria-current="page">Статус</span></li>
+        <li><a href="memories.html">Память</a></li>
+        <li><span aria-current="page">Теги</span></li>
       </ol>
       <span class="crumbs-spacer"></span>
       <button class="btn ghost sm" type="button" data-palette-open>
@@ -173,68 +169,38 @@
 
       <div class="page-head">
         <div>
-          <h1 tabindex="-1">Статус</h1>
-          <p class="page-sub" id="page-updated">обновлено только что · <span class="pill live" id="live-pill"><span class="dot" aria-hidden="true"></span>live</span></p>
-        </div>
-        <div class="page-actions">
-          <button class="btn secondary sm" type="button" id="st-check">Проверить связь</button>
+          <h1 tabindex="-1" title="Теги — чем помечены записи памяти. Выберите тег — увидите его записи">Теги · словарь памяти</h1>
+          <p class="page-sub">Каждая запись помечена тегами. Размер тега — сколько записей им помечено</p>
         </div>
       </div>
 
-      <div class="status-line" id="st-stale" hidden style="margin: 0 0 var(--space-2); color: var(--color-warning)">
-        Данные задерживаются — переподключаемся…
+      <div class="tags-page">
+        <div class="tag-toolbar">
+          <div class="tag-searchwrap">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input class="tag-search" id="tag-q" type="search" placeholder="Поиск по тегам…" aria-label="Поиск по тегам по началу слова" aria-describedby="tag-found">
+          </div>
+          <span class="tag-found" id="tag-found" role="status"></span>
+          <span class="tag-found" id="tag-total"></span>
+        </div>
+
+        <div class="tag-cloud" id="tag-cloud"></div>
+        <div id="tag-card-slot"></div>
+
+        <p class="tag-draft">Словарь тегов — черновик, ещё не утверждён владельцем</p>
+        <p class="sr-only" role="status" aria-live="polite" id="tags-live"></p>
       </div>
-
-      <section class="status-block" aria-label="Хранилища">
-        <div class="panel-head">Хранилища <span class="count" id="stores-count"></span>
-          <span style="margin-left: auto"></span>
-          <a class="btn ghost sm" href="index.html">Открыть Хранилища →</a>
-        </div>
-        <div class="sb-rows" id="st-stores"></div>
-      </section>
-
-      <section class="status-block" style="margin-top: var(--space-3)" aria-label="Сервер">
-        <div class="panel-head">Сервер (борд)</div>
-        <div class="sb-rows" id="st-board"></div>
-      </section>
-
-      <section class="status-block" style="margin-top: var(--space-3)" aria-label="Хосты">
-        <div class="panel-head">Хосты <span class="count" id="hosts-count"></span>
-          <a class="btn ghost sm" style="margin-left: auto" href="hosts.html">Открыть Хосты →</a>
-        </div>
-        <div class="sb-rows" id="st-hosts"></div>
-      </section>
-
-      <section class="status-block" style="margin-top: var(--space-3)" aria-label="Память">
-        <div class="panel-head">Память
-          <a class="btn ghost sm" style="margin-left: auto" href="pulse.html">Открыть Пульс →</a>
-        </div>
-        <div class="status-counters" id="st-memory"></div>
-      </section>
-
-      <section class="status-block" style="margin-top: var(--space-3)" aria-label="Задачи">
-        <div class="panel-head">Задачи
-          <a class="btn ghost sm" style="margin-left: auto" href="tasks.html">Открыть Канбан →</a>
-        </div>
-        <div class="status-counters" id="st-tasks"></div>
-      </section>
-
-      <section class="status-block" style="margin-top: var(--space-3)" aria-label="Последние события">
-        <div class="panel-head">Последние события <span class="count">· 5</span>
-          <a class="btn ghost sm" style="margin-left: auto" href="kora.html">Открыть Кору →</a>
-        </div>
-        <div class="sb-rows" id="st-events" aria-live="off"></div>
-      </section>
 
     </main>
   </div>
 </div>
 
+
 <div class="overlay" id="palette" hidden role="dialog" aria-modal="true" aria-label="Командная палитра">
   <div class="palette">
     <div class="palette-input-wrap">
       <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      <input class="palette-input" type="text" role="combobox" aria-expanded="true" aria-controls="palette-results" aria-autocomplete="list" aria-label="Командная палитра" placeholder="Куда идём? Попробуйте: «хосты», «кора», «статус»">
+      <input class="palette-input" type="text" role="combobox" aria-expanded="true" aria-controls="palette-results" aria-autocomplete="list" aria-label="Командная палитра" placeholder="Куда идём? Попробуйте: «настройки», «тема», «сессия»">
     </div>
     <div class="palette-results" id="palette-results" role="listbox" aria-label="Результаты"></div>
     <div class="palette-foot">
@@ -277,122 +243,251 @@
 <script>
 
   (function () {
-
-    /* v6 (07k §3): anonymous visit renders the gate instead of the section —
-     * shell.js has already replaced #main; nothing here should run or throw. */
+    /* v8 (07k §3): аноним видит гейт — страница не запускается */
     if (document.getElementById("main") && document.getElementById("main").dataset.gated) return;
     var D = window.STAND;
     var doc = document;
-    var toast = window.standToast;
-    var S = D.status;
+    var cloud = doc.getElementById("tag-cloud");
+    var slot = doc.getElementById("tag-card-slot");
+    var foundEl = doc.getElementById("tag-found");
+    var totalEl = doc.getElementById("tag-total");
+    var live = doc.getElementById("tags-live");
+    var qInput = doc.getElementById("tag-q");
+    var selected = null;
+    var query = "";
 
-    /* ── Хранилища (07e §2): тот же источник, что питает «Обзор» ── */
-    var stores = doc.getElementById("st-stores");
-    doc.getElementById("stores-count").textContent = "· " + D.status.stores.length;
-    D.status.stores.forEach(function (s) {
-      var r = doc.createElement("a");
-      r.className = "status-row";
-      r.href = "index.html";
-      var dotCls = s.state === "жив" ? "success" : s.state === "с оговорками" ? "warning" : "broken";
-      r.innerHTML =
-        '<span class="st-dot" style="background: var(--color-' + dotCls + ')" aria-hidden="true"></span>' +
-        "<span>" + s.name + "</span>" +
-        '<span class="st-note">' + s.state + " · " + s.note + "</span>";
-      stores.appendChild(r);
+    /* ── производные счётчики: один проход по записям (07m §2.1, 07j §2.2.3).
+     * Запись = памяти + узел колодца, склейка по id (без дублей счёта) ── */
+    function buildIndex(records) {
+      var counts = {};
+      var order = [];
+      var pairs = {};
+      var tagged = 0;
+      Object.keys(records).forEach(function (id) {
+        var tags = records[id].tags || [];
+        if (!tags.length) return;
+        tagged++;
+        for (var i = 0; i < tags.length; i++) {
+          var t = tags[i];
+          if (!counts[t]) { counts[t] = 0; order.push(t); }
+          counts[t]++;
+          for (var j = i + 1; j < tags.length; j++) {
+            var u = tags[j];
+            if (u === t) continue;
+            var key = t < u ? t + "\u0000" + u : u + "\u0000" + t;
+            pairs[key] = (pairs[key] || 0) + 1;
+          }
+        }
+      });
+      return { counts: counts, order: order, pairs: pairs, tagged: tagged };
+    }
+    function stepOf(n) {
+      return n >= 8 ? "tag-l" : n >= 4 ? "tag-m" : "tag-s"; /* L ≥ 8 · M 4–7 · S ≤ 3 */
+    }
+    function relatedOf(tag, ix) {
+      var out = [];
+      Object.keys(ix.counts).forEach(function (u) {
+        if (u === tag) return;
+        var key = tag < u ? tag + "\u0000" + u : u + "\u0000" + tag;
+        var n = ix.pairs[key] || 0;
+        if (n) out.push({ tag: u, n: n });
+      });
+      out.sort(function (a, b) { return b.n - a.n || ix.counts[b.tag] - ix.counts[a.tag] || (a.tag < b.tag ? -1 : 1); });
+      return out.slice(0, 3);
+    }
+    function plural(n, one, few, many) {
+      var m10 = n % 10, m100 = n % 100;
+      if (m10 === 1 && m100 !== 11) return one;
+      if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+      return many;
+    }
+
+    /* состояния (07m §2.5): ошибка данных → честный экран с повтором */
+    if (!D || !D.memories) {
+      cloud.innerHTML = "";
+      var err = doc.createElement("div");
+      err.className = "empty-state";
+      err.innerHTML = '<p class="es-title">Словарь не прочитался — данные не открылись</p>';
+      var retry = doc.createElement("button");
+      retry.className = "btn secondary sm";
+      retry.type = "button";
+      retry.textContent = "Повторить";
+      retry.addEventListener("click", function () { location.reload(); });
+      err.appendChild(retry);
+      slot.appendChild(err);
+      return;
+    }
+
+    var records = {};
+    (D.wellNodes || []).forEach(function (n) { if (n && n.id) records[n.id] = n; });
+    (D.memories || []).forEach(function (m) { if (m && m.id) records[m.id] = m; });
+    var ix = buildIndex(records);
+    var tags = ix.order.slice().sort(function (a, b) {
+      return ix.counts[b] - ix.counts[a] || (a < b ? -1 : 1);
     });
+    totalEl.textContent = tags.length + " " + plural(tags.length, "тег", "тега", "тегов") +
+      " · " + ix.tagged + " " + plural(ix.tagged, "запись", "записи", "записей") + " с тегами";
 
-    /* ── Сервер (SSE + версия — уже отдаётся на Обзоре) ── */
-    var board = doc.getElementById("st-board");
-    var br = doc.createElement("div");
-    br.className = "status-row";
-    br.innerHTML =
-      '<span class="st-dot" style="background: var(--color-success)" aria-hidden="true"></span>' +
-      "<span>" + D.status.board.line + "</span>";
-    board.appendChild(br);
+    if (!tags.length) {
+      /* матрица «пусто»: с фикстурами не встречается, состояние обязательно */
+      cloud.innerHTML = "";
+      var es = doc.createElement("div");
+      es.className = "empty-state";
+      es.innerHTML = '<p class="es-title">Тегов ещё нет — они появятся, когда записи получат метки</p>';
+      var go = doc.createElement("a");
+      go.className = "btn secondary sm";
+      go.href = "memories.html";
+      go.textContent = "К записям";
+      es.appendChild(go);
+      slot.appendChild(es);
+      foundEl.textContent = "";
+      return;
+    }
 
-    /* ── Хосты: lifecycle-пилюли 07a §4 ────────────────────────── */
-    var hostsBox = doc.getElementById("st-hosts");
-    doc.getElementById("hosts-count").textContent = "· " + D.status.hosts.length;
-    var hostPill = {
-      online: '<span class="pill online"><span class="dot" aria-hidden="true"></span>на связи</span>',
-      silent: '<span class="pill silent"><span class="dot" aria-hidden="true"></span>молчит</span>',
-      off: '<span class="pill off"><span class="dot" aria-hidden="true"></span>выключен</span>',
-    };
-    D.status.hosts.forEach(function (h) {
-      var r = doc.createElement("a");
-      r.className = "status-row";
-      r.href = "hosts.html?host=" + encodeURIComponent(h.name);
-      r.innerHTML =
-        (hostPill[h.lifecycle] || hostPill.online) +
-        "<span>" + h.name + "</span>" +
-        '<span class="st-note">' + h.line.replace(h.name, "").trim() + "</span>";
-      hostsBox.appendChild(r);
-    });
+    function chipOf(tag) {
+      var b = doc.createElement("button");
+      b.type = "button";
+      b.className = "tag-chip " + stepOf(ix.counts[tag]);
+      b.textContent = "#" + tag;
+      b.dataset.tag = tag;
+      b.title = tag + " — " + ix.counts[tag] + " " + plural(ix.counts[tag], "запись", "записи", "записей");
+      b.setAttribute("aria-pressed", selected === tag ? "true" : "false");
+      b.addEventListener("click", function () {
+        if (selected === tag) { deselect(); return; }
+        select(tag);
+      });
+      return b;
+    }
 
-    /* ── Память / Задачи: счётчики с переходом ─────────────────── */
-    doc.getElementById("st-memory").innerHTML =
-      "записей <span class='num'>" + D.status.memory.recs + "</span>" +
-      " · тегов <span class='num'>" + D.status.memory.tags + "</span>" +
-      " · за час импульсов <span class='num'>" + D.status.memory.pulses + "</span>" +
-      " · последняя запись <span class='num'>" + D.status.memory.last + "</span>";
-    var T = D.status.tasks;
-    doc.getElementById("st-tasks").innerHTML =
-      "идёт <span class='num'>" + T.running + "</span>" +
-      " · в очереди <span class='num'>" + T.queued + "</span>" +
-      " · ждёт валидации <span class='num'>" + T.validation + "</span>" +
-      " · завершено за сегодня <span class='num'>" + T.doneToday + "</span>";
+    /* loading: скелетон из 12 чипов до первого кадра (07m §2.5) */
+    for (var i = 0; i < 12; i++) {
+      var sk = doc.createElement("span");
+      sk.className = "skel tag-skel";
+      cloud.appendChild(sk);
+    }
+    requestAnimationFrame(function () { renderCloud(); });
 
-    /* ── Последние события (живая лента) ───────────────────────── */
-    var evBox = doc.getElementById("st-events");
-    D.hostEvents.slice(0, 5).forEach(function (ev, i) {
-      var r = doc.createElement("div");
-      r.className = "recent-row" + (i === 0 ? " fresh" : "");
-      r.style.padding = "0 var(--space-4)";
-      r.innerHTML = '<span class="ev-time">' + ev.time + "</span><span>" + ev.host + " · " + ev.text + "</span>";
-      evBox.appendChild(r);
-    });
-
-    /* ── Проверить связь: честный демо-опрос ───────────────────── */
-    doc.getElementById("st-check").addEventListener("click", function () {
-      var b = this;
-      b.classList.add("loading");
-      b.textContent = "Проверяем…";
-      b.disabled = true;
-      setTimeout(function () {
-        b.classList.remove("loading");
-        b.disabled = false;
-        b.textContent = "Проверить связь";
-        toast("laptop-go-1 ответил за 0,8 с · vpnus-1 молчит 4 мин", "info");
-      }, 800);
-    });
-
-    /* ── Демо-переподключение: честное переключение состояния (07e §3)
-     *    LIVE и «переподключаемся» никогда не показываются вместе ── */
-    var livePill = doc.getElementById("live-pill");
-    var staleNote = doc.getElementById("st-stale");
-    var dated = doc.getElementById("page-updated");
-    var demoBar = doc.createElement("div");
-    demoBar.className = "status-line";
-    demoBar.style.cssText = "padding: var(--space-2) var(--space-4); border-top: var(--line-hairline) solid var(--myelin-hairline)";
-    demoBar.innerHTML =
-      '<button class="btn ghost sm" type="button" id="demo-reconnect" aria-pressed="false">демо: разрыв SSE</button>' +
-      '<span class="hc-meta" style="font-size: var(--text-xs)">демо</span>';
-    doc.querySelector(".status-block").before(demoBar);
-    demoBar.querySelector("#demo-reconnect").addEventListener("click", function () {
-      var broken = this.getAttribute("aria-pressed") === "true";
-      this.setAttribute("aria-pressed", broken ? "false" : "true");
-      if (!broken) {
-        livePill.hidden = true;
-        staleNote.hidden = false;
-        dated.textContent = "данные на 14:07 · переподключаемся";
-        toast("SSE-разрыв — переподключаемся…", "info");
-      } else {
-        livePill.hidden = false;
-        staleNote.hidden = true;
-        dated.innerHTML = "обновлено только что · <span class='pill live' id='live-pill'><span class='dot' aria-hidden='true'></span>live</span>";
-        toast("Связь восстановлена — лента дозапросила пропущенное", "success");
+    function renderCloud() {
+      cloud.innerHTML = "";
+      var shown = 0;
+      tags.forEach(function (t) {
+        if (query && t.indexOf(query) !== 0) return;
+        cloud.appendChild(chipOf(t));
+        shown++;
+      });
+      foundEl.textContent = query ? "Найдено: " + shown : "";
+      live.textContent = query ? "Найдено: " + shown : "";
+      if (!shown) {
+        var box = doc.createElement("div");
+        box.className = "empty-state";
+        var msg = doc.createElement("p");
+        msg.className = "es-title";
+        msg.textContent = "По «" + query + "» тегов нет. Смягчите начало слова";
+        box.appendChild(msg);
+        var all = doc.createElement("button");
+        all.className = "btn secondary sm";
+        all.type = "button";
+        all.textContent = "Показать все";
+        all.addEventListener("click", function () {
+          qInput.value = "";
+          query = "";
+          renderCloud();
+        });
+        box.appendChild(all);
+        cloud.appendChild(box);
       }
+    }
+
+    var debounce = null;
+    qInput.addEventListener("input", function () {
+      if (debounce) clearTimeout(debounce);
+      debounce = setTimeout(function () {
+        query = qInput.value.trim().toLowerCase(); /* префикс: по началу слова */
+        renderCloud();
+      }, 300);
     });
+
+    function select(tag) {
+      selected = tag;
+      cloud.querySelectorAll(".tag-chip").forEach(function (c) {
+        c.setAttribute("aria-pressed", c.dataset.tag === tag ? "true" : "false");
+      });
+      renderCard(tag);
+      announce("Выбран тег " + tag);
+    }
+    function deselect() {
+      selected = null;
+      cloud.querySelectorAll(".tag-chip").forEach(function (c) {
+        c.setAttribute("aria-pressed", "false");
+      });
+      slot.innerHTML = "";
+      announce("Выбор снят");
+    }
+    function announce(text) { live.textContent = ""; setTimeout(function () { live.textContent = text; }, 50); }
+
+    function renderCard(tag) {
+      slot.innerHTML = "";
+      var card = doc.createElement("article");
+      card.className = "tag-card tag-card-in";
+      var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+        doc.documentElement.getAttribute("data-motion") === "reduced";
+      if (reduced) card.classList.remove("tag-card-in");
+
+      var h = doc.createElement("h3");
+      h.tabIndex = -1;
+      h.textContent = "#" + tag;
+      card.appendChild(h);
+
+      var meta = (D.tagMeta || {})[tag];
+      var desc = doc.createElement("p");
+      desc.className = "tag-desc";
+      desc.textContent = meta || "Описания пока нет — тег вырос из записей";
+      card.appendChild(desc);
+
+      var facts = doc.createElement("p");
+      facts.className = "tag-facts";
+      var n = ix.counts[tag];
+      facts.appendChild(doc.createTextNode("Записей: " + n));
+      var rel = relatedOf(tag, ix);
+      if (rel.length) {
+        var lab = doc.createElement("span");
+        lab.textContent = "Связанные:";
+        facts.appendChild(lab);
+        rel.forEach(function (r) {
+          var rb = doc.createElement("button");
+          rb.type = "button";
+          rb.className = "chip tag-rel";
+          rb.textContent = "#" + r.tag;
+          rb.setAttribute("aria-label", "Перейти к тегу " + r.tag + " — " + ix.counts[r.tag] + " записей");
+          rb.addEventListener("click", function () {
+            select(r.tag);
+            /* облако могло быть отфильтровано: подсветка видима только там */
+            if (query && r.tag.indexOf(query) !== 0) {
+              qInput.value = "";
+              query = "";
+              renderCloud();
+              syncPressed();
+            }
+          });
+          facts.appendChild(rb);
+        });
+      }
+      card.appendChild(facts);
+
+      var cta = doc.createElement("a");
+      cta.className = "btn secondary sm";
+      cta.href = "memories.html?tag=" + encodeURIComponent(tag);
+      cta.textContent = "Показать записи →";
+      card.appendChild(cta);
+
+      slot.appendChild(card);
+      h.focus();
+    }
+    function syncPressed() {
+      cloud.querySelectorAll(".tag-chip").forEach(function (c) {
+        c.setAttribute("aria-pressed", c.dataset.tag === selected ? "true" : "false");
+      });
+    }
   })();
 
 </script>
