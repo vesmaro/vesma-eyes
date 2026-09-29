@@ -5173,7 +5173,10 @@ export interface components {
          * UiTelemetryBatch
          * @description Ingest body (taxonomy §3.1): a flat batch of taxonomy events. No
          *     max on the list here — an oversized batch is the handler's honest 413,
-         *     not pydantic's generic 422.
+         *     not pydantic's generic 422. The earlier C1 gate (a pre-parse
+         *     Content-Length cap in ``telemetry_body_cap``) already refused
+         *     multi-MB bodies before this model is ever reached; the batch-count 413
+         *     stays for size-legal bodies with too many events.
          */
         readonly UiTelemetryBatch: {
             /** Events */
@@ -8692,7 +8695,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description batch larger than 50 events */
+            /** @description declared body over the 1 MiB pre-parse cap (C1, refused before the body is read) or a batch larger than 50 events */
             readonly 413: {
                 headers: {
                     readonly [name: string]: unknown;
