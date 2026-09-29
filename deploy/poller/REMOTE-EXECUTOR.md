@@ -11,6 +11,40 @@
 Оба пути требуют enrollment-токен (одноразовый `mne_…`, TTL 15 мин,
 ≤3 живых) — mint из UI: Реестр → «Добавить исполнителя».
 
+## 0. Что ставит этот гайд — два исполнителя одной семьи
+
+Сегодня «одна команда» (Путь 1) и `bootstrap.sh` ставят **Python-поллер**
+(`scripts/assignment_poller.py`) — legacy-исполнителя ноутбука и
+переходного периода (решение владельца:
+`docs/design/2026-09-23-connect-provisioning.md` §C). Резидентный
+сервис-представитель борда — **Go-агент `vesmaro-agent`** (репозиторий
+`vesmaro/vesmaro-agent`, релиз 0.6.0, service charter v2 / ME-016) —
+пока ставится руками из релизов агента. Это drop-in замена поллера
+против того же борда (тот же проводной протокол, PROTOCOL §7), плюс то,
+чего у поллера нет:
+
+- `transport: mesh` — борд-нога через релей mnemos-mesh (пин mesh-core);
+- discovery v2/v3 — факты об установленных харнесах/средах/умениях хоста
+  (`POST /api/executors/{id}/discovery`; маршрут уже в API борда);
+- loopback intake отчётов детей (compat-канал + native Canon edge,
+  ADR 0021) с жизненным циклом v0.6: per-task токен-бакет (по умолчанию
+  25/мин — с запасом под бюджет борда 30 отчётов/60 с), last-wins
+  коалесинг недоставленных промежуточных отчётов, shutdown-drain с
+  честным dead-letter (`transport-agent-shutdown`).
+
+Enrollment Go-агент выполняет сам бинарник (ратифицированный режим M1,
+PROTOCOL §1.1): `VESMARO_ENROLL_TOKEN=mne_… vesmaro-agent --enroll
+--config agent.yaml` — регистрация, `executor_secret` в 0600 env-файл,
+VERSION handshake. Протокол и чартер — в doc-хабе борда (`/docs` → API
+→ vesmaro-agent: тело протокола на пине + выжимка charter v2).
+
+Чего ещё нет (честно): `bootstrap.sh` Go-артефакты не доставляет —
+переключение установщика на релизы агента отдельная задача; ротация и
+обновление — PROTOCOL §7.4. Exit-коды агента отличаются и от поллера, и
+от установщика (PROTOCOL §7.2: 2 аргументы/конфиг · 3 нет
+`VESMARO_BOARD_TOKEN` · 4 лок занят · 5 отказ регистрации · 6
+пост-регистрационная ошибка enroll).
+
 ## Путь 1 — одна команда
 
 На экране токена в UI собрана готовая строка (origin подставлен, токен
@@ -264,6 +298,11 @@ curl -sS -X PATCH "$BOARD_URL/api/executors/<executor_id>" \
 
 - [README.md](README.md) — установка поллера, юниты, диагностика,
   zcode launcher, bootstrap.sh (исходник установщика).
+- Go-агент `vesmaro-agent` — протокол и charter v2: doc-хаб борда
+  (`/docs` → API → vesmaro-agent) либо репозиторий
+  `vesmaro/vesmaro-agent` (`docs/PROTOCOL.md`,
+  `docs/decisions/CHARTER-v2.md`); ADR 0021 — native intake
+  (`docs/decisions/0021-agent-intake-contract.md`).
 - RUNBOOK чарта §11 (`deploy/chart/vesmaro-eyes/RUNBOOK.md`) —
   конвенция helm upgrade / image.tag при апгрейдах борда.
 - E2E-план живого теста на `vpn.us` — борд `t-1790065380697-8bcf`.
