@@ -21,9 +21,13 @@
  *   VESMARO_SMOKE_BASE_URL=https://vesmaro.abyss.lab npm run smoke:render
  *     — remote mode against ANY deployed base (prod, staging, a dev
  *       server). Docs surfaces are static; the board/pulse/task surfaces
- *       run against the deployment's live API. The untrusted-mermaid
- *       fixture task (TB-15) is injected into the LIVE board projection
- *       via a network interception — no server-side change.
+ *       run against the deployment's live API. Navigations use CANONICAL
+ *       root paths: since the Ф4 root-app flip a deployed server 302s
+ *       /app/X → /X WITHOUT the query string, so a legacy deep link like
+ *       /app/tasks/TB-15?tab=details lost ?tab and landed on the default
+ *       pane (ME-026). The untrusted-mermaid fixtures (task TB-15 AND the
+ *       over-cap memory) are injected into the LIVE deployment via a
+ *       network interception — no server-side change, no writes.
  *
  * Base URL resolution: --base-url CLI arg > VESMARO_SMOKE_BASE_URL env >
  * local vite preview (http://localhost:4173).
@@ -161,8 +165,51 @@ const UNTRUSTED_REPORTS = {
   items: [],
 };
 
-/** Inject TB-15 into the board projection via network interception. */
-async function injectUntrustedFixture(page) {
+/**
+ * The over-cap fallback fixture (ME-026): the board-envelope form of
+ * gateway/fixtures.ts MOCK_MERMAID_OVERCAP_MEMORY — SIX fences in ONE
+ * text, one over the per-surface cap. Remote mode MUST inject it, and
+ * through the contract the DEPLOYED gateway actually speaks: BoardAdapter
+ * reads GET /api/memories/item/{id} (the ok/memory envelope — not the
+ * mnemos HttpAdapter's /api/memories/{id}). Without interception the id
+ * resolves to nothing on a live deployment, the not-found wall passed
+ * the «no diagram» asserts vacuously and failed the six source-visible
+ * ones (the 14/6/1 remote smoke of 1.45.0).
+ */
+const MERMAID_OVERCAP_MEMORY_ENVELOPE = {
+  ok: true,
+  server: "smoke-fixture",
+  memory: {
+    id: "mem-mermaid-overcap-fixture",
+    title: "Mermaid over-cap fixture (smoke)",
+    content:
+      "Отчёт: шесть мелких диаграмм в одной памяти — над потолком фенсов на " +
+      "поверхность, все должны остаться исходным кодом.\n\n" +
+      "```mermaid\nF1-->R1\n```\n\n" +
+      "```mermaid\nF2-->R2\n```\n\n" +
+      "```mermaid\nF3-->R3\n```\n\n" +
+      "```mermaid\nF4-->R4\n```\n\n" +
+      "```mermaid\nF5-->R5\n```\n\n" +
+      "```mermaid\nF6-->R6\n```",
+    raw_content: null,
+    tags: ["project:vesmaro"],
+    status: "raw",
+    memory_type: "note",
+    source: "mcp",
+    source_url: null,
+    project: "vesmaro",
+    agent: "zcode",
+    created_at: "2026-09-28T00:00:00Z",
+    updated_at: "2026-09-28T00:00:00Z",
+  },
+};
+
+/**
+ * Inject the untrusted-mermaid fixtures into a LIVE deployment via
+ * network interception (remote mode only — the mock adapter serves them
+ * natively in local mode).
+ */
+async function injectRemoteFixtures(page) {
   // BE-16: task detail reads GET /api/tasks/{id} (taskById), NOT the
   // board projection — the fixture intercepts BOTH endpoints.
   await page.route("**/api/tasks/TB-15", (route) =>
@@ -220,13 +267,36 @@ async function injectUntrustedFixture(page) {
       body: JSON.stringify({ items: [], count: 0 }),
     }),
   );
+  // ME-026: the over-cap memory fixture — through the deployed gateway's
+  // contract: BoardAdapter.getMemory reads GET /api/memories/item/{id}
+  // (the ok/memory envelope; includeRaw has no wire effect there). The
+  // trailing glob keeps it robust against added query params.
+  await page.route(
+    "**/api/memories/item/mem-mermaid-overcap-fixture*",
+    (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(MERMAID_OVERCAP_MEMORY_ENVELOPE),
+      }),
+  );
 }
 
 // ---------------------------------------------------------------------------
 // Route table (ADR 0020 invariant 7 + ME-011 board notes)
 // ---------------------------------------------------------------------------
 
-const DOCS_BASE = "/app/docs"; // ADR 0011: production serves under /app
+/**
+ * SPA path prefix for navigations. The local vite preview serves the
+ * production build under /app/ (vite.config base — ADR 0011), so local
+ * mode keeps the prefix. A deployed server since the Ф4 root-app flip
+ * answers /app/X with a 302 to /X WITHOUT the query string
+ * (server/app.py app_spa), so remote mode navigates the CANONICAL root
+ * paths directly — a legacy /app/tasks/TB-15?tab=details lost ?tab and
+ * landed on the default «Отчёты» pane (ME-026).
+ */
+const APP_PREFIX = LOCAL_MODE ? "/app" : "";
+const DOCS_BASE = `${APP_PREFIX}/docs`;
 
 async function runSmoke(page) {
   const base = process.env.__SMOKE_BASE ?? "";
@@ -329,7 +399,7 @@ async function runSmoke(page) {
 
   // -- 5. TextEngine surfaces: pulse page ---------------------------------
   console.log("\n[5/8] TextEngine surface: pulse page fragments render");
-  await page.goto(`${base}/app/memory/pulse`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${base}${APP_PREFIX}/memory/pulse`, { waitUntil: "domcontentloaded" });
   await page.waitForSelector("main", { timeout: 20_000 });
   await page.waitForLoadState("networkidle").catch(() => {});
   const pulseText = (await mainText(page)).replace(/\s+/g, " ");
@@ -342,7 +412,7 @@ async function runSmoke(page) {
   // -- 6. TextEngine surface: task detail page ----------------------------
   console.log("\n[6/8] TextEngine surface: task detail page renders");
   const taskId = process.env.__SMOKE_TASK_ID ?? "TB-1";
-  await page.goto(`${base}/app/tasks/${taskId}?tab=details`, {
+  await page.goto(`${base}${APP_PREFIX}/tasks/${taskId}?tab=details`, {
     waitUntil: "domcontentloaded",
   });
   await page.waitForSelector("main", { timeout: 20_000 });
@@ -361,18 +431,19 @@ async function runSmoke(page) {
   // lazy — wait for the svg explicitly; caps/errors fall back to source and
   // would fail this assert loudly (never a fake green).
   console.log("\n[7/8] untrusted-surface mermaid fence (task detail fixture)");
-  await page.goto(`${base}/app/tasks/TB-15?tab=details`, {
+  await page.goto(`${base}${APP_PREFIX}/tasks/TB-15?tab=details`, {
     waitUntil: "domcontentloaded",
   });
   await page.waitForSelector("main", { timeout: 20_000 });
   await page.waitForLoadState("networkidle").catch(() => {});
   const untrustedText = await mainText(page);
-  // The details pane must actually be served (some deployments render the
-  // reports pane regardless of ?tab=): otherwise there is nothing to
-  // assert here — an honest SKIP, never a fake green. The marker is the
-  // spec's PROSE heading, NOT the fence source: since the flip the source
-  // hides once the diagram renders, so keying on the fence text would race
-  // (and then always skip) — the heading is plain text, always present.
+  // The details pane must actually be served: a deployment that drops the
+  // ?tab= query (the pre-ME-026 legacy /app redirect did) or renders the
+  // reports pane regardless leaves nothing to assert here — an honest
+  // SKIP, never a fake green. The marker is the spec's PROSE heading, NOT
+  // the fence source: since the flip the source hides once the diagram
+  // renders, so keying on the fence text would race (and then always
+  // skip) — the heading is plain text, always present.
   const detailsServed = (untrustedText ?? "").includes("Diagram (untrusted surface)");
   if (!detailsServed) {
     skip(
@@ -403,7 +474,7 @@ async function runSmoke(page) {
   // (scoped to the .mermaid-diagram mount — the page's own lucide chrome
   // legitimately contains svgs), all six sources visible.
   console.log("\n[8/8] untrusted mermaid over-cap: honest inert fallback");
-  await page.goto(`${base}/app/memory/mem-mermaid-overcap-fixture`, {
+  await page.goto(`${base}${APP_PREFIX}/memory/mem-mermaid-overcap-fixture`, {
     waitUntil: "domcontentloaded",
   });
   await page.waitForSelector("main", { timeout: 20_000 });
@@ -526,16 +597,19 @@ async function main() {
     }
     baseUrl = `http://localhost:${PREVIEW_PORT}`;
   }
-  process.env.__SMOKE_BASE = baseUrl;
+  // Strip a trailing slash so `${base}${APP_PREFIX}/…` never builds
+  // `//tasks/…` from an operator-supplied base (ME-026 hardening).
+  process.env.__SMOKE_BASE = baseUrl.replace(/\/+$/, "");
 
   const browser = await playwright.chromium.launch(launchOptions);
   const context = await browser.newContext({ ignoreHTTPSErrors: true });
   const page = await context.newPage();
   if (LOCAL_MODE) {
     // Mock adapter serves fixtures in-memory — no interception needed.
-    // (Remote mode: inject TB-15 into the LIVE board projection.)
+    // (Remote mode: inject TB-15 + the over-cap memory into the LIVE
+    // deployment via network interception.)
   } else {
-    await injectUntrustedFixture(page);
+    await injectRemoteFixtures(page);
   }
 
   let crashed = false;

@@ -123,6 +123,20 @@ class TestRootAppApp:
         assert landed.status_code == 200
         assert "viewer" in landed.text
 
+    def test_app_redirect_preserves_query_string(self, client, root_app,
+                                                 app_dir):
+        """ME-026: the legacy /app 302 must keep the query — a bookmarked
+        /app/tasks/X?tab=details lands on the requested tab, and a bare
+        /app with params keeps them; no query → no dangling '?'."""
+        deep = client.get("/app/tasks/42?tab=details", follow_redirects=False)
+        assert deep.status_code == 302
+        assert deep.headers["Location"] == "/tasks/42?tab=details"
+        bare = client.get("/app?keep=1", follow_redirects=False)
+        assert bare.status_code == 302
+        assert bare.headers["Location"] == "/?keep=1"
+        clean = client.get("/app/tasks/42", follow_redirects=False)
+        assert clean.headers["Location"] == "/tasks/42"
+
     def test_app_real_files_still_served(self, client, root_app, app_dir):
         """Vite's production base is /app/, so index.html references
         /app/assets/... — asset URLs keep working after the flip."""

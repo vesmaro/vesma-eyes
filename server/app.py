@@ -7372,23 +7372,33 @@ def _app_index_response() -> FileResponse:
     return FileResponse(index, headers={"Cache-Control": "no-cache"})
 
 
+def _query_suffix(request: Request) -> str:
+    """The incoming request's `?query` (or "") — the /app → / legacy
+    redirect must NOT eat it (ME-026): /app/tasks/X?tab=details used to
+    land on the default tab for users and the render smoke alike."""
+    query = request.url.query
+    return f"?{query}" if query else ""
+
+
 @app.get("/app", include_in_schema=False)
 @app.get("/app/", include_in_schema=False)
-async def app_index():
+async def app_index(request: Request):
     """SPA entries: /app and /app/ serve the viewer's index.html; after the
-    Ф4 flip they redirect to the new root so old bookmarks survive."""
+    Ф4 flip they redirect to the new root so old bookmarks survive. The
+    302 keeps the query string (/?x=1, ME-026)."""
     if ROOT_APP == "app":
-        return RedirectResponse("/", status_code=302)
+        return RedirectResponse(f"/{_query_suffix(request)}", status_code=302)
     return _app_index_response()
 
 
 @app.get("/app/{path:path}", include_in_schema=False)
-async def app_spa(path: str):
+async def app_spa(path: str, request: Request):
     """Catch-all under /app: real files are served (vite emits them under
     assets/ with content-hashed names → immutable — the production vite
     base is /app/, so these file URLs stay valid in BOTH root modes),
     anything else falls back to index.html for the client router; after
-    the flip non-file paths redirect prefix-stripped."""
+    the flip non-file paths redirect prefix-stripped, query kept
+    (ME-026)."""
     if not (APP_DIR / "index.html").is_file():
         board_home = "/board" if ROOT_APP == "app" else "/"
         raise HTTPException(
@@ -7409,8 +7419,10 @@ async def app_spa(path: str):
         return FileResponse(candidate, headers={"Cache-Control": cache})
     if ROOT_APP == "app":
         # A client route: its canonical home since the flip is the same
-        # path without the /app prefix (/app/tasks/42 -> /tasks/42).
-        return RedirectResponse(f"/{path}", status_code=302)
+        # path without the /app prefix (/app/tasks/42 -> /tasks/42), the
+        # query string kept (/app/tasks/42?tab=details, ME-026).
+        return RedirectResponse(f"/{path}{_query_suffix(request)}",
+                                status_code=302)
     return _app_index_response()
 
 
