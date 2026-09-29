@@ -6733,6 +6733,14 @@ class UiTokenVerifyOut(_ApiModel):
     token_class: Literal["ui", "legacy"]
 
 
+class UiTokenProbeOut(_ApiModel):
+    """The anonymous boot-probe verdict (ME-028): an explicit ``{"live":
+    false}`` 200 — same boolean the 401 used to carry, minus the console
+    noise on every page load. Never ``{"live": true}``: a live cookie
+    answers 204 with no body (the viewer's raw fetch pins that)."""
+    live: bool
+
+
 def _ui_verify_mismatch_detail(supplied: str, effective: dict[str, str]) -> str:
     """Class-aware 401 detail for the login — the ``_token_mismatch_detail``
     analogue for a RAW pasted value (owner feedback 2026-09-22: the board
@@ -6792,7 +6800,19 @@ async def verify_ui_token(body: UiTokenVerifyIn, request: Request,
             "token_class": "legacy" if ui == effective.get("machine") else "ui"}
 
 
-@app.get("/api/auth/ui-token")
+@app.get(
+    "/api/auth/ui-token",
+    # SEC-1 (ME-028 cascade): the machine-readable contract carries the full
+    # probe verdict set — 200 {"live": false} anonymous / 204 live cookie /
+    # 503 fail-closed — and tests/test_openapi_contract.py pins it, so a
+    # silent drift back to a 401 answer cannot regenerate cleanly.
+    responses={
+        200: {"model": UiTokenProbeOut,
+              "description": "no live vesmaro_ui cookie (anonymous probe verdict)"},
+        204: {"description": "a live vesmaro_ui cookie (hasUiToken() -> true)"},
+        503: {"description": "owner login is not configured (fail-closed)"},
+    },
+)
 async def probe_ui_session(request: Request) -> Response:
     """Boot probe for the viewer's session hydration (ADR 0014 Ф2): 204 =
     a live ``vesmaro_ui`` cookie (hasUiToken() → true, no login window);
