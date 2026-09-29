@@ -7334,6 +7334,46 @@ _TELEMETRY_BATCH_MAX = 50          # events per request (taxonomy §3.1)
 _telemetry_limiter = RateLimiter(
     limit=_TELEMETRY_RATE_LIMIT, window=_TELEMETRY_RATE_WINDOW)
 
+# Cascade C1 (1.52.0 release security audit, P2 / CWE-400): the ingest's
+# 403/413/429 verdicts all fired only AFTER Starlette had buffered the
+# whole body and pydantic had parsed every element — an unauthenticated
+# leg could POST hundreds of MB of VALID events and burn CPU/memory
+# before the first refusal. A pydantic max_length (or a route dependency)
+# cannot close that: FastAPI reads ``request.body()`` before any handler
+# or dependency code runs. The cap below is a PRE-PARSE gate — a
+# middleware reading Content-Length from the ASGI scope (never the body)
+# and answering 413 before routing, so not a single body byte is read.
+# 1 MiB is ~100x the largest legal batch (50 events x ~200 B); scoped to
+# this one route on purpose — a global body cap would change every other
+# endpoint's contract in one move (a separate owner-level decision). A
+# body WITHOUT Content-Length (chunked) rides the post-parse batch 413
+# below: the 60/60s limiter bounds such legs' frequency and the LAN
+# ingress is the trust boundary (residual risk accepted for v0).
+_TELEMETRY_BODY_MAX_BYTES = 1_048_576   # 1 MiB pre-parse Content-Length cap
+
+
+@app.middleware("http")
+async def telemetry_body_cap(request: Request, call_next):
+    """C1 pre-parse gate (CWE-400): refuse an oversized DECLARED body on
+    the telemetry ingest before the body is read — the same contract 413
+    the batch cap answers, just at the earliest possible point. Header
+    only: no body buffering, no parsing; every other route passes through
+    untouched (one method+path string compare)."""
+    if (request.method == "POST"
+            and request.url.path == "/api/events/ui"):
+        declared = request.headers.get("Content-Length", "")
+        if (declared.isdigit()
+                and int(declared) > _TELEMETRY_BODY_MAX_BYTES):
+            logging.getLogger("vesmaro.telemetry").warning(
+                "ui telemetry body over pre-parse cap declared=%s",
+                declared)
+            return JSONResponse(
+                status_code=413,
+                content={"detail": "request body exceeds "
+                                   f"{_TELEMETRY_BODY_MAX_BYTES} bytes "
+                                   "(pre-parse Content-Length cap)"})
+    return await call_next(request)
+
 # The frozen v0 kind registry (taxonomy §1.2) — the single dictionary the
 # ingest validates against and the tests lock. Kinds are additive by
 # contract (SSE dictionary rule, ui-contract §11): new kinds extend this
@@ -7445,7 +7485,10 @@ _UiTelemetryEvent = Annotated[
 class UiTelemetryBatch(BaseModel):
     """Ingest body (taxonomy §3.1): a flat batch of taxonomy events. No
     max on the list here — an oversized batch is the handler's honest 413,
-    not pydantic's generic 422."""
+    not pydantic's generic 422. The earlier C1 gate (a pre-parse
+    Content-Length cap in ``telemetry_body_cap``) already refused
+    multi-MB bodies before this model is ever reached; the batch-count 413
+    stays for size-legal bodies with too many events."""
     model_config = ConfigDict(extra="forbid")
     events: list[_UiTelemetryEvent] = Field(min_length=1)
 
@@ -7509,15 +7552,17 @@ def _guard_telemetry_ui(request: Request) -> None:
 @app.post(
     "/api/events/ui",
     # The machine-readable verdict set (ME-028 SEC-1 pattern): 200 accepted /
-    # 403 non-ui leg / 413 batch > 50 / 422 off-taxonomy event (unknown kind,
-    # free-text or extra field, client-stamped envelope key) / 429 rate
-    # limit. Pinned by tests/test_me037_ui_telemetry.py so drift cannot
-    # regenerate cleanly.
+    # 403 non-ui leg / 413 oversize (pre-parse Content-Length cap, or batch
+    # > 50) / 422 off-taxonomy event (unknown kind, free-text or extra
+    # field, client-stamped envelope key) / 429 rate limit. Pinned by
+    # tests/test_me037_ui_telemetry.py so drift cannot regenerate cleanly.
     responses={
         200: {"model": UiTelemetryOut,
               "description": "batch accepted (all-or-nothing)"},
         403: {"description": "not a ui-class leg (anonymous / machine / mnd_)"},
-        413: {"description": "batch larger than 50 events"},
+        413: {"description": "declared body over the 1 MiB pre-parse cap "
+                             "(C1, refused before the body is read) or a "
+                             "batch larger than 50 events"},
         422: {"description": "unknown kind, payload outside the taxonomy "
                              "schema, or a free-text/extra field (rejected, "
                              "not dropped)"},

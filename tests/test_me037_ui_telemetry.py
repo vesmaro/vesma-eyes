@@ -553,3 +553,100 @@ class TestNotificationsReadAudit:
         r = client.get("/api/activity", params={"limit": 200})
         assert r.status_code == 200
         assert all(i["kind"] != "notifications.read" for i in r.json()["items"])
+
+
+# ------------------------------------------------ C1: pre-parse body cap
+# Cascade fix (1.52.0 release security audit, P2 / CWE-400): the 403/413/
+# 429 verdicts used to fire only AFTER Starlette had buffered the whole
+# body and pydantic had parsed every element — an anonymous leg could burn
+# CPU/memory with hundreds of MB of VALID events before the first refusal.
+# The cap is a middleware reading Content-Length from the ASGI scope and
+# answering 413 BEFORE routing: not a single body byte is read.
+class TestBodyCapC1:
+    def _request(self, *, method: str = "POST", path: str = "/api/events/ui",
+                 content_length: str | None = None) -> Request:
+        headers = ([(b"content-length", content_length.encode())]
+                   if content_length is not None else [])
+        scope = {"type": "http", "method": method, "path": path,
+                 "headers": headers, "query_string": b"",
+                 "server": ("test", 80), "client": ("127.0.0.1", 1),
+                 "scheme": "http"}
+
+        async def _no_body():   # the middleware must NEVER touch the body
+            raise AssertionError("the body channel must not be read")
+
+        return Request(scope, receive=_no_body)
+
+    @staticmethod
+    async def _sentinel(request):
+        from starlette.responses import Response
+        return Response(b"passed-through", status_code=200)
+
+    def test_oversize_declared_length_413_without_reading_the_body(
+            self, app_module):
+        """The C1 core: a huge DECLARED Content-Length is refused by the
+        header alone — no body is sent (the receive channel raises if
+        touched), call_next is never reached, and the answer is the same
+        contract 413 verdict shape."""
+        import asyncio
+        cap = app_module._TELEMETRY_BODY_MAX_BYTES
+
+        async def _call_next(request):
+            raise AssertionError("call_next must not run for an "
+                                 "oversize declaration")
+
+        resp = asyncio.run(app_module.telemetry_body_cap(
+            self._request(content_length=str(cap + 1)), _call_next))
+        assert resp.status_code == 413
+        assert "detail" in json.loads(resp.body.decode())
+
+    def test_cap_boundary_and_pass_through_matrix(self, app_module):
+        """Exactly-at-cap passes (the refusal is strictly >), small and
+        absent declarations pass (chunked rides the post-parse batch 413),
+        a non-numeric declaration passes (transport-level garbage is not
+        the middleware's verdict), and the gate is route-scoped: other
+        paths and methods ride untouched."""
+        import asyncio
+        cap = app_module._TELEMETRY_BODY_MAX_BYTES
+        cases = [
+            ("declared == cap", self._request(content_length=str(cap))),
+            ("declared small", self._request(content_length="1234")),
+            ("no declaration (chunked)", self._request()),
+            ("non-numeric declaration",
+             self._request(content_length="not-a-number")),
+            ("oversize, other path",
+             self._request(path="/api/task-drafts",
+                           content_length=str(cap * 100))),
+            ("oversize, GET method",
+             self._request(method="GET",
+                           content_length=str(cap * 100))),
+        ]
+        for name, request in cases:
+            resp = asyncio.run(app_module.telemetry_body_cap(
+                request, self._sentinel))
+            assert resp.status_code == 200 and \
+                resp.body == b"passed-through", name
+
+    def test_real_oversize_body_413_before_any_parsing(self, client,
+                                                       app_module):
+        """Integration: a real multi-MB body gets the pre-parse 413 — not
+        the pydantic 422 a parsed garbage body would produce, and not the
+        guard's 403 (ANONYMOUS leg: the cap refuses before the guard can
+        run, which is the point — earliest refusal wins)."""
+        cap = app_module._TELEMETRY_BODY_MAX_BYTES
+        r = client.post("/api/events/ui",
+                        content=b"x" * (cap + 1),
+                        headers={"Content-Type": "application/json"})
+        assert r.status_code == 413
+        assert "detail" in r.json()
+        assert "bytes" in r.json()["detail"]
+
+    def test_normal_batches_are_not_affected(self, client, ui_auth):
+        """The honest gate: the largest LEGAL batch (50 events, ~6 KB)
+        sails through the cap unchanged — 200, all events stored."""
+        visit = _visit_id()
+        r = _post(client, [_event("ui.visit", visit) for _ in range(50)],
+                  ui_auth)
+        assert r.status_code == 200
+        assert r.json()["accepted"] == 50
+        assert len(_telemetry_rows(visit)) == 50
