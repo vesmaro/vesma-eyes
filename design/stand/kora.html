@@ -239,9 +239,9 @@
 
           <!-- выбрана сессия: транскрипт-свиток (07j §3.1 Б, канон 07d §3).
                v7-раунд (плотность): «Покрытие этой сессии» слито в шапку после
-               статуса (caps-мелким, высота шапки не растёт), честная строка
-               «Управлять сессией» сворачиваемая и свёрнута по умолчанию —
-               свиток получает высоту. -->
+               статуса (caps-мелким, высота шапки не растёт). v9-аддендум
+               (07j §4.6, директива владельца 2026-09-29): под свитком —
+               постоянное поле переписки вместо свёрнутой «Управлять сессией…». -->
           <div class="wz-session" id="wz-session" hidden>
             <div class="wz-head">
               <h2 id="wz-title" tabindex="-1"></h2>
@@ -266,14 +266,18 @@
                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
               </button>
             </div>
-            <div class="collapse-block wz-honest-block" id="wz-honest-block">
-              <button class="cb-toggle" type="button" id="wz-honest-toggle" aria-expanded="false" aria-controls="wz-honest-body">
-                <svg class="chev icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-                Управлять сессией…
+            <!-- v9-аддендум (07j §4.6): поле переписки — постоянное, под свитком.
+                 Демо-релей: реплика владельца уходит в хвост транскрипта «вы: …»
+                 с чипом «в очереди релея → доставлено»; ответа агента здесь нет
+                 (честность, 07a §3.5). Персист: vesmaro.koraDraft:{sessId}. -->
+            <div class="wz-composer" id="wz-composer">
+              <label class="sr-only" for="wz-comp-input">Написать агенту в эту сессию</label>
+              <textarea class="wz-comp-input" id="wz-comp-input" rows="1"
+                        placeholder="Написать агенту…" aria-describedby="wz-comp-note"></textarea>
+              <button class="wz-comp-send" id="wz-comp-send" type="button" aria-label="Отправить агенту">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
               </button>
-              <div class="cb-body" id="wz-honest-body" hidden>
-                <p class="wz-honest">Управлять сессией отсюда пока нельзя — только читать. Это в планах</p>
-              </div>
+              <p class="wz-comp-note" id="wz-comp-note">в продуктовой версии доставка — через релей хоста (план срез 3)</p>
             </div>
           </div>
         </section>
@@ -544,6 +548,90 @@
     }
     function linkOf(s) { return "kora.html?session=" + encodeURIComponent(s.id); }
 
+    /* ── v9-аддендум (07j §4.6): поле переписки. Реплики владельца живут
+     * в копии транскрипта в памяти страницы (data.js-фикстуры не трогаем);
+     * персист — vesmaro.koraDraft:{sessId}, выживает смену сессии и перезагрузку.
+     * Никаких ответов агента: доставка честно заканчивается чипом «доставлено» */
+    var DRAFT_PREFIX = "vesmaro.koraDraft:";
+    var drafts = {}; /* sessId -> [{id, text, ts, status}] */
+    var relayTimers = {}; /* id реплики -> timer доставки */
+    function draftKey(id) { return DRAFT_PREFIX + id; }
+    function clockOfTs(ms) {
+      var d = new Date(ms);
+      return pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+    }
+    function loadDraft(id) {
+      if (drafts[id]) return drafts[id];
+      var arr = [];
+      try { arr = JSON.parse(store.get(draftKey(id), "[]") || "[]") || []; }
+      catch (e) { arr = []; }
+      /* очередь релея живёт только в открытой странице: недоставленное
+       * на момент загрузки считается доставленным — фейк «потери» не показываем */
+      arr.forEach(function (m) { if (m.status === "queued") m.status = "delivered"; });
+      drafts[id] = arr;
+      return arr;
+    }
+    function saveDraft(id) {
+      if (!drafts[id]) return;
+      store.set(draftKey(id), JSON.stringify(drafts[id]));
+    }
+    function autosize() {
+      compInput.style.height = "auto";
+      compInput.style.height = Math.min(compInput.scrollHeight, 120) + "px";
+    }
+    function sendDraft() {
+      var s = findS(selectedId);
+      if (!s || s.state !== "live") return;
+      var text = compInput.value.replace(/\s+/g, " ").trim();
+      if (!text) return;
+      var arr = loadDraft(s.id);
+      var mid = s.id + ":" + arr.length + ":" + Date.now();
+      var m = { id: mid, text: text, ts: Date.now(), status: "queued" };
+      arr.push(m);
+      saveDraft(s.id);
+      compInput.value = "";
+      autosize();
+      /* активный поиск отфильтровал бы новую реплику — снимаем его (как при
+       * смене сессии: поле запроса чистится, счётчик обнуляется) */
+      if (query) {
+        query = "";
+        matchCursor = -1;
+        searchInput.value = "";
+        searchCount.textContent = "";
+      }
+      renderTranscript(s);
+      setFollow(true); /* своя реплика должна быть видна: хвост + follow снова включён */
+      /* демо-релей: 1,5–2,5 с до «доставлено» (07j §4.6); ответа не будет —
+       * агент ответит в своей сессии */
+      relayTimers[mid] = setTimeout(function () {
+        m.status = "delivered";
+        saveDraft(s.id);
+        var chip = wzScroll.querySelector('[data-mid="' + mid + '"]');
+        if (chip) {
+          chip.setAttribute("data-chip", "delivered");
+          chip.querySelector(".chip-tx").textContent = "доставлено";
+        }
+      }, 1500 + Math.round(Math.random() * 1000));
+    }
+    /* состояние поля по сессии: живая — можно писать; завершённая/прерванная —
+     * disabled + причина visible-строкой и title (не только tooltip, WCAG) */
+    function setComposerState(s) {
+      var live = s && s.state === "live";
+      compInput.disabled = !live;
+      compSend.disabled = !live;
+      compWrap.classList.toggle("is-off", !live);
+      if (live) {
+        compWrap.removeAttribute("title");
+        compNote.textContent = "в продуктовой версии доставка — через релей хоста (план срез 3)";
+      } else if (s && s.state === "interrupted") {
+        compNote.textContent = "Сессия прервана — писать некуда; начните новую на хосте";
+        compWrap.title = compNote.textContent;
+      } else if (s) {
+        compNote.textContent = "Сессия завершена — писать некуда; начните новую на хосте";
+        compWrap.title = compNote.textContent;
+      }
+    }
+
     /* ── P0: контракт хранилища v2 и миграция (07l §5.2) ─────────────── */
     var STORAGE_VERSION = 2;
     /* пространство миграции — только vesmaro.kora*; чужие домены
@@ -632,8 +720,11 @@
     var wzCov = doc.getElementById("wz-cov");
     var wzScroll = doc.getElementById("wz-scroll");
     var tailBtn = doc.getElementById("wz-tail");
-    var honestToggle = doc.getElementById("wz-honest-toggle");
-    var honestBody = doc.getElementById("wz-honest-body");
+    /* v9-аддендум (07j §4.6): поле переписки «Написать агенту…» */
+    var compWrap = doc.getElementById("wz-composer");
+    var compInput = doc.getElementById("wz-comp-input");
+    var compSend = doc.getElementById("wz-comp-send");
+    var compNote = doc.getElementById("wz-comp-note");
 
     var tree = doc.getElementById("host-tree");
     var ctxTitle = doc.getElementById("ctx-title");
@@ -1216,6 +1307,9 @@
       wzCov.title = covText(s);
       renderTranscript(s);
       restoreScroll(s);
+      /* v9 (07j §4.6): поле переписки живёт состоянием сессии — живая можно
+       * писать, завершённая/прерванная disabled с причиной */
+      setComposerState(s);
     }
     function renderWorkzoneSkeleton() {
       wzScroll.innerHTML = "";
@@ -1244,7 +1338,13 @@
     function renderTranscript(s) {
       wzScroll.innerHTML = "";
       var lines = (s.transcript || []).filter(lineMatches);
-      if (query) searchCount.textContent = "Найдено: " + lines.length;
+      /* v9: реплики владельца (копия транскрипта в памяти) участвуют в выдаче
+       * поиска наравне с фикстурными — счётчик считает и их */
+      var ownerAll = loadDraft(s.id);
+      var ownerLines = ownerAll.filter(function (m) {
+        return lineMatches({ who: "вы", text: m.text });
+      });
+      if (query) searchCount.textContent = "Найдено: " + (lines.length + ownerLines.length);
       else searchCount.textContent = "";
       if (s.coverage === "none") {
         var nc = el("div", "wz-nonecov");
@@ -1255,15 +1355,19 @@
         lb.addEventListener("click", function () { openLegend(); });
         nc.appendChild(lb);
         wzScroll.appendChild(nc);
+        appendOwnerLines(ownerLines);
         return;
       }
       if (!lines.length) {
         if (query) {
-          wzScroll.appendChild(el("p", "wz-noresult", "Ничего. В этой сессии таких реплик нет"));
+          if (!ownerLines.length) {
+            wzScroll.appendChild(el("p", "wz-noresult", "Ничего. В этой сессии таких реплик нет"));
+          }
         } else {
           wzScroll.appendChild(el("p", "wz-noresult",
             "В этой сессии пока нет реплик: агент начал работу и ещё не говорил. Первая появится с первым ходом — обычно до 2 минут"));
         }
+        appendOwnerLines(ownerLines);
         return;
       }
       lines.forEach(function (l) {
@@ -1292,6 +1396,47 @@
       if (s.coverage !== "full") {
         wzScroll.appendChild(el("p", "t-end", "— на этом данные заканчиваются"));
       }
+      /* v9 (07j §4.6): реплики владельца — в хвосте, после скана; честно
+       * отделены маркером конца данных у неполного покрытия */
+      appendOwnerLines(ownerLines);
+    }
+    /* v9 (07j §4.6): хвостовые реплики «вы: …» со статус-чипом релея.
+     * Чип — role=status: смена «в очереди релея → доставлено» объявляется;
+     * статус передан точкой+текстом, не цветом одним (WCAG 1.4.1) */
+    function appendOwnerLines(ownerLines) {
+      if (!ownerLines.length) return;
+      ownerLines.forEach(function (m) {
+        var row = el("div", "t-line t-owner");
+        var time = clockOfTs(m.ts);
+        var tm = el("span", "t-time mono", time);
+        var main = el("div", "t-main");
+        var who = el("span", "t-who");
+        buildText(who, "вы: ");
+        var tx = el("span", "t-text");
+        buildText(tx, m.text);
+        main.appendChild(who);
+        main.appendChild(tx);
+        var chip = el("span", "t-chip");
+        chip.setAttribute("role", "status");
+        chip.setAttribute("data-chip", m.status === "delivered" ? "delivered" : "queued");
+        chip.setAttribute("data-mid", m.id);
+        var dot = el("span", "chip-dot");
+        dot.setAttribute("aria-hidden", "true");
+        chip.appendChild(dot);
+        chip.appendChild(el("span", "chip-tx", m.status === "delivered" ? "доставлено" : "в очереди релея"));
+        main.appendChild(chip);
+        var cp = el("button", "t-copy");
+        cp.type = "button";
+        cp.setAttribute("aria-label", "Копировать вашу реплику от " + time);
+        cp.innerHTML = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+        cp.addEventListener("click", function () {
+          copyText(time + "  вы: " + m.text, "Реплика скопирована");
+        });
+        row.appendChild(tm);
+        row.appendChild(main);
+        row.appendChild(cp);
+        wzScroll.appendChild(row);
+      });
     }
     function copyText(t, okMsg) {
       function ok() { toast(okMsg, "success"); }
@@ -1923,13 +2068,16 @@
         aboutBody.hidden = open;
         store.set("vesmaro.koraAbout", open ? "0" : "1");
       });
-      /* v7-раунд (плотность): «Управлять сессией…» — раскрытие без персиста,
-       * по умолчанию свёрнуто на каждом визите */
-      honestToggle.addEventListener("click", function () {
-        var open = honestToggle.getAttribute("aria-expanded") === "true";
-        honestToggle.setAttribute("aria-expanded", open ? "false" : "true");
-        honestBody.hidden = open;
+      /* v9-аддендум (07j §4.6): поле переписки — Enter отправляет,
+       * Shift+Enter перенос строки; кнопка дублирует отправку (touch) */
+      compInput.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          guarded("отправка реплики агенту", compWrap, sendDraft)();
+        }
       });
+      compSend.addEventListener("click", guarded("отправка реплики агенту", compWrap, sendDraft));
+      compInput.addEventListener("input", autosize);
       legendToggle.addEventListener("click", function () {
         var open = legendToggle.getAttribute("aria-expanded") === "true";
         legendToggle.setAttribute("aria-expanded", open ? "false" : "true");
