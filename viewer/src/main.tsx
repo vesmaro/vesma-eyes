@@ -29,34 +29,41 @@ import "@/styles/global.css";
  * so the deployed `/app` deep links resolve client-side (ADR 0011 §2 Ф0a:
  * server history-fallback serves index.html for `/app/{path}`).
  */
-const gateway = createGateway();
-
 const rootElement = document.getElementById("root");
 if (!rootElement) {
   throw new Error("Bootstrap failed: #root element not found in index.html");
 }
 
-createRoot(rootElement).render(
-  <StrictMode>
-    <GatewayContext.Provider value={gateway}>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          {/* i18n (owner feedback 1.4.0): ru default, persisted choice in
-           * localStorage "vesmaro.lang", mirrored into <html lang>. */}
-          <I18nProvider>
-            {/* Density (Ф1, concept §3.3): [data-density] on <html> drives the
-             * --row-h/--list-gap operational tokens; persisted "vesmaro.density". */}
-            <DensityProvider>
-              {/* Hotkeys (Ф1): `/` search focus + `?` cheatsheet with the
-               * inInput guard; the dialog renders from here, above routes.
-               * App brings its own data router (createBrowserRouter). */}
-              <HotkeysProvider>
-                <App />
-              </HotkeysProvider>
-            </DensityProvider>
-          </I18nProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
-    </GatewayContext.Provider>
-  </StrictMode>,
-);
+/**
+ * ME-024 (entry hygiene): createGateway is async — the mock adapter and its
+ * fixture corpus live in a lazy chunk that only mock-mode builds (dev, smoke)
+ * ever fetch. Production resolves on the next microtask with the board
+ * adapter, so first paint is unaffected there; mock builds pay one chunk
+ * fetch before the tree mounts.
+ */
+void createGateway().then((gateway) => {
+  createRoot(rootElement).render(
+    <StrictMode>
+      <GatewayContext.Provider value={gateway}>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            {/* i18n (owner feedback 1.4.0): ru default, persisted choice in
+             * localStorage "vesmaro.lang", mirrored into <html lang>. */}
+            <I18nProvider>
+              {/* Density (Ф1, concept §3.3): [data-density] on <html> drives the
+               * --row-h/--list-gap operational tokens; persisted "vesmaro.density". */}
+              <DensityProvider>
+                {/* Hotkeys (Ф1): `/` search focus + `?` cheatsheet with the
+                 * inInput guard; the dialog renders from here, above routes.
+                 * App brings its own data router (createBrowserRouter). */}
+                <HotkeysProvider>
+                  <App />
+                </HotkeysProvider>
+              </DensityProvider>
+            </I18nProvider>
+          </ThemeProvider>
+        </QueryClientProvider>
+      </GatewayContext.Provider>
+    </StrictMode>,
+  );
+});
