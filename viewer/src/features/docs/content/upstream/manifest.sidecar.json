@@ -2,8 +2,8 @@
   "version": 1,
   "generated_by": "scripts/sync_docs.py",
   "source_shas": {
-    "mnemos": "23f0fce42ea87c329d4049397292b3dca948773c",
-    "mnemos-mesh": "331ef3a785c1a74fb9f8972ff93cd6db5a8fc174"
+    "mnemos": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+    "mnemos-mesh": "b428ea9b7ec9731fe4d53478702d0667cf3f53de"
   },
   "pages": [
     {
@@ -14,7 +14,7 @@
       },
       "category": "mesh-admin",
       "order": 2,
-      "lastVerified": "2026-09-22",
+      "lastVerified": "2026-09-29",
       "locales": [
         "en",
         "ru"
@@ -22,8 +22,12 @@
       "provenance": {
         "repo": "mnemos-mesh",
         "source_path": "docs/en/admin/runbook.md",
-        "sha": "331ef3a785c1a74fb9f8972ff93cd6db5a8fc174",
-        "commit_date": "2026-09-22T18:15:20+03:00"
+        "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
+        "commit_date": "2026-09-29T19:55:12+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
       },
       "kinds": {
         "ru": "curated-translation"
@@ -37,7 +41,7 @@
       },
       "category": "mesh-admin",
       "order": 1,
-      "lastVerified": "2026-09-22",
+      "lastVerified": "2026-09-29",
       "locales": [
         "en",
         "ru"
@@ -45,8 +49,12 @@
       "provenance": {
         "repo": "mnemos-mesh",
         "source_path": "docs/en/admin/security.md",
-        "sha": "331ef3a785c1a74fb9f8972ff93cd6db5a8fc174",
-        "commit_date": "2026-09-22T18:15:20+03:00"
+        "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
+        "commit_date": "2026-09-29T19:55:12+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
       },
       "kinds": {
         "ru": "curated-translation"
@@ -60,7 +68,7 @@
       },
       "category": "mesh-user",
       "order": 2,
-      "lastVerified": "2026-09-22",
+      "lastVerified": "2026-09-29",
       "locales": [
         "en",
         "ru"
@@ -68,8 +76,12 @@
       "provenance": {
         "repo": "mnemos-mesh",
         "source_path": "docs/en/user/configuration.md",
-        "sha": "331ef3a785c1a74fb9f8972ff93cd6db5a8fc174",
-        "commit_date": "2026-09-22T18:15:20+03:00"
+        "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
+        "commit_date": "2026-09-29T19:55:12+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
       },
       "kinds": {
         "ru": "curated-translation"
@@ -83,7 +95,7 @@
       },
       "category": "mesh-user",
       "order": 1,
-      "lastVerified": "2026-09-22",
+      "lastVerified": "2026-09-29",
       "locales": [
         "en",
         "ru"
@@ -91,8 +103,12 @@
       "provenance": {
         "repo": "mnemos-mesh",
         "source_path": "docs/en/user/getting-started.md",
-        "sha": "331ef3a785c1a74fb9f8972ff93cd6db5a8fc174",
-        "commit_date": "2026-09-22T18:15:20+03:00"
+        "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
+        "commit_date": "2026-09-29T19:55:12+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
       },
       "kinds": {
         "ru": "curated-translation"
@@ -106,7 +122,7 @@
       },
       "category": "mnemos-admin",
       "order": 2,
-      "lastVerified": "2026-09-23",
+      "lastVerified": "2026-09-29",
       "locales": [
         "en",
         "ru"
@@ -114,8 +130,12 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/admin/federation.md",
-        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
-        "commit_date": "2026-09-23T00:19:30+03:00"
+        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+        "commit_date": "2026-09-29T12:16:19+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
       }
     },
     {
@@ -126,7 +146,7 @@
       },
       "category": "mnemos-admin",
       "order": 4,
-      "lastVerified": "2026-09-23",
+      "lastVerified": "2026-09-29",
       "locales": [
         "en",
         "ru"
@@ -134,8 +154,12 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/admin/runbooks/backup-restore.md",
-        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
-        "commit_date": "2026-09-23T00:19:30+03:00"
+        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+        "commit_date": "2026-09-29T12:16:19+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
       }
     },
     {
@@ -146,7 +170,7 @@
       },
       "category": "mnemos-admin",
       "order": 3,
-      "lastVerified": "2026-09-23",
+      "lastVerified": "2026-09-29",
       "locales": [
         "en",
         "ru"
@@ -154,8 +178,12 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/admin/runbooks/install.md",
-        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
-        "commit_date": "2026-09-23T00:19:30+03:00"
+        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+        "commit_date": "2026-09-29T12:16:19+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
       }
     },
     {
@@ -166,7 +194,7 @@
       },
       "category": "mnemos-admin",
       "order": 1,
-      "lastVerified": "2026-09-23",
+      "lastVerified": "2026-09-29",
       "locales": [
         "en",
         "ru"
@@ -174,8 +202,12 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/admin/security.md",
-        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
-        "commit_date": "2026-09-23T00:19:30+03:00"
+        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+        "commit_date": "2026-09-29T12:16:19+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
       }
     },
     {
@@ -186,7 +218,7 @@
       },
       "category": "mnemos-architecture",
       "order": 1,
-      "lastVerified": "2026-09-23",
+      "lastVerified": "2026-09-29",
       "locales": [
         "en",
         "ru"
@@ -194,8 +226,12 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/architecture/overview.md",
-        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
-        "commit_date": "2026-09-23T00:19:30+03:00"
+        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+        "commit_date": "2026-09-29T12:16:19+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
       }
     },
     {
@@ -206,7 +242,7 @@
       },
       "category": "mnemos-user",
       "order": 8,
-      "lastVerified": "2026-09-23",
+      "lastVerified": "2026-09-29",
       "locales": [
         "en",
         "ru"
@@ -214,8 +250,12 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/user/cli-reference.md",
-        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
-        "commit_date": "2026-09-23T00:19:30+03:00"
+        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+        "commit_date": "2026-09-29T12:16:19+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
       }
     },
     {
@@ -226,7 +266,7 @@
       },
       "category": "mnemos-user",
       "order": 4,
-      "lastVerified": "2026-09-23",
+      "lastVerified": "2026-09-29",
       "locales": [
         "en",
         "ru"
@@ -234,8 +274,12 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/user/context-filter.md",
-        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
-        "commit_date": "2026-09-23T00:19:30+03:00"
+        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+        "commit_date": "2026-09-29T12:16:19+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
       }
     },
     {
@@ -246,7 +290,7 @@
       },
       "category": "mnemos-user",
       "order": 7,
-      "lastVerified": "2026-09-23",
+      "lastVerified": "2026-09-29",
       "locales": [
         "en",
         "ru"
@@ -254,8 +298,12 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/user/export-import.md",
-        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
-        "commit_date": "2026-09-23T00:19:30+03:00"
+        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+        "commit_date": "2026-09-29T12:16:19+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
       }
     },
     {
@@ -266,7 +314,7 @@
       },
       "category": "mnemos-user",
       "order": 1,
-      "lastVerified": "2026-09-23",
+      "lastVerified": "2026-09-29",
       "locales": [
         "en",
         "ru"
@@ -274,8 +322,12 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/user/getting-started.md",
-        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
-        "commit_date": "2026-09-23T00:19:30+03:00"
+        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+        "commit_date": "2026-09-29T12:16:19+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
       }
     },
     {
@@ -286,7 +338,7 @@
       },
       "category": "mnemos-user",
       "order": 9,
-      "lastVerified": "2026-09-23",
+      "lastVerified": "2026-09-29",
       "locales": [
         "en",
         "ru"
@@ -294,8 +346,12 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/user/http-api.md",
-        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
-        "commit_date": "2026-09-23T00:19:30+03:00"
+        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+        "commit_date": "2026-09-29T12:16:19+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
       }
     },
     {
@@ -306,7 +362,7 @@
       },
       "category": "mnemos-user",
       "order": 2,
-      "lastVerified": "2026-09-23",
+      "lastVerified": "2026-09-29",
       "locales": [
         "en",
         "ru"
@@ -314,8 +370,12 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/user/integration-guide.md",
-        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
-        "commit_date": "2026-09-23T00:19:30+03:00"
+        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+        "commit_date": "2026-09-29T12:16:19+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
       }
     },
     {
@@ -326,7 +386,7 @@
       },
       "category": "mnemos-user",
       "order": 10,
-      "lastVerified": "2026-09-23",
+      "lastVerified": "2026-09-29",
       "locales": [
         "en",
         "ru"
@@ -334,8 +394,12 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/user/mcp-tools.md",
-        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
-        "commit_date": "2026-09-23T00:19:30+03:00"
+        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+        "commit_date": "2026-09-29T12:16:19+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
       }
     },
     {
@@ -346,7 +410,7 @@
       },
       "category": "mnemos-user",
       "order": 6,
-      "lastVerified": "2026-09-23",
+      "lastVerified": "2026-09-29",
       "locales": [
         "en",
         "ru"
@@ -354,8 +418,12 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/user/metrics.md",
-        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
-        "commit_date": "2026-09-23T00:19:30+03:00"
+        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+        "commit_date": "2026-09-29T12:16:19+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
       }
     },
     {
@@ -366,7 +434,7 @@
       },
       "category": "mnemos-user",
       "order": 3,
-      "lastVerified": "2026-09-23",
+      "lastVerified": "2026-09-29",
       "locales": [
         "en",
         "ru"
@@ -374,8 +442,12 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/user/sync.md",
-        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
-        "commit_date": "2026-09-23T00:19:30+03:00"
+        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+        "commit_date": "2026-09-29T12:16:19+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
       }
     },
     {
@@ -386,7 +458,7 @@
       },
       "category": "mnemos-user",
       "order": 5,
-      "lastVerified": "2026-09-23",
+      "lastVerified": "2026-09-29",
       "locales": [
         "en",
         "ru"
@@ -394,8 +466,12 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/user/tag-contract.md",
-        "sha": "23f0fce42ea87c329d4049397292b3dca948773c",
-        "commit_date": "2026-09-23T00:19:30+03:00"
+        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
+        "commit_date": "2026-09-29T12:16:19+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
       }
     }
   ]

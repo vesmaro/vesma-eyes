@@ -20,9 +20,10 @@ projects:
   # ---------------------------------------------------------------- mnemos ---
   mnemos:
     repo: ../mnemos
-    # Pinned 2026-09-23 (wave W1a). Re-pin deliberately: update the SHA,
-    # re-run `npm run sync-docs`, diff-review the corpus (Docs Writer).
-    ref: 23f0fce42ea87c329d4049397292b3dca948773c
+    # Pinned 2026-09-29 (ME-039 re-sync, ecosystem revision; was 23f0fce,
+    # 2026-09-23/W1a — 35 commits behind). Re-pin deliberately: update the
+    # SHA, re-run `npm run sync-docs`, diff-review the corpus (Docs Writer).
+    ref: 8bc139bf0749c0a50b9f1661e34d33b03ca78e3a
     # Non-docs links (CONTRIBUTING.md, config.example.yaml, …) are rewritten
     # to this template at the pinned SHA; {sha} is substituted.
     web_base: "https://github.com/vesmaro/vesmaro/blob/{sha}"
@@ -274,89 +275,89 @@ projects:
       # federation-testing — вне селекции (решение W2):
       - file: en/admin/federation.md
         find: "[`federation-testing.md`](federation-testing.md)"
-        replace: "[`federation-testing.md`](https://github.com/vesmaro/vesmaro/blob/23f0fce42ea87c329d4049397292b3dca948773c/docs/en/admin/federation-testing.md)"
+        replace: "[`federation-testing.md`](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/en/admin/federation-testing.md)"
         reason: >-
           federation-testing остаётся в апстриме — QA-гайд релизной проверки
           федерации, борд федерацию не эксплуатирует
       - file: ru/admin/federation.md
         find: "[`federation-testing.md`](federation-testing.md)"
-        replace: "[`federation-testing.md`](https://github.com/vesmaro/vesmaro/blob/23f0fce42ea87c329d4049397292b3dca948773c/docs/ru/admin/federation-testing.md)"
+        replace: "[`federation-testing.md`](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/ru/admin/federation-testing.md)"
         reason: RU-зеркало правила выше
       # dependency-updates — вне селекции (решение W2):
       - file: en/user/getting-started.md
         find: "[dependency-updates runbook](../admin/runbooks/dependency-updates.md)"
-        replace: "[dependency-updates runbook](https://github.com/vesmaro/vesmaro/blob/23f0fce42ea87c329d4049397292b3dca948773c/docs/en/admin/runbooks/dependency-updates.md)"
+        replace: "[dependency-updates runbook](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/en/admin/runbooks/dependency-updates.md)"
         reason: >-
           рутина мейнтейнеров апстрима (пины CVE); наш upgrade.md управляет
           только тегом образа борда
       - file: ru/user/getting-started.md
         find: "[ранбук по обновлению зависимостей](../admin/runbooks/dependency-updates.md)"
-        replace: "[ранбук по обновлению зависимостей](https://github.com/vesmaro/vesmaro/blob/23f0fce42ea87c329d4049397292b3dca948773c/docs/ru/admin/runbooks/dependency-updates.md)"
+        replace: "[ранбук по обновлению зависимостей](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/ru/admin/runbooks/dependency-updates.md)"
         reason: RU-зеркало правила выше
       # migrate (ai-brain) — вне селекции (решение W2):
       - file: en/user/cli-reference.md
         find: "[runbooks/migrate.md](../admin/runbooks/migrate.md)"
-        replace: "[runbooks/migrate.md](https://github.com/vesmaro/vesmaro/blob/23f0fce42ea87c329d4049397292b3dca948773c/docs/en/admin/runbooks/migrate.md)"
+        replace: "[runbooks/migrate.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/en/admin/runbooks/migrate.md)"
         reason: >-
           разовая миграция с ai-brain, проекта-предшественника; в
           экосистеме борда его нет
       - file: ru/user/cli-reference.md
         find: "[runbooks/migrate.md](../admin/runbooks/migrate.md)"
-        replace: "[runbooks/migrate.md](https://github.com/vesmaro/vesmaro/blob/23f0fce42ea87c329d4049397292b3dca948773c/docs/ru/admin/runbooks/migrate.md)"
+        replace: "[runbooks/migrate.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/ru/admin/runbooks/migrate.md)"
         reason: RU-зеркало правила выше
       # a2a-sessions — вне селекции (решение W2), 3 ссылки на локаль:
       - file: en/user/http-api.md
         find: "The A2A contract is also documented in [a2a-sessions.md](../architecture/a2a-sessions.md) (link to the design rationale)."
-        replace: "The A2A contract is also documented in [a2a-sessions.md](https://github.com/vesmaro/vesmaro/blob/23f0fce42ea87c329d4049397292b3dca948773c/docs/en/architecture/a2a-sessions.md) (link to the design rationale)."
+        replace: "The A2A contract is also documented in [a2a-sessions.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/en/architecture/a2a-sessions.md) (link to the design rationale)."
         reason: >-
           спека A2A — поверхность разработчика (контракт §3: architecture =
           одна обзорная); ссылка ведёт в апстрим @ пина
       - file: en/user/http-api.md
         find: "The contract is described in detail in [a2a-sessions.md](../architecture/a2a-sessions.md); this section is the HTTP surface."
-        replace: "The contract is described in detail in [a2a-sessions.md](https://github.com/vesmaro/vesmaro/blob/23f0fce42ea87c329d4049397292b3dca948773c/docs/en/architecture/a2a-sessions.md); this section is the HTTP surface."
+        replace: "The contract is described in detail in [a2a-sessions.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/en/architecture/a2a-sessions.md); this section is the HTTP surface."
         reason: то же решение W2, второй анкер
       - file: en/user/http-api.md
         find: "- [a2a-sessions.md](../architecture/a2a-sessions.md) — A2A contract and design rationale"
-        replace: "- [a2a-sessions.md](https://github.com/vesmaro/vesmaro/blob/23f0fce42ea87c329d4049397292b3dca948773c/docs/en/architecture/a2a-sessions.md) — A2A contract and design rationale"
+        replace: "- [a2a-sessions.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/en/architecture/a2a-sessions.md) — A2A contract and design rationale"
         reason: то же решение W2, третий анкер
       - file: ru/user/http-api.md
         find: "Контракт A2A также описан в [a2a-sessions.md](../architecture/a2a-sessions.md) (ссылка на обоснование дизайна)."
-        replace: "Контракт A2A также описан в [a2a-sessions.md](https://github.com/vesmaro/vesmaro/blob/23f0fce42ea87c329d4049397292b3dca948773c/docs/ru/architecture/a2a-sessions.md) (ссылка на обоснование дизайна)."
+        replace: "Контракт A2A также описан в [a2a-sessions.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/ru/architecture/a2a-sessions.md) (ссылка на обоснование дизайна)."
         reason: RU-зеркало правил A2A выше
       - file: ru/user/http-api.md
         find: "Контракт подробно описан в [a2a-sessions.md](../architecture/a2a-sessions.md); этот раздел — HTTP-поверхность."
-        replace: "Контракт подробно описан в [a2a-sessions.md](https://github.com/vesmaro/vesmaro/blob/23f0fce42ea87c329d4049397292b3dca948773c/docs/ru/architecture/a2a-sessions.md); этот раздел — HTTP-поверхность."
+        replace: "Контракт подробно описан в [a2a-sessions.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/ru/architecture/a2a-sessions.md); этот раздел — HTTP-поверхность."
         reason: RU-зеркало, второй анкер
       - file: ru/user/http-api.md
         find: "- [a2a-sessions.md](../architecture/a2a-sessions.md) — контракт A2A и обоснование дизайна"
-        replace: "- [a2a-sessions.md](https://github.com/vesmaro/vesmaro/blob/23f0fce42ea87c329d4049397292b3dca948773c/docs/ru/architecture/a2a-sessions.md) — контракт A2A и обоснование дизайна"
+        replace: "- [a2a-sessions.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/ru/architecture/a2a-sessions.md) — контракт A2A и обоснование дизайна"
         reason: RU-зеркало, третий анкер
       # container-deployment — вне селекции (решение W2), 6 входящих ссылок:
       - file: en/user/getting-started.md
         find: "see [container-deployment.md](../admin/runbooks/container-deployment.md) |"
-        replace: "see [container-deployment.md](https://github.com/vesmaro/vesmaro/blob/23f0fce42ea87c329d4049397292b3dca948773c/docs/en/admin/runbooks/container-deployment.md) |"
+        replace: "see [container-deployment.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/en/admin/runbooks/container-deployment.md) |"
         reason: >-
           установочный путь апстрима; наш deploy.md считает mnemos готовой
           предпосылкой и на этот ранбук не смотрит
       - file: en/user/getting-started.md
         find: "Full guide: [container-deployment.md](../admin/runbooks/container-deployment.md)."
-        replace: "Full guide: [container-deployment.md](https://github.com/vesmaro/vesmaro/blob/23f0fce42ea87c329d4049397292b3dca948773c/docs/en/admin/runbooks/container-deployment.md)."
+        replace: "Full guide: [container-deployment.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/en/admin/runbooks/container-deployment.md)."
         reason: то же решение W2, второй анкер
       - file: en/admin/runbooks/install.md
         find: "[container-deployment.md](container-deployment.md)."
-        replace: "[container-deployment.md](https://github.com/vesmaro/vesmaro/blob/23f0fce42ea87c329d4049397292b3dca948773c/docs/en/admin/runbooks/container-deployment.md)."
+        replace: "[container-deployment.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/en/admin/runbooks/container-deployment.md)."
         reason: то же решение W2, ссылка из install
       - file: ru/user/getting-started.md
         find: "см. [container-deployment.md](../admin/runbooks/container-deployment.md) |"
-        replace: "см. [container-deployment.md](https://github.com/vesmaro/vesmaro/blob/23f0fce42ea87c329d4049397292b3dca948773c/docs/ru/admin/runbooks/container-deployment.md) |"
+        replace: "см. [container-deployment.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/ru/admin/runbooks/container-deployment.md) |"
         reason: RU-зеркало правил container-deployment выше
       - file: ru/user/getting-started.md
         find: "Полное руководство: [container-deployment.md](../admin/runbooks/container-deployment.md)."
-        replace: "Полное руководство: [container-deployment.md](https://github.com/vesmaro/vesmaro/blob/23f0fce42ea87c329d4049397292b3dca948773c/docs/ru/admin/runbooks/container-deployment.md)."
+        replace: "Полное руководство: [container-deployment.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/ru/admin/runbooks/container-deployment.md)."
         reason: RU-зеркало, второй анкер
       - file: ru/admin/runbooks/install.md
         find: "[ранбук container-deployment.md](container-deployment.md)."
-        replace: "[ранбук container-deployment.md](https://github.com/vesmaro/vesmaro/blob/23f0fce42ea87c329d4049397292b3dca948773c/docs/ru/admin/runbooks/container-deployment.md)."
+        replace: "[ранбук container-deployment.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/ru/admin/runbooks/container-deployment.md)."
         reason: RU-зеркало, ссылка из install
       # project/adr — вне селекции (контракт §3). Ссылка на КАТАЛОГ (без .md)
       # не переписывается механизмом ссылок (цель не файл) и остаётся мёртвой
@@ -364,20 +365,23 @@ projects:
       # tree @ пина, как остальные ссылки вне селекции.
       - file: en/user/getting-started.md
         find: "[project/adr/](../../project/adr/)"
-        replace: "[project/adr/](https://github.com/vesmaro/vesmaro/tree/23f0fce42ea87c329d4049397292b3dca948773c/docs/project/adr)"
+        replace: "[project/adr/](https://github.com/vesmaro/vesmaro/tree/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/project/adr)"
         reason: >-
           каталог ADR апстрима — вне селекции; мёртвая относительная ссылка
           на каталог в первой же странице читателя недопустима
       - file: ru/user/getting-started.md
         find: "[project/adr/](../../project/adr/)"
-        replace: "[project/adr/](https://github.com/vesmaro/vesmaro/tree/23f0fce42ea87c329d4049397292b3dca948773c/docs/project/adr)"
+        replace: "[project/adr/](https://github.com/vesmaro/vesmaro/tree/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/project/adr)"
         reason: RU-зеркало правила выше
 
   # ----------------------------------------------------------- mnemos-mesh ---
   mnemos-mesh:
     repo: ../mnemos-mesh
-    # Pinned 2026-09-23 (wave W1a).
-    ref: 331ef3a785c1a74fb9f8972ff93cd6db5a8fc174
+    # Pinned 2026-09-29 (ME-039 re-sync; was 331ef3a, 2026-09-23/W1a —
+    # 106 commits behind). b428ea9 = tag v1.6.8 — the release-charting
+    # commit (== their main, merge PR #92: homehelper tunnel lifecycle
+    # logging, release-pipeline repairs).
+    ref: b428ea9b7ec9731fe4d53478702d0667cf3f53de
     web_base: "https://github.com/Korrnals/mnemos-mesh/blob/{sha}"
     locale_dirs:
       en: docs/en
@@ -431,16 +435,17 @@ projects:
       # href (контракт §6.1).
       - file: en/admin/security.md
         find: "- [ADR-0016 — federation threat model](../../../../mnemos/docs/project/adr/0016-federation-threat-model.md) (mnemos repo)"
-        replace: "- [ADR-0016 — federation threat model](https://github.com/vesmaro/vesmaro/blob/23f0fce42ea87c329d4049397292b3dca948773c/docs/project/adr/0016-federation-threat-model.md) (mnemos repo)"
+        replace: "- [ADR-0016 — federation threat model](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/project/adr/0016-federation-threat-model.md) (mnemos repo)"
         reason: >-
           cross-clone ссылка (mesh → mnemos project/adr): относительный путь
           в корпусе борда мёртв — только GitHub @ пина mnemos
     # Кураторские RU-переводы — НАШ слой (контракт §5: «кураторский перевод
     # 4 страниц»), переживают ре-синк: каждый синк переиздаёт ru-слот из
     # curated-источника (provenance kind "curated-translation"). Пути `source`
-    # — от корня нашего репо, вне вытираемой зоны content/upstream. Файлы ещё
-    # не написаны (волна W3): sync предупреждает «curated translation file
-    # missing» и публикует только en — это warning, не ошибка.
+    # — от корня нашего репо, вне вытираемой зоны content/upstream. Написаны
+    # волной W3. ME-039: тела EN идентичны 331ef3a..b428ea9 (diff пуст),
+    # перевод не протух — translator_note ниже честно хранит базис перевода
+    # (en@331ef3a), обновляется только при изменении EN-тела.
     translations:
       ru:
         - source_of: user/getting-started.md
