@@ -8,6 +8,11 @@ import { describe, expect, it } from "vitest";
  *    pure-frontend surface, backend-independent by design.
  * 2. react-markdown has ONE import site — `Markdown.tsx` (the single
  *    sanitization story lives there, not scattered across the feature).
+ * 3. the sanitize stack (rehype-raw / rehype-sanitize / hast-util-sanitize)
+ *    has ONE engine module — `TextEngine/core/pipeline.corpus.ts` (ME-022,
+ *    closing ME-013 P3-1/P3-2): static forms are lint-covered in
+ *    eslint.config.js, DYNAMIC `import()` forms are covered here, because
+ *    ESLint's no-restricted-imports never sees ImportExpression nodes.
  */
 
 const DOCS_DIR = join(import.meta.dirname);
@@ -88,5 +93,61 @@ describe("docs feature architecture gates", () => {
     expect(
       /(import\s*\(\s*["']mermaid["']\s*\))/.test(readFileSync(exempt, "utf8")),
     ).toBe(true);
+  });
+
+  it("keeps the sanitize stack in exactly ONE engine module (core/pipeline.corpus.ts, ME-022)", () => {
+    // ME-022 (ME-013 P3-1/P3-2): the ESLint pins cover static imports only —
+    // no-restricted-imports visits Import/Export declarations but NOT
+    // dynamic import(). This gate is the mechanical backstop for the dynamic
+    // half and for every specifier shape (bare, deep
+    // "rehype-sanitize/lib/index.js", hast-util-sanitize itself), scanned
+    // across the WHOLE src tree: unlike the mermaid scan above (features +
+    // components), a dynamic sanitize import anywhere — src/lib, src/layout —
+    // would weld the md-sanitize pool onto its chunk with no budget gate to
+    // see it, so the wider net is free here.
+    const engineSrc = listSources(SRC_DIR);
+    const SPEC = "(rehype-raw|rehype-sanitize|hast-util-sanitize)";
+    const stackImport = new RegExp(
+      `from\\s*["'][^"']*${SPEC}` + // static import / re-export
+        `|import\\s*\\(\\s*["'][^"']*${SPEC}` + // dynamic import()
+        `|import\\s*["'][^"']*${SPEC}`, // side-effect import
+    );
+    // Exact-path exemptions (P3-3 style, no basename matches):
+    // - pipeline.corpus.ts IS the sanctioned single site (its static stack
+    //   imports are the pipeline itself);
+    // - *.test.* files mock/smoke the real packages (same rule as above).
+    const corpusSite = join(
+      SRC_DIR,
+      "components",
+      "TextEngine",
+      "core",
+      "pipeline.corpus.ts",
+    );
+    // Shape allowances, erased before matching so the gate greps what the
+    // BUNDLER sees:
+    // - `import type ...;` statements are erased at compile time (zero
+    //   runtime/chunk impact) — legal anywhere, mirroring the ESLint
+    //   allowTypeImports allowances;
+    // - sanitizeSchema.ts may import the defaultSchema BASE (Ф2: the wrapper
+    //   supplies the config) — the exact sanctioned statement is erased, so
+    //   any other value import (e.g. sanitize) still fails the gate.
+    const TYPE_IMPORT = /import\s+type\s+[^;]*?;/g;
+    const DEFAULT_SCHEMA_BASE =
+      /import\s*\{\s*defaultSchema\s*\}\s*from\s*["']hast-util-sanitize["']\s*;/g;
+    const offenders = engineSrc
+      .filter((file) => file !== corpusSite && !file.includes(".test."))
+      .filter((file) => {
+        let src = readFileSync(file, "utf8").replace(TYPE_IMPORT, ";");
+        if (file === join(SRC_DIR, "features", "docs", "sanitizeSchema.ts")) {
+          src = src.replace(DEFAULT_SCHEMA_BASE, ";");
+        }
+        return stackImport.test(src);
+      });
+    expect(
+      offenders.map((file) => file.replace(`${DOCS_DIR}/../`, "")),
+    ).toEqual([]);
+    // And the one sanctioned site is real and still owns the stack.
+    expect(statSync(corpusSite).isFile()).toBe(true);
+    expect(stackImport.test(readFileSync(corpusSite, "utf8"))).toBe(true);
   });
 });

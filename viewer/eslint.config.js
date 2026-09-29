@@ -93,13 +93,36 @@ export default tseslint.config(
           message:
             "Docs gate (АРХКОМ-8): dangerouslySetInnerHTML is forbidden in the docs feature — sanitization runs inside the react-markdown pipeline.",
         },
+        {
+          // ME-022 (ME-013 P3-1): specifier-less (side-effect) imports and
+          // `export *` carry no import names, so the no-restricted-imports
+          // allowImportNames carve-outs above cannot see them — catch them
+          // structurally. Type-only declarations always have specifiers, so
+          // the type-import allowance stays intact.
+          selector:
+            "ImportDeclaration[source.value=/^(rehype-raw|rehype-sanitize|hast-util-sanitize)(\\/|$)/]:not(:has(ImportSpecifier))",
+          message:
+            "Docs gate (ME-022, ME-013 P3-1): a side-effect import still welds the sanitize stack onto this chunk — import the assembled pipeline (Markdown.tsx) or the schema config (sanitizeSchema.ts) instead.",
+        },
+        {
+          selector:
+            "ExportAllDeclaration[source.value=/^(rehype-raw|rehype-sanitize|hast-util-sanitize)(\\/|$)/]",
+          message:
+            "Docs gate (ME-022, ME-013 P3-1): `export *` re-exports the whole sanitize stack — it must not pass through docs modules.",
+        },
       ],
     },
   },
   {
     // The app-wide single site for the privileged corpus pipeline (ADR 0020
     // Ф2 + review P2-2) and, since ME-013 (Amendment 1), for the mermaid
-    // library too. THREE restrictions live here:
+    // library too. FOUR restrictions live here. ME-022 (ME-013 P3-1/P3-2)
+    // hardened the sanitize-stack pins: deep specifiers
+    // ("rehype-sanitize/lib/index.js") and hast-util-sanitize itself are
+    // restricted, not just the bare names. CONTROL SPLIT: this rule visits
+    // only Import/Export declarations — dynamic import() is INVISIBLE to it;
+    // the engine-wide grep-test in src/features/docs/architecture.test.ts
+    // covers the dynamic half mechanically.
     // - rehype-raw/rehype-sanitize: the untrusted profile's import graph must
     //   stay statically free of the sanitize stack — the md-core/md-sanitize
     //   chunk split is only as real as this import rule.
@@ -150,6 +173,16 @@ export default tseslint.config(
               message:
                 "ADR 0020 Amendment 1 (ME-013): mermaid is imported ONLY in TextEngine/core/Mermaid.tsx (its dynamic import IS the lazy chunk boundary) — import the MermaidDiagram component instead.",
             },
+            {
+              // ME-022 (ME-013 P3-2): the sanitize gate itself. Type-only
+              // imports are compile-time-erased (no chunk impact); the
+              // defaultSchema config allowance lives in the docs block below
+              // (Ф2: the wrapper supplies the schema).
+              name: "hast-util-sanitize",
+              allowTypeImports: true,
+              message:
+                "ME-022 (ME-013 P3-2): hast-util-sanitize is the sanitizer itself — value imports live ONLY in TextEngine/core/pipeline.corpus.ts (type-only imports are allowed anywhere). A direct sanitize() call outside the pipeline bypasses the single sanitize gate.",
+            },
           ],
           patterns: [
             {
@@ -160,6 +193,20 @@ export default tseslint.config(
               ],
               message:
                 "ME-019 review P2-2: buildCorpusPipeline is consumed ONLY by features/docs/Markdown.tsx — a new importer would statically weld the md-sanitize vendor pool into its chunk, and the budget gate cannot see that (it checks the eager base set and md-core→md-sanitize edges only). Route the capability through the wrapper instead.",
+            },
+            {
+              // ME-022 (ME-013 P3-1): deep specifiers are the same restricted
+              // modules ("rehype-sanitize/lib/index.js" must not escape the
+              // bare-name pin). allowTypeImports keeps compile-time-erased
+              // type imports legal everywhere.
+              group: [
+                "rehype-raw/**",
+                "rehype-sanitize/**",
+                "hast-util-sanitize/**",
+              ],
+              allowTypeImports: true,
+              message:
+                "ME-022 (ME-013 P3-1): deep specifiers resolve to the same restricted sanitize stack — rehype-raw/rehype-sanitize/hast-util-sanitize value imports live ONLY in TextEngine/core/pipeline.corpus.ts.",
             },
           ],
         },
@@ -197,6 +244,17 @@ export default tseslint.config(
               message:
                 "Docs gate (АРХКОМ-8 + Amendment 1): mermaid is imported only in TextEngine/core/Mermaid.tsx — mount the MermaidDiagram component, never the library.",
             },
+            {
+              // ME-022 (ME-013 P3-2): sanitizeSchema.ts is the sanctioned
+              // schema-config module (Ф2: the wrapper supplies the schema),
+              // so the defaultSchema base and type-only imports stay legal in
+              // docs; the sanitizer function itself does not.
+              name: "hast-util-sanitize",
+              allowImportNames: ["defaultSchema"],
+              allowTypeImports: true,
+              message:
+                "Docs gate (ME-022, ME-013 P3-2): from hast-util-sanitize only the defaultSchema config and type-only imports are allowed in docs (sanitizeSchema.ts) — the sanitize() function itself runs ONLY inside TextEngine/core/pipeline.corpus.ts.",
+            },
           ],
           patterns: [
             {
@@ -207,6 +265,19 @@ export default tseslint.config(
               ],
               message:
                 "ME-019 review P2-2: only features/docs/Markdown.tsx imports buildCorpusPipeline — every other docs module goes through the wrapper.",
+            },
+            {
+              // ME-022 (ME-013 P3-1): deep-specifier forms of the sanitize
+              // stack, same allowances as the bare-name entry above.
+              group: [
+                "rehype-raw/**",
+                "rehype-sanitize/**",
+                "hast-util-sanitize/**",
+              ],
+              allowImportNames: ["defaultSchema"],
+              allowTypeImports: true,
+              message:
+                "Docs gate (ME-022, ME-013 P3-1): deep specifiers resolve to the same restricted sanitize stack — only the defaultSchema config and type-only imports are allowed in docs.",
             },
           ],
         },
@@ -241,6 +312,28 @@ export default tseslint.config(
               message:
                 "Docs gate (АРХКОМ-8 + Amendment 1): mermaid must stay behind TextEngine/core/Mermaid.tsx's dynamic import — this file imports the MermaidDiagram component only.",
             },
+            {
+              // ME-022 (ME-013 P3-2): the wrapper consumes the ASSEMBLED
+              // schema from sanitizeSchema.ts — it has no business with the
+              // sanitize package itself (type-only imports excepted).
+              name: "hast-util-sanitize",
+              allowTypeImports: true,
+              message:
+                "Docs gate (ME-022, ME-013 P3-2): Markdown.tsx takes the schema from features/docs/sanitizeSchema.ts — hast-util-sanitize value imports live only in TextEngine/core/pipeline.corpus.ts (type-only imports allowed).",
+            },
+          ],
+          patterns: [
+            {
+              // ME-022 (ME-013 P3-1): deep specifiers of the sanitize stack.
+              group: [
+                "rehype-raw/**",
+                "rehype-sanitize/**",
+                "hast-util-sanitize/**",
+              ],
+              allowTypeImports: true,
+              message:
+                "Docs gate (ME-022, ME-013 P3-1): deep specifiers resolve to the same restricted sanitize stack — Markdown.tsx imports the assembled pipeline and the schema config, never the packages.",
+            },
           ],
         },
       ],
@@ -270,6 +363,13 @@ export default tseslint.config(
               message:
                 "Docs gate (АРХКОМ-8 + ADR 0020 Ф2): sanitize schemas live only in TextEngine/core/pipeline.corpus.ts's pipeline.",
             },
+            {
+              // ME-022 (ME-013 P3-2): the mermaid module hosts diagrams only.
+              name: "hast-util-sanitize",
+              allowTypeImports: true,
+              message:
+                "Docs gate (ME-022, ME-013 P3-2): the sanitize stack lives only in TextEngine/core/pipeline.corpus.ts — the mermaid chunk must not grow a sanitizer (type-only imports allowed).",
+            },
           ],
           patterns: [
             {
@@ -280,6 +380,17 @@ export default tseslint.config(
               ],
               message:
                 "ME-019 review P2-2: the mermaid lazy chunk must not import the corpus pipeline — md-sanitize would ride the diagram chunk.",
+            },
+            {
+              // ME-022 (ME-013 P3-1): deep specifiers of the sanitize stack.
+              group: [
+                "rehype-raw/**",
+                "rehype-sanitize/**",
+                "hast-util-sanitize/**",
+              ],
+              allowTypeImports: true,
+              message:
+                "Docs gate (ME-022, ME-013 P3-1): deep specifiers resolve to the same restricted sanitize stack — the mermaid chunk must not grow a sanitizer.",
             },
           ],
         },
