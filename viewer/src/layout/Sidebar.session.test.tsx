@@ -23,13 +23,16 @@ import {
 
 /**
  * Session-aware footer mode line (fix/login-feedback + UI-22 owner
- * feedback): the bottom-left sidebar line must state the LIVE contract —
- * «read-only» without any identity, «device connected» with a paired device
- * (ADR 0012 §5, v0 read-only scope) and «session active» with a ui token —
- * per adapter, instead of the static «L1 read-only» that kept lying after
- * login. The reactive flip (login without reload) lives in
- * LoginDialog.flow.test.tsx under happy-dom; these renderToString cases pin
- * the static states (SSR viewport = desktop, so the footer line renders).
+ * feedback; gates v6 words — union И1, 07k §1.2 / dressing map §1.3): the
+ * bottom-left sidebar line must state the LIVE contract — «аноним»
+ * (anonymous) on the board without an owner session, «вы: владелец»
+ * (you: owner) with a ui token or in the mock playground, «device
+ * connected» with a paired device (ADR 0012 §5, scope v1), and the honest
+ * legacy «read-only» on the mnemos L1 adapter (its reads are open and its
+ * auth model is different — the v6 session words would lie there). The
+ * reactive flip (login without reload) lives in LoginDialog.flow.test.tsx
+ * under happy-dom; these renderToString cases pin the static states (SSR
+ * viewport = desktop, so the footer line renders).
  */
 
 class MemoryStorage {
@@ -90,29 +93,29 @@ function renderSidebar(gateway: AnyGateway, withGate: boolean): string {
 }
 
 describe("Sidebar footer mode line (session-aware)", () => {
-  it("board adapter without a token: read-only", () => {
+  it("board adapter without a token: anonymous (v6 footer word)", () => {
     const html = renderSidebar(new BoardAdapter("/api"), true);
-    expect(html).toContain("read-only");
-    expect(html).not.toContain("session active");
+    expect(html).toContain("anonymous");
+    expect(html).not.toContain("you: owner");
   });
 
-  it("board adapter with a stored token: session active", () => {
+  it("board adapter with a stored token: you: owner (v6 footer word)", () => {
     sessionStorage.setItem(UI_TOKEN_STORAGE_KEY, "ui-live");
     const html = renderSidebar(new BoardAdapter("/api"), true);
-    expect(html).toContain("session active");
-    expect(html).not.toContain("read-only");
+    expect(html).toContain("you: owner");
+    expect(html).not.toContain("anonymous");
   });
 
-  it("mnemos adapter: read-only even with the gate mounted (no mutation surface)", () => {
+  it("mnemos adapter: keeps its honest read-only word (no v6 session there)", () => {
     const html = renderSidebar(new HttpAdapter("/api"), true);
     expect(html).toContain("read-only");
-    expect(html).not.toContain("session active");
+    expect(html).not.toContain("you: owner");
   });
 
-  it("mock adapter, bare harness (no gate): session active via the fail-soft fallback", () => {
+  it("mock adapter, bare harness (no gate): you: owner via the fail-soft fallback", () => {
     const html = renderSidebar(new MockAdapter({ latency: false }), false);
     // The dev playground has no auth wall — control is genuinely available.
-    expect(html).toContain("session active");
+    expect(html).toContain("you: owner");
     expect(html).not.toContain("read-only");
   });
 });
@@ -137,7 +140,7 @@ describe("Sidebar footer mode line (device state, UI-22 + scope v1)", () => {
     const html = renderSidebar(new BoardAdapter("/api"), true);
     expect(html).toContain("device connected · full access");
     expect(html).not.toContain("read-only");
-    expect(html).not.toContain("session active");
+    expect(html).not.toContain("you: owner");
   });
 
   it("a pre-scope-v1 identity (no scope field) reads as control — migration semantics", () => {
@@ -158,10 +161,10 @@ describe("Sidebar footer mode line (device state, UI-22 + scope v1)", () => {
     const html = renderSidebar(new BoardAdapter("/api"), true);
     expect(html).toContain("device connected");
     expect(html).not.toContain("full access");
-    expect(html).not.toContain("session active");
+    expect(html).not.toContain("you: owner");
   });
 
-  it("device identity beside a ui token: session active wins (the owner controls)", () => {
+  it("device identity beside a ui token: you: owner wins (the owner controls)", () => {
     saveDeviceIdentity({
       token: "mnd_paired-device",
       deviceId: "dev_1",
@@ -170,7 +173,7 @@ describe("Sidebar footer mode line (device state, UI-22 + scope v1)", () => {
     });
     sessionStorage.setItem(UI_TOKEN_STORAGE_KEY, "ui-live");
     const html = renderSidebar(new BoardAdapter("/api"), true);
-    expect(html).toContain("session active");
+    expect(html).toContain("you: owner");
     expect(html).not.toContain("device connected");
   });
 

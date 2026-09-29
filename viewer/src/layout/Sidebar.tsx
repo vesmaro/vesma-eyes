@@ -5,15 +5,20 @@ import {
   ChevronRight,
   Command,
   Keyboard,
+  Lock,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
 import { useT } from "@/i18n";
 import { useTaskInbox } from "@/features/tasks/useTasks";
+import { gatedDomainFor } from "@/features/ui-token/gateDomains";
+import { useAuthSession } from "@/features/ui-token/useAuthSession";
 import {
   sessionModeI18nKey,
   useSessionMode,
 } from "@/features/ui-token/useSessionControl";
+import { isTaskMutationSource } from "@/gateway/capabilities";
+import { useGateway } from "@/gateway/GatewayContext";
 import { useBoardHealth } from "@/hooks/usePulse";
 import { openPalette } from "@/lib/paletteState";
 import { useHotkeys } from "./Hotkeys";
@@ -322,6 +327,14 @@ const STRATA_CLASS: Partial<Record<string, string>> = {
  * GROUP TOGGLE (chevron, aria-expanded) for domains with sections, and the
  * honest disabled slot for phase-2+ domains (soonKey). The active domain
  * carries the 2px iris strip + its strata wash; the rail keeps icons only.
+ *
+ * Gates v6 (ME-043, 07k §2.2): for an anonymous visitor a GATED domain row
+ * carries the honest lock — the lock REPLACES the counter (numbers are
+ * content; an anonymous sidebar must not display them) and the tooltip
+ * says WHY the domain is closed, in words. The row itself stays
+ * navigable — URL-first: the click goes to the real route, which renders
+ * the gate screen (never a fake redirect, never hiding). Public domains
+ * (Обзор, Документы) stay lock-free by the owner's verdict.
  */
 function DomainRow({
   domain,
@@ -342,8 +355,17 @@ function DomainRow({
   pathname: string;
 }) {
   const t = useT();
+  const { status, gatesActive } = useAuthSession();
+  // The lock table is the SAME pure data the Shell content gate reads —
+  // one source of truth for «which domains are gated» (gateDomains.ts).
+  const gated = gatesActive && gatedDomainFor(domain.to) !== null;
+  const locked = gated && status === "anonymous";
+  // No numbers for a non-user on a gated domain: pending hides them for the
+  // one boot-probe round-trip, anonymous replaces them with the lock.
+  const hideCounters = gated && status !== "user";
   const Icon = domain.icon;
   const label = t(domain.key);
+  const rowLabel = locked ? `${label} — ${t("auth.lock.why")}` : label;
 
   // Honest disabled slot (Phase 2+): visible, explained, inert.
   if (domain.soonKey) {
@@ -395,10 +417,34 @@ function DomainRow({
           className="absolute -left-2 top-2 bottom-2 w-0.5 rounded-full bg-iris"
         />
       ) : null}
-      <Icon className="size-5 shrink-0" aria-hidden="true" />
+      {locked && !expanded ? (
+        /* Rail (07k §2.2 «свёрнутый сайдбар: замок виден под иконкой
+         * домена»): the lock rides under the domain icon — recognition
+         * survives the collapsed geometry. */
+        <span className="flex shrink-0 flex-col items-center">
+          <Icon className="size-5" aria-hidden="true" />
+          <Lock
+            data-testid="domain-lock"
+            className="size-2.5 text-foreground-muted"
+            aria-hidden="true"
+          />
+        </span>
+      ) : (
+        <Icon className="size-5 shrink-0" aria-hidden="true" />
+      )}
       {expanded ? <span className={cn("flex-1", hideLabels)}>{label}</span> : null}
-      {expanded && counterIds.length > 0 ? (
+      {expanded && !hideCounters && counterIds.length > 0 ? (
         <AggregateCountBadge ids={counterIds} />
+      ) : null}
+      {/* The honest lock of a gated domain (07k §2.2): lucide lock 14px in
+       * the muted text tone (≥3:1 non-text contrast, 1.4.11) — a lock with
+       * a worded tooltip, never a bare icon. */}
+      {expanded && locked ? (
+        <Lock
+          data-testid="domain-lock"
+          className="size-3.5 shrink-0 text-foreground-muted"
+          aria-hidden="true"
+        />
       ) : null}
       {hasSections && expanded ? (
         <ChevronRight
@@ -422,8 +468,8 @@ function DomainRow({
           type="button"
           onClick={() => onOpenChange(!open)}
           aria-expanded={open}
-          title={label}
-          aria-label={label}
+          title={rowLabel}
+          aria-label={rowLabel}
           className={rowClass}
         >
           {inner}
@@ -431,8 +477,8 @@ function DomainRow({
       ) : (
         <Link
           to={domain.linkTo ?? domain.to}
-          title={label}
-          aria-label={label}
+          title={rowLabel}
+          aria-label={rowLabel}
           aria-current={active ? "page" : undefined}
           className={rowClass}
         >
@@ -459,6 +505,7 @@ function DomainRow({
                     siblings={domain.sections ?? []}
                     pathname={pathname}
                     hideLabels={hideLabels}
+                    hideCounter={hideCounters}
                   />
                 </li>
               ))}
@@ -475,6 +522,7 @@ function SectionLink({
   siblings,
   pathname,
   hideLabels,
+  hideCounter,
 }: {
   section: NavSection;
   /** The domain's full section list — master-detail highlighting must know
@@ -482,6 +530,9 @@ function SectionLink({
   siblings: readonly NavSection[];
   pathname: string;
   hideLabels: string;
+  /** Gates v6: a non-user on a gated domain sees NO counters — numbers are
+   * content (the domain row answers with the lock instead, 07k §2.2). */
+  hideCounter: boolean;
 }) {
   const t = useT();
   const label = t(section.key);
@@ -527,7 +578,7 @@ function SectionLink({
         />
       ) : null}
       <span className={hideLabels}>{label}</span>
-      {section.counter === "inbox" ? <InboxCount /> : null}
+      {section.counter === "inbox" && !hideCounter ? <InboxCount /> : null}
     </Link>
   );
 }
@@ -624,10 +675,30 @@ function AggregateCountBadge({ ids }: { ids: readonly NavCounterId[] }) {
  */
 function SidebarStatusLine({ expanded }: { expanded: boolean }) {
   const t = useT();
+  const gateway = useGateway();
   const sessionMode = useSessionMode();
   const health = useBoardHealth();
   const version = health.data?.app_version;
-  const mode = t(sessionModeI18nKey(sessionMode));
+  // Gates v6 words (07k §1.2, dressing map §1.3): the owner session says
+  // «вы: владелец» — the token model carries no user name, and the owner
+  // IS the signed-in role; a session-less board visitor is «аноним». The
+  // device modes keep their scope-v1 lines, and the mnemos L1 adapter
+  // keeps its honest «read-only» (its reads are open and its auth model is
+  // different — the v6 session words would lie there).
+  let mode: string;
+  switch (sessionMode) {
+    case "active":
+      mode = t("auth.status.signedIn");
+      break;
+    case "device":
+    case "deviceControl":
+      mode = t(sessionModeI18nKey(sessionMode));
+      break;
+    default:
+      mode = isTaskMutationSource(gateway)
+        ? t("auth.status.anonymous")
+        : t(sessionModeI18nKey(sessionMode));
+  }
   const authorized = sessionMode !== "readOnly";
   const full = version ? `mnemos-eyes ${version} · ${mode}` : `mnemos-eyes · ${mode}`;
   // Short version for the rail (07k §1.2 «1.41»): major.minor of either
