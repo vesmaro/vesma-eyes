@@ -3,6 +3,7 @@ import { Navigate } from "react-router";
 import type { RouteObject } from "react-router";
 import { Shell } from "@/layout/Shell";
 import { SearchPage } from "@/features/search/SearchPage"; // eager — only eagerly loaded chunk (§3)
+import { TelemetryRouteObserver } from "@/telemetry/TelemetryRouteObserver"; // ME-041: ui.nav emitter
 import {
   KoraGatewayContext,
   makeKoraGateway,
@@ -156,270 +157,278 @@ const DocsCategoryLegacyRedirect = lazy(() =>
  */
 export function buildRoutes(): RouteObject[] {
   return [
-    // /pair sits OUTSIDE the Shell (ADR 0012 §2.3): the device leg must
-    // work with no session and no owner chrome — it is registered BEFORE
-    // the Shell route, so it never inherits the sidebar layout.
+    // ME-041: one pathless layout route observes every committed location
+    // change (incl. /pair, outside the Shell) and emits ui.nav — additive
+    // wrapper, renders nothing but <Outlet/>.
     {
-      path: "/pair",
-      element: (
-        <Page>
-          <PairPage />
-        </Page>
-      ),
-    },
-    {
-      element: <Shell />,
+      element: <TelemetryRouteObserver />,
       children: [
-        // Обзор — the app root (concept §2.4, honest Ф1 cut).
+        // /pair sits OUTSIDE the Shell (ADR 0012 §2.3): the device leg must
+        // work with no session and no owner chrome — it is registered BEFORE
+        // the Shell route, so it never inherits the sidebar layout.
         {
-          index: true,
+          path: "/pair",
           element: (
             <Page>
-              <OverviewPage />
-            </Page>
-          ),
-        },
-
-        // Память domain. Static siblings outrank the :id route by ranking.
-        {
-          path: "/memory",
-          element: (
-            <Page>
-              <MemoriesPage />
+              <PairPage />
             </Page>
           ),
         },
         {
-          path: "/memory/search",
-          element: (
-            <Page>
-              <SearchPage />
-            </Page>
-          ),
-        },
-        {
-          path: "/memory/pulse",
-          element: (
-            <Page>
-              <PulsePage />
-            </Page>
-          ),
-        },
-        {
-          path: "/memory/tags",
-          element: (
-            <Page>
-              <TagsPage />
-            </Page>
-          ),
-        },
-        {
-          path: "/memory/:id",
-          element: (
-            <Page>
-              <MemoryDetailPage />
-            </Page>
-          ),
-        },
-
-        // Задачи domain (Ф2–Ф3, ADR 0011): the KANBAN is view №1 at the
-        // domain root (CV-4 — the index honours the persisted view choice,
-        // see TasksIndex), the dense list lives at /tasks/list, then the
-        // task page (tabs), the inbox mirror and the archive. The layout
-        // route owns the domain SSE bridge (taskEvents.ts).
-        {
-          path: "/tasks",
-          element: (
-            <Page>
-              <TasksLayout />
-            </Page>
-          ),
+          element: <Shell />,
           children: [
-            { index: true, element: <TasksIndex /> },
-            { path: "list", element: <TaskListPage /> },
-            // UI-28 «Активность» (spec §1): inside the layout — ONE domain
-            // SSE stream (useTaskEvents) feeds the page's live buffer.
-            { path: "activity", element: <TaskActivityPage /> },
-            { path: "inbox", element: <TaskInboxPage /> },
-            { path: "archive", element: <TaskArchivePage /> },
-            // Static siblings rank above :id (react-router ranking).
-            { path: ":id", element: <TaskDetailPage /> },
+            // Обзор — the app root (concept §2.4, honest Ф1 cut).
+            {
+              index: true,
+              element: (
+                <Page>
+                  <OverviewPage />
+                </Page>
+              ),
+            },
+
+            // Память domain. Static siblings outrank the :id route by ranking.
+            {
+              path: "/memory",
+              element: (
+                <Page>
+                  <MemoriesPage />
+                </Page>
+              ),
+            },
+            {
+              path: "/memory/search",
+              element: (
+                <Page>
+                  <SearchPage />
+                </Page>
+              ),
+            },
+            {
+              path: "/memory/pulse",
+              element: (
+                <Page>
+                  <PulsePage />
+                </Page>
+              ),
+            },
+            {
+              path: "/memory/tags",
+              element: (
+                <Page>
+                  <TagsPage />
+                </Page>
+              ),
+            },
+            {
+              path: "/memory/:id",
+              element: (
+                <Page>
+                  <MemoryDetailPage />
+                </Page>
+              ),
+            },
+
+            // Задачи domain (Ф2–Ф3, ADR 0011): the KANBAN is view №1 at the
+            // domain root (CV-4 — the index honours the persisted view choice,
+            // see TasksIndex), the dense list lives at /tasks/list, then the
+            // task page (tabs), the inbox mirror and the archive. The layout
+            // route owns the domain SSE bridge (taskEvents.ts).
+            {
+              path: "/tasks",
+              element: (
+                <Page>
+                  <TasksLayout />
+                </Page>
+              ),
+              children: [
+                { index: true, element: <TasksIndex /> },
+                { path: "list", element: <TaskListPage /> },
+                // UI-28 «Активность» (spec §1): inside the layout — ONE domain
+                // SSE stream (useTaskEvents) feeds the page's live buffer.
+                { path: "activity", element: <TaskActivityPage /> },
+                { path: "inbox", element: <TaskInboxPage /> },
+                { path: "archive", element: <TaskArchivePage /> },
+                // Static siblings rank above :id (react-router ranking).
+                { path: ":id", element: <TaskDetailPage /> },
+              ],
+            },
+
+            // Агенты domain (AGW-3, spec 2026-09-19 §1 + ME-014 verdict): the
+            // root is an ALIAS — replace-redirect to the HOST ROSTER (the
+            // «Хосты» view is the default landing since ME-014; /agents/execution
+            // and /agents/harnesses keep their paths — existing links and
+            // bookmarks survive). ONE route object (review P3-7 — the former
+            // duplicate path is gone): the layout owns the domain SSE bridge,
+            // the index child redirects to the default view.
+            {
+              path: "/agents",
+              element: (
+                <Page>
+                  <AgentsLayout />
+                </Page>
+              ),
+              children: [
+                { index: true, element: <Navigate to="/agents/hosts" replace /> },
+                // ME-014: the roster — hosts → agents, presence + chips,
+                // zero mutations (the registry owns them).
+                { path: "hosts", element: <AgentsHostsPage /> },
+                { path: "execution", element: <AgentsExecutionPage /> },
+                // AGW-4: the executor registry — connection guide + approve /
+                // enable / revoke / delete management (spec §1, wave 2).
+                { path: "harnesses", element: <AgentsHarnessesPage /> },
+              ],
+            },
+
+            // Кора domain (ADR 0019 rev.2): the session list at the domain root
+            // (slice 1 — LIVE over GET /api/kora/sessions via the HTTP adapter),
+            // the read-only transcript + chat at /kora/:sessionId (slices 2-3 —
+            // the screen is wired, the board serves those routes when the slices
+            // land; the adapter fails loud meanwhile, never mock-serves them).
+            {
+              path: "/kora",
+              element: (
+                <Page>
+                  <KoraGatewayContext.Provider value={makeKoraGateway()}>
+                    <KoraPage />
+                  </KoraGatewayContext.Provider>
+                </Page>
+              ),
+            },
+            {
+              path: "/kora/:sessionId",
+              element: (
+                <Page>
+                  <KoraGatewayContext.Provider value={makeKoraGateway()}>
+                    <KoraSessionPage />
+                  </KoraGatewayContext.Provider>
+                </Page>
+              ),
+            },
+
+            // Документация domain (ADR 0015 + ADR 0016): three project hubs.
+            // /docs answers with an instant replace-redirect into the default
+            // hub (design spec §2/§8 — the section root is /docs/vesmaro-eyes);
+            // legacy single-segment URLs resolve through the redirect map in
+            // DocsHubPage (hit → replace, miss → not-found). Static segments
+            // (`c`) outrank the dynamic ones, so /docs/:project/c/:category and
+            // the splat article route rank correctly against each other.
+            {
+              path: "/docs",
+              element: (
+                <Page>
+                  <Navigate to="/docs/vesmaro-eyes" replace />
+                </Page>
+              ),
+            },
+            {
+              path: "/docs/c/:category",
+              element: (
+                <Page>
+                  <DocsCategoryLegacyRedirect />
+                </Page>
+              ),
+            },
+            {
+              path: "/docs/:project",
+              element: (
+                <Page>
+                  <DocsHubPage />
+                </Page>
+              ),
+            },
+            {
+              path: "/docs/:project/c/:category",
+              element: (
+                <Page>
+                  <DocsCategoryPage />
+                </Page>
+              ),
+            },
+            {
+              path: "/docs/:project/*",
+              element: (
+                <Page>
+                  <DocsPage />
+                </Page>
+              ),
+            },
+
+            // Система domain (temporary honest home for the legacy views).
+            {
+              path: "/system/status",
+              element: (
+                <Page>
+                  <StatusPage />
+                </Page>
+              ),
+            },
+            // Owner settings (UI-23 hub v2 over the UI-21 shell): one h1 +
+            // six sibling sections «Внешний вид» | «Поведение» | «Доска» |
+            // «Навигация» | «Исполнение» | «Автоматизация», deep-linkable via
+            // #appearance/#behavior/#board/#navigation/#execution/#automation.
+            {
+              path: "/system/settings",
+              element: (
+                <Page>
+                  <SettingsHubPage />
+                </Page>
+              ),
+            },
+            // Automation (SCHED-1-UI, ADR 0013 §8): rules + journal + manual
+            // run-now; engine honestly off in S1.
+            {
+              path: "/system/automation",
+              element: (
+                <Page>
+                  <AutomationPage />
+                </Page>
+              ),
+            },
+            // Устройства (CV-7, ADR 0012 Consequences): the paired-device list
+            // + the QR-pairing flow («Подключить → QR → сверка → список»).
+            {
+              path: "/system/devices",
+              element: (
+                <Page>
+                  <DevicesPage />
+                </Page>
+              ),
+            },
+            {
+              path: "/system/sessions",
+              element: (
+                <Page>
+                  <SessionsPage />
+                </Page>
+              ),
+            },
+            {
+              path: "/system/sessions/:id",
+              element: (
+                <Page>
+                  <SessionDetailPage />
+                </Page>
+              ),
+            },
+            {
+              path: "/system/traces",
+              element: (
+                <Page>
+                  <TracesPage />
+                </Page>
+              ),
+            },
+
+            // Legacy flat routes → replace redirects (bookmarks survive Ф1).
+            ...LEGACY_ROUTES.map(({ from, to }) => ({
+              path: from,
+              element: <LegacyRedirect to={to} />,
+            })),
+
+            { path: "*", element: <NotFound /> },
           ],
         },
-
-        // Агенты domain (AGW-3, spec 2026-09-19 §1 + ME-014 verdict): the
-        // root is an ALIAS — replace-redirect to the HOST ROSTER (the
-        // «Хосты» view is the default landing since ME-014; /agents/execution
-        // and /agents/harnesses keep their paths — existing links and
-        // bookmarks survive). ONE route object (review P3-7 — the former
-        // duplicate path is gone): the layout owns the domain SSE bridge,
-        // the index child redirects to the default view.
-        {
-          path: "/agents",
-          element: (
-            <Page>
-              <AgentsLayout />
-            </Page>
-          ),
-          children: [
-            { index: true, element: <Navigate to="/agents/hosts" replace /> },
-            // ME-014: the roster — hosts → agents, presence + chips,
-            // zero mutations (the registry owns them).
-            { path: "hosts", element: <AgentsHostsPage /> },
-            { path: "execution", element: <AgentsExecutionPage /> },
-            // AGW-4: the executor registry — connection guide + approve /
-            // enable / revoke / delete management (spec §1, wave 2).
-            { path: "harnesses", element: <AgentsHarnessesPage /> },
-          ],
-        },
-
-        // Кора domain (ADR 0019 rev.2): the session list at the domain root
-        // (slice 1 — LIVE over GET /api/kora/sessions via the HTTP adapter),
-        // the read-only transcript + chat at /kora/:sessionId (slices 2-3 —
-        // the screen is wired, the board serves those routes when the slices
-        // land; the adapter fails loud meanwhile, never mock-serves them).
-        {
-          path: "/kora",
-          element: (
-            <Page>
-              <KoraGatewayContext.Provider value={makeKoraGateway()}>
-                <KoraPage />
-              </KoraGatewayContext.Provider>
-            </Page>
-          ),
-        },
-        {
-          path: "/kora/:sessionId",
-          element: (
-            <Page>
-              <KoraGatewayContext.Provider value={makeKoraGateway()}>
-                <KoraSessionPage />
-              </KoraGatewayContext.Provider>
-            </Page>
-          ),
-        },
-
-        // Документация domain (ADR 0015 + ADR 0016): three project hubs.
-        // /docs answers with an instant replace-redirect into the default
-        // hub (design spec §2/§8 — the section root is /docs/vesmaro-eyes);
-        // legacy single-segment URLs resolve through the redirect map in
-        // DocsHubPage (hit → replace, miss → not-found). Static segments
-        // (`c`) outrank the dynamic ones, so /docs/:project/c/:category and
-        // the splat article route rank correctly against each other.
-        {
-          path: "/docs",
-          element: (
-            <Page>
-              <Navigate to="/docs/vesmaro-eyes" replace />
-            </Page>
-          ),
-        },
-        {
-          path: "/docs/c/:category",
-          element: (
-            <Page>
-              <DocsCategoryLegacyRedirect />
-            </Page>
-          ),
-        },
-        {
-          path: "/docs/:project",
-          element: (
-            <Page>
-              <DocsHubPage />
-            </Page>
-          ),
-        },
-        {
-          path: "/docs/:project/c/:category",
-          element: (
-            <Page>
-              <DocsCategoryPage />
-            </Page>
-          ),
-        },
-        {
-          path: "/docs/:project/*",
-          element: (
-            <Page>
-              <DocsPage />
-            </Page>
-          ),
-        },
-
-        // Система domain (temporary honest home for the legacy views).
-        {
-          path: "/system/status",
-          element: (
-            <Page>
-              <StatusPage />
-            </Page>
-          ),
-        },
-        // Owner settings (UI-23 hub v2 over the UI-21 shell): one h1 +
-        // six sibling sections «Внешний вид» | «Поведение» | «Доска» |
-        // «Навигация» | «Исполнение» | «Автоматизация», deep-linkable via
-        // #appearance/#behavior/#board/#navigation/#execution/#automation.
-        {
-          path: "/system/settings",
-          element: (
-            <Page>
-              <SettingsHubPage />
-            </Page>
-          ),
-        },
-        // Automation (SCHED-1-UI, ADR 0013 §8): rules + journal + manual
-        // run-now; engine honestly off in S1.
-        {
-          path: "/system/automation",
-          element: (
-            <Page>
-              <AutomationPage />
-            </Page>
-          ),
-        },
-        // Устройства (CV-7, ADR 0012 Consequences): the paired-device list
-        // + the QR-pairing flow («Подключить → QR → сверка → список»).
-        {
-          path: "/system/devices",
-          element: (
-            <Page>
-              <DevicesPage />
-            </Page>
-          ),
-        },
-        {
-          path: "/system/sessions",
-          element: (
-            <Page>
-              <SessionsPage />
-            </Page>
-          ),
-        },
-        {
-          path: "/system/sessions/:id",
-          element: (
-            <Page>
-              <SessionDetailPage />
-            </Page>
-          ),
-        },
-        {
-          path: "/system/traces",
-          element: (
-            <Page>
-              <TracesPage />
-            </Page>
-          ),
-        },
-
-        // Legacy flat routes → replace redirects (bookmarks survive Ф1).
-        ...LEGACY_ROUTES.map(({ from, to }) => ({
-          path: from,
-          element: <LegacyRedirect to={to} />,
-        })),
-
-        { path: "*", element: <NotFound /> },
       ],
     },
   ];

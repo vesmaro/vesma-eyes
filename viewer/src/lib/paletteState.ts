@@ -1,4 +1,6 @@
 import { useSyncExternalStore } from "react";
+import { trackPaletteOpened } from "@/telemetry/telemetry";
+import type { TelemetryPaletteTrigger } from "@/telemetry/events";
 
 /**
  * Session-only signal «the command palette is open right now» (UX-overhaul
@@ -29,16 +31,27 @@ export function subscribePaletteOpen(notify: () => void): () => void {
   };
 }
 
-/** Open/close the palette. Idempotent: no-op on no change. */
-export function setPaletteOpen(open: boolean): void {
+/**
+ * Open/close the palette. Idempotent: no-op on no change. `trigger` rides
+ * the open transition into `cmdk.palette_opened` (ME-041, taxonomy §1.2
+ * #7 — this module owns the ONE open transition, so it is the one place
+ * the trigger is known); default "hotkey" covers the bare hotkey call
+ * sites, the TopBar button passes "button", the Radix close path never
+ * opens. No-op while the telemetry gate is disarmed (anonymous session).
+ */
+export function setPaletteOpen(
+  open: boolean,
+  trigger: TelemetryPaletteTrigger = "hotkey",
+): void {
   if (paletteOpen === open) return;
   paletteOpen = open;
+  if (open) trackPaletteOpened(trigger);
   listeners.forEach((notify) => notify());
 }
 
 /** Imperative opener for the hotkey listener and the TopBar trigger. */
-export function openPalette(): void {
-  setPaletteOpen(true);
+export function openPalette(trigger: TelemetryPaletteTrigger = "hotkey"): void {
+  setPaletteOpen(true, trigger);
 }
 
 /** Reactive flag — what the Shell-mounted palette dialog subscribes to. */

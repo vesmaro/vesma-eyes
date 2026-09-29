@@ -5,6 +5,7 @@ import { Search } from "lucide-react";
 import { useT } from "@/i18n";
 import { withReturn } from "@/lib/returnParams";
 import { usePaletteOpen, setPaletteOpen } from "@/lib/paletteState";
+import { markPaletteNavigation, trackItemSelected } from "@/telemetry/telemetry";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useSearch } from "@/hooks/useSearch";
 import { useBoardTasks } from "@/features/tasks/useTasks";
@@ -210,8 +211,14 @@ function PaletteBody() {
     }
   }, [activeId]);
 
+  // ME-041 (taxonomy §1.2 #8): the one activation point — the group and
+  // the via (Enter vs click) ride the event; the query text never does
+  // (§3.4). Marking the navigation here also attributes the ROUTE change
+  // (ui.nav via=palette) and a /kora landing (kora.entered entry=palette).
   const choose = useCallback(
-    (item: PaletteItem) => {
+    (item: PaletteItem, via: "enter" | "click") => {
+      markPaletteNavigation();
+      trackItemSelected(item.group, via);
       setPaletteOpen(false);
       navigate(item.to);
     },
@@ -228,7 +235,7 @@ function PaletteBody() {
     } else if (event.key === "Enter") {
       event.preventDefault();
       const item = flat[active];
-      if (item) choose(item);
+      if (item) choose(item, "enter");
     }
   };
 
@@ -347,7 +354,7 @@ function PaletteGroupBlock({
   offset: number;
   activeId: string | undefined;
   label: string;
-  onChoose: (item: PaletteItem) => void;
+  onChoose: (item: PaletteItem, via: "enter" | "click") => void;
   onHover: (index: number) => void;
 }) {
   const labelId = `${LISTBOX_ID}-label-${entry.group}`;
@@ -372,7 +379,7 @@ function PaletteGroupBlock({
             >
               <button
                 type="button"
-                onClick={() => onChoose(item)}
+                onClick={() => onChoose(item, "click")}
                 // Standard palette pointer behaviour (review P3-7): the
                 // highlight FOLLOWS the mouse (onMouseMove selects the row),
                 // so a plain click always lands on the active row and stays
