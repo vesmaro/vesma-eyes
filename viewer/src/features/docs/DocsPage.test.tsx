@@ -127,13 +127,13 @@ describe("imported article (/docs/mnemos/**, spec §6)", () => {
     const text = container.textContent ?? "";
     expect(text).toContain("Пользователю"); // imported category chip
     expect(text).not.toContain("актуально для"); // no release badge upstream
-    expect(text).toContain("из mnemos@23f0fce · синхр. 23.09");
+    expect(text).toContain("из mnemos@8bc139b · синхр. 29.09");
     // Full form rides title/aria-label (whole SHA + dd.mm.yyyy).
     const badge = [...container.querySelectorAll("[title]")].find((element) =>
       element.getAttribute("title")?.startsWith("Импортировано из репозитория mnemos"),
     );
-    expect(badge?.getAttribute("title")).toContain("23f0fce42ea87c329d4049397292b3dca948773c");
-    expect(badge?.getAttribute("title")).toContain("23.09.2026");
+    expect(badge?.getAttribute("title")).toContain("8bc139bf0749c0a50b9f1661e34d33b03ca78e3a");
+    expect(badge?.getAttribute("title")).toContain("29.09.2026");
     expect(badge?.getAttribute("aria-label")).toBe(badge?.getAttribute("title"));
     await actUnmount(root);
   });
@@ -294,7 +294,7 @@ describe("hub covers (design spec §4)", () => {
     });
     const text = container.textContent ?? "";
     expect(text).toContain("Доступно на русском и английском");
-    expect(text).toContain("из mnemos@23f0fce · синхр. 23.09");
+    expect(text).toContain("из mnemos@8bc139b · синхр. 29.09");
     expect(container.querySelectorAll("a[href^='/docs/mnemos/c/']")).toHaveLength(3);
     // «С чего начать» links into the imported corpus.
     expect(
@@ -310,7 +310,7 @@ describe("hub covers (design spec §4)", () => {
     });
     const text = container.textContent ?? "";
     expect(text).toContain("Доступно на русском и английском");
-    expect(text).toContain("из mnemos-mesh@331ef3a · синхр. 22.09");
+    expect(text).toContain("из mnemos-mesh@b428ea9 · синхр. 29.09");
     expect(container.querySelectorAll("a[href^='/docs/mnemos-mesh/c/']")).toHaveLength(
       2,
     );
