@@ -3,9 +3,15 @@
 - Status: **Accepted** (АРХКОМ-9, 2026-09-26; convergence of all four
   specialists without objections — the criticism phase was folded in via
   cross-briefing. Standing conditions: Canon mandatoriness on the native
-  channel activates upon ratification of `vesmaro-canon-archcom-v1`;
-  v0.6 is gated by metrics that are defined and emitted already in the
-  v0.5 acceptance)
+  channel activates upon ratification of `vesmaro-canon-archcom-v1`.
+  **v0.6 landed 2026-09-29** — release `0.6.0` (`2e163a9`); the metric
+  gate resolved. Shipped calibrations (codified in the agent protocol
+  §2.9, config keys §7.1): per-task token bucket **25/min, burst 5**
+  (`intake_task_rate_per_min`); `final`s pass over the bucket untouched
+  and never coalesce; last-wins coalescing of queued intermediates;
+  shutdown drain **3 s** (`intake_drain_seconds`) dead-lettering
+  `transport-agent-shutdown`; strict is the default, with the
+  `intake_soft_mode: off | until:<RFC3339>` rollout window in config)
 - Deciders: Product Architect, Analytics Lead, Senior Security Engineer,
   Senior System Engineer; chaired and synthesised by `@GCW: Tech Lead`
 - Related: ADR 0009 (`0009-agent-bridge-assignments.md` — §7 reports
@@ -92,7 +98,7 @@ serves both classes of children.
 | Phase | Scope | Gate |
 | --- | --- | --- |
 | v0.5 | Native `/intake/v1/reports` + Canon validation (go:embed pin) + attribution/pool + per-child capability + metrics (including the v0.6 gate metrics) + dead-letter base (masking, 0600, TTL) | Live e2e: native report through the mesh; capability test; dead-letter test |
-| v0.6 (metric-gated) | Per-task token bucket, aggregation of intermediate reports (last-wins progress / batch milestones), dead-letter rotation | v0.5 metrics (validated share, reports/s) |
+| v0.6 (**landed 2026-09-29**, release `0.6.0`) | Per-task token bucket, last-wins coalescing of queued intermediates, dead-letter rotation — as shipped: bucket **25/min burst 5**; `final`s exempt (no token, no coalescing — they displace the newest queued intermediate instead); drain 3 s → `transport-agent-shutdown`; `intake_soft_mode` rollout window in config | Gate resolved by the v0.5 acceptance metrics; the shipped contract is codified in `vesmaro-agent/docs/PROTOCOL.md` §2.9 |
 | Canon gate | Mandatoriness of the Canon format activates upon ratification of `vesmaro-canon-archcom-v1` | Their archcom session |
 
 v0.5 mechanics, accepted as a package:
@@ -213,6 +219,9 @@ hardening (deferred to multi-user hosts); ratification of
   connectivity provisioning the intake runs on
 - `vesmaro-agent/docs/PROTOCOL.md` §2.8 — mesh addendum: loopback shim,
   child env (`VESMARO_BOARD_URL` without a token), verbatim statuses
+- `vesmaro-agent/docs/PROTOCOL.md` §2.9 (pinned at `dbd6054`) — the
+  v0.6 intake lifecycle as shipped: lane admission (bucket, coalescing,
+  finals), shutdown drain, status matrix, metrics; config keys §7.1
 - `vesmaro-agent/internal/board/shim.go` — shim v0.4.0 (compat mode),
   `MaxShimBodyBytes` = 1 MiB
 - vesmaro-canon (spec-only): `docs/canon.md` §10 (freeze until 6.0,
