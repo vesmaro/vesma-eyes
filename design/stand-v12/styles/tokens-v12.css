@@ -206,6 +206,16 @@
   --duration-wow-beat: 1200ms;
   --duration-wow-cycle: 7200ms;
 
+  /* ── Волна 3 (спека 15 §14.1/§14.3): только имена ─────────────────── */
+  --web-node-alpha: 0.05;         /* покой узлов паутины */
+  --web-edge-alpha: 0.07;         /* покой рёбер паутины */
+  --web-wave-alpha: 0.08;         /* потолок альфы волны/композита */
+  --web-wave-speed: 160px/s;      /* скорость малых нейронов */
+  --duration-web-idle: 10000ms;   /* период всегда-волны (8-12s) */
+  --duration-flight: 800ms;       /* полёт Весмы (окно 600-900) */
+  --satellite-size: 64px;
+  --satellite-rest: 60s;          /* минимальный межполётный покой */
+
   /* ── Новые имена v12 (спека 15 §5: только имена, ADR 0006 цел) ───── */
   --well-hero-h: clamp(520px, calc(100vh - 48px), 860px); /* герой Обзора */
   --hud-veil: rgb(9 11 15 / 0.78);          /* подложка HUD-текста на канвасе */
@@ -302,6 +312,8 @@
     --duration-wow-beat: 0ms;
     --duration-wow-cycle: 0ms;
     --duration-awaken: 0ms;
+    --duration-web-idle: 0ms;
+    --duration-flight: 0ms;
     --duration-slow: 0ms;
     --duration-normal: 0ms;
     --duration-fast: 80ms;
@@ -317,6 +329,8 @@
   --duration-wow-beat: 0ms;
   --duration-wow-cycle: 0ms;
   --duration-awaken: 0ms;
+  --duration-web-idle: 0ms;
+  --duration-flight: 0ms;
   --duration-slow: 0ms;
   --duration-normal: 0ms;
   --duration-fast: 80ms;

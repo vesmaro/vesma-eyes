@@ -1,0 +1,139 @@
+/* living-extra.css — «Ткань коры» (§14.1 SUPERSEDE) + Весма В4 (§14.3).
+ * Волна альфы — canvas JS (всегда, амбиент); нейроны — по событиям шины.
+ * Весма: DOM + inline SVG, transform/opacity only; glow — box-shadow
+ * контейнера из --glow-* (§14.2). Все значения — токены. */
+
+/* ── Паутина: fixed z:0 под контентом, текст никогда поверх ────────── */
+.cortex-web { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+.cortex-web canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cortex-web .cw-static { opacity: 0; }
+/* деградация <45fps: кроссфейд в статичный рисунок, opacity-only 240ms */
+.cortex-web.cw-static-mode .cw-anim { opacity: 0; transition: opacity 240ms var(--ease-enter); }
+.cortex-web.cw-static-mode .cw-static { opacity: 1; transition: opacity 240ms var(--ease-enter); }
+@media (prefers-reduced-motion: reduce) {
+  .cortex-web .cw-anim { opacity: 0; }
+  .cortex-web .cw-static { opacity: 1; }
+}
+
+/* ── Весма: гнездо (96×96, мобильный 64), подкова, тело, реплика ────── */
+.sat-nest {
+  position: fixed;
+  right: 16px; bottom: 16px;               /* §14.3.1: отступ 16px */
+  width: 96px; height: 96px;
+  z-index: 55;                              /* под В3-карточкой (60) и палитрой (70) */
+}
+.sat-homes {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+}
+.sat-body {
+  position: absolute;
+  right: 8px; bottom: 10px;
+  width: var(--satellite-size, 64px); height: var(--satellite-size, 64px);
+  padding: 0; border: none; background: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform var(--duration-flight, 800ms) var(--ease-enter);
+  will-change: transform;
+}
+.sat-body:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+.sat-body svg { width: 100%; height: 100%; display: block; }
+
+/* вздох: glow на контейнере (НЕ внутри SVG), transform-free; сон — тише */
+.sat-body::after {
+  content: "";
+  position: absolute; inset: 12%;
+  border-radius: var(--radius-full);
+  box-shadow: var(--glow-iris);
+  opacity: 0;
+  animation: sat-breath 8000ms var(--ease-breath) infinite;
+  pointer-events: none;
+}
+@keyframes sat-breath {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 0.55; }                    /* α≈0.18×glow-потолок (§14.3.6) */
+}
+.sat-nest.is-asleep .sat-body::after { animation-name: sat-breath-sleep; }
+@keyframes sat-breath-sleep {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 0.25; }                    /* тише свет, не «грусть» (§14.3.2) */
+}
+
+/* полёт: translate3d по дуге (только transform; 600–900ms окно) */
+.sat-body.is-flight {
+  animation: sat-fly var(--duration-flight, 800ms) var(--ease-enter) forwards;
+}
+@keyframes sat-fly {
+  0%   { transform: translate3d(0, 0, 0); }
+  50%  { transform: translate3d(calc(var(--tx) * 0.5), calc(var(--ty) * 0.5 + var(--arc)), 0); }
+  100% { transform: translate3d(var(--tx), var(--ty), 0); }
+}
+.sat-body.is-hold { animation: none; transform: translate3d(var(--tx), var(--ty), 0); }
+.sat-body.is-hold:not(.is-pointing) { transition: transform 600ms var(--ease-enter); } /* возврат */
+/* дендрит-указатель: веер рук наклоняется к адресату */
+.sat-body.is-pointing .stroke-arm { transform: rotate(-14deg); transform-origin: 60px 60px; transition: transform var(--duration-normal) var(--ease-enter); }
+/* единственная реакция на касание — вздрагивание контура 120ms */
+.sat-body.is-flinch svg { animation: sat-flinch 120ms var(--ease-enter); }
+@keyframes sat-flinch {
+  0% { transform: scale(1); } 50% { transform: scale(0.96); } 100% { transform: scale(1); }
+}
+
+/* «Спокойный»: сидит статично, полётов нет; «Выключен» — не рендерится (JS) */
+.sat-nest.sat-calm .sat-body::after { animation: none; opacity: 0.35; }
+.sat-nest.sat-calm .sat-body { cursor: default; }
+
+/* адресат полёта: край --myelin-strong (§14.3.2) */
+.sat-attention {
+  box-shadow: 0 0 0 2px var(--myelin-strong) !important;
+  border-radius: var(--radius-md);
+  transition: box-shadow var(--duration-fast) var(--ease-enter);
+}
+/* указующее кольцо «показать» */
+.sat-ring {
+  position: absolute; inset: -6px;
+  border: 2px solid var(--myelin-strong);
+  border-radius: var(--radius-md);
+  animation: sat-ring-pulse 1200ms var(--ease-enter) 3;
+  pointer-events: none;
+}
+@keyframes sat-ring-pulse {
+  0% { opacity: 0.9; transform: scale(0.97); }
+  100% { opacity: 0; transform: scale(1.06); }
+}
+
+/* реплика: В3-паттерн — role=status, ≤2 строки + ссылка (§14.3.4) */
+.sat-replica {
+  position: absolute;
+  right: 0; bottom: calc(100% + var(--space-2));
+  width: max-content; max-width: 260px;
+  display: grid; gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-raised);
+  font-size: var(--text-data);
+  color: var(--color-text-primary);
+  z-index: 56;
+}
+.sat-replica a { color: var(--color-iris-bright); }
+.sat-replica span { line-height: var(--leading-normal); }
+
+/* В3-карточка ошибки поднимается выше гнезда (§14.3.1) */
+body.has-satellite .living-v3-card { bottom: calc(16px + 96px + var(--space-3)); }
+
+@media (max-width: 767px) {
+  .sat-nest { width: 64px; height: 64px; right: 8px; bottom: 8px; }
+  .sat-body { width: 48px; height: 48px; }
+  body.has-satellite .living-v3-card { bottom: calc(8px + 64px + var(--space-3)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sat-body, .sat-body.is-hold { transition: none; }
+  .sat-body.is-flight { animation: none; transform: translate3d(var(--tx), var(--ty), 0); }
+  .sat-body::after { animation: none; }
+  .sat-ring { animation: none; opacity: 0.6; }
+}

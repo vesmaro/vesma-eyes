@@ -228,6 +228,24 @@
   if (doc.readyState === "loading") doc.addEventListener("DOMContentLoaded", onHeroReady);
   else onHeroReady();
 
+  /* ── Зов Весмы «показать» (§14.3.2: только зов пользователя) ─────── */
+  doc.querySelectorAll("[data-vesma-show]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      if (window.Vesma) {
+        var zone = doc.querySelector(".panel") || doc.body;
+        window.Vesma.show(zone, "Полигон машинерии: демо-хуки шины, режимы слоя, лента событий.");
+      }
+    });
+  });
+
+  /* ── living-extra (§14): ленивый чанк после first paint ──────────── */
+  window.addEventListener("load", function () {
+    var sc = doc.createElement("script");
+    sc.src = "js/living-extra.js";
+    sc.async = true;
+    doc.head.appendChild(sc);
+  });
+
   /* ── Прибытие из палитры (§3.3): заголовок h1 получает фокус ──────── */
   function focusArrivedH1() {
     var flag = false;
