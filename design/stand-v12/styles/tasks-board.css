@@ -1,0 +1,155 @@
+/* tasks-board.css — Задачи «Живой пульт» (спека 15 §3.4 + §13.8).
+ *
+ * Канбан остаётся канбаном; оживает данными: шапки колонок несут счётчик +
+ * темп N/ч (производная шины task.done за 60 минут); task.done — спектакль
+ * в три такта; фасад-чип owner.wait фильтрует доску. Drag в стенде нет —
+ * борд заморожен по лору (M-189); перетаскивание конфликтует с
+ * автопереносами. Все значения — токены.
+ */
+
+.tasks-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  margin: 0 0 var(--space-6);
+}
+.tasks-head .page-title { margin: 0; }
+/* фасад-чип — тот же компонент, что на Обзоре (.hud-wait-chip, hero.css);
+ * здесь — кнопка-фильтр (aria-pressed) */
+.tasks-head .hud-wait-chip { cursor: pointer; font-family: var(--font-ui); }
+.tasks-head .hud-wait-chip .wait-title { color: var(--color-text-secondary); }
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+.col {
+  display: grid;
+  gap: var(--space-2);
+  min-height: 120px;
+}
+.col-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: 0 var(--space-2) var(--space-2);
+  border-bottom: var(--line-myelin) solid var(--myelin-strong);
+}
+.col-head .col-name {
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.col-head .col-count,
+.col-head .col-rate {
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--numeric-tnum); /* §13.8.1 */
+  font-size: var(--text-data);
+  color: var(--color-text-primary);
+}
+.col-head .col-rate { color: var(--color-iris-bright); }
+/* мини-статистика v11 в шапках (§13.8.6): кликабельна */
+.col-head .col-mini {
+  margin-left: auto;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--numeric-tnum);
+  font-size: var(--text-caps);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.col-head .col-mini:hover { color: var(--color-text-primary); }
+.col-head .col-mini:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* карточка: ≥48px (2.5.8), blocked — кромка-причина §13.8.5 */
+.task-card {
+  position: relative;
+  display: grid;
+  gap: var(--space-1);
+  min-height: 48px;
+  padding: var(--space-3);
+  border: var(--line-hairline) solid var(--myelin-hairline);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-well);
+}
+.task-card[data-blocked] {
+  border-left: 2px solid var(--color-warning);
+}
+.task-card[data-owner-wait] {
+  border-color: var(--color-confidence-dim);
+  box-shadow: inset 2px 0 0 var(--color-confidence); /* золотая кромка 2px */
+}
+.task-card .card-id {
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--numeric-tnum);
+  font-size: var(--text-caps);
+  color: var(--color-text-muted);
+}
+.task-card .card-title {
+  font-size: var(--text-ui);
+  color: var(--color-text-primary);
+  font-weight: var(--weight-medium);
+}
+.task-card .card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  font-size: var(--text-data);
+  color: var(--color-text-secondary);
+}
+.task-card .card-meta .card-agent { color: var(--color-iris-bright); }
+.task-card .card-blocked-note {
+  font-size: var(--text-data);
+  color: var(--color-warning); /* §13.8.5: не цветом одним — текст причины */
+}
+
+/* фасад-фильтр: карточки без owner.wait затемняются, взаимодействие живо */
+.board[data-owner-wait] .task-card:not([data-owner-wait]) {
+  opacity: 0.35;
+}
+
+/* такт 1: золотая вспышка 240ms + hold 600ms (§13.8.2) */
+.task-card.is-done-flash { animation: card-done-flash 840ms var(--ease-enter); }
+@keyframes card-done-flash {
+  0% { box-shadow: inset 0 0 0 2px var(--color-confidence); background: color-mix(in srgb, var(--color-confidence) 18%, var(--color-bg-well)); }
+  28.6% { box-shadow: inset 0 0 0 2px var(--color-confidence); background: color-mix(in srgb, var(--color-confidence) 18%, var(--color-bg-well)); }
+  100% { box-shadow: inset 2px 0 0 var(--color-confidence-dim); background: var(--color-bg-well); }
+}
+/* такт 2: FLIP-transform 400ms (класс+transform задаёт JS) */
+.task-card.is-flipping { transition: transform 400ms var(--ease-enter); z-index: 5; }
+/* reduced: без FLIP — статичный золотой тинт 1.5s (§13.8.2) */
+.task-card.is-done-tint { animation: card-done-tint 1.5s var(--ease-exit) forwards; }
+@keyframes card-done-tint {
+  0% { background: color-mix(in srgb, var(--color-confidence) 18%, var(--color-bg-well)); }
+  100% { background: var(--color-bg-well); }
+}
+
+/* пустая колонка: «Пусто — агентам есть что взять» + CTA (пустота приглашает) */
+.col-empty {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px dashed var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  font-size: var(--text-data);
+}
+.col-empty[hidden] { display: none; }
+
+@media (max-width: 1100px) { .board { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 700px) { .board { grid-template-columns: minmax(0, 1fr); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .task-card.is-done-flash { animation: none; }
+  .task-card.is-flipping { transition: none; }
+}

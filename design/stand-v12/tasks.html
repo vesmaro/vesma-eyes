@@ -4,11 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Задачи — vesmaro-eyes · стенд ВАУ v12</title>
-  <meta name="description" content="Заглушка экрана Задач v12 (срез 5, спека 15 §3.4): цель чипа «Ждут владельца» с Обзора.">
+  <meta name="description" content="Задачи «Живой пульт» (спека 15 §3.4): темп колонок из шины, спектакль task.done, фасад «Ждут владельца».">
   <link rel="stylesheet" href="styles/tokens-v12.css">
   <link rel="stylesheet" href="styles/shell-v12.css">
   <link rel="stylesheet" href="styles/living-layer.css">
   <link rel="stylesheet" href="styles/palette.css">
+  <link rel="stylesheet" href="styles/tasks-board.css">
 </head>
 <body data-screen="tasks">
 <a class="skip-link" href="#main">К содержимому</a>
@@ -22,7 +23,7 @@
     <div class="topbar-spacer"></div>
     <div class="topbar-status">
       <span class="pill live" title="Живое соединение с демо-лентой стенда"><span class="dot" aria-hidden="true"></span>live</span>
-      <a class="iconbtn exec-badge" href="shell.html#living" data-exec-count aria-label="Активные исполнения: 1 — открыть полигон живого слоя">
+      <a class="iconbtn exec-badge" href="#main" data-exec-count aria-label="Активные исполнения: 1 — живой пульт задач">
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
         <span class="badge-dot" aria-hidden="true">1</span>
       </a>
@@ -52,8 +53,8 @@
         <span class="side-label">Трейлер</span>
       </a>
       <a class="side-link" href="shell.html">
-        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-        <span class="side-label">Полигон машинерии</span>
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/></svg>
+        <span class="side-label">Полигон</span>
       </a>
       <a class="side-link" href="hosts.html">
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M12 8V4H8"/><path d="M2 14h2"/><path d="M20 14h2"/></svg>
@@ -77,29 +78,54 @@
         <span class="side-count">1</span>
       </span>
     </nav>
-    <p class="side-note">Срез 5 (§3.4 «Живой пульт») — не начат.</p>
+    <p class="side-note">Срез 5 (§3.4): темп из шины, спектакль task.done, фасад owner.wait. Drag нет — борд заморожен (лор M-189).</p>
   </aside>
 
   <main class="content" id="main">
-    <p class="crumbs"><a href="overview.html">обзор</a> / задачи</p>
-    <h1 class="page-title">Задачи</h1>
+    <div class="tasks-head">
+      <h1 class="page-title">Задачи</h1>
+      <!-- Фасад «Ждут владельца» — тот же компонент, что чип Обзора;
+           здесь — кнопка-фильтр (aria-pressed, §13.8.4) -->
+      <button type="button" class="hud-wait-chip" id="facade-wait"
+              aria-label="Ждут владельца: 3 — показать только ожидающие решения">
+        <span class="wait-diamond" aria-hidden="true">◆</span>
+        Ждут владельца: <span class="wait-count">3</span>
+        <span class="wait-mode">· показать</span>
+      </button>
+    </div>
+
     <p class="page-lead">
-      Сюда ведёт чип «Ждут владельца» с Обзора (фильтр owner.wait — срез 5,
-      спека 15 §3.4 «Живой пульт»: фасад-чип, темп колонок, хореография
-      task.done). Демо-события жизненного цикла задач — в Полигоне.
+      Доска живёт шиной: счётчики и темп «решений за час» — производные
+      событий <code>task.*</code>. Спектакль <code>task.done</code>: вспышка
+      золота → перелёт в «Решено» → курьер к Нейре, счётчик ▸N растёт.
     </p>
-    <section class="panel" aria-labelledby="wait-h">
-      <h2 id="wait-h">Ждут владельца (фикстуры демо-данных)</h2>
-      <div class="feed" aria-label="Ожидающие решения">
+
+    <div class="board" id="board" aria-label="Канбан-доска задач"></div>
+
+    <section class="panel" style="margin-top: var(--space-8);" aria-labelledby="live-h">
+      <h2 id="live-h">Живая доска · демо-хуки</h2>
+      <p class="panel-note">
+        События шины — единственный источник. «Дать задачу» публикует
+        <code>task.start</code> и заводит карточку; <code>task.done</code>
+        запускает спектакль на первой подходящей карточке.
+      </p>
+      <div class="demo-row" aria-label="Демо-хуки событий задач">
+        <button type="button" class="demo-btn" data-ev="task.start"><span class="demo-sig" aria-hidden="true"></span>задача началась <span class="demo-mono">task.start</span></button>
+        <button type="button" class="demo-btn" data-ev="task.done"><span class="demo-sig" aria-hidden="true"></span>задача завершена <span class="demo-mono">task.done</span></button>
+        <button type="button" class="demo-btn" data-ev="owner.wait"><span class="demo-sig" aria-hidden="true"></span>ждут владельца <span class="demo-mono">owner.wait</span></button>
+        <button type="button" class="demo-btn" data-ev="owner.clear"><span class="demo-sig" aria-hidden="true"></span>владелец ответил <span class="demo-mono">owner.clear</span></button>
+        <button type="button" class="demo-btn" data-give-task><span class="demo-sig" aria-hidden="true"></span>дать задачу</button>
+      </div>
+    </section>
+
+    <section class="panel" id="archive-panel" aria-labelledby="arch-h">
+      <h2 id="arch-h">Ждут владельца · архив</h2>
+      <p class="panel-note">Фикстуры демо-данных (W-*); мини-статистика «готово» в шапке «Решено» ведёт сюда.</p>
+      <div class="feed" aria-label="Ожидающие решения и архив">
         <div class="feed-row" data-ev="owner.wait"><span class="ev-dot" aria-hidden="true"></span><span>W-12 · Утвердить тег-словарь (M-241)</span><span class="ev-time">◆</span></div>
         <div class="feed-row" data-ev="owner.wait"><span class="ev-dot" aria-hidden="true"></span><span>W-11 · Разморозить борд после рефакторинга сессий</span><span class="ev-time">◆</span></div>
         <div class="feed-row" data-ev="owner.wait"><span class="ev-dot" aria-hidden="true"></span><span>W-9 · Подтвердить пейринг нового устройства</span><span class="ev-time">◆</span></div>
-      </div>
-      <div class="demo-row" style="margin-top: var(--space-4);" aria-label="Демо-хуки событий задач">
-        <button type="button" class="demo-btn sm" data-ev="task.start"><span class="demo-sig" aria-hidden="true"></span>task.start</button>
-        <button type="button" class="demo-btn sm" data-ev="task.done"><span class="demo-sig" aria-hidden="true"></span>task.done</button>
-        <button type="button" class="demo-btn sm" data-ev="owner.wait"><span class="demo-sig" aria-hidden="true"></span>owner.wait</button>
-        <button type="button" class="demo-btn sm" data-ev="owner.clear"><span class="demo-sig" aria-hidden="true"></span>owner.clear</button>
+        <div class="feed-row"><span class="ev-dot" aria-hidden="true" style="background: var(--color-success);"></span><span>T-126 · Отчёт волны 1 в Коре — готово</span><span class="ev-time">✓</span></div>
       </div>
     </section>
   </main>
@@ -108,6 +134,7 @@
 <script src="js/stand-v12.js"></script>
 <script src="js/data.js"></script>
 <script src="js/living.js"></script>
+<script src="js/tasks-v12.js"></script>
 <script src="js/palette-v12.js"></script>
 </body>
 </html>
