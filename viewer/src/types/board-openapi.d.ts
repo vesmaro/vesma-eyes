@@ -1214,7 +1214,18 @@ export interface paths {
             readonly path?: never;
             readonly cookie?: never;
         };
-        readonly get?: never;
+        /**
+         * Executor Discovery Mirror
+         * @description Discovery mirror read — the GET leg of the route above (ME-015 tail,
+         *     the AGW-18 «discovery-роут 405»: the POST-only registration left GET to
+         *     the root catch-all, which answered a wrong-status shell instead of the
+         *     mirror). OPEN read, the SAME boundary as GET /api/executors (the
+         *     cluster ingress is the auth boundary; the mirror already rides the
+         *     open ExecutorOut.discovered projection); unknown id → 404, an honest
+         *     verdict instead of the SPA fallback. Advisory data only — never
+         *     routing authority, never capabilities.
+         */
+        readonly get: operations["executor_discovery_mirror_api_executors__executor_id__discovery_get"];
         readonly put?: never;
         /**
          * Executor Discovery
@@ -3062,6 +3073,33 @@ export interface components {
             readonly environments: readonly {
                 readonly [key: string]: unknown;
             }[];
+        };
+        /**
+         * ExecutorDiscoveryMirrorOut
+         * @description GET leg of the discovery route (ME-015 tail, AGW-18): the ADVISORY
+         *     mirror of the executor's LAST discovery report. Just the mirror and
+         *     its cap — the full registry row lives on GET /api/executors/{id};
+         *     ``meta.max_entries`` rides the same read-never-hardcode discipline as
+         *     the presence thresholds.
+         */
+        readonly ExecutorDiscoveryMirrorOut: {
+            /** Ok */
+            readonly ok: boolean;
+            /** Executor Id */
+            readonly executor_id: string;
+            /**
+             * Discovered
+             * @default []
+             */
+            readonly discovered: readonly {
+                readonly [key: string]: unknown;
+            }[];
+            /** Meta */
+            readonly meta: {
+                readonly [key: string]: unknown;
+            };
+        } & {
+            readonly [key: string]: unknown;
         };
         /** ExecutorDiscoveryOut */
         readonly ExecutorDiscoveryOut: {
@@ -7165,6 +7203,37 @@ export interface operations {
                 };
                 content: {
                     readonly "application/json": components["schemas"]["ExecutorStateChangeOut"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly executor_discovery_mirror_api_executors__executor_id__discovery_get: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly executor_id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["ExecutorDiscoveryMirrorOut"];
                 };
             };
             /** @description Validation Error */

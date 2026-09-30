@@ -1699,6 +1699,18 @@ class ExecutorDiscoveryOut(_ApiModel):
     rejected_names: list[str] = []
 
 
+class ExecutorDiscoveryMirrorOut(_ApiModel):
+    """GET leg of the discovery route (ME-015 tail, AGW-18): the ADVISORY
+    mirror of the executor's LAST discovery report. Just the mirror and
+    its cap — the full registry row lives on GET /api/executors/{id};
+    ``meta.max_entries`` rides the same read-never-hardcode discipline as
+    the presence thresholds."""
+    ok: bool
+    executor_id: str
+    discovered: list[dict[str, Any]] = []
+    meta: dict[str, Any]
+
+
 class ExecutorRegisteredOut(_ApiModel):
     ok: bool
     executor: ExecutorOut
@@ -4449,6 +4461,27 @@ async def executor_discovery(executor_id: str, body: ExecutorDiscoveryBody,
     return {"ok": True, "executor": _executor_public(row),
             "accepted": accepted, "rejected": rejected,
             "rejected_names": rejected_names}
+
+
+@app.get("/api/executors/{executor_id}/discovery")
+async def executor_discovery_mirror(executor_id: str) -> ExecutorDiscoveryMirrorOut:
+    """Discovery mirror read — the GET leg of the route above (ME-015 tail,
+    the AGW-18 «discovery-роут 405»: the POST-only registration left GET to
+    the root catch-all, which answered a wrong-status shell instead of the
+    mirror). OPEN read, the SAME boundary as GET /api/executors (the
+    cluster ingress is the auth boundary; the mirror already rides the
+    open ExecutorOut.discovered projection); unknown id → 404, an honest
+    verdict instead of the SPA fallback. Advisory data only — never
+    routing authority, never capabilities."""
+    row = store.get_executor(executor_id)
+    if row is None:
+        raise HTTPException(404, f"executor {executor_id} not found")
+    return {
+        "ok": True,
+        "executor_id": executor_id,
+        "discovered": _executor_public(row)["discovered"],
+        "meta": {"max_entries": _DISCOVERY_MAX_ENTRIES},
+    }
 
 
 @app.patch("/api/executors/{executor_id}")
