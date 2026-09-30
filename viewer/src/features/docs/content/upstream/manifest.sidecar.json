@@ -97,8 +97,8 @@
       "provenance": {
         "repo": "vesmaro-eyes",
         "source_path": "docs/api",
-        "sha": "f5d11acdedc8f5e4f8be0807978189ac9edbc887",
-        "commit_date": "2026-09-30T00:12:56+03:00"
+        "sha": "09c5be80884db9b1992f623d9c0a0411ac65bb63",
+        "commit_date": "2026-09-30T12:23:46+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -157,15 +157,15 @@
       },
       "category": "api-board",
       "order": 4,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-09-30",
       "locales": [
         "ru"
       ],
       "provenance": {
         "repo": "vesmaro-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
-        "commit_date": "2026-09-29T22:04:31+03:00"
+        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
+        "commit_date": "2026-09-30T12:22:11+03:00"
       },
       "contentClass": {
         "ru": "corpus"
@@ -178,15 +178,15 @@
       },
       "category": "api-board",
       "order": 6,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-09-30",
       "locales": [
         "ru"
       ],
       "provenance": {
         "repo": "vesmaro-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
-        "commit_date": "2026-09-29T22:04:31+03:00"
+        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
+        "commit_date": "2026-09-30T12:22:11+03:00"
       },
       "contentClass": {
         "ru": "corpus"
@@ -199,15 +199,15 @@
       },
       "category": "api-board",
       "order": 7,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-09-30",
       "locales": [
         "ru"
       ],
       "provenance": {
         "repo": "vesmaro-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
-        "commit_date": "2026-09-29T22:04:31+03:00"
+        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
+        "commit_date": "2026-09-30T12:22:11+03:00"
       },
       "contentClass": {
         "ru": "corpus"
@@ -220,15 +220,15 @@
       },
       "category": "api-board",
       "order": 5,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-09-30",
       "locales": [
         "ru"
       ],
       "provenance": {
         "repo": "vesmaro-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
-        "commit_date": "2026-09-29T22:04:31+03:00"
+        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
+        "commit_date": "2026-09-30T12:22:11+03:00"
       },
       "contentClass": {
         "ru": "corpus"
@@ -241,15 +241,15 @@
       },
       "category": "api-board",
       "order": 11,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-09-30",
       "locales": [
         "ru"
       ],
       "provenance": {
         "repo": "vesmaro-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
-        "commit_date": "2026-09-29T22:04:31+03:00"
+        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
+        "commit_date": "2026-09-30T12:22:11+03:00"
       },
       "contentClass": {
         "ru": "corpus"
@@ -262,15 +262,15 @@
       },
       "category": "api-board",
       "order": 1,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-09-30",
       "locales": [
         "ru"
       ],
       "provenance": {
         "repo": "vesmaro-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
-        "commit_date": "2026-09-29T22:04:31+03:00"
+        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
+        "commit_date": "2026-09-30T12:22:11+03:00"
       },
       "contentClass": {
         "ru": "corpus"
@@ -283,15 +283,15 @@
       },
       "category": "api-board",
       "order": 8,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-09-30",
       "locales": [
         "ru"
       ],
       "provenance": {
         "repo": "vesmaro-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
-        "commit_date": "2026-09-29T22:04:31+03:00"
+        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
+        "commit_date": "2026-09-30T12:22:11+03:00"
       },
       "contentClass": {
         "ru": "corpus"
@@ -304,15 +304,15 @@
       },
       "category": "api-board",
       "order": 3,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-09-30",
       "locales": [
         "ru"
       ],
       "provenance": {
         "repo": "vesmaro-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
-        "commit_date": "2026-09-29T22:04:31+03:00"
+        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
+        "commit_date": "2026-09-30T12:22:11+03:00"
       },
       "contentClass": {
         "ru": "corpus"
@@ -325,15 +325,15 @@
       },
       "category": "api-board",
       "order": 9,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-09-30",
       "locales": [
         "ru"
       ],
       "provenance": {
         "repo": "vesmaro-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
-        "commit_date": "2026-09-29T22:04:31+03:00"
+        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
+        "commit_date": "2026-09-30T12:22:11+03:00"
       },
       "contentClass": {
         "ru": "corpus"
@@ -346,15 +346,15 @@
       },
       "category": "api-board",
       "order": 10,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-09-30",
       "locales": [
         "ru"
       ],
       "provenance": {
         "repo": "vesmaro-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
-        "commit_date": "2026-09-29T22:04:31+03:00"
+        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
+        "commit_date": "2026-09-30T12:22:11+03:00"
       },
       "contentClass": {
         "ru": "corpus"
@@ -367,15 +367,15 @@
       },
       "category": "api-board",
       "order": 12,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-09-30",
       "locales": [
         "ru"
       ],
       "provenance": {
         "repo": "vesmaro-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
-        "commit_date": "2026-09-29T22:04:31+03:00"
+        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
+        "commit_date": "2026-09-30T12:22:11+03:00"
       },
       "contentClass": {
         "ru": "corpus"
@@ -388,15 +388,15 @@
       },
       "category": "api-board",
       "order": 2,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-09-30",
       "locales": [
         "ru"
       ],
       "provenance": {
         "repo": "vesmaro-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
-        "commit_date": "2026-09-29T22:04:31+03:00"
+        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
+        "commit_date": "2026-09-30T12:22:11+03:00"
       },
       "contentClass": {
         "ru": "corpus"
