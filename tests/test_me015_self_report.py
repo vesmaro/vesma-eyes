@@ -13,7 +13,12 @@ Coverage map:
   auth gate (own executor token or machine token); unauthenticated polls
   never update; params without executor_id → 422; invalid transport →
   422; the deployed poller's exact wire shape (executor_id only) is
-  unaffected.
+  unaffected;
+- the registration handshake (tail): version/transport from POST
+  /api/executors reach the roster verbatim (register with version X →
+  roster returns X); an unversioned enrollment is the honest '' — never
+  a placeholder banner; a post-enroll upgrade ages the stale tag out with
+  one heartbeat.
 """
 
 from __future__ import annotations
@@ -225,3 +230,52 @@ class TestSelfReportPollPiggyback:
         out = _row(client, executor["id"])
         assert out["version"] == "0.1.1"
         assert out["presence"] == "online"
+
+
+class TestRegistrationHandshake:
+    """ME-015 tail (AGW-18 stale-tags half): the registration body IS the
+    VERSION handshake (agent protocol §1.1/§5 — the agent enrolls itself,
+    so the row's ``version`` is the binary's own fact) and ``transport``
+    is a registration fact. The roster (GET /api/executors — ME-014's data
+    source) must return EXACTLY what the live registry holds: never a
+    stub constant, never a defaulted tag."""
+
+    def test_register_with_version_x_roster_returns_x(self, client, auth):
+        """The dispatch-level acceptance: register an executor with
+        version X and a mesh transport → the roster row carries X verbatim
+        (list, one-row GET and the registration echo — all three legs)."""
+        executor, _secret = _register(client, auth, "me015-r1",
+                                      transport="mesh-r4", version="0.6.0")
+        assert executor["version"] == "0.6.0"          # the 201 echo
+        roster = client.get("/api/executors").json()
+        row = next(i for i in roster["items"] if i["id"] == executor["id"])
+        assert row["version"] == "0.6.0"
+        assert row["transport"] == "mesh-r4"
+        one = _row(client, executor["id"])             # GET /{id}
+        assert one["version"] == "0.6.0"
+        assert one["transport"] == "mesh-r4"
+
+    def test_unversioned_registration_is_honest_absence(self, client, auth):
+        """An agent that enrolls without a version shows '' — the honest
+        empty, never a placeholder banner like '0.1.1' (the prod symptom
+        ME-015 was filed for)."""
+        executor, _secret = _register(client, auth, "me015-r2")
+        roster = client.get("/api/executors").json()
+        row = next(i for i in roster["items"] if i["id"] == executor["id"])
+        assert row["version"] == ""
+        assert row["transport"] == "local-poll"        # declared default
+
+    def test_handshake_then_upgrade_keeps_roster_honest(self, client, auth):
+        """Full lifecycle: enroll at X, the agent upgrades and self-reports
+        Y on its next heartbeat → the roster shows Y (the last reported
+        fact wins — stale tags age out with one beat, no re-enroll)."""
+        executor, secret = _register(client, auth, "me015-r3",
+                                     transport="mesh-r4", version="0.5.1")
+        r = client.post(
+            f"/api/executors/{executor['id']}/heartbeat",
+            json={"version": "0.6.0"}, headers=_ex_headers(secret))
+        assert r.status_code == 200, r.text
+        roster = client.get("/api/executors").json()
+        row = next(i for i in roster["items"] if i["id"] == executor["id"])
+        assert row["version"] == "0.6.0"
+        assert row["transport"] == "mesh-r4"
