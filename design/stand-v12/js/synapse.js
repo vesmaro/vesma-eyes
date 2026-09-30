@@ -54,6 +54,20 @@
   }
   refreshColors();
 
+  /* ── v12 (15 §13.1): поштучная волна пробуждения — свет всплывает из глубины к зеркалу воды.
+   * Гвард: окно --duration-awaken (1200ms = 240ms проявление + 960ms разброс);
+   * после окна код инертен (awakenT0 = -1), флаг vesmaro.awakened
+   * общий с CSS-частью. Механика событий (pulses/tints/hover/breath/
+   * деградация FPS) не тронута (§13.1 p.5). */
+  var awakenT0 = -1;
+  var AWAKEN_WINDOW = (parseFloat(colorVar("--duration-awaken", "1200")) || 1200);
+  var AWAKEN_REVEAL = 240;
+  var AWAKEN_SPREAD = Math.max(0, AWAKEN_WINDOW - AWAKEN_REVEAL);
+  function wakeAlpha(n, wNow) {
+    var k = (wNow - n.wake * AWAKEN_SPREAD) / AWAKEN_REVEAL;
+    return k < 0 ? 0 : k > 1 ? 1 : k;
+  }
+
   /* ── Deterministic layout (stable across visits) ────────────────────── */
   function mulberry32(a) {
     return function () {
@@ -110,7 +124,9 @@
         phase: i * 0.7,
         vx: (rnd() - 0.5) * 2, // px per second (≤4)
         vy: (rnd() - 0.5) * 2,
+        wake: 0, /* v12 (§13.1): 1 − y/H — глубина; нижние узлы ≈1 просыпаются первыми */
       };
+      n.wake = 1 - n.y / H;
       nodes.push(n);
       byId[m.id] = n;
     });
@@ -356,6 +372,14 @@
 
   /* ── Render ─────────────────────────────────────────────────────────── */
   function render(now) {
+    /* v12 (§13.1): окно волны; после окна — инертность + запись флага
+     * (идемпотентно с CSS-частью stand-v12.js) */
+    var wNow = awakenT0 < 0 ? 1e9 : Math.max(0, (now || 0) - awakenT0);
+    if (awakenT0 >= 0 && wNow > AWAKEN_WINDOW) {
+      awakenT0 = -1;
+      try { sessionStorage.setItem("vesmaro.awakened", "1"); } catch (e) {}
+      wNow = 1e9;
+    }
     var W = canvas.width / dpr;
     var H = canvas.height / dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -378,12 +402,13 @@
       var b = nodes[ed[1]];
       if (!a || !b) return;
       var strong = focusNode && (a === focusNode || b === focusNode);
+      var wEdge = Math.min(wakeAlpha(a, wNow), wakeAlpha(b, wNow)); /* v12: один расчёт на ребро */
       if (strong) {
         ctx.strokeStyle = COL.myelin;
-        ctx.globalAlpha = 1;
+        ctx.globalAlpha = wEdge;
       } else {
         ctx.strokeStyle = COL.idle;
-        ctx.globalAlpha = focusNode ? 0.4 : 1;
+        ctx.globalAlpha = (focusNode ? 0.4 : 1) * wEdge;
       }
       ctx.beginPath();
       ctx.moveTo(a.x, a.y);
@@ -422,7 +447,7 @@
       var alpha = dimmed ? 0.4 : 1;
       var breath = reduced ? 1 : 1 + 0.06 * Math.sin((breathT / 5000) * Math.PI * 2 + n.phase);
       var hs = n.r * 10;
-      ctx.globalAlpha = (dimmed ? 0.05 : 0.12) * breath;
+      ctx.globalAlpha = (dimmed ? 0.05 : 0.12) * breath * wakeAlpha(n, wNow); /* v12 волна */
       ctx.drawImage(halo, n.x - hs / 2, n.y - hs / 2, hs, hs);
       if (n === focusNode && glowOn) {
         ctx.globalAlpha = 0.8 * breath;
@@ -435,7 +460,7 @@
       var dimmed = focusNode && n !== focusNode && !adj[i];
       var alpha = dimmed ? 0.4 : 1;
       var breath = reduced ? 1 : 1 + 0.06 * Math.sin((breathT / 5000) * Math.PI * 2 + n.phase);
-      ctx.globalAlpha = Math.min(1, alpha * breath);
+      ctx.globalAlpha = Math.min(1, alpha * breath) * wakeAlpha(n, wNow); /* v12 волна */
       ctx.fillStyle = n === focusNode ? COL.irisBright : COL.iris;
       ctx.beginPath();
       ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
@@ -552,6 +577,15 @@
 
   /* first paint before rAF starts (spec 04 §1: rAF after first paint) */
   resize();
+  /* v12 (§13.1 p.2): старт волны — после первого buildGraph, до цикла;
+   * reduced волну не стартует (статика сразу) */
+  try {
+    if (sessionStorage.getItem("vesmaro.awakened") !== "1" && !reduced) {
+      awakenT0 = performance.now();
+    }
+  } catch (e) {
+    if (!reduced) awakenT0 = performance.now();
+  }
   requestAnimationFrame(function () {
     if (reduced) render(0);
     else startLoop();

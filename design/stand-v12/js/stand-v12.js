@@ -199,7 +199,11 @@
   if (doc.readyState === "loading") doc.addEventListener("DOMContentLoaded", onHeroReady);
   else onHeroReady();
 
-  /* Тикер: одна строка, события шины, fade-swap 240ms (НЕ marquee) */
+  /* Тикер: одна строка, события шины (НЕ marquee). §13.3: тикер = данные —
+   * строка обновляется ВО ВСЕХ режимах живого слоя (включая «Выключен»);
+   * гасится только ДВИЖЕНИЕ: fade-swap 240ms живёт лишь в «Полном» и
+   * вне паузы Нейры (aria-pressed кнопки — живой атрибут living.js,
+   * клик-перехват удалён по вердикту). */
   function tickerSet(d) {
     if (!ticker) return;
     var tm = ticker.querySelector(".ticker-time");
@@ -211,28 +215,22 @@
     if (tx) tx.textContent = d.text || "";
     ticker.setAttribute("data-ev", d.ev || "");
   }
-  var tickerPaused = false; /* пауза живого слоя останавливает и тикер (§3.1) */
+  function fadeAllowed() {
+    if (root.getAttribute("data-living") !== "full") return false;
+    var neura = doc.querySelector(".living-neura");
+    return !(neura && neura.getAttribute("aria-pressed") === "true");
+  }
   if (ticker) {
     doc.addEventListener("stand:feed-event", function (e) {
-      if (tickerPaused) return;
       var d = e.detail || {};
+      if (!fadeAllowed()) { tickerSet(d); return; } /* мгновенная подстановка */
       ticker.classList.add("is-swapping");
       setTimeout(function () {
         tickerSet(d);
         ticker.classList.remove("is-swapping");
       }, 120);
     });
-    /* пауза: клик по Нейре living.js не экспортирует — ловим жест
-     * делегированием (аппроксимация стенда, см. README «отклонения»);
-     * «Выключен» — через смену режима */
-    doc.addEventListener("click", function (e) {
-      if (e.target.closest && e.target.closest(".living-neura")) tickerPaused = !tickerPaused;
-    });
   }
-  window.addEventListener("stand:living-change", function () {
-    tickerPaused = livingNow() === "off";
-  });
-  if (ticker && livingNow() === "off") tickerPaused = true;
 
   /* «Поделиться»: честная кнопка — копирует адрес страницы */
   doc.querySelectorAll("[data-share]").forEach(function (b) {
@@ -265,12 +263,14 @@
       quiet = new URLSearchParams(window.location.search).get("static") === "1";
     } catch (e) {}
     if (awakened || quiet || systemReduced()) return;
-    try { sessionStorage.setItem(AWAKEN_KEY, "1"); } catch (e) {}
+    /* ФЛАГ не пишем: окно волны закрывает и флагует движок (synapse.js
+     * §13.1 p.4); здесь — только HUD-каскад и один импульс. */
     hero.setAttribute("data-awaken", "");
     setTimeout(function () {
       var seed = (STAND && STAND.wellNodes && STAND.wellNodes[9]) || { id: null, title: "Схему провенанса" };
-      /* публикация в ту же единую шину с mem-адресом узла (для импульса
-       * по ребру); emit() не используется — ему нечем передать mem */
+      /* Ровно одно событие (§13.2), единый издательский уровень стенда
+       * (тот же хук, что демо-кнопки). Прод: событие приходит из реальной
+       * шины — издатель удалить. */
       doc.dispatchEvent(new CustomEvent("stand:feed-event", {
         detail: { ev: "write", mem: seed.id, text: "агент agb записал «" + seed.title + "»", who: "agb", srv: "mnemos-01", at: Date.now() },
       }));

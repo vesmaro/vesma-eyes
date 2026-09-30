@@ -1,4 +1,7 @@
-/* kora-v12.js — Кора «Дирижёрская» (спека 15 §3.2, срез §8.3).
+/* kora-v12.js — Кора «Дирижёрская» (спека 15 §3.2 + §13.6).
+ * i18n-ключи kora.* (RU/EN, паритет 07n; i18n-слой в скаффолде нет —
+ * ключи собраны здесь): Эфир/Ether; Сессий нет — агенты свободны/No
+ * sessions — agents are idle; Дать задачу/Assign a task.
  *
  * Пульт в два крыла (вкладок нет); транскрипт-сцена с actor-rail;
  * Эфир — постоянный поток: строки появляются по событиям ЕДИНОЙ шины
@@ -114,6 +117,10 @@
     row.className = "ether-row" + (o.sessId ? "" : " plain");
     row.setAttribute("data-kind", o.kind);
     if (o.errorText) row.setAttribute("aria-live", "assertive"); /* 4.1.3 */
+    var dot = doc.createElement("span"); /* точка словаря (§13.6.3) */
+    dot.className = "ev-dot";
+    dot.setAttribute("aria-hidden", "true");
+    row.appendChild(dot);
     var tx = doc.createElement("span");
     tx.className = "ether-text";
     var strong = doc.createElement("strong");
@@ -172,18 +179,22 @@
       time: fmtClock(),
       errorText: ev === "error" ? (d.text || "связь потеряна") : null,
     });
-    /* вспышка ирис 240ms — класс события task.start (§3.2) */
-    etherPush(row, ev === "task.start" || ev === "owner.wait");
+    /* §13.6.4: вспышка строки по событию её сессии (write/task.* с сессией) */
+    var hasSess = !!(row.tagName === "BUTTON");
+    etherPush(row, hasSess || ev === "task.start" || ev === "owner.wait");
 
     /* сцена: write от активной сессии дописывает строку агента; ошибка —
      * строку ошибки (rail красный, имя дублирует) */
     if (trList && currentSession) {
       if (ev === "write") {
-        trList.appendChild(trRow(currentSession.agent, (d.text || "записал в память"), fmtClock(), /^записал/.test(d.text || "")));
+        var wrow = trRow(currentSession.agent, (d.text || "записал в память"), fmtClock(), /^записал/.test(d.text || ""));
+        wrow.style.setProperty("--tr-flash", "var(--synapse-write)"); /* §13.6.5 */
+        trList.appendChild(wrow);
         trList.scrollTop = trList.scrollHeight;
       } else if (ev === "error") {
         var erow = trRow(currentSession.agent, "связь потеряна: " + (d.text || "повторная попытка"), fmtClock(), false);
         erow.setAttribute("data-ev", "error");
+        erow.style.setProperty("--tr-flash", "var(--synapse-error)"); /* §13.6.5 */
         trList.appendChild(erow);
       }
     }
@@ -235,61 +246,50 @@
     });
   });
 
-  /* ── Швы Ж3/Ж4: drag + клавиатура (v7-механика, зона ≥24px) ────────── */
+  /* ── Шов Ж4: drag + клавиатура (v7-механика) + aria-valuenow (§13.6.1);
+   * ≤60px — свёрнутый Пульт, только счётчик ожиданий (§13.6.7).
+   * Ж3 (seam-side) — фикс 320px (§13.6.2): элемент жив как хост жилы j3
+   * living.js, drag крыла убран по вердикту. */
   var grid = doc.querySelector(".kora-grid");
-  function seamDrag(seam, axis) {
-    if (!seam || !grid) return;
-    var start = 0, base = 0;
-    function clampPx(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
-    function apply(px) {
-      if (axis === "x") grid.style.setProperty("--ether-w", clampPx(px, 280, 520) + "px");
-      else grid.style.setProperty("--pult-h", clampPx(px, 140, 320) + "px");
+  var pult = doc.querySelector(".pult");
+  var seamPult = doc.getElementById("seam-pult");
+  function pultApply(px) {
+    px = Math.max(40, Math.min(320, px));
+    grid.style.setProperty("--pult-h", px + "px");
+    if (pult) pult.classList.toggle("is-collapsed", px <= 60);
+    if (seamPult) {
+      seamPult.setAttribute("aria-valuenow", String(Math.round(px)));
+      seamPult.setAttribute("aria-valuetext", px <= 60 ? "Пульт свёрнут: только счётчик ожиданий" : "Пульт: " + Math.round(px) + " пикселей");
     }
-    seam.addEventListener("pointerdown", function (e) {
+  }
+  if (seamPult && grid) {
+    var start = 0, base = 0;
+    seamPult.addEventListener("pointerdown", function (e) {
       e.preventDefault();
-      seam.setPointerCapture(e.pointerId);
-      start = axis === "x" ? e.clientX : e.clientY;
-      base = axis === "x"
-        ? grid.getBoundingClientRect().right - seam.getBoundingClientRect().left - 12
-        : grid.getBoundingClientRect().bottom - seam.getBoundingClientRect().top - 12;
+      seamPult.setPointerCapture(e.pointerId);
+      start = e.clientY;
+      base = grid.getBoundingClientRect().bottom - seamPult.getBoundingClientRect().top - 12;
       doc.body.classList.add("seam-grab", "seam-dragging");
     });
-    seam.addEventListener("pointermove", function (e) {
-      if (!seam.hasPointerCapture || !seam.hasPointerCapture(e.pointerId)) return;
-      var now = axis === "x" ? e.clientX : e.clientY;
+    seamPult.addEventListener("pointermove", function (e) {
+      if (!seamPult.hasPointerCapture || !seamPult.hasPointerCapture(e.pointerId)) return;
       var gridRect = grid.getBoundingClientRect();
-      var px = axis === "x"
-        ? gridRect.right - (now - start + base)
-        : gridRect.bottom - (now - start + base);
-      apply(px);
+      pultApply(gridRect.bottom - (e.clientY - start + base));
     });
     function drop(e) {
-      if (!seam.hasPointerCapture || !seam.hasPointerCapture(e.pointerId)) return;
-      seam.releasePointerCapture(e.pointerId);
+      if (!seamPult.hasPointerCapture || !seamPult.hasPointerCapture(e.pointerId)) return;
+      seamPult.releasePointerCapture(e.pointerId);
       doc.body.classList.remove("seam-grab", "seam-dragging");
     }
-    seam.addEventListener("pointerup", drop);
-    seam.addEventListener("pointercancel", drop);
-    /* клавиатура: ±24px (2.1.1) */
-    seam.addEventListener("keydown", function (e) {
-      var cur = axis === "x"
-        ? parseFloat(getComputedStyle(grid).getPropertyValue("--ether-w"))
-        : parseFloat(getComputedStyle(grid).getPropertyValue("--pult-h"));
-      var step = 0;
-      if (axis === "x") {
-        if (e.key === "ArrowLeft") step = 24;
-        if (e.key === "ArrowRight") step = -24;
-      } else {
-        if (e.key === "ArrowUp") step = 24;
-        if (e.key === "ArrowDown") step = -24;
-      }
-      if (!step) return;
-      e.preventDefault();
-      apply(cur + step);
+    seamPult.addEventListener("pointerup", drop);
+    seamPult.addEventListener("pointercancel", drop);
+    seamPult.addEventListener("keydown", function (e) {
+      var cur = parseFloat(getComputedStyle(grid).getPropertyValue("--pult-h")) || 200;
+      if (e.key === "ArrowUp") { e.preventDefault(); pultApply(cur + 24); }
+      if (e.key === "ArrowDown") { e.preventDefault(); pultApply(cur - 24); }
     });
+    pultApply(200);
   }
-  seamDrag(doc.getElementById("seam-side"), "x");
-  seamDrag(doc.getElementById("seam-pult"), "y");
 
   /* ── Старт: сессия + seed Эфира (после data.js) ────────────────────── */
   function init() {

@@ -1,0 +1,244 @@
+/* palette.css — Палитра ⌘K «командная магия» (спека 15 §3.3, срез §8.4).
+ *
+ * Магия = скорость и контекст, НЕ анимация: открытие ТОЛЬКО opacity +
+ * scale(0.98→1) ≤120ms, ноль stagger; отклик на ввод — пересчёт ≤80ms без
+ * движения. Scrim — «фокусировка зрачка»: blur 4px + затемнение
+ * --palette-scrim (функционален: держит контраст фокуса, не декоративен).
+ * «Попадание в память» — короткий ирис-отсвет по левому краю строки
+ * (recall-цвет, 240ms, гаснет). Все значения — токены.
+ */
+
+.palette-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 70;                      /* над В3-карточкой (60) */
+  display: none;
+  background: var(--palette-scrim);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.palette-overlay.is-open { display: block; }
+.palette-overlay.is-anim {
+  animation: palette-in var(--duration-fast, 150ms) var(--ease-enter); /* ≤120ms окно */
+}
+@keyframes palette-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.palette {
+  width: min(640px, calc(100vw - var(--space-8)));
+  margin: 12vh auto 0;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  max-height: 64vh;
+}
+.palette-overlay.is-anim .palette {
+  animation: palette-pop var(--duration-fast, 150ms) var(--ease-enter);
+}
+@keyframes palette-pop {
+  from { opacity: 0; scale: 0.98; }   /* только opacity+scale (§3.3) */
+  to { opacity: 1; scale: 1; }
+}
+
+.palette-input-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: var(--line-hairline) solid var(--myelin-hairline);
+}
+.palette-input-row .icon {
+  width: 18px; height: 18px;
+  stroke: var(--color-text-muted);
+  fill: none;
+  stroke-width: 1.5;
+  flex: none;
+}
+.palette-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  color: var(--color-text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--text-lg);
+}
+.palette-input:focus { outline: none; }
+.palette-input::placeholder { color: var(--color-text-muted); }
+.kbd {
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--numeric-tnum);
+  font-size: var(--text-caps);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border-subtle);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-1);
+  background: var(--color-bg-well);
+}
+.palette-esc { flex: none; }
+
+.palette-results {
+  overflow-y: auto;
+  padding: var(--space-2) var(--space-2) var(--space-3);
+}
+.palette-group {
+  display: grid;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+.palette-group-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.palette-group-head .group-count {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--numeric-tnum);
+}
+
+/* строка-превью: не голый пункт — контекст записи/задачи/команды */
+.pal-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+  width: 100%;
+  min-height: 48px;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--color-text-primary);
+  font-family: var(--font-ui);
+  text-align: left;
+  cursor: pointer;
+}
+.pal-row:hover,
+.pal-row.is-active { background: var(--myelin-strong); }
+.pal-row:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: 0;                 /* ринг внутри строки, виден на scrim (2.4.7) */
+}
+.pal-row .pal-title {
+  font-size: var(--text-ui);
+  color: var(--color-text-primary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pal-row .pal-title .kbd { margin-left: var(--space-2); }
+.pal-row .pal-preview {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: var(--text-data);
+  color: var(--color-text-secondary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pal-row .pal-preview .prov {
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--numeric-tnum);
+  color: var(--color-text-muted);
+}
+.pal-row .pal-route {
+  /* маршрут-крошка «куда попадёшь» — mono 11px (§3.3) */
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--numeric-tnum);
+  font-size: var(--text-caps);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  display: grid;
+  justify-items: end;
+  gap: var(--space-1);
+}
+.status-chip {
+  display: inline-block;
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-iris-bright);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-full);
+  padding: 0 var(--space-2);
+  margin-right: var(--space-2);
+}
+.status-chip[data-state="blocked"] { color: var(--color-error); }
+.status-chip[data-state="resolved"],
+.status-chip[data-state="done"] { color: var(--color-success); }
+.status-chip[data-state="in-progress"] { color: var(--color-confidence); }
+
+mark {
+  background: none;
+  color: var(--color-iris-bright);
+  font-weight: var(--weight-semibold);
+}
+
+/* «попадание в память»: ирис-отсвет по левому краю строки, 240ms, гаснет */
+.pal-row.is-hit::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 15%;
+  bottom: 15%;
+  width: 3px;
+  border-radius: var(--radius-full);
+  background: var(--synapse-recall);
+  animation: pal-hit var(--duration-impulse) var(--ease-exit) forwards;
+}
+@keyframes pal-hit {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.pal-empty {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-6) var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-ui);
+}
+.pal-empty .pal-empty-hint { color: var(--color-text-muted); font-size: var(--text-data); }
+
+/* кнопка ⌘K в топбаре (вставляется palette-v12.js) */
+.palette-open-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 28px;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--color-text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--text-data);
+  cursor: pointer;
+}
+.palette-open-btn:hover { border-color: var(--color-border); color: var(--color-text-primary); }
+.palette-open-btn:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .palette-overlay.is-anim,
+  .palette-overlay.is-anim .palette { animation: none; }
+  .pal-row.is-hit::before { animation: none; opacity: 0.9; }
+}

@@ -235,21 +235,8 @@ body[data-screen="overview"] .content {
   gap: var(--space-2);
 }
 
-/* ── Пробуждение (раз за сессию, sessionStorage vesmaro.awakened) ─────── */
-.awaken-veil { display: none; }
-.well-hero[data-awaken] .awaken-veil {
-  display: block;
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background: var(--color-well-canvas);
-  animation: awaken-veil-lift var(--duration-awaken) var(--ease-enter) forwards;
-}
-@keyframes awaken-veil-lift {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
+/* ── Пробуждение (раз за сессию, sessionStorage vesmaro.awakened) ───────
+ * Поштучная волна графа — в synapse.js (§13.1); здесь — только HUD-часть. */
 /* HUD-слоты: каскад ≤8 звеньев, шаг --duration-stagger; title 8→0 */
 .well-hero[data-awaken] .hud-in {
   opacity: 0;
@@ -322,6 +309,5 @@ body[data-screen="overview"] .content {
   .well-ticker .ticker-ev,
   .well-ticker .ticker-text { transition: none; }
   .feed-row.fresh { animation: none; background: transparent; }
-  .well-hero[data-awaken] .awaken-veil { animation: none; opacity: 0; }
   .well-hero[data-awaken] .hud-in { animation: none; opacity: 1; translate: none; }
 }
