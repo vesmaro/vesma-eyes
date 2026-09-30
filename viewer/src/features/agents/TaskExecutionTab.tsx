@@ -19,6 +19,7 @@ import {
 import { AssignmentStateBadge } from "./AssignmentStateBadge";
 import { AssignExecutorSheet } from "./AssignExecutorSheet";
 import type { AssignPrefill } from "./AssignExecutorSheet";
+import { TaskSessionsPanel } from "./TaskSessionsPanel";
 import { TaskWorkersPanel } from "./TaskWorkersPanel";
 import { useAssignments, useExecutors } from "./useAgents";
 import { useAssignmentMutations } from "./useAssignmentMutations";
@@ -114,7 +115,12 @@ export function TaskExecutionTab({
           </Button>
         ) : null}
         {!active && !accepts ? (
-          <Button variant="outline" size="sm" disabled title={t("agents.assign.terminalTask")}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled
+            title={t("agents.assign.terminalTask")}
+          >
             <Play className="size-4" aria-hidden="true" />
             {t("agents.assign.open")}
           </Button>
@@ -212,6 +218,12 @@ export function TaskExecutionTab({
         </ul>
       )}
 
+      {/* ME-063: the child level — specialist sessions the task executor's
+       * agent reported. Renders in EVERY branch (assignments present or
+       * not): the agent-leg facts are independent of the board's own
+       * assignment queue, and the §5 honest-empty plaque is an answer too. */}
+      <TaskSessionsPanel task={task} />
+
       <AssignExecutorSheet
         task={task}
         open={sheetOpen}
@@ -230,13 +242,20 @@ function ageLine(
   t: ReturnType<typeof useT>,
   lang: "ru" | "en",
 ): string {
-  if (row.state === "done" || row.state === "failed" || row.state === "cancelled" || row.state === "expired") {
+  if (
+    row.state === "done" ||
+    row.state === "failed" ||
+    row.state === "cancelled" ||
+    row.state === "expired"
+  ) {
     return row.finished_at ? formatTaskDate(row.finished_at, lang) : "";
   }
   const anchor = ageAnchorOf(row);
   if (!anchor) return "";
   const age = formatAge(anchor, now);
-  return age ? t(ageLabelKey(row.state), { age: `${age.display} ${t(age.unitKey)}` }) : "";
+  return age
+    ? t(ageLabelKey(row.state), { age: `${age.display} ${t(age.unitKey)}` })
+    : "";
 }
 
 /**
@@ -291,7 +310,9 @@ function routingSignature(
 ) {
   const routing = row.routing;
   if (!routing || routing.resolved === null) {
-    return <span className="text-foreground-muted">{t("agents.routing.unmatchedRow")}</span>;
+    return (
+      <span className="text-foreground-muted">{t("agents.routing.unmatchedRow")}</span>
+    );
   }
   const executor = executorRows.find((candidate) => candidate.id === routing.resolved);
   // The registry row is the authoritative presence; an id gone from the

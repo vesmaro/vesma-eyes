@@ -119,8 +119,7 @@ function ChatPanel({ sessionId }: { sessionId: string }) {
   const send = useKoraSendMessage(sessionId);
   const [text, setText] = useState("");
 
-  const blocked =
-    koraErrorCode(send.error) === "step_up_required";
+  const blocked = koraErrorCode(send.error) === "step_up_required";
 
   return (
     <Card>
@@ -175,10 +174,7 @@ function ChatPanel({ sessionId }: { sessionId: string }) {
          * an internal SLA, not owner copy — the tooltip keeps it available
          * on demand, the visible line says only what it means for the
          * owner: the answer re-reads the session after a send. */}
-        <p
-          className="text-xs text-foreground-muted"
-          title={t("kora.chat.freshness")}
-        >
+        <p className="text-xs text-foreground-muted" title={t("kora.chat.freshness")}>
           {t("kora.chat.freshnessHint")}
         </p>
       </CardContent>
@@ -249,6 +245,11 @@ export function KoraSessionPage() {
           variant="not-found"
           title={t("kora.session.notFound")}
           message={t("kora.session.notFoundMessage", { id: decoded })}
+          /* ME-063: the task card's deep-links land here when the host is
+           * not readable — the coverage REASON rides with the plaque (spec
+           * §5: «возврат с объяснением, не пустой экран»), so the owner
+           * understands the 404 is a boundary, not a broken link. */
+          detail={t("kora.session.notFoundCoverage")}
           action={
             <Button variant="outline" asChild>
               <Link to="/kora">{t("kora.session.backToList")}</Link>
@@ -345,7 +346,9 @@ export function KoraSessionPage() {
                         {item.ts ? (
                           <span title={`seq ${item.seq}`}>{item.ts}</span>
                         ) : (
-                          <span title={`seq ${item.seq}`}>{t("kora.transcript.line")}</span>
+                          <span title={`seq ${item.seq}`}>
+                            {t("kora.transcript.line")}
+                          </span>
                         )}
                         {item.redaction_applied ? (
                           <span title={t("kora.transcript.redactedNote")}>

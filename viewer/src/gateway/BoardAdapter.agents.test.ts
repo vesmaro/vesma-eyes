@@ -565,3 +565,90 @@ describe("BoardAdapter agents wire — harness dictionary (wave 3C)", () => {
     });
   });
 });
+
+describe("BoardAdapter agents wire — ME-063 task session facts", () => {
+  const SESSIONS_ROW = {
+    session_id: "exec-1:sess_a1b2c3",
+    executor_id: "exec-1",
+    executor_name: "zcode@laptop",
+    native_id: "sess_a1b2c3",
+    task_id: "TB-11",
+    harness: "zcode",
+    specialist: "@GCW: Researcher",
+    path: "/home/u/.zcode/cli/sess_a1b2c3.jsonl",
+    tool_calls: 12,
+    duration_s: 340,
+    started_at: "2026-09-30T10:04:11+00:00",
+    ended_at: "2026-09-30T10:09:51+00:00",
+    parent_native_id: "",
+    first_seen_at: "2026-09-30T10:09:55+00:00",
+    reported_at: "2026-09-30T10:09:55+00:00",
+    reported_age_s: 12,
+  };
+
+  it("listTaskSessions: GET /tasks/{id}/sessions, read identity (no bearer while an owner session lives)", async () => {
+    const { fetchImpl, calls } = recordingFetch(200, {
+      ok: true,
+      task_id: "TB-11",
+      count: 1,
+      items: [SESSIONS_ROW],
+    });
+    const adapter = new BoardAdapter({
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      getUiTokenFn: () => "ui-test-token",
+    });
+
+    const page = await adapter.listTaskSessions("TB-11");
+
+    // The ui-class read rides the same-origin cookie (the Kora reads'
+    // posture): no Authorization header while the owner session lives.
+    expect(calls[0].method).toBe("GET");
+    expect(calls[0].url).toBe("/api/tasks/TB-11/sessions");
+    expect(calls[0].authorization).toBeUndefined();
+    // The wire shape passes through untouched — session_id IS the glue.
+    expect(page).toEqual({
+      ok: true,
+      task_id: "TB-11",
+      count: 1,
+      items: [SESSIONS_ROW],
+    });
+  });
+
+  it("encodes hostile task ids into one path segment", async () => {
+    const { fetchImpl, calls } = recordingFetch(200, {
+      ok: true,
+      task_id: "TB 1/2",
+      count: 0,
+      items: [],
+    });
+    const adapter = new BoardAdapter({
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+    await adapter.listTaskSessions("TB 1/2");
+    expect(calls[0].url).toBe("/api/tasks/TB%201%2F2/sessions");
+  });
+
+  it("the mnd_ 403 wall surfaces as ApiError with the server's explanatory text", async () => {
+    const { fetchImpl } = recordingFetch(403, {
+      detail: "Session facts are owner-only (ui-class): the host path is a host fact.",
+    });
+    const adapter = new BoardAdapter({
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+    await expect(adapter.listTaskSessions("TB-11")).rejects.toMatchObject({
+      status: 403,
+      message: "Session facts are owner-only (ui-class): the host path is a host fact.",
+    });
+  });
+
+  it("404 unknown task stays an honest ApiError, never a fabricated empty page", async () => {
+    const { fetchImpl } = recordingFetch(404, { detail: "task not found" });
+    const adapter = new BoardAdapter({
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+    await expect(adapter.listTaskSessions("NOPE-1")).rejects.toMatchObject({
+      status: 404,
+      message: "task not found",
+    });
+  });
+});

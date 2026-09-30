@@ -187,10 +187,7 @@ describe("TaskExecutionTab × TaskWorkersPanel (UI-31)", () => {
     const html = await renderTab({
       taskId: "TB-1",
       assignments: [],
-      activity: [
-        { kind: "task.moved" },
-        { kind: "assignment.started" },
-      ],
+      activity: [{ kind: "task.moved" }, { kind: "assignment.started" }],
     });
     expect(html).toContain("Who worked on this");
     expect(html).toContain(
@@ -230,9 +227,13 @@ describe("TaskExecutionTab × TaskWorkersPanel (UI-31)", () => {
     });
     expect(html).toContain("Who worked on this");
     expect(html).toContain("Audit log unavailable in this mode");
-    // The skeleton («Loading the task audit log») must NOT hang forever.
+    // The audit-log skeleton must NOT hang forever — its aria-label is the
+    // pin. ME-063 note: the tab now hosts a SECOND async block («Specialists
+    // and sessions»); in this scenario the gateway still has the agents
+    // read, so that block's skeleton is BOUNDED (the wire resolves it) and
+    // legitimately renders — the eternal-skeleton verdict stays per-block.
     expect(html).not.toContain("Loading the task audit log");
-    expect(html).not.toContain("shimmer");
+    expect(html).toContain("Loading specialist sessions");
   });
 
   it("P2-2: has_more window → the honest «latest 200 events» caveat", async () => {
@@ -252,9 +253,7 @@ describe("TaskExecutionTab × TaskWorkersPanel (UI-31)", () => {
     const html = await renderTab({
       taskId: "TB-1",
       assignments: [],
-      activity: [
-        { kind: "task.moved", actor: "device:dev-7pad night-tablet" },
-      ],
+      activity: [{ kind: "task.moved", actor: "device:dev-7pad night-tablet" }],
     });
     // `device:<id> <name>` → the NAME is the identity, never translated.
     expect(html).toContain(">night-tablet</span>");

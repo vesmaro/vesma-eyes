@@ -42,7 +42,9 @@ async function mountCard(
   transform: (page: ExecutorsPage) => ExecutorsPage = (page) => page,
 ): Promise<Mount> {
   const gateway = new MockAdapter({ latency: false });
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   const page = transform(await gateway.listExecutors());
   queryClient.setQueryData(keys.agents.executors.list(), page);
   const container = document.createElement("div");
@@ -133,7 +135,13 @@ describe("ExecutorSheet — identity + the diff PATCH discipline", () => {
     expect(html).toContain("Idle — nothing in progress");
     expect(html).toContain("All tasks");
     expect(html).toContain("Refresh pulse");
-    for (const section of ["Identity", "Link", "Access", "Capabilities", "Danger zone"]) {
+    for (const section of [
+      "Identity",
+      "Link",
+      "Access",
+      "Capabilities",
+      "Danger zone",
+    ]) {
       expect(html).toContain(section);
     }
     // П2: the harness WHY-note (a service fact) sits under the FOLDED
@@ -286,10 +294,14 @@ describe("ExecutorSheet — the revoked tombstone", () => {
     expect(nameInput?.disabled).toBe(true);
     expect(html).not.toContain("New capability");
     expect(
-      mount.query<HTMLButtonElement>("button").some((b) => b.textContent?.includes("Revoke")),
+      mount
+        .query<HTMLButtonElement>("button")
+        .some((b) => b.textContent?.includes("Revoke")),
     ).toBe(false);
     expect(
-      mount.query<HTMLButtonElement>("button").some((b) => b.textContent?.includes("Delete")),
+      mount
+        .query<HTMLButtonElement>("button")
+        .some((b) => b.textContent?.includes("Delete")),
     ).toBe(true);
     // The secret is NEVER rendered — only the honest hint about it.
     expect(html).toContain("The secret is never shown");
@@ -299,8 +311,7 @@ describe("ExecutorSheet — the revoked tombstone", () => {
 });
 
 describe("ExecutorSheet — AGW-11 paste-back approve (TOFU honesty)", () => {
-  const hexPin =
-    "3f2a9c1d5b7e40a68d93c1f0b2e4d6a8c0e2f4b6d8a0c2e4f60482a6c8e0d2f4";
+  const hexPin = "3f2a9c1d5b7e40a68d93c1f0b2e4d6a8c0e2f4b6d8a0c2e4f60482a6c8e0d2f4";
   const tail = hexPin.slice(-8);
 
   it("a pending row WITH provision context demands the fingerprint tail", async () => {
@@ -351,7 +362,9 @@ describe("ExecutorSheet — AGW-11 paste-back approve (TOFU honesty)", () => {
       expect(spy).toHaveBeenCalledWith("exec-copilot-pending", { state: "approved" });
     });
     // The context is one-shot: consumed by the successful verify.
-    expect(sessionStorage.getItem("vesmaro.provision-approve.exec-copilot-pending")).toBeNull();
+    expect(
+      sessionStorage.getItem("vesmaro.provision-approve.exec-copilot-pending"),
+    ).toBeNull();
     await actUnmount(mount.root);
   });
 
@@ -436,3 +449,4 @@ describe("ExecutorSheet — AGW-11 paste-back approve (TOFU honesty)", () => {
     await actUnmount(mount.root);
   });
 });
+

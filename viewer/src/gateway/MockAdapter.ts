@@ -33,6 +33,7 @@ import {
   MOCK_REPORTS,
   MOCK_SCHEDULES,
   MOCK_TASK_MEMORIES,
+  MOCK_TASK_SESSIONS,
   MOCK_TASKS,
 } from "./boardFixtures";
 import type {
@@ -108,6 +109,8 @@ import type {
   TaskMutationAck,
   TaskPatchInput,
   TaskReports,
+  TaskSessionFact,
+  TaskSessionsPage,
   TaskUnarchiveResult,
 } from "./boardTypes";
 import type { BoardTask, MergedTags } from "./boardTypes";
@@ -142,7 +145,8 @@ const LAUNCH_PAGE_CAP = 200;
  * renderer chunk), mem-0005 carries no fragment at all (honest absence).
  */
 const MOCK_PULSE_CONTENT_OVERRIDES: Readonly<Record<string, string | null>> = {
-  "mem-0004": "# Decision log\n\n- namespaced tags only\n- `topic:` slugs reviewed weekly",
+  "mem-0004":
+    "# Decision log\n\n- namespaced tags only\n- `topic:` slugs reviewed weekly",
   "mem-0005": null,
 };
 
@@ -249,6 +253,10 @@ export class MockAdapter implements MemoryGateway {
    * reference semantics. */
   private activityLog: ActivityItem[] = [];
   private nextActivityId = 1;
+  /** ME-063: the agent-leg session-facts mirror (advisory, read-only —
+   * the mock never mints facts at runtime: before the agent leg deploys,
+   * the corpus snapshot IS the honest state of the world). */
+  private readonly taskSessions: TaskSessionFact[];
 
   constructor(options: MockAdapterOptions = {}) {
     this.latency = options.latency ?? { minMs: 80, maxMs: 200 };
@@ -283,6 +291,7 @@ export class MockAdapter implements MemoryGateway {
     // Runtime rows continue the corpus id sequence (audit-table monotonic).
     this.nextActivityId =
       Math.max(0, ...this.activityLog.map((row) => Number(row.id) || 0)) + 1;
+    this.taskSessions = MOCK_TASK_SESSIONS.map((fact) => ({ ...fact }));
   }
 
   // --- UI-28 activity (GET /api/activity, week-0 contract mock) ---------------
@@ -1136,6 +1145,41 @@ export class MockAdapter implements MemoryGateway {
     };
   }
 
+  /**
+   * ME-063 — `GET /api/tasks/{id}/sessions` mirror: honest 404 for an
+   * unknown task (the server's task-not-found gate), oldest reported
+   * first, `reported_age_s` computed against the mock clock like the
+   * server computes it per GET. No auth wall in the playground — the
+   * ui-class guard belongs to the real board.
+   */
+  async listTaskSessions(
+    taskId: string,
+    signal?: AbortSignal,
+  ): Promise<TaskSessionsPage> {
+    await this.delay(signal);
+    const exists =
+      this.tasks.some((row) => row.id === taskId) ||
+      this.archivedTasks.some((row) => row.id === taskId);
+    if (!exists) {
+      throw new ApiError(404, `task '${taskId}' not found on the board`, {
+        url: `mock:/api/tasks/${encodeURIComponent(taskId)}/sessions`,
+      });
+    }
+    const now = this.now();
+    const items = this.taskSessions
+      .filter((fact) => fact.task_id === taskId)
+      .map((fact) => {
+        const reportedAt = Date.parse(fact.reported_at);
+        const ageS =
+          Number.isFinite(reportedAt) && now > reportedAt
+            ? Math.floor((now - reportedAt) / 1000)
+            : 0;
+        return { ...fact, reported_age_s: ageS };
+      })
+      .sort((a, b) => a.reported_at.localeCompare(b.reported_at));
+    return { ok: true, task_id: taskId, count: items.length, items };
+  }
+
   async createHarness(
     payload: HarnessCreateInput,
     signal?: AbortSignal,
@@ -1663,7 +1707,9 @@ export class MockAdapter implements MemoryGateway {
         step("bootstrap finished — watching the enrollment");
         row.state = "done";
         this.finishProvisionEnrollment(job);
-        step(`executor ${job.enrollment.executor_id} registered — awaiting owner approval`);
+        step(
+          `executor ${job.enrollment.executor_id} registered — awaiting owner approval`,
+        );
         return;
       default:
         return;

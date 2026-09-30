@@ -69,6 +69,30 @@ export function useExecutors() {
   });
 }
 
+/**
+ * Specialist session facts (`GET /api/tasks/{id}/sessions`, ME-063 —
+ * agents-ui-spec §4). ui-class read; no SSE vocabulary in v0, so the
+ * freshness policy is staleTime 0: every mount of the «Исполнение» tab
+ * (the task-detail tab swap or an SPA navigation back) refetches — the
+ * honest substitute for the event push the board does not have yet.
+ */
+export function useTaskSessions(taskId: string | undefined) {
+  const gateway = useGateway();
+  const capable = isAgentsSource(gateway) && taskId !== undefined;
+  return useQuery({
+    queryKey: keys.tasks.sessions(taskId ?? ""),
+    queryFn: ({ signal }) => {
+      if (!isAgentsSource(gateway) || taskId === undefined) {
+        throw new Error("useTaskSessions: gateway has no agents capability.");
+      }
+      return gateway.listTaskSessions(taskId, signal);
+    },
+    enabled: capable,
+    staleTime: STALE_TIMES.taskSessions,
+    gcTime: GC_TIMES.taskSessions,
+  });
+}
+
 /** Default/fallback executor pair (`GET /api/settings/execution`). */
 export function useExecutionSettings() {
   const gateway = useGateway();
@@ -129,7 +153,9 @@ export function useCreateAssignment() {
   return useMutation<AssignmentCreatedResult, Error, AssignmentCreateInput>({
     mutationFn: (payload) => {
       if (!isAgentsMutationSource(gateway)) {
-        throw new Error("useCreateAssignment: gateway has no agents mutation capability.");
+        throw new Error(
+          "useCreateAssignment: gateway has no agents mutation capability.",
+        );
       }
       return gateway.createAssignment(payload);
     },
@@ -156,7 +182,9 @@ export function useCancelAssignment() {
   >({
     mutationFn: ({ assignmentId, reason }) => {
       if (!isAgentsMutationSource(gateway)) {
-        throw new Error("useCancelAssignment: gateway has no agents mutation capability.");
+        throw new Error(
+          "useCancelAssignment: gateway has no agents mutation capability.",
+        );
       }
       return gateway.cancelAssignment(assignmentId, reason);
     },
@@ -187,7 +215,9 @@ export function usePutExecutionSettings() {
       return gateway.putExecutionSettings(payload);
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: keys.agents.settings.execution() });
+      void queryClient.invalidateQueries({
+        queryKey: keys.agents.settings.execution(),
+      });
       void queryClient.invalidateQueries({ queryKey: keys.agents.assignments.all });
     },
   });

@@ -249,6 +249,49 @@ export interface AssignmentsPage {
   readonly items: readonly AssignmentItem[];
 }
 
+/**
+ * One specialist session fact — board `TaskSessionFactOut` (ME-062/063,
+ * agents-ui-spec §2.1). The agent-reported child of the task's executor:
+ * advisory mirror, never authority. `session_id` is the Kora glue
+ * `'{executor_id}:{native_id}'` — the deep-link into the read-only
+ * transcript viewer needs no translation. `path` is a HOST fact rendered
+ * only on this ui-class surface (never on public ones, spec §2.1).
+ */
+export interface TaskSessionFact {
+  /** Kora glue `'<executor_id>:<native_id>'` — the deep-link id as-is. */
+  readonly session_id: string;
+  readonly executor_id: string;
+  /** Registry display name at report time; may be empty (honest). */
+  readonly executor_name: string;
+  /** Session id in the harness's own store (unique per executor). */
+  readonly native_id: string;
+  readonly task_id: string;
+  /** Dictionary `zcode|vscode|pi` (server-validated). */
+  readonly harness: string;
+  /** Spawned subagent_type — best-effort, may be empty. */
+  readonly specialist: string;
+  /** Host-local session file path — ui-class surface ONLY (spec §2.1). */
+  readonly path: string;
+  readonly tool_calls: number;
+  readonly duration_s: number;
+  /** Empty `ended_at` = the child has not exited yet (live session). */
+  readonly started_at: string;
+  readonly ended_at: string;
+  /** Phase-2 tree fuel (parent chain), omitempty today. */
+  readonly parent_native_id: string;
+  readonly first_seen_at: string;
+  readonly reported_at: string;
+  readonly reported_age_s: number;
+}
+
+/** Session-facts page — board `TaskSessionsOut`, oldest reported first. */
+export interface TaskSessionsPage {
+  readonly ok: boolean;
+  readonly task_id: string;
+  readonly count: number;
+  readonly items: readonly TaskSessionFact[];
+}
+
 /** Assignment queue filters (`GET /api/assignments`). */
 export interface AssignmentListParams {
   /** Exact lifecycle state (dictionary value; empty = all). */
@@ -423,12 +466,7 @@ export type ProvisionAuthKind = "key" | "password" | "alias";
 
 /** Job lifecycle — board `provision_jobs.state` CHECK set, verbatim. */
 export type ProvisionJobState =
-  | "queued"
-  | "connecting"
-  | "installing"
-  | "watching"
-  | "done"
-  | "failed";
+  "queued" | "connecting" | "installing" | "watching" | "done" | "failed";
 
 /**
  * One provision job row — the GET /api/executors/provision/{id} `job`
@@ -838,12 +876,7 @@ export type DeviceGrantsResult = Schemas["DeviceGrantsOut"];
  * it — LABELS ONLY. The server owns validation (unknown names → 422);
  * this list drives the toggle rendering and the PUT payload order.
  */
-export const DEVICE_GRANULES = [
-  "tasks",
-  "reports",
-  "inbox",
-  "notifications",
-] as const;
+export const DEVICE_GRANULES = ["tasks", "reports", "inbox", "notifications"] as const;
 
 /** One granule id (a `DEVICE_GRANULES` member). */
 export type DeviceGranule = (typeof DEVICE_GRANULES)[number];
@@ -910,9 +943,7 @@ export function isActivityType(value: string): value is ActivityType {
 /** True for the exact-kind spellings the `type=` csv also accepts. */
 export function isActivityKind(value: string): value is ActivityKind {
   return (
-    value === "report" ||
-    value.startsWith("task.") ||
-    value.startsWith("assignment.")
+    value === "report" || value.startsWith("task.") || value.startsWith("assignment.")
   );
 }
 
@@ -976,7 +1007,11 @@ export interface ActivityParams {
 export interface ActivityBucket {
   readonly ts: string;
   readonly total: number;
-  readonly by_type: { readonly task: number; readonly assignment: number; readonly report: number };
+  readonly by_type: {
+    readonly task: number;
+    readonly assignment: number;
+    readonly report: number;
+  };
 }
 
 /** Bucket view (`?bucket=hour&hours=24`): sparse — only hours WITH events. */
