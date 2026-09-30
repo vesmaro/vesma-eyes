@@ -577,7 +577,9 @@ api_hub:
             выдумывания — честная кураторская заметка
             (curated api/mnemos-mesh/index)
 
-  # --- vesmaro-eyes board API: OpenAPI-снапшот → RU-страницы ---------------
+  # --- vesmaro-eyes board API: OpenAPI-снапшот → страницы ru+en (ME-044) ---
+  # title/about — локале-маппинги {ru, en} (как title у include-записей
+  # апстримов); отсутствующая локаль = FAIL генератора (fail-closed).
   board_api:
     spec: viewer/board-openapi-snapshot.json
     category: api-board
@@ -588,85 +590,154 @@ api_hub:
     groups:
       - slug: vesmaro-eyes/index
         prefixes: []
-        title: Обзор API борда
         order: 1
-        about: >-
-          Карта HTTP API борда vesmaro-eyes: все группы эндпоинтов, счётчики
-          операций и снимок OpenAPI, из которого справочник сгенерирован.
+        title:
+          ru: Обзор API борда
+          en: Board API overview
+        about:
+          ru: >-
+            Карта HTTP API борда vesmaro-eyes: все группы эндпоинтов, счётчики
+            операций и снимок OpenAPI, из которого справочник сгенерирован.
+          en: >-
+            A map of the vesmaro-eyes board HTTP API: every endpoint group,
+            operation counts, and the OpenAPI snapshot the reference is
+            generated from.
       - slug: vesmaro-eyes/tasks
         prefixes: [tasks, task-drafts]
-        title: Задачи и входящие
         order: 2
-        about: >-
-          CRUD задач, перемещения, история, памяти и отчёты задачи, архив,
-          черновики и входящие из памяти (inbox).
+        title:
+          ru: Задачи и входящие
+          en: Tasks and intake
+        about:
+          ru: >-
+            CRUD задач, перемещения, история, памяти и отчёты задачи, архив,
+            черновики и входящие из памяти (inbox).
+          en: >-
+            Task CRUD, moves, history, task memories and reports, archive,
+            drafts, and memory inbox intake.
       - slug: vesmaro-eyes/memories
         prefixes: [memories, tags, mnemos]
-        title: Память, теги и поиск mnemos
         order: 3
-        about: >-
-          Серверы памяти и их настройки, группы памяти, пульс и статистика,
-          записи, теги и семантический поиск mnemos.
+        title:
+          ru: Память, теги и поиск mnemos
+          en: Memory, tags, and mnemos search
+        about:
+          ru: >-
+            Серверы памяти и их настройки, группы памяти, пульс и статистика,
+            записи, теги и семантический поиск mnemos.
+          en: >-
+            Memory servers and their settings, memory groups, heartbeat and
+            stats, records, tags, and mnemos semantic search.
       - slug: vesmaro-eyes/assignments
         prefixes: [assignments]
-        title: Назначения исполнителям
         order: 4
-        about: >-
-          Жизненный цикл назначения: создание, клейм, старт, сердцебиение,
-          завершение, отказ, отмена.
+        title:
+          ru: Назначения исполнителям
+          en: Executor assignments
+        about:
+          ru: >-
+            Жизненный цикл назначения: создание, клейм, старт, сердцебиение,
+            завершение, отказ, отмена.
+          en: >-
+            The assignment lifecycle: creation, claim, start, heartbeat,
+            completion, failure, cancellation.
       - slug: vesmaro-eyes/executors
         prefixes: [executors, harnesses, agents, specialists]
-        title: Исполнители, харнессы, специалисты
         order: 5
-        about: >-
-          Реестр исполнителей и enrollment, словарь харнессов, активность
-          агентов, профили специалистов и provision-задания.
+        title:
+          ru: Исполнители, харнессы, специалисты
+          en: Executors, harnesses, specialists
+        about:
+          ru: >-
+            Реестр исполнителей и enrollment, словарь харнессов, активность
+            агентов, профили специалистов и provision-задания.
+          en: >-
+            Executor registry and enrollment, the harness dictionary, agent
+            activity, specialist profiles, and provision jobs.
       - slug: vesmaro-eyes/automation
         prefixes: [automation]
-        title: Автоматизация
         order: 6
-        about: >-
-          Правила-хуки, расписания и их запуски, настройки автоматизации
-          и статус движка.
+        title:
+          ru: Автоматизация
+          en: Automation
+        about:
+          ru: >-
+            Правила-хуки, расписания и их запуски, настройки автоматизации
+            и статус движка.
+          en: >-
+            Rule hooks, schedules and their runs, automation settings, and
+            engine status.
       - slug: vesmaro-eyes/devices
         prefixes: [devices, pairing]
-        title: Устройства и пейринг
         order: 7
-        about: >-
-          Спаренные устройства, гранты, QR-пейринг: код, обмен, подтверждение.
+        title:
+          ru: Устройства и пейринг
+          en: Devices and pairing
+        about:
+          ru: >-
+            Спаренные устройства, гранты, QR-пейринг: код, обмен, подтверждение.
+          en: >-
+            Paired devices, grants, QR pairing: code, exchange, confirmation.
       - slug: vesmaro-eyes/kora
         prefixes: [kora]
-        title: Сессии Kora
         order: 8
-        about: Список сессий Kora и транскрипты, приём kora-scan.
+        title:
+          ru: Сессии Kora
+          en: Kora sessions
+        about:
+          ru: Список сессий Kora и транскрипты, приём kora-scan.
+          en: Kora session list and transcripts, kora-scan intake.
       - slug: vesmaro-eyes/mesh
         prefixes: [mesh]
-        title: Узлы меша
         order: 9
-        about: >-
-          Наблюдаемые узлы mnemos-mesh: добавление, правка, удаление,
-          список.
+        title:
+          ru: Узлы меша
+          en: Mesh nodes
+        about:
+          ru: >-
+            Наблюдаемые узлы mnemos-mesh: добавление, правка, удаление,
+            список.
+          en: >-
+            Observed mnemos-mesh nodes: add, edit, delete, list.
       - slug: vesmaro-eyes/poller
         prefixes: [poller]
-        title: Артефакты poller
         order: 10
-        about: >-
-          Bootstrap-скрипт assignment-poller и его артефакты: CA-сертификат,
-          сервис-юнит, скрипт и контрольная сумма.
+        title:
+          ru: Артефакты poller
+          en: Poller artifacts
+        about:
+          ru: >-
+            Bootstrap-скрипт assignment-poller и его артефакты: CA-сертификат,
+            сервис-юнит, скрипт и контрольная сумма.
+          en: >-
+            The assignment-poller bootstrap script and its artifacts: the CA
+            certificate, service unit, script, and checksum.
       - slug: vesmaro-eyes/feed
         prefixes: [notifications, activity, reports, archive]
-        title: Уведомления, активность, отчёты
         order: 11
-        about: >-
-          Лента борда: уведомления и отметка прочтения, активность,
-          отчёты задач и лента отчётов, архив.
+        title:
+          ru: Уведомления, активность, отчёты
+          en: Notifications, activity, reports
+        about:
+          ru: >-
+            Лента борда: уведомления и отметка прочтения, активность,
+            отчёты задач и лента отчётов, архив.
+          en: >-
+            The board feed: notifications and read marking, activity, task
+            reports and the report feed, archive.
       - slug: vesmaro-eyes/system
         prefixes: [board, board-reflect, health, settings, auth, events]
-        title: Борд и служебные эндпоинты
         order: 12
-        about: >-
-          Доска целиком и её отражение из памяти, health, настройки
-          исполнения, UI-токен аутентификации, поток событий.
+        title:
+          ru: Борд и служебные эндпоинты
+          en: Board and service endpoints
+        about:
+          ru: >-
+            Доска целиком и её отражение из памяти, health, настройки
+            исполнения, UI-токен аутентификации, поток событий.
+          en: >-
+            The whole board and its memory reflection, health, execution
+            settings, UI-token auth, the event stream.
 
   # --- кураторские страницы (наш слой; тела в curated/api/<locale>/…) ------
   curated:

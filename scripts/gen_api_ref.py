@@ -18,12 +18,15 @@ Sections (categories.ts registry on the viewer side):
   api-overview        curated hub cover (what lives here, source map,
                       freshness rule);
   api-board           vesmaro-eyes board API — DETERMINISTIC rendering of
-      viewer/board-openapi-snapshot.json (RU v1): path groups from the
-      `board_api.groups` map, one page per group + an index page. Hand
-      retelling is FORBIDDEN: a spec change means regeneration. Provenance
-      of every generated page = the spec's git blob SHA + the date of the
-      last commit touching the spec (in frontmatter `source:` and in the
-      sidecar provenance block).
+      viewer/board-openapi-snapshot.json (ru + en mirror, ME-044): path
+      groups from the `board_api.groups` map, one page per group + an
+      index page, built per locale (group title/about are locale mappings
+      in the config; table chrome comes from RU_LABELS/EN_LABELS; the
+      spec's own operation texts are EN in both locales). Hand retelling
+      is FORBIDDEN: a spec change means regeneration. Provenance of every
+      generated page = the spec's git blob SHA + the date of the last
+      commit touching the spec (in frontmatter `source:` and in the
+      sidecar provenance block) — identical for both locales.
   api-mnemos          mnemos HTTP API surfaces: the upstream A2A Sessions
       API spec (docs/en|ru/architecture/a2a-sessions.md, previously outside
       every selection) + a curated map page over the full HTTP reference
@@ -121,6 +124,7 @@ RU_LABELS = {
     "required_no": "нет",
     "body_required": "Тело запроса (обязательное)",
     "body_optional": "Тело запроса (необязательное)",
+    "body_schema_suffix": "— схема `{name}`",
     "responses": "Ответы",
     "code": "Код",
     "schema": "Схема",
@@ -129,7 +133,92 @@ RU_LABELS = {
     "field": "Поле",
     "default": "Дефолт",
     "no_content": "—",
+    # type words (render_type)
+    "type_array": "массив из",
+    "type_object": "объект",
+    "type_string": "строка",
+    "type_integer": "целое",
+    "type_number": "число",
+    "type_boolean": "булево",
+    # item-position plurals: RU keeps the exact v1 wording (empty = base
+    # word), EN pluralizes ("array of strings", not "array of string")
+    "type_plural": {},
+    # constraint chrome (render_constraints)
+    "c_values": "значения:",
+    "c_chars": "симв.",
+    "c_format": "формат",
+    "c_pattern": "паттерн",
+    # page chrome (render_group_page + the index page)
+    "generated_from": "Сгенерировано из снимка OpenAPI v{version} (эндпоинтов в разделе: {count}).",
+    "snapshot_line": "Снимок OpenAPI: **{title} v{version}**, {ops} операций, {schemas} схем. Разделы справочника:",
+    "index_table": ("Раздел", "Операций", "Что покрывает"),
+    "index_note": (
+        "Страницы разделов генерируются из снимка детерминированно "
+        "(`scripts/gen_api_ref.py`): правка возможна только регенерацией. "
+        "Внутри разделов — таблицы параметров, схем и ответов; тексты "
+        "операций приведены из спеки как есть (EN)."
+    ),
+    "schema_outside": "Схема `{name}` определена вне этого раздела снимка.",
+    "schema_plain": "Схема без именованных свойств (скаляр или перечисление).",
 }
+
+# ME-044: the EN mirror of the board reference. RU v1 stays byte-identical;
+# EN pages share the spec provenance and differ ONLY in chrome/labels —
+# operation summaries/descriptions come from the spec and are EN already.
+EN_LABELS = {
+    "params": "Parameters",
+    "in_path": "path",
+    "in_query": "query",
+    "param": "Parameter",
+    "where": "In",
+    "type": "Type",
+    "required": "Required",
+    "constraints": "Constraints",
+    "required_yes": "yes",
+    "required_no": "no",
+    "body_required": "Request body (required)",
+    "body_optional": "Request body (optional)",
+    "body_schema_suffix": "— schema `{name}`",
+    "responses": "Responses",
+    "code": "Code",
+    "schema": "Schema",
+    "description": "Description",
+    "schemas_appendix": "Schemas used on this page",
+    "field": "Field",
+    "default": "Default",
+    "no_content": "—",
+    "type_array": "array of",
+    "type_object": "object",
+    "type_string": "string",
+    "type_integer": "integer",
+    "type_number": "number",
+    "type_boolean": "boolean",
+    "type_plural": {
+        "string": "strings",
+        "integer": "integers",
+        "number": "numbers",
+        "boolean": "booleans",
+        "object": "objects",
+    },
+    "c_values": "values:",
+    "c_chars": "chars",
+    "c_format": "format",
+    "c_pattern": "pattern",
+    "generated_from": "Generated from the OpenAPI snapshot v{version} (operations in this section: {count}).",
+    "snapshot_line": "OpenAPI snapshot: **{title} v{version}**, {ops} operations, {schemas} schemas. Reference sections:",
+    "index_table": ("Section", "Operations", "Coverage"),
+    "index_note": (
+        "Section pages are generated from the snapshot deterministically "
+        "(`scripts/gen_api_ref.py`): the only way to edit them is "
+        "regeneration. Inside the sections: parameter, schema, and response "
+        "tables; operation texts are quoted from the spec as is."
+    ),
+    "schema_outside": "Schema `{name}` is defined outside this section of the snapshot.",
+    "schema_plain": "Schema without named properties (scalar or enum).",
+}
+
+LABELS = {"ru": RU_LABELS, "en": EN_LABELS}
+BOARD_LOCALES = ("ru", "en")
 
 
 # --------------------------------------------------------------------------
@@ -200,62 +289,75 @@ def spec_provenance(spec_path: Path) -> dict[str, Any]:
 
 
 # --------------------------------------------------------------------------
-# OpenAPI → markdown (RU v1)
+# OpenAPI → markdown (ru + en, ME-044)
 # --------------------------------------------------------------------------
+
+def locale_text(value: Any, locale: str, where: str) -> str:
+    """Per-locale config text (group titles/abouts). A mapping carries one
+    entry per locale — a missing key is a config bug, fail-closed (the
+    overlay-anchor discipline). A plain string is shared by all locales
+    (single-language authoring escape, e.g. a product name)."""
+    if isinstance(value, dict):
+        if locale not in value:
+            raise SyncError(
+                f"{where}: no `{locale}` entry — add it to the config (fail-closed)"
+            )
+        return str(value[locale])
+    return str(value)
+
 
 def schema_name(ref: str) -> str:
     return ref.rsplit("/", 1)[-1]
 
 
-def render_type(node: Any) -> str:
-    """Compact RU-ish type string; nested $refs render by name (no recursion)."""
+def render_type(node: Any, labels: dict[str, Any]) -> str:
+    """Compact localized type string; nested $refs render by name (no recursion)."""
     if node is None or isinstance(node, bool):
         return "—"
     if "$ref" in node:
         return f"`{schema_name(node['$ref'])}`"
     for combinator in ("anyOf", "oneOf", "allOf"):
         if combinator in node:
-            return " | ".join(render_type(part) for part in node[combinator])
+            return " | ".join(render_type(part, labels) for part in node[combinator])
     node_type = node.get("type")
     if node_type == "array":
-        return f"массив из {render_type(node.get('items'))}"
-    if node_type == "object":
-        return "объект"
-    if node_type == "string":
-        return "строка"
-    if node_type == "integer":
-        return "целое"
-    if node_type == "number":
-        return "число"
-    if node_type == "boolean":
-        return "булево"
+        items = node.get("items")
+        plural = (
+            labels.get("type_plural", {}).get(items.get("type"))
+            if isinstance(items, dict)
+            else None
+        )
+        inner = plural or render_type(items, labels)
+        return f"{labels['type_array']} {inner}"
+    if node_type in ("object", "string", "integer", "number", "boolean"):
+        return str(labels[f"type_{node_type}"])
     if node_type == "null":
         return "null"
     return str(node_type or "—")
 
 
-def render_constraints(node: dict[str, Any]) -> str:
+def render_constraints(node: dict[str, Any], labels: dict[str, Any]) -> str:
     parts: list[str] = []
     if "enum" in node:
-        parts.append("значения: " + ", ".join(f"`{v}`" for v in node["enum"]))
+        parts.append(f"{labels['c_values']} " + ", ".join(f"`{v}`" for v in node["enum"]))
     if "maxLength" in node:
-        parts.append(f"≤ {node['maxLength']} симв.")
+        parts.append(f"≤ {node['maxLength']} {labels['c_chars']}")
     if "minLength" in node:
-        parts.append(f"≥ {node['minLength']} симв.")
+        parts.append(f"≥ {node['minLength']} {labels['c_chars']}")
     if "maximum" in node:
         parts.append(f"≤ {node['maximum']}")
     if "minimum" in node:
         parts.append(f"≥ {node['minimum']}")
     if "format" in node:
-        parts.append(f"формат {node['format']}")
+        parts.append(f"{labels['c_format']} {node['format']}")
     if "pattern" in node:
-        parts.append(f"паттерн `{node['pattern']}`")
+        parts.append(f"{labels['c_pattern']} `{node['pattern']}`")
     if node.get("description"):
         parts.append(str(node["description"]))
     return "; ".join(parts)
 
 
-def schema_property_rows(schema: dict[str, Any]) -> list[list[str]]:
+def schema_property_rows(schema: dict[str, Any], labels: dict[str, Any]) -> list[list[str]]:
     rows: list[list[str]] = []
     for name, prop in (schema.get("properties") or {}).items():
         required = name in (schema.get("required") or [])
@@ -263,10 +365,10 @@ def schema_property_rows(schema: dict[str, Any]) -> list[list[str]]:
         rows.append(
             [
                 f"`{name}`",
-                render_type(prop),
-                RU_LABELS["required_yes"] if required else RU_LABELS["required_no"],
-                RU_LABELS["no_content"] if default is None else f"`{json.dumps(default, ensure_ascii=False)}`",
-                render_constraints(prop),
+                render_type(prop, labels),
+                labels["required_yes"] if required else labels["required_no"],
+                labels["no_content"] if default is None else f"`{json.dumps(default, ensure_ascii=False)}`",
+                render_constraints(prop, labels),
             ]
         )
     return rows
@@ -295,7 +397,9 @@ def response_schema_ref(response: dict[str, Any]) -> str | None:
     return None
 
 
-def render_operation(method: str, path: str, op: dict[str, Any]) -> tuple[str, list[str]]:
+def render_operation(
+    method: str, path: str, op: dict[str, Any], labels: dict[str, Any]
+) -> tuple[str, list[str]]:
     """One operation section + the schema names directly referenced."""
     lines: list[str] = [f"### `{method.upper()}` `{path}`"]
     if op.get("summary"):
@@ -310,19 +414,19 @@ def render_operation(method: str, path: str, op: dict[str, Any]) -> tuple[str, l
         rows = [
             [
                 f"`{p['name']}`",
-                RU_LABELS["in_path"] if p.get("in") == "path" else RU_LABELS["in_query"],
-                render_type(p.get("schema") or {}),
-                RU_LABELS["required_yes"] if p.get("required") else RU_LABELS["required_no"],
-                render_constraints(p.get("schema") or {}) or str(p.get("description") or ""),
+                labels["in_path"] if p.get("in") == "path" else labels["in_query"],
+                render_type(p.get("schema") or {}, labels),
+                labels["required_yes"] if p.get("required") else labels["required_no"],
+                render_constraints(p.get("schema") or {}, labels) or str(p.get("description") or ""),
             ]
             for p in params
         ]
         lines.append("")
-        lines.append(f"**{RU_LABELS['params']}**")
+        lines.append(f"**{labels['params']}**")
         lines.append("")
         lines.append(
             md_table(
-                [RU_LABELS["param"], RU_LABELS["where"], RU_LABELS["type"], RU_LABELS["required"], RU_LABELS["constraints"]],
+                [labels["param"], labels["where"], labels["type"], labels["required"], labels["constraints"]],
                 rows,
             )
         )
@@ -337,16 +441,17 @@ def render_operation(method: str, path: str, op: dict[str, Any]) -> tuple[str, l
             break
     if body:
         title = (
-            RU_LABELS["body_required"] if body.get("required") else RU_LABELS["body_optional"]
+            labels["body_required"] if body.get("required") else labels["body_optional"]
         )
+        suffix = str(labels["body_schema_suffix"]).format(name=body_schema) if body_schema else ""
         lines.append("")
-        lines.append(f"**{title}**" + (f" — схема `{body_schema}`" if body_schema else ""))
+        lines.append(f"**{title}**" + (f" {suffix}" if suffix else ""))
         if body_schema:
             refs.append(body_schema)
 
     if op.get("responses"):
         lines.append("")
-        lines.append(f"**{RU_LABELS['responses']}**")
+        lines.append(f"**{labels['responses']}**")
         lines.append("")
         rows = []
         for code in sorted(op["responses"], key=str):
@@ -357,12 +462,12 @@ def render_operation(method: str, path: str, op: dict[str, Any]) -> tuple[str, l
             rows.append(
                 [
                     f"`{code}`",
-                    f"`{ref}`" if ref else RU_LABELS["no_content"],
+                    f"`{ref}`" if ref else labels["no_content"],
                     str(response.get("description") or ""),
                 ]
             )
         lines.append(
-            md_table([RU_LABELS["code"], RU_LABELS["schema"], RU_LABELS["description"]], rows)
+            md_table([labels["code"], labels["schema"], labels["description"]], rows)
         )
     return "\n".join(lines), refs
 
@@ -373,19 +478,20 @@ def render_group_page(
     operations: list[tuple[str, str, dict[str, Any]]],
     schemas: dict[str, Any],
     spec_meta: dict[str, Any],
+    locale: str,
 ) -> str:
-    """The markdown body of one board-API group page (RU v1)."""
-    lines: list[str] = [f"# {group['title']}", ""]
-    if group.get("about"):
-        lines.append(str(group["about"]))
+    """The markdown body of one board-API group page (ru or en)."""
+    labels = LABELS[locale]
+    title = locale_text(group["title"], locale, f"board_api.groups[{group['slug']}].title")
+    about = locale_text(group["about"], locale, f"board_api.groups[{group['slug']}].about") if group.get("about") else ""
+    lines: list[str] = [f"# {title}", ""]
+    if about:
+        lines.append(about)
         lines.append("")
-    lines.append(
-        f"Сгенерировано из снимка OpenAPI v{spec_meta['version']} "
-        f"(эндпоинтов в разделе: {len(operations)})."
-    )
+    lines.append(str(labels["generated_from"]).format(version=spec_meta["version"], count=len(operations)))
     lines.append("")
     for method, path, op in operations:
-        section, refs = render_operation(method, path, op)
+        section, refs = render_operation(method, path, op, labels)
         lines.append(section)
         lines.append("")
     referenced = sorted(
@@ -396,26 +502,26 @@ def render_group_page(
         }
     )
     if referenced:
-        lines.append(f"## {RU_LABELS['schemas_appendix']}")
+        lines.append(f"## {labels['schemas_appendix']}")
         lines.append("")
         for name in referenced:
             schema = schemas.get(name)
             lines.append(f"### `{name}`")
             lines.append("")
             if schema is None:
-                lines.append(f"Схема `{name}` определена вне этого раздела снимка.")
+                lines.append(str(labels["schema_outside"]).format(name=name))
                 lines.append("")
                 continue
-            rows = schema_property_rows(schema)
+            rows = schema_property_rows(schema, labels)
             if rows:
                 lines.append(
                     md_table(
-                        [RU_LABELS["field"], RU_LABELS["type"], RU_LABELS["required"], RU_LABELS["default"], RU_LABELS["constraints"]],
+                        [labels["field"], labels["type"], labels["required"], labels["default"], labels["constraints"]],
                         rows,
                     )
                 )
             else:
-                lines.append("Схема без именованных свойств (скаляр или перечисление).")
+                lines.append(str(labels["schema_plain"]))
             lines.append("")
     return "\n".join(lines).rstrip("\n")
 
@@ -437,7 +543,9 @@ def collect_refs(op: dict[str, Any]) -> list[str]:
 def build_board_pages(
     board_api: dict[str, Any], prov: dict[str, Any]
 ) -> tuple[list[dict[str, Any]], int]:
-    """Deterministic spec → pages pipeline. Unmapped path = DRIFT fail."""
+    """Deterministic spec → pages pipeline, one page-set per BOARD_LOCALE
+    (ME-044: ru + en mirror). Unmapped path = DRIFT fail. Both locale sets
+    share the spec provenance; only labels/titles differ."""
     spec_path = REPO_ROOT / board_api["spec"]
     spec = json.loads(spec_path.read_text(encoding="utf-8"))
     schemas = (spec.get("components") or {}).get("schemas") or {}
@@ -475,83 +583,105 @@ def build_board_pages(
 
     spec_meta = {"version": version}
     pages: list[dict[str, Any]] = []
+    banner = GEN_SPEC_BANNER_TEMPLATE.format(sha12=prov["sha"][:12], version=version)
+    extra_fields = [("source", f"spec@{prov['sha'][:12]}"), ("spec_version", version)]
+    provenance = {
+        "repo": "vesmaro-eyes",
+        "source_path": board_api["spec"],
+        "sha": prov["sha"],
+        "commit_date": prov["commit_date"],
+    }
 
-    # --- index page -----------------------------------------------------
-    index_slug = board_api["index_slug"]
-    index_group = groups[index_slug]
-    rows = []
-    for group in board_api["groups"]:
-        if group["slug"] == index_slug:
-            continue
-        rows.append(
-            [f"[{group['title']}](api/{group['slug']})", str(len(by_group[group["slug"]])), str(group.get("about", ""))]
+    for locale in BOARD_LOCALES:
+        labels = LABELS[locale]
+
+        # --- index page -------------------------------------------------
+        index_slug = board_api["index_slug"]
+        index_group = groups[index_slug]
+        index_title = locale_text(
+            index_group["title"], locale, f"board_api.groups[{index_slug}].title"
         )
-    index_body = "\n".join(
-        [
-            f"# {index_group['title']}",
-            "",
-            str(index_group.get("about", "")),
-            "",
-            f"Снимок OpenAPI: **{info.get('title', 'vesmaro-eyes')} v{version}**, "
-            f"{total_ops} операций, {len(schemas)} схем. Разделы справочника:",
-            "",
-            md_table(["Раздел", "Операций", "Что покрывает"], rows),
-            "",
-            "> Страницы разделов генерируются из снимка детерминированно "
-            "(`scripts/gen_api_ref.py`): правка возможна только регенерацией. "
-            "Внутри разделов — таблицы параметров, схем и ответов; тексты "
-            "операций приведены из спеки как есть (EN).",
-        ]
-    )
-    pages.append(
-        {
-            "path": f"{index_slug}.md",
-            "locale": "ru",
-            "title": index_group["title"],
-            "category": board_api["category"],
-            "order": int(index_group["order"]),
-            "body": index_body,
-            "banner": GEN_SPEC_BANNER_TEMPLATE.format(sha12=prov["sha"][:12], version=version),
-            "extra_fields": [("source", f"spec@{prov['sha'][:12]}"), ("spec_version", version)],
-            "provenance": {
-                "repo": "vesmaro-eyes",
-                "source_path": board_api["spec"],
-                "sha": prov["sha"],
-                "commit_date": prov["commit_date"],
-            },
-            "kind": "openapi-generated",
-        }
-    )
-
-    # --- one page per group ----------------------------------------------
-    for group in board_api["groups"]:
-        if group["slug"] == index_slug:
-            continue
-        body = render_group_page(
-            group=group,
-            operations=by_group[group["slug"]],
-            schemas=schemas,
-            spec_meta=spec_meta,
+        index_about = (
+            locale_text(index_group["about"], locale, f"board_api.groups[{index_slug}].about")
+            if index_group.get("about")
+            else ""
+        )
+        rows = []
+        for group in board_api["groups"]:
+            if group["slug"] == index_slug:
+                continue
+            group_title = locale_text(
+                group["title"], locale, f"board_api.groups[{group['slug']}].title"
+            )
+            group_about = (
+                locale_text(group["about"], locale, f"board_api.groups[{group['slug']}].about")
+                if group.get("about")
+                else ""
+            )
+            rows.append(
+                [f"[{group_title}](api/{group['slug']})", str(len(by_group[group["slug"]])), group_about]
+            )
+        index_body = "\n".join(
+            [
+                f"# {index_title}",
+                "",
+                index_about,
+                "",
+                str(labels["snapshot_line"]).format(
+                    title=info.get("title", "vesmaro-eyes"),
+                    version=version,
+                    ops=total_ops,
+                    schemas=len(schemas),
+                ),
+                "",
+                md_table(list(labels["index_table"]), rows),
+                "",
+                f"> {labels['index_note']}",
+            ]
         )
         pages.append(
             {
-                "path": f"{group['slug']}.md",
-                "locale": "ru",
-                "title": str(group["title"]),
+                "path": f"{index_slug}.md",
+                "locale": locale,
+                "title": index_title,
                 "category": board_api["category"],
-                "order": int(group["order"]),
-                "body": body,
-                "banner": GEN_SPEC_BANNER_TEMPLATE.format(sha12=prov["sha"][:12], version=version),
-                "extra_fields": [("source", f"spec@{prov['sha'][:12]}"), ("spec_version", version)],
-                "provenance": {
-                    "repo": "vesmaro-eyes",
-                    "source_path": board_api["spec"],
-                    "sha": prov["sha"],
-                    "commit_date": prov["commit_date"],
-                },
+                "order": int(index_group["order"]),
+                "body": index_body,
+                "banner": banner,
+                "extra_fields": extra_fields,
+                "provenance": provenance,
                 "kind": "openapi-generated",
             }
         )
+
+        # --- one page per group ------------------------------------------
+        for group in board_api["groups"]:
+            if group["slug"] == index_slug:
+                continue
+            group_title = locale_text(
+                group["title"], locale, f"board_api.groups[{group['slug']}].title"
+            )
+            body = render_group_page(
+                group=group,
+                operations=by_group[group["slug"]],
+                schemas=schemas,
+                spec_meta=spec_meta,
+                locale=locale,
+            )
+            pages.append(
+                {
+                    "path": f"{group['slug']}.md",
+                    "locale": locale,
+                    "title": group_title,
+                    "category": board_api["category"],
+                    "order": int(group["order"]),
+                    "body": body,
+                    "banner": banner,
+                    "extra_fields": extra_fields,
+                    "provenance": provenance,
+                    "kind": "openapi-generated",
+                }
+            )
     return pages, total_ops
 
 
@@ -856,6 +986,8 @@ def sync(config: dict[str, Any], hub: dict[str, Any]) -> dict[str, Any]:
     board_pages, total_ops = build_board_pages(hub["board_api"], pins["__spec__"])
     report["board_api"] = {
         "pages": len(board_pages),
+        "pages_per_locale": len(board_pages) // len(BOARD_LOCALES),
+        "locales": list(BOARD_LOCALES),
         "operations": total_ops,
         "spec_blob": pins["__spec__"]["sha"][:12],
         "spec_version": json.loads((REPO_ROOT / hub["board_api"]["spec"]).read_text(encoding="utf-8"))["info"]["version"],
@@ -967,7 +1099,8 @@ def main(argv: list[str] | None = None) -> int:
     board = report["board_api"]
     print(
         f"[api/board] spec blob {board['spec_blob']} v{board['spec_version']}: "
-        f"{board['operations']} операций → {board['pages']} страниц"
+        f"{board['operations']} операций → {board['pages']} страниц "
+        f"({'+'.join(board['locales'])}, по {board['pages_per_locale']})"
     )
     for name, info in report["sources"].items():
         print(
