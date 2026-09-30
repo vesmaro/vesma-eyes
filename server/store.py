@@ -100,8 +100,38 @@ ACTIVITY_FAMILIES: dict[str, tuple[str, ...]] = {
 # would punch holes in a product surface, not just prune chatter. The cap
 # therefore trims oldest NON-task rows only; a board flooded with task.*
 # can exceed the cap (accepted: task history is the retention boundary).
+# ME-049 (security cascade C2): inside the cap pass eviction is
+# FAMILY-AWARE — UI telemetry goes first. A telemetry flood (ui.* visits
+# from every page load) must not push board-audit rows
+# (executor.*/pairing.*/provisioning.* …) out of the cap window: chatter
+# is expendable, the audit trail is not. Only when telemetry is exhausted
+# does the trim touch older audit rows — the total cap stays a hard bound.
 ACTIVITY_RETENTION_DAYS = 90
 ACTIVITY_RETENTION_CAP = 500_000
+# ME-049: the telemetry classification for the family-aware cap pass —
+# the ME-037 frozen taxonomy (events-taxonomy-v0 §1.2) as stored kinds.
+# Prefix families are safe to match wholesale (no audit kind starts with
+# ui./cmdk./living.); kora is deliberately NOT a prefix — the server's
+# own kora.sessions.upserted audit kind shares it, so the kora telemetry
+# kinds are listed exactly.
+TELEMETRY_EVENT_PREFIXES: tuple[str, ...] = ("ui.", "cmdk.", "living.")
+TELEMETRY_EVENT_KINDS: tuple[str, ...] = (
+    "kora.entered", "kora.intent_started", "kora.intent_completed",
+    "kora.intent_abandoned", "notifications.read",
+)
+
+
+def _telemetry_condition() -> tuple[str, list[str]]:
+    """(sql_fragment, params) matching the telemetry kinds — used by the
+    ME-049 family-aware cap pass. Parameters only; the kind list is a
+    frozen module constant, never caller input."""
+    frag = " OR ".join(["kind LIKE ?"] * len(TELEMETRY_EVENT_PREFIXES))
+    params: list[str] = [f"{p}%" for p in TELEMETRY_EVENT_PREFIXES]
+    if TELEMETRY_EVENT_KINDS:
+        frag += (" OR kind IN ("
+                 + ", ".join("?" * len(TELEMETRY_EVENT_KINDS)) + ")")
+        params.extend(TELEMETRY_EVENT_KINDS)
+    return f"({frag})", params
 VALID_ENVS = frozenset({"cluster", "laptop", "local", "cloud", "unknown"})
 # BE-12: task priority dictionary. `normal` is both the API default and the
 # column DEFAULT, so pre-migration rows read `normal` with no backfill.
@@ -1860,8 +1890,10 @@ class Store:
         whole batch. The kinds are pre-validated by the API layer (the
         server-side registry); ``task_id`` is None because telemetry
         describes surfaces and visits, never a task. Retention is the
-        standing UI-28 sweep: every telemetry kind is non-``task.*``, so
-        the 90-day/500k passes apply unchanged, no new policy."""
+        standing UI-28 sweep, ME-049-aware: telemetry is non-``task.*``,
+        so the 90-day pass applies as-is, and under the 500k cap telemetry
+        is evicted BEFORE audit rows (a UI flood must not push
+        executor.*/pairing.* out of the retention window)."""
         with self._lock, self._conn() as db:
             for kind, payload in rows:
                 self._log(db, kind, None, payload)
@@ -2019,15 +2051,17 @@ class Store:
         return [r["id"] for r in rows]
 
     def sweep_events_retention(self) -> dict[str, int]:
-        """UI-28 retention (TL verdict 2026-09-27): prune the audit
-        ``events`` table. Two passes:
+        """UI-28 retention (TL verdict 2026-09-27) + ME-049: prune the
+        audit ``events`` table. Two passes:
 
         1. AGE — non-task events older than ACTIVITY_RETENTION_DAYS are
            deleted. The task.* family is exempt (per-task «История»
            reads it forever; see the constants' motivation).
-        2. CAP — above ACTIVITY_RETENTION_CAP rows total, the oldest
-           non-task rows are deleted down to the cap. Again task.* is
-           never deleted: the cap trims chatter, not history.
+        2. CAP — above ACTIVITY_RETENTION_CAP rows total, delete down to
+           the cap, FAMILY-AWARE (ME-049): oldest UI-telemetry rows go
+           first; only once telemetry is exhausted do older non-task
+           audit rows go. task.* is never deleted in either stage: the
+           cap trims chatter, not history.
 
         Returns deleted row counts per pass for the sweep log. Idempotent
         by construction (both passes are conditional DELETEs); safe to
@@ -2036,6 +2070,7 @@ class Store:
         cutoff = (datetime.now(timezone.utc)
                   - timedelta(days=ACTIVITY_RETENTION_DAYS)
                   ).isoformat(timespec="seconds")
+        tel_where, tel_params = _telemetry_condition()
         with self._lock, self._conn() as db:
             aged = db.execute(
                 "DELETE FROM events WHERE kind NOT LIKE 'task.%' AND ts<?",
@@ -2046,12 +2081,25 @@ class Store:
             excess = int(total) - ACTIVITY_RETENTION_CAP
             capped = 0
             if excess > 0:
+                # ME-049 stage 1: telemetry is expendable chatter — a
+                # ui.* flood must evict telemetry, not the audit trail.
                 capped = db.execute(
                     "DELETE FROM events WHERE id IN ("
                     "SELECT id FROM events WHERE kind NOT LIKE 'task.%' "
+                    f"AND {tel_where} "  # noqa: S608 — frozen constants
                     "ORDER BY id ASC LIMIT ?)",
-                    (excess,),
+                    (*tel_params, excess),
                 ).rowcount
+                # Stage 2: telemetry exhausted and still over the cap —
+                # the cap is a hard bound; trim oldest audit rows.
+                remaining = excess - capped
+                if remaining > 0:
+                    capped += db.execute(
+                        "DELETE FROM events WHERE id IN ("
+                        "SELECT id FROM events WHERE kind NOT LIKE 'task.%' "
+                        "ORDER BY id ASC LIMIT ?)",
+                        (remaining,),
+                    ).rowcount
         return {"aged": int(aged), "capped": int(capped)}
 
     # ------------------------------------------------------ memory servers

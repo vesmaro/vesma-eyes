@@ -239,18 +239,30 @@ def mask_secrets(text: str) -> str:
 
 # --------------------------------------------------------------- rate limiter
 class RateLimiter:
-    """Minimal in-memory sliding-window limiter (per key), thread-safe."""
+    """Minimal in-memory sliding-window limiter (per key), thread-safe.
+
+    ME-050: ``_events`` is bounded to the keys active within the last
+    window — one-shot keys (per-IP limiters => unique IPs) are swept out
+    once every one of their events has left the window, instead of
+    leaking an emptied deque per key forever."""
 
     def __init__(self, limit: int, window: float) -> None:
         self.limit = limit
         self.window = window
         self._events: dict[str, deque[float]] = {}
         self._lock = threading.Lock()
+        self._last_sweep = 0.0  # monotonic ts of the last expired-key sweep
 
     def acquire(self, key: str) -> bool:
         """Count one request for key; False when over the limit."""
         now = time.monotonic()
         with self._lock:
+            # ME-050: amortized eviction — at most one full sweep per
+            # window, so steady-state acquire stays O(window events) and
+            # ``_events`` tracks the live working set, not the key history.
+            if now - self._last_sweep >= self.window:
+                self._last_sweep = now
+                self._sweep(now)
             q = self._events.setdefault(key, deque())
             while q and now - q[0] > self.window:
                 q.popleft()
@@ -258,6 +270,18 @@ class RateLimiter:
                 return False
             q.append(now)
             return True
+
+    def _sweep(self, now: float) -> None:
+        """Drop keys whose EVERY event is outside the window (ME-050).
+
+        Eviction cannot change any observable outcome: a swept key is
+        re-created by ``setdefault`` on its next acquire, where the
+        popleft loop would have discarded those expired events anyway —
+        it behaves exactly like a first-time key."""
+        stale = [k for k, q in self._events.items()
+                 if not q or now - q[-1] > self.window]
+        for k in stale:
+            del self._events[k]
 
     def retry_after(self, key: str) -> int:
         """Seconds until ``acquire(key)`` can succeed again (0 = free now).
