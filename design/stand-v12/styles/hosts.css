@@ -1,0 +1,163 @@
+/* hosts.css — Хосты «ростер машин» (ME-061 доводка, P0-2).
+ *
+ * Honest-ростер из фикстуры STAND.hosts: карточка = витальная точка
+ * жизненного цикла + состояние · возраст · действие (словарь 07a),
+ * счётчики (доклады/задачи/агенты) и последние события. Все значения —
+ * токены tokens-v12.css; литералов нет (правило линии).
+ * Палитра статусов — замороженные имена (--color-success/warning/…),
+ * точка никогда не единственный носитель статуса (WCAG 1.4.1): рядом
+ * текстовая метка жизненного цикла. */
+
+.hosts-layout {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.hosts-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  padding: var(--space-3) var(--space-4);
+  border: var(--line-hairline) solid var(--myelin-hairline);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--numeric-tnum);
+  font-size: var(--text-data);
+  color: var(--color-text-secondary);
+}
+.hosts-summary .sum-n { color: var(--color-text-primary); }
+.hosts-summary .sum-ok { color: var(--color-success); }
+.hosts-summary .sum-warn { color: var(--color-warning); }
+
+.roster {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.host-card {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: var(--line-hairline) solid var(--myelin-hairline);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-well);
+}
+.host-card > .host-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.host-card .vital-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-success);
+  box-shadow: 0 0 0 3px var(--color-iris-glow);
+  flex: none;
+}
+.host-card[data-lifecycle="silent"] .vital-dot { background: var(--color-warning); box-shadow: none; }
+.host-card[data-lifecycle="off"] .vital-dot { background: var(--synapse-idle); box-shadow: none; }
+.host-card[data-lifecycle="provisioning"] .vital-dot { background: var(--color-info); }
+
+.host-card .host-name {
+  font-size: var(--text-ui);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+}
+.host-card .host-state {
+  margin-left: auto;
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.host-card[data-lifecycle="online"] .host-state { color: var(--color-success); }
+.host-card[data-lifecycle="silent"] .host-state { color: var(--color-warning); }
+.host-card[data-lifecycle="provisioning"] .host-state { color: var(--color-info); }
+
+.host-card .host-status {
+  margin: 0;
+  font-size: var(--text-ui);
+  color: var(--color-text-primary);
+  line-height: var(--leading-normal);
+}
+.host-card .host-note {
+  margin: 0;
+  font-size: var(--text-data);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-normal);
+}
+.host-card .host-busy {
+  margin: 0;
+  font-size: var(--text-data);
+  color: var(--color-iris-bright);
+}
+
+.host-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--numeric-tnum);
+  font-size: var(--text-data);
+  color: var(--color-text-secondary);
+}
+.host-stats .stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border: var(--line-hairline) solid var(--myelin-hairline);
+  border-radius: var(--radius-sm);
+}
+.host-stats .stat b { color: var(--color-text-primary); font-weight: var(--weight-medium); }
+
+.host-recent {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: var(--line-hairline) solid var(--myelin-hairline);
+  padding-top: var(--space-2);
+}
+.host-recent li {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  font-size: var(--text-data);
+  color: var(--color-text-secondary);
+}
+.host-recent .ev-time {
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--numeric-tnum);
+  color: var(--color-text-secondary); /* P2-6: контраст таймстампов ≥ WCAG AA */
+  flex: none;
+}
+
+.host-card .host-tech {
+  font-family: var(--font-mono);
+  font-size: var(--text-caps);
+  color: var(--color-text-secondary);
+  letter-spacing: 0.01em;
+}
+
+/* honest empty-state: машин нет — ростер не притворяется */
+.roster-empty {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  padding: var(--space-8);
+  border: 1px dashed var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+}
+.roster-empty strong { color: var(--color-text-primary); font-weight: var(--weight-medium); }
+.roster-empty .btn { margin-top: var(--space-2); }
+
+@media (max-width: 900px) {
+  .roster { grid-template-columns: minmax(0, 1fr); }
+}

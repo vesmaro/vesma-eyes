@@ -26,10 +26,15 @@
   gap: var(--space-4);
   align-items: start;
 }
+
+/* P1-4 (доводка ME-061): доска занимает всю рабочую ширину — правая
+ * половина экрана не пустует; тихие панели ниже остаются в мерной колонне */
+body[data-screen="tasks"] .content { max-width: none; }
+body[data-screen="tasks"] .content > .panel { max-width: 1160px; }
 .col {
   display: grid;
   gap: var(--space-2);
-  min-height: 120px;
+  min-height: 240px; /* P1-4: колонки не схлопываются — доска держит высоту */
 }
 .col-head {
   display: flex;

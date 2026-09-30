@@ -58,14 +58,19 @@
    * Гвард: окно --duration-awaken (1200ms = 240ms проявление + 960ms разброс);
    * после окна код инертен (awakenT0 = -1), флаг vesmaro.awakened
    * общий с CSS-частью. Механика событий (pulses/tints/hover/breath/
-   * деградация FPS) не тронута (§13.1 p.5). */
+   * деградация FPS) не тронута (§13.1 p.5).
+   * v12-fix (ME-061 доводка): волна дозажигает ЯРКОСТЬ, а не существование —
+   * базис AWAKEN_BASE виден с первого кадра (headless-скриншот без rAF-цикла
+   * и кадр до окна волны показывают сеть, «тьма 93% кадра» закрыта). */
   var awakenT0 = -1;
   var AWAKEN_WINDOW = (parseFloat(colorVar("--duration-awaken", "1200")) || 1200);
   var AWAKEN_REVEAL = 240;
   var AWAKEN_SPREAD = Math.max(0, AWAKEN_WINDOW - AWAKEN_REVEAL);
+  var AWAKEN_BASE = 0.55; /* сеть читается сразу; волна поднимает 0.55 → 1 */
   function wakeAlpha(n, wNow) {
     var k = (wNow - n.wake * AWAKEN_SPREAD) / AWAKEN_REVEAL;
-    return k < 0 ? 0 : k > 1 ? 1 : k;
+    k = k < 0 ? 0 : k > 1 ? 1 : k;
+    return AWAKEN_BASE + (1 - AWAKEN_BASE) * k;
   }
 
   /* ── Deterministic layout (stable across visits) ────────────────────── */
@@ -89,7 +94,7 @@
     byId = {};
     var rnd = mulberry32(20260925);
     var src = D.wellNodes || D.memories;
-    var mems = src.slice(0, 70); // hard cap: well under the 300 limit
+    var mems = src.slice(0, 160); // cap 300 canon; v12-fix: все фикстуры wellNodes (82) — плотная ткань
     var W = hero.clientWidth || 900;
     var H = hero.clientHeight || 280;
 
@@ -101,8 +106,9 @@
         x: W * ((c + 0.5) / k) + (rnd() - 0.5) * W * 0.05,
         /* v12 (15 §3.1): плотность смещена к низу — верх ~30% разрежен
          * («зеркало воды» под HUD-текстом); единственная правка движка,
-         * санкционирована спеком (§3.1 Активы) */
-        y: H * 0.64 + (rnd() - 0.5) * H * 0.26,
+         * санкционирована спеком (§3.1 Активы). v12-fix: центры чуть выше
+         * (0.64 → 0.58) — ткань читается, а не жмётся к полу. */
+        y: H * 0.58 + (rnd() - 0.5) * H * 0.26,
       });
     }
 
@@ -111,15 +117,15 @@
       var cl = centers[ci];
       var ang = rnd() * Math.PI * 2;
       var rad = Math.pow(rnd(), 0.65); // плотнее к центру кластера
-      var spread = Math.min(W * 0.09, H * 0.34);
+      var spread = Math.min(W * 0.14, H * 0.42);
       var age = m.age || 24;
-      var r0 = Math.max(2, Math.min(4, 4 - (age / 288) * 2));
+      var r0 = Math.max(2.5, Math.min(5, 5 - (age / 288) * 2)); /* v12-fix: крупнее ядра */
       var n = {
         id: m.id,
         m: m,
         cluster: ci,
         x: Math.max(24, Math.min(W - 24, cl.x + Math.cos(ang) * rad * spread)),
-        y: Math.max(H * 0.3, Math.min(H - 16, cl.y + Math.sin(ang) * rad * spread * 0.8)), /* v12: низ зеркала воды */
+        y: Math.max(H * 0.24, Math.min(H - 16, cl.y + Math.sin(ang) * rad * spread * 0.8)), /* v12: низ зеркала воды */
         r: r0,
         phase: i * 0.7,
         vx: (rnd() - 0.5) * 2, // px per second (≤4)
@@ -146,13 +152,13 @@
     var bridges = 0;
     var seen = {};
     pairs.forEach(function (p) {
-      if (edges.length > 110 || deg[p.i] >= 4 || deg[p.j] >= 4) return;
+      if (edges.length > 180 || deg[p.i] >= 5 || deg[p.j] >= 5) return;
       var key = p.i < p.j ? p.i + "|" + p.j : p.j + "|" + p.i;
       if (seen[key]) return;
-      if (p.same || (p.d < W * 0.12 && bridges < 6)) {
+      if (p.same || (p.d < W * 0.22 && bridges < 26)) { /* v12-fix: мосты 12→26, дальность 0.12W→0.22W — ткань сплошная, не острова */
         if (!p.same) bridges++;
         seen[key] = 1;
-        edges.push([p.i, p.j]);
+        edges.push([p.i, p.j, p.same ? 0 : 1]); /* 3-й элемент: мост между колониями */
         deg[p.i]++;
         deg[p.j]++;
       }
@@ -214,7 +220,7 @@
     canvas.width = hero.clientWidth * dpr;
     canvas.height = hero.clientHeight * dpr;
     buildGraph();
-    if (reduced) render(0);
+    render(performance.now()); /* v12-fix: синхронный кадр на каждый resize */
   }
   window.addEventListener("resize", resize);
 
@@ -396,7 +402,7 @@
     }
 
     // edges (myelin hairlines); spotlight: unrelated edges dim to 40%
-    ctx.lineWidth = 0.5;
+    ctx.lineWidth = 1.25; /* v12-fix: 0.5px линия не читалась на скриншотах */
     edges.forEach(function (ed) {
       var a = nodes[ed[0]];
       var b = nodes[ed[1]];
@@ -406,6 +412,11 @@
       if (strong) {
         ctx.strokeStyle = COL.myelin;
         ctx.globalAlpha = wEdge;
+      } else if (ed[2]) {
+        /* v12-fix: межкластерные мосты — ирис-связка (светлее миелина):
+         * колонии читаются одним полотном */
+        ctx.strokeStyle = COL.recall;
+        ctx.globalAlpha = (focusNode ? 0.16 : 0.32) * wEdge;
       } else {
         ctx.strokeStyle = COL.idle;
         ctx.globalAlpha = (focusNode ? 0.4 : 1) * wEdge;
@@ -434,7 +445,7 @@
         ctx.stroke();
       });
       ctx.globalAlpha = 1;
-      ctx.lineWidth = 0.5;
+      ctx.lineWidth = 0.85;
     }
 
     // nodes: light pre-rendered halo per node + iris cores; breath 5s ±0.06
@@ -446,8 +457,8 @@
       var dimmed = focusNode && n !== focusNode && !adj[i];
       var alpha = dimmed ? 0.4 : 1;
       var breath = reduced ? 1 : 1 + 0.06 * Math.sin((breathT / 5000) * Math.PI * 2 + n.phase);
-      var hs = n.r * 10;
-      ctx.globalAlpha = (dimmed ? 0.05 : 0.12) * breath * wakeAlpha(n, wNow); /* v12 волна */
+      var hs = n.r * 16; /* v12-fix: гало шире (10r → 16r), альфа 0.12 → 0.2 */
+      ctx.globalAlpha = (dimmed ? 0.05 : 0.2) * breath * wakeAlpha(n, wNow); /* v12 волна */
       ctx.drawImage(halo, n.x - hs / 2, n.y - hs / 2, hs, hs);
       if (n === focusNode && glowOn) {
         ctx.globalAlpha = 0.8 * breath;
@@ -461,7 +472,10 @@
       var alpha = dimmed ? 0.4 : 1;
       var breath = reduced ? 1 : 1 + 0.06 * Math.sin((breathT / 5000) * Math.PI * 2 + n.phase);
       ctx.globalAlpha = Math.min(1, alpha * breath) * wakeAlpha(n, wNow); /* v12 волна */
-      ctx.fillStyle = n === focusNode ? COL.irisBright : COL.iris;
+      /* v12-fix: ядро по ценности записи — уверенность ≥ 0.92 светится
+       * ярче (--color-iris-bright), прочие — базовый ирис; палитра не тронута */
+      ctx.fillStyle = n === focusNode ? COL.irisBright
+        : (n.m && n.m.conf >= 0.92 ? COL.irisBright : COL.iris);
       ctx.beginPath();
       ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
       ctx.fill();
@@ -575,10 +589,15 @@
     if (!document.hidden) startLoop();
   });
 
-  /* first paint before rAF starts (spec 04 §1: rAF after first paint) */
-  resize();
-  /* v12 (§13.1 p.2): старт волны — после первого buildGraph, до цикла;
-   * reduced волну не стартует (статика сразу) */
+  /* v12-fix (спека 04 §1 «rAF after first paint», доводка ME-061):
+   * ПЕРВЫЙ КАДР РИСУЕТСЯ СИНХРОННО — до любого requestAnimationFrame.
+   * Причина: chrome-headless-shell (--screenshot) исполняет ровно ОДИН
+   * rAF-колбэк за прогон (проверено зондом: rafFrames=1 при
+   * virtual-time-budget=5000), а прежний порядок «resize → rAF → startLoop →
+   * rAF(loop)» требовал минимум ДВА колбэка — канвас оставался пустым в
+   * headless-скриншотах в обоих проходах (с virtual-time и без).
+   * Порядок теперь: старт волны (чтобы кадр учитывал окно) → resize()
+   * с синхронным render(performance.now()) → rAF-цикл. */
   try {
     if (sessionStorage.getItem("vesmaro.awakened") !== "1" && !reduced) {
       awakenT0 = performance.now();
@@ -586,6 +605,7 @@
   } catch (e) {
     if (!reduced) awakenT0 = performance.now();
   }
+  resize();
   requestAnimationFrame(function () {
     if (reduced) render(0);
     else startLoop();

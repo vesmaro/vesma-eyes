@@ -116,6 +116,8 @@
     row.type = o.sessId ? "button" : undefined;
     row.className = "ether-row" + (o.sessId ? "" : " plain");
     row.setAttribute("data-kind", o.kind);
+    /* P2-6: маркер роли (§13.6.5 → Эфир): владелец — ирис, агент — покой */
+    row.setAttribute("data-role", o.who === "owner" ? "owner" : "agent");
     if (o.errorText) row.setAttribute("aria-live", "assertive"); /* 4.1.3 */
     var dot = doc.createElement("span"); /* точка словаря (§13.6.3) */
     dot.className = "ev-dot";

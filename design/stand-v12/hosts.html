@@ -4,14 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Хосты — vesmaro-eyes · стенд ВАУ v12</title>
-  <meta name="description" content="Экран-заглушка стенда v12: сюда ссылается карточка ошибки связи живого слоя (v11 08 §5.3).">
+  <meta name="description" content="Хосты «ростер машин»: состояние каждой машины, счётчики докладов и задач, последние события (фикстура data.js).">
   <link rel="stylesheet" href="styles/tokens-v12.css">
   <link rel="stylesheet" href="styles/shell-v12.css">
   <link rel="stylesheet" href="styles/living-layer.css">
   <link rel="stylesheet" href="styles/palette.css">
   <link rel="stylesheet" href="styles/living-extra.css">
+  <link rel="stylesheet" href="styles/hosts.css">
 </head>
-<body>
+<body data-screen="hosts">
 <a class="skip-link" href="#main">К содержимому</a>
 <div class="app">
 
@@ -61,23 +62,29 @@
         <span class="side-label">Хосты</span>
       </a>
     </nav>
-    <p class="side-note">Экран-заглушка; наполнение — волна интеграции.</p>
+    <p class="side-note">Ростер машин: состояние · возраст · действие; сюда ведёт карточка ошибки связи живого слоя.</p>
   </aside>
 
   <main class="content" id="main">
     <p class="crumbs"><a href="overview.html">стенд v12</a> / хосты</p>
     <h1 class="page-title">Хосты</h1>
     <p class="page-lead">
-      Заглушка v12: живой слой из stand-v11-base ссылается сюда из карточки
-      ошибки связи («Открыть Хосты», 08 §5.3) — ссылка не должна быть
-      мёртвой. Наполнение экрана придёт в волне интеграции.
+      Каждая машина — строка жизни: состояние, чем занята, сколько докладов
+      и задач. Данные — фикстура стенда (data.js); в продукте ростер живёт
+      той же схемой от реальных докладов машин.
     </p>
+
+    <div class="hosts-layout">
+      <p class="hosts-summary" id="hosts-summary" aria-label="Сводка по машинам"></p>
+      <div class="roster" id="roster" aria-label="Ростер хостов"></div>
+    </div>
   </main>
 </div>
 
 <script src="js/stand-v12.js"></script>
 <script src="js/data.js"></script>
 <script src="js/living.js"></script>
+<script src="js/hosts-v12.js"></script>
 <script src="js/palette-v12.js"></script>
 </body>
 </html>

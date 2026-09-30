@@ -161,7 +161,7 @@ body[data-screen="kora"] .content {
   font-family: var(--font-mono);
   font-variant-numeric: var(--numeric-tnum);
   font-size: var(--text-caps);          /* mono-время 11px (§3.2) */
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);  /* P2-6 (доводка): ≥4.5:1 на стратах коры */
   white-space: nowrap;
 }
 /* §13.6.6: инсет «мысль» — свиток внутри сцены (Lora, мера ≤60ch) */
@@ -281,8 +281,16 @@ body[data-screen="kora"] .content {
 .ether-row[data-kind="index"] .ev-dot { background: var(--synapse-idle); }
 .ether-row[data-kind="error"] .ev-dot { background: var(--synapse-error); }
 .ether-row[data-kind="error"] {
-  box-shadow: inset 0 0 0 1px var(--color-error); /* красная кромка + текст (1.4.1) */
+  box-shadow: inset 3px 0 0 var(--color-error),
+              inset 0 0 0 1px var(--color-error); /* красная кромка + текст (1.4.1) */
 }
+/* P2-6 (доводка ME-061): маркеры ПО РОЛЯМ рядом с точками-событиями —
+ * расширение словаря §13.6.5 на Эфир: владелец — ирис, агент — заметный
+ * покой idle (в плотном списке миелин 0.14 не читался). Роль дублирована
+ * цветом имени (WCAG 1.4.1: не только цветом — имя/текст остаются). */
+.ether-row[data-role="agent"] { box-shadow: inset 3px 0 0 var(--synapse-idle); }
+.ether-row[data-role="owner"] { box-shadow: inset 3px 0 0 var(--color-iris); }
+.ether-row[data-role="owner"] .ether-text strong { color: var(--color-iris-bright); }
 .ether-row:hover { background: var(--myelin-strong); }
 .ether-row:focus-visible {
   outline: var(--focus-ring-width) solid var(--color-focus);
@@ -294,7 +302,7 @@ body[data-screen="kora"] .content {
   font-family: var(--font-mono);
   font-variant-numeric: var(--numeric-tnum);
   font-size: var(--text-caps);
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary); /* P2-6 (доводка): контраст ≥ WCAG AA */
   white-space: nowrap;
 }
 /* §13.6.4: вспышка строки Эфира — фон --myelin-strong, 240ms + спад 400ms */
