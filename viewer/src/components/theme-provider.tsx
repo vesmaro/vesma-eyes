@@ -106,6 +106,19 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyTheme(theme);
   }, [theme]);
 
+  // Blueprint §12.7: the theme-color meta follows the RESOLVED theme. The
+  // value is READ from the live token (zero duplicated hexes here); the
+  // pre-paint bootstrap in index.html carries the first-paint values, and
+  // tokens.test.ts pins its hexes against tokens.css.
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (!meta) return;
+    const value = getComputedStyle(document.documentElement)
+      .getPropertyValue("--color-bg-base")
+      .trim();
+    if (value) meta.setAttribute("content", value);
+  }, [theme]);
+
   // Follow the OS while the user has not made an explicit choice — the
   // preference state is the single authority (no storage re-reads here).
   useEffect(() => {

@@ -154,7 +154,20 @@ const MOTION_TOKENS = [
   "--ease-exit",
   "--ease-spring",
   "--ease-breath",
+  "--duration-awaken",
+  "--duration-attention",
+  "--duration-attention-hold",
 ];
+
+/**
+ * Phase 1 «Кора-организм» (design blueprint v1.1 §5.2) — the seven new names
+ * on the frozen canon. `--hud-veil`/`--palette-scrim` are themed pairs (the
+ * light values serve NON-hero light canvases; the hero pins the dark column
+ * via the `[data-well-window]` scope). `--text-display`/`--well-hero-h` are
+ * theme-independent. The three durations are zeroed in BOTH reduced blocks.
+ */
+const PHASE1_THEMED_TOKENS = ["--hud-veil", "--palette-scrim"];
+const PHASE1_STATIC_TOKENS = ["--text-display", "--well-hero-h"];
 
 /** Board-only appendix (ADR 0006 freeze note in web/styles/tokens.css):
  * the ONLY custom properties the web track may define beyond the canon. */
@@ -257,14 +270,30 @@ describe("tokens.css inventory (canon v2 — docs/design/02-TOKENS.md §1–§3)
       ...SHADOW_TOKENS,
       ...MOTION_TOKENS,
       ...NEURO_STATIC_TOKENS,
+      ...PHASE1_STATIC_TOKENS,
     ]) {
       expect(props, `${token} missing`).toContain(token);
     }
   });
 
+  it("defines the Phase 1 themed pairs in BOTH themes", () => {
+    for (const token of PHASE1_THEMED_TOKENS) {
+      expect(
+        blockProps(darkDecls),
+        `${token} missing from dark theme`,
+      ).toContain(token);
+      expect(
+        blockProps(lightDecls),
+        `${token} missing from light theme`,
+      ).toContain(token);
+    }
+  });
+
   it("keeps the frozen iris seed value in both themes (ADR 0003 / D10)", () => {
     const seeds = tokensCss.match(/--color-iris:\s*#1a8a96/g) ?? [];
-    expect(seeds).toHaveLength(2); // dark + light
+    // 3 declarations: dark :root + light block + the well-window scope
+    // (Phase 1's dark-column pin for the hero — the VALUE stays frozen).
+    expect(seeds).toHaveLength(3);
   });
 
   it("defines the density regime pair and the user-driven operational tokens", () => {
@@ -333,6 +362,38 @@ describe("И0 value evolution locks (02-TOKENS.md §5 — intentional deltas)", 
   });
 });
 
+describe("Phase 1 value locks (design blueprint v1.1 §5.2 — Кора-организм)", () => {
+  it("pins the seven new names to their blueprint values", () => {
+    expect(darkDecls.get("--text-display")).toBe(
+      "clamp(2.25rem, 3.5vw, 2.75rem)",
+    );
+    expect(darkDecls.get("--well-hero-h")).toBe(
+      "clamp(520px, calc(100vh - 48px), 860px)",
+    );
+    expect(darkDecls.get("--hud-veil")).toBe("rgb(9 11 15 / 0.78)");
+    expect(lightDecls.get("--hud-veil")).toBe("rgb(245 246 248 / 0.85)");
+    expect(darkDecls.get("--palette-scrim")).toBe("rgb(9 11 15 / 0.55)");
+    expect(lightDecls.get("--palette-scrim")).toBe("rgb(245 246 248 / 0.6)");
+    expect(darkDecls.get("--duration-awaken")).toBe("1200ms");
+    expect(darkDecls.get("--duration-attention")).toBe("320ms");
+    expect(darkDecls.get("--duration-attention-hold")).toBe("2400ms");
+  });
+
+  it("the well-window scope pins the DARK column for the hero in both themes", () => {
+    // The owner-approved exception-image (2026-10-01): the hero stands on
+    // the dark canvas in light «береста» too — the veil follows the well,
+    // not the page. The scope block must carry the exact dark values.
+    for (const css of [tokensCss, boardTokensCss]) {
+      const block = css.match(/\[data-well-window\]\s*\{([^}]*)\}/)?.[1] ?? "";
+      expect(block, "well-window scope present").not.toBe("");
+      expect(block).toContain("--color-well-canvas: #090b0f");
+      expect(block).toContain("--hud-veil: rgb(9 11 15 / 0.78)");
+      expect(block).toContain("--color-text-primary: #e6edf3");
+      expect(block).toContain("--color-focus: #4fc2ce");
+    }
+  });
+});
+
 describe("reduced-motion overrides (design-system.md §7, 06-MOTION §7)", () => {
   it("zeroes ambient and long transitions while keeping instant feedback", () => {
     const mediaIndex = tokensCss.indexOf("@media (prefers-reduced-motion: reduce)");
@@ -350,6 +411,10 @@ describe("reduced-motion overrides (design-system.md §7, 06-MOTION §7)", () =>
     expect(media).toContain("--duration-normal: 0ms");
     expect(media).toContain("--duration-fast: 80ms");
     expect(media).toContain("--duration-impulse: 0ms"); // pulses → static tint
+    // Phase 1 durations join the reduced ladder (blueprint §5.2/§10).
+    expect(media).toContain("--duration-awaken: 0ms"); // static graph immediately
+    expect(media).toContain("--duration-attention: 0ms");
+    expect(media).toContain("--duration-attention-hold: 0ms");
   });
 });
 
@@ -560,6 +625,20 @@ describe("theme bootstrap (design-system.md §9)", () => {
     expect(indexHtml).toContain("prefers-color-scheme"); // system default
     expect(indexHtml).toContain("dataset.theme"); // [data-theme] switching
   });
+
+  it("carries a theme-color meta whose hexes match the resolved surface tokens", () => {
+    // Blueprint §12.7: the meta follows the RESOLVED theme — the bootstrap
+    // script writes the dark/light --color-bg-base values, the provider
+    // re-reads the live token after mount. The hexes here are the guard
+    // against drift between index.html and tokens.css.
+    expect(indexHtml).toMatch(/<meta name="theme-color" content="#[0-9a-f]{6}"/);
+    const darkBase = darkDecls.get("--color-bg-base")!;
+    const lightBase = lightDecls.get("--color-bg-base")!;
+    expect(darkBase).toMatch(/^#[0-9a-f]{6}$/);
+    expect(lightBase).toMatch(/^#[0-9a-f]{6}$/);
+    expect(indexHtml).toContain(darkBase);
+    expect(indexHtml).toContain(lightBase);
+  });
 });
 
 describe("motion attribute (UI-23, vesmaro.motion reduced branches)", () => {
@@ -573,6 +652,9 @@ describe("motion attribute (UI-23, vesmaro.motion reduced branches)", () => {
     expect(forced).toContain("--duration-normal: 0ms");
     expect(forced).toContain("--duration-fast: 80ms");
     expect(forced).toContain("--duration-impulse: 0ms");
+    expect(forced).toContain("--duration-awaken: 0ms");
+    expect(forced).toContain("--duration-attention: 0ms");
+    expect(forced).toContain("--duration-attention-hold: 0ms");
   });
 });
 

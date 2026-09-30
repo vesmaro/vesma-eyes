@@ -44,7 +44,7 @@ export function MemoryCard({ memory, className, returnSource }: MemoryCardProps)
           <h2 className="font-scroll text-base font-semibold leading-tight">
             <Link
               to={detailHref}
-              className="inline-flex min-h-6 items-center hover:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+              className="inline-flex min-h-6 items-center hover:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
             >
               {memoryTitle(memory)}
             </Link>

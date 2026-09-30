@@ -510,7 +510,7 @@ function InboxCount() {
     <span
       title={t("tasks.inboxCount", { count })}
       aria-label={t("tasks.inboxCount", { count })}
-      className="ml-auto inline-flex shrink-0 items-center rounded-full bg-iris/15 px-1.5 font-mono text-xs text-iris-bright"
+      className="ml-auto inline-flex shrink-0 items-center rounded-full bg-iris-tint px-1.5 font-mono text-xs text-iris-bright"
     >
       {count}
     </span>
@@ -602,7 +602,7 @@ function AggregateCountBadge({
       <span
         title={label}
         aria-label={label}
-        className="absolute right-1 top-1 inline-flex shrink-0 items-center justify-center rounded-full bg-iris/15 px-1 font-mono text-[10px] leading-4 text-iris-bright"
+        className="absolute right-1 top-1 inline-flex shrink-0 items-center justify-center rounded-full bg-iris-tint px-1 font-mono text-[10px] leading-4 text-iris-bright"
       >
         {count > RAIL_BADGE_CAP ? `${RAIL_BADGE_CAP}+` : count}
       </span>
@@ -612,7 +612,7 @@ function AggregateCountBadge({
     <span
       title={label}
       aria-label={label}
-      className="ml-auto inline-flex shrink-0 items-center rounded-full bg-iris/15 px-1.5 font-mono text-xs text-iris-bright"
+      className="ml-auto inline-flex shrink-0 items-center rounded-full bg-iris-tint px-1.5 font-mono text-xs text-iris-bright"
     >
       {count}
     </span>

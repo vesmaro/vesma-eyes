@@ -33,7 +33,7 @@ export const LINK_CLASS =
  * pull the remark-gfm stack into the search chunk (ME-019 review P2-3).
  */
 export const ARTICLE_MARK_CLASS =
-  "rounded-sm bg-iris/15 px-0.5 text-foreground";
+  "rounded-sm bg-iris-tint px-0.5 text-foreground";
 
 /** Only these URL schemes may become live links (author content is untrusted). */
 export function isAllowedHref(href: string | undefined): boolean {

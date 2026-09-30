@@ -91,6 +91,16 @@
   --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
   --duration-impulse: 240ms;            /* synapse pulse lifetime ≤240ms */
+
+  /* ── Phase 1 «Кора-организм» additions (design blueprint v1.1 §5.2;
+   *    seven new names on the frozen canon — ADR 0006 names untouched) ── */
+  --text-display: clamp(2.25rem, 3.5vw, 2.75rem); /* the ONE display step — Overview hero only; Inter 600 */
+  --well-hero-h: clamp(520px, calc(100vh - 48px), 860px); /* Overview hero height; no fold scroll ≥1024w */
+  --hud-veil: rgb(9 11 15 / 0.78);      /* functional HUD-text backdrop on canvas ONLY; pairs §7.1 */
+  --palette-scrim: rgb(9 11 15 / 0.55); /* palette backdrop tint; + blur(4px) = the system's only blur */
+  --duration-awaken: 1200ms;            /* Overview awakening wave — once per session */
+  --duration-attention: 320ms;          /* attention double-beat pause (name fixed in Ф1, consumed in Ф2) */
+  --duration-attention-hold: 2400ms;    /* ▸N glow hold after the double beat; ≤1 at a time */
 }
 
 /* ── Frozen core (names & values stable) ────────────────────────────── */
@@ -213,6 +223,71 @@
   --shadow-float: 0 8px 24px 0 rgb(0 0 0 / 0.3);
   --shadow-modal: 0 16px 48px 0 rgb(0 0 0 / 0.35);
   --shadow-iris: 0 0 32px 8px var(--color-iris-glow);
+
+  /* Phase 1 — themed pairs (blueprint §5.2). The light veil serves LIGHT
+   * canvases OUTSIDE the hero; the hero itself pins the dark column via the
+   * well-window scope below (owner-approved exception-image, 2026-10-01). */
+  --hud-veil: rgb(245 246 248 / 0.85);
+  --palette-scrim: rgb(245 246 248 / 0.6);
+}
+
+/* ── Well window (тёмное окно колодца, owner-approved 2026-10-01) ────────
+ * The Overview hero stands on the DARK canvas in BOTH themes: «кора светлая,
+ * колодец глубокий» (v12 §12.2). The veil follows the well, not the page —
+ * inside [data-well-window] the dark-column values of every surface/accent
+ * token the hero consumes are pinned, so the hero carries the §7.1 dark
+ * contrast pairs even on a light page. Page Theme Lock holds: this is a
+ * recorded exception-image, not a second theme (no text surfaces outside
+ * the hero). Values are the :root (dark) column — kept in lockstep with it
+ * and asserted by tokens.test.ts. No frozen name is renamed or revalued. */
+[data-well-window] {
+  --color-well-canvas: #090b0f;
+  --hud-veil: rgb(9 11 15 / 0.78);
+  --palette-scrim: rgb(9 11 15 / 0.55);
+
+  --color-iris-dim: #0e4a52;
+  --color-iris: #1a8a96;
+  --color-iris-bright: #4fc2ce;
+  --color-iris-glow: #4fc2ce40;
+  --color-iris-solid: #1a8a96;
+  --color-iris-solid-hover: #4fc2ce;
+
+  --color-confidence: #c9933a;
+  --color-confidence-dim: #7a5520;
+
+  --color-success: #3fbf7f;
+  --color-warning: #d9a03f;
+  --color-error: #e0655c;
+  --color-info: #4fc2ce;
+
+  --color-text-primary: #e6edf3;
+  --color-text-secondary: #9aa7b4;
+  --color-text-muted: #7c8894;          /* pinned for safety — forbidden on HUD (§7.1) */
+  --color-text-inverse: #0d0f14;
+
+  --color-border-subtle: #1c232e;
+  --color-border: #5e687e;
+  --color-border-iris: #4fc2ce40;
+
+  --color-focus: #4fc2ce;
+  --myelin-hairline: rgb(230 237 243 / 0.07);
+  --myelin-strong: rgb(230 237 243 / 0.14);
+
+  --strata-memory: rgb(79 194 206 / 0.05);
+  --strata-tasks: rgb(122 138 158 / 0.05);
+  --strata-agents: rgb(201 147 58 / 0.05);
+  --strata-docs: rgb(186 176 158 / 0.05);
+  --strata-system: rgb(122 138 158 / 0.035);
+
+  --synapse-idle: rgb(122 138 158 / 0.35);
+  --synapse-recall: #4fc2ce;
+  --synapse-write: #c9933a;
+  --synapse-error: #e0655c;
+
+  --glow-iris: 0 0 24px rgb(79 194 206 / 0.35);
+  --glow-gold: 0 0 24px rgb(201 147 58 / 0.30);
+  --glow-live: 0 0 16px rgb(63 191 127 / 0.30);
+  --glow-error: 0 0 16px rgb(224 101 92 / 0.30);
 }
 
 /* ── Reduced motion: OS + user-level mirror ─────────────────────────── */
@@ -223,6 +298,9 @@
     --duration-normal: 0ms;
     --duration-fast: 80ms;     /* opacity-only ≤80ms */
     --duration-impulse: 0ms;   /* pulses → static tint (see 06-MOTION §7) */
+    --duration-awaken: 0ms;    /* awakening → static graph immediately (§10) */
+    --duration-attention: 0ms; /* double beat → single static highlight */
+    --duration-attention-hold: 0ms; /* no glow hold */
   }
 }
 [data-motion="reduced"] {
@@ -231,6 +309,9 @@
   --duration-normal: 0ms;
   --duration-fast: 80ms;
   --duration-impulse: 0ms;
+  --duration-awaken: 0ms;
+  --duration-attention: 0ms;
+  --duration-attention-hold: 0ms;
 }
 
 /* ── Board-only appendix (FE-5 / UI-13; NOT part of the canon v2 set) ──

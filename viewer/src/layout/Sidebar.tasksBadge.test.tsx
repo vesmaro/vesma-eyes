@@ -175,7 +175,7 @@ describe("Tasks domain aggregate badge (UI-30)", () => {
     // Identical token set to the InboxCount pill — zero new colours.
     expect(classes).toContain("ml-auto");
     expect(classes).toContain("rounded-full");
-    expect(classes).toContain("bg-iris/15");
+    expect(classes).toContain("bg-iris-tint");
     expect(classes).toContain("font-mono");
     expect(classes).toContain("text-xs");
     expect(classes).toContain("text-iris-bright");

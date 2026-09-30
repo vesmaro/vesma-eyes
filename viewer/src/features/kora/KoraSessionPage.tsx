@@ -34,10 +34,10 @@ import { KoraSignInCta } from "./KoraSignInCta";
  */
 
 const ROLE_TONE: Record<string, string> = {
-  user: "bg-iris/15 text-iris-bright",
+  user: "bg-iris-tint text-iris-bright",
   assistant: "bg-elevated text-foreground-secondary",
-  system: "bg-warning/15 text-warning",
-  tool: "bg-confidence/15 text-confidence",
+  system: "bg-warning-tint text-warning",
+  tool: "bg-confidence-tint text-confidence",
 };
 
 function ReadonlyPlate() {

@@ -37,7 +37,9 @@ describe("SearchResultList (mock fixtures)", () => {
         <SearchResultList results={[]} isLoading />
       </MemoryRouter>,
     );
-    expect(html).toContain("shimmer");
+    // Static skeletons (blueprint §6.3 slop-pass): the pulse/shimmer left
+    // with the Phase-1 motion hygiene — the placeholder stays a quiet card.
+    expect(html).toContain("bg-elevated");
   });
 });
 

@@ -91,7 +91,7 @@ export function ChipSection({
               type="button"
               onClick={onTitleClick}
               aria-label={titleAria}
-              className="min-h-6 truncate rounded-sm transition-colors duration-instant hover:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+              className="min-h-6 truncate rounded-sm transition-colors duration-instant hover:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
             >
               {title}
             </button>
@@ -198,9 +198,9 @@ export function FamilyRow({
             aria-pressed={selected === undefined}
             onClick={() => onSelect(undefined)}
             className={cn(
-              "inline-flex min-h-6 items-center rounded-sm border px-2 py-0.5 text-sm transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
+              "inline-flex min-h-6 items-center rounded-sm border px-2 py-0.5 text-sm transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
               selected === undefined
-                ? "border-transparent bg-iris/15 text-iris-bright"
+                ? "border-transparent bg-iris-tint text-iris-bright"
                 : "border-border-subtle bg-well text-foreground-secondary hover:bg-elevated",
             )}
           >
@@ -218,9 +218,9 @@ export function FamilyRow({
                 aria-label={`${label}, ${t("tags.family.tags", { count: family.tagCount })}`}
                 onClick={() => onSelect(family.prefix)}
                 className={cn(
-                  "inline-flex min-h-6 max-w-[16rem] items-center truncate rounded-sm border px-2 py-0.5 text-sm transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
+                  "inline-flex min-h-6 max-w-[16rem] items-center truncate rounded-sm border px-2 py-0.5 text-sm transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
                   active
-                    ? "border-transparent bg-iris/15 text-iris-bright"
+                    ? "border-transparent bg-iris-tint text-iris-bright"
                     : "border-border-subtle bg-well text-foreground-secondary hover:bg-elevated",
                 )}
               >
@@ -303,7 +303,7 @@ export function TagBreadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
                   type="button"
                   onClick={crumb.onClick}
                   className={cn(
-                    "inline-flex min-h-6 items-center truncate rounded-sm text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
+                    "inline-flex min-h-6 items-center truncate rounded-sm text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
                     crumb.mono && "font-mono",
                   )}
                 >

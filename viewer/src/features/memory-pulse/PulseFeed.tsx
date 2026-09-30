@@ -92,7 +92,7 @@ export function PulseFeed({
                         )
                       : `/memory/${encodeURIComponent(item.id)}`
                   }
-                  className="inline-flex min-h-6 items-center font-scroll text-sm font-semibold leading-snug hover:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+                  className="inline-flex min-h-6 items-center font-scroll text-sm font-semibold leading-snug hover:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                 >
                   {item.title || t("pulse.untitled")}
                 </Link>

@@ -85,7 +85,7 @@ describe("TopBar i18n (ru default, en switch)", () => {
     );
     expect(html).toContain('role="group"');
     expect(html).toContain('aria-label="Язык интерфейса"');
-    expect(html).toContain("focus-visible:outline-iris-bright");
+    expect(html).toContain("focus-visible:outline-focus"); // Phase 1 ring unification
     // Both segments are real buttons (keyboard reachable, no roving tabindex).
     expect(html.match(/<button /g)?.length).toBe(2);
   });

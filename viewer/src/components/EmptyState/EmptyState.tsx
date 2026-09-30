@@ -85,7 +85,7 @@ export function EmptyState({
             aria-expanded={techOpen}
             aria-controls={techId}
             onClick={() => setTechOpen((value) => !value)}
-            className="inline-flex items-center gap-1 rounded-sm text-xs text-foreground-muted underline-offset-2 transition-colors duration-instant hover:text-foreground-secondary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+            className="inline-flex items-center gap-1 rounded-sm text-xs text-foreground-muted underline-offset-2 transition-colors duration-instant hover:text-foreground-secondary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           >
             {techOpen ? (
               <ChevronDown className="size-3" aria-hidden="true" />

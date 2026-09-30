@@ -10,15 +10,15 @@ const badgeVariants = cva(
         default: "border-transparent bg-elevated text-foreground-secondary",
         // 15% tints keep the accent hue while the text clears 4.5:1 in both
         // themes (T7 audit; bg-confidence-dim combos failed AA).
-        iris: "border-transparent bg-iris/15 text-iris-bright",
-        confidence: "border-transparent bg-confidence/15 text-confidence",
+        iris: "border-transparent bg-iris-tint text-iris-bright",
+        confidence: "border-transparent bg-confidence-tint text-confidence",
         outline: "border-border text-foreground-secondary",
-        success: "border-transparent bg-success/15 text-success",
+        success: "border-transparent bg-success-tint text-success",
         // warning tint follows the same AA-derived /15 pattern (AGW-2: the
         // `expired` assignment state; no new colour — ADR 0003, the
         // --color-warning token has existed since T4).
-        warning: "border-transparent bg-warning/15 text-warning",
-        error: "border-transparent bg-error/15 text-error",
+        warning: "border-transparent bg-warning-tint text-warning",
+        error: "border-transparent bg-error-tint text-error",
       },
     },
     defaultVariants: {
