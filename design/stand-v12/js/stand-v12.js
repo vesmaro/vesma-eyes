@@ -199,6 +199,18 @@
   if (doc.readyState === "loading") doc.addEventListener("DOMContentLoaded", onHeroReady);
   else onHeroReady();
 
+  /* ── Прибытие из палитры (§3.3): заголовок h1 получает фокус ──────── */
+  function focusArrivedH1() {
+    var flag = false;
+    try { flag = sessionStorage.getItem("stand-focus-h1") === "1"; } catch (e) {}
+    if (!flag) return;
+    try { sessionStorage.removeItem("stand-focus-h1"); } catch (e) {}
+    var h1 = doc.querySelector("h1");
+    if (h1) { h1.setAttribute("tabindex", "-1"); h1.focus({ preventScroll: false }); }
+  }
+  if (doc.readyState === "loading") doc.addEventListener("DOMContentLoaded", focusArrivedH1);
+  else focusArrivedH1();
+
   /* Тикер: одна строка, события шины (НЕ marquee). §13.3: тикер = данные —
    * строка обновляется ВО ВСЕХ режимах живого слоя (включая «Выключен»);
    * гасится только ДВИЖЕНИЕ: fade-swap 240ms живёт лишь в «Полном» и

@@ -21,14 +21,22 @@
 .palette-overlay.is-anim {
   animation: palette-in var(--duration-fast, 150ms) var(--ease-enter); /* ≤120ms окно */
 }
+.palette-overlay.is-closing {
+  animation: palette-out var(--duration-fast, 150ms) var(--ease-exit) forwards;
+}
+@keyframes palette-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
 @keyframes palette-in {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
 .palette {
-  width: min(640px, calc(100vw - var(--space-8)));
-  margin: 12vh auto 0;
+  width: min(560px, 92vw);              /* §13.7.1 */
+  margin: 20vh auto 0;                  /* §13.7.1: top 20vh */
+  transform-origin: top center;         /* §13.7.4 */
   background: var(--color-bg-elevated);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -117,7 +125,7 @@
   gap: var(--space-3);
   align-items: center;
   width: 100%;
-  min-height: 48px;
+  min-height: 44px;                     /* §13.7.2 */
   padding: var(--space-2) var(--space-3);
   border: none;
   border-radius: var(--radius-md);
@@ -133,8 +141,9 @@
   outline: var(--focus-ring-width) solid var(--color-focus);
   outline-offset: 0;                 /* ринг внутри строки, виден на scrim (2.4.7) */
 }
+.pal-row .pal-main { min-width: 0; }
 .pal-row .pal-title {
-  font-size: var(--text-ui);
+  font-size: var(--text-ui);            /* primary 15px */
   color: var(--color-text-primary);
   min-width: 0;
   overflow: hidden;
@@ -145,7 +154,7 @@
 .pal-row .pal-preview {
   display: block;
   margin-top: var(--space-1);
-  font-size: var(--text-data);
+  font-size: var(--text-data);          /* secondary 13px muted */
   color: var(--color-text-secondary);
   min-width: 0;
   overflow: hidden;
@@ -183,6 +192,14 @@
 .status-chip[data-state="resolved"],
 .status-chip[data-state="done"] { color: var(--color-success); }
 .status-chip[data-state="in-progress"] { color: var(--color-confidence); }
+
+.pal-lock .icon {
+  width: 14px; height: 14px;
+  stroke: var(--color-text-muted);
+  fill: none;
+  stroke-width: 1.5;
+}
+.pal-row[aria-disabled="true"] { opacity: 0.6; }
 
 mark {
   background: none;
