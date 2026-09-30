@@ -27,9 +27,23 @@ import { actUnmount } from "@/test/actTools";
  * the buffer with aria-live=off. Controlled fixtures seed the caches —
  * times are computed from the REAL clock (the ages themselves are covered
  * pure in presence/timing tests).
+ *
+ * ME-048 flake hardening: the terminal grouping compares CALENDAR days
+ * (`new Date(row.finished_at).toDateString() === today`, ExecutionPage
+ * §Layer 2), so with a real wall clock any run in the first minutes after
+ * local midnight put the `ago(300)` "finished today" fixture on yesterday
+ * — the «terminal today» group vanished and 2 tests went red (observed:
+ * a full run started 00:00:05; the rerun was green). The clock is now
+ * PINNED via fake timers with `toFake: ["Date"]` ONLY — setTimeout and
+ * friends stay real, so rendering/act/QueryClient behaviour is unchanged;
+ * fixtures and the component's render-time `new Date()` share one fixed
+ * mid-day instant, making the today/yesterday boundary deterministic in
+ * every timezone and under any scheduler load.
  */
 
-const NOW = Date.now();
+/** Fixed, timezone-neutral base: 2026-09-15 12:00 LOCAL — mid-day, so no
+ * fixture offset (≤26 h) can cross the local midnight in either direction. */
+const NOW = new Date(2026, 8, 15, 12, 0, 0, 0).getTime();
 const ago = (seconds: number): string => new Date(NOW - seconds * 1000).toISOString();
 
 function executorPage(): ExecutorsPage {
@@ -154,11 +168,16 @@ async function mountPage(
 }
 
 beforeEach(() => {
+  // ME-048: pin the wall clock to the fixture base (Date only — see the
+  // file header). Every `new Date()` in the component under test now
+  // resolves to the same instant the fixtures were derived from.
+  vi.useFakeTimers({ toFake: ["Date"], now: NOW });
   resetFeedStore();
   localStorage.clear();
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   document.body.innerHTML = "";
 });
 
