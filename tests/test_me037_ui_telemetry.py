@@ -8,8 +8,11 @@ Covered:
 - the guard: ui bearer + ui cookie legs pass; anonymous, machine (split
   mode) and mnd_ device legs are 403 — telemetry numbers describe the
   owner only;
-- the kind registry: all 11 §1.2 kinds ingest with their exact property
-  sets; an unknown kind is a 422 refusal, never a silent drop;
+- the kind registry: all 10 client §1.2 kinds ingest with their exact
+  property sets; an unknown kind is a 422 refusal, never a silent drop;
+  notifications.read is server-owned (cascade P3-1): the ingest refuses
+  client submissions with the same 422 — audit rows are server property,
+  never fabricable through the telemetry leg;
 - privacy (§3.4, hard boundary): free-text fields (intent text, palette
   query, URLs, exact sizes) are rejected by the schema — extra="forbid"
   models with enums/buckets only; the envelope (ts/actor_class/
@@ -75,8 +78,11 @@ def _event(kind: str, visit_id: str, **props) -> dict:
     return {"kind": kind, "visit_id": visit_id} | props
 
 
-# The full §1.2 dictionary with one valid payload per kind — the registry
-# acceptance set AND the source for the exact-property-set lock below.
+# The full §1.2 CLIENT dictionary with one valid payload per kind — the
+# registry acceptance set AND the source for the exact-property-set lock
+# below. notifications.read is NOT here (cascade P3-1): the kind is
+# server-owned, the ingest refuses client submissions with the standing
+# off-taxonomy 422 (pinned in TestServerOwnedKind below).
 _VALID_PAYLOADS: dict[str, dict] = {
     "ui.visit": {},
     "ui.nav": {"surface": "kora", "via": "route"},
@@ -89,7 +95,6 @@ _VALID_PAYLOADS: dict[str, dict] = {
     "cmdk.palette_opened": {"trigger": "hotkey"},
     "cmdk.item_selected": {"group": "memory", "via": "enter"},
     "living.layer_toggled": {"from": "calm", "to": "off", "where": "quick"},
-    "notifications.read": {},
 }
 
 
@@ -283,18 +288,53 @@ class TestKindRegistry:
         assert len(rows) == 1 and rows[0]["kind"] == kind
 
     def test_registry_is_exactly_the_section_1_2_dictionary(self, app_module):
-        """The frozen v0 dictionary: 11 kinds, additive by contract — a
-        new kind is a conscious registry extension (taxonomy revision),
-        never an accidental acceptance."""
+        """The frozen v0 CLIENT dictionary: 10 kinds, additive by contract —
+        a new kind is a conscious registry extension (taxonomy revision),
+        never an accidental acceptance. notifications.read left the
+        client dictionary in cascade P3-1 (server-owned kind)."""
         assert set(app_module._TELEMETRY_KINDS) == set(_VALID_PAYLOADS)
-        assert len(app_module._TELEMETRY_KINDS) == 11
+        assert len(app_module._TELEMETRY_KINDS) == 10
 
     def test_unknown_kind_422(self, client, ui_auth):
         visit = _visit_id()
-        for kind in ("ui.typo", "kora.enterred", "task.created", ""):
+        for kind in ("ui.typo", "kora.enterred", "task.created",
+                     "notifications.read", ""):
             r = _post(client, [_event(kind, visit)], ui_auth)
             assert r.status_code == 422, kind
         assert _telemetry_rows(visit) == []
+
+    def test_client_notifications_read_is_refused_not_stored(
+            self, client, ui_auth):
+        """Cascade P3-1 (security verdict, TL ruling 2026-09-30): the kind
+        is SERVER-OWNED. A ui leg must not be able to fabricate audit
+        rows through the telemetry ingest (the kind used to land in the
+        audit tier — the very tier ME-049 shields), so a client
+        submission hits the standing off-taxonomy 422 and leaves NO row;
+        the canonical server path below keeps writing the real audit.
+        Retention stays audit-tier automatically (store keeps the kind
+        out of every telemetry list — see the P3-1 note in
+        tests/test_ui28_activity.py TestTelemetryRegistryDrift)."""
+        visit = _visit_id()
+        r = _post(client, [_event("notifications.read", visit)], ui_auth)
+        assert r.status_code == 422, r.text
+        assert _telemetry_rows(visit) == [], \
+            "a client-fabricated audit row must never reach the store"
+        with _db() as db:
+            before = db.execute(
+                "SELECT COUNT(*) AS n FROM events "
+                "WHERE kind='notifications.read'").fetchone()["n"]
+        # the canonical writer is unaffected: the server path stamps its
+        # own scope and the audit row lands (row-count delta is the
+        # isolation key on the shared session DB — the server payload
+        # carries no client-controllable marker)
+        r = client.post("/api/notifications/read", headers=ui_auth)
+        assert r.status_code == 200, r.text
+        with _db() as db:
+            after = db.execute(
+                "SELECT COUNT(*) AS n FROM events "
+                "WHERE kind='notifications.read'").fetchone()["n"]
+        assert after - before == 1, \
+            "the server audit path must keep writing"
 
     def test_missing_kind_property_422(self, client, ui_auth):
         """Each kind carries EXACTLY its §1.2 property set — a missing
