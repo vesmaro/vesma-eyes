@@ -102,3 +102,39 @@ def test_sweep_drops_only_empty_or_expired(monkeypatch):
     rl._sweep(clock.now)
     assert "gone" not in rl._events
     assert "stays" in rl._events
+
+
+def test_retry_after_zero_for_swept_key(monkeypatch):
+    """Advisory-hint consistency after eviction (successor audit): a
+    swept key was drain-on-next-acquire anyway, so retry_after must read
+    0 ("free now"), not a stale hint from the evicted deque — and the
+    next acquire behaves exactly like a first-time key."""
+    clock = FakeClock(monkeypatch)
+    rl = RateLimiter(limit=1, window=60.0)
+    assert rl.acquire("gone") is True
+    clock.advance(61.0)
+    assert rl.acquire("other") is True  # trips the sweep; "gone" evicted
+    assert "gone" not in rl._events
+    assert rl.retry_after("gone") == 0
+    assert rl.acquire("gone") is True
+
+
+def test_sweep_amortized_once_per_window(monkeypatch):
+    """Amortization pin: the sweep fires at most once per window, not
+    per acquire — steady-state acquire stays O(1) in the key count."""
+    clock = FakeClock(monkeypatch)
+    rl = RateLimiter(limit=100, window=60.0)
+    calls: list[float] = []
+    real_sweep = rl._sweep
+
+    def counting_sweep(now: float) -> None:
+        calls.append(now)
+        real_sweep(now)
+
+    rl._sweep = counting_sweep  # instance attr shadows the method
+    for i in range(50):
+        assert rl.acquire(f"k-{i}") is True  # all inside the first window
+    assert len(calls) == 1, "one sweep per window, not per acquire"
+    clock.advance(60.0)
+    assert rl.acquire("next") is True  # the next window trips it again
+    assert len(calls) == 2
