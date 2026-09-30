@@ -109,23 +109,38 @@ ACTIVITY_FAMILIES: dict[str, tuple[str, ...]] = {
 ACTIVITY_RETENTION_DAYS = 90
 ACTIVITY_RETENTION_CAP = 500_000
 # ME-049: the telemetry classification for the family-aware cap pass —
-# the ME-037 frozen taxonomy (events-taxonomy-v0 §1.2) as stored kinds,
-# with ONE deliberate divergence: notifications.read. The taxonomy lists
-# it as a telemetry kind, but the server ALSO writes it as an audit row
-# (app.py /api/notifications/read → log_board_event — the baseline-4
-# «пинок» with the server-stamped scope), and a kind-level SQL match
-# cannot split the two variants. The conservative split wins: the whole
-# kind rides the audit tier (never evicted before executor.*/pairing.*);
-# the ingest variant is rare device-leg counting, not the flood surface —
-# the ui.visit/ui.nav page-load chatter is, and that is prefix-matched.
+# the ME-037 frozen taxonomy (events-taxonomy-v0 §1.2) as stored kinds.
 # Prefix families are safe to match wholesale (verified: no server-side
 # audit kind starts with ui./cmdk./living.); kora is deliberately NOT a
 # prefix — the server's own kora.sessions.upserted audit kind shares it,
-# so the four kora client kinds are listed exactly.
+# so the kora client kinds are listed exactly below.
+# Cascade P2 (quality verdict): the classification mirrors the SERVER
+# ingest registry (app._TELEMETRY_KINDS) in two parts — prefix families
+# here, non-prefix kinds in TELEMETRY_NON_PREFIX_KINDS — and the
+# deliberate divergence is MATERIALIZED as TELEMETRY_AUDIT_EXCEPTIONS
+# (comment-only before): TELEMETRY_EVENT_KINDS is the mirror minus the
+# exceptions, so the exception list feeds the SQL predicate itself.
+# The mirror is not imported from app (import direction is app->store);
+# the drift test in tests/test_ui28_activity.py pins the sides together
+# so a new registry family nobody adds here fails red instead of
+# silently riding the audit tier while telemetry floods push
+# executor.*/pairing.* out of the retention window.
+# notifications.read divergence rationale: the taxonomy lists it as a
+# telemetry kind, but the server ALSO writes it as an audit row
+# (app.py /api/notifications/read → log_board_event — the baseline-4
+# «пинок» with the server-stamped scope), and a kind-level SQL match
+# cannot split the two variants; the conservative split wins (the ingest
+# variant is rare device-leg counting, not the flood surface — the
+# ui.visit/ui.nav page-load chatter is, and that is prefix-matched).
 TELEMETRY_EVENT_PREFIXES: tuple[str, ...] = ("ui.", "cmdk.", "living.")
-TELEMETRY_EVENT_KINDS: tuple[str, ...] = (
+TELEMETRY_NON_PREFIX_KINDS: tuple[str, ...] = (
     "kora.entered", "kora.intent_started", "kora.intent_completed",
-    "kora.intent_abandoned",
+    "kora.intent_abandoned", "notifications.read",
+)
+TELEMETRY_AUDIT_EXCEPTIONS: tuple[str, ...] = ("notifications.read",)
+TELEMETRY_EVENT_KINDS: tuple[str, ...] = tuple(
+    k for k in TELEMETRY_NON_PREFIX_KINDS
+    if k not in TELEMETRY_AUDIT_EXCEPTIONS
 )
 
 

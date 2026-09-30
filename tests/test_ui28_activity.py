@@ -641,6 +641,84 @@ class TestEventsRetentionFamilyAware:
         assert self._kinds_left(path) == {"kora.sessions.upserted"}
 
 
+class TestTelemetryRegistryDrift:
+    """Cascade P2 (quality verdict, ship-after-fix): the telemetry
+    classification lives in TWO places — the server ingest registry
+    _TELEMETRY_KINDS (app.py) and the store retention tiers
+    (TELEMETRY_EVENT_PREFIXES / _NON_PREFIX_KINDS / _AUDIT_EXCEPTIONS).
+    These are the binding pins: a registry kind of a NEW family that
+    nobody adds to the store must fail RED here, not silently ride the
+    audit tier while telemetry floods push executor.*/pairing.* out of
+    the retention window."""
+
+    def test_registry_kinds_bound_to_retention_tiers(self, app_module):
+        """Unit half: every server-registry kind is classified in the
+        store as prefix-match, exact telemetry kind, or a MATERIALIZED
+        audit exception — the divergence is exactly the exception
+        constant (no more: an unclassified kind is silent drift; no
+        less: an exception that is also telemetry-classified is dead),
+        the non-prefix mirror matches the registry, and the exact-kind
+        list is non-empty ('kind IN ()' would be an SQL error)."""
+        st = server.store
+        registry = set(app_module._TELEMETRY_KINDS)
+        classified = {
+            k for k in registry
+            if k.startswith(st.TELEMETRY_EVENT_PREFIXES)
+            or k in st.TELEMETRY_EVENT_KINDS
+        }
+        divergence = registry - classified
+        assert divergence == set(st.TELEMETRY_AUDIT_EXCEPTIONS), (
+            "registry kinds not telemetry-classified in the store must "
+            "be exactly TELEMETRY_AUDIT_EXCEPTIONS — a new registry "
+            "family needs its store-tier entry (or a deliberate, "
+            "documented exception)")
+        non_prefix = {
+            k for k in registry
+            if not k.startswith(st.TELEMETRY_EVENT_PREFIXES)}
+        assert non_prefix == set(st.TELEMETRY_NON_PREFIX_KINDS), \
+            "the non-prefix mirror must track the server registry"
+        assert st.TELEMETRY_EVENT_KINDS, \
+            "empty TELEMETRY_EVENT_KINDS => 'kind IN ()' is an SQL error"
+
+    def test_full_registry_flood_classification(self, app_module, tmp_path,
+                                                monkeypatch):
+        """Behavioural half: one row per REGISTRY kind (not a hand-picked
+        flood mix) plus older audit rows; the cap pressure equals the
+        telemetry-classified count. Exactly the telemetry rows go in
+        stage 1; every audit-tier row — the materialized exceptions
+        included — stays. The audit rows are seeded FIRST (oldest ids):
+        under drift stage 2 would eat them and this goes red."""
+        st = server.store
+        registry = list(app_module._TELEMETRY_KINDS)
+        audit_tier = set(st.TELEMETRY_AUDIT_EXCEPTIONS)
+        telemetry_count = sum(
+            1 for k in registry
+            if k not in audit_tier)  # prefixes+exact minus exceptions
+        monkeypatch.setattr(st, "ACTIVITY_RETENTION_CAP",
+                            2 + len(registry) - telemetry_count)
+        path = tmp_path / "cascade-p2-drift.db"
+        server.store.Store(path)
+        now = datetime.now(timezone.utc)
+        rows = [
+            ("executor.registered", _iso(now - timedelta(hours=3))),
+            ("pairing.issued", _iso(now - timedelta(hours=3))),
+            *[(k, _iso(now - timedelta(minutes=1))) for k in registry],
+        ]
+        with sqlite3.connect(path) as db:
+            for kind, ts in rows:
+                db.execute(
+                    "INSERT INTO events (ts, kind, task_id, payload) "
+                    "VALUES (?,?,?,?)", (ts, kind, None, "{}"))
+        store = server.store.Store(path)
+        swept = store.sweep_events_retention()
+        assert swept == {"aged": 0, "capped": telemetry_count}
+        with sqlite3.connect(path) as db:
+            left = {r[0] for r in db.execute(
+                "SELECT kind FROM events").fetchall()}
+        assert left == {"executor.registered", "pairing.issued"} | audit_tier, \
+            "only registry telemetry may go; audit rows never"
+
+
 # ------------------------------------- SSE strip on subscription (v.2)
 def _sse_request(headers: dict | None = None) -> Request:
     scope = {"type": "http", "method": "GET", "path": "/api/events",
