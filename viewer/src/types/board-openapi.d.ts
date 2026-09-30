@@ -4139,23 +4139,6 @@ export interface components {
         } & {
             readonly [key: string]: unknown;
         };
-        /**
-         * NotificationsReadEvent
-         * @description notifications.read via the ingest carries visit_id only — the
-         *     canonical emitter is the server (POST /api/notifications/read stamps
-         *     ``scope`` itself); this variant exists so the registry covers the whole
-         *     §1.2 dictionary and a mis-routed client event fails loudly, not
-         *     silently.
-         */
-        readonly NotificationsReadEvent: {
-            /** Visit Id */
-            readonly visit_id: string;
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            readonly kind: "notifications.read";
-        };
         /** OkNoteOut */
         readonly OkNoteOut: {
             /** Ok */
@@ -5180,7 +5163,7 @@ export interface components {
          */
         readonly UiTelemetryBatch: {
             /** Events */
-            readonly events: readonly (components["schemas"]["UiVisitEvent"] | components["schemas"]["UiNavEvent"] | components["schemas"]["KoraEnteredEvent"] | components["schemas"]["KoraIntentStartedEvent"] | components["schemas"]["KoraIntentCompletedEvent"] | components["schemas"]["KoraIntentAbandonedEvent"] | components["schemas"]["CmdkPaletteOpenedEvent"] | components["schemas"]["CmdkItemSelectedEvent"] | components["schemas"]["LivingLayerToggledEvent"] | components["schemas"]["UiSurfaceErrorEvent"] | components["schemas"]["NotificationsReadEvent"])[];
+            readonly events: readonly (components["schemas"]["UiVisitEvent"] | components["schemas"]["UiNavEvent"] | components["schemas"]["KoraEnteredEvent"] | components["schemas"]["KoraIntentStartedEvent"] | components["schemas"]["KoraIntentCompletedEvent"] | components["schemas"]["KoraIntentAbandonedEvent"] | components["schemas"]["CmdkPaletteOpenedEvent"] | components["schemas"]["CmdkItemSelectedEvent"] | components["schemas"]["LivingLayerToggledEvent"] | components["schemas"]["UiSurfaceErrorEvent"])[];
         };
         /** UiTelemetryOut */
         readonly UiTelemetryOut: {
