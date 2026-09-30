@@ -1,7 +1,7 @@
 {
   "version": 1,
   "generated_by": "scripts/sync_docs.py + scripts/gen_api_ref.py",
-  "synced_at": "2026-09-30T10:58:11+03:00",
+  "synced_at": "2026-09-30T12:22:11+03:00",
   "projects": {
     "mnemos": {
       "repo": "../mnemos",
@@ -17,7 +17,7 @@
     },
     "api_hub": {
       "board_api_spec": "viewer/board-openapi-snapshot.json",
-      "board_api_blob_sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
+      "board_api_blob_sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
       "sources": {
         "mnemos": {
           "repo": "../mnemos",
@@ -102,18 +102,18 @@
       "en": {
         "repo": "vesmaro-eyes",
         "source_path": "docs/api",
-        "sha": "f5d11acdedc8f5e4f8be0807978189ac9edbc887",
-        "commit_date": "2026-09-30T00:12:56+03:00",
-        "synced_at": "2026-09-30T00:12:56+03:00",
+        "sha": "09c5be80884db9b1992f623d9c0a0411ac65bb63",
+        "commit_date": "2026-09-30T12:23:46+03:00",
+        "synced_at": "2026-09-30T12:23:46+03:00",
         "locale": "en",
         "kind": "curated"
       },
       "ru": {
         "repo": "vesmaro-eyes",
         "source_path": "docs/api",
-        "sha": "f5d11acdedc8f5e4f8be0807978189ac9edbc887",
-        "commit_date": "2026-09-30T00:12:56+03:00",
-        "synced_at": "2026-09-30T00:12:56+03:00",
+        "sha": "09c5be80884db9b1992f623d9c0a0411ac65bb63",
+        "commit_date": "2026-09-30T12:23:46+03:00",
+        "synced_at": "2026-09-30T12:23:46+03:00",
         "locale": "ru",
         "kind": "curated"
       }
@@ -153,9 +153,9 @@
       "ru": {
         "repo": "vesmaro-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
-        "commit_date": "2026-09-29T22:04:31+03:00",
-        "synced_at": "2026-09-29T22:04:31+03:00",
+        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
+        "commit_date": "2026-09-30T12:22:11+03:00",
+        "synced_at": "2026-09-30T12:22:11+03:00",
         "locale": "ru",
         "kind": "openapi-generated"
       }
@@ -164,9 +164,9 @@
       "ru": {
         "repo": "vesmaro-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
-        "commit_date": "2026-09-29T22:04:31+03:00",
-        "synced_at": "2026-09-29T22:04:31+03:00",
+        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
+        "commit_date": "2026-09-30T12:22:11+03:00",
+        "synced_at": "2026-09-30T12:22:11+03:00",
         "locale": "ru",
         "kind": "openapi-generated"
       }
@@ -175,9 +175,9 @@
       "ru": {
         "repo": "vesmaro-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
-        "commit_date": "2026-09-29T22:04:31+03:00",
-        "synced_at": "2026-09-29T22:04:31+03:00",
+        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
+        "commit_date": "2026-09-30T12:22:11+03:00",
+        "synced_at": "2026-09-30T12:22:11+03:00",
         "locale": "ru",
         "kind": "openapi-generated"
       }
@@ -186,9 +186,9 @@
       "ru": {
         "repo": "vesmaro-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
-        "commit_date": "2026-09-29T22:04:31+03:00",
-        "synced_at": "2026-09-29T22:04:31+03:00",
+        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
+        "commit_date": "2026-09-30T12:22:11+03:00",
+        "synced_at": "2026-09-30T12:22:11+03:00",
         "locale": "ru",
         "kind": "openapi-generated"
       }
@@ -197,9 +197,9 @@
       "ru": {
         "repo": "vesmaro-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
-        "commit_date": "2026-09-29T22:04:31+03:00",
-        "synced_at": "2026-09-29T22:04:31+03:00",
+        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
+        "commit_date": "2026-09-30T12:22:11+03:00",
+        "synced_at": "2026-09-30T12:22:11+03:00",
         "locale": "ru",
         "kind": "openapi-generated"
       }
@@ -208,9 +208,9 @@
       "ru": {
         "repo": "vesmaro-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
-        "commit_date": "2026-09-29T22:04:31+03:00",
-        "synced_at": "2026-09-29T22:04:31+03:00",
+        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
+        "commit_date": "2026-09-30T12:22:11+03:00",
+        "synced_at": "2026-09-30T12:22:11+03:00",
         "locale": "ru",
         "kind": "openapi-generated"
       }
@@ -219,9 +219,9 @@
       "ru": {
         "repo": "vesmaro-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
-        "commit_date": "2026-09-29T22:04:31+03:00",
-        "synced_at": "2026-09-29T22:04:31+03:00",
+        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
+        "commit_date": "2026-09-30T12:22:11+03:00",
+        "synced_at": "2026-09-30T12:22:11+03:00",
         "locale": "ru",
         "kind": "openapi-generated"
       }
@@ -230,9 +230,9 @@
       "ru": {
         "repo": "vesmaro-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
-        "commit_date": "2026-09-29T22:04:31+03:00",
-        "synced_at": "2026-09-29T22:04:31+03:00",
+        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
+        "commit_date": "2026-09-30T12:22:11+03:00",
+        "synced_at": "2026-09-30T12:22:11+03:00",
         "locale": "ru",
         "kind": "openapi-generated"
       }
@@ -241,9 +241,9 @@
       "ru": {
         "repo": "vesmaro-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
-        "commit_date": "2026-09-29T22:04:31+03:00",
-        "synced_at": "2026-09-29T22:04:31+03:00",
+        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
+        "commit_date": "2026-09-30T12:22:11+03:00",
+        "synced_at": "2026-09-30T12:22:11+03:00",
         "locale": "ru",
         "kind": "openapi-generated"
       }
@@ -252,9 +252,9 @@
       "ru": {
         "repo": "vesmaro-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
-        "commit_date": "2026-09-29T22:04:31+03:00",
-        "synced_at": "2026-09-29T22:04:31+03:00",
+        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
+        "commit_date": "2026-09-30T12:22:11+03:00",
+        "synced_at": "2026-09-30T12:22:11+03:00",
         "locale": "ru",
         "kind": "openapi-generated"
       }
@@ -263,9 +263,9 @@
       "ru": {
         "repo": "vesmaro-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
-        "commit_date": "2026-09-29T22:04:31+03:00",
-        "synced_at": "2026-09-29T22:04:31+03:00",
+        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
+        "commit_date": "2026-09-30T12:22:11+03:00",
+        "synced_at": "2026-09-30T12:22:11+03:00",
         "locale": "ru",
         "kind": "openapi-generated"
       }
@@ -274,9 +274,9 @@
       "ru": {
         "repo": "vesmaro-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "a72ab859c384a263c91cb161e7b6f4552f0dcc40",
-        "commit_date": "2026-09-29T22:04:31+03:00",
-        "synced_at": "2026-09-29T22:04:31+03:00",
+        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
+        "commit_date": "2026-09-30T12:22:11+03:00",
+        "synced_at": "2026-09-30T12:22:11+03:00",
         "locale": "ru",
         "kind": "openapi-generated"
       }
