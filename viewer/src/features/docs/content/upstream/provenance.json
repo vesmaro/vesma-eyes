@@ -1,7 +1,7 @@
 {
   "version": 1,
   "generated_by": "scripts/sync_docs.py + scripts/gen_api_ref.py",
-  "synced_at": "2026-09-29T22:04:31+03:00",
+  "synced_at": "2026-09-30T10:58:11+03:00",
   "projects": {
     "mnemos": {
       "repo": "../mnemos",
@@ -31,8 +31,8 @@
         },
         "vesmaro-agent": {
           "repo": "../vesmaro-agent",
-          "ref": "b8a51498accff8af7b507746cf46a2d72af9fd86",
-          "sha": "b8a51498accff8af7b507746cf46a2d72af9fd86"
+          "ref": "dbd6054ed22c70897247e83c14effbc2e0b7eead",
+          "sha": "dbd6054ed22c70897247e83c14effbc2e0b7eead"
         }
       }
     }
@@ -102,18 +102,18 @@
       "en": {
         "repo": "vesmaro-eyes",
         "source_path": "docs/api",
-        "sha": "aa2a4c815a564e80f84ae1a1294895b1a398ee65",
-        "commit_date": "2026-09-29T22:50:53+03:00",
-        "synced_at": "2026-09-29T22:50:53+03:00",
+        "sha": "f5d11acdedc8f5e4f8be0807978189ac9edbc887",
+        "commit_date": "2026-09-30T00:12:56+03:00",
+        "synced_at": "2026-09-30T00:12:56+03:00",
         "locale": "en",
         "kind": "curated"
       },
       "ru": {
         "repo": "vesmaro-eyes",
         "source_path": "docs/api",
-        "sha": "aa2a4c815a564e80f84ae1a1294895b1a398ee65",
-        "commit_date": "2026-09-29T22:50:53+03:00",
-        "synced_at": "2026-09-29T22:50:53+03:00",
+        "sha": "f5d11acdedc8f5e4f8be0807978189ac9edbc887",
+        "commit_date": "2026-09-30T00:12:56+03:00",
+        "synced_at": "2026-09-30T00:12:56+03:00",
         "locale": "ru",
         "kind": "curated"
       }
@@ -122,18 +122,18 @@
       "en": {
         "repo": "vesmaro-agent",
         "source_path": "docs/decisions/CHARTER-v2.md",
-        "sha": "b8a51498accff8af7b507746cf46a2d72af9fd86",
-        "commit_date": "2026-09-29T13:36:02+03:00",
-        "synced_at": "2026-09-29T13:36:02+03:00",
+        "sha": "dbd6054ed22c70897247e83c14effbc2e0b7eead",
+        "commit_date": "2026-09-30T10:58:11+03:00",
+        "synced_at": "2026-09-30T10:58:11+03:00",
         "locale": "en",
         "kind": "curated"
       },
       "ru": {
         "repo": "vesmaro-agent",
         "source_path": "docs/decisions/CHARTER-v2.md",
-        "sha": "b8a51498accff8af7b507746cf46a2d72af9fd86",
-        "commit_date": "2026-09-29T13:36:02+03:00",
-        "synced_at": "2026-09-29T13:36:02+03:00",
+        "sha": "dbd6054ed22c70897247e83c14effbc2e0b7eead",
+        "commit_date": "2026-09-30T10:58:11+03:00",
+        "synced_at": "2026-09-30T10:58:11+03:00",
         "locale": "ru",
         "kind": "curated"
       }
@@ -142,9 +142,9 @@
       "en": {
         "repo": "vesmaro-agent",
         "source_path": "docs/PROTOCOL.md",
-        "sha": "b8a51498accff8af7b507746cf46a2d72af9fd86",
-        "commit_date": "2026-09-29T13:36:02+03:00",
-        "synced_at": "2026-09-29T13:36:02+03:00",
+        "sha": "dbd6054ed22c70897247e83c14effbc2e0b7eead",
+        "commit_date": "2026-09-30T10:58:11+03:00",
+        "synced_at": "2026-09-30T10:58:11+03:00",
         "locale": "en",
         "kind": "upstream"
       }
