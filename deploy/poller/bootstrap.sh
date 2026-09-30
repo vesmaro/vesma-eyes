@@ -81,8 +81,8 @@ EXPECT_FP="${VESMARO_EXPECT_FP:-}"   # --expect-fp wins over the env synonym
 EXECUTOR_MODE="agent"
 AGENT_VERSION="${VESMARO_AGENT_VERSION:-latest}"   # latest | v0.6.0 | 0.6.0
 # GitHub source of the agent release (private repo today — see header).
+# Downloads ride the API asset endpoint, not the browser_download_url.
 GH_API="https://api.github.com/repos/vesmaro/vesmaro-agent"
-GH_DL="https://github.com/vesmaro/vesmaro-agent/releases/download"
 GH_AUTH=()
 if [[ -n "${VESMARO_GH_TOKEN:-}" ]]; then
   GH_AUTH=(-H "Authorization: Bearer $VESMARO_GH_TOKEN")
@@ -391,41 +391,65 @@ agent_install() {
   esac
 
   # ---- release resolution + download + sha256 (fail-closed) ----------
+  # Downloads ride the GitHub API asset endpoint (Accept: octet-stream),
+  # NOT the browser_download_url: a PRIVATE repo's browser URLs answer
+  # 404 to Authorization headers (verified live), while the API endpoint
+  # works with the token today and anonymously the day the repo goes
+  # public. The redirect leg to the signed CDN URL carries no token
+  # (curl strips Authorization cross-host) — exactly the hygiene we want.
+  local rel_json="" gh_hint=""
+  if [[ -z "${VESMARO_GH_TOKEN:-}" ]]; then
+    gh_hint=" — the agent repo is PRIVATE today: export VESMARO_GH_TOKEN (read-only, repo-scoped) and re-run, e.g. sudo VESMARO_GH_TOKEN=… bash bootstrap.sh … (the token is never logged)"
+  fi
   if [[ "$AGENT_VERSION" == "latest" ]]; then
     step "resolving the latest vesmaro-agent release"
-    if ! tag=$(curl -fsSL ${GH_AUTH[@]+"${GH_AUTH[@]}"} \
-                  "$GH_API/releases/latest" 2>/dev/null \
-                  | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1) \
-       || [[ -z "$tag" ]]; then
-      local hint=""
-      if [[ -z "${VESMARO_GH_TOKEN:-}" ]]; then
-        hint=" — the agent repo is PRIVATE today: export VESMARO_GH_TOKEN (read-only, repo-scoped) and re-run, e.g. sudo VESMARO_GH_TOKEN=… bash bootstrap.sh … (the token is never logged)"
-      fi
-      die "could not resolve the latest vesmaro-agent release from $GH_API/releases/latest$hint" 3
-    fi
+    rel_json=$(curl -fsSL ${GH_AUTH[@]+"${GH_AUTH[@]}"} \
+                 "$GH_API/releases/latest" 2>/dev/null) \
+      || die "could not resolve the latest vesmaro-agent release from $GH_API/releases/latest$gh_hint" 3
+    tag=$(printf '%s' "$rel_json" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1)
+    [[ -n "$tag" ]] || die "could not parse the release tag out of the $GH_API/releases/latest answer$gh_hint" 3
   else
     tag="$AGENT_VERSION"
     [[ "$tag" == v* ]] || tag="v$tag"
+    step "resolving release $tag"
+    rel_json=$(curl -fsSL ${GH_AUTH[@]+"${GH_AUTH[@]}"} \
+                 "$GH_API/releases/tags/$tag" 2>/dev/null) \
+      || die "could not resolve release $tag from $GH_API/releases/tags/$tag (no such tag?)$gh_hint" 3
   fi
   ver="${tag#v}"
   asset="vesmaro-agent_${ver}_${goos}_${goarch}.tar.gz"
   csfile="vesmaro-agent_${ver}_checksums.txt"
   echo "   release: $tag → $asset"
 
+  # The asset id from the release answer (one asset object per tr-split
+  # fragment; the fragment that starts at the object's "{" carries
+  # url/id/name — an uploader's nested object opens a NEW fragment, and
+  # browser_download_url lands in a later one). Compact API JSON and a
+  # re-spaced variant both match.
+  api_asset_id() {
+    local frag
+    frag=$(printf '%s' "$rel_json" | tr '{' '\n' \
+      | grep -F -e "\"name\":\"$1\"" -e "\"name\": \"$1\"" | head -1 || true)
+    printf '%s' "$frag" | sed -n 's/.*"id": *\([0-9]*\).*/\1/p'
+  }
+  local asset_id cs_id
+  asset_id=$(api_asset_id "$asset")
+  cs_id=$(api_asset_id "$csfile")
+  [[ -n "$asset_id" ]] \
+    || die "$asset is not published on release $tag (wrong OS/arch or a broken release?)" 3
+  [[ -n "$cs_id" ]] \
+    || die "the release checksums file ($csfile) is not published on $tag — an unverified artifact is never installed" 3
+
   step "downloading the release artifacts (sha256-verified)"
   tmp=$(mktemp -d)
-  if ! curl -fL ${GH_AUTH[@]+"${GH_AUTH[@]}"} \
-       -o "$tmp/$asset" "$GH_DL/$tag/$asset" 2>/dev/null; then
-    local hint=""
-    if [[ -z "${VESMARO_GH_TOKEN:-}" ]]; then
-      hint=" (private repo? export VESMARO_GH_TOKEN — read-only, repo-scoped; never logged)"
-    fi
+  if ! curl -fL ${GH_AUTH[@]+"${GH_AUTH[@]}"} -H "Accept: application/octet-stream" \
+       -o "$tmp/$asset" "$GH_API/releases/assets/$asset_id" 2>/dev/null; then
     rm -rf "$tmp"
-    die "could not download $asset from $GH_DL/$tag/$hint" 3
+    die "could not download $asset from release $tag (asset id $asset_id)$gh_hint" 3
   fi
-  curl -fL ${GH_AUTH[@]+"${GH_AUTH[@]}"} \
-       -o "$tmp/checksums.txt" "$GH_DL/$tag/$csfile" 2>/dev/null \
-    || { rm -rf "$tmp"; die "could not download the release checksums ($csfile) — an unverified artifact is never installed" 3; }
+  curl -fL ${GH_AUTH[@]+"${GH_AUTH[@]}"} -H "Accept: application/octet-stream" \
+       -o "$tmp/checksums.txt" "$GH_API/releases/assets/$cs_id" 2>/dev/null \
+    || { rm -rf "$tmp"; die "could not download the release checksums ($csfile) from release $tag" 3; }
   # The release's own manifest is the sha256 source (both spellings of the
   # asset name are accepted — goreleaser emits bare and ./-prefixed rows).
   expect=$(awk -v f="$asset" '{name=$2; sub(/^\.\//, "", name)} name == f {print $1}' \

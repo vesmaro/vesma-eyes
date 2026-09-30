@@ -129,9 +129,13 @@ def world(tmp_path, lab_ca):
     every layout knob pointed into tmp_path."""
     asset = f"vesmaro-agent_{VER}_{_goos()}_{_goarch()}.tar.gz"
     csfile = f"vesmaro-agent_{VER}_checksums.txt"
-    dl = f"https://github.com/vesmaro/vesmaro-agent/releases/download/{TAG}"
 
     # --- the fake release ------------------------------------------------
+    # The release answer mirrors the GitHub API shape the script parses:
+    # compact JSON with assets[] carrying ids (the script downloads via
+    # the API asset endpoint — browser_download_url 404s for private
+    # repos, verified live). The .sig row is a decoy: a suffixed name
+    # must not satisfy the exact-match lookup.
     rel = tmp_path / "release"
     rel.mkdir()
     payload = rel / "payload"
@@ -145,8 +149,20 @@ def world(tmp_path, lab_ca):
     digest = hashlib.sha256(tarball.read_bytes()).hexdigest()
     checksums = rel / csfile
     checksums.write_text(f"{digest}  {asset}\n")
+    release_json = json.dumps({
+        "tag_name": TAG,
+        "assets": [
+            {"url": "https://api.github.com/repos/vesmaro/vesmaro-agent/releases/assets/101",
+             "id": 101, "name": asset},
+            {"url": "https://api.github.com/repos/vesmaro/vesmaro-agent/releases/assets/102",
+             "id": 102, "name": csfile},
+            {"url": "https://api.github.com/repos/vesmaro/vesmaro-agent/releases/assets/103",
+             "id": 103, "name": f"{asset}.sig"},
+        ]}, separators=(",", ":"))
     latest = rel / "latest.json"
-    latest.write_text(json.dumps({"tag_name": TAG}))
+    latest.write_text(release_json)
+    tag_json = rel / "tag.json"
+    tag_json.write_text(release_json)
 
     # --- the board registry answers --------------------------------------
     row = json.dumps({"id": EXEC_ID, "name": EXEC_NAME, "harness": "zcode",
@@ -181,8 +197,9 @@ def world(tmp_path, lab_ca):
         case "$*" in
           *"/api/poller/artifacts/ca.crt"*) serve "{lab_ca['pem']}" ;;
           *"api.github.com/repos/vesmaro/vesmaro-agent/releases/latest"*) serve "{latest}" ;;
-          *{dl}/{asset}*) serve "{tarball}" ;;
-          *{dl}/{csfile}*) serve "{checksums}" ;;
+          *"api.github.com/repos/vesmaro/vesmaro-agent/releases/tags/{TAG}") serve "{tag_json}" ;;
+          *"api.github.com/repos/vesmaro/vesmaro-agent/releases/assets/101"*) serve "{tarball}" ;;
+          *"api.github.com/repos/vesmaro/vesmaro-agent/releases/assets/102"*) serve "{checksums}" ;;
           *"/api/executors/{EXEC_ID}") serve "{row_file}" ;;
           *"/api/executors"*) serve "{list_file}" ;;
           *) echo "stub curl: no route for $*" >&2; exit 1 ;;
@@ -209,7 +226,7 @@ def world(tmp_path, lab_ca):
     }
     return {"tmp": tmp_path, "stubs": stubs, "log": log, "sysctl_log": sysctl_log,
             "ca_target": ca_target, "asset": asset, "digest": digest,
-            "checksums": checksums, "tarball": tarball, "dl": dl,
+            "checksums": checksums, "tarball": tarball,
             "paths": paths, "canon": lab_ca["canon"]}
 
 
@@ -287,7 +304,8 @@ class TestFreshInstall:
         assert r.returncode == 0, r.stdout + r.stderr
         logged = world["log"].read_text()
         assert "releases/latest" not in logged
-        assert f"/download/{TAG}/" in logged
+        assert f"releases/tags/{TAG}" in logged
+        assert "releases/assets/" in logged
 
 
 # ------------------------------------------------------- integrity (sha256)
