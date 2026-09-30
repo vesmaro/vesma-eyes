@@ -54,10 +54,9 @@
 
 .wow-title {
   margin: 0;
-  font-size: var(--text-hero-xl);       /* 56→152px, регистр «КИНО» */
-  line-height: var(--leading-hero);
-  letter-spacing: var(--tracking-hero);
-  font-weight: var(--weight-display);
+  font-size: var(--text-2xl);           /* трейлер — прочая страница: ≤32px (спека 15 §5) */
+  line-height: var(--leading-tight);
+  font-weight: var(--weight-semibold);
   color: var(--color-text-primary);
   text-wrap: balance;
 }

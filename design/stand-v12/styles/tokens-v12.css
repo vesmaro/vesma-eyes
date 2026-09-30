@@ -3,16 +3,17 @@
  * Отправная точка: design/stand/styles/tokens.css (замороженные имена
  * ADR 0006 / ui-contract §8) + v11-добавления ритма внимания
  * (--duration-attention*, stand-v11-base). Палитра НЕ расширена:
- * новые hue не вводились, WOW достигается шкалой и плотностью.
+ * новые hue не вводились.
  *
- * НОВАЯ типографическая шкала v12 — «два регистра»:
- *   КИНО (трейлер/герои): флюидный clamp-ряд до 9.5rem, отрицательная
- *     отбивка --tracking-hero, вёрстка --leading-hero 1.02. Против
- *     замороженного максимума v11 в 2rem — это смена регистра, а не
- *     ещё одна ступенька.
- *   ПРИБОРКА (шелл): микрошкала плотности v11 (caps/data/ui) — рабочая
- *     зона остаётся инструментом.
- * Дисплейный акцент: Lora italic (один акцентный символ/слово на экран).
+ * Типографика v12 — по спеке 15 §5: одно новое имя шкалы
+ * --text-display (36→44px, weight 600, --tracking-display) — только
+ * герой Обзора; остальное — замороженная лестница (прочие заголовки
+ * ≤32px) + микрошкала приборки 11/13/15px. Радикальность — контраст
+ * масштабов витрины и приборки на одном экране.
+ *
+ * Новые имена v12 (спека 15 §5, только добавление): --text-display,
+ * --text-lead, --tracking-display, --well-hero-h, --hud-veil,
+ * --duration-awaken, --palette-scrim, --duration-wow-* (трейлер).
  *
  * Все значения — токены; в компонентах литералов нет (правило линии).
  */
@@ -141,24 +142,22 @@
   --glow-live: 0 0 16px rgb(63 191 127 / 0.30);
   --glow-error: 0 0 16px rgb(224 101 92 / 0.30);
 
-  /* ── НОВАЯ типографическая шкала v12 ──────────────────────────────── */
-  /* Регистр «КИНО» — флюидная, от вьюпорта; радикальнее замороженной
-   * лестницы v11 (макс. 2rem → макс. 9.5rem, отрицательный трекинг) */
-  --text-hero-xl: clamp(3.5rem, 12vw, 9.5rem);      /* 56→152px, имя продукта */
-  --text-hero: clamp(2.75rem, 8vw, 6.5rem);          /* 44→104px, заголовок трейлера */
-  --text-display: clamp(2rem, 3.5vw, 3.25rem);       /* 32→52px, герои экранов */
-  --text-title: clamp(1.375rem, 1.8vw, 1.875rem);    /* 22→30px, секции */
-  --text-lead: clamp(1.0625rem, 1.2vw, 1.3125rem);   /* 17→21px, подзаголовок */
+  /* ── Типографика v12 (спека 15 §5) ──────────────────────────────────
+   * Одно новое имя шкалы: --text-display (36→44px, weight 600,
+   * --tracking-display, --leading-tight) — ТОЛЬКО герой Обзора.
+   * Остальное — замороженная лестница + микрошкала 11/13/15px; заголовки
+   * прочих страниц ≤32px. Радикальность — контраст 44px витрины против
+   * 11px приборки на одном экране, не расширение системы. */
+  --text-display: clamp(2.25rem, 3.5vw, 2.75rem);   /* 36→44px, герой Обзора */
+  --text-lead: clamp(1.0625rem, 1.2vw, 1.3125rem);  /* 17→21px, подзаголовок */
 
   /* Регистр «ПРИБОРКА» — плотность инструмента (наследие v11) */
   --text-ui: 0.9375rem;        /* 15px, базовый UI шелла */
   --text-data: 0.8125rem;      /* 13px, плотные операционные данные */
   --text-caps: 0.6875rem;      /* 11px, капс-метки + --tracking-caps */
 
-  --tracking-hero: -0.035em;   /* плотная дисплейная отбивка */
-  --tracking-caps: 0.14em;     /* широкая капс-метка v12 (v11: 0.04) */
-  --leading-hero: 1.02;
-  --leading-display: 1.12;
+  --tracking-display: -0.01em; /* трекинг --text-display (спека 15 §5) */
+  --tracking-caps: 0.04em;     /* замороженное значение v11 */
   --numeric-tnum: tabular-nums;
 
   --font-ui: "Inter Variable", "Inter", "Helvetica Neue", system-ui, sans-serif;
@@ -180,7 +179,6 @@
   --weight-regular: 400;
   --weight-medium: 500;
   --weight-semibold: 600;
-  --weight-display: 700;       /* v12: дисплейный вес регистра «КИНО» */
 
   /* Пространства (база stand) */
   --space-1: 0.25rem;  --space-2: 0.5rem;  --space-3: 0.75rem; --space-4: 1rem;
@@ -207,6 +205,12 @@
   /* v12: ритм трейлера — такт появления карточек повествования (5s-дуга) */
   --duration-wow-beat: 1200ms;
   --duration-wow-cycle: 7200ms;
+
+  /* ── Новые имена v12 (спека 15 §5: только имена, ADR 0006 цел) ───── */
+  --well-hero-h: clamp(520px, calc(100vh - 48px), 860px); /* герой Обзора */
+  --hud-veil: rgb(9 11 15 / 0.78);          /* подложка HUD-текста на канвасе */
+  --duration-awaken: 1200ms;                /* пробуждение, раз/сессию */
+  --palette-scrim: rgb(9 11 15 / 0.55);     /* зрачок-фокус палитры (срез 4) */
 
   --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
@@ -276,6 +280,10 @@
   --shadow-float: 0 8px 24px 0 rgb(0 0 0 / 0.3);
   --shadow-modal: 0 16px 48px 0 rgb(0 0 0 / 0.35);
   --shadow-iris: 0 0 32px 8px var(--color-iris-glow);
+
+  /* v12 (спека 15 §5): светлая ветка новых имён */
+  --hud-veil: rgb(245 246 248 / 0.85);
+  --palette-scrim: rgb(245 246 248 / 0.6);
 }
 
 /* ── Reduced motion: OS + пользовательский уровень ──────────────────── */
@@ -288,6 +296,7 @@
     --duration-attention-hold: 0ms;
     --duration-wow-beat: 0ms;
     --duration-wow-cycle: 0ms;
+    --duration-awaken: 0ms;
     --duration-slow: 0ms;
     --duration-normal: 0ms;
     --duration-fast: 80ms;
@@ -302,6 +311,7 @@
   --duration-attention-hold: 0ms;
   --duration-wow-beat: 0ms;
   --duration-wow-cycle: 0ms;
+  --duration-awaken: 0ms;
   --duration-slow: 0ms;
   --duration-normal: 0ms;
   --duration-fast: 80ms;

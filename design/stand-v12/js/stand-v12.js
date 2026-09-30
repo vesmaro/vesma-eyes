@@ -1,23 +1,43 @@
-/* stand-v12.js — машинерия стенда «ВАУ v12» (ME-061, скаффолд).
+/* stand-v12.js — машинерия стенда «ВАУ v12» (ME-061, спека 15 §8).
  *
  * Что здесь есть (и что остаётся при смене арт-наполнения):
+ *   - ДЕФОЛТ living «Полный» для КОНЦЕПТ-СТЕНДА (§4): бутстрап ДО парса
+ *     living.js выставляет вкладочный оверрайд, только если пользователь
+ *     ничего не выбрал. Прод-дефолт living.js — «Спокойный» — НЕ тронут:
+ *     supersede дефолта гейтится вердиктом владельца (12 §1 п.6).
  *   - тема (data-theme, localStorage vesmaro.theme);
- *   - режимы живого слоя (vesmaro.livingLayer + событие stand:living-change,
- *     тот же контракт, что у living.js из stand-v11-base);
- *   - демо-хуки шины: кнопки [data-ev] публикуют события в ЕДИНСТВЕННЫЙ
- *     источник — document-событие stand:feed-event (08 §3.1); второй
- *     источник не создаётся;
- *   - лента шины (role=log) — видимое подтверждение ответа живого слоя;
- *   - авто-дуга трейлера (body[data-wow-feed]): 5-секундный сценарий
- *     task.start → write → task.done → owner.wait → owner.clear.
+ *   - режимы живого слоя (vesmaro.livingLayer + stand:living-change);
+ *   - демо-хуки шины [data-ev] → stand:feed-event (единственный источник,
+ *     08 §3.1; второй источник не создаётся);
+ *   - лента шины #feed-log (полигон) и тикер героя [data-ticker] (§3.1):
+ *     fade-swap 240ms, пауза живого слоя останавливает и его;
+ *   - герой Обзора: HUD-цифры из STAND, чип «Ждут владельца» (empty —
+ *     не рендерится), share-кнопка, «Пробуждение» раз/сессию (§3.1:
+ *     sessionStorage vesmaro.awakened; первый импульс ~1.4s — реальное
+ *     событие в ту же шину);
+ *   - авто-дуга трейлера (body[data-wow-feed]).
  *
  * Чего здесь НЕТ: таймеров «оживления» вне шины, прямых обращений к
- * canvas Нейры, второй шины. living.js подключается как есть (js/living.js).
+ * canvas Нейры/колодца, второй шины. living.js/synapse.js — js/ как есть
+ * (кроме санкционированной правки плотности в synapse.js).
  */
 (function () {
   "use strict";
   var doc = document;
   var root = doc.documentElement;
+
+  /* ── Дефолт «Полный» для концепт-стенда (спека 15 §4) ────────────────
+   * Вкладочный оверрайд living.js ставится ДО его парса (порядок
+   * подключения: stand-v12.js → data.js → living.js → synapse.js).
+   * Условие: пользователь ничего не выбрал сам (нет localStorage-режима,
+   * нет ?living=). Прод-логика не затронута: default living.js = "calm". */
+  try {
+    var qpLiving = new URLSearchParams(window.location.search).get("living");
+    var chosen = localStorage.getItem("vesmaro.livingLayer");
+    if (!qpLiving && !chosen && !sessionStorage.getItem("stand-living-override")) {
+      sessionStorage.setItem("stand-living-override", "full");
+    }
+  } catch (e) {}
 
   var EVENT_LABELS = {
     recall: "обращение к памяти",
@@ -130,6 +150,132 @@
       log.insertBefore(row, log.firstChild);
       while (log.children.length > 12) log.removeChild(log.lastChild);
     });
+  }
+
+  /* ── Герой Обзора «Световой колодец» (спека 15 §3.1) ─────────────────
+   * Скрипты подключаются в порядке: stand-v12 → data → living → synapse;
+   * STAND-зависимая инициализация — на DOMContentLoaded (data.js уже
+   * выполнен), слушатели шины вешаются сразу. */
+  var ticker = doc.querySelector("[data-ticker]");
+  var hero = doc.querySelector(".well-hero");
+
+  function onHeroReady() {
+    var STAND = window.STAND;
+    if (!doc.body.hasAttribute("data-screen") ||
+        doc.body.getAttribute("data-screen") !== "overview" || !STAND) return;
+
+    var c = STAND.counters || {};
+    var t = doc.querySelector("[data-hud-total]");
+    if (t && c.total) t.textContent = c.total;
+    var ph = doc.getElementById("pulses-hour");
+    if (ph && c.pulsesHour != null) ph.textContent = String(c.pulsesHour);
+    var vt = doc.querySelector("[data-vital-tags]");
+    if (vt && c.tags != null) vt.textContent = String(c.tags);
+    var va = doc.querySelector("[data-vital-agents]");
+    if (va && STAND.agents) va.textContent = String(STAND.agents.length);
+    var vh = doc.querySelector("[data-vital-hosts]");
+    if (vh && STAND.hosts) vh.textContent = String(STAND.hosts.length);
+
+    /* Чип «Ждут владельца»: empty — НЕ рендерится (тишина, 15 §3.1) */
+    var chip = doc.querySelector(".hud-wait-chip");
+    var waiting = STAND.waiting || [];
+    if (chip) {
+      if (!waiting.length || !(c.waiting > 0)) {
+        chip.remove();
+      } else {
+        var wc = chip.querySelector(".wait-count");
+        var wt = chip.querySelector(".wait-title");
+        if (wc) wc.textContent = String(c.waiting);
+        if (wt) wt.textContent = waiting[0].title;
+      }
+    }
+
+    /* тикер: стартовая строка — последнее событие ленты */
+    if (ticker && STAND.feedSeed && STAND.feedSeed.length && !ticker.getAttribute("data-ev")) {
+      tickerSet(STAND.feedSeed[0]);
+    }
+    awakenStart(STAND);
+  }
+  if (doc.readyState === "loading") doc.addEventListener("DOMContentLoaded", onHeroReady);
+  else onHeroReady();
+
+  /* Тикер: одна строка, события шины, fade-swap 240ms (НЕ marquee) */
+  function tickerSet(d) {
+    if (!ticker) return;
+    var tm = ticker.querySelector(".ticker-time");
+    var ev = ticker.querySelector(".ticker-ev");
+    var tx = ticker.querySelector(".ticker-text");
+    var dd = new Date(d.at || Date.now());
+    if (tm) tm.textContent = [("0" + dd.getHours()).slice(-2), ("0" + dd.getMinutes()).slice(-2)].join(":");
+    if (ev) ev.textContent = EVENT_LABELS[d.ev] || d.ev;
+    if (tx) tx.textContent = d.text || "";
+    ticker.setAttribute("data-ev", d.ev || "");
+  }
+  var tickerPaused = false; /* пауза живого слоя останавливает и тикер (§3.1) */
+  if (ticker) {
+    doc.addEventListener("stand:feed-event", function (e) {
+      if (tickerPaused) return;
+      var d = e.detail || {};
+      ticker.classList.add("is-swapping");
+      setTimeout(function () {
+        tickerSet(d);
+        ticker.classList.remove("is-swapping");
+      }, 120);
+    });
+    /* пауза: клик по Нейре living.js не экспортирует — ловим жест
+     * делегированием (аппроксимация стенда, см. README «отклонения»);
+     * «Выключен» — через смену режима */
+    doc.addEventListener("click", function (e) {
+      if (e.target.closest && e.target.closest(".living-neura")) tickerPaused = !tickerPaused;
+    });
+  }
+  window.addEventListener("stand:living-change", function () {
+    tickerPaused = livingNow() === "off";
+  });
+  if (ticker && livingNow() === "off") tickerPaused = true;
+
+  /* «Поделиться»: честная кнопка — копирует адрес страницы */
+  doc.querySelectorAll("[data-share]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var was = b.textContent;
+      function say(msg) { b.textContent = msg; setTimeout(function () { b.textContent = was; }, 1800); }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(window.location.href).then(
+          function () { say("Ссылка скопирована"); },
+          function () { say("Скопируйте из адресной строки"); }
+        );
+      } else say("Скопируйте из адресной строки");
+    });
+  });
+
+  /* Пробуждение (§3.1): раз за сессию; veil 1200ms + каскад HUD ≤8;
+   * ~1.4s — первый импульс: РЕАЛЬНОЕ событие в ту же шину (не второй
+   * источник); данные — фикстура data.js (agb · «Схема провенанса») */
+  function systemReduced() {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+      root.getAttribute("data-motion") === "reduced";
+  }
+  var AWAKEN_KEY = "vesmaro.awakened";
+  function awakenStart(STAND) {
+    if (!hero) return;
+    var awakened = false;
+    var quiet = false;
+    try {
+      awakened = sessionStorage.getItem(AWAKEN_KEY) === "1";
+      quiet = new URLSearchParams(window.location.search).get("static") === "1";
+    } catch (e) {}
+    if (awakened || quiet || systemReduced()) return;
+    try { sessionStorage.setItem(AWAKEN_KEY, "1"); } catch (e) {}
+    hero.setAttribute("data-awaken", "");
+    setTimeout(function () {
+      var seed = (STAND && STAND.wellNodes && STAND.wellNodes[9]) || { id: null, title: "Схему провенанса" };
+      /* публикация в ту же единую шину с mem-адресом узла (для импульса
+       * по ребру); emit() не используется — ему нечем передать mem */
+      doc.dispatchEvent(new CustomEvent("stand:feed-event", {
+        detail: { ev: "write", mem: seed.id, text: "агент agb записал «" + seed.title + "»", who: "agb", srv: "mnemos-01", at: Date.now() },
+      }));
+    }, 1400);
+    setTimeout(function () { hero.removeAttribute("data-awaken"); }, 1600);
   }
 
   /* ── Трейлер: авто-дуга «продукт живой» (5 секунд) ─────────────────── */

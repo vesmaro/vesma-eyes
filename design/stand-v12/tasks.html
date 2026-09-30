@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Задачи — vesmaro-eyes · стенд ВАУ v12</title>
+  <meta name="description" content="Заглушка экрана Задач v12 (срез 5, спека 15 §3.4): цель чипа «Ждут владельца» с Обзора.">
+  <link rel="stylesheet" href="styles/tokens-v12.css">
+  <link rel="stylesheet" href="styles/shell-v12.css">
+  <link rel="stylesheet" href="styles/living-layer.css">
+</head>
+<body data-screen="tasks">
+<a class="skip-link" href="#main">К содержимому</a>
+<div class="app">
+
+  <header class="topbar">
+    <a class="brand" href="overview.html">
+      <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
+      vesmaro-eyes
+    </a>
+    <div class="topbar-spacer"></div>
+    <div class="topbar-status">
+      <span class="pill live" title="Живое соединение с демо-лентой стенда"><span class="dot" aria-hidden="true"></span>live</span>
+      <a class="iconbtn exec-badge" href="shell.html#living" data-exec-count aria-label="Активные исполнения: 1 — открыть полигон живого слоя">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
+        <span class="badge-dot" aria-hidden="true">1</span>
+      </a>
+      <button class="iconbtn" type="button" data-theme-toggle aria-pressed="false" aria-label="Сменить тему: сейчас тёмная">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <aside class="sidebar" aria-label="Разделы стенда">
+    <nav class="side-nav" aria-label="Экраны и домены">
+      <div class="side-section-title">Экраны</div>
+      <a class="side-link" href="overview.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
+        <span class="side-label">Обзор</span>
+      </a>
+      <a class="side-link" href="tasks.html" aria-current="page">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v9"/></svg>
+        <span class="side-label">Задачи</span>
+      </a>
+      <a class="side-link" href="wow.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>
+        <span class="side-label">Трейлер</span>
+      </a>
+      <a class="side-link" href="shell.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        <span class="side-label">Полигон машинерии</span>
+      </a>
+      <a class="side-link" href="hosts.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M12 8V4H8"/><path d="M2 14h2"/><path d="M20 14h2"/></svg>
+        <span class="side-label">Хосты</span>
+      </a>
+
+      <div class="side-section-title">Домены</div>
+      <span class="side-domain">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/></svg>
+        <span class="side-label">Память</span>
+        <span class="side-count">5</span>
+      </span>
+      <span class="side-domain">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v9"/></svg>
+        <span class="side-label">Задачи</span>
+        <span class="side-count">5</span>
+      </span>
+      <span class="side-domain">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+        <span class="side-label">Агенты</span>
+        <span class="side-count">1</span>
+      </span>
+    </nav>
+    <p class="side-note">Срез 5 (§3.4 «Живой пульт») — не начат.</p>
+  </aside>
+
+  <main class="content" id="main">
+    <p class="crumbs"><a href="overview.html">обзор</a> / задачи</p>
+    <h1 class="page-title">Задачи</h1>
+    <p class="page-lead">
+      Сюда ведёт чип «Ждут владельца» с Обзора (фильтр owner.wait — срез 5,
+      спека 15 §3.4 «Живой пульт»: фасад-чип, темп колонок, хореография
+      task.done). Демо-события жизненного цикла задач — в Полигоне.
+    </p>
+    <section class="panel" aria-labelledby="wait-h">
+      <h2 id="wait-h">Ждут владельца (фикстуры демо-данных)</h2>
+      <div class="feed" aria-label="Ожидающие решения">
+        <div class="feed-row" data-ev="owner.wait"><span class="ev-dot" aria-hidden="true"></span><span>W-12 · Утвердить тег-словарь (M-241)</span><span class="ev-time">◆</span></div>
+        <div class="feed-row" data-ev="owner.wait"><span class="ev-dot" aria-hidden="true"></span><span>W-11 · Разморозить борд после рефакторинга сессий</span><span class="ev-time">◆</span></div>
+        <div class="feed-row" data-ev="owner.wait"><span class="ev-dot" aria-hidden="true"></span><span>W-9 · Подтвердить пейринг нового устройства</span><span class="ev-time">◆</span></div>
+      </div>
+      <div class="demo-row" style="margin-top: var(--space-4);" aria-label="Демо-хуки событий задач">
+        <button type="button" class="demo-btn sm" data-ev="task.start"><span class="demo-sig" aria-hidden="true"></span>task.start</button>
+        <button type="button" class="demo-btn sm" data-ev="task.done"><span class="demo-sig" aria-hidden="true"></span>task.done</button>
+        <button type="button" class="demo-btn sm" data-ev="owner.wait"><span class="demo-sig" aria-hidden="true"></span>owner.wait</button>
+        <button type="button" class="demo-btn sm" data-ev="owner.clear"><span class="demo-sig" aria-hidden="true"></span>owner.clear</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="js/stand-v12.js"></script>
+<script src="js/data.js"></script>
+<script src="js/living.js"></script>
+</body>
+</html>

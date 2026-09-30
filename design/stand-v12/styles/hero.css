@@ -1,0 +1,327 @@
+/* hero.css — герой Обзора «Световой колодец» (спека 15 §3.1, §5, §6).
+ *
+ * Full-bleed канвас на всю рабочую зону (высота --well-hero-h), данные —
+ * HUD-слои поверх канваса (НЕ карточки), свет только событийный (шина
+ * stand:feed-event → synapse.js/living.js). Подложка HUD-текста —
+ * функциональная --hud-veil (края hairline, никакого глассмори).
+ * Пробуждение «Пробуждение» — раз за сессию: veil 1200ms + каскад HUD
+ * (≤8 звеньев, шаг --duration-stagger); reduced → граф статичен сразу.
+ * Все цвета/размеры — токены tokens-v12.css; литералов нет.
+ */
+
+/* ── Герой: full-bleed ───────────────────────────────────────────────── */
+body[data-screen="overview"] .content {
+  max-width: none;
+  padding: 0;                    /* паддинги 0 (спека 15 §8.1) */
+}
+.well-hero {
+  position: relative;
+  width: 100%;
+  height: var(--well-hero-h);    /* clamp(520px, 100vh−48px, 860px) */
+  min-height: 520px;
+  background: var(--color-well-canvas);
+  overflow: hidden;
+}
+.well-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+/* верхние ~30% разрежены («зеркало воды»): раскладка плотности —
+ * единственная правка движка synapse.js, санкционирована спеком
+ * (§3.1 Активы: «берётся как есть, меняется раскладка плотности») */
+
+/* sr-only (synapse.js appends live region) */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* тултип узла (synapse.js) */
+.node-tip {
+  position: absolute;
+  z-index: 3;
+  max-width: 300px;
+  padding: var(--space-2) var(--space-3);
+  border: var(--line-hairline) solid var(--myelin-strong);
+  border-radius: var(--radius-md);
+  background: var(--hud-veil);
+  box-shadow: var(--shadow-raised);
+  display: grid;
+  gap: var(--space-1);
+  pointer-events: none;
+}
+.node-tip strong {
+  font-size: var(--text-ui);
+  color: var(--color-text-primary);
+  font-weight: var(--weight-medium);
+}
+.node-tip .tip-meta {
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--numeric-tnum);
+  font-size: var(--text-data);
+  color: var(--color-text-secondary);
+}
+
+/* ── HUD: общие слои ─────────────────────────────────────────────────── */
+.well-hud-top,
+.well-hud-bottom {
+  position: absolute;
+  left: 0; right: 0;
+  z-index: 2;
+  pointer-events: none;         /* канвас доступен: hover/клавиатура узлов */
+}
+.well-hud-top > *,
+.well-hud-bottom > * {
+  pointer-events: auto;
+}
+.well-hud-top {
+  top: 0;
+  padding: var(--space-8) var(--space-10) 0;
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
+.well-hud-bottom {
+  bottom: 0;
+  padding: 0 var(--space-10) var(--space-4);
+  display: grid;
+  gap: var(--space-2);
+}
+
+.hud-veil {
+  background: var(--hud-veil);
+  border-radius: var(--radius-md);
+  border: var(--line-hairline) solid var(--myelin-hairline);
+}
+
+/* ── HUD-верх: заголовочный кластер ──────────────────────────────────── */
+.hud-title {
+  margin: 0;
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--text-display);          /* 36→44px — ТОЛЬКО здесь (15 §5) */
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+}
+.hud-subline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  align-items: center;
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--numeric-tnum);
+  font-size: var(--text-data);
+  color: var(--color-text-secondary);
+}
+.hud-subline .hud-share {
+  font-family: var(--font-ui);
+  min-height: 24px;                        /* ≥24px (15 §3.1, 2.5.8) */
+  padding: var(--space-1) var(--space-3);
+}
+.hud-subline .hud-rate { color: var(--color-iris-bright); }
+
+/* ── HUD-низ: чип ожидания + витал-кластер + тикер ───────────────────── */
+.hud-bottom-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+.hud-wait-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 24px;                        /* ≥24px; тач-цель 44 через padding */
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-confidence-dim);
+  border-left: 2px solid var(--color-confidence);
+  border-radius: var(--radius-md);
+  background: var(--hud-veil);
+  color: var(--color-text-primary);
+  font-size: var(--text-ui);
+  text-decoration: none;
+  transition: border-color var(--duration-instant) var(--ease-enter),
+              background var(--duration-instant) var(--ease-enter);
+}
+.hud-wait-chip .wait-diamond { color: var(--color-confidence); }
+.hud-wait-chip .wait-count {
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--numeric-tnum);
+  font-weight: var(--weight-medium);
+}
+.hud-wait-chip:hover { border-color: var(--color-confidence); } /* край — myelin-ряд */
+.hud-wait-chip:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+.hud-wait-chip:active { background: var(--myelin-strong); }
+/* empty — не рендерится (тишина); скрытие — JS по данным */
+
+.hud-vitals {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--numeric-tnum);
+  font-size: var(--text-data);
+  color: var(--color-text-secondary);
+}
+.hud-vitals .vital-n { color: var(--color-text-primary); }
+
+/* Тикер: одна строка, события шины, fade-swap 240ms; НЕ marquee */
+.well-ticker {
+  display: flex;
+  gap: var(--space-3);
+  align-items: baseline;
+  width: fit-content;
+  max-width: 100%;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-ui);
+  color: var(--color-text-primary);
+}
+.well-ticker .ticker-time {
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--numeric-tnum);
+  font-size: var(--text-data);
+  color: var(--color-text-muted);
+  flex: none;
+}
+.well-ticker .ticker-ev {
+  flex: none;
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-iris-bright);       /* recall/прочее — ирис словаря */
+}
+.well-ticker[data-ev="task.done"] .ticker-ev,
+.well-ticker[data-ev="owner.wait"] .ticker-ev { color: var(--color-confidence); }
+/* ошибка — цвет + текст события (WCAG 1.4.1: не только цвет) */
+.well-ticker[data-ev="error"] .ticker-ev { color: var(--color-error); }
+.well-ticker .ticker-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.well-ticker.is-swapping .ticker-text,
+.well-ticker.is-swapping .ticker-time,
+.well-ticker.is-swapping .ticker-ev {
+  opacity: 0;
+  translate: 0 2px;
+}
+.well-ticker .ticker-time,
+.well-ticker .ticker-ev,
+.well-ticker .ticker-text {
+  transition: opacity var(--duration-normal) var(--ease-enter),
+              translate var(--duration-normal) var(--ease-enter);
+}
+
+/* демо-кнопки шины — под тикер-лентой (указание ТЛ) */
+.hud-demo-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* ── Пробуждение (раз за сессию, sessionStorage vesmaro.awakened) ─────── */
+.awaken-veil { display: none; }
+.well-hero[data-awaken] .awaken-veil {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: var(--color-well-canvas);
+  animation: awaken-veil-lift var(--duration-awaken) var(--ease-enter) forwards;
+}
+@keyframes awaken-veil-lift {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+/* HUD-слоты: каскад ≤8 звеньев, шаг --duration-stagger; title 8→0 */
+.well-hero[data-awaken] .hud-in {
+  opacity: 0;
+  translate: 0 8px;
+  animation: hud-awaken var(--duration-normal) var(--ease-enter) forwards;
+  animation-delay: calc(var(--hud-i, 0) * var(--duration-stagger));
+}
+@keyframes hud-awaken {
+  to { opacity: 1; translate: 0 0; }
+}
+
+/* ── Fold: тихие панели под первым экраном ───────────────────────────── */
+.fold-wrap {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-10) var(--space-16);
+}
+
+/* полная лента (synapse.js наполняет .feed) */
+.feed {
+  display: grid;
+  gap: var(--space-1);
+}
+.feed-row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: baseline;
+  padding: var(--space-1) var(--space-2);
+  border-bottom: var(--line-hairline) solid var(--myelin-hairline);
+  font-size: var(--text-data);
+  color: var(--color-text-secondary);
+}
+.feed-row .ev-dot {
+  width: 8px; height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--synapse-recall);
+  flex: none;
+  align-self: center;
+}
+.feed-row[data-ev="write"] .ev-dot,
+.feed-row[data-ev="task.done"] .ev-dot,
+.feed-row[data-ev="owner.wait"] .ev-dot { background: var(--synapse-write); }
+.feed-row[data-ev="error"] .ev-dot { background: var(--synapse-error); }
+.feed-row[data-ev="error"] { color: var(--color-error); } /* цвет + текст */
+.feed-row .ev-time {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--numeric-tnum);
+  color: var(--color-text-muted);
+}
+.feed-row.fresh { animation: feed-fresh var(--duration-normal) var(--ease-enter); }
+@keyframes feed-fresh {
+  from { background: var(--myelin-strong); }
+  to { background: transparent; }
+}
+.feed-row.flash { background: var(--myelin-strong); }
+
+/* ── Адаптив ─────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .well-hud-top { padding: var(--space-4) var(--space-4) 0; }
+  .well-hud-bottom { padding: 0 var(--space-4) var(--space-3); }
+  .hud-title { padding: var(--space-2) var(--space-4); }
+  .fold-wrap { padding: var(--space-6) var(--space-4) var(--space-12); }
+  .hud-bottom-row { align-items: flex-start; flex-direction: column; }
+}
+
+/* ── Reduced-motion: финальные состояния (спека 15 §6) ───────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .well-ticker .ticker-time,
+  .well-ticker .ticker-ev,
+  .well-ticker .ticker-text { transition: none; }
+  .feed-row.fresh { animation: none; background: transparent; }
+  .well-hero[data-awaken] .awaken-veil { animation: none; opacity: 0; }
+  .well-hero[data-awaken] .hud-in { animation: none; opacity: 1; translate: none; }
+}

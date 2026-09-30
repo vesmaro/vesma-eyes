@@ -14,7 +14,7 @@
 <div class="app">
 
   <header class="topbar">
-    <a class="brand" href="wow.html">
+    <a class="brand" href="overview.html">
       <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
       vesmaro-eyes
     </a>
@@ -30,6 +30,14 @@
   <aside class="sidebar" aria-label="Разделы стенда">
     <nav class="side-nav" aria-label="Экраны">
       <div class="side-section-title">Экраны</div>
+      <a class="side-link" href="overview.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
+        <span class="side-label">Обзор</span>
+      </a>
+      <a class="side-link" href="tasks.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v9"/></svg>
+        <span class="side-label">Задачи</span>
+      </a>
       <a class="side-link" href="wow.html">
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>
         <span class="side-label">Трейлер</span>
@@ -47,7 +55,7 @@
   </aside>
 
   <main class="content" id="main">
-    <p class="crumbs"><a href="wow.html">стенд v12</a> / хосты</p>
+    <p class="crumbs"><a href="overview.html">стенд v12</a> / хосты</p>
     <h1 class="page-title">Хосты</h1>
     <p class="page-lead">
       Заглушка v12: живой слой из stand-v11-base ссылается сюда из карточки
@@ -57,7 +65,8 @@
   </main>
 </div>
 
-<script src="js/living.js"></script>
 <script src="js/stand-v12.js"></script>
+<script src="js/data.js"></script>
+<script src="js/living.js"></script>
 </body>
 </html>
