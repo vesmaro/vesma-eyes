@@ -28,9 +28,46 @@ var WA=parseFloat(v("--web-wave-alpha","0.08")),SP=parseFloat(v("--web-wave-spee
 var HAIR="",IRIS="";
 function rc(){HAIR=v("--myelin-hairline","rgba(230,237,243,.07)");IRIS=v("--color-iris","#1a8a96")}
 rc();
-/* малые нейроны: события → рождение на якоре, пробег по рёбрам (≤3) */
+/* граф ткани (ME-061 фикс: блок был потерян — X/Y/E/ADJ/N/size/DST ниже
+ * объявлены здесь, без них web() падал ReferenceError на всех экранах,
+ * кроме Обзора, и молча убирал и паутину, и Весму). Детерминированная
+ * укладка mulberry32 (сид — как у колодца); плотность от площади вьюпорта,
+ * рёбра — близкие соседи (капы: ≤150 рёбер, степень ≤3, ≤8 мостиков —
+ * бюджет кадра §14.1: ≤120–150 рёбер × sin + arcs на порядок ниже 0.3ms) */
+var dpr=1,dcap=2,N=0,X=[],Y=[],E=[],ADJ=[];
+function graph(){
+var w=innerWidth,h=innerHeight,a=20260930;
+function rnd(){a|=0;a=a+0x6d2b79f5|0;var t=Math.imul(a^a>>>15,1|a);
+t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}
+N=Math.max(36,Math.min(84,Math.round(w*h/18000)));
+X=[];Y=[];for(var i=0;i<N;i++){X.push(28+rnd()*(w-56));Y.push(28+rnd()*(h-56))}
+var D=Math.max(150,Math.min(w,h)*0.22),deg=[],ps=[];
+for(i=0;i<N;i++)deg.push(0);
+for(i=0;i<N;i++)for(var j=i+1;j<N;j++){var d=Math.hypot(X[i]-X[j],Y[i]-Y[j]);if(d<D)ps.push([d,i,j])}
+ps.sort(function(p,q){return p[0]-q[0]});
+E=[];ADJ=[];for(i=0;i<N;i++)ADJ.push([]);
+var br=0;
+ps.forEach(function(p){
+if(E.length>=150||deg[p[1]]>=3||deg[p[2]]>=3)return;
+if(p[0]>D*0.55){if(br>=8)return;br++}
+var ei=E.length;E.push([p[1],p[2]]);deg[p[1]]++;deg[p[2]]++;
+ADJ[p[1]].push(ei);ADJ[p[2]].push(ei)})}
+function size(){/* оба канваса под вьюпорт; DPR-кап 2, лестница fps режет dcap */
+dpr=Math.min(dcap,devicePixelRatio||1);
+cv.width=innerWidth*dpr;cv.height=innerHeight*dpr;
+cs.width=innerWidth*dpr;cs.height=innerHeight*dpr;
+graph();DST()}
+function DST(){/* статичная композиция: цель кроссфейд-деградации и reduced */
+var c=x2;c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,innerWidth,innerHeight);
+c.lineWidth=0.5;c.strokeStyle=HAIR;c.globalAlpha=EA;
+E.forEach(function(e){c.beginPath();c.moveTo(X[e[0]],Y[e[0]]);c.lineTo(X[e[1]],Y[e[1]]);c.stroke()});
+c.globalAlpha=NA;c.fillStyle=IRIS;
+X.forEach(function(x,i){c.beginPath();c.arc(x,Y[i],1.6,0,7);c.fill()});
+c.globalAlpha=1}
+/* малые нейроны: события → рождение на якоре, пробег по рёбрам (≤3);
+ * guard !N: чанк грузится лениво — событие шины может прийти до graph() */
 var NU=[],PN=null,PTm=0;
-function SPN(a){if(NU.length>=3)return;
+function SPN(a){if(NU.length>=3||!N)return;
 var path=[],node=a.n,used={};
 for(var s=0;s<4&&ADJ[node].length;s++){
  var opts=ADJ[node].filter(function(e){return !used[e]});
@@ -50,7 +87,7 @@ if(W.__toneEvent)W.__toneEvent(a.ev)},600);
 if(W.Vesma)W.Vesma.CLD(ev);
 STT()});
 var TI=[];/* «Спокойный»: одиночный статичный тинт затронутых рёбер 1.5s */
-function tint(a){var ax=X[a.n],ay=Y[a.n],hit=[];
+function tint(a){if(!N)return;var ax=X[a.n],ay=Y[a.n],hit=[];
 E.forEach(function(e){var mx=(X[e[0]]+X[e[1]])/2,my=(Y[e[0]]+Y[e[1]])/2;
 if(Math.hypot(mx-ax,my-ay)<120)hit.push(e)});
 TI.push({e:hit,c:a.c,t0:performance.now()})}
@@ -93,9 +130,10 @@ c.globalAlpha=1;
 fms+=performance.now()-T0;acc+=dt;fr++;
 if(acc>=1000){W.__webFrameMs=fms/fr;var fps=fr*1000/acc;fr=0;acc=0;fms=0;
 if(fps<45&&!stat){stat=true;lite=true;HH.classList.add("cw-static-mode")}
-else if(fps<55.5&&!lite){lite=true;dpr=1.5;size()}}}
+else if(fps<55.5&&!lite){lite=true;dcap=1.5;size()}}}
 function STT(){if(raf==null&&!doc.hidden&&eff()!=="off"&&!stat)raf=requestAnimationFrame(PNT)}
 doc.addEventListener("visibilitychange",function(){tPrev=0;STT()});
+W.addEventListener("resize",function(){size();STT()});
 new MutationObserver(function(){rc();size();
 if(lmode()==="off"){HH.remove();return}
 if(reduced()){PNT(0);return}
@@ -111,7 +149,11 @@ else raf=requestAnimationFrame(PNT);
  * (fetch assets/neura-v2.svg), стили состояний — living-extra.css. */
 (function(){
 function vm(){var m=root.getAttribute("data-living");return reduced()?"calm":(m==="full"?"full":m==="off"?"off":"calm")}
-var NST=doc.createElement("div");NST.className="sat-NST";NST.id="sat-NST";
+/* ME-061 фикс: класс гнезда — «sat-nest», как в living-extra.css
+ * (было «sat-NST»: селекторы .sat-nest не совпали, неспозиционированный
+ * гнездо-блок растянулся на весь контент, а подкова получила дефолтный
+ * чёрный fill — «чёрный полукруг» поверх колодца на Обзоре) */
+var NST=doc.createElement("div");NST.className="sat-nest";NST.id="sat-NST";
 NST.innerHTML='<svg class="sat-homes" viewBox="0 0 96 96" aria-hidden="true"><path d="M12,84 A40,40 0 0 1 84,84"/></svg>'+
 '<button type="button" class="sat-body" aria-label="Весма — помощник. Клик — пауза живого слоя">'+
 '<svg class="neura-v2 lod-v3 idle" viewBox="0 0 120 120" aria-hidden="true"></svg></button>'+
@@ -120,6 +162,10 @@ doc.body.appendChild(NST);doc.body.classList.add("has-satellite");
 var UN=NST.querySelector(".sat-body"),svg=NST.querySelector(".neura-v2"),rep=NST.querySelector(".sat-replica");
 fetch("assets/neura-v2.svg").then(function(r){return r.text()}).then(function(t){
 var a=new DOMParser().parseFromString(t,"image/svg+xml").documentElement;
+/* ME-061 фикс: <style> атласа живёт в его корне, группы его не несут —
+ * без импорта стилей все .iris-fill/.stroke-* получали дефолтный чёрный */
+var st=a.querySelector("style");
+if(st)svg.insertBefore(doc.importNode(st,true),svg.firstChild);
 ["neura-body","neura-arms","neura-tail"].forEach(function(id){
 var g=a.querySelector("#"+id);if(g)svg.appendChild(doc.importNode(g,true))})});
 var FL=[],flying=false,PQ=null,SLP=null;

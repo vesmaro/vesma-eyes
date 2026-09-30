@@ -4,8 +4,8 @@
     Один атлас, три LOD (lod-v1 упрощённый 24px / lod-v2 комета / lod-v3
     полный ×3.4), 9 состояний классами на корне (idle breath flash-recall
     flash-write flash-error attention paused-fold calm-static off-dot).
-    Цвета — ТОЛЬКО var(--…): светлая тема работает заменой переменных.
-    Glow НЕ здесь — на контейнере box-shadow из --glow-* (§14.2).
+    Цвета — ТОЛЬКО CSS-токены var(…): светлая тема работает заменой переменных.
+    Glow НЕ здесь: свет = box-shadow контейнера из токенов glow (§14.2).
     Слои: #neura-body / #neura-arms / #neura-tail / #neura-glow (пустой:
     свет принадлежит контейнеру). Художественная доработка — поверх,
     слои и классы контракты.
@@ -87,6 +87,6 @@
     <circle class="lantern" cx="100.7" cy="83.5" r="2"/>
   </g>
 
-  <!-- glow НЕ внутри SVG: свет — box-shadow контейнера из --glow-* (§14.2) -->
+  <!-- glow НЕ внутри SVG: свет = box-shadow контейнера из токенов glow (§14.2) -->
   <g id="neura-glow"></g>
 </svg>

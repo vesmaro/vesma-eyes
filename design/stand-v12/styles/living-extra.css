@@ -5,6 +5,10 @@
 
 /* ── Паутина: fixed z:0 под контентом, текст никогда поверх ────────── */
 .cortex-web { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+/* ME-061 фикс: .app был НЕ позиционирован — positioned-канвас (z:0)
+ * рисовался бы поверх блочного контента; карточка В3 (60) и палитра (70)
+ * живут в корневом контексте (body-level), z:1 у .app их не затрагивает */
+.app { position: relative; z-index: 1; }
 .cortex-web canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .cortex-web .cw-static { opacity: 0; }
 /* деградация <45fps: кроссфейд в статичный рисунок, opacity-only 240ms */
@@ -25,6 +29,12 @@
 .sat-homes {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
+}
+/* ME-061 фикс: у дуги-подковы не было правила — SVG-path получал дефолтный
+ * чёрный fill (растянутый на весь экран = «чёрный полукруг» владельца) */
+.sat-homes path {
+  fill: none;
+  stroke: var(--myelin-strong);
 }
 .sat-body {
   position: absolute;
