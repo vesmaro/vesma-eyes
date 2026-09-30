@@ -31,9 +31,10 @@ import { actUnmount } from "@/test/actTools";
  * ME-048 flake hardening: the terminal grouping compares CALENDAR days
  * (`new Date(row.finished_at).toDateString() === today`, ExecutionPage
  * §Layer 2), so with a real wall clock any run in the first minutes after
- * local midnight put the `ago(300)` "finished today" fixture on yesterday
- * — the «terminal today» group vanished and 2 tests went red (observed:
- * a full run started 00:00:05; the rerun was green). The clock is now
+ * local midnight puts the `ago(300)` "finished today" fixture on yesterday
+ * — the «terminal today» group vanishes and exactly these 2 tests go red
+ * (mechanism verified by code inspection; the concrete "full run started
+ * 00:00:05, rerun green" catch is the predecessor agent's report). The clock is now
  * PINNED via fake timers with `toFake: ["Date"]` ONLY — setTimeout and
  * friends stay real, so rendering/act/QueryClient behaviour is unchanged;
  * fixtures and the component's render-time `new Date()` share one fixed
