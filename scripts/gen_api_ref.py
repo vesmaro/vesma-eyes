@@ -45,7 +45,10 @@ skipped.
 
 Order of runs: `npm run sync-docs` chains sync_docs.py FIRST (it wipes
 content/upstream/*, including api/) and THIS generator second. Running
-gen_api_ref.py twice is byte-identical (no wall-clock anywhere). Running
+gen_api_ref.py twice is byte-identical (no wall-clock anywhere), and
+since ME-052 also ACROSS commits: every provenance anchor follows content
+(the spec blob, upstream pins, the last change of a curated source), so
+regenerating between unrelated main commits produces zero diff. Running
 sync_docs.py alone leaves a consistent tree without api/ pages (the
 sidecar is rebuilt from scratch there) — the npm chain is the contract.
 
@@ -818,6 +821,56 @@ def build_curated_pages(
     return pages, warnings
 
 
+def hub_internal_provenance(
+    slug_tail: str,
+    *,
+    repo: Path | None = None,
+    curated_dir: Path | None = None,
+) -> dict[str, str]:
+    """Provenance anchor for hub-internal curated pages (ME-052).
+
+    The page's own curated sources are the stable thing it was verified
+    against, so the anchor is the LAST COMMIT THAT CHANGED THEM (either
+    locale file) — its SHA and date. The pre-ME-052 behavior pinned repo
+    HEAD, which restamped verified-at on every unrelated main commit
+    (noisy diff: regeneration between commits was not byte-stable).
+    ADR 0016 §7 canon: honest freshness follows the SOURCE, not the repo
+    state. Fallback when no curated file has history yet (freshly added,
+    uncommitted): generation HEAD, the only honest thing that exists."""
+    if repo is None:
+        repo = REPO_ROOT
+    if curated_dir is None:
+        curated_dir = CURATED_DIR
+    source_path = f"curated/api/{{ru,en}}/{slug_tail}.md"
+    paths = [curated_dir / locale / f"{slug_tail}.md" for locale in ("ru", "en")]
+    existing = [p for p in paths if p.is_file()]
+    log = ""
+    if existing:
+        try:
+            rels = [str(p.relative_to(repo)) for p in existing]
+        except ValueError:  # curated dir outside the repo — config bug
+            raise SyncError(
+                f"curated/{slug_tail}: curated dir {curated_dir} is not inside "
+                f"{repo} — cannot anchor provenance"
+            ) from None
+        log = run_git(repo, "log", "-1", "--format=%H%x00%cI", "--", *rels)
+    if not log:
+        head = run_git(repo, "rev-parse", "HEAD")
+        return {
+            "repo": "vesmaro-eyes",
+            "source_path": source_path,
+            "sha": head,
+            "commit_date": run_git(repo, "log", "-1", "--format=%cI"),
+        }
+    sha, date = log.split("\x00")
+    return {
+        "repo": "vesmaro-eyes",
+        "source_path": source_path,
+        "sha": sha,
+        "commit_date": date,
+    }
+
+
 def curated_provenance(entry: dict[str, Any], pins: dict[str, dict[str, Any]]) -> dict[str, str]:
     """Curated pages carry the pin of the source they were verified against."""
     verify = entry.get("verified_against") or {}
@@ -829,14 +882,9 @@ def curated_provenance(entry: dict[str, Any], pins: dict[str, dict[str, Any]]) -
             "sha": pin["sha"],
             "commit_date": pin["commit_date"],
         }
-    # Hub-internal curation: pin our own HEAD (honest "verified at").
-    head = run_git(REPO_ROOT, "rev-parse", "HEAD")
-    return {
-        "repo": "vesmaro-eyes",
-        "source_path": str(verify.get("path", "docs")),
-        "sha": head,
-        "commit_date": run_git(REPO_ROOT, "log", "-1", "--format=%cI"),
-    }
+    # Hub-internal curation (ME-052): pin the last actual change of the
+    # page's curated sources — a HEAD pin restamped on every commit.
+    return hub_internal_provenance(str(entry["slug"]).strip("/"))
 
 
 # --------------------------------------------------------------------------
