@@ -846,6 +846,7 @@
    * write = gold, recall = iris, error = red (always with text, WCAG 1.4.1). */
   const koraEther = [
     { ageMinAgo: 2, kind: "write", host: "laptop-go-1", who: "zcode", action: "записал итог в память" },
+    { ageMinAgo: 6, kind: "write", host: "laptop-go-1", who: "владелец", action: "ответил по «Пейринг QR»" },
     { ageMinAgo: 4, kind: "write", host: "laptop-go-1", who: "core", action: "продолжил «Командную: UI-10»" },
     { ageMinAgo: 12, kind: "recall", host: "vpnus-1", who: "pi", action: "доложился после паузы" },
     { ageMinAgo: 26, kind: "write", host: "laptop-go-1", who: "zcode и core", action: "начали «Командную: UI-10»" },

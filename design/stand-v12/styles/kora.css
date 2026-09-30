@@ -280,17 +280,21 @@ body[data-screen="kora"] .content {
 .ether-row[data-kind="recall"] .ev-dot { background: var(--synapse-recall); }
 .ether-row[data-kind="index"] .ev-dot { background: var(--synapse-idle); }
 .ether-row[data-kind="error"] .ev-dot { background: var(--synapse-error); }
-.ether-row[data-kind="error"] {
-  box-shadow: inset 3px 0 0 var(--color-error),
-              inset 0 0 0 1px var(--color-error); /* красная кромка + текст (1.4.1) */
-}
 /* P2-6 (доводка ME-061): маркеры ПО РОЛЯМ рядом с точками-событиями —
  * расширение словаря §13.6.5 на Эфир: владелец — ирис, агент — заметный
  * покой idle (в плотном списке миелин 0.14 не читался). Роль дублирована
  * цветом имени (WCAG 1.4.1: не только цветом — имя/текст остаются). */
-.ether-row[data-role="agent"] { box-shadow: inset 3px 0 0 var(--synapse-idle); }
+.ether-row[data-role="agent"] {
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--color-text-primary) 40%, transparent);
+}
 .ether-row[data-role="owner"] { box-shadow: inset 3px 0 0 var(--color-iris); }
 .ether-row[data-role="owner"] .ether-text strong { color: var(--color-iris-bright); }
+/* ошибка — рельс ПОВЕРХ роли (событие важнее); блок ниже ролей:
+ * равная специфичность, побеждает последний */
+.ether-row[data-kind="error"] {
+  box-shadow: inset 3px 0 0 var(--color-error),
+              inset 0 0 0 1px var(--color-error);
+}
 .ether-row:hover { background: var(--myelin-strong); }
 .ether-row:focus-visible {
   outline: var(--focus-ring-width) solid var(--color-focus);

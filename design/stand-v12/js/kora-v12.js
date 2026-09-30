@@ -117,7 +117,8 @@
     row.className = "ether-row" + (o.sessId ? "" : " plain");
     row.setAttribute("data-kind", o.kind);
     /* P2-6: маркер роли (§13.6.5 → Эфир): владелец — ирис, агент — покой */
-    row.setAttribute("data-role", o.who === "owner" ? "owner" : "agent");
+    var ownerRole = o.who === "owner" || o.who === "владелец" || o.who === "вы";
+    row.setAttribute("data-role", ownerRole ? "owner" : "agent");
     if (o.errorText) row.setAttribute("aria-live", "assertive"); /* 4.1.3 */
     var dot = doc.createElement("span"); /* точка словаря (§13.6.3) */
     dot.className = "ev-dot";
@@ -126,7 +127,7 @@
     var tx = doc.createElement("span");
     tx.className = "ether-text";
     var strong = doc.createElement("strong");
-    strong.textContent = o.who;
+    strong.textContent = o.who === "owner" ? "владелец" : o.who;
     tx.appendChild(strong);
     tx.appendChild(doc.createTextNode(" · " + (o.errorText || o.action)));
     var tm = doc.createElement("span");
