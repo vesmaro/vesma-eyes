@@ -75,12 +75,7 @@
     b.setAttribute("aria-pressed", light ? "true" : "false");
     b.setAttribute("aria-label", "Сменить тему: сейчас " + (light ? "светлая" : "тёмная"));
     b.addEventListener("click", function () {
-      var now = root.getAttribute("data-theme") === "light" ? "dark" : "light";
-      if (now === "dark") root.removeAttribute("data-theme");
-      else root.setAttribute("data-theme", "light");
-      try { localStorage.setItem(THEME_KEY, now); } catch (e) {}
-      b.setAttribute("aria-pressed", now === "light" ? "true" : "false");
-      b.setAttribute("aria-label", "Сменить тему: сейчас " + (now === "light" ? "светлая" : "тёмная"));
+      setTheme(root.getAttribute("data-theme") === "light" ? "dark" : "light");
     });
   });
 
@@ -151,6 +146,40 @@
       while (log.children.length > 12) log.removeChild(log.lastChild);
     });
   }
+
+  /* ── Тема/плотность: один источник состояния — атрибуты корня (§13.9) ── */
+  function systemReducedGlobal() {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+      root.getAttribute("data-motion") === "reduced";
+  }
+  function setTheme(mode) {
+    /* кроссфейд 240ms — только на перечисленных поверхностях (settings.css,
+     * §13.9.4); reduced — без перехода */
+    var fade = !systemReducedGlobal();
+    if (fade) {
+      root.classList.add("theme-cross");
+      setTimeout(function () { root.classList.remove("theme-cross"); }, 280);
+    }
+    if (mode === "light") root.setAttribute("data-theme", "light");
+    else root.removeAttribute("data-theme");
+    try { localStorage.setItem(THEME_KEY, mode); } catch (e) {}
+    root.querySelectorAll("[data-theme-toggle]").forEach(function (b) {
+      b.setAttribute("aria-pressed", mode === "light" ? "true" : "false");
+      b.setAttribute("aria-label", "Сменить тему: сейчас " + (mode === "light" ? "светлая" : "тёмная"));
+    });
+  }
+  var DENSITY_KEY = "vesmaro.density";
+  try {
+    var dens = localStorage.getItem(DENSITY_KEY);
+    if (dens === "compact" || dens === "comfortable") root.setAttribute("data-density", dens);
+  } catch (e) {}
+  function setDensity(mode) {
+    if (mode === "compact" || mode === "comfortable") root.setAttribute("data-density", mode);
+    else root.removeAttribute("data-density");
+    try { localStorage.setItem(DENSITY_KEY, mode); } catch (e) {}
+  }
+  window.StandV12.setTheme = setTheme;
+  window.StandV12.setDensity = setDensity;
 
   /* ── Герой Обзора «Световой колодец» (спека 15 §3.1) ─────────────────
    * Скрипты подключаются в порядке: stand-v12 → data → living → synapse;

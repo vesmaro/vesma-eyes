@@ -286,6 +286,11 @@
   --palette-scrim: rgb(245 246 248 / 0.6);
 }
 
+/* ── Плотность v12 (спека 15 §3.5): один источник состояния — атрибут
+ * корня data-density; потребители берут --row-h ─────────────────────── */
+:root, [data-density="comfortable"] { --row-h: 2.5rem; }
+[data-density="compact"] { --row-h: 2rem; }
+
 /* ── Reduced motion: OS + пользовательский уровень ──────────────────── */
 @media (prefers-reduced-motion: reduce) {
   :root {

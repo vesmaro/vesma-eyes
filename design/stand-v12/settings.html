@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Настройки — vesmaro-eyes · стенд ВАУ v12</title>
+  <meta name="description" content="Настройки «Личность коры» (спека 15 §3.5): живое зеркало-лупа, «Живой слой» первой строкой.">
+  <link rel="stylesheet" href="styles/tokens-v12.css">
+  <link rel="stylesheet" href="styles/shell-v12.css">
+  <link rel="stylesheet" href="styles/living-layer.css">
+  <link rel="stylesheet" href="styles/palette.css">
+  <link rel="stylesheet" href="styles/settings.css">
+</head>
+<body data-screen="settings">
+<a class="skip-link" href="#main">К содержимому</a>
+<div class="app">
+
+  <header class="topbar">
+    <a class="brand" href="overview.html">
+      <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
+      vesmaro-eyes
+    </a>
+    <div class="topbar-spacer"></div>
+    <div class="topbar-status">
+      <span class="pill live" title="Живое соединение с демо-лентой стенда"><span class="dot" aria-hidden="true"></span>live</span>
+      <button class="iconbtn" type="button" data-theme-toggle aria-pressed="false" aria-label="Сменить тему: сейчас тёмная">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <aside class="sidebar" aria-label="Разделы стенда">
+    <nav class="side-nav" aria-label="Экраны и домены">
+      <div class="side-section-title">Экраны</div>
+      <a class="side-link" href="overview.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
+        <span class="side-label">Обзор</span>
+      </a>
+      <a class="side-link" href="tasks.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v9"/></svg>
+        <span class="side-label">Задачи</span>
+      </a>
+      <a class="side-link" href="kora.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        <span class="side-label">Кора</span>
+      </a>
+      <a class="side-link" href="settings.html" aria-current="page">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        <span class="side-label">Настройки</span>
+      </a>
+      <a class="side-link" href="wow.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>
+        <span class="side-label">Трейлер</span>
+      </a>
+      <a class="side-link" href="shell.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/></svg>
+        <span class="side-label">Полигон</span>
+      </a>
+      <a class="side-link" href="hosts.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M12 8V4H8"/><path d="M2 14h2"/><path d="M20 14h2"/></svg>
+        <span class="side-label">Хосты</span>
+      </a>
+
+      <div class="side-section-title">Домены</div>
+      <span class="side-domain">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/></svg>
+        <span class="side-label">Память</span>
+        <span class="side-count">5</span>
+      </span>
+      <span class="side-domain">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v9"/></svg>
+        <span class="side-label">Задачи</span>
+        <span class="side-count">5</span>
+      </span>
+      <span class="side-domain">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+        <span class="side-label">Агенты</span>
+        <span class="side-count">1</span>
+      </span>
+    </nav>
+    <p class="side-note">Срез 6 (§3.5): лупа ×1.6, «Живой слой» — первой строкой.</p>
+  </aside>
+
+  <main class="content" id="main">
+    <p class="crumbs"><a href="overview.html">обзор</a> / настройки</p>
+    <h1 class="page-title" tabindex="-1">Настройки</h1>
+    <p class="page-lead">
+      Настройки — «какое у продукта лицо»: не форма, а зеркало. Любое
+      переключение применяется к продукту и лупе одновременно — один
+      источник состояния, атрибуты корня.
+    </p>
+
+    <div class="settings-grid">
+      <div>
+        <section class="panel appearance-panel" aria-labelledby="look-h">
+          <h2 id="look-h">Внешний вид</h2>
+
+          <div class="setting-row">
+            <h3>Живой слой</h3>
+            <p class="setting-note">
+              По умолчанию — полный: лицо продукта живое. Спокойный — без
+              дыхания, только события. Выключен — чистая кора.
+            </p>
+            <div class="radio-row" role="radiogroup" aria-label="Режим живого слоя">
+              <label class="radio-pill"><input type="radio" name="living" value="full" data-living-radio checked>Полный</label>
+              <label class="radio-pill"><input type="radio" name="living" value="calm" data-living-radio>Спокойный</label>
+              <label class="radio-pill"><input type="radio" name="living" value="off" data-living-radio>Выключен</label>
+            </div>
+            <p class="setting-note">
+              Системная настройка «сократить движение» ограничивает слой
+              всегда; клик по Нейре — быстрая пауза сессии.
+            </p>
+          </div>
+
+          <div class="setting-row">
+            <h3>Тема</h3>
+            <div class="radio-row" role="radiogroup" aria-label="Тема интерфейса">
+              <label class="radio-pill"><input type="radio" name="theme" value="dark" data-theme-radio checked>Колодец</label>
+              <label class="radio-pill"><input type="radio" name="theme" value="light" data-theme-radio>Береста</label>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <h3>Плотность</h3>
+            <div class="radio-row" role="radiogroup" aria-label="Плотность строк">
+              <label class="radio-pill"><input type="radio" name="density" value="comfortable" data-density-radio checked>Созерцательная</label>
+              <label class="radio-pill"><input type="radio" name="density" value="compact" data-density-radio>Операционная</label>
+            </div>
+            <p class="setting-note">Высота строк списков: 2.5rem / 2rem — видно в лупе справа.</p>
+          </div>
+
+          <div class="setting-row">
+            <h3>Язык</h3>
+            <div class="radio-row" role="radiogroup" aria-label="Язык интерфейса">
+              <label class="radio-pill"><input type="radio" name="lang" value="ru" checked>Русский</label>
+              <label class="radio-pill"><input type="radio" name="lang" value="en" disabled title="Волна i18n (07n)">English</label>
+            </div>
+            <p class="setting-note">Перевод стенда — волна i18n (07n); новые ключи идут семействами living/cmdk/cockpit с паритетом ru/en.</p>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="more-h">
+          <h2 id="more-h">Навигация · Сессия · О стенде</h2>
+          <p class="panel-note">
+            Тихие секции волны продукта: хоткеи, сброс сессии, версия
+            стенда и онбординг В3. Скаффолд v12 честно оставляет их
+            следующей волне.
+          </p>
+        </section>
+      </div>
+
+      <!-- ЛУПА: увеличенный фрагмент шелла, синхронный атрибутами корня -->
+      <aside class="loupe" aria-label="Зеркало: живое превью настроек">
+        <p class="loupe-cap">Зеркало <span class="loupe-badge">превью · ×1.6</span></p>
+        <div class="loupe-scale">
+          <div class="loupe-topbar">
+            <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
+            <div class="loupe-status">
+              <span class="pill live"><span class="dot" aria-hidden="true"></span>live</span>
+              <!-- Статичная SVG-морфология Нейры (состояние-точная);
+                   живой canvas один — в топбаре продукта (living.js) -->
+              <span class="mirror-neura" id="mirror-neura" data-state="idle" role="img"
+                    aria-label="Превью Нейры: индикатор состояния живого слоя">
+                <svg viewBox="0 0 28 28" aria-hidden="true">
+                  <line x1="5.7" y1="15.8" x2="1.4" y2="16.7" stroke="var(--myelin-strong)" stroke-width="1"/>
+                  <line x1="22.3" y1="15.8" x2="26.6" y2="16.7" stroke="var(--myelin-strong)" stroke-width="1"/>
+                  <line x1="6.8" y1="9.5" x2="3.7" y2="7.6" stroke="var(--myelin-strong)" stroke-width="1"/>
+                  <line x1="21.0" y1="9.2" x2="23.7" y2="7.5" stroke="var(--myelin-strong)" stroke-width="1"/>
+                  <line x1="20.3" y1="18.9" x2="24.5" y2="22.2" stroke="var(--myelin-strong)" stroke-width="1"/>
+                  <circle cx="24.5" cy="22.2" r="1.4" fill="var(--myelin-strong)"/>
+                  <circle cx="14" cy="14" r="8.5" fill="none" stroke="var(--myelin-strong)" stroke-width="1"/>
+                  <circle class="iris-fill" cx="14" cy="14" r="5.2"/>
+                  <circle class="pupil" cx="14" cy="14" r="2.0"/>
+                  <circle class="iris-ring" cx="14" cy="14" r="5.2"/>
+                </svg>
+              </span>
+              <span class="exec-badge" title="Активные исполнения">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" style="width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.5;"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
+                <span class="badge-dot" aria-hidden="true">1</span>
+              </span>
+            </div>
+          </div>
+          <div class="loupe-list">
+            <div class="loupe-row"><span class="loupe-dot" aria-hidden="true"></span>M-219 · Словарь импульсов</div>
+            <div class="loupe-row"><span class="loupe-dot" aria-hidden="true" style="background: var(--synapse-write);"></span>T-128 · UI-10 проводник</div>
+          </div>
+        </div>
+        <p class="setting-note" style="margin: 0;">
+          Меняете «Живой слой» — Нейра в лупе вздыхает или замирает;
+          «Плотность» — строки растут или сжимаются; тема крестфейдится
+          и в продукте, и в лупе.
+        </p>
+      </aside>
+    </div>
+  </main>
+</div>
+
+<script src="js/stand-v12.js"></script>
+<script src="js/data.js"></script>
+<script src="js/living.js"></script>
+<script src="js/settings-v12.js"></script>
+<script src="js/palette-v12.js"></script>
+</body>
+</html>
