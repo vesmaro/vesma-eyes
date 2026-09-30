@@ -1,0 +1,80 @@
+/* web-tones.src.js — тоновый слой паутины (спека 15 §14.6.1, волна 4):
+ * базовый тон от health (error>warn>update>нейтраль, кроссфейд 1200ms,
+ * состояние несут узлы — рёбра в покое миелин) + временные SSE-тона
+ * (фон 10s / обычная 12s / повышенная ≤60s; ≤2 одновременно, продление,
+ * терминалы, конфликт-приоритет). Ленивый чанк после living-extra;
+ * подключение — хук-протокол W.__toneRaw/__toneEvent/__toneFrame.
+ * Анти-фейк (§14.6.1.3): цвет только из реального источника; mute() →
+ * строго нейтраль. «Спокойный»/reduced — слой отдаёт null (статичный
+ * тинт 1.5s уже в базовом чанке). */
+(function () {
+"use strict";
+var doc=document,root=doc.documentElement,W=window;
+function v(n,f){var x=getComputedStyle(root).getPropertyValue(n).trim();return x||f}
+function lmode(){var m=root.getAttribute("data-living");return m==="full"||m==="calm"||m==="off"?m:"calm"}
+function reduced(){return matchMedia("(prefers-reduced-motion: reduce)").matches||root.getAttribute("data-motion")==="reduced"}
+function rgb(x){var m=x.match(/#([0-9a-f]{3,6})/i);
+if(m){var h=m[1];if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]}
+m=x.match(/rgba?\(([^)]+)\)/);if(m){var p=m[1].split(/[\s,/]+/);return[+p[0],+p[1],+p[2]]}
+return[122,138,158]}
+var TC={};
+function rc(){TC.neutral=rgb(v("--color-iris","#1a8a96"));
+TC.update=rgb(v("--web-tone-update","#A88FC7"));
+TC.warn=rgb(v("--color-warning","#d9a03f"));TC.error=rgb(v("--synapse-error","#e0655c"));
+TC.recall=rgb(v("--synapse-recall","#4fc2ce"));TC.write=rgb(v("--synapse-write","#c9933a"));
+TC.success=rgb(v("--color-success","#3fbf7f"));TC.conf=rgb(v("--color-confidence","#c9933a"))}
+rc();
+new MutationObserver(rc).observe(root,{attributes:true,attributeFilter:["data-theme"]});
+
+/* ── базовый тон: health ∪ SSE error ∪ флаг обновления ─────────────── */
+var base={stores:null,upd:false,errUntil:0,cur:TC.neutral.slice(),tgt:TC.neutral.slice(),fadeT:0};
+function parseStores(){var D=W.STAND;if(!D||!D.status||!D.status.stores)return null;
+var r=null;D.status.stores.forEach(function(s){
+if(/нет связи|error/i.test((s.state||"")+" "+(s.note||"")))r="error";
+else if(r!=="error"&&/оговорк|warn|квота/i.test((s.state||"")+" "+(s.note||"")))r=r||"warn"});return r}
+function baseState(){if(performance.now()<base.errUntil)return"error";
+if(base.stores==="error")return"error";if(base.stores==="warn")return"warn";
+if(base.upd)return"update";return"neutral"}
+var FADE=parseFloat(v("--duration-tone-fade","1200"))||1200;
+/* ── временные тона (§14.6.1.2) ────────────────────────────────────── */
+var TONE_CLS={recall:["recall",10000],index:["recall",10000],"task.start":["recall",10000],
+write:["write",12000],"task.done":["write",12000],"device.connected":["success",12000],
+"owner.clear":["recall",12000],"task.blocked":["warn",60000,1],"inbox.arrived":["conf",60000,1],
+"owner.wait":["conf",60000,1],error:["error",15000]};
+var TONE_PR={error:4,warn:3,conf:3,success:2,write:2,recall:1,update:0};
+var tones=[];
+function add(ev){var m=TONE_CLS[ev];if(!m)return;
+if(ev==="owner.clear")tones=tones.filter(function(t){return t.key!=="conf"});
+if(ev==="task.start"||ev==="task.done")tones=tones.filter(function(t){return t.key!=="warn"});
+var same=null;tones.forEach(function(t){if(t.key===m[0])same=t});
+if(same){same.t0=performance.now();same.dur=m[1];return}
+if(tones.length>=2){tones.sort(function(a,b){return(TONE_PR[a.key]-TONE_PR[b.key])||((a.t0+a.dur)-(b.t0+b.dur))});
+if(TONE_PR[m[0]]<=TONE_PR[tones[0].key])tones.shift();else return}
+tones.push({key:m[0],col:TC[m[0]],t0:performance.now(),dur:m[1],hold:!!m[2]})}
+function pick(now){if(!tones.length)return null;
+tones=tones.filter(function(t){if(t.hold)return true;return now-t.t0<t.dur});
+if(!tones.length)return null;
+var best=tones[0];tones.forEach(function(t){if(TONE_PR[t.key]>TONE_PR[best.key]||
+(TONE_PR[t.key]===TONE_PR[best.key]&&t.t0>best.t0))best=t});
+if(!best.hold&&(now-best.t0)>=best.dur)return null;
+var col=best.col.slice(),k=(now-best.t0)/best.dur;
+if(!best.hold&&k>0.8){var f=(k-0.8)/0.2;for(var i=0;i<3;i++)col[i]+=(base.cur[i]-col[i])*f}
+return"rgb("+(col[0]|0)+","+(col[1]|0)+","+(col[2]|0)+")"}
+/* ── хук-протокол к living-extra (web-модуль) ──────────────────────── */
+W.__toneRaw=function(ev){if(ev==="error")base.errUntil=performance.now()+60000;
+else base.errUntil=0};/* подтверждённый ok (§14.6.1.1) */
+W.__toneEvent=function(ev){if(lmode()==="full"&&!reduced())add(ev)};
+W.__toneFrame=function(now,dt){
+if(lmode()!=="full"||reduced())return null;
+var want=TC[baseState()]||TC.neutral;
+if(want.join()!==base.tgt.join()){base.tgt=want.slice();base.fadeT=FADE}
+if(base.fadeT>0){var k=Math.min(1,dt/Math.max(1,base.fadeT));base.fadeT=Math.max(0,base.fadeT-dt);
+for(var i=0;i<3;i++)base.cur[i]+=(base.tgt[i]-base.cur[i])*k}
+else base.cur=base.tgt.slice();
+return pick(now)};
+W.CortexWeb={setUpdate:function(f){base.upd=!!f},setHealth:function(x){base.stores=x},
+mute:function(){base.stores=null;base.upd=false;base.errUntil=0;tones.length=0}};
+try{base.stores=parseStores();
+if(new URLSearchParams(location.search).get("quiet")==="1"){base.stores=null;base.errUntil=0}}catch(e){}
+})();

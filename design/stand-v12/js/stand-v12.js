@@ -228,6 +228,21 @@
   if (doc.readyState === "loading") doc.addEventListener("DOMContentLoaded", onHeroReady);
   else onHeroReady();
 
+  /* ── Демо-крюки тонового слоя паутины (§14.6.1: стенд-уровень) ───── */
+  var toneUpd = false;
+  doc.querySelectorAll("[data-tone-update]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      toneUpd = !toneUpd;
+      if (window.CortexWeb) window.CortexWeb.setUpdate(toneUpd);
+      b.setAttribute("aria-pressed", toneUpd ? "true" : "false");
+    });
+  });
+  doc.querySelectorAll("[data-tone-silence]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      if (window.CortexWeb) window.CortexWeb.mute();
+    });
+  });
+
   /* ── Зов Весмы «показать» (§14.3.2: только зов пользователя) ─────── */
   doc.querySelectorAll("[data-vesma-show]").forEach(function (b) {
     b.addEventListener("click", function () {
@@ -243,6 +258,13 @@
     var sc = doc.createElement("script");
     sc.src = "js/living-extra.js";
     sc.async = true;
+    sc.addEventListener("load", function () {
+      /* §14.6.1: тоновый слой — второй ленивый чанк (после базового) */
+      var t = doc.createElement("script");
+      t.src = "js/web-tones.js";
+      t.async = true;
+      doc.head.appendChild(t);
+    });
     doc.head.appendChild(sc);
   });
 

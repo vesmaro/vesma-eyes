@@ -28,24 +28,6 @@ var WA=parseFloat(v("--web-wave-alpha","0.08")),SP=parseFloat(v("--web-wave-spee
 var HAIR="",IRIS="";
 function rc(){HAIR=v("--myelin-hairline","rgba(230,237,243,.07)");IRIS=v("--color-iris","#1a8a96")}
 rc();
-var N=42,E=[],X=[],Y=[],ADJ=[],dpr=1,rng=1;
-function rand(){rng=(rng*1103515245+12345)&0x7fffffff;return rng/0x7fffffff}
-function BLD(){E=[];X=[];Y=[];ADJ=[];rng=20260930;
-var w=innerWidth,h=innerHeight,i,j;
-for(i=0;i<N;i++){X.push(rand()*w);Y.push(rand()*h);ADJ.push([])}
-var ps=[];for(i=0;i<N;i++)for(j=i+1;j<N;j++)ps.push([Math.hypot(X[i]-X[j],Y[i]-Y[j]),i,j]);
-ps.sort(function(a,b){return a[0]-b[0]});var deg=new Array(N);for(i=0;i<N;i++)deg[i]=0;
-ps.forEach(function(p){if(E.length>=120)return;
-if(deg[p[1]]<3&&deg[p[2]]<3){var k=E.length;E.push([p[1],p[2]]);
-ADJ[p[1]].push(k);ADJ[p[2]].push(k);deg[p[1]]++;deg[p[2]]++}})}
-function size(){dpr=Math.min(2,devicePixelRatio||1);
-[cv,cs].forEach(function(c){c.width=innerWidth*dpr;c.height=innerHeight*dpr});
-BLD();DST()}
-function DST(){var c=x2;c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,innerWidth,innerHeight);
-c.lineWidth=0.5;c.strokeStyle=HAIR;c.globalAlpha=EA;
-E.forEach(function(e){c.beginPath();c.moveTo(X[e[0]],Y[e[0]]);c.lineTo(X[e[1]],Y[e[1]]);c.stroke()});
-c.globalAlpha=NA;c.fillStyle=IRIS;
-X.forEach(function(x,i){c.beginPath();c.arc(x,Y[i],1.6,0,7);c.fill()});c.globalAlpha=1}
 /* малые нейроны: события → рождение на якоре, пробег по рёбрам (≤3) */
 var NU=[],PN=null,PTm=0;
 function SPN(a){if(NU.length>=3)return;
@@ -59,9 +41,13 @@ if(path.length)NU.push({path:path,seg:0,k:0,c:a.c,t0:performance.now()})}
 doc.addEventListener("stand:feed-event",function(e){
 if(eff()==="off")return;
 var ev=(e.detail||{}).ev||"",a={ev:ev,c:colOf(ev),n:hash(ev)%N};
+if(W.__toneRaw)W.__toneRaw(ev);/* §14.6.1: тон-чанк опционален */
 if(eff()==="calm"){tint(a);return}
 PN=a;/* coalesce 600ms (как у курьеров) */
-if(!PTm)PTm=setTimeout(function(){PTm=0;if(PN){SPN(PN);PN=null}},600);
+if(!PTm)PTm=setTimeout(function(){PTm=0;
+if(PN){SPN(PN);PN=null}
+if(W.__toneEvent)W.__toneEvent(a.ev)},600);
+if(W.Vesma)W.Vesma.CLD(ev);
 STT()});
 var TI=[];/* «Спокойный»: одиночный статичный тинт затронутых рёбер 1.5s */
 function tint(a){var ax=X[a.n],ay=Y[a.n],hit=[];
@@ -75,6 +61,7 @@ var c=x1,T0=performance.now();
 c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,innerWidth,innerHeight);
 /* ВСЕГДА-волна: бегущая альфа по рёбрам, период 10s, длина 420px;
  * полный: центр 0.06 ±0.02 → пик 0.08 (кап); спокойный: ±0.005 */
+var nodeCol=W.__toneFrame?W.__toneFrame(now,dt):null;
 var calm=eff()==="calm",mid=0.06,amp=calm?0.005:0.02,T=10000,L=420;
 var t=now%T,ph=t/T,dx=0.89,dy=0.45;
 c.lineWidth=0.5;
@@ -174,7 +161,22 @@ function SH(el,ph){if(!el)return;
 FT(el,5000,function(){SY(ph||"Показать главное за минуту",null,true);
 var g=doc.createElement("span");g.className="sat-ring";el.appendChild(g);
 setTimeout(function(){g.remove()},5000)})}
-W.Vesma={SH:SH,BR:BR,CL:CL};
+var cloudLast=0,cloudTxt="",cloudT=null;
+function CLD(ev){/* облачко = голос Весмы (§14.6.1: инвариант 2): у домика
+   для фон/обычных классов, без полёта; owner.wait/error говорят у цели */
+if(vm()!=="full")return;
+if(ev==="owner.wait"||ev==="error")return;
+var M={write:"Записала в память.",recall:"Нашла в памяти.","task.done":"Задача закрыта.",
+"task.start":"Задача пошла.","owner.clear":"Ждущих нет.","device.connected":"Устройство на связи.",
+index:"Индекс обновила.","task.blocked":"Задача встала.","inbox.arrived":"Пришло во входящие."};
+var t=M[ev];if(!t)return;
+var now=Date.now();
+if(now-cloudLast<90000||t===cloudTxt)return;/* ≤1/90s + без повторов */
+cloudLast=now;cloudTxt=t;
+SY(t,null,true);
+clearTimeout(cloudT);
+cloudT=setTimeout(function(){rep.hidden=true},4000)}
+W.Vesma={SH:SH,BR:BR,CL:CL,CLD:CLD};
 UN.addEventListener("click",function(){
 var b=doc.querySelector(".living-neura");if(b)b.click();
 UN.classList.add("is-flinch");setTimeout(function(){UN.classList.remove("is-flinch")},120)});

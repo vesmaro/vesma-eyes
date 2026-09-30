@@ -215,6 +215,12 @@
   --duration-flight: 800ms;       /* полёт Весмы (окно 600-900) */
   --satellite-size: 64px;
   --satellite-rest: 60s;          /* минимальный межполётный покой */
+  /* ── Волна 4 (15 §14.6.1.4): тоновый слой паутины — сирень = записанное
+   * исключение из лимита палитры (директива владельца v12.2, 01 §3) */
+  --web-tone-update: #A88FC7;      /* dark: сирень «пришло обновление», 6.8:1 */
+  --duration-tone-temp: 12000ms;  /* окно обычной важности */
+  --duration-tone-hold: 60000ms;  /* потолок повышенной */
+  --duration-tone-fade: 1200ms;   /* кроссфейд подмены/возврата тона */
 
   /* ── Новые имена v12 (спека 15 §5: только имена, ADR 0006 цел) ───── */
   --well-hero-h: clamp(520px, calc(100vh - 48px), 860px); /* герой Обзора */
@@ -294,6 +300,7 @@
   /* v12 (спека 15 §5): светлая ветка новых имён */
   --hud-veil: rgb(245 246 248 / 0.85);
   --palette-scrim: rgb(245 246 248 / 0.6);
+  --web-tone-update: #6E5A94;      /* light: 5.5:1 (15 §14.6.1.4) */
 }
 
 /* ── Плотность v12 (спека 15 §3.5): один источник состояния — атрибут
@@ -314,6 +321,9 @@
     --duration-awaken: 0ms;
     --duration-web-idle: 0ms;
     --duration-flight: 0ms;
+    --duration-tone-temp: 1500ms;
+    --duration-tone-hold: 1500ms;
+    --duration-tone-fade: 0ms;
     --duration-slow: 0ms;
     --duration-normal: 0ms;
     --duration-fast: 80ms;
@@ -331,6 +341,9 @@
   --duration-awaken: 0ms;
   --duration-web-idle: 0ms;
   --duration-flight: 0ms;
+  --duration-tone-temp: 1500ms;
+  --duration-tone-hold: 1500ms;
+  --duration-tone-fade: 0ms;
   --duration-slow: 0ms;
   --duration-normal: 0ms;
   --duration-fast: 80ms;
