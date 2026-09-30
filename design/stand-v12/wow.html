@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Трейлер — vesmaro-eyes · стенд ВАУ v12</title>
+  <meta name="description" content="Стенд ВАУ-редизайна v12: трейлер продукта. Скаффолд машинерии; арт-наполнение — из 15-WOW-DIRECTION.md.">
+  <link rel="stylesheet" href="styles/tokens-v12.css">
+  <link rel="stylesheet" href="styles/shell-v12.css">
+  <link rel="stylesheet" href="styles/living-layer.css">
+  <link rel="stylesheet" href="styles/wow.css">
+</head>
+<body data-wow-feed>
+<a class="skip-link" href="#main">К содержимому</a>
+
+<!-- Шелл-каркас: топбар обязателен для living.js (жила Ж1 + слот Нейры
+     в .topbar-status). Сайдбара на трейлере нет — курьеры идут по Ж1. -->
+<header class="topbar">
+  <a class="brand" href="wow.html">
+    <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
+    vesmaro-eyes
+  </a>
+  <div class="topbar-spacer"></div>
+  <div class="topbar-status">
+    <span class="pill live" title="Живое соединение с демо-лентой стенда"><span class="dot" aria-hidden="true"></span>live</span>
+    <button class="iconbtn" type="button" data-theme-toggle aria-pressed="false" aria-label="Сменить тему: сейчас тёмная">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
+    </button>
+  </div>
+</header>
+
+<main class="wow-stage" id="main">
+  <div class="wow-strata" aria-hidden="true"></div>
+
+  <div class="wow-frame">
+    <p class="wow-kicker">
+      <span class="wow-kicker-line" aria-hidden="true"></span>
+      стенд v12 · трейлер · 5 секунд
+    </p>
+
+    <!-- HERO:PLACEHOLDER — наполнение сменит дизайнер (15-WOW-DIRECTION.md);
+         композиционный каркас (кадр/магистраль/такты) — машинерия v12 -->
+    <h1 class="wow-title">Память, которая <span class="wow-accent">дышит</span></h1>
+    <p class="wow-sub">
+      vesmaro-eyes — локальная память, в которой видно жизнь: события текут
+      по жилам интерфейса, запись золотеет, ожидание владельца стучит дважды.
+    </p>
+
+    <div class="wow-cta">
+      <a class="btn primary" href="shell.html">Войти в стенд</a>
+      <a class="btn secondary" href="shell.html#living">Полигон живого слоя</a>
+    </div>
+
+    <div class="wow-vein" aria-hidden="true">
+      <span class="wow-pulse"></span>
+      <span class="wow-pulse gold"></span>
+    </div>
+
+    <div class="wow-beats">
+      <div class="wow-beat" data-kind="event">
+        <span class="wow-beat-cap"><span class="wow-beat-sig" aria-hidden="true"></span>task.start</span>
+        <p class="wow-beat-text"><strong>Агент взял задачу.</strong> Импульс ириса ушёл по магистрали к Нейре.</p>
+      </div>
+      <div class="wow-beat" data-kind="done">
+        <span class="wow-beat-cap"><span class="wow-beat-sig" aria-hidden="true"></span>task.done</span>
+        <p class="wow-beat-text"><strong>Задача завершена.</strong> Запись в память — вспышка золота, миелин откликается.</p>
+      </div>
+      <div class="wow-beat" data-kind="attention">
+        <span class="wow-beat-cap"><span class="wow-beat-sig" aria-hidden="true"></span>owner.wait</span>
+        <p class="wow-beat-text"><strong>Ждут вашего решения.</strong> Двойной удар, зрачок расширен — пока вы не ответите.</p>
+      </div>
+    </div>
+
+    <div class="wow-meta">
+      <span>bus: stand:feed-event · словарь v11: task.* · owner.* · error</span>
+      <span class="wow-meta-sig">живой слой подключён — смотрите на статус-зону</span>
+    </div>
+  </div>
+</main>
+
+<script src="js/living.js"></script>
+<script src="js/stand-v12.js"></script>
+</body>
+</html>

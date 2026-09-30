@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Пульс · лента памяти — vesmaro-eyes · стенд «Живая кора»</title>
+  <link rel="stylesheet" href="styles/tokens.css">
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/shell.css">
+  <link rel="stylesheet" href="styles/components.css">
+</head>
+<body>
+<a class="skip-link" href="#main">К содержимому</a>
+<div class="app">
+
+  <header class="topbar">
+    <button class="iconbtn side-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-label="Открыть разделы">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
+    </button>
+    <a class="brand" href="index.html">
+      <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/></svg>
+      vesmaro-eyes
+    </a>
+    <div class="topsearch">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="search" placeholder="Поиск по памяти и задачам…" aria-label="Глобальный поиск по памяти и задачам">
+      <span class="kbd-hint" aria-hidden="true"><kbd class="kbd">/</kbd></span>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="topbar-status">
+      <button class="iconbtn search-expand" type="button" data-search-expand aria-label="Открыть поиск"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
+      <span class="pill live" title="Живое соединение с демо-лентой стенда"><span class="dot" aria-hidden="true"></span>live</span>
+      <a class="iconbtn" href="agents.html" data-exec-count aria-label="Активные исполнения: 1 — открыть «Исполнение»">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
+        <span class="badge-dot" aria-hidden="true">1</span>
+      </a>
+      <button class="iconbtn" type="button" data-bell aria-label="Уведомления: лента не подключена в стенде">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      </button>
+      <div class="langtoggle" role="group" aria-label="Язык интерфейса">
+        <button type="button" aria-pressed="true" data-lang-demo>RU</button>
+        <button type="button" data-lang-demo>EN</button>
+      </div>
+      <button class="iconbtn" type="button" data-theme-toggle aria-pressed="false" aria-label="Сменить тему: сейчас тёмная">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <aside class="sidebar" aria-label="Разделы">
+    <nav class="side-nav" aria-label="Домены">
+      <a class="side-link" href="index.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/></svg>
+        <span class="side-label">Обзор</span>
+      </a>
+      <div class="side-group" data-open>
+        <button type="button" class="side-link side-domain domain-current" aria-current="true" aria-expanded="true">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>
+          <span class="side-label">Память</span>
+          <svg class="side-chevron icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <div class="side-sections"><div>
+          <a class="side-section" href="memories.html">Записи</a>
+          <a class="side-section" href="search.html">Поиск</a>
+          <a class="side-section" href="pulse.html" aria-current="page">Пульс</a>
+          <a class="side-section" href="tags.html">Теги</a>
+        </div></div>
+      </div>
+      <div class="side-group">
+        <button type="button" class="side-link side-domain" aria-expanded="false">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v9"/></svg>
+          <span class="side-label">Задачи</span><span class="side-count" data-side-count="tasks">5</span>
+          <svg class="side-chevron icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <div class="side-sections"><div>
+          <a class="side-section" href="tasks.html">Канбан</a>
+          <a class="side-section" href="tasks.html?view=list">Список</a>
+          <a class="side-section" href="tasks.html?view=inbox">Входящие<span class="side-count" data-side-count="inbox">2</span></a>
+          <a class="side-section" href="tasks.html?view=archive">Архив</a>
+        </div></div>
+      </div>
+      <div class="side-group">
+        <button type="button" class="side-link side-domain" aria-expanded="false">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+          <span class="side-label">Агенты</span><span class="side-count" data-side-count="agents">1</span>
+          <svg class="side-chevron icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <div class="side-sections"><div>
+          <a class="side-section" href="agents.html">Исполнение</a>
+          <a class="side-section" href="hosts.html">Хосты<span class="side-count" data-side-count="hosts">4</span></a>
+          <a class="side-section" href="connect.html">Подключить машину</a>
+        </div></div>
+      </div>
+      <a class="side-link" href="docs.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+        <span class="side-label">Документы</span>
+      </a>
+      <div class="side-group">
+        <button type="button" class="side-link side-domain" aria-expanded="false">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+          <span class="side-label">Рабочий стол</span><span class="badge-exp">эксп</span>
+          <svg class="side-chevron icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <div class="side-sections"><div>
+          <a class="side-section" href="desktop.html">Терминал</a>
+          <a class="side-section" href="explorer.html">Проводник</a>
+        </div></div>
+      </div>
+      <div class="side-group">
+        <button type="button" class="side-link side-domain" aria-expanded="false">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 .73 2.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1-1-1.74l.15-.09a2 2 0 0 0-.73-2.73l-.22-.38a2 2 0 0 0-.73-.73l.15.08a2 2 0 0 1-2 0l-.43.25a2 2 0 0 1-1 1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span class="side-label">Настройки</span>
+          <svg class="side-chevron icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <div class="side-sections"><div>
+          <a class="side-section" href="status.html">Статус</a>
+          <a class="side-section" href="settings.html">Настройки</a>
+          <button class="side-section disabled" type="button" aria-disabled="true" data-demo-action="«Автоматизация» — раздел вне стенда">Автоматизация</button>
+          <button class="side-section disabled" type="button" aria-disabled="true" data-demo-action="«Устройства» — раздел вне стенда; подключение телефона — pair.html">Устройства</button>
+          <button class="side-section disabled" type="button" aria-disabled="true" data-demo-action="«Трассировки» — раздел вне стенда">Трассировки</button>
+        </div></div>
+      </div>
+      <a class="side-link" href="pair.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="12" x="2" y="6" rx="2"/><rect width="5" height="10" x="16" y="7" rx="2"/><path d="M9 12h7"/></svg>
+        <span class="side-label">Подключить телефон</span>
+      </a>
+    </nav>
+    <div class="side-foot">
+      <button class="side-link" type="button" data-palette-open>
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"/></svg>
+        <span class="side-label">Палитра</span>
+        <span class="side-count">Ctrl K</span>
+      </button>
+      <button class="side-link" type="button" data-cheatsheet-open>
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="M10 8h.01"/><path d="M12 12h.01"/><path d="M14 8h.01"/><path d="M16 12h.01"/><path d="M18 8h.01"/><path d="M6 8h.01"/><path d="M7 16h10"/><path d="M8 12h.01"/></svg>
+        <span class="side-label">Шпаргалка</span>
+        <span class="side-count">?</span>
+      </button>
+      <a class="side-link" href="gallery.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+        <span class="side-label">Галерея</span>
+        <span class="badge-stand">стенд</span>
+      </a>
+      <button class="side-link" type="button" data-sidebar-toggle aria-expanded="true">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
+        <span class="side-label">Свернуть</span>
+        <span class="side-count">[</span>
+      </button>
+      <p class="stand-note stand-status" data-stand-version-line></p>
+    </div>
+  </aside>
+
+  <div class="main">
+
+    <nav class="crumbs" aria-label="Хлебные крошки">
+      <span class="gprefix" aria-hidden="true">g→</span>
+      <ol>
+        <li><a href="index.html">Обзор</a></li>
+        <li><a href="memories.html">Память</a></li>
+        <li><span aria-current="page">Пульс</span></li>
+      </ol>
+      <span class="crumbs-spacer"></span>
+      <button class="btn ghost sm" type="button" data-palette-open>
+        <kbd class="kbd">Ctrl</kbd><kbd class="kbd">K</kbd> Палитра
+      </button>
+    </nav>
+
+    <main class="content" id="main">
+
+      <div class="page-head">
+        <div>
+          <h1 tabindex="-1" title="Пульс — лента событий памяти: что искали, что записали. Точки те же, что бегут по колодцу на Обзоре">Пульс · лента памяти</h1>
+          <p class="page-sub">Полный журнал событий памяти с фильтрами; источник один с колодцем Обзора</p>
+        </div>
+        <div class="page-actions">
+          <p class="pulse-meta"><span id="pulse-clock">сейчас —:—</span><span id="pulse-hour"></span></p>
+        </div>
+      </div>
+
+      <div class="pulse-page">
+        <div class="pulse-toolbar">
+          <label for="pf-type">События</label>
+          <select class="set-select" id="pf-type">
+            <option value="">все события</option>
+            <option value="recall">нашлось</option>
+            <option value="write">записи</option>
+            <option value="index">индекс</option>
+            <!-- v11 (14 §1.3): словарь v2 — жизненный цикл задач -->
+            <option value="task.start">задача началась</option>
+            <option value="task.done">задача завершена</option>
+            <option value="owner.wait">ждут владельца</option>
+            <option value="owner.clear">владелец ответил</option>
+            <option value="error">сбой</option>
+          </select>
+          <label for="pf-server">Сервер</label>
+          <select class="set-select" id="pf-server">
+            <option value="">все серверы</option>
+          </select>
+          <span class="pulse-count" id="pulse-count" role="status"></span>
+        </div>
+
+        <div class="pulse-box">
+          <div class="pulse-new" id="pulse-new" role="status" aria-live="polite" hidden>
+            <button class="pulse-new-btn" type="button" id="pulse-new-btn"></button>
+          </div>
+          <div class="pulse-feed" id="pulse-feed" tabindex="0" aria-label="Журнал событий памяти"></div>
+          <div id="pulse-stale-slot"></div>
+        </div>
+
+        <p class="pulse-foot">Каждая точка здесь — импульс по ребру колодца. Полный колодец — <a href="index.html">на Обзоре</a></p>
+        <p class="sr-only" role="status" aria-live="polite" id="pulse-live"></p>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+
+<div class="overlay" id="palette" hidden role="dialog" aria-modal="true" aria-label="Командная палитра">
+  <div class="palette">
+    <div class="palette-input-wrap">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input class="palette-input" type="text" role="combobox" aria-expanded="true" aria-controls="palette-results" aria-autocomplete="list" aria-label="Командная палитра" placeholder="Куда идём? Попробуйте: «настройки», «тема», «сессия»">
+    </div>
+    <div class="palette-results" id="palette-results" role="listbox" aria-label="Результаты"></div>
+    <div class="palette-foot">
+      <span><kbd class="kbd">↑</kbd><kbd class="kbd">↓</kbd> перемещение</span>
+      <span><kbd class="kbd">Enter</kbd> выполнить</span>
+      <span><kbd class="kbd">Esc</kbd> закрыть</span>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="cheatsheet" hidden role="dialog" aria-modal="true" aria-labelledby="cheatsheet-title">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="cheatsheet-title">Хоткеи</h2>
+      <button class="iconbtn" type="button" data-modal-close aria-label="Закрыть шпаргалку">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <table class="hotkeys-table">
+        <thead><tr><th scope="col">Клавиши</th><th scope="col">Действие</th></tr></thead>
+        <tbody>
+          <tr><td><kbd class="kbd">/</kbd></td><td>фокус глобального поиска</td></tr>
+          <tr><td><kbd class="kbd">Ctrl</kbd> <kbd class="kbd">K</kbd></td><td>палитра команд</td></tr>
+          <tr><td><kbd class="kbd">?</kbd></td><td>эта шпаргалка</td></tr>
+          <tr><td><kbd class="kbd">g</kbd> → <kbd class="kbd">o</kbd> / <kbd class="kbd">m</kbd> / <kbd class="kbd">a</kbd> / <kbd class="kbd">k</kbd> / <kbd class="kbd">d</kbd> / <kbd class="kbd">w</kbd></td><td>Обзор / Память / Агенты / Кора / Документы / Рабочий стол</td></tr>
+          <tr><td><kbd class="kbd">g</kbd> → <kbd class="kbd">t</kbd> / <kbd class="kbd">b</kbd> / <kbd class="kbd">i</kbd> / <kbd class="kbd">p</kbd> / <kbd class="kbd">e</kbd> / <kbd class="kbd">s</kbd></td><td>Задачи / Канбан / Входящие / Пульс / Исполнение / Настройки</td></tr>
+          <tr><td><kbd class="kbd">j</kbd> / <kbd class="kbd">k</kbd></td><td>вниз / вверх по списку (в продуктовой версии)</td></tr>
+          <tr><td><kbd class="kbd">x</kbd></td><td>выделить строку (bulk, в продукте)</td></tr>
+          <tr><td><kbd class="kbd">Esc</kbd></td><td>закрыть верхний оверлей</td></tr>
+          <tr><td><kbd class="kbd">[</kbd></td><td>свернуть / развернуть сайдбар</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/shell.js"></script>
+<script src="js/living.js"></script>
+<script>
+
+  (function () {
+    /* v8 (07k §3): аноним видит гейт — лента не запускается */
+    if (document.getElementById("main") && document.getElementById("main").dataset.gated) return;
+    var D = window.STAND;
+    var doc = document;
+    var feed = doc.getElementById("pulse-feed");
+    var newWrap = doc.getElementById("pulse-new");
+    var newBtn = doc.getElementById("pulse-new-btn");
+    var countEl = doc.getElementById("pulse-count");
+    var clockEl = doc.getElementById("pulse-clock");
+    var hourEl = doc.getElementById("pulse-hour");
+    var live = doc.getElementById("pulse-live");
+    var fType = doc.getElementById("pf-type");
+    var fServer = doc.getElementById("pf-server");
+
+    /* ── якорь загрузки: события фиксируются как «якорь − minAgo», дальше
+     * возраст растёт сам, часы идут (07j §2.2: рукописных часов нет) ── */
+    var ANCHOR = new Date();
+    function pad2(n) { return n < 10 ? "0" + n : "" + n; }
+    function hhmm(d) { return pad2(d.getHours()) + ":" + pad2(d.getMinutes()); }
+    function ageText(at) {
+      var m = Math.max(1, Math.round((Date.now() - at) / 60000));
+      if (m < 60) return m + " мин назад";
+      var h = Math.round(m / 60);
+      if (h < 24) return h + " ч назад";
+      return Math.round(h / 24) + " дн назад";
+    }
+    function plural(n, one, few, many) {
+      var m10 = n % 10, m100 = n % 100;
+      if (m10 === 1 && m100 !== 11) return one;
+      if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+      return many;
+    }
+
+    /* ── записи памяти: одна карта по id — провенанс событий (07m §3.3) ── */
+    var records = {};
+    (D.wellNodes || []).forEach(function (n) { if (n && n.id) records[n.id] = n; });
+    (D.memories || []).forEach(function (m) { if (m && m.id) records[m.id] = m; });
+    function srvOfRecord(r) {
+      /* провенанс «кто · сервер [· возраст]»: owner работал на abyss-lab */
+      var p = (r.prov || "").split(" · ");
+      var srv = (p[1] || "").trim();
+      return srv === "abyss" ? "abyss-lab" : srv;
+    }
+    function whoOfRecord(r) { return ((r.prov || "").split(" · ")[0] || "—").trim(); }
+
+    /* ── проекция ленты: seed + ротация пула — те же события, что гонят
+     * импульсы канваса Обзора (07m §3.2, projection not a second dataset) ── */
+    var events = (D.feedSeed || []).map(function (e) {
+      var r = e.mem ? records[e.mem] : null;
+      return {
+        ev: e.ev,
+        mem: e.mem && r ? e.mem : null, /* записи нет — строка не кликабельна */
+        text: e.text,
+        who: e.who || (r ? whoOfRecord(r) : "—"),
+        srv: e.srv || (r ? srvOfRecord(r) : "mnemos-01"),
+        at: ANCHOR.getTime() - (e.minAgo != null ? e.minAgo : 1) * 60000,
+      };
+    });
+    var pool = (D.feedPool || []).slice();
+    var poolIdx = 0;
+
+    /* серверы фильтра — из фикстур серверов, не руками */
+    (D.servers || []).forEach(function (s) {
+      var o = doc.createElement("option");
+      o.value = s.name;
+      o.textContent = s.name;
+      fServer.appendChild(o);
+    });
+
+    var stale = false;
+    try { stale = new URLSearchParams(window.location.search).get("demo") === "stale"; } catch (e) {}
+    var paused = false;
+    var pending = []; /* новые, накопленные при паузе скролла */
+    var fTypeV = "", fSrvV = "";
+
+    function matches(e) {
+      return (!fTypeV || e.ev === fTypeV) && (!fSrvV || e.srv === fSrvV);
+    }
+    function visibleCount() {
+      var n = 0;
+      events.forEach(function (e) { if (matches(e)) n++; });
+      return n;
+    }
+    function announce(t) { live.textContent = ""; setTimeout(function () { live.textContent = t; }, 50); }
+
+    function rowNode(e, animate) {
+      var r = e.mem ? records[e.mem] : null;
+      var row = doc.createElement(r && e.mem ? "a" : "div");
+      if (r && e.mem) row.href = "memories.html?id=" + encodeURIComponent(e.mem);
+      row.className = "pulse-row" + (animate ? " row-in" : "");
+      row._ev = e; /* строка знает своё событие: возраст и trim — без позиций */
+      row.dataset.ev = e.ev;
+      if (r && e.mem) row.title = (r.title || "") + " · " + hhmm(new Date(e.at));
+      else row.title = hhmm(new Date(e.at));
+      var dot = doc.createElement("span");
+      dot.className = "p-dot";
+      dot.setAttribute("aria-hidden", "true");
+      row.appendChild(dot);
+      var tx = doc.createElement("span");
+      tx.className = "p-text";
+      tx.textContent = e.text;
+      row.appendChild(tx);
+      var pv = doc.createElement("span");
+      pv.className = "p-prov";
+      pv.textContent = e.who + " · " + e.srv + " · " + ageText(e.at);
+      row.appendChild(pv);
+      return row;
+    }
+
+    function renderFeed() {
+      feed.innerHTML = "";
+      var shown = events.filter(matches);
+      if (!events.length) {
+        /* матрица «пусто»: с фикстурами не встречается, состояние обязательно */
+        var es = doc.createElement("div");
+        es.className = "empty-state pulse-empty";
+        var t = doc.createElement("p");
+        t.className = "es-title";
+        t.textContent = "Пока тихо — события появятся, как только память заработает";
+        es.appendChild(t);
+        var go = doc.createElement("a");
+        go.className = "btn secondary sm";
+        go.href = "index.html";
+        go.textContent = "На Обзор";
+        es.appendChild(go);
+        feed.appendChild(es);
+        countEl.textContent = "";
+        return;
+      }
+      if (!shown.length) {
+        var box = doc.createElement("div");
+        box.className = "empty-state pulse-empty";
+        var ft = doc.createElement("p");
+        ft.className = "es-title";
+        ft.textContent = "По этому фильтру событий нет";
+        box.appendChild(ft);
+        var reset = doc.createElement("button");
+        reset.className = "btn secondary sm";
+        reset.type = "button";
+        reset.textContent = "Сбросить фильтр";
+        reset.addEventListener("click", function () {
+          fType.value = ""; fServer.value = "";
+          fTypeV = ""; fSrvV = "";
+          renderFeed();
+          announce("Фильтр сброшен");
+        });
+        box.appendChild(reset);
+        feed.appendChild(box);
+        countEl.textContent = "0 событий в ленте";
+        return;
+      }
+      var frag = doc.createDocumentFragment();
+      shown.forEach(function (e) { frag.appendChild(rowNode(e, false)); });
+      feed.appendChild(frag);
+      countEl.textContent = shown.length + " " + plural(shown.length, "событие", "события", "событий") + " в ленте";
+    }
+
+    /* ── часы и возрасты: пересчёт ежеминутно, без перестройки ленты ── */
+    function tickClock() {
+      clockEl.textContent = "сейчас " + hhmm(new Date());
+      feed.querySelectorAll(".pulse-row").forEach(function (row) {
+        var e = row._ev;
+        if (e) row.querySelector(".p-prov").textContent = e.who + " · " + e.srv + " · " + ageText(e.at);
+      });
+    }
+    hourEl.textContent = "импульсов за час: " + ((D.counters || {}).pulsesHour != null ? D.counters.pulsesHour : "—");
+    tickClock();
+    setInterval(tickClock, 60000);
+
+    /* ── пауза при скролле: прокрутил от верха — лента не дёргается ── */
+    feed.addEventListener("scroll", function () {
+      var away = feed.scrollTop > 8;
+      if (away && !paused) { paused = true; }
+      else if (!away && paused) { flushPending(true); }
+    });
+    newBtn.addEventListener("click", function () { flushPending(false); });
+    function flushPending(fromScroll) {
+      paused = false;
+      /* pending хранится «свежие вперёд»; в DOM попадают только строки,
+       * проходящие активный фильтр — данные и выборка не расходятся */
+      pending.forEach(function (e) {
+        if (matches(e)) feed.insertBefore(rowNode(e, false), feed.firstChild);
+      });
+      events.unshift.apply(events, pending);
+      pending = [];
+      newWrap.hidden = true;
+      trimFeed();
+      if (!fromScroll) feed.scrollTop = 0;
+      updateCount();
+    }
+    function updateCount() {
+      if (!events.length) return;
+      var shown = events.filter(matches);
+      countEl.textContent = shown.length + " " + plural(shown.length, "событие", "события", "событий") + " в ленте";
+    }
+    function trimFeed() {
+      var cap = 50; /* лента держит не больше 50 строк (07m §3.2) */
+      var removed = null;
+      while (events.length > cap) {
+        var old = events.pop();
+        (removed || (removed = [])).push(old);
+      }
+      if (!removed) return;
+      /* из DOM убираем именно строки вытесненных событий — при активном
+       * фильтре DOM-выборка и полный список не совпадают по позициям */
+      feed.querySelectorAll(".pulse-row").forEach(function (row) {
+        if (removed.indexOf(row._ev) >= 0) row.parentNode.removeChild(row);
+      });
+    }
+
+    /* ── ротация пула: новое событие раз в 15–30 с, ≤1 вставки/сек ── */
+    function rotate() {
+      if (!pool.length) return;
+      var src = pool[poolIdx % pool.length];
+      poolIdx++;
+      var r = src.mem ? records[src.mem] : null;
+      var e = {
+        ev: src.ev,
+        mem: src.mem && r ? src.mem : null,
+        text: src.text,
+        who: src.who || (r ? whoOfRecord(r) : src.who || "core"),
+        srv: src.srv || (r ? srvOfRecord(r) : "mnemos-01"),
+        at: Date.now(),
+      };
+      if (paused) {
+        pending.unshift(e);
+        var n = pending.length;
+        newBtn.textContent = n + " " + plural(n, "новое событие", "новых события", "новых событий") + " — к свежим";
+        newWrap.hidden = false;
+        announce(n + " " + plural(n, "новое событие", "новых события", "новых событий"));
+        return;
+      }
+      events.unshift(e);
+      var empty = feed.querySelector(".empty-state");
+      if (empty) empty.parentNode.removeChild(empty);
+      /* активный фильтр: событие в данных всегда, в ленте — если проходит */
+      if (matches(e)) feed.insertBefore(rowNode(e, true), feed.firstChild);
+      trimFeed();
+      updateCount();
+    }
+    /* v10 (08 §3.1): ротация из единой шины stand:feed-event (data.js);
+     * разрыв (?demo=stale) — лента честно замирает, шина не слушается */
+    function onFeedEvent(e) { rotate(e.detail); }
+    if (!stale) document.addEventListener("stand:feed-event", onFeedEvent);
+
+    /* ── состояние разрыва (07m §3.5): плашка с честной границей данных ── */
+    if (stale) {
+      var slot = doc.getElementById("pulse-stale-slot");
+      var line = doc.createElement("p");
+      line.className = "pulse-stale";
+      var dot = doc.createElement("span");
+      dot.className = "p-dot";
+      dot.setAttribute("aria-hidden", "true");
+      line.appendChild(dot);
+      var newest = events.reduce(function (m, e) { return Math.max(m, e.at); }, 0);
+      line.appendChild(doc.createTextNode("Лента отстала: показаны события до " + hhmm(new Date(newest))));
+      slot.appendChild(line);
+    }
+
+    /* ── фильтры: пересечение, перерисовка 150ms fade (07m §3.3) ── */
+    function onFilter() {
+      fTypeV = fType.value;
+      fSrvV = fServer.value;
+      feed.classList.add("pulse-fade", "swap");
+      setTimeout(function () {
+        renderFeed();
+        feed.classList.remove("swap");
+      }, 150);
+    }
+    fType.addEventListener("change", onFilter);
+    fServer.addEventListener("change", onFilter);
+
+    /* loading: скелетон 3 строк до первого кадра (07m §3.5) */
+    for (var i = 0; i < 3; i++) {
+      var sk = doc.createElement("div");
+      sk.className = "skel skel-line";
+      sk.style.margin = "var(--space-3) var(--space-4)";
+      feed.appendChild(sk);
+    }
+    requestAnimationFrame(renderFeed);
+  })();
+
+</script>
+</body>
+</html>

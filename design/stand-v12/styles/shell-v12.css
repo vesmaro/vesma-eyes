@@ -1,0 +1,445 @@
+/* shell-v12.css — общий шелл-каркас стенда «ВАУ v12» (ME-061).
+ *
+ * Каркас новый (радикальная типографика — регистр «КИНО» для героев,
+ * «ПРИБОРКА» для инструмента), но СТРУКТУРНЫЕ хуки живого слоя
+ * сохранены дословно, чтобы living.js из stand-v11-base работал как есть:
+ *   .topbar (жила Ж1) · .topbar-status + .pill.live (слот Нейры) ·
+ *   .sidebar (жила Ж2) · .side-domain .side-label «Память/Задачи/Агенты»
+ *   (узлы-источники курьеров) · [data-exec-count] (свечение внимания).
+ * Стили живого слоя — styles/living-layer.css (перенос из v11 без правок).
+ * Литералов нет: только токены tokens-v12.css.
+ */
+
+/* ── База ────────────────────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+html { height: 100%; }
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--color-bg-base);
+  color: var(--color-text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--text-ui);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+}
+
+.skip-link {
+  position: fixed;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: 100;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-iris-solid);
+  color: var(--color-text-inverse);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transform: translateY(calc(-100% - var(--space-4)));
+}
+.skip-link:focus-visible {
+  transform: none;
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+
+:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background var(--duration-instant) var(--ease-enter),
+              color var(--duration-instant) var(--ease-enter);
+}
+.iconbtn:hover { background: var(--myelin-hairline); color: var(--color-text-primary); }
+.iconbtn:active { background: var(--myelin-strong); }
+.iconbtn .icon { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.5; }
+
+/* ── Каркас: топбар + сайдбар + ткань ────────────────────────────────── */
+.app {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: 48px;
+  padding: 0 var(--space-4);
+  background: var(--color-bg-base);
+  border-bottom: var(--line-myelin) solid var(--myelin-strong); /* шов Ж1 — хост жилы */
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-primary);
+  text-decoration: none;
+  font-size: var(--text-ui);
+  font-weight: var(--weight-semibold);
+  letter-spacing: calc(var(--tracking-hero) / 4); /* едва плотнее нейтрального */
+}
+.brand-mark {
+  width: 22px;
+  height: 22px;
+  color: var(--color-iris-bright);
+}
+.brand-mark circle { stroke: currentColor; fill: none; stroke-width: 1.5; }
+.brand-mark circle:last-of-type { fill: currentColor; stroke: none; }
+
+.topbar-spacer { flex: 1; }
+
+.topbar-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1); /* слот Нейры встаёт слева от LIVE (living.js) */
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  border: var(--line-hairline) solid var(--myelin-hairline);
+  color: var(--color-text-secondary);
+}
+.pill.live { color: var(--color-success); border-color: currentColor; }
+.pill.live .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: currentColor;
+  box-shadow: var(--glow-live);
+}
+@media (prefers-reduced-motion: reduce) {
+  .pill.live .dot { box-shadow: none; }
+}
+
+.exec-badge {
+  position: relative;
+  color: var(--color-text-secondary);
+}
+.exec-badge .badge-dot {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--color-confidence);
+  color: var(--color-text-inverse);
+  font-size: var(--text-caps);
+  font-weight: var(--weight-medium);
+  line-height: 1;
+}
+
+/* ── Сайдбар: навигация экранов + узлы-источники курьеров ────────────── */
+.sidebar {
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4) var(--space-3);
+  background: var(--color-bg-well);
+  border-right: var(--line-myelin) solid var(--myelin-strong); /* шов Ж2 — хост жилы */
+}
+.side-nav {
+  display: grid;
+  gap: var(--space-1);
+}
+.side-section-title {
+  margin: var(--space-4) 0 var(--space-1);
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.side-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  transition: background var(--duration-instant) var(--ease-enter),
+              color var(--duration-instant) var(--ease-enter);
+}
+.side-link:hover { background: var(--myelin-hairline); color: var(--color-text-primary); }
+.side-link[aria-current="page"] {
+  background: var(--myelin-hairline);
+  color: var(--color-text-primary);
+  box-shadow: inset 2px 0 0 var(--color-iris-bright);
+}
+.side-link .icon { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.5; flex: none; }
+
+/* Домены: в v12-скаффолде инертные метки-зоны (не ссылки — экранов ещё
+ * нет); текст .side-label обязателен — это узлы-источники курьеров
+ * (sideRowY «Память/Задачи/Агенты») */
+.side-domain {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2);
+  color: var(--color-text-muted);
+}
+.side-domain .icon { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.5; flex: none; }
+.side-domain .side-count {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--numeric-tnum);
+  font-size: var(--text-data);
+  color: var(--color-text-muted);
+}
+
+.side-note {
+  margin-top: auto;
+  padding-top: var(--space-4);
+  font-size: var(--text-data);
+  color: var(--color-text-muted);
+  line-height: var(--leading-normal);
+}
+
+/* ── Ткань контента ──────────────────────────────────────────────────── */
+.content {
+  grid-row: 2;
+  padding: var(--space-8) var(--space-10) var(--space-16);
+  max-width: 1160px;
+}
+.crumbs {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  margin: 0 0 var(--space-6);
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.crumbs a { color: var(--color-text-secondary); text-decoration: none; }
+.crumbs a:hover { color: var(--color-iris-bright); }
+
+.page-title {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-display);          /* регистр «КИНО», минимальная ступень */
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-hero);
+  font-weight: var(--weight-display);
+}
+.page-lead {
+  margin: 0 0 var(--space-8);
+  max-width: 68ch;
+  font-size: var(--text-lead);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text-secondary);
+}
+
+/* ── Карты-полигона ──────────────────────────────────────────────────── */
+.panel {
+  border: var(--line-hairline) solid var(--myelin-hairline);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-well);
+  padding: var(--space-6);
+  margin: 0 0 var(--space-6);
+}
+.panel > h2 {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-title);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-hero);
+}
+.panel-note {
+  margin: 0 0 var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  max-width: 72ch;
+}
+
+/* Слот героя: контейнер под композицию из 15-WOW-DIRECTION.md */
+.hero-slot {
+  display: grid;
+  place-items: center;
+  min-height: 320px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(var(--myelin-hairline) 1px, transparent 1px) 0 0 / 100% 25%,
+    var(--color-well-canvas);
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: var(--space-8);
+}
+.hero-slot .hero-slot-cap {
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+/* ── Кнопки (в т.ч. классы living-v3-карточки: .btn.secondary.sm) ───── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  font-family: var(--font-ui);
+  font-size: var(--text-ui);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--duration-instant) var(--ease-enter),
+              border-color var(--duration-instant) var(--ease-enter);
+}
+.btn.primary {
+  background: var(--color-iris-solid);
+  color: var(--color-text-inverse);
+}
+.btn.primary:hover { background: var(--color-iris-solid-hover); }
+.btn.secondary {
+  background: none;
+  color: var(--color-iris-bright);
+  border-color: var(--color-border);
+}
+.btn.secondary:hover { border-color: var(--color-iris-bright); }
+.btn.ghost {
+  background: none;
+  color: var(--color-text-secondary);
+  border-color: transparent;
+}
+.btn.ghost:hover { color: var(--color-text-primary); background: var(--myelin-hairline); }
+.btn.sm { min-height: 32px; padding: var(--space-1) var(--space-3); font-size: var(--text-sm); }
+
+/* Демо-хуки: сигнатура события цветом словаря, но текст всегда есть */
+.demo-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-5);
+}
+.demo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--text-ui);
+  cursor: pointer;
+  transition: border-color var(--duration-instant) var(--ease-enter),
+              background var(--duration-instant) var(--ease-enter);
+}
+.demo-btn:hover { background: var(--color-bg-overlay); }
+.demo-btn .demo-sig {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: var(--synapse-recall);
+  flex: none;
+}
+.demo-btn[data-ev="task.done"] .demo-sig,
+.demo-btn[data-ev="owner.wait"] .demo-sig { background: var(--synapse-write); }
+.demo-btn[data-ev="error"] .demo-sig { background: var(--synapse-error); }
+.demo-btn .demo-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--numeric-tnum);
+  font-size: var(--text-data);
+  color: var(--color-text-secondary);
+}
+
+/* Лента шины: живой лог событий stand:feed-event */
+.feed-log {
+  display: grid;
+  gap: var(--space-1);
+  max-height: 240px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--numeric-tnum);
+  font-size: var(--text-data);
+}
+.feed-row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: baseline;
+  padding: var(--space-1) var(--space-2);
+  border-bottom: var(--line-hairline) solid var(--myelin-hairline);
+  color: var(--color-text-secondary);
+}
+.feed-row time { color: var(--color-text-muted); }
+.feed-row .feed-ev { color: var(--color-text-primary); }
+.feed-row[data-ev="task.done"] .feed-ev,
+.feed-row[data-ev="owner.wait"] .feed-ev { color: var(--color-confidence); }
+.feed-row[data-ev="error"] .feed-ev { color: var(--color-error); }
+.feed-empty { color: var(--color-text-muted); padding: var(--space-2); }
+
+/* Режимы живого слоя: сегмент-переключатель */
+.mode-row { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.mode-btn {
+  min-height: 32px;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: none;
+  color: var(--color-text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.mode-btn[aria-pressed="true"] {
+  border-color: var(--color-iris-bright);
+  color: var(--color-iris-bright);
+}
+
+/* ── Адаптив: сайдбар уходит в горизонтальную ленту ──────────────────── */
+@media (max-width: 900px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .sidebar {
+    grid-row: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-2);
+    overflow-x: auto;
+    padding: var(--space-2) var(--space-3);
+    border-right: none;
+    border-bottom: var(--line-myelin) solid var(--myelin-strong);
+  }
+  .side-nav {
+    grid-auto-flow: column;
+    grid-auto-columns: max-content;
+    gap: var(--space-1);
+  }
+  .side-section-title, .side-note, .side-domain .side-count { display: none; }
+  .content { padding: var(--space-6) var(--space-4) var(--space-12); }
+}

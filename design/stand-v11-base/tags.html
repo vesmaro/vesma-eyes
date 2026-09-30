@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Теги · словарь памяти — vesmaro-eyes · стенд «Живая кора»</title>
+  <link rel="stylesheet" href="styles/tokens.css">
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/shell.css">
+  <link rel="stylesheet" href="styles/components.css">
+</head>
+<body>
+<a class="skip-link" href="#main">К содержимому</a>
+<div class="app">
+
+  <header class="topbar">
+    <button class="iconbtn side-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-label="Открыть разделы">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
+    </button>
+    <a class="brand" href="index.html">
+      <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/></svg>
+      vesmaro-eyes
+    </a>
+    <div class="topsearch">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="search" placeholder="Поиск по памяти и задачам…" aria-label="Глобальный поиск по памяти и задачам">
+      <span class="kbd-hint" aria-hidden="true"><kbd class="kbd">/</kbd></span>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="topbar-status">
+      <button class="iconbtn search-expand" type="button" data-search-expand aria-label="Открыть поиск"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
+      <span class="pill live" title="Живое соединение с демо-лентой стенда"><span class="dot" aria-hidden="true"></span>live</span>
+      <a class="iconbtn" href="agents.html" data-exec-count aria-label="Активные исполнения: 1 — открыть «Исполнение»">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
+        <span class="badge-dot" aria-hidden="true">1</span>
+      </a>
+      <button class="iconbtn" type="button" data-bell aria-label="Уведомления: лента не подключена в стенде">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      </button>
+      <div class="langtoggle" role="group" aria-label="Язык интерфейса">
+        <button type="button" aria-pressed="true" data-lang-demo>RU</button>
+        <button type="button" data-lang-demo>EN</button>
+      </div>
+      <button class="iconbtn" type="button" data-theme-toggle aria-pressed="false" aria-label="Сменить тему: сейчас тёмная">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <aside class="sidebar" aria-label="Разделы">
+    <nav class="side-nav" aria-label="Домены">
+      <a class="side-link" href="index.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/></svg>
+        <span class="side-label">Обзор</span>
+      </a>
+      <div class="side-group" data-open>
+        <button type="button" class="side-link side-domain domain-current" aria-current="true" aria-expanded="true">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>
+          <span class="side-label">Память</span>
+          <svg class="side-chevron icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <div class="side-sections"><div>
+          <a class="side-section" href="memories.html">Записи</a>
+          <a class="side-section" href="search.html">Поиск</a>
+          <a class="side-section" href="pulse.html">Пульс</a>
+          <a class="side-section" href="tags.html" aria-current="page">Теги</a>
+        </div></div>
+      </div>
+      <div class="side-group">
+        <button type="button" class="side-link side-domain" aria-expanded="false">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v9"/></svg>
+          <span class="side-label">Задачи</span><span class="side-count" data-side-count="tasks">5</span>
+          <svg class="side-chevron icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <div class="side-sections"><div>
+          <a class="side-section" href="tasks.html">Канбан</a>
+          <a class="side-section" href="tasks.html?view=list">Список</a>
+          <a class="side-section" href="tasks.html?view=inbox">Входящие<span class="side-count" data-side-count="inbox">2</span></a>
+          <a class="side-section" href="tasks.html?view=archive">Архив</a>
+        </div></div>
+      </div>
+      <div class="side-group">
+        <button type="button" class="side-link side-domain" aria-expanded="false">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+          <span class="side-label">Агенты</span><span class="side-count" data-side-count="agents">1</span>
+          <svg class="side-chevron icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <div class="side-sections"><div>
+          <a class="side-section" href="agents.html">Исполнение</a>
+          <a class="side-section" href="hosts.html">Хосты<span class="side-count" data-side-count="hosts">4</span></a>
+          <a class="side-section" href="connect.html">Подключить машину</a>
+        </div></div>
+      </div>
+      <a class="side-link" href="docs.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+        <span class="side-label">Документы</span>
+      </a>
+      <div class="side-group">
+        <button type="button" class="side-link side-domain" aria-expanded="false">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+          <span class="side-label">Рабочий стол</span><span class="badge-exp">эксп</span>
+          <svg class="side-chevron icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <div class="side-sections"><div>
+          <a class="side-section" href="desktop.html">Терминал</a>
+          <a class="side-section" href="explorer.html">Проводник</a>
+        </div></div>
+      </div>
+      <div class="side-group">
+        <button type="button" class="side-link side-domain" aria-expanded="false">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 .73 2.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1-1-1.74l.15-.09a2 2 0 0 0-.73-2.73l-.22-.38a2 2 0 0 0-.73-.73l.15.08a2 2 0 0 1-2 0l-.43.25a2 2 0 0 1-1 1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span class="side-label">Настройки</span>
+          <svg class="side-chevron icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <div class="side-sections"><div>
+          <a class="side-section" href="status.html">Статус</a>
+          <a class="side-section" href="settings.html">Настройки</a>
+          <button class="side-section disabled" type="button" aria-disabled="true" data-demo-action="«Автоматизация» — раздел вне стенда">Автоматизация</button>
+          <button class="side-section disabled" type="button" aria-disabled="true" data-demo-action="«Устройства» — раздел вне стенда; подключение телефона — pair.html">Устройства</button>
+          <button class="side-section disabled" type="button" aria-disabled="true" data-demo-action="«Трассировки» — раздел вне стенда">Трассировки</button>
+        </div></div>
+      </div>
+      <a class="side-link" href="pair.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="12" x="2" y="6" rx="2"/><rect width="5" height="10" x="16" y="7" rx="2"/><path d="M9 12h7"/></svg>
+        <span class="side-label">Подключить телефон</span>
+      </a>
+    </nav>
+    <div class="side-foot">
+      <button class="side-link" type="button" data-palette-open>
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"/></svg>
+        <span class="side-label">Палитра</span>
+        <span class="side-count">Ctrl K</span>
+      </button>
+      <button class="side-link" type="button" data-cheatsheet-open>
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="M10 8h.01"/><path d="M12 12h.01"/><path d="M14 8h.01"/><path d="M16 12h.01"/><path d="M18 8h.01"/><path d="M6 8h.01"/><path d="M7 16h10"/><path d="M8 12h.01"/></svg>
+        <span class="side-label">Шпаргалка</span>
+        <span class="side-count">?</span>
+      </button>
+      <a class="side-link" href="gallery.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+        <span class="side-label">Галерея</span>
+        <span class="badge-stand">стенд</span>
+      </a>
+      <button class="side-link" type="button" data-sidebar-toggle aria-expanded="true">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
+        <span class="side-label">Свернуть</span>
+        <span class="side-count">[</span>
+      </button>
+      <p class="stand-note stand-status" data-stand-version-line></p>
+    </div>
+  </aside>
+
+  <div class="main">
+
+    <nav class="crumbs" aria-label="Хлебные крошки">
+      <span class="gprefix" aria-hidden="true">g→</span>
+      <ol>
+        <li><a href="index.html">Обзор</a></li>
+        <li><a href="memories.html">Память</a></li>
+        <li><span aria-current="page">Теги</span></li>
+      </ol>
+      <span class="crumbs-spacer"></span>
+      <button class="btn ghost sm" type="button" data-palette-open>
+        <kbd class="kbd">Ctrl</kbd><kbd class="kbd">K</kbd> Палитра
+      </button>
+    </nav>
+
+    <main class="content" id="main">
+
+      <div class="page-head">
+        <div>
+          <h1 tabindex="-1" title="Теги — чем помечены записи памяти. Выберите тег — увидите его записи">Теги · словарь памяти</h1>
+          <p class="page-sub">Каждая запись помечена тегами. Размер тега — сколько записей им помечено</p>
+        </div>
+      </div>
+
+      <div class="tags-page">
+        <div class="tag-toolbar">
+          <div class="tag-searchwrap">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input class="tag-search" id="tag-q" type="search" placeholder="Поиск по тегам…" aria-label="Поиск по тегам по началу слова" aria-describedby="tag-found">
+          </div>
+          <span class="tag-found" id="tag-found" role="status"></span>
+          <span class="tag-found" id="tag-total"></span>
+        </div>
+
+        <div class="tag-cloud" id="tag-cloud"></div>
+        <div id="tag-card-slot"></div>
+
+        <p class="tag-draft">Словарь тегов — черновик, ещё не утверждён владельцем</p>
+        <p class="sr-only" role="status" aria-live="polite" id="tags-live"></p>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+
+<div class="overlay" id="palette" hidden role="dialog" aria-modal="true" aria-label="Командная палитра">
+  <div class="palette">
+    <div class="palette-input-wrap">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input class="palette-input" type="text" role="combobox" aria-expanded="true" aria-controls="palette-results" aria-autocomplete="list" aria-label="Командная палитра" placeholder="Куда идём? Попробуйте: «настройки», «тема», «сессия»">
+    </div>
+    <div class="palette-results" id="palette-results" role="listbox" aria-label="Результаты"></div>
+    <div class="palette-foot">
+      <span><kbd class="kbd">↑</kbd><kbd class="kbd">↓</kbd> перемещение</span>
+      <span><kbd class="kbd">Enter</kbd> выполнить</span>
+      <span><kbd class="kbd">Esc</kbd> закрыть</span>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="cheatsheet" hidden role="dialog" aria-modal="true" aria-labelledby="cheatsheet-title">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="cheatsheet-title">Хоткеи</h2>
+      <button class="iconbtn" type="button" data-modal-close aria-label="Закрыть шпаргалку">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <table class="hotkeys-table">
+        <thead><tr><th scope="col">Клавиши</th><th scope="col">Действие</th></tr></thead>
+        <tbody>
+          <tr><td><kbd class="kbd">/</kbd></td><td>фокус глобального поиска</td></tr>
+          <tr><td><kbd class="kbd">Ctrl</kbd> <kbd class="kbd">K</kbd></td><td>палитра команд</td></tr>
+          <tr><td><kbd class="kbd">?</kbd></td><td>эта шпаргалка</td></tr>
+          <tr><td><kbd class="kbd">g</kbd> → <kbd class="kbd">o</kbd> / <kbd class="kbd">m</kbd> / <kbd class="kbd">a</kbd> / <kbd class="kbd">k</kbd> / <kbd class="kbd">d</kbd> / <kbd class="kbd">w</kbd></td><td>Обзор / Память / Агенты / Кора / Документы / Рабочий стол</td></tr>
+          <tr><td><kbd class="kbd">g</kbd> → <kbd class="kbd">t</kbd> / <kbd class="kbd">b</kbd> / <kbd class="kbd">i</kbd> / <kbd class="kbd">p</kbd> / <kbd class="kbd">e</kbd> / <kbd class="kbd">s</kbd></td><td>Задачи / Канбан / Входящие / Пульс / Исполнение / Настройки</td></tr>
+          <tr><td><kbd class="kbd">j</kbd> / <kbd class="kbd">k</kbd></td><td>вниз / вверх по списку (в продуктовой версии)</td></tr>
+          <tr><td><kbd class="kbd">x</kbd></td><td>выделить строку (bulk, в продукте)</td></tr>
+          <tr><td><kbd class="kbd">Esc</kbd></td><td>закрыть верхний оверлей</td></tr>
+          <tr><td><kbd class="kbd">[</kbd></td><td>свернуть / развернуть сайдбар</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/shell.js"></script>
+<script src="js/living.js"></script>
+<script>
+
+  (function () {
+    /* v8 (07k §3): аноним видит гейт — страница не запускается */
+    if (document.getElementById("main") && document.getElementById("main").dataset.gated) return;
+    var D = window.STAND;
+    var doc = document;
+    var cloud = doc.getElementById("tag-cloud");
+    var slot = doc.getElementById("tag-card-slot");
+    var foundEl = doc.getElementById("tag-found");
+    var totalEl = doc.getElementById("tag-total");
+    var live = doc.getElementById("tags-live");
+    var qInput = doc.getElementById("tag-q");
+    var selected = null;
+    var query = "";
+
+    /* ── производные счётчики: один проход по записям (07m §2.1, 07j §2.2.3).
+     * Запись = памяти + узел колодца, склейка по id (без дублей счёта) ── */
+    function buildIndex(records) {
+      var counts = {};
+      var order = [];
+      var pairs = {};
+      var tagged = 0;
+      Object.keys(records).forEach(function (id) {
+        var tags = records[id].tags || [];
+        if (!tags.length) return;
+        tagged++;
+        for (var i = 0; i < tags.length; i++) {
+          var t = tags[i];
+          if (!counts[t]) { counts[t] = 0; order.push(t); }
+          counts[t]++;
+          for (var j = i + 1; j < tags.length; j++) {
+            var u = tags[j];
+            if (u === t) continue;
+            var key = t < u ? t + "\u0000" + u : u + "\u0000" + t;
+            pairs[key] = (pairs[key] || 0) + 1;
+          }
+        }
+      });
+      return { counts: counts, order: order, pairs: pairs, tagged: tagged };
+    }
+    function stepOf(n) {
+      return n >= 8 ? "tag-l" : n >= 4 ? "tag-m" : "tag-s"; /* L ≥ 8 · M 4–7 · S ≤ 3 */
+    }
+    function relatedOf(tag, ix) {
+      var out = [];
+      Object.keys(ix.counts).forEach(function (u) {
+        if (u === tag) return;
+        var key = tag < u ? tag + "\u0000" + u : u + "\u0000" + tag;
+        var n = ix.pairs[key] || 0;
+        if (n) out.push({ tag: u, n: n });
+      });
+      out.sort(function (a, b) { return b.n - a.n || ix.counts[b.tag] - ix.counts[a.tag] || (a.tag < b.tag ? -1 : 1); });
+      return out.slice(0, 3);
+    }
+    function plural(n, one, few, many) {
+      var m10 = n % 10, m100 = n % 100;
+      if (m10 === 1 && m100 !== 11) return one;
+      if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+      return many;
+    }
+
+    /* состояния (07m §2.5): ошибка данных → честный экран с повтором */
+    if (!D || !D.memories) {
+      cloud.innerHTML = "";
+      var err = doc.createElement("div");
+      err.className = "empty-state";
+      err.innerHTML = '<p class="es-title">Словарь не прочитался — данные не открылись</p>';
+      var retry = doc.createElement("button");
+      retry.className = "btn secondary sm";
+      retry.type = "button";
+      retry.textContent = "Повторить";
+      retry.addEventListener("click", function () { location.reload(); });
+      err.appendChild(retry);
+      slot.appendChild(err);
+      return;
+    }
+
+    var records = {};
+    (D.wellNodes || []).forEach(function (n) { if (n && n.id) records[n.id] = n; });
+    (D.memories || []).forEach(function (m) { if (m && m.id) records[m.id] = m; });
+    var ix = buildIndex(records);
+    var tags = ix.order.slice().sort(function (a, b) {
+      return ix.counts[b] - ix.counts[a] || (a < b ? -1 : 1);
+    });
+    totalEl.textContent = tags.length + " " + plural(tags.length, "тег", "тега", "тегов") +
+      " · " + ix.tagged + " " + plural(ix.tagged, "запись", "записи", "записей") + " с тегами";
+
+    if (!tags.length) {
+      /* матрица «пусто»: с фикстурами не встречается, состояние обязательно */
+      cloud.innerHTML = "";
+      var es = doc.createElement("div");
+      es.className = "empty-state";
+      es.innerHTML = '<p class="es-title">Тегов ещё нет — они появятся, когда записи получат метки</p>';
+      var go = doc.createElement("a");
+      go.className = "btn secondary sm";
+      go.href = "memories.html";
+      go.textContent = "К записям";
+      es.appendChild(go);
+      slot.appendChild(es);
+      foundEl.textContent = "";
+      return;
+    }
+
+    function chipOf(tag) {
+      var b = doc.createElement("button");
+      b.type = "button";
+      b.className = "tag-chip " + stepOf(ix.counts[tag]);
+      b.textContent = "#" + tag;
+      b.dataset.tag = tag;
+      b.title = tag + " — " + ix.counts[tag] + " " + plural(ix.counts[tag], "запись", "записи", "записей");
+      b.setAttribute("aria-pressed", selected === tag ? "true" : "false");
+      b.addEventListener("click", function () {
+        if (selected === tag) { deselect(); return; }
+        select(tag);
+      });
+      return b;
+    }
+
+    /* loading: скелетон из 12 чипов до первого кадра (07m §2.5) */
+    for (var i = 0; i < 12; i++) {
+      var sk = doc.createElement("span");
+      sk.className = "skel tag-skel";
+      cloud.appendChild(sk);
+    }
+    requestAnimationFrame(function () { renderCloud(); });
+
+    function renderCloud() {
+      cloud.innerHTML = "";
+      var shown = 0;
+      tags.forEach(function (t) {
+        if (query && t.indexOf(query) !== 0) return;
+        cloud.appendChild(chipOf(t));
+        shown++;
+      });
+      foundEl.textContent = query ? "Найдено: " + shown : "";
+      live.textContent = query ? "Найдено: " + shown : "";
+      if (!shown) {
+        var box = doc.createElement("div");
+        box.className = "empty-state";
+        var msg = doc.createElement("p");
+        msg.className = "es-title";
+        msg.textContent = "По «" + query + "» тегов нет. Смягчите начало слова";
+        box.appendChild(msg);
+        var all = doc.createElement("button");
+        all.className = "btn secondary sm";
+        all.type = "button";
+        all.textContent = "Показать все";
+        all.addEventListener("click", function () {
+          qInput.value = "";
+          query = "";
+          renderCloud();
+        });
+        box.appendChild(all);
+        cloud.appendChild(box);
+      }
+    }
+
+    var debounce = null;
+    qInput.addEventListener("input", function () {
+      if (debounce) clearTimeout(debounce);
+      debounce = setTimeout(function () {
+        query = qInput.value.trim().toLowerCase(); /* префикс: по началу слова */
+        renderCloud();
+      }, 300);
+    });
+
+    function select(tag) {
+      selected = tag;
+      cloud.querySelectorAll(".tag-chip").forEach(function (c) {
+        c.setAttribute("aria-pressed", c.dataset.tag === tag ? "true" : "false");
+      });
+      renderCard(tag);
+      announce("Выбран тег " + tag);
+    }
+    function deselect() {
+      selected = null;
+      cloud.querySelectorAll(".tag-chip").forEach(function (c) {
+        c.setAttribute("aria-pressed", "false");
+      });
+      slot.innerHTML = "";
+      announce("Выбор снят");
+    }
+    function announce(text) { live.textContent = ""; setTimeout(function () { live.textContent = text; }, 50); }
+
+    function renderCard(tag) {
+      slot.innerHTML = "";
+      var card = doc.createElement("article");
+      card.className = "tag-card tag-card-in";
+      var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+        doc.documentElement.getAttribute("data-motion") === "reduced";
+      if (reduced) card.classList.remove("tag-card-in");
+
+      var h = doc.createElement("h3");
+      h.tabIndex = -1;
+      h.textContent = "#" + tag;
+      card.appendChild(h);
+
+      var meta = (D.tagMeta || {})[tag];
+      var desc = doc.createElement("p");
+      desc.className = "tag-desc";
+      desc.textContent = meta || "Описания пока нет — тег вырос из записей";
+      card.appendChild(desc);
+
+      var facts = doc.createElement("p");
+      facts.className = "tag-facts";
+      var n = ix.counts[tag];
+      facts.appendChild(doc.createTextNode("Записей: " + n));
+      var rel = relatedOf(tag, ix);
+      if (rel.length) {
+        var lab = doc.createElement("span");
+        lab.textContent = "Связанные:";
+        facts.appendChild(lab);
+        rel.forEach(function (r) {
+          var rb = doc.createElement("button");
+          rb.type = "button";
+          rb.className = "chip tag-rel";
+          rb.textContent = "#" + r.tag;
+          rb.setAttribute("aria-label", "Перейти к тегу " + r.tag + " — " + ix.counts[r.tag] + " записей");
+          rb.addEventListener("click", function () {
+            select(r.tag);
+            /* облако могло быть отфильтровано: подсветка видима только там */
+            if (query && r.tag.indexOf(query) !== 0) {
+              qInput.value = "";
+              query = "";
+              renderCloud();
+              syncPressed();
+            }
+          });
+          facts.appendChild(rb);
+        });
+      }
+      card.appendChild(facts);
+
+      var cta = doc.createElement("a");
+      cta.className = "btn secondary sm";
+      cta.href = "memories.html?tag=" + encodeURIComponent(tag);
+      cta.textContent = "Показать записи →";
+      card.appendChild(cta);
+
+      slot.appendChild(card);
+      h.focus();
+    }
+    function syncPressed() {
+      cloud.querySelectorAll(".tag-chip").forEach(function (c) {
+        c.setAttribute("aria-pressed", c.dataset.tag === selected ? "true" : "false");
+      });
+    }
+  })();
+
+</script>
+</body>
+</html>

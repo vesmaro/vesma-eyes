@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Подключение устройства — vesmaro-eyes · стенд «Живая кора»</title>
+  <link rel="stylesheet" href="styles/tokens.css">
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/components.css">
+  <link rel="stylesheet" href="styles/pair.css">
+</head>
+<body>
+<a class="skip-link" href="#main">К содержимому</a>
+<div class="pair-page">
+
+  <header class="pair-head">
+    <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/></svg>
+    <span class="ph-title">vesmaro-eyes · Подключение устройства</span>
+    <span class="ph-spacer"></span>
+    <button class="iconbtn" type="button" data-theme-toggle aria-pressed="false" aria-label="Сменить тему: сейчас тёмная">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
+    </button>
+  </header>
+
+  <main class="pair-main" id="main">
+    <div class="pair-col">
+      <h1 class="sr-only" tabindex="-1">Подключение устройства к борту</h1>
+      <p class="pair-phase-sub" style="margin-top: calc(-1 * var(--space-2))">Публичная страница пейринга: код живёт 3 минуты и работает один раз</p>
+
+      <!-- ═══ возврат «На борт»: один слот во всех фазах, не мигрирует (07h §12) ═══ -->
+      <a class="pair-back" href="index.html" aria-label="На борт — вернуться на главную">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+        На борт
+      </a>
+
+      <!-- ═══ ФАЗА 1: QR до скана (07h §2) ═══ -->
+      <section class="pair-stage" id="phase-qr" aria-label="Фаза: подключение кодом">
+        <div id="phase-qr-content">
+          <h2 class="pair-phase-title" tabindex="-1">Отсканируйте QR камерой телефона</h2>
+          <div class="qr-wrap">
+            <div>
+              <div class="qr-box" id="qr-box">
+                <!-- демо-QR: фиксированный паттерн из фоновых данных, не реальный код -->
+                <svg id="qr-svg" viewBox="0 0 29 29" role="img" aria-label="QR-код подключения: открывает vesmaro на телефоне"></svg>
+              </div>
+              <p class="qr-demo-tag" style="margin-top: var(--space-2)">
+                <span aria-hidden="true">◑</span> демо: узор нарисован стендом, не реальным кодом
+              </p>
+            </div>
+            <div class="qr-side">
+              <div class="ttl-line">
+                <svg class="ttl-arc" id="ttl-arc" viewBox="0 0 36 36" width="20" height="20" aria-hidden="true">
+                  <circle class="arc-bg" cx="18" cy="18" r="15.5"/>
+                  <circle class="arc-fg" id="ttl-fg" cx="18" cy="18" r="15.5" stroke-dasharray="97.4" stroke-dashoffset="0"/>
+                </svg>
+                <span id="ttl-text" aria-live="off">истечёт через 3:00</span>
+              </div>
+              <div class="manual-code">
+                <code id="pair-code">mne-4F2K-QRTX-7701</code>
+                <button class="btn secondary sm" type="button" id="copy-code">Копировать</button>
+              </div>
+              <p class="pair-note" style="text-align: left">Нет камеры? Введите код вручную на странице vesmaro на телефоне (откроется сама после сканирования; вручную — адрес борда в браузере телефона)</p>
+            </div>
+          </div>
+          <ol class="pair-steps">
+            <li>Откройте на телефоне камеру</li>
+            <li>Наведите на код — откроется страница подключения</li>
+            <li>Страница сама отправит код — подтвердите на экране владельца</li>
+          </ol>
+          <div class="collapse-block pair-details">
+            <button class="cb-toggle" type="button" aria-expanded="false" aria-controls="pair-whatfor">
+              <svg class="chev icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+              Что это даёт?
+            </button>
+            <div class="cb-body" id="pair-whatfor" hidden>
+              <p style="margin: 0 0 var(--space-2); font-size: var(--text-ui); color: var(--color-text-secondary)">
+                Телефон станет вторым экраном борта: смотреть память, задачи и сессии, двигать задачи и отвечать на входящие — с правами, которые выдаёте вы.
+              </p>
+              <p style="margin: 0; font-size: var(--text-sm); color: var(--color-text-muted)">
+                Чувствительные действия — с подтверждением владельца. Устройство видно в списке устройств, доступ отзывается в один шаг — в Настройках · Устройства.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- истёкший код: не мёртвая страница (07h §2) -->
+        <div class="pair-expired" id="phase-expired" hidden>
+          <p class="pair-phase-title" tabindex="-1">Код истёк — срок действия кода вышел (3 минуты)</p>
+          <p class="pair-phase-sub">Код живёт 3 минуты и работает один раз. Запросите новый — старый погашен.</p>
+          <div class="pair-actions">
+            <button class="btn primary sm" type="button" id="new-code">Запросить новый код</button>
+          </div>
+        </div>
+
+        <details class="demo-fold">
+          <summary>для стенда</summary>
+        <div class="pair-manual">
+          <p class="field-hint" style="margin: 0">Демо-переходы фаз (канон стенда):</p>
+          <div class="pm-grid">
+            <button class="btn ghost sm" type="button" data-demo-phase="wait">демо: код отсканирован</button>
+            <button class="btn ghost sm" type="button" data-demo-phase="expired">демо: код истёк</button>
+            <button class="btn ghost sm" type="button" data-demo-phase="reject">демо: владелец отклонил</button>
+            <button class="btn ghost sm" type="button" data-demo-phase="manual">демо: ввести код вручную</button>
+          </div>
+        </div>
+        </details>
+      </section>
+
+      <!-- ═══ ФАЗА 2: ожидание подтверждения (07h §3) ═══ -->
+      <section class="pair-stage" id="phase-wait" hidden aria-label="Фаза: ждём подтверждения на экране владельца">
+        <h2 class="pair-phase-title" tabindex="-1">Код принят — ждём подтверждения</h2>
+        <div class="verify-group" id="verify-group" role="img" aria-label="Код подтверждения: 4 7 1 9">
+          <span>4</span><span>7</span><span>1</span><span>9</span>
+        </div>
+        <p class="pair-phase-sub">Сверьте цифры с экраном владельца: он увидит этот код при подтверждении.<br>Это защита от чужого кода — не пароль.</p>
+        <div class="wait-line">
+          <span class="spinner" aria-hidden="true"></span>
+          <span role="status">Ждём подтверждения на экране владельца…</span>
+        </div>
+        <p class="pair-note">На телефоне покажутся те же 4 цифры — сверяйте их с этим экраном.</p>
+        <p class="pair-note">Обычно быстро. Проверим ещё раз автоматически через минуту — или проверьте сами:</p>
+        <div class="pair-actions">
+          <button class="btn secondary sm" type="button" id="check-now">Проверить сейчас</button>
+        </div>
+        <details class="demo-fold">
+          <summary>для стенда</summary>
+        <div class="pair-manual">
+          <div class="pm-grid">
+            <button class="btn ghost sm" type="button" data-demo-phase="success">демо: владелец подтвердил</button>
+            <button class="btn ghost sm" type="button" data-demo-phase="reject">демо: владелец отклонил</button>
+            <button class="btn ghost sm" type="button" data-demo-phase="qr">вернуться к QR</button>
+          </div>
+        </div>
+        </details>
+      </section>
+
+      <!-- ═══ ФАЗА 3: успех (07h §4) ═══ -->
+      <section class="pair-stage" id="phase-success" hidden aria-label="Фаза: телефон подключён">
+        <h2 class="pair-phase-title" tabindex="-1">Телефон подключён</h2>
+        <div class="pair-result ok" role="status">
+          <div class="rc-title"><span aria-hidden="true">●</span> Токен сохранён на этом устройстве</div>
+          <p>Копировать его никуда не нужно. Откройте vesmaro на телефоне — увидите тот же борт: память, задачи, сессии.</p>
+          <p class="scope-line">права: полный доступ · действует до 27 окт (продлевается активностью)</p>
+        </div>
+        <div class="pair-actions">
+          <button class="btn primary sm" type="button" data-demo-phase="qr">Готово</button>
+        </div>
+        <details class="demo-fold">
+          <summary>для стенда</summary>
+        <div class="pair-manual">
+          <div class="pm-grid">
+            <button class="btn ghost sm" type="button" data-demo-phase="qr">демо: подключить ещё одно</button>
+          </div>
+        </div>
+        </details>
+      </section>
+
+      <!-- ═══ ФАЗА 4: отказ / ошибка — честные вердикты (07h §5) ═══ -->
+      <section class="pair-stage" id="phase-fail" hidden aria-label="Фаза: подключение не состоялось">
+        <div class="pair-result fail" id="fail-card" role="alert">
+          <div class="rc-title"><span aria-hidden="true">●</span> <span id="fail-title">Подключение отклонено</span></div>
+          <p id="fail-why">Владелец отклонил запрос: устройство не получит доступ, код погашен.</p>
+        </div>
+        <div class="pair-actions">
+          <button class="btn secondary sm" type="button" data-demo-phase="qr">Запросить новый код</button>
+          <button class="btn ghost sm" type="button" id="fail-manual">Ввести код заново</button>
+        </div>
+        <details class="demo-fold">
+          <summary>для стенда</summary>
+        <div class="pair-manual">
+          <div class="pm-grid">
+            <button class="btn ghost sm" type="button" data-demo-phase="qr">демо: начать заново</button>
+          </div>
+        </div>
+        </details>
+      </section>
+
+      <!-- форма ручного ввода кода (равноправный путь, ADR §2 a11y) -->
+      <section class="pair-stage" id="phase-manual" hidden aria-label="Фаза: ручной ввод кода">
+        <h2 class="pair-phase-title" tabindex="-1">Введите код вручную</h2>
+        <p class="pair-phase-sub">Код напечатан на экране владельца рядом с QR — 4 блока через дефис.</p>
+        <form class="pair-manual" id="manual-form" novalidate>
+          <div class="field">
+            <label for="manual-code-input">Код подключения</label>
+            <input class="input" id="manual-code-input" type="text" autocomplete="off" spellcheck="false" placeholder="mne-XXXX-XXXX-XXXX" aria-describedby="manual-err">
+            <p class="field-error" id="manual-err" hidden>код не похож на mne-XXXX-XXXX-XXXX — проверьте опечатки</p>
+          </div>
+          <div class="pm-grid">
+            <button class="btn primary" type="submit" id="manual-submit">Подключить</button>
+            <button class="btn secondary sm" type="button" data-demo-phase="qr">Назад к QR</button>
+          </div>
+        </form>
+      </section>
+
+      <div class="pair-demo" aria-label="Демо-навигация фаз">
+        <span>демо-фазы:</span>
+        <button class="btn ghost sm" type="button" data-demo-phase="qr">QR</button>
+        <button class="btn ghost sm" type="button" data-demo-phase="wait">ожидание</button>
+        <button class="btn ghost sm" type="button" data-demo-phase="success">успех</button>
+        <button class="btn ghost sm" type="button" data-demo-phase="reject">отказ</button>
+        <button class="btn ghost sm" type="button" data-demo-phase="netfail">сбой сети</button>
+      </div>
+    </div>
+  </main>
+
+  <footer class="pair-foot">
+    <div>Управление устройствами — в <a href="index.html" data-demo-action="Настройки · Устройства — раздел вне стенда; управление устройствами появится в продуктовой версии">Настройки · Устройства</a></div>
+    <!-- v6 (07k §1.3): статусная строка версии и сессии — та же константа STAND.version -->
+    <div class="pair-version-line stand-status" data-stand-version-line></div>
+  </footer>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/pair.js"></script>
+<script>
+  /* v6 (07k §1.3, §5.1): pair footer renders the same session/status line —
+   * a tiny local render, no Shell here. Reads the model key directly
+   * (vesmaro.authSession — the same contract shell.js writes; no standAuth
+   * helper outside the Shell). RU strings per 07a. */
+  (function () {
+    var line = document.querySelector("[data-stand-version-line]");
+    if (!line) return;
+    var session = null;
+    try {
+      session = JSON.parse(localStorage.getItem("vesmaro.authSession") || "null");
+      if (!session || !session.user) session = null;
+    } catch (e) {}
+    var ver = (window.STAND && window.STAND.version) || "?";
+    var sl = (window.STAND && window.STAND.slice) || "v6";
+    line.textContent = "vesmaro-eyes " + ver + " · " + (session ? "вы: " + session.user : "аноним");
+    var tip = "Стенд дизайна, срез " + sl + " · демо-данные";
+    if (session && session.since) {
+      var min = Math.max(1, Math.round((Date.now() - new Date(session.since).getTime()) / 60000));
+      var age = min < 60 ? min + " мин" : Math.round(min / 60) + " ч";
+      tip += " · роль: " + (session.role === "owner" ? "владелец" : "участник") + " · вход " + age + " назад";
+    }
+    line.title = tip;
+    line.classList.toggle("auth-user", !!session);
+  })();
+</script>
+</body>
+</html>

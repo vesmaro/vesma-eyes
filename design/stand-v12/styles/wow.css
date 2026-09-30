@@ -1,0 +1,241 @@
+/* wow.css — трейлер «ВАУ v12» (wow.html). PLACEHOLDER-композиция фронтенда
+ * до арт-дирекшна (15-WOW-DIRECTION.md): дизайнер меняет наполнение,
+ * машинерия (шина living.js, такты, слоты) остаётся.
+ *
+ * Приём: экран как «кадр» — регистр «КИНО» токенов v12, дисплейная
+ * плотность --tracking-hero, один серифный акцент (Lora italic) на глаголе
+ * жизни, повествование трёх карточек по такту --duration-wow-beat внутри
+ * цикла --duration-wow-cycle (5-секундная дуга «продукт живой»).
+ * Все цвета — словарь токенов; литералов нет. Reduced-motion: такты
+ * схлопываются токенами в статичную раскладку (первое состояние видно).
+ */
+
+.wow-stage {
+  position: relative;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  min-height: calc(100vh - 48px);   /* минус липкий топбар */
+  padding: var(--space-16) var(--space-10) var(--space-10);
+  background:
+    radial-gradient(120% 90% at 50% -10%,
+      color-mix(in srgb, var(--color-iris-dim) 55%, transparent) 0%,
+      transparent 60%),
+    var(--color-well-canvas);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* ── Композиция: заголовок-кадр ──────────────────────────────────────── */
+.wow-frame {
+  display: grid;
+  align-content: center;
+  gap: var(--space-6);
+  max-width: 1160px;
+  margin: 0 auto;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.wow-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.wow-kicker .wow-kicker-line {
+  width: 48px;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.wow-title {
+  margin: 0;
+  font-size: var(--text-hero-xl);       /* 56→152px, регистр «КИНО» */
+  line-height: var(--leading-hero);
+  letter-spacing: var(--tracking-hero);
+  font-weight: var(--weight-display);
+  color: var(--color-text-primary);
+  text-wrap: balance;
+}
+.wow-title .wow-accent {
+  /* единственный серифный акцент кадра: глагол жизни курсивом */
+  font-family: var(--font-scroll);
+  font-style: italic;
+  font-weight: var(--weight-regular);
+  color: var(--color-iris-bright);
+}
+
+.wow-sub {
+  margin: 0;
+  max-width: 56ch;
+  font-size: var(--text-lead);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text-secondary);
+}
+
+.wow-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-top: var(--space-2);
+}
+
+/* ── Магистраль: пульс-линия под заголовком (словарь курьеров) ───────── */
+.wow-vein {
+  position: relative;
+  height: 2px;
+  margin: var(--space-8) 0 var(--space-10);
+  background: var(--myelin-strong);
+  border-radius: var(--radius-full);
+  overflow: visible;
+}
+.wow-vein .wow-pulse {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 72px;
+  height: 4px;
+  margin-top: -2px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(to left, var(--synapse-recall) 8px, transparent 72px);
+  box-shadow: var(--glow-iris);
+  animation: wow-pulse-run var(--duration-wow-cycle) linear infinite;
+}
+.wow-vein .wow-pulse.gold {
+  animation-name: wow-pulse-run-gold;
+  animation-delay: calc(var(--duration-wow-cycle) * -0.45);
+  background: linear-gradient(to left, var(--synapse-write) 8px, transparent 72px);
+  box-shadow: var(--glow-gold);
+}
+@keyframes wow-pulse-run {
+  from { left: -8%; opacity: 0; }
+  8% { opacity: 1; }
+  88% { opacity: 1; }
+  to { left: 100%; opacity: 0; }
+}
+@keyframes wow-pulse-run-gold {
+  from { left: -8%; opacity: 0; }
+  8% { opacity: 1; }
+  88% { opacity: 1; }
+  to { left: 100%; opacity: 0; }
+}
+
+/* ── Повествование: три такта дуги ───────────────────────────────────── */
+.wow-beats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+  position: relative;
+  z-index: 1;
+}
+.wow-beat {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  border: var(--line-hairline) solid var(--myelin-hairline);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-bg-well) 82%, transparent);
+  opacity: 0.32;
+  transform: translateY(var(--space-2));
+  transition: opacity var(--duration-slow) var(--ease-enter),
+              transform var(--duration-slow) var(--ease-enter),
+              border-color var(--duration-slow) var(--ease-enter);
+}
+.wow-beat .wow-beat-cap {
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.wow-beat .wow-beat-sig {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--synapse-idle);
+}
+.wow-beat .wow-beat-text {
+  margin: 0;
+  font-size: var(--text-ui);
+  line-height: var(--leading-normal);
+  color: var(--color-text-secondary);
+}
+.wow-beat .wow-beat-text strong { color: var(--color-text-primary); font-weight: var(--weight-medium); }
+
+/* такты: подсветка по фазам цикла (beat i живёт в своей трети) */
+.wow-beat:nth-child(1) { animation: wow-beat-live var(--duration-wow-cycle) var(--ease-enter) infinite; }
+.wow-beat:nth-child(2) { animation: wow-beat-live var(--duration-wow-cycle) var(--ease-enter) calc(var(--duration-wow-cycle) / 3) infinite; }
+.wow-beat:nth-child(3) { animation: wow-beat-live var(--duration-wow-cycle) var(--ease-enter) calc(var(--duration-wow-cycle) / 1.5) infinite; }
+.wow-beat[data-kind="done"] .wow-beat-sig,
+.wow-beat[data-kind="attention"] .wow-beat-sig { background: var(--synapse-write); }
+.wow-beat[data-kind="attention"] { border-left: 2px solid var(--color-confidence); }
+
+@keyframes wow-beat-live {
+  0% { opacity: 0.32; transform: translateY(var(--space-2)); border-color: var(--myelin-hairline); }
+  4% { opacity: 1; transform: translateY(0); border-color: var(--color-border-iris); }
+  28% { opacity: 1; transform: translateY(0); border-color: var(--color-border-iris); }
+  34% { opacity: 0.32; transform: translateY(var(--space-2)); border-color: var(--myelin-hairline); }
+  100% { opacity: 0.32; transform: translateY(var(--space-2)); border-color: var(--myelin-hairline); }
+}
+
+/* ── Фон-страта: медленный вздох колодца (глубина, не внимание) ──────── */
+.wow-strata {
+  position: absolute;
+  inset: auto -10% -30% -10%;
+  height: 60%;
+  background: radial-gradient(60% 100% at 50% 100%,
+    color-mix(in srgb, var(--color-iris-dim) 40%, transparent) 0%,
+    transparent 70%);
+  z-index: 0;
+  animation: wow-strata-breath var(--duration-iris) var(--ease-breath) infinite alternate;
+}
+@keyframes wow-strata-breath {
+  from { opacity: 0.35; }
+  to { opacity: 0.7; }
+}
+
+/* ── Статус-строка кадра ─────────────────────────────────────────────── */
+.wow-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-8);
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--numeric-tnum);
+  font-size: var(--text-data);
+  color: var(--color-text-muted);
+}
+.wow-meta .wow-meta-sig { color: var(--color-success); }
+
+/* ── Адаптив кадра ───────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .wow-stage { padding: var(--space-10) var(--space-4) var(--space-6); }
+  .wow-beats { grid-template-columns: minmax(0, 1fr); }
+  .wow-vein { margin: var(--space-6) 0; }
+}
+
+/* ── Reduced-motion: кадр статичен, первое состояние видно ───────────── */
+@media (prefers-reduced-motion: reduce) {
+  .wow-vein .wow-pulse { display: none; }
+  .wow-vein::after {
+    /* статичный след словаря: ирис-сегмент вместо бегущего импульса */
+    content: "";
+    position: absolute;
+    left: 12%;
+    width: 72px;
+    height: 2px;
+    background: var(--synapse-recall);
+  }
+  .wow-beat { opacity: 1; transform: none; animation: none; }
+  .wow-beat:nth-child(2) { opacity: 1; }
+  .wow-beat:nth-child(3) { opacity: 1; }
+  .wow-strata { animation: none; opacity: 0.5; }
+}

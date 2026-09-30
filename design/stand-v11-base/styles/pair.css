@@ -1,0 +1,414 @@
+/* pair.css — «Живая кора» stand v3: /pair device pairing page (spec 07h).
+ * Outside the Shell (ADR 0012 §2.3 canon): own laconic header, dark default,
+ * centered max-w-md column, vertical rhythm --space-4. Tokens only. */
+
+.pair-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-base);
+}
+
+/* own laconic header: iris mark + title + theme toggle (only setting) */
+.pair-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  border-bottom: var(--line-hairline) solid var(--myelin-hairline);
+  background: var(--color-bg-well);
+}
+.pair-head .brand-mark {
+  width: 20px;
+  height: 20px;
+  color: var(--color-iris);
+  flex: none;
+}
+.pair-head .ph-title {
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-ui);
+  color: var(--color-text-primary);
+}
+.pair-head .ph-spacer {
+  flex: 1;
+}
+.pair-head .ph-back {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+.pair-head .ph-back:hover {
+  color: var(--color-iris-bright);
+  text-decoration: none;
+}
+
+/* ── v4: возврат «На борт» — заметный контур в одном слоте во всех фазах
+ * (07h §12). primary-outline: контур iris, текст iris-bright; первичное
+ * действие фазы остаётся главным. Высота 44px — страница и есть тач-сценарий
+ * (WCAG 2.5.8). Иконка не одна — текст-лейбл рядом (1.4.1). */
+.pair-back {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 44px;
+  padding: 0 var(--space-4);
+  border: 1.5px solid var(--color-iris);
+  border-radius: var(--radius-md);
+  color: var(--color-iris-bright);
+  font-size: var(--text-ui);
+  font-weight: var(--weight-medium);
+  transition: background var(--duration-instant) var(--ease-enter);
+}
+.pair-back:hover {
+  background: var(--myelin-strong);
+}
+.pair-back:active {
+  background: var(--strata-system);
+}
+.pair-back:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-width);
+}
+
+/* centered column */
+.pair-main {
+  flex: 1;
+  width: 100%;
+  display: grid;
+  place-items: start center;
+  padding: var(--space-8) var(--space-4) var(--space-12);
+}
+.pair-col {
+  width: min(448px, 100%);
+  display: grid;
+  gap: var(--space-4);
+}
+.pair-stage {
+  background: var(--color-bg-well);
+  border: var(--line-hairline) solid var(--myelin-hairline);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: grid;
+  gap: var(--space-4);
+  animation: pair-in var(--duration-normal) var(--ease-enter);
+}
+@keyframes pair-in {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+}
+.pair-stage.leaving {
+  animation: pair-out var(--duration-normal) var(--ease-exit) forwards;
+}
+@keyframes pair-out {
+  to {
+    opacity: 0;
+  }
+}
+.pair-phase-title {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+  text-align: center;
+}
+.pair-phase-sub {
+  font-size: var(--text-ui);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+/* QR block: light quiet-zone plaque in both themes (ADR §6, WCAG 1.4.11) */
+.qr-wrap {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.qr-box {
+  width: 248px;
+  height: 248px;
+  padding: var(--space-3);
+  background: #ffffff; /* quiet-zone plaque — fixed, both themes; QR modules ≥3:1 */
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-subtle);
+  transition: opacity var(--duration-normal) var(--ease-exit);
+}
+.qr-box.expired {
+  opacity: 0;
+}
+.qr-box svg {
+  width: 100%;
+  height: 100%;
+}
+.qr-demo-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.qr-side {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+.ttl-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--numeric-tnum);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+.ttl-arc {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  transform: rotate(-90deg);
+}
+.ttl-arc .arc-bg {
+  fill: none;
+  stroke: var(--color-border-subtle);
+  stroke-width: 3;
+}
+.ttl-arc .arc-fg {
+  fill: none;
+  stroke: var(--color-iris-bright);
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear;
+}
+.ttl-arc.warn .arc-fg {
+  stroke: var(--color-warning);
+}
+.ttl-arc[data-static="true"] .arc-fg {
+  transition: none;
+}
+.manual-code {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.manual-code code {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+}
+.pair-steps {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+/* «Что это даёт?» — collapsed, chevron ≥24px, persisted in session */
+.pair-details > .cb-toggle {
+  min-height: 32px;
+}
+/* manual code form (fallback path, ADR §2 a11y) */
+.pair-manual {
+  display: grid;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: var(--line-hairline) solid var(--myelin-hairline);
+}
+/* демо-чипы фаз: ровный ряд/грид, не лесенка (дефект приёмки №4c) */
+.pair-manual .pm-grid {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+}
+/* целевой раунд: демо-кнопки фаз убраны с видимой зоны — details «для стенда»
+ * под карточкой; закрыт по умолчанию, не мешает первому впечатлению (07h §2) */
+.demo-fold {
+  margin-top: var(--space-3);
+}
+.demo-fold > summary {
+  cursor: pointer;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  width: fit-content;
+}
+.demo-fold > summary:hover {
+  color: var(--color-text-secondary);
+}
+.demo-fold > summary:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+.demo-fold[open] > summary {
+  margin-bottom: var(--space-2);
+}
+/* expired state */
+.pair-expired {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: center;
+  text-align: center;
+}
+
+/* verify digits (56px mono boxes, role=img group) */
+.verify-group {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: center;
+}
+.verify-group span {
+  display: inline-grid;
+  place-items: center;
+  width: 56px;
+  height: 64px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  font-variant-numeric: var(--numeric-tnum);
+  color: var(--color-text-primary);
+}
+.wait-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  justify-content: center;
+  font-size: var(--text-ui);
+  color: var(--color-text-secondary);
+}
+.wait-line .spinner {
+  flex: none;
+}
+.pair-note {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+/* success result card (07b §5.1 canon) */
+.pair-result {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-subtle);
+}
+.pair-result.ok {
+  border-color: color-mix(in srgb, var(--color-success) 45%, transparent);
+}
+.pair-result.fail {
+  border-color: color-mix(in srgb, var(--color-error) 45%, transparent);
+}
+.pair-result .rc-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+}
+.pair-result.ok .rc-title {
+  color: var(--color-success);
+}
+.pair-result.fail .rc-title {
+  color: var(--color-error);
+}
+.pair-result p {
+  margin: 0;
+  font-size: var(--text-ui);
+  color: var(--color-text-secondary);
+}
+.pair-result ul {
+  margin: 0;
+  padding-left: var(--space-5);
+  color: var(--color-text-secondary);
+  font-size: var(--text-ui);
+  display: grid;
+  gap: var(--space-1);
+}
+.pair-result .scope-line {
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--numeric-tnum);
+  font-size: var(--text-caps);
+  color: var(--color-text-muted);
+}
+.pair-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+/* demo phase-switch footer */
+.pair-demo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  justify-content: center;
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+/* bottom devices line */
+.pair-foot {
+  padding: var(--space-3) var(--space-5);
+  border-top: var(--line-hairline) solid var(--myelin-hairline);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+.pair-foot a {
+  color: var(--color-iris-bright);
+}
+/* no glow sources on a public page except focus ring (07h §7) */
+@media (prefers-reduced-motion: reduce) {
+  .pair-stage,
+  .pair-stage.leaving,
+  .qr-box {
+    animation: none;
+    transition: none;
+  }
+}
+[data-motion="reduced"] .pair-stage,
+[data-motion="reduced"] .pair-stage.leaving,
+[data-motion="reduced"] .qr-box {
+  animation: none;
+  transition: none;
+}
+[data-motion="reduced"] .ttl-arc .arc-fg {
+  transition: none;
+}
+/* v6 (07k §1.3): version/session line as the second row of .pair-foot.
+   Same contract as the sidebar footer; static dot, no glow (§0). */
+.pair-version-line {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  font-variant-numeric: var(--numeric-tnum);
+  white-space: nowrap;
+}
+.pair-version-line::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+  flex: none;
+}
+.pair-version-line.auth-user::before {
+  background: var(--color-success);
+}

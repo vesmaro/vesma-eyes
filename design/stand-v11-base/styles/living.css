@@ -1,0 +1,197 @@
+/* living.css — витрина «Живой слой v11» (страница living.html, спека 14).
+ * Служебная страница стенда (класс gallery: витрина ветки дизайна, в продукт
+ * не входит). Токены — только И0/НЕЙРО-словарь; новых hue нет.
+ * Стили витрина-специфичны и в продуктовый living-чанк не входят. */
+
+.lv-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+.lv-nav {
+  position: sticky;
+  top: calc(48px + var(--space-4));
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+.lv-nav a {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+.lv-nav a:hover { color: var(--color-text-primary); background: var(--myelin-hairline); }
+.lv-nav a:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.lv-section {
+  margin: 0 0 var(--space-10);
+}
+.lv-section > h2 {
+  font-size: var(--text-lg);
+  margin: 0 0 var(--space-1);
+}
+.lv-intro {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-secondary);
+  max-width: 80ch;
+}
+.lv-note {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin: var(--space-2) 0 0;
+}
+
+/* ── Грамматика: классы импульсов ────────────────────────────────────── */
+.lv-grammar {
+  border: var(--line-hairline) solid var(--myelin-hairline);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.lv-g-row {
+  display: grid;
+  grid-template-columns: 2.2rem minmax(0, 1.4fr) minmax(0, 1fr) 0.9fr 1.6fr auto;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: var(--line-hairline) solid var(--myelin-hairline);
+  background: var(--color-bg-well);
+}
+.lv-g-row:last-child { border-bottom: none; }
+.lv-g-row.head {
+  background: var(--color-bg-elevated);
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.lv-g-sign {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+  justify-self: center;
+}
+.lv-g-sign.event { background: var(--synapse-recall); }
+.lv-g-sign.event.gold { background: var(--synapse-write); }
+.lv-g-sign.attention {
+  background: transparent;
+  border: 2px solid var(--synapse-write);
+}
+.lv-g-sign.error { background: var(--synapse-error); }
+.lv-g-name { font-size: var(--text-ui); color: var(--color-text-primary); }
+.lv-g-name .lv-g-kind {
+  display: block;
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.lv-g-dir, .lv-g-speed, .lv-g-arrive {
+  font-family: var(--font-mono);
+  font-size: var(--text-data);
+  color: var(--color-text-secondary);
+  font-variant-numeric: var(--numeric-tnum);
+}
+
+/* ── Анатомия ────────────────────────────────────────────────────────── */
+.lv-anatomy {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+  padding: var(--space-4);
+  border: var(--line-hairline) solid var(--myelin-hairline);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-well);
+}
+.lv-anat-plate { display: grid; gap: var(--space-3); justify-items: center; }
+.lv-anat-v3 { width: 96px; height: 96px; }
+.lv-anat-v1 { width: 84px; height: 84px; }
+.lv-anat-cap {
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  color: var(--color-text-muted);
+}
+.lv-parts { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-2); }
+.lv-parts li {
+  display: grid;
+  grid-template-columns: 9rem minmax(0, 1fr);
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  border-bottom: var(--line-hairline) solid var(--myelin-hairline);
+  padding-bottom: var(--space-2);
+}
+.lv-parts .lv-part-name { color: var(--color-text-primary); font-weight: var(--weight-medium); }
+.lv-parts .lv-part-role { color: var(--color-text-secondary); }
+.lv-statepick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
+}
+
+/* ── Таблицы (мёртвые состояния, карта фаз, бюджет) ──────────────────── */
+.lv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+.lv-table th {
+  text-align: left;
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  font-weight: var(--weight-medium);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+.lv-table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: var(--line-hairline) solid var(--myelin-hairline);
+  color: var(--color-text-secondary);
+  vertical-align: top;
+}
+.lv-table td:first-child { color: var(--color-text-primary); white-space: nowrap; }
+
+/* ── V3-концепт: подсказка-наведение ─────────────────────────────────── */
+.lv-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-confidence-dim);
+  border-left: 2px solid var(--color-confidence);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+  font-size: var(--text-sm);
+  max-width: 52ch;
+}
+.lv-hint .lv-hint-close {
+  margin-left: auto;
+  flex: none;
+}
+.lv-rules { margin: 0; padding-left: 1.2em; display: grid; gap: var(--space-2); }
+.lv-rules li { color: var(--color-text-secondary); }
+.lv-rules strong { color: var(--color-text-primary); font-weight: var(--weight-medium); }
+
+@media (max-width: 900px) {
+  .lv-grid { grid-template-columns: minmax(0, 1fr); }
+  .lv-nav {
+    position: static;
+    grid-auto-flow: column;
+    overflow-x: auto;
+  }
+  .lv-g-row { grid-template-columns: 1.6rem minmax(0, 1fr) auto; }
+  .lv-g-row > .lv-g-dir, .lv-g-row > .lv-g-speed, .lv-g-row > .lv-g-arrive { display: none; }
+  .lv-anatomy { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+  .lv-parts li { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lv-hint { transition: none; }
+}

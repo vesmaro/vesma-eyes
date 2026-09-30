@@ -1,0 +1,207 @@
+/* ── v10 «Живой слой» (08-LIVING-NEURON): В1 Нейра, жилы, В2-курьеры ──
+ * Токены: --duration-neura/--duration-courier/--neura-breath-alpha/
+ * --vein-breath-alpha (08 §8). Цвета — словарь импульсов 06 §5, без новых hue. */
+
+/* В1 «Нейра»: кнопка 40×40 в статус-зоне, слева от LIVE-пилюли (08 §0) */
+.living-neura {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-md);
+  background: none;
+  cursor: pointer;
+  transition: background var(--duration-instant) var(--ease-enter);
+}
+.living-neura:hover {
+  background: var(--myelin-hairline); /* как iconbtn (08 §5.1) */
+}
+.living-neura:active {
+  background: var(--myelin-strong); /* морфология не меняется (08 §5.1) */
+}
+/* sticky-топбар: ринг 2px/2px с offset 4px (08 §7, канон 03 §8) */
+.living-neura:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 4px;
+}
+.living-neura canvas {
+  display: block;
+}
+/* пауза: статичная морфология; «Выключен»: точка Ø8 вместо персонажа */
+.living-neura .living-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-iris);
+}
+.living-neura.is-off-mode canvas { display: none; }
+.living-neura.is-calm canvas { display: block; }
+/* статичный SVG-фолбэк <45fps: кроссфейд 240ms opacity-only (08 §2.5) */
+.living-neura-svg {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 28px;
+  height: 28px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 240ms var(--ease-enter);
+}
+.living-static .living-neura canvas { opacity: 0; transition: opacity 240ms var(--ease-enter); }
+.living-static .living-neura-svg { opacity: 1; }
+
+/* Жилы: оверлеи СУЩЕСТВУЮЩИХ швов — новых линий на странице нет (08 §2.1).
+ * Покой = прозрачность 0 (под швом виден обычный --myelin-hairline). */
+.living-vein {
+  position: fixed;
+  z-index: 41; /* над топбаром (40), под модалками */
+  pointer-events: none;
+  background: var(--color-iris);
+  opacity: 0;
+}
+.living-vein.is-breathing {
+  /* v11 (14 §2.1): полный вдох-выдох внутри duty-окна (3–5s) —
+   * длительность задаёт JS (--vein-breath-dur), обрыв на середине
+   * цикла и скачок opacity исключены */
+  animation: vein-breath var(--vein-breath-dur, 10s) var(--ease-breath) 1;
+}
+@keyframes vein-breath {
+  0%, 100% { opacity: 0; }
+  50% { opacity: var(--vein-breath-alpha); }
+}
+/* след курьера / статичный тинт (Спокойный, reduced): затухание 1.5s */
+.living-vein.is-tinted {
+  opacity: 0.28;
+  background: var(--vein-tint, var(--color-iris));
+  transition: opacity 1.5s var(--ease-exit);
+}
+.living-vein:not(.is-tinted) {
+  transition: opacity var(--duration-instant) var(--ease-enter);
+}
+
+/* В2 «Синапс»: комета — ядро + хвост, offset-path задаёт JS (08 §1.3) */
+.living-courier {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 16px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  pointer-events: none;
+  z-index: 42;
+  offset-rotate: auto;
+  offset-distance: 0%;
+  background:
+    linear-gradient(to left, var(--courier-color, var(--color-iris)) 6px, transparent 16px);
+  box-shadow: 0 0 8px var(--courier-color, var(--color-iris)); /* glow-спрайт */
+  animation: living-courier-run var(--courier-dur, 1000ms) linear forwards;
+}
+/* агрегированный: яркость +30%, хвост 16px вместо 10px (08 §2.4) */
+.living-courier.aggregated {
+  width: 22px;
+  filter: brightness(1.3);
+  background:
+    linear-gradient(to left, var(--courier-color, var(--color-iris)) 6px, transparent 22px);
+}
+/* v11 (14 §2.2): курьер ВНИМАНИЯ — кольцевая голова вместо сплошной:
+ * важное стучит, а не мелькает; форма различает от write при общем золоте */
+.living-courier.attention::before {
+  content: "";
+  position: absolute;
+  right: -3px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  border: 1.5px solid var(--courier-color, var(--color-confidence));
+  border-radius: var(--radius-full);
+  background: var(--color-bg-base);
+}
+.living-courier.attention.aggregated::before {
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+}
+/* v11 (14 §2.2): ▸N при прибытии внимания — число и свечение совпадают
+ * по времени; удержание --duration-attention-hold */
+[data-exec-count] {
+  transition: box-shadow var(--duration-instant) var(--ease-enter);
+}
+[data-exec-count].attention-hold {
+  box-shadow: 0 0 10px var(--color-confidence);
+}
+@keyframes living-courier-run {
+  from { offset-distance: 0%; opacity: 0; }
+  15% { opacity: 1; }   /* подъём первые 15% пути */
+  80% { opacity: 1; }
+  to { offset-distance: 100%; opacity: 0; } /* спад последние 20% */
+}
+
+/* В3 «Ирис»: карточка ошибки связи, правый нижний угол (08 §5.3) */
+.living-v3-card {
+  position: fixed;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  width: 320px;
+  max-width: calc(100vw - var(--space-8));
+  padding: var(--space-4);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-float);
+  z-index: 60;
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  opacity: 0;
+  translate: 0 8px;
+  transition: opacity 240ms var(--ease-enter), translate 240ms var(--ease-enter);
+}
+.living-v3-card.is-open {
+  opacity: 1;
+  translate: 0 0;
+}
+.living-v3-card canvas { display: block; }
+.living-v3-text {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-text-primary);
+}
+.living-v3-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.living-v3-actions .btn { min-height: 24px; } /* ≥24, мобильный 44 (08 §7) */
+
+/* деградация <55.5fps: glow-спрайты курьеров off (08 §2.5) */
+.living-lite .living-courier { box-shadow: none; }
+
+/* supersede (08 §0): единый ambient-билет шелла перенесён с бренд-ириса
+ * на Нейру — бренд-знак статичен */
+.brand-mark circle:last-of-type {
+  animation: none;
+}
+
+/* reduced-motion: курьеры/дыхание не запускаются движком; CSS-страховка */
+@media (prefers-reduced-motion: reduce) {
+  .living-courier { display: none; }
+  .living-vein.is-breathing { animation: none; }
+  .living-v3-card { transition: none; }
+}
+[data-motion="reduced"] .living-courier { display: none; }
+[data-motion="reduced"] .living-vein.is-breathing { animation: none; }
+[data-motion="reduced"] .living-v3-card { transition: none; }
+
+/* мобильный: слот Нейры 44×44 (08 §7, 2.5.8) */
+@media (max-width: 767px) {
+  .living-neura { width: 44px; height: 44px; }
+  .living-v3-card { right: var(--space-3); bottom: var(--space-3); }
+}

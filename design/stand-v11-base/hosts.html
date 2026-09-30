@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Агенты · Хосты — vesmaro-eyes · стенд «Живая кора»</title>
+  <link rel="stylesheet" href="styles/tokens.css">
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/shell.css">
+  <link rel="stylesheet" href="styles/components.css">
+</head>
+<body>
+<a class="skip-link" href="#main">К содержимому</a>
+<div class="app">
+
+  <header class="topbar">
+    <button class="iconbtn side-toggle" type="button" data-sidebar-toggle aria-expanded="false" aria-label="Открыть разделы">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
+    </button>
+    <a class="brand" href="index.html">
+      <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/></svg>
+      vesmaro-eyes
+    </a>
+    <div class="topsearch">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="search" placeholder="Поиск по памяти и задачам…" aria-label="Глобальный поиск по памяти и задачам">
+      <span class="kbd-hint" aria-hidden="true"><kbd class="kbd">/</kbd></span>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="topbar-status">
+      <button class="iconbtn search-expand" type="button" data-search-expand aria-label="Открыть поиск"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
+      <span class="pill live" title="Живое соединение с демо-лентой стенда"><span class="dot" aria-hidden="true"></span>live</span>
+      <a class="iconbtn" href="agents.html" data-exec-count aria-label="Активные исполнения: 1 — открыть «Исполнение»">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
+        <span class="badge-dot" aria-hidden="true">1</span>
+      </a>
+      <button class="iconbtn" type="button" data-bell aria-label="Уведомления: лента не подключена в стенде">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      </button>
+      <div class="langtoggle" role="group" aria-label="Язык интерфейса">
+        <button type="button" aria-pressed="true" data-lang-demo>RU</button>
+        <button type="button" data-lang-demo>EN</button>
+      </div>
+      <button class="iconbtn" type="button" data-theme-toggle aria-pressed="false" aria-label="Сменить тему: сейчас тёмная">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <aside class="sidebar" aria-label="Разделы">
+    <nav class="side-nav" aria-label="Домены">
+      <a class="side-link" href="index.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/></svg>
+        <span class="side-label">Обзор</span>
+      </a>
+      <div class="side-group">
+        <button type="button" class="side-link side-domain" aria-expanded="false">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>
+          <span class="side-label">Память</span>
+          <svg class="side-chevron icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <div class="side-sections"><div>
+          <a class="side-section" href="memories.html">Записи</a>
+          <a class="side-section" href="search.html">Поиск</a>
+          <a class="side-section" href="pulse.html">Пульс</a>
+          <a class="side-section" href="tags.html">Теги</a>
+        </div></div>
+      </div>
+      <div class="side-group">
+        <button type="button" class="side-link side-domain" aria-expanded="false">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v9"/></svg>
+          <span class="side-label">Задачи</span><span class="side-count" data-side-count="tasks">5</span>
+          <svg class="side-chevron icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <div class="side-sections"><div>
+          <a class="side-section" href="tasks.html">Канбан</a>
+          <a class="side-section" href="tasks.html?view=list">Список</a>
+          <a class="side-section" href="tasks.html?view=inbox">Входящие<span class="side-count" data-side-count="inbox">2</span></a>
+          <a class="side-section" href="tasks.html?view=archive">Архив</a>
+        </div></div>
+      </div>
+      <div class="side-group" data-open>
+        <button type="button" aria-current="true" class="side-link side-domain domain-current" aria-expanded="true">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+          <span class="side-label">Агенты</span><span class="side-count" data-side-count="agents">1</span>
+          <svg class="side-chevron icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <div class="side-sections"><div>
+          <a class="side-section" href="agents.html">Исполнение</a>
+          <a class="side-section" href="hosts.html" aria-current="page">Хосты<span class="side-count" data-side-count="hosts">4</span></a>
+          <a class="side-section" href="connect.html">Подключить машину</a>
+        </div></div>
+      </div>
+      <a class="side-link" href="kora.html" title="сессии и переписка агентов">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        <span class="side-label">Кора</span>
+      </a>
+      <a class="side-link" href="docs.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+        <span class="side-label">Документы</span>
+      </a>
+      <div class="side-group">
+        <button type="button" class="side-link side-domain" aria-expanded="false">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+          <span class="side-label">Рабочий стол</span><span class="badge-exp">эксп</span>
+          <svg class="side-chevron icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <div class="side-sections"><div>
+          <a class="side-section" href="desktop.html">Терминал</a>
+          <a class="side-section" href="explorer.html">Проводник</a>
+        </div></div>
+      </div>
+      <div class="side-group">
+        <button type="button" class="side-link side-domain" aria-expanded="false">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span class="side-label">Настройки</span>
+          <svg class="side-chevron icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <div class="side-sections"><div>
+          <a class="side-section" href="status.html">Статус</a>
+          <a class="side-section" href="settings.html">Настройки</a>
+          <button class="side-section disabled" type="button" aria-disabled="true" data-demo-action="«Автоматизация» — раздел вне стенда">Автоматизация</button>
+          <button class="side-section disabled" type="button" aria-disabled="true" data-demo-action="«Устройства» — раздел вне стенда; подключение телефона — pair.html">Устройства</button>
+          <button class="side-section disabled" type="button" aria-disabled="true" data-demo-action="«Трассировки» — раздел вне стенда">Трассировки</button>
+        </div></div>
+      </div>
+      <a class="side-link" href="pair.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="12" x="2" y="6" rx="2"/><rect width="5" height="10" x="16" y="7" rx="2"/><path d="M9 12h7"/></svg>
+        <span class="side-label">Подключить телефон</span>
+      </a>
+    </nav>
+    <div class="side-foot">
+      <button class="side-link" type="button" data-palette-open>
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"/></svg>
+        <span class="side-label">Палитра</span>
+        <span class="side-count">Ctrl K</span>
+      </button>
+      <button class="side-link" type="button" data-cheatsheet-open>
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="M10 8h.01"/><path d="M12 12h.01"/><path d="M14 8h.01"/><path d="M16 12h.01"/><path d="M18 8h.01"/><path d="M6 8h.01"/><path d="M7 16h10"/><path d="M8 12h.01"/></svg>
+        <span class="side-label">Шпаргалка</span>
+        <span class="side-count">?</span>
+      </button>
+      <a class="side-link" href="gallery.html">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+        <span class="side-label">Галерея</span>
+        <span class="badge-stand">стенд</span>
+      </a>
+      <button class="side-link" type="button" data-sidebar-toggle aria-expanded="true">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
+        <span class="side-label">Свернуть</span>
+        <span class="side-count">[</span>
+      </button>
+      <p class="stand-note stand-status" data-stand-version-line></p>
+    </div>
+  </aside>
+
+  <div class="main">
+
+    <nav class="crumbs" aria-label="Хлебные крошки">
+      <span class="gprefix" aria-hidden="true">g→</span>
+      <ol>
+        <li><a href="index.html">Обзор</a></li>
+        <li><a href="agents.html">Агенты</a></li>
+        <li><span aria-current="page">Хосты</span></li>
+      </ol>
+      <span class="crumbs-spacer"></span>
+      <button class="btn ghost sm" type="button" data-palette-open>
+        <kbd class="kbd">Ctrl</kbd><kbd class="kbd">K</kbd> Палитра
+      </button>
+    </nav>
+
+    <main class="content" id="main">
+
+      <div class="page-head">
+        <div>
+          <h1 tabindex="-1">Хосты</h1>
+          <p class="page-sub">Машины, где работают агенты. Клик по карточке — «Жизнь хоста».</p>
+        </div>
+        <div class="page-actions">
+          <a class="btn primary sm" href="connect.html">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            Подключить хост
+          </a>
+        </div>
+      </div>
+
+      <section class="panel" aria-label="Реестр хостов">
+        <div class="panel-head">Реестр хостов <span class="count" id="host-count"></span></div>
+        <div class="panel-body">
+          <div class="host-grid" id="host-grid"></div>
+        </div>
+        <p class="status-line" style="padding: 0 var(--space-4) var(--space-3)">
+          Изменить можно всё, кроме харнеса — он задаёт правила машины.
+          <button class="btn ghost sm" type="button" data-demo-action="Подробнее — блок «Технические детали» в карточке хоста">подробнее</button>
+        </p>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<div class="drawer-overlay" id="drawer-ov" hidden></div>
+<aside class="drawer" id="host-drawer" hidden role="dialog" aria-modal="true" aria-labelledby="hd-title">
+  <div class="drawer-head">
+    <div>
+      <h2 id="hd-title" tabindex="-1"></h2>
+      <div class="status-line" id="hd-status"></div>
+      <p class="hostcard-busy" id="hd-busy"></p>
+    </div>
+    <button class="iconbtn" type="button" id="hd-close" aria-label="Закрыть карточку хоста">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+  </div>
+  <div class="drawer-body" id="hd-body"></div>
+</aside>
+
+<div class="overlay" id="palette" hidden role="dialog" aria-modal="true" aria-label="Командная палитра">
+  <div class="palette">
+    <div class="palette-input-wrap">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input class="palette-input" type="text" role="combobox" aria-expanded="true" aria-controls="palette-results" aria-autocomplete="list" aria-label="Командная палитра" placeholder="Куда идём? Попробуйте: «хосты», «laptop-go-1», «подключить»">
+    </div>
+    <div class="palette-results" id="palette-results" role="listbox" aria-label="Результаты"></div>
+    <div class="palette-foot">
+      <span><kbd class="kbd">↑</kbd><kbd class="kbd">↓</kbd> перемещение</span>
+      <span><kbd class="kbd">Enter</kbd> выполнить</span>
+      <span><kbd class="kbd">Esc</kbd> закрыть</span>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="cheatsheet" hidden role="dialog" aria-modal="true" aria-labelledby="cheatsheet-title">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="cheatsheet-title">Хоткеи</h2>
+      <button class="iconbtn" type="button" data-modal-close aria-label="Закрыть шпаргалку">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <table class="hotkeys-table">
+        <thead><tr><th scope="col">Клавиши</th><th scope="col">Действие</th></tr></thead>
+        <tbody>
+          <tr><td><kbd class="kbd">/</kbd></td><td>фокус глобального поиска</td></tr>
+          <tr><td><kbd class="kbd">Ctrl</kbd> <kbd class="kbd">K</kbd></td><td>палитра команд</td></tr>
+          <tr><td><kbd class="kbd">?</kbd></td><td>эта шпаргалка</td></tr>
+          <tr><td><kbd class="kbd">g</kbd> → <kbd class="kbd">o</kbd> / <kbd class="kbd">m</kbd> / <kbd class="kbd">a</kbd> / <kbd class="kbd">k</kbd> / <kbd class="kbd">d</kbd> / <kbd class="kbd">w</kbd></td><td>Обзор / Память / Агенты / Кора / Документы / Рабочий стол</td></tr>
+          <tr><td><kbd class="kbd">g</kbd> → <kbd class="kbd">t</kbd> / <kbd class="kbd">b</kbd> / <kbd class="kbd">i</kbd> / <kbd class="kbd">p</kbd> / <kbd class="kbd">e</kbd> / <kbd class="kbd">s</kbd></td><td>Задачи / Канбан / Входящие / Пульс / Исполнение / Настройки</td></tr>
+          <tr><td><kbd class="kbd">j</kbd> / <kbd class="kbd">k</kbd></td><td>вниз / вверх по списку (в продуктовой версии)</td></tr>
+          <tr><td><kbd class="kbd">x</kbd></td><td>выделить строку (bulk, в продукте)</td></tr>
+          <tr><td><kbd class="kbd">Esc</kbd></td><td>закрыть верхний оверлей</td></tr>
+          <tr><td><kbd class="kbd">[</kbd></td><td>свернуть / развернуть сайдбар</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="confirm" hidden role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="confirm-title"></h2>
+      <button class="iconbtn" type="button" data-modal-close aria-label="Закрыть подтверждение">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p id="confirm-text" style="margin: 0 0 var(--space-4); color: var(--color-text-secondary)"></p>
+      <div style="display: flex; gap: var(--space-2); justify-content: flex-end">
+        <button class="btn secondary sm" type="button" id="confirm-no">Отмена</button>
+        <button class="btn danger sm" type="button" id="confirm-yes"></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/shell.js"></script>
+<script src="js/living.js"></script>
+<script>
+
+  (function () {
+
+    /* v6 (07k §3): anonymous visit renders the gate instead of the section —
+     * shell.js has already replaced #main; nothing here should run or throw. */
+    if (document.getElementById("main") && document.getElementById("main").dataset.gated) return;
+    var D = window.STAND;
+    var doc = document;
+    var grid = doc.getElementById("host-grid");
+    /* счётчик из данных, не статичный текст (u-a #1) */
+    doc.getElementById("host-count").textContent = "· " + D.hosts.length;
+
+    var LC = {
+      provisioning: { cls: "provisioning", pill: '<span class="pill provisioning"><span class="dot" aria-hidden="true"></span>ставится…</span>' },
+      online: { cls: "online", pill: '<span class="pill live"><span class="dot" aria-hidden="true"></span>на связи</span>' },
+      silent: { cls: "silent", pill: '<span class="pill silent" title="молчит дольше обычного (обычно агент докладывается раз в минуту)"><span class="dot" aria-hidden="true"></span>молчит 4 мин</span>' },
+      off: { cls: "off", pill: '<span class="pill off"><span class="dot" aria-hidden="true"></span>выключен владельцем</span>' },
+      revoked: { cls: "revoked", pill: '<span class="pill revoked"><span class="dot" aria-hidden="true"></span>отозван</span>' },
+    };
+
+    function el(tag, cls, text) {
+      var e = doc.createElement(tag);
+      if (cls) e.className = cls;
+      if (text != null) e.textContent = text;
+      return e;
+    }
+
+    /* ── Registry cards (07c §1): pill + name + busy line + harness ── */
+    D.hosts.forEach(function (h, idx) {
+      var lc = LC[h.lifecycle] || LC.online;
+      var card = el("button", "host-card");
+      card.type = "button";
+      card.dataset.idx = idx;
+      card.innerHTML =
+        (lc.pill || "") +
+        '<span class="hc-name">' + h.name + "</span>" +
+        '<span class="hc-meta">' + h.statusLine + "</span>" +
+        (h.busyLine ? '<span class="hc-meta">' + h.busyLine + "</span>" : "") +
+        (h.harness ? '<span class="hc-meta">' + h.harness + (h.tasksActive ? " · задачи: " + h.tasksActive : "") + "</span>" : "") +
+        (h.lifecycle === "off"
+          ? '<span class="hc-actions" style="margin-top: var(--space-2)"><button class="btn secondary sm" type="button" data-host-idx="' + idx + '" data-act="enable">Включить</button></span>'
+          : "");
+      card.addEventListener("click", function (e) {
+        if (e.target.closest("[data-act='enable']")) {
+          window.standToast("Включение хоста — действие продуктовой версии; в стенде демо-данные", "info");
+          return;
+        }
+        openCard(idx);
+      });
+      grid.appendChild(card);
+    });
+
+    /* ── Drawer: «Жизнь хоста» (07c) ──────────────────────────────── */
+    var ov = doc.getElementById("drawer-ov");
+    var drawer = doc.getElementById("host-drawer");
+    var title = doc.getElementById("hd-title");
+    var statusBox = doc.getElementById("hd-status");
+    var busyBox = doc.getElementById("hd-busy");
+    var body = doc.getElementById("hd-body");
+    var opener = null;
+
+    function checkConnBtn(host, row) {
+      var b = el("button", "btn secondary sm");
+      b.type = "button";
+      b.textContent = "Проверить связь";
+      b.addEventListener("click", function () {
+        b.classList.add("loading");
+        b.textContent = "Проверяем…";
+        b.disabled = true;
+        setTimeout(function () {
+          b.classList.remove("loading");
+          b.disabled = false;
+          b.textContent = "Проверить связь";
+          window.standToast(
+            host.lifecycle === "silent"
+              ? "Не отвечает: молчит 4 мин — докладов нет"
+              : "Ответил за 0,8 с",
+            host.lifecycle === "silent" ? "info" : "success"
+          );
+        }, 800);
+      });
+      return b;
+    }
+
+    function nowBlock(h) {
+      var wrap = el("div", "now-block");
+      wrap.appendChild(el("div", "drawer-sec-label", "Сейчас"));
+      if (h.lifecycle === "off") {
+        wrap.appendChild(el("p", "status-line", "Хост выключен — блок нечего показывать. Включите — и он продолжит."));
+        return wrap;
+      }
+      if (h.lifecycle === "revoked") return null;
+      if (h.lifecycle === "provisioning") {
+        wrap.appendChild(el("p", "status-line", "Ставим агента на машину — обычно пара минут"));
+        return wrap;
+      }
+      var now = h.now || {};
+      if (now.task) {
+        var r1 = el("div", "now-row");
+        r1.appendChild(el("span", null, "▸ задача «" + now.task.title + "» · " + now.task.state + " · " + now.task.report));
+        var b1 = el("button", "btn ghost sm row-cta");
+        b1.type = "button";
+        b1.textContent = "Открыть";
+        b1.setAttribute("data-demo-action", "Открытие задачи — «Задачи» вне стенда; смотрите «Записи»");
+        r1.appendChild(b1);
+        wrap.appendChild(r1);
+      }
+      if (now.session) {
+        var r2 = el("div", "now-row");
+        r2.appendChild(el("span", null, "сессия " + now.session.harness + " · " + now.session.opened));
+        var b2 = el("button", "btn secondary sm row-cta");
+        b2.type = "button";
+        b2.textContent = "Открыть в Корее";
+        b2.setAttribute("data-demo-action", "Кора — журнал сессий этого хоста; в стенде откройте kora.html");
+        r2.appendChild(b2);
+        wrap.appendChild(r2);
+      }
+      if (now.idle) {
+        var r3 = el("div", "now-row");
+        r3.appendChild(el("span", null, now.idle));
+        var b3 = el("button", "btn primary sm row-cta");
+        b3.type = "button";
+        b3.textContent = "Дать задачу";
+        b3.setAttribute("data-demo-action", "«Дать задачу» — задачи с предвыбором хоста; «Задачи» вне стенда");
+        r3.appendChild(b3);
+        wrap.appendChild(r3);
+      }
+      return wrap;
+    }
+
+    function recentBlock(h) {
+      var wrap = el("div");
+      wrap.appendChild(el("div", "drawer-sec-label", "Недавно"));
+      if (!h.recent.length) {
+        var empty = el("p", "status-line", "Тишина. Первые события появятся после первого доклада агента — обычно до 2 минут");
+        var b = el("button", "btn secondary sm");
+        b.type = "button";
+        b.textContent = "Проверить связь";
+        empty.appendChild(b);
+        wrap.appendChild(empty);
+        return wrap;
+      }
+      h.recent.slice(0, 5).forEach(function (ev) {
+        var r = el("div", "recent-row");
+        r.appendChild(el("span", "ev-time", ev.time));
+        r.appendChild(el("span", null, ev.text));
+        if (ev.cta) {
+          var b = el("button", "btn ghost sm row-cta");
+          b.type = "button";
+          b.textContent = "Открыть";
+          b.setAttribute("data-demo-action", "Открытие события — «Задачи» вне стенда");
+          r.appendChild(b);
+        }
+        wrap.appendChild(r);
+      });
+      return wrap;
+    }
+
+    function actionsBlock(h) {
+      if (h.lifecycle === "revoked") return null;
+      var wrap = el("div");
+      wrap.appendChild(el("div", "drawer-sec-label", "Быстрые действия"));
+      var row = el("div", "danger-zone");
+      row.style.borderTop = "none";
+      row.style.paddingTop = "0";
+      var give = el("button", "btn secondary sm");
+      give.type = "button";
+      give.textContent = "Дать задачу";
+      if (h.lifecycle === "off") {
+        give.disabled = true;
+        give.title = "Хост выключен владельцем — новые задачи не получает";
+      }
+      give.setAttribute("data-demo-action", give.disabled
+        ? "Дать задачу недоступно: хост выключен владельцем"
+        : "«Дать задачу» — задачи с предвыбором хоста; «Задачи» вне стенда");
+      var kora = el("button", "btn secondary sm");
+      kora.href = "kora.html?host=" + encodeURIComponent(h.name);
+      kora.textContent = "Сессии в Кору";
+      var conn = checkConnBtn(h);
+      row.appendChild(give);
+      row.appendChild(kora);
+      row.appendChild(conn);
+      wrap.appendChild(row);
+      return wrap;
+    }
+
+    function skillsBlock(h) {
+      var wrap = el("div", "skills-roles");
+      wrap.appendChild(el("div", "drawer-sec-label", "Умения и роли"));
+      var sk = el("div", null);
+      sk.style.fontSize = "var(--text-ui)";
+      if (h.skills.length) {
+        var chips = el("div", "skill-chips");
+        h.skills.forEach(function (s) { chips.appendChild(el("span", "chip", s)); });
+        sk.appendChild(chips);
+      } else {
+        sk.appendChild(el("span", "status-line", "Умения: пока не назначены — задачи хост не найдут."));
+        var sa = el("button", "btn secondary sm");
+        sa.type = "button";
+        sa.textContent = "Назначить умения";
+        sa.setAttribute("data-demo-action", "Назначение умений — выбор из словаря сервера; в стенде заглушка");
+        sk.appendChild(sa);
+        sk.appendChild(el("p", "status-line", "Умения — что хосту можно запускать. Назначаете вы; хост не добавит их сам."));
+      }
+      wrap.appendChild(sk);
+      var rl = el("div", null);
+      rl.style.fontSize = "var(--text-ui)";
+      rl.style.marginTop = "var(--space-2)";
+      if (h.roles.length) {
+        var rchips = el("div", "skill-chips");
+        h.roles.forEach(function (r) { rchips.appendChild(el("span", "chip", r)); });
+        rl.appendChild(rchips);
+      }
+      var ra = el("button", "btn ghost sm");
+      ra.type = "button";
+      ra.textContent = "+ Добавить роль";
+      ra.setAttribute("data-demo-action", "Роли помогают подбирать задачи: например, researcher. Правка — в продуктовой версии");
+      rl.appendChild(ra);
+      rl.appendChild(el("p", "status-line", "Роли влияют на подбор задач. Что хосту реально разрешено, решает его машина — см. детали."));
+      wrap.appendChild(rl);
+      return wrap;
+    }
+
+    function techBlock(h) {
+      var wrap = el("div", "collapse-block");
+      var t = el("button", "cb-toggle");
+      t.type = "button";
+      t.setAttribute("aria-expanded", "false");
+      t.setAttribute("aria-controls", "hd-tech");
+      t.innerHTML =
+        '<svg class="chev icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>' +
+        "Технические детали";
+      var b = el("div", "cb-body");
+      b.id = "hd-tech";
+      b.hidden = true;
+      var t2 = el("table", "tech-table");
+      var rows = [
+        ["id хоста", '<span class="mono">' + h.tech.id + "</span>"],
+        ["регистрация", h.tech.registered],
+        ["IP первого входа", '<span class="mono">' + h.tech.ip + "</span>"],
+        ["отпечаток машины", '<span class="mono">' + h.tech.fp + "</span> · первое подключение — отпечаток запомнен"],
+        ["софт", "агент " + h.tech.agent + " · харнес " + h.tech.harnessVer],
+        ["связь", "агент сам докладывается каждые ~2 мин — сервер его не дёргает · " + h.tech.transport],
+        ["харнес", h.harness ? "работает через " + h.harness + " · менять нельзя без перерегистрации: харнес задаёт, что агенту разрешено на его машине" : "—"],
+        ["секрет", "секрет показывается один раз при регистрации. Потеряли — выключите хост и подключите заново"],
+        ["доклады", h.tech.reports],
+      ];
+      rows.forEach(function (r) {
+        var tr = doc.createElement("tr");
+        var th = doc.createElement("th");
+        th.scope = "row";
+        th.textContent = r[0];
+        var td = doc.createElement("td");
+        td.innerHTML = r[1];
+        tr.appendChild(th);
+        tr.appendChild(td);
+        t2.appendChild(tr);
+      });
+      b.appendChild(t2);
+      if (h.lifecycle !== "revoked") {
+        var dz = el("div", "danger-zone");
+        var b1 = el("button", "btn secondary sm");
+        b1.type = "button";
+        b1.textContent = h.lifecycle === "off" ? "Включить" : "Выключить";
+        b1.setAttribute("data-demo-action", "Действие продуктовой версии: в стенде данные не меняются");
+        var b2 = el("button", "btn danger sm");
+        b2.type = "button";
+        b2.textContent = "Отозвать доступ";
+        b2.addEventListener("click", function () {
+          askConfirm("Отозвать " + h.name + "?", "Секрет перестанет действовать, агент на машине остановится. Вернуть можно только новым подключением.", "Отозвать");
+        });
+        var b3 = el("button", "btn danger sm");
+        b3.type = "button";
+        b3.textContent = "Удалить";
+        b3.setAttribute("data-demo-action", "Удаление хоста — действие продуктовой версии с подтверждением");
+        dz.appendChild(b1);
+        dz.appendChild(b2);
+        dz.appendChild(b3);
+        b.appendChild(dz);
+      }
+      t.addEventListener("click", function () {
+        var open = t.getAttribute("aria-expanded") === "true";
+        t.setAttribute("aria-expanded", open ? "false" : "true");
+        b.hidden = open;
+        try { localStorage.setItem("stand-host-tech-" + h.name, open ? "0" : "1"); } catch (e) {}
+      });
+      try { if (localStorage.getItem("stand-host-tech-" + h.name) === "1") { t.setAttribute("aria-expanded", "true"); b.hidden = false; } } catch (e) {}
+      wrap.appendChild(t);
+      wrap.appendChild(b);
+      return wrap;
+    }
+
+    function openCard(idx) {
+      var h = D.hosts[idx];
+      opener = doc.activeElement;
+      title.textContent = h.name;
+      var lc = LC[h.lifecycle] || LC.online;
+      statusBox.innerHTML = (lc.pill || "") + '<span>' + h.statusLine + "</span>";
+      busyBox.textContent = h.lifecycle === "off" ? (h.statusNote || "") : (h.busyLine || "");
+      if (h.lifecycle === "off") {
+        var en = el("button", "btn secondary sm");
+        en.type = "button";
+        en.textContent = "Включить";
+        en.addEventListener("click", function () {
+          toast("Включение хоста — действие продуктовой версии; в стенде демо-данные", "info");
+        });
+        title.parentElement.querySelector(".status-line").appendChild(en);
+      }
+      body.innerHTML = "";
+      if (h.lifecycle === "off") {
+        var st = el("div", "result-card timeout");
+        st.appendChild(el("div", "rc-title", "Новые задачи не получает."));
+        st.appendChild(el("p", null, "Доклады продолжаются — машина жива. Вернуть — одной кнопкой [Включить] в шапке."));
+        body.appendChild(st);
+      }
+      if (h.lifecycle === "revoked") {
+        var st2 = el("div", "result-card fail");
+        st2.appendChild(el("div", "rc-title", "Доступ отозван."));
+        st2.appendChild(el("p", null, "Секрет агента больше не действует; на машине его сервис остановлен. Вернуть можно только новым подключением."));
+        var re = el("a", "btn secondary sm");
+        re.href = "connect.html";
+        re.textContent = "Подключить заново";
+        st2.appendChild(re);
+        body.appendChild(st2);
+      }
+      if (h.lifecycle === "provisioning") {
+        var st3 = el("div", "result-card timeout");
+        st3.appendChild(el("div", "rc-title", "Ставится…"));
+        st3.appendChild(el("p", null, "Ставим агента на машину — обычно пара минут. Первый доклад придёт сам."));
+        body.appendChild(st3);
+      }
+      var n = nowBlock(h);
+      if (n) { body.appendChild(n); }
+      var r = recentBlock(h);
+      if (r) body.appendChild(r);
+      var a = actionsBlock(h);
+      if (a) body.appendChild(a);
+      body.appendChild(skillsBlock(h));
+      body.appendChild(techBlock(h));
+      ov.hidden = false;
+      drawer.hidden = false;
+      title.focus();
+    }
+
+    function closeCard() {
+      ov.hidden = true;
+      drawer.hidden = true;
+      if (opener && opener.focus) opener.focus();
+    }
+    doc.getElementById("hd-close").addEventListener("click", closeCard);
+    ov.addEventListener("click", closeCard);
+    doc.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && !drawer.hidden) {
+        e.stopPropagation();
+        closeCard();
+      }
+      if (e.key === "Tab" && !drawer.hidden) {
+        var f = drawer.querySelectorAll("button, a[href], input, select, textarea");
+        if (!f.length) return;
+        var first = f[0], last = f[f.length - 1];
+        if (e.shiftKey && doc.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && doc.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    });
+
+    /* ── Confirm modal (danger zone) ──────────────────────────────── */
+    var cModal = doc.getElementById("confirm");
+    var cYes = doc.getElementById("confirm-yes");
+    function askConfirm(t, text, yes) {
+      doc.getElementById("confirm-title").textContent = t;
+      doc.getElementById("confirm-text").textContent = text;
+      cYes.textContent = yes;
+      cModal.hidden = false;
+    }
+    cYes.addEventListener("click", function () {
+      cModal.hidden = true;
+      window.standToast("Действие продуктовой версии: в стенде данные не меняются", "info");
+    });
+
+    /* ── Kora deep-link: ?host=<name> предфильтр заметка ──────────── */
+    var q = new URLSearchParams(window.location.search).get("host");
+    if (q) window.standToast("Хост " + q + ": сессии — в Корее (kora.html?host=" + q + ")", "info");
+  })();
+
+</script>
+</body>
+</html>
