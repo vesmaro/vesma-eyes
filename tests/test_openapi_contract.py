@@ -237,7 +237,10 @@ class TestKeyRoutesReferenceSchemas:
         (shown once, claim_token pattern)."""
         for name in ("ExecutorOut", "ExecutorListOut", "ExecutorRegister",
                      "ExecutorRegisteredOut", "ExecutorPatch",
-                     "ExecutorStateChangeOut"):
+                     "ExecutorStateChangeOut",
+                     # ME-015: discovery ingest + mirror legs
+                     "ExecutorDiscoveryBody", "ExecutorDiscoveryOut",
+                     "ExecutorDiscoveryMirrorOut"):
             assert name in _components(spec)
         assert _ref_name(_response_schema(
             spec, "/api/executors", "get")) == "ExecutorListOut"
@@ -252,6 +255,19 @@ class TestKeyRoutesReferenceSchemas:
         assert _ref_name(_response_schema(
             spec, "/api/executors/{executor_id}/heartbeat", "post")) \
             == "ExecutorStateChangeOut"
+        # ME-015: the discovery route is a REAL pair — POST ingest answers
+        # ExecutorDiscoveryOut, the GET mirror leg (AGW-18 405 tail) answers
+        # ExecutorDiscoveryMirrorOut; a POST-only registration would leave
+        # "get" absent and fall through to the SPA catch-all.
+        assert _ref_name(_response_schema(
+            spec, "/api/executors/{executor_id}/discovery", "get")) \
+            == "ExecutorDiscoveryMirrorOut"
+        assert _ref_name(_response_schema(
+            spec, "/api/executors/{executor_id}/discovery", "post")) \
+            == "ExecutorDiscoveryOut"
+        mirror = _components(spec)["ExecutorDiscoveryMirrorOut"]
+        assert {"ok", "executor_id", "discovered", "meta"} \
+            <= set(mirror.get("properties", {}))
         out = _components(spec)["ExecutorOut"]
         must_have = {"id", "name", "harness", "host", "transport",
                      "capabilities", "version", "enabled", "state",

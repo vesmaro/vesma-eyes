@@ -15,7 +15,9 @@ Coverage map:
 - cap 32 → honest 422; the additive AGW-17 ``environments`` field is
   accepted and ignored; the report proves liveness (last_seen ticks);
 - no migrations: the ``discovered`` column rides the additive ALTER
-  (registered_via precedent) — a pre-ME-015 row reads back as ``[]``.
+  (registered_via precedent) — a pre-ME-015 row reads back as ``[]``;
+- the GET mirror leg (AGW-18 tail): 200 + the LAST report mirror + the cap
+  in meta, OPEN read on the GET /api/executors boundary, unknown id 404.
 """
 
 from __future__ import annotations
@@ -64,6 +66,12 @@ def _row(client, executor_id: str) -> dict:
     r = client.get(f"/api/executors/{executor_id}")
     assert r.status_code == 200, r.text
     return r.json()
+
+
+def _post_discovery(client, executor_id, secret, harnesses, **extra):
+    payload = {"harnesses": harnesses} | extra
+    return client.post(f"/api/executors/{executor_id}/discovery",
+                       json=payload, headers=_ex_headers(secret))
 
 def _board_events(app_module, kind: str, executor_id: str) -> list[dict]:
     """Audit rows for THIS executor (the events table is session-scoped
@@ -251,6 +259,66 @@ class TestDiscoveryLeg:
         r = self._post(client, executor["id"], secret, entries)
         assert r.status_code == 422, r.text
         assert "cap 32" in r.json()["detail"]
+
+class TestDiscoveryMirrorGet:
+    """GET /api/executors/{id}/discovery — the mirror read leg (ME-015
+    tail, AGW-18): the POST-only registration used to leave GET to the
+    root SPA catch-all (a wrong-status shell, observed as 405/404); the
+    honest answer is the LAST report mirror, an OPEN read on the same
+    boundary as GET /api/executors."""
+
+    def test_get_returns_last_report_mirror(self, client, auth):
+        executor, secret = _register(client, auth, "me015-g1")
+        _post_discovery(client, executor["id"], secret, [
+            {"name": "zcode", "version": "1.22.0", "path": "/usr/bin/zcode"},
+            {"name": "pi", "version": "5", "path": ""},
+        ])
+        r = client.get(f"/api/executors/{executor['id']}/discovery")
+        assert r.status_code == 200, r.text
+        out = r.json()
+        assert out["ok"] is True
+        assert out["executor_id"] == executor["id"]
+        assert [d["name"] for d in out["discovered"]] == ["pi", "zcode"]
+        # the mirror equals the registry projection — one source of truth
+        assert out["discovered"] == \
+            _row(client, executor["id"])["discovered"]
+        # the cap rides meta: clients read it, never hardcode
+        assert out["meta"]["max_entries"] == 32
+
+    def test_never_reported_is_honest_empty(self, client, auth):
+        executor, _secret = _register(client, auth, "me015-g2")
+        r = client.get(f"/api/executors/{executor['id']}/discovery")
+        assert r.status_code == 200, r.text
+        assert r.json()["discovered"] == []
+
+    def test_unknown_id_is_404_not_spa_shell(self, client):
+        r = client.get("/api/executors/ex-nosuch/discovery")
+        assert r.status_code == 404, r.text
+        assert "application/json" in r.headers.get("content-type", "")
+
+    def test_open_read_no_token_class_required(self, client, auth):
+        """Same boundary as GET /api/executors: the cluster ingress is the
+        auth boundary — an anonymous read is served, not 401'd."""
+        executor, secret = _register(client, auth, "me015-g3")
+        _post_discovery(client, executor["id"], secret,
+                         [{"name": "zcode", "version": "1"}])
+        r = client.get(f"/api/executors/{executor['id']}/discovery")
+        assert r.status_code == 200, r.text
+        assert r.json()["discovered"][0]["name"] == "zcode"
+
+    def test_get_survives_row_wipe_by_id(self, client, auth):
+        """The read is by id on the LIVE row — a deleted executor stops
+        serving the mirror (404), never a stale snapshot."""
+        executor, secret = _register(client, auth, "me015-g4")
+        _post_discovery(client, executor["id"], secret,
+                         [{"name": "zcode", "version": "1"}])
+        assert client.delete(
+            f"/api/executors/{executor['id']}", headers=auth).status_code \
+            == 200
+        assert client.get(
+            f"/api/executors/{executor['id']}/discovery").status_code == 404
+
+
 
 class TestNoMigration:
     """The discovered column rides the additive ALTER — a pre-ME-015 row
