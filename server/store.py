@@ -109,28 +109,37 @@ ACTIVITY_FAMILIES: dict[str, tuple[str, ...]] = {
 ACTIVITY_RETENTION_DAYS = 90
 ACTIVITY_RETENTION_CAP = 500_000
 # ME-049: the telemetry classification for the family-aware cap pass —
-# the ME-037 frozen taxonomy (events-taxonomy-v0 §1.2) as stored kinds.
-# Prefix families are safe to match wholesale (no audit kind starts with
-# ui./cmdk./living.); kora is deliberately NOT a prefix — the server's
-# own kora.sessions.upserted audit kind shares it, so the kora telemetry
-# kinds are listed exactly.
+# the ME-037 frozen taxonomy (events-taxonomy-v0 §1.2) as stored kinds,
+# with ONE deliberate divergence: notifications.read. The taxonomy lists
+# it as a telemetry kind, but the server ALSO writes it as an audit row
+# (app.py /api/notifications/read → log_board_event — the baseline-4
+# «пинок» with the server-stamped scope), and a kind-level SQL match
+# cannot split the two variants. The conservative split wins: the whole
+# kind rides the audit tier (never evicted before executor.*/pairing.*);
+# the ingest variant is rare device-leg counting, not the flood surface —
+# the ui.visit/ui.nav page-load chatter is, and that is prefix-matched.
+# Prefix families are safe to match wholesale (verified: no server-side
+# audit kind starts with ui./cmdk./living.); kora is deliberately NOT a
+# prefix — the server's own kora.sessions.upserted audit kind shares it,
+# so the four kora client kinds are listed exactly.
 TELEMETRY_EVENT_PREFIXES: tuple[str, ...] = ("ui.", "cmdk.", "living.")
 TELEMETRY_EVENT_KINDS: tuple[str, ...] = (
     "kora.entered", "kora.intent_started", "kora.intent_completed",
-    "kora.intent_abandoned", "notifications.read",
+    "kora.intent_abandoned",
 )
 
 
 def _telemetry_condition() -> tuple[str, list[str]]:
-    """(sql_fragment, params) matching the telemetry kinds — used by the
-    ME-049 family-aware cap pass. Parameters only; the kind list is a
-    frozen module constant, never caller input."""
-    frag = " OR ".join(["kind LIKE ?"] * len(TELEMETRY_EVENT_PREFIXES))
-    params: list[str] = [f"{p}%" for p in TELEMETRY_EVENT_PREFIXES]
-    if TELEMETRY_EVENT_KINDS:
-        frag += (" OR kind IN ("
-                 + ", ".join("?" * len(TELEMETRY_EVENT_KINDS)) + ")")
-        params.extend(TELEMETRY_EVENT_KINDS)
+    """(sql_fragment, params) matching the telemetry kinds for the
+    ME-049 family-aware cap pass. The fragment interpolates frozen
+    module constants only (never caller input); every value is a bound
+    parameter."""
+    frag = " OR ".join(
+        ["kind LIKE ?"] * len(TELEMETRY_EVENT_PREFIXES)
+        + [f"kind IN ({', '.join('?' * len(TELEMETRY_EVENT_KINDS))})"]
+    )
+    params = [f"{p}%" for p in TELEMETRY_EVENT_PREFIXES]
+    params.extend(TELEMETRY_EVENT_KINDS)
     return f"({frag})", params
 VALID_ENVS = frozenset({"cluster", "laptop", "local", "cloud", "unknown"})
 # BE-12: task priority dictionary. `normal` is both the API default and the
@@ -2083,10 +2092,12 @@ class Store:
             if excess > 0:
                 # ME-049 stage 1: telemetry is expendable chatter — a
                 # ui.* flood must evict telemetry, not the audit trail.
+                # tel_where interpolates frozen constants only; every
+                # value is a bound parameter (_telemetry_condition).
                 capped = db.execute(
                     "DELETE FROM events WHERE id IN ("
                     "SELECT id FROM events WHERE kind NOT LIKE 'task.%' "
-                    f"AND {tel_where} "  # noqa: S608 — frozen constants
+                    f"AND {tel_where} "
                     "ORDER BY id ASC LIMIT ?)",
                     (*tel_params, excess),
                 ).rowcount

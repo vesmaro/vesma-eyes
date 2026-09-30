@@ -33,6 +33,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from starlette.requests import Request
 
+import server.store
 from conftest import DATA_DIR
 
 DB_PATH = DATA_DIR / "board.db"
@@ -536,6 +537,108 @@ class TestEventsRetention:
                 "SELECT COUNT(*) AS n FROM events WHERE ts=?",
                 (old,)).fetchone()["n"]
         assert left == 0
+
+
+class TestEventsRetentionFamilyAware:
+    """ME-049 (security cascade C2): the 500k cap pass evicts UI
+    telemetry BEFORE audit rows, so a telemetry flood cannot push
+    executor.*/pairing.* out of the retention window.
+
+    Contour: fresh Store per test (tmp_path) — the family split is
+    order-sensitive (old audit vs newer telemetry), which the shared
+    session DB cannot guarantee. Timestamps are seeded directly, the
+    test_store/_insert_event pattern."""
+
+    @staticmethod
+    def _seed(path, rows: list[tuple[str, str]]) -> None:
+        """Direct event seeds on the isolated DB: (kind, ts) pairs in
+        id order — retention shapes the live writers do not produce."""
+        with sqlite3.connect(path) as db:
+            for kind, ts in rows:
+                db.execute(
+                    "INSERT INTO events (ts, kind, task_id, payload) "
+                    "VALUES (?,?,?,?)", (ts, kind, None, "{}"))
+
+    @staticmethod
+    def _kinds_left(path) -> set[str]:
+        with sqlite3.connect(path) as db:
+            return {r[0] for r in db.execute(
+                "SELECT kind FROM events").fetchall()}
+
+    def test_telemetry_flood_spares_older_audit(self, tmp_path,
+                                                monkeypatch):
+        """The ME-049 acceptance: the flood exceeds the cap by exactly
+        its own size, and the audit rows are OLDER than the flood —
+        plain oldest-first would take the audit first. Family-aware
+        eviction takes the telemetry; executor.*/pairing.* stay, task.*
+        stays (exempt), and the dual-natured notifications.read stays
+        (kind-level SQL cannot split its audit variant from the ingest
+        variant, so the whole kind rides the audit tier)."""
+        monkeypatch.setattr(server.store, "ACTIVITY_RETENTION_CAP", 4)
+        path = tmp_path / "me049-flood.db"
+        server.store.Store(path)  # schema only
+        now = datetime.now(timezone.utc)
+        old_audit = _iso(now - timedelta(hours=3))
+        flood = [_iso(now - timedelta(minutes=m)) for m in (9, 7, 5, 3, 1)]
+        self._seed(path, [
+            ("executor.registered", old_audit),
+            ("pairing.issued", old_audit),
+            ("task.moved", old_audit),
+            ("notifications.read", old_audit),
+            *[(k, flood[i]) for i, k in enumerate((
+                "ui.visit", "cmdk.palette_opened", "living.layer_toggled",
+                "kora.entered", "kora.intent_started"))],
+        ])
+        store = server.store.Store(path)
+        swept = store.sweep_events_retention()
+        assert swept == {"aged": 0, "capped": 5}, \
+            "the whole excess is telemetry; stage 2 never fires"
+        assert self._kinds_left(path) == {
+            "executor.registered", "pairing.issued",
+            "task.moved", "notifications.read"}, \
+            "older audit rows must survive a telemetry flood"
+
+    def test_cap_still_hard_bound_when_telemetry_exhausted(self, tmp_path,
+                                                           monkeypatch):
+        """Anti-overcorrection pin: family-awareness shields audit from
+        TELEMETRY floods, not from the cap — once telemetry is gone the
+        oldest audit rows still go (500k stays a hard bound); task.* is
+        exempt even as the last row standing."""
+        monkeypatch.setattr(server.store, "ACTIVITY_RETENTION_CAP", 1)
+        path = tmp_path / "me049-hard-bound.db"
+        server.store.Store(path)
+        now = datetime.now(timezone.utc)
+        self._seed(path, [
+            ("task.report",
+             _iso(now - timedelta(hours=3))),
+            ("executor.registered",
+             _iso(now - timedelta(hours=2))),
+            ("ui.visit",
+             _iso(now - timedelta(hours=1))),
+        ])
+        store = server.store.Store(path)
+        swept = store.sweep_events_retention()
+        assert swept == {"aged": 0, "capped": 2}, \
+            "stage 1 takes the telemetry row, stage 2 the older audit row"
+        assert self._kinds_left(path) == {"task.report"}
+
+    def test_kora_prefix_is_not_telemetry(self, tmp_path, monkeypatch):
+        """kora.* must NOT be a prefix match: kora.sessions.upserted is
+        a server audit kind (Store.upsert_kora_sessions) and rides the
+        audit tier, while the exact client kinds are telemetry. Under a
+        wrong 'kora.%' prefix the audit row would be evicted first."""
+        monkeypatch.setattr(server.store, "ACTIVITY_RETENTION_CAP", 1)
+        path = tmp_path / "me049-kora.db"
+        server.store.Store(path)
+        now = datetime.now(timezone.utc)
+        self._seed(path, [
+            ("kora.sessions.upserted", _iso(now - timedelta(hours=2))),
+            ("kora.entered", _iso(now - timedelta(hours=1))),
+        ])
+        store = server.store.Store(path)
+        swept = store.sweep_events_retention()
+        assert swept == {"aged": 0, "capped": 1}
+        assert self._kinds_left(path) == {"kora.sessions.upserted"}
 
 
 # ------------------------------------- SSE strip on subscription (v.2)
