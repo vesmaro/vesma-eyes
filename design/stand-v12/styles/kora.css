@@ -1,0 +1,457 @@
+/* kora.css — Кора «Дирижёрская» (спека 15 §3.2, срез §8.3).
+ *
+ * Пульт развёрнут в два крыла (Дайджест | Эфир) — вкладок нет; транскрипт =
+ * сцена с actor-rail 3px и mono-временем; Партер — узкие строки с витальными
+ * точками. Швы Ж3/Ж4 — хендлы ресайза v7 (drag + клавиатура), живые жилы
+ * living.js ходят по ним (.kora-seam-side / .kora-seam-pult — контракт имён).
+ * Цвет rail дублируется именем говорящего (WCAG 1.4.1). Все значения —
+ * токены tokens-v12.css.
+ */
+
+body[data-screen="kora"] .content {
+  max-width: none;
+  padding: 0;
+}
+
+.kora-grid {
+  --ether-w: 340px;             /* ≥280px (§3.2); drag Ж3 */
+  --pult-h: 200px;              /* drag Ж4 */
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr) var(--ether-w);
+  grid-template-rows: minmax(340px, calc(100vh - 48px - var(--pult-h))) auto;
+  min-height: calc(100vh - 48px);
+}
+
+/* ── Партер: хосты и агенты, узкие строки с витальными точками ───────── */
+.parter {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  background: var(--color-bg-well);
+  border-right: var(--line-myelin) solid var(--myelin-strong);
+  overflow-y: auto;
+}
+.parter-title {
+  margin: var(--space-2) 0 var(--space-1);
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.parter-title:first-child { margin-top: 0; }
+.parter-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--row-h, 2.5rem);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-data);
+  color: var(--color-text-secondary);
+}
+.parter-row .vital-dot {
+  width: 8px; height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-success);
+  flex: none;
+}
+.parter-row[data-lifecycle="silent"] .vital-dot { background: var(--color-warning); }
+.parter-row[data-lifecycle="off"] .vital-dot { background: var(--synapse-idle); }
+.parter-row[data-lifecycle="failed"] .vital-dot { background: var(--color-error); }
+.parter-row[data-lifecycle="queued"] .vital-dot { background: var(--synapse-idle); }
+.parter-row .parter-line {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.parter-row .parter-line strong { color: var(--color-text-primary); font-weight: var(--weight-medium); }
+.parter-row .parter-sub {
+  display: block;
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Сцена: транскрипт выбранной сессии ──────────────────────────────── */
+.scene {
+  grid-column: 2;
+  grid-row: 1;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-width: 0;
+  min-height: 0;
+}
+.scene-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  align-items: baseline;
+  padding: var(--space-4) var(--space-6) var(--space-3);
+  border-bottom: var(--line-hairline) solid var(--myelin-hairline);
+}
+.scene-head h1 {
+  margin: 0;
+  font-size: var(--text-xl);          /* ≤32px вне героя Обзора (§5) */
+  line-height: var(--leading-tight);
+  font-weight: var(--weight-semibold);
+}
+.scene-head .scene-meta {
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--numeric-tnum);
+  font-size: var(--text-data);
+  color: var(--color-text-muted);
+}
+.scene-head .scene-state {
+  color: var(--color-success);
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+.scene-head .scene-state[data-state="done"] { color: var(--color-text-muted); }
+
+.tr-list {
+  overflow-y: auto;
+  padding: var(--space-4) var(--space-6);
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+}
+/* actor-rail 3px: владелец — iris, агент — золото записи, ошибка — красный;
+ * цвет дублируется именем в строке (1.4.1) */
+.tr-row {
+  display: grid;
+  grid-template-columns: 3px minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: baseline;
+  padding-left: var(--space-2);
+}
+.tr-row::before {
+  content: "";
+  width: 3px;
+  border-radius: var(--radius-full);
+  background: var(--synapse-write);     /* агент — золото по умолчанию */
+  align-self: stretch;
+}
+.tr-row[data-who="owner"]::before { background: var(--color-iris-bright); }
+.tr-row[data-who="agent-error"]::before,
+.tr-row[data-ev="error"]::before { background: var(--synapse-error); }
+.tr-row .tr-who {
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.tr-row .tr-body {
+  min-width: 0;
+  color: var(--color-text-primary);
+  font-size: var(--text-ui);
+  line-height: var(--leading-normal);
+}
+.tr-row .tr-time {
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--numeric-tnum);
+  font-size: var(--text-caps);          /* mono-время 11px (§3.2) */
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+/* «Мысль» агента: инсет-строка на scroll-фоне в Lora — свиток в сцене */
+.tr-row.thought .tr-body {
+  font-family: var(--font-scroll);
+  color: var(--color-text-secondary);
+  background: var(--color-scroll-bg);
+  border: var(--line-hairline) solid var(--color-scroll-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+}
+.tr-row.is-fresh { animation: tr-fresh var(--duration-slow) var(--ease-enter); }
+@keyframes tr-fresh {
+  from { opacity: 0; translate: 0 4px; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+/* skeleton загрузки сцены (штатный паттерн, 3 строки) */
+.tr-skeleton { display: grid; gap: var(--space-3); }
+.tr-skeleton .skel-row {
+  height: var(--row-h, 2.5rem);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg,
+    var(--myelin-hairline) 0%, var(--myelin-strong) 40%, var(--myelin-hairline) 80%);
+  background-size: 200% 100%;
+  animation: skel-shimmer 900ms var(--ease-in-out) infinite alternate;
+}
+@keyframes skel-shimmer { from { background-position: 0 0; } to { background-position: 100% 0; } }
+
+/* композер-мост: панельная v10-логика, отправка = событие шины */
+.composer {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6) var(--space-4);
+  border-top: var(--line-hairline) solid var(--myelin-hairline);
+}
+.composer input {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--text-ui);
+}
+.composer input:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* ── Эфир: постоянный поток всех сессий (Крыло-2) ────────────────────── */
+.ether {
+  grid-column: 3;
+  grid-row: 1;
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-width: 0;
+  min-height: 0;
+  background: var(--color-bg-well);
+  border-left: var(--line-myelin) solid var(--myelin-strong);
+}
+.ether-head {
+  padding: var(--space-4) var(--space-4) var(--space-2);
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+.ether-head h2 {
+  margin: 0;
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  font-weight: var(--weight-medium);
+}
+.ether-head .ether-live { color: var(--color-success); font-size: var(--text-caps); }
+.ether-list {
+  overflow-y: auto;
+  padding: 0 var(--space-2) var(--space-2);
+  display: grid;
+  gap: var(--space-1);
+  align-content: start;
+}
+.ether-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: baseline;
+  width: 100%;
+  min-height: var(--row-h, 2.5rem);
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  border-left: 3px solid var(--synapse-write);
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--text-data);
+  text-align: left;
+  cursor: pointer;
+}
+.ether-row[data-kind="recall"] { border-left-color: var(--synapse-recall); }
+.ether-row[data-kind="index"] { border-left-color: var(--synapse-idle); }
+.ether-row[data-kind="error"] {
+  border-left-color: var(--synapse-error);
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 0 0 1px var(--color-error); /* красная кромка + текст (1.4.1) */
+}
+.ether-row:hover { background: var(--myelin-strong); }
+.ether-row:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+.ether-row .ether-text { min-width: 0; }
+.ether-row .ether-text strong { color: var(--color-text-primary); font-weight: var(--weight-medium); }
+.ether-row .ether-time {
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--numeric-tnum);
+  font-size: var(--text-caps);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+/* вспышка ирис 240ms по task.start (§3.2); ошибка — красный hold */
+.ether-row.is-flash { animation: ether-flash var(--duration-impulse) var(--ease-enter); }
+@keyframes ether-flash {
+  from { background: color-mix(in srgb, var(--color-iris-bright) 30%, transparent); }
+  to { background: transparent; }
+}
+/* строки-события (index/error) — не кнопки: без cursor/hover-кнопки */
+.ether-row.plain { cursor: default; }
+.ether-row.plain:hover { background: none; }
+/* empty: «Сессий нет: агенты свободны» + CTA «Дать задачу» (не «пусто») */
+.ether-empty {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-ui);
+}
+.ether-empty strong { color: var(--color-text-primary); }
+.ether-foot {
+  padding: var(--space-2) var(--space-3);
+  border-top: var(--line-hairline) solid var(--myelin-hairline);
+}
+
+/* ── Швы-хендлы ресайза (v7): Ж3 вертикальный, Ж4 горизонтальный ─────── */
+.kora-seam {
+  position: absolute;
+  z-index: 6;
+  touch-action: none;
+}
+.kora-seam::after {
+  content: "";
+  position: absolute;
+  background: var(--myelin-strong);
+  opacity: 0.35;
+  transition: opacity var(--duration-instant) var(--ease-enter);
+  pointer-events: none;
+}
+.kora-seam:hover::after,
+.kora-seam:focus-visible::after,
+body.seam-dragging .kora-seam::after { opacity: 1; }
+.kora-seam:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: calc(-1 * var(--focus-ring-width)); /* ринг внутри зоны (07l §7) */
+}
+.kora-seam-side {
+  top: 0; bottom: 0;
+  left: -12px;
+  width: 24px;
+  cursor: col-resize;
+}
+.kora-seam-side::after {
+  top: 0; bottom: 0;
+  left: calc(50% - 2px);
+  width: 4px;
+}
+.kora-seam-pult {
+  top: -12px;
+  left: 0; right: 0;
+  height: 24px;
+  cursor: row-resize;
+}
+.kora-seam-pult::after {
+  left: 0; right: 0;
+  top: calc(50% - 2px);
+  height: 4px;
+}
+body.seam-grab { user-select: none; }
+
+/* ── Пульт: два крыла (Дайджест | Ждут владельца) — вкладок нет ──────── */
+.pult-wrap {
+  grid-column: 2 / 4;
+  grid-row: 2;
+  position: relative;
+  padding-top: var(--space-4);
+}
+.pult {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-6);
+  align-items: start;
+  padding: var(--space-4) var(--space-6) var(--space-6);
+  background: var(--color-bg-well);
+  border-top: var(--line-myelin) solid var(--myelin-strong);
+  min-height: var(--pult-h);
+}
+.pult-wing h2 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  font-weight: var(--weight-medium);
+}
+.pult-digest {
+  display: grid;
+  gap: var(--space-2);
+  font-size: var(--text-data);
+  color: var(--color-text-secondary);
+  max-width: 72ch;
+}
+.pult-digest .digest-name { color: var(--color-text-primary); font-weight: var(--weight-medium); font-size: var(--text-ui); }
+.pult-digest ul { margin: 0; padding-left: 1.2em; display: grid; gap: var(--space-1); }
+.pult-right {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+/* бейдж ожидания: живой слой вешает курьеры owner.wait от него (v11 14 §2.3) */
+.pult-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 24px;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-confidence-dim);
+  border-radius: var(--radius-full);
+  font-size: var(--text-caps);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-confidence);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.pult-badge:hover { background: var(--myelin-hairline); border-color: var(--color-confidence); }
+.pult-badge:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+.pult-badge .mono { font-variant-numeric: var(--numeric-tnum); }
+
+/* ── Адаптив ─────────────────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .kora-grid {
+    grid-template-columns: 200px minmax(0, 1fr) var(--ether-w);
+  }
+}
+@media (max-width: 900px) {
+  body[data-screen="kora"] .content { overflow-x: hidden; }
+  .kora-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto auto;
+    min-height: 0;
+  }
+  .parter {
+    grid-column: 1; grid-row: 1;
+    flex-direction: row;
+    flex-wrap: wrap;
+    border-right: none;
+    border-bottom: var(--line-myelin) solid var(--myelin-strong);
+  }
+  .parter-title { width: 100%; }
+  .scene { grid-column: 1; grid-row: 2; }
+  .ether {
+    grid-column: 1; grid-row: 3;
+    border-left: none;
+    border-top: var(--line-myelin) solid var(--myelin-strong);
+  }
+  .kora-seam-side { display: none; }   /* на мобиле шов не таскается */
+  .pult-wrap { grid-column: 1; grid-row: 4; }
+  .pult { grid-template-columns: minmax(0, 1fr); }
+  .tr-list { max-height: 50vh; }
+  .ether-list { max-height: 40vh; }
+}
+
+/* ── Reduced-motion: финальные состояния ─────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .tr-row.is-fresh { animation: none; }
+  .ether-row.is-flash { animation: none; background: color-mix(in srgb, var(--color-iris-bright) 12%, transparent); }
+  .tr-skeleton .skel-row { animation: none; }
+}
