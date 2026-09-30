@@ -425,6 +425,10 @@ def _executor_public(e: dict[str, Any]) -> dict[str, Any]:
         discovered = json.loads(e.get("discovered") or "[]")
     except (TypeError, ValueError):
         discovered = []
+    try:
+        inventory = json.loads(e.get("harness_inventory") or "[]")
+    except (TypeError, ValueError):
+        inventory = []
     return {
         "id": e["id"],
         "name": e["name"],
@@ -434,6 +438,7 @@ def _executor_public(e: dict[str, Any]) -> dict[str, Any]:
         "capabilities": [c for c in caps if isinstance(c, str)],
         "version": e.get("version", ""),
         "discovered": [d for d in discovered if isinstance(d, dict)],
+        "harness_inventory": [i for i in inventory if isinstance(i, dict)],
         "enabled": bool(e.get("enabled")),
         "state": e.get("state", "pending"),
         "last_seen": e.get("last_seen", ""),
@@ -1637,6 +1642,7 @@ class ExecutorOut(_ApiModel):
     capabilities: list[str] = []
     version: str = ""
     discovered: list[dict[str, Any]] = []  # ME-015: last discovery mirror (advisory)
+    harness_inventory: list[dict[str, Any]] = []  # ME-062: environments[] snapshot (advisory)
     enabled: bool = False
     state: str = "pending"             # pending | approved | revoked
     last_seen: str = ""
@@ -1683,12 +1689,35 @@ class DiscoveryEntry(BaseModel):
     path: str = Field(default="", max_length=200)
 
 
+class SessionFactIn(BaseModel):
+    """One agent-authored session fact (ME-062, agents-ui-spec §2.1).
+    Grammar violations (missing task_id / native_id, harness outside
+    zcode|vscode|pi) are DROPS + audit board-side — the discovery-names
+    pattern, NOT pydantic 422s — so every field stays permissive here;
+    only WIRE-TYPE violations (a string where a counter belongs) are the
+    model's 422s. ``path`` is a host filesystem fact: ui-class serving
+    only (spec §2.2), never an OPEN surface."""
+    task_id: str = Field(default="", max_length=120)
+    harness: str = Field(default="", max_length=60)
+    native_id: str = Field(default="", max_length=512)
+    specialist: str = Field(default="", max_length=120)
+    path: str = Field(default="", max_length=1024)
+    tool_calls: int = Field(default=0)
+    duration_s: int = Field(default=0)
+    started_at: str = Field(default="", max_length=40)
+    ended_at: str = Field(default="", max_length=40)
+    parent_native_id: str = Field(default="", max_length=512)
+
+
 class ExecutorDiscoveryBody(BaseModel):
     """Discovery report body (agent protocol §3). The AGW-17 additive
-    ``environments`` field is accepted and IGNORED board-side — the
-    contract governs the ``harnesses`` list only."""
+    ``environments`` field and the ME-062 additive ``sessions[]`` field
+    are validated and STORED board-side (spec §6.1: the BE slice turns
+    accept-and-ignore into store-and-serve); old agents that post neither
+    leave both mirrors untouched."""
     harnesses: list[DiscoveryEntry] = []
-    environments: list[dict[str, Any]] = []  # additive, content-free — ignored
+    environments: list[dict[str, Any]] = []  # additive, content-free
+    sessions: list[SessionFactIn] = []       # ME-062: task-linked facts
 
 
 class ExecutorDiscoveryOut(_ApiModel):
@@ -1697,6 +1726,8 @@ class ExecutorDiscoveryOut(_ApiModel):
     accepted: int
     rejected: int
     rejected_names: list[str] = []
+    sessions_accepted: int = 0   # ME-062 additive ingest counters
+    sessions_dropped: int = 0
 
 
 class ExecutorDiscoveryMirrorOut(_ApiModel):
@@ -3405,6 +3436,111 @@ async def list_task_reports(task_id: str) -> ReportsOut:
             "count": len(reports), "items": reports}
 
 
+# ------------------------------------------------- ME-062 task session facts
+# agents-ui-spec §4: the task card's «Специалисты и сессии» source — the
+# agent-authored facts the discovery leg stores. UI-CLASS ONLY (spec §2.2
+# «раскрытие путей»: the fact carries a host filesystem ``path``, so the
+# read never joins the OPEN boundary or the SSE dictionary; mnd_ devices
+# are walled with an EXPLANATORY 403 — the route rides the device read
+# table only so a valid device reaches the wall, the transcript-route
+# precedent). 404 unknown task; an existing task with no facts is an
+# HONEST EMPTY (spec §5 — «агент ещё не отчитался», never a skeleton).
+
+_TASK_SESSIONS_MND_WALL = (
+    "Сессии специалистов в карточке задачи доступны только владельцу "
+    "(ui-класс): факт несёт локальный путь хоста. Устройству с mnd_-"
+    "токеном эти данные не отдаются (спека ME-020/062, §7). Откройте "
+    "борд в браузере под owner-сессией.")
+
+
+def _guard_ui_read(request: Request, mnd_wall: str) -> None:
+    """UI-class READ guard (ME-062): the owner session — bearer ui token
+    (constant-time) or the vesmaro_ui cookie leg (ADR 0014 Ф2). A valid
+    mnd_ device gets the EXPLANATORY wall (403 with the why — never a
+    bare 403); invalid mnd_ never reaches here (the scope middleware
+    answers 401 first). Leg order mirrors _guard_kora_read (device state
+    FIRST — the device carries its bearer in the Authorization header)."""
+    if getattr(request.state, "device", None) is not None:
+        raise HTTPException(403, mnd_wall)
+    auth = request.headers.get("Authorization", "")
+    if auth:
+        ui_token = _token_classes().get("ui", "")
+        if (ui_token and hmac.compare_digest(
+                auth.encode("utf-8"), f"Bearer {ui_token}".encode("utf-8"))):
+            return
+        raise HTTPException(
+            401, _token_mismatch_detail(auth, _token_classes(), ("ui",)))
+    if _cookie_ui_ok(request):
+        return
+    raise HTTPException(
+        401, "owner session required — task session facts are ui-only "
+             "(login at /api/auth/ui-token, ADR 0014)")
+
+
+class TaskSessionFactOut(_ApiModel):
+    """One session fact as the task card serves it (spec §4: fact fields
+    + age). ``session_id`` is the Kora glue '<executor_id>:<native_id>'
+    — the deep-link into the read-only transcript viewer needs no
+    translation (slice 2 re-validates the registry on every answer)."""
+    session_id: str
+    executor_id: str
+    executor_name: str = ""
+    native_id: str
+    task_id: str
+    harness: str
+    specialist: str = ""
+    path: str = ""
+    tool_calls: int = 0
+    duration_s: int = 0
+    started_at: str = ""
+    ended_at: str = ""
+    parent_native_id: str = ""
+    first_seen_at: str = ""
+    reported_at: str = ""
+    reported_age_s: int = 0
+
+
+class TaskSessionsOut(_ApiModel):
+    ok: bool
+    task_id: str
+    count: int
+    items: list[TaskSessionFactOut]
+
+
+@app.get("/api/tasks/{task_id}/sessions")
+async def list_task_sessions(task_id: str,
+                             request: Request) -> TaskSessionsOut:
+    """Session facts for the task card (ME-062, spec §4): the specialist
+    children the executor's agent reported, oldest reported first. UI
+    read only (``path`` is a host fact); honest-empty for a task whose
+    executor has no agent leg yet — the FE renders the §5 reason, the
+    board answers plain facts."""
+    _guard_ui_read(request, _TASK_SESSIONS_MND_WALL)
+    facts = store.task_session_facts(task_id)
+    if facts is None:
+        raise HTTPException(404, "task not found")
+    items = [TaskSessionFactOut(
+        session_id=f"{f['executor_id']}:{f['native_id']}",
+        executor_id=f["executor_id"],
+        executor_name=f.get("executor_name") or "",
+        native_id=f["native_id"],
+        task_id=f["task_id"],
+        harness=f["harness"],
+        specialist=f.get("specialist") or "",
+        path=f.get("path") or "",
+        tool_calls=f.get("tool_calls") or 0,
+        duration_s=f.get("duration_s") or 0,
+        started_at=f.get("started_at") or "",
+        ended_at=f.get("ended_at") or "",
+        parent_native_id=f.get("parent_native_id") or "",
+        first_seen_at=f.get("first_seen_at") or "",
+        reported_at=f.get("reported_at") or "",
+        reported_age_s=_kora_age_seconds(f.get("reported_at") or ""),
+    ) for f in facts]
+    return TaskSessionsOut(ok=True, task_id=task_id, count=len(items),
+                           items=items)
+
+
 # Cross-task feed page size (CV-6). Above the cap the limit is silently
 # clamped — board convention (GET /api/archive), not a 422: a live feed
 # must tolerate an aggressive client asking for everything.
@@ -4410,6 +4546,55 @@ async def executor_heartbeat(executor_id: str, request: Request,
 # never a silent truncation.
 _DISCOVERY_MAX_ENTRIES = 32
 
+# ME-062 (agents-ui-spec §2.1/§3.2): the additive discovery legs' caps —
+# the agent contract's own limits, enforced board-side as honest 422s
+# (spec §6.1). sessions[]: ≤ 32 rows per post (dedup by id is the
+# agent's; the board caps the POST, the STORE bounds the per-executor
+# mirror). environments[]: ≤ 32 rows (the discovery-entry family cap);
+# the capabilities object: name lists ≤ 50 (specialists/skills) and
+# ≤ 30 (plugins/instructions), whole object ≤ 8 KiB marshaled.
+_DISCOVERY_MAX_SESSIONS = 32
+_DISCOVERY_MAX_ENVIRONMENTS = 32
+_INVENTORY_LIST_CAPS = {"specialists": 50, "skills": 50,
+                        "plugins": 30, "instructions": 30}
+_INVENTORY_MAX_BYTES = 8 * 1024
+
+
+def _validate_discovery_environments(
+        environments: list[dict[str, Any]]) -> None:
+    """ME-062 caps for the additive ``environments[]`` (spec §3.2 — the
+    v3 capabilities contract the AGENT already enforces; the board
+    refuses over-budget payloads instead of trusting them). Honest 422s:
+    row count, nameless rows, over-cap name lists, over-budget marshaled
+    capabilities. Never a silent trim — the counters/lists must stay the
+    agent's own honest report."""
+    if len(environments) > _DISCOVERY_MAX_ENVIRONMENTS:
+        raise HTTPException(
+            422, f"too many discovery environments: "
+                 f"{len(environments)} (cap {_DISCOVERY_MAX_ENVIRONMENTS})")
+    for env in environments:
+        name = str(env.get("name") or "").strip()
+        if not name:
+            raise HTTPException(
+                422, "discovery environment row without a name")
+        caps = env.get("capabilities")
+        if caps is None:
+            continue
+        if not isinstance(caps, dict):
+            raise HTTPException(
+                422, f"environment {name}: capabilities must be an object")
+        for field, cap in _INVENTORY_LIST_CAPS.items():
+            names = caps.get(field)
+            if isinstance(names, list) and len(names) > cap:
+                raise HTTPException(
+                    422, f"environment {name}: {field} list exceeds the "
+                         f"cap ({len(names)} > {cap})")
+        size = len(json.dumps(caps, ensure_ascii=False).encode("utf-8"))
+        if size > _INVENTORY_MAX_BYTES:
+            raise HTTPException(
+                422, f"environment {name}: capabilities object exceeds "
+                     f"8 KiB ({size} bytes)")
+
 
 @app.post("/api/executors/{executor_id}/discovery")
 async def executor_discovery(executor_id: str, body: ExecutorDiscoveryBody,
@@ -4431,12 +4616,24 @@ async def executor_discovery(executor_id: str, body: ExecutorDiscoveryBody,
       identical re-report is a silent no-op (hourly cadence, no churn);
     - an authenticated report proves liveness as well as a poll (the
       kora-scan precedent) — last_seen ticks.
-    The additive AGW-17 ``environments`` field is accepted and ignored."""
+
+    ME-062 (spec §6.1): the additive legs stopped being ignored —
+    ``environments[]`` is stored as the ``harness_inventory`` snapshot
+    (caps honestly 422'd: 32 rows, 50/50/30/30 names, 8 KiB/object) and
+    ``sessions[]`` lands in the task-session-fact store after task-linkage
+    validation (drops audited as sessions.rejected, never 422 — the
+    discovery-names grammar)."""
     if len(body.harnesses) > _DISCOVERY_MAX_ENTRIES:
         raise HTTPException(
             422,
             f"too many discovery entries: {len(body.harnesses)} "
             f"(cap {_DISCOVERY_MAX_ENTRIES})")
+    if len(body.sessions) > _DISCOVERY_MAX_SESSIONS:
+        raise HTTPException(
+            422,
+            f"too many discovery session facts: {len(body.sessions)} "
+            f"(cap {_DISCOVERY_MAX_SESSIONS})")
+    _validate_discovery_environments(body.environments)
     executor = _authenticate_executor(request)
     if executor is None:
         raise HTTPException(401, "executor token required")
@@ -4458,9 +4655,15 @@ async def executor_discovery(executor_id: str, body: ExecutorDiscoveryBody,
         executor_id, [e.model_dump() for e in body.harnesses])
     if row is None:
         raise HTTPException(404, f"executor {executor_id} not found")
-    return {"ok": True, "executor": _executor_public(row),
+    store.report_executor_inventory(executor_id, body.environments)
+    sessions = store.report_session_facts(
+        executor_id, [s.model_dump() for s in body.sessions])
+    fresh = store.get_executor(executor_id) or row
+    return {"ok": True, "executor": _executor_public(fresh),
             "accepted": accepted, "rejected": rejected,
-            "rejected_names": rejected_names}
+            "rejected_names": rejected_names,
+            "sessions_accepted": sessions["accepted"],
+            "sessions_dropped": sessions["dropped"]}
 
 
 @app.get("/api/executors/{executor_id}/discovery")

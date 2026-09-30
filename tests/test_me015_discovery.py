@@ -237,9 +237,12 @@ class TestDiscoveryLeg:
         assert self._post(client, executor["id"], secret,
                           [{"name": "zcode"}]).status_code == 403
 
-    def test_environments_field_additive_ignored(self, client, auth):
-        """AGW-17: the rich environment facts ride along additively — a
-        board that accepts and ignores them stays contract-correct."""
+    def test_environments_field_never_pollutes_harness_mirror(
+            self, client, auth):
+        """AGW-17: the rich environment facts ride along additively and
+        (ME-062) land in the SEPARATE harness_inventory snapshot — they
+        must never leak into the ``discovered`` harness-name mirror
+        (v2-payload compatibility)."""
         executor, secret = _register(client, auth, "me015-c8")
         r = self._post(client, executor["id"], secret,
                        [{"name": "zcode", "version": "1"}],
