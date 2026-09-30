@@ -20,6 +20,11 @@ board (vesmaro.abyss.lab)                 laptop
 Удалённый исполнитель (VPS): enrollment-флоу, сетевой путь и чеклист
 подключения — [REMOTE-EXECUTOR.md](REMOTE-EXECUTOR.md).
 
+> **bootstrap v2 (ME-055):** установщик `bootstrap.sh` по умолчанию
+> ставит **Go-агент `vesmaro-agent`** (релизный бинарник, PROTOCOL §1.1
+> enroll). Этот Python-поллер — legacy-ветка установщика: явный флаг
+> `--poller`. Декомиссия поллера — отдельная задача ME-056.
+
 ## Состав
 
 | Файл | Назначение |

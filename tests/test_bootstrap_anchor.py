@@ -3,13 +3,16 @@
 The REAL script runs against a fake world: stub ``curl`` (serves a real
 openssl-generated CA), stub ``id`` (fake root — CI is not root), stub
 ``systemctl``, a ``python3`` shim that fakes ONLY the version probe and
-execs the real interpreter otherwise (normalize_fp rides real python).
-openssl stays REAL: the fingerprint pipeline and the CA:TRUE check must
-be the production ones.
+execs the real interpreter otherwise. openssl stays REAL: the
+fingerprint pipeline and the CA:TRUE check must be the production ones.
 
-Happy-path runs stop at the venv step: ``python3 -m venv /opt/mnemos-eyes``
-fails for a non-root CI user — a deterministic, assertable proof the run
-got PAST the anchor gate (die message names the venv, exit 3).
+bootstrap v2 (ME-055): the DEFAULT executor is the Go agent, so
+happy-path runs stop at the release-resolution step — the stub curl
+serves ONLY the CA, so the api.github.com lookup fails — a
+deterministic, assertable proof the run got PAST the anchor gate (die
+message names the release resolution, exit 3). The legacy ``--poller``
+path keeps the v1 proof point (the venv step; python3 shim feeds the
+preflight probe there).
 
 QA matrix:
 - anchor flag: mismatch → abort, downloaded CA discarded; match → gate
@@ -22,7 +25,8 @@ QA matrix:
 - interactive TOFU via a real pty (util-linux ``script``): typing the
   canon (or the openssl hex form — normalize parity) passes, garbage or
   empty aborts with the CA discarded;
-- garbage --expect-fp shape → exit 2 before any network.
+- garbage --expect-fp shape → exit 2 before any network;
+- legacy --poller: the v1 contour still reaches the venv step.
 """
 
 from __future__ import annotations
@@ -43,6 +47,7 @@ import pytest
 REPO = Path(__file__).resolve().parents[1]
 BOOTSTRAP_SH = REPO / "deploy" / "poller" / "bootstrap.sh"
 
+AGENT_DIE = "could not resolve the latest vesmaro-agent release"
 VENV_DIE = "could not create the venv"
 
 
@@ -175,14 +180,14 @@ class TestAnchorFlag:
         assert f"verified against the anchor: {lab_ca['canon']}" in r.stdout
         # … which equals the python canon (openssl pipeline cross-check)
         assert stubs["ca_target"].exists()
-        # … and the run continued past TLS into the venv step
-        assert r.returncode == 3 and VENV_DIE in r.stdout + r.stderr
+        # … and the run continued past TLS into the agent release step (v2)
+        assert r.returncode == 3 and AGENT_DIE in r.stdout + r.stderr
 
     def test_env_synonym_vesmaro_expect_fp(self, stubs, lab_ca):
         r = _run(stubs, env_extra={"VESMARO_EXPECT_FP": lab_ca["canon"]},
                  detach_tty=True)
         assert f"verified against the anchor: {lab_ca['canon']}" in r.stdout
-        assert VENV_DIE in r.stdout + r.stderr
+        assert AGENT_DIE in r.stdout + r.stderr
 
     def test_hex_form_accepted_via_normalize(self, stubs, lab_ca):
         r = _run(stubs, "--expect-fp", lab_ca["hex"], detach_tty=True)
@@ -201,9 +206,12 @@ class TestPrePlacedCa:
         shutil.copyfile(lab_ca["pem"], stubs["ca_target"])
         r = _run(stubs, "--expect-fp", lab_ca["canon"], detach_tty=True)
         assert "pre-placed" in r.stdout
-        assert not stubs["log"].exists() or stubs["log"].read_text() == ""
+        # v2: the CA is still never FETCHED (pre-placed) — later curls
+        # (the agent release lookup) are a different channel entirely.
+        logged = stubs["log"].read_text() if stubs["log"].exists() else ""
+        assert "/api/poller/artifacts/ca.crt" not in logged
         assert f"verified against the anchor: {lab_ca['canon']}" in r.stdout
-        assert VENV_DIE in r.stdout + r.stderr
+        assert AGENT_DIE in r.stdout + r.stderr
 
     def test_mismatch_aborts_but_preserves_owner_file(self, stubs, lab_ca):
         shutil.copyfile(lab_ca["pem"], stubs["ca_target"])
@@ -219,7 +227,7 @@ class TestPrePlacedCa:
         shutil.copyfile(lab_ca["pem"], stubs["ca_target"])
         r = _run(stubs, detach_tty=True)
         assert "no prompt" in r.stdout
-        assert VENV_DIE in r.stdout + r.stderr
+        assert AGENT_DIE in r.stdout + r.stderr
 
 
 # --------------------------------------------------------- interactive TOFU
@@ -230,7 +238,7 @@ class TestInteractiveTofu:
         r = _run(stubs, use_pty=True, feed=lab_ca["canon"] + "\n")
         assert lab_ca["canon"] in r.stdout                # printed for TOFU
         assert "confirmed by the operator" in r.stdout
-        assert VENV_DIE in r.stdout + r.stderr
+        assert AGENT_DIE in r.stdout + r.stderr
 
     @pytest.mark.skipif(shutil.which("script") is None,
                         reason="util-linux script(1) not available")
@@ -263,3 +271,25 @@ class TestNoTty:
         assert "--expect-fp" in r.stdout + r.stderr
         assert "/dev/tty" in r.stdout + r.stderr
         assert not stubs["ca_target"].exists()
+
+
+# ------------------------------------------------------- legacy --poller (v2)
+class TestLegacyPollerFlag:
+    def test_poller_flag_reaches_the_venv_step(self, stubs, lab_ca):
+        """--poller keeps the v1 contour: past the anchor, past the python
+        preflight (the shim feeds the 310 probe), stops at the venv —
+        pointed at an unwritable /proc path so the failure is
+        deterministic on any runner (the legacy layout knob keeps the
+        test off /opt)."""
+        r = _run(stubs, "--expect-fp", lab_ca["canon"], "--poller",
+                 detach_tty=True,
+                 env_extra={"VESMARO_BASE_DIR": "/proc/vesmaro-agw9"})
+        assert f"verified against the anchor: {lab_ca['canon']}" in r.stdout
+        assert "LEGACY python poller" in r.stdout
+        assert r.returncode == 3 and VENV_DIE in r.stdout + r.stderr
+
+    def test_default_is_the_go_agent(self, stubs, lab_ca):
+        """No flag → the v2 default branch names the Go agent."""
+        r = _run(stubs, "--expect-fp", lab_ca["canon"], detach_tty=True)
+        assert "Go agent vesmaro-agent" in r.stdout
+        assert AGENT_DIE in r.stdout + r.stderr

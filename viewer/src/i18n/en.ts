@@ -993,13 +993,13 @@ export const en: Record<TranslationKey, string> = {
     "Press «Add executor», fill in the name and the harness — you can add your own harness right in the list.",
   "agents.connect.step2": "Create a token and copy the ONE command from the screen.",
   "agents.connect.step3":
-    "Run it on the external machine (VPS) — it installs the dependencies, the agent and the service on its own.",
+    "Run it on the external machine (VPS) — it installs the Go agent vesmaro-agent (a release binary, checksum-verified) and the systemd service on its own.",
   "agents.connect.step4":
     "The agent appears here in «Awaiting approval» — approve and enable it.",
   "agents.connect.step5":
     "Give the task with the button on the task card — execution happens on the external machine.",
   "agents.connect.note":
-    "The command downloads the installer from the board (the installer text is public); everything after rides a secured channel with certificate verification. The token is one-time and lives for 15 minutes.",
+    "The command downloads the installer from the board (the installer text is public); everything after rides a secured channel with certificate verification. The token is one-time and lives for 15 minutes. While the agent repository is private, the machine needs a read-only GitHub token in VESMARO_GH_TOKEN (see «Путь 1» in the runbook).",
   "agents.connect.manual":
     "The manual path — deploy/poller/REMOTE-EXECUTOR.md («Путь 2 — руками», for diagnostics and isolated networks).",
   "agents.executors.actionFailed": "Failed to update the executor",
