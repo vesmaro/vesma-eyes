@@ -138,7 +138,7 @@
   background: var(--color-iris);
 }
 .mirror-neura .pupil { fill: var(--color-bg-base); transition: r var(--duration-normal) var(--ease-enter); }
-.mirror-neura[data-wait="1"] .pupil { r: 3.6; }  /* дилатация ожидания (14 §1.4) */
+.mirror-neura[data-wait="1"] .pupil { r: 4.5; }  /* дилатация ожидания (14 §1.4) */
 /* вздох: glow 8s, только в «Полном»; transform-free (§13.9.2) */
 html[data-living="full"] .mirror-neura .iris-ring {
   animation: mirror-breath 8000ms var(--ease-breath) infinite;

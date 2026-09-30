@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="styles/shell-v12.css">
   <link rel="stylesheet" href="styles/living-layer.css">
   <link rel="stylesheet" href="styles/palette.css">
+  <link rel="stylesheet" href="styles/living-extra.css">
   <link rel="stylesheet" href="styles/settings.css">
 </head>
 <body data-screen="settings">
@@ -161,17 +162,17 @@
                    живой canvas один — в топбаре продукта (living.js) -->
               <span class="mirror-neura" id="mirror-neura" data-state="idle" role="img"
                     aria-label="Превью Нейры: индикатор состояния живого слоя">
-                <svg viewBox="0 0 28 28" aria-hidden="true">
-                  <line x1="5.7" y1="15.8" x2="1.4" y2="16.7" stroke="var(--myelin-strong)" stroke-width="1"/>
-                  <line x1="22.3" y1="15.8" x2="26.6" y2="16.7" stroke="var(--myelin-strong)" stroke-width="1"/>
-                  <line x1="6.8" y1="9.5" x2="3.7" y2="7.6" stroke="var(--myelin-strong)" stroke-width="1"/>
-                  <line x1="21.0" y1="9.2" x2="23.7" y2="7.5" stroke="var(--myelin-strong)" stroke-width="1"/>
-                  <line x1="20.3" y1="18.9" x2="24.5" y2="22.2" stroke="var(--myelin-strong)" stroke-width="1"/>
-                  <circle cx="24.5" cy="22.2" r="1.4" fill="var(--myelin-strong)"/>
-                  <circle cx="14" cy="14" r="8.5" fill="none" stroke="var(--myelin-strong)" stroke-width="1"/>
-                  <circle class="iris-fill" cx="14" cy="14" r="5.2"/>
-                  <circle class="pupil" cx="14" cy="14" r="2.0"/>
-                  <circle class="iris-ring" cx="14" cy="14" r="5.2"/>
+                <!-- LOD В1 атласа neura-v2 (§14.2): мембрана+ирис+ядро+2 дендрита -->
+                <svg class="neura-v2 lod-v1 idle" viewBox="0 0 120 120" aria-hidden="true">
+                  <circle class="stroke-membrane" cx="60" cy="60" r="30" fill="none" stroke="var(--myelin-strong)" stroke-width="1"/>
+                  <circle class="iris-fill" cx="60" cy="60" r="18.5" fill="var(--color-iris)"/>
+                  <circle class="pupil" cx="60" cy="60" r="3" fill="var(--color-bg-base)"/>
+                  <circle class="nucleolus" cx="60" cy="60" r="1" fill="var(--color-confidence)"/>
+                  <g fill="none" stroke="var(--myelin-strong)" stroke-linecap="round">
+                    <line x1="31.6" y1="66.0" x2="14.0" y2="69.8" stroke-width="1"/>
+                    <line x1="87.3" y1="69.9" x2="102.3" y2="75.4" stroke-width="1"/>
+                  </g>
+                  <circle class="iris-ring" cx="60" cy="60" r="18.5"/>
                 </svg>
               </span>
               <span class="exec-badge" title="Активные исполнения">

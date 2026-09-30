@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" class="neura-v2 lod-v3 idle" role="img" aria-label="Нейра v2 — атлас морфологии">
+  <!--
+    neura-v2.svg — ассеты нейронов v2 (спека 15 §14.2, волна 3 ME-066).
+    Один атлас, три LOD (lod-v1 упрощённый 24px / lod-v2 комета / lod-v3
+    полный ×3.4), 9 состояний классами на корне (idle breath flash-recall
+    flash-write flash-error attention paused-fold calm-static off-dot).
+    Цвета — ТОЛЬКО var(--…): светлая тема работает заменой переменных.
+    Glow НЕ здесь — на контейнере box-shadow из --glow-* (§14.2).
+    Слои: #neura-body / #neura-arms / #neura-tail / #neura-glow (пустой:
+    свет принадлежит контейнеру). Художественная доработка — поверх,
+    слои и классы контракты.
+  -->
+  <style>
+    .neura-v2 * { vector-effect: non-scaling-stroke; }
+    .neura-v2 line, .neura-v2 path, .neura-v2 circle { transition:
+      fill var(--duration-normal, 240ms) var(--ease-enter, ease),
+      stroke var(--duration-normal, 240ms) var(--ease-enter, ease),
+      opacity var(--duration-normal, 240ms) var(--ease-enter, ease),
+      transform var(--duration-normal, 240ms) var(--ease-enter, ease); }
+    .neura-v2 .stroke-membrane { stroke: var(--myelin-strong); fill: none; }
+    .neura-v2 .iris-fill { fill: var(--color-iris); }
+    .neura-v2 .iris-strokes { stroke: var(--color-iris); }
+    .neura-v2 .core { fill: var(--color-bg-base); }
+    .neura-v2 .nucleolus { fill: var(--color-confidence); transform-origin: 60px 60px; }
+    .neura-v2 .stroke-arm { stroke: var(--myelin-strong); fill: none; stroke-linecap: round; }
+    .neura-v2 .arm-button { fill: var(--synapse-idle); }
+    .neura-v2 .myelin-bead { fill: var(--color-confidence-dim); }
+    .neura-v2 .lantern { fill: var(--color-iris); }
+    /* LOD: один виден, прочие скрыты */
+    .lod-v1 #arms-v2, .lod-v1 #arms-v3, .lod-v1 #lod-detail, .lod-v1 #neura-tail .collateral { display: none; }
+    .lod-v2 #arms-v1, .lod-v2 #arms-v3, .lod-v2 #lod-detail { display: none; }
+    .lod-v3 #arms-v1, .lod-v3 #arms-v2 { display: none; }
+    /* Состояния (§14.2): длительности — motion-токены с фолбеками */
+    .flash-recall .iris-fill { fill: var(--color-iris-bright); }
+    .flash-write .iris-fill { fill: var(--synapse-write); }
+    .flash-error .stroke-membrane { stroke: var(--color-error); }
+    .flash-error .iris-fill { fill: var(--color-error); }
+    .flash-error #neura-arms { transform: rotate(2deg); transform-origin: 60px 60px; } /* штрихи поникают */
+    .flash-error .lantern { fill: var(--synapse-error); }
+    .attention .nucleolus { transform: scale(1.5); }   /* ядрышко 2→3 */
+    .attention .iris-fill { transform: scale(0.92); transform-origin: 60px 60px; } /* кольцо сжалось на 8% */
+    .attention .lantern { fill: var(--synapse-write); }
+    .paused-fold #neura-arms { transform: scale(0.55); transform-origin: 60px 60px; opacity: 0.6; }
+    .calm-static .iris-fill { fill: var(--neura-last, var(--color-iris)); }
+    .off-dot #neura-body, .off-dot #neura-arms, .off-dot #neura-tail { display: none; }
+    .off-dot .off-dot-fallback { display: block; }
+    .off-dot-fallback { display: none; fill: var(--color-iris); }
+    @media (prefers-reduced-motion: reduce) {
+      .neura-v2 line, .neura-v2 path, .neura-v2 circle { transition: none; }
+    }
+  </style>
+
+  <g id="neura-body">
+    <!-- двойная мембрана: внешняя 1px + внутренняя 0.5px, отступ 2px -->
+    <circle class="stroke-membrane" cx="60" cy="60" r="30" stroke-width="1"/>
+    <circle class="stroke-membrane" cx="60" cy="60" r="28" stroke-width="0.5"/>
+    <!-- ирис-плащ: кольцо + 12 радиальных штрихов 0.5px («ткань ириса») -->
+    <circle class="iris-fill" cx="60" cy="60" r="18.5"/>
+    <g id="lod-detail" class="iris-strokes"><line x1="73.5" y1="60.0" x2="77.5" y2="60.0" stroke-width="0.5"/><line x1="71.7" y1="66.8" x2="75.2" y2="68.8" stroke-width="0.5"/><line x1="66.8" y1="71.7" x2="68.8" y2="75.2" stroke-width="0.5"/><line x1="60.0" y1="73.5" x2="60.0" y2="77.5" stroke-width="0.5"/><line x1="53.2" y1="71.7" x2="51.2" y2="75.2" stroke-width="0.5"/><line x1="48.3" y1="66.8" x2="44.8" y2="68.8" stroke-width="0.5"/><line x1="46.5" y1="60.0" x2="42.5" y2="60.0" stroke-width="0.5"/><line x1="48.3" y1="53.2" x2="44.8" y2="51.2" stroke-width="0.5"/><line x1="53.2" y1="48.3" x2="51.2" y2="44.8" stroke-width="0.5"/><line x1="60.0" y1="46.5" x2="60.0" y2="42.5" stroke-width="0.5"/><line x1="66.8" y1="48.3" x2="68.8" y2="44.8" stroke-width="0.5"/><line x1="71.7" y1="53.2" x2="75.2" y2="51.2" stroke-width="0.5"/></g>
+    <!-- сердце-лампа: ядро Ø6 + ядрышко Ø2 золото (единственный тёплый акцент) -->
+    <circle class="core" cx="60" cy="60" r="3"/>
+    <circle class="nucleolus" cx="60" cy="60" r="1"/>
+    <circle class="off-dot-fallback" cx="60" cy="60" r="4"/>
+  </g>
+
+  <g id="neura-arms" stroke-linecap="round">
+    <!-- LOD В1: мембрана+ирис+ядро+2 дендрита (читаемо на 24px) -->
+    <g id="arms-v1" class="stroke-arm"><line x1="31.6" y1="66.0" x2="17.9" y2="68.9" stroke-width="1"/><line x1="88.4" y1="66.0" x2="102.1" y2="68.9" stroke-width="1"/><circle cx="17.9" cy="68.9" r="0.75"/><circle cx="102.1" cy="68.9" r="0.75"/></g>
+    <!-- LOD В2 «комета»: 5 дендритов, асимметричный веер -->
+    <g id="arms-v2" class="stroke-arm"><line x1="31.6" y1="66.0" x2="16.0" y2="69.4" stroke-width="1"/><line x1="87.3" y1="69.9" x2="101.3" y2="75.0" stroke-width="1"/><line x1="33.7" y1="47.7" x2="23.7" y2="43.1" stroke-width="1"/><line x1="82.9" y1="42.1" x2="92.3" y2="34.8" stroke-width="1"/><line x1="50.1" y1="32.7" x2="47.0" y2="24.3" stroke-width="1"/><circle cx="16.0" cy="69.4" r="0.75"/><circle cx="101.3" cy="75.0" r="0.75"/><circle cx="23.7" cy="43.1" r="0.75"/><circle cx="92.3" cy="34.8" r="0.75"/><circle cx="47.0" cy="24.3" r="0.75"/>
+      <line class="stroke-arm" x1="57.0" y1="88.8" x2="55.9" y2="98.8" stroke-width="1.25"/>
+    </g>
+    <!-- LOD В3 полный ×3.4: 7 дендритов + нижняя опора + миелин-бусины -->
+    <g id="arms-v3" class="stroke-arm"><line x1="31.6" y1="66.0" x2="14.0" y2="69.8" stroke-width="1"/><line x1="34.9" y1="74.5" x2="21.9" y2="82.0" stroke-width="1"/><line x1="87.3" y1="69.9" x2="102.3" y2="75.4" stroke-width="1"/><line x1="83.8" y1="76.6" x2="95.2" y2="84.7" stroke-width="1"/><line x1="33.7" y1="47.7" x2="22.8" y2="42.7" stroke-width="1"/><line x1="82.9" y1="42.1" x2="93.1" y2="34.1" stroke-width="1"/><line x1="50.1" y1="32.7" x2="46.7" y2="23.4" stroke-width="1"/><circle cx="14.0" cy="69.8" r="0.75"/><circle cx="21.9" cy="82.0" r="0.75"/><circle cx="102.3" cy="75.4" r="0.75"/><circle cx="95.2" cy="84.7" r="0.75"/><circle cx="22.8" cy="42.7" r="0.75"/><circle cx="93.1" cy="34.1" r="0.75"/><circle cx="46.7" cy="23.4" r="0.75"/>
+      <line class="stroke-arm" x1="57.0" y1="88.8" x2="55.9" y2="98.8" stroke-width="1.25"/>
+      <g class="myelin-bead"><circle cx="28.2" cy="66.8" r="1.2"/><circle cx="88.7" cy="70.4" r="1.0"/><circle cx="35.5" cy="48.6" r="0.8"/><circle cx="82.5" cy="42.5" r="1.1"/></g>
+    </g>
+  </g>
+
+  <g id="neura-tail">
+    <!-- аксон-хвост: S-кривая (не прямая), 2 коллатерали, фонарь Ø4 -->
+    <path class="stroke-arm" d="M 82.9 77.9 Q 88.3 88.3 100.7 83.5" fill="none" stroke-width="1"/>
+    <g class="collateral">
+      <line class="stroke-arm" x1="86.6" y1="85.7" x2="85.9" y2="93.1" stroke-width="0.5"/>
+      <line class="stroke-arm" x1="92.2" y1="87.0" x2="94.0" y2="95.2" stroke-width="0.5"/>
+    </g>
+    <circle class="lantern" cx="100.7" cy="83.5" r="2"/>
+  </g>
+
+  <!-- glow НЕ внутри SVG: свет — box-shadow контейнера из --glow-* (§14.2) -->
+  <g id="neura-glow"></g>
+</svg>
