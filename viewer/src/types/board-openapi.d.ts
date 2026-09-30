@@ -713,6 +713,30 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/api/tasks/{task_id}/sessions": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * List Task Sessions
+         * @description Session facts for the task card (ME-062, spec §4): the specialist
+         *     children the executor's agent reported, oldest reported first. UI
+         *     read only (``path`` is a host fact); honest-empty for a task whose
+         *     executor has no agent leg yet — the FE renders the §5 reason, the
+         *     board answers plain facts.
+         */
+        readonly get: operations["list_task_sessions_api_tasks__task_id__sessions_get"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/api/reports": {
         readonly parameters: {
             readonly query?: never;
@@ -1235,7 +1259,13 @@ export interface paths {
          *       identical re-report is a silent no-op (hourly cadence, no churn);
          *     - an authenticated report proves liveness as well as a poll (the
          *       kora-scan precedent) — last_seen ticks.
-         *     The additive AGW-17 ``environments`` field is accepted and ignored.
+         *
+         *     ME-062 (spec §6.1): the additive legs stopped being ignored —
+         *     ``environments[]`` is stored as the ``harness_inventory`` snapshot
+         *     (caps honestly 422'd: 32 rows, 50/50/30/30 names, 8 KiB/object) and
+         *     ``sessions[]`` lands in the task-session-fact store after task-linkage
+         *     validation (drops audited as sessions.rejected, never 422 — the
+         *     discovery-names grammar).
          */
         readonly post: operations["executor_discovery_api_executors__executor_id__discovery_post"];
         readonly delete?: never;
@@ -3046,8 +3076,10 @@ export interface components {
         /**
          * ExecutorDiscoveryBody
          * @description Discovery report body (agent protocol §3). The AGW-17 additive
-         *     ``environments`` field is accepted and IGNORED board-side — the
-         *     contract governs the ``harnesses`` list only.
+         *     ``environments`` field and the ME-062 additive ``sessions[]`` field
+         *     are validated and STORED board-side (spec §6.1: the BE slice turns
+         *     accept-and-ignore into store-and-serve); old agents that post neither
+         *     leave both mirrors untouched.
          */
         readonly ExecutorDiscoveryBody: {
             /**
@@ -3062,6 +3094,11 @@ export interface components {
             readonly environments: readonly {
                 readonly [key: string]: unknown;
             }[];
+            /**
+             * Sessions
+             * @default []
+             */
+            readonly sessions: readonly components["schemas"]["SessionFactIn"][];
         };
         /** ExecutorDiscoveryOut */
         readonly ExecutorDiscoveryOut: {
@@ -3077,6 +3114,16 @@ export interface components {
              * @default []
              */
             readonly rejected_names: readonly string[];
+            /**
+             * Sessions Accepted
+             * @default 0
+             */
+            readonly sessions_accepted: number;
+            /**
+             * Sessions Dropped
+             * @default 0
+             */
+            readonly sessions_dropped: number;
         } & {
             readonly [key: string]: unknown;
         };
@@ -3148,6 +3195,13 @@ export interface components {
              * @default []
              */
             readonly discovered: readonly {
+                readonly [key: string]: unknown;
+            }[];
+            /**
+             * Harness Inventory
+             * @default []
+             */
+            readonly harness_inventory: readonly {
                 readonly [key: string]: unknown;
             }[];
             /**
@@ -4775,6 +4829,68 @@ export interface components {
              */
             readonly enabled: boolean;
         };
+        /**
+         * SessionFactIn
+         * @description One agent-authored session fact (ME-062, agents-ui-spec §2.1).
+         *     Grammar violations (missing task_id / native_id, harness outside
+         *     zcode|vscode|pi) are DROPS + audit board-side — the discovery-names
+         *     pattern, NOT pydantic 422s — so every field stays permissive here;
+         *     only WIRE-TYPE violations (a string where a counter belongs) are the
+         *     model's 422s. ``path`` is a host filesystem fact: ui-class serving
+         *     only (spec §2.2), never an OPEN surface.
+         */
+        readonly SessionFactIn: {
+            /**
+             * Task Id
+             * @default
+             */
+            readonly task_id: string;
+            /**
+             * Harness
+             * @default
+             */
+            readonly harness: string;
+            /**
+             * Native Id
+             * @default
+             */
+            readonly native_id: string;
+            /**
+             * Specialist
+             * @default
+             */
+            readonly specialist: string;
+            /**
+             * Path
+             * @default
+             */
+            readonly path: string;
+            /**
+             * Tool Calls
+             * @default 0
+             */
+            readonly tool_calls: number;
+            /**
+             * Duration S
+             * @default 0
+             */
+            readonly duration_s: number;
+            /**
+             * Started At
+             * @default
+             */
+            readonly started_at: string;
+            /**
+             * Ended At
+             * @default
+             */
+            readonly ended_at: string;
+            /**
+             * Parent Native Id
+             * @default
+             */
+            readonly parent_native_id: string;
+        };
         /** SpecialistProfileOut */
         readonly SpecialistProfileOut: {
             /** Ok */
@@ -5112,6 +5228,95 @@ export interface components {
             readonly memory_ids?: readonly string[] | null;
             /** Mnemos Tags */
             readonly mnemos_tags?: readonly string[] | null;
+        };
+        /**
+         * TaskSessionFactOut
+         * @description One session fact as the task card serves it (spec §4: fact fields
+         *     + age). ``session_id`` is the Kora glue '<executor_id>:<native_id>'
+         *     — the deep-link into the read-only transcript viewer needs no
+         *     translation (slice 2 re-validates the registry on every answer).
+         */
+        readonly TaskSessionFactOut: {
+            /** Session Id */
+            readonly session_id: string;
+            /** Executor Id */
+            readonly executor_id: string;
+            /**
+             * Executor Name
+             * @default
+             */
+            readonly executor_name: string;
+            /** Native Id */
+            readonly native_id: string;
+            /** Task Id */
+            readonly task_id: string;
+            /** Harness */
+            readonly harness: string;
+            /**
+             * Specialist
+             * @default
+             */
+            readonly specialist: string;
+            /**
+             * Path
+             * @default
+             */
+            readonly path: string;
+            /**
+             * Tool Calls
+             * @default 0
+             */
+            readonly tool_calls: number;
+            /**
+             * Duration S
+             * @default 0
+             */
+            readonly duration_s: number;
+            /**
+             * Started At
+             * @default
+             */
+            readonly started_at: string;
+            /**
+             * Ended At
+             * @default
+             */
+            readonly ended_at: string;
+            /**
+             * Parent Native Id
+             * @default
+             */
+            readonly parent_native_id: string;
+            /**
+             * First Seen At
+             * @default
+             */
+            readonly first_seen_at: string;
+            /**
+             * Reported At
+             * @default
+             */
+            readonly reported_at: string;
+            /**
+             * Reported Age S
+             * @default 0
+             */
+            readonly reported_age_s: number;
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /** TaskSessionsOut */
+        readonly TaskSessionsOut: {
+            /** Ok */
+            readonly ok: boolean;
+            /** Task Id */
+            readonly task_id: string;
+            /** Count */
+            readonly count: number;
+            /** Items */
+            readonly items: readonly components["schemas"]["TaskSessionFactOut"][];
+        } & {
+            readonly [key: string]: unknown;
         };
         /** UiNavEvent */
         readonly UiNavEvent: {
@@ -6544,6 +6749,37 @@ export interface operations {
                 };
                 content: {
                     readonly "application/json": components["schemas"]["ReportCreatedOut"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly list_task_sessions_api_tasks__task_id__sessions_get: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly task_id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["TaskSessionsOut"];
                 };
             };
             /** @description Validation Error */
