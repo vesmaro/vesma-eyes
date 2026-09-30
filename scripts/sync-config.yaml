@@ -542,9 +542,10 @@ api_hub:
 
     vesmaro-agent:
       repo: ../vesmaro-agent
-      # Свежий main на момент волны ME-038 (2026-09-29), версия агента 0.6.0
-      # (ADR 0021 lineage).
-      ref: b8a51498accff8af7b507746cf46a2d72af9fd86
+      # Main после squash-мержа PR #2 (ME-053): в протокол вернуто утонувшее
+      # доки-обновление релиза 0.6.0 (+104/−40, intake addendum). Агент 0.6.0
+      # (ADR 0021 lineage), код не менялся.
+      ref: dbd6054ed22c70897247e83c14effbc2e0b7eead
       web_base: "https://github.com/vesmaro/vesmaro-agent/blob/{sha}"
       locale_dirs:
         en: docs

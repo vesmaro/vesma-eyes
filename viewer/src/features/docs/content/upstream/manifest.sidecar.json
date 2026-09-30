@@ -6,7 +6,7 @@
     "mnemos-mesh": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
     "api/mnemos": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
     "api/mnemos-mesh": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
-    "api/vesmaro-agent": "b8a51498accff8af7b507746cf46a2d72af9fd86"
+    "api/vesmaro-agent": "dbd6054ed22c70897247e83c14effbc2e0b7eead"
   },
   "pages": [
     {
@@ -89,7 +89,7 @@
       },
       "category": "api-overview",
       "order": 1,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-09-30",
       "locales": [
         "en",
         "ru"
@@ -97,8 +97,8 @@
       "provenance": {
         "repo": "vesmaro-eyes",
         "source_path": "docs/api",
-        "sha": "aa2a4c815a564e80f84ae1a1294895b1a398ee65",
-        "commit_date": "2026-09-29T22:50:53+03:00"
+        "sha": "f5d11acdedc8f5e4f8be0807978189ac9edbc887",
+        "commit_date": "2026-09-30T00:12:56+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -113,7 +113,7 @@
       },
       "category": "api-agent",
       "order": 2,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-09-30",
       "locales": [
         "en",
         "ru"
@@ -121,8 +121,8 @@
       "provenance": {
         "repo": "vesmaro-agent",
         "source_path": "docs/decisions/CHARTER-v2.md",
-        "sha": "b8a51498accff8af7b507746cf46a2d72af9fd86",
-        "commit_date": "2026-09-29T13:36:02+03:00"
+        "sha": "dbd6054ed22c70897247e83c14effbc2e0b7eead",
+        "commit_date": "2026-09-30T10:58:11+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -136,15 +136,15 @@
       },
       "category": "api-agent",
       "order": 1,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-09-30",
       "locales": [
         "en"
       ],
       "provenance": {
         "repo": "vesmaro-agent",
         "source_path": "docs/PROTOCOL.md",
-        "sha": "b8a51498accff8af7b507746cf46a2d72af9fd86",
-        "commit_date": "2026-09-29T13:36:02+03:00"
+        "sha": "dbd6054ed22c70897247e83c14effbc2e0b7eead",
+        "commit_date": "2026-09-30T10:58:11+03:00"
       },
       "contentClass": {
         "en": "corpus"
