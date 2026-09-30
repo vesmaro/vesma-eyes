@@ -116,7 +116,7 @@ ACTIVITY_RETENTION_CAP = 500_000
 # so the kora client kinds are listed exactly below.
 # Cascade P2 (quality verdict): the classification mirrors the SERVER
 # ingest registry (app._TELEMETRY_KINDS) in two parts — prefix families
-# here, non-prefix kinds in TELEMETRY_NON_PREFIX_KINDS — and the
+# here, non-prefix kinds in TELEMETRY_NON_PREFIX_KINDS — and any
 # deliberate divergence is MATERIALIZED as TELEMETRY_AUDIT_EXCEPTIONS
 # (comment-only before): TELEMETRY_EVENT_KINDS is the mirror minus the
 # exceptions, so the exception list feeds the SQL predicate itself.
@@ -125,19 +125,21 @@ ACTIVITY_RETENTION_CAP = 500_000
 # so a new registry family nobody adds here fails red instead of
 # silently riding the audit tier while telemetry floods push
 # executor.*/pairing.* out of the retention window.
-# notifications.read divergence rationale: the taxonomy lists it as a
-# telemetry kind, but the server ALSO writes it as an audit row
-# (app.py /api/notifications/read → log_board_event — the baseline-4
-# «пинок» with the server-stamped scope), and a kind-level SQL match
-# cannot split the two variants; the conservative split wins (the ingest
-# variant is rare device-leg counting, not the flood surface — the
-# ui.visit/ui.nav page-load chatter is, and that is prefix-matched).
+# Cascade P3-1 (security verdict, TL ruling 2026-09-30): notifications.read
+# is SERVER-OWNED — the ingest refuses client submissions (422, the kind
+# is out of the client registry) and the only writer is the server audit
+# path (app.py /api/notifications/read → log_board_event, the baseline-4
+# «пинок» with the server-stamped scope) which lands in the store
+# directly, bypassing the ingest. Retention therefore needs no exception
+# for it: the kind is in no telemetry list here, so it rides the audit
+# tier automatically. TELEMETRY_AUDIT_EXCEPTIONS stays EMPTY — an active
+# slot for the NEXT deliberate divergence (the drift test reads it).
 TELEMETRY_EVENT_PREFIXES: tuple[str, ...] = ("ui.", "cmdk.", "living.")
 TELEMETRY_NON_PREFIX_KINDS: tuple[str, ...] = (
     "kora.entered", "kora.intent_started", "kora.intent_completed",
-    "kora.intent_abandoned", "notifications.read",
+    "kora.intent_abandoned",
 )
-TELEMETRY_AUDIT_EXCEPTIONS: tuple[str, ...] = ("notifications.read",)
+TELEMETRY_AUDIT_EXCEPTIONS: tuple[str, ...] = ()
 TELEMETRY_EVENT_KINDS: tuple[str, ...] = tuple(
     k for k in TELEMETRY_NON_PREFIX_KINDS
     if k not in TELEMETRY_AUDIT_EXCEPTIONS

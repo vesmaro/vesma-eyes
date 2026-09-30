@@ -7378,13 +7378,20 @@ async def telemetry_body_cap(request: Request, call_next):
 # ingest validates against and the tests lock. Kinds are additive by
 # contract (SSE dictionary rule, ui-contract §11): new kinds extend this
 # map through a taxonomy revision, never a rename.
+# Cascade P3-1 (security verdict, TL ruling 2026-09-30): notifications.read
+# is SERVER-OWNED and is no longer a client-ingestible kind. The ingest
+# used to accept it and store it in the audit tier — the very tier ME-049
+# protects — meaning a ui leg could fabricate (rate-limited, capped)
+# audit rows; audit is server property. The only writer now is the server
+# audit path (POST /api/notifications/read → log_board_event with the
+# server-stamped scope); a client-submitted notifications.read fails the
+# discriminated union below with the standing off-taxonomy 422.
 _TELEMETRY_KINDS: tuple[str, ...] = (
     "ui.visit", "ui.nav", "ui.surface_error",
     "kora.entered", "kora.intent_started", "kora.intent_completed",
     "kora.intent_abandoned",
     "cmdk.palette_opened", "cmdk.item_selected",
     "living.layer_toggled",
-    "notifications.read",
 )
 
 # One taxonomy kind = one model variant (discriminated by ``kind``): each
@@ -7464,20 +7471,11 @@ class UiSurfaceErrorEvent(_UiEventBase):
     op: Literal["read", "write"]
 
 
-class NotificationsReadEvent(_UiEventBase):
-    """notifications.read via the ingest carries visit_id only — the
-    canonical emitter is the server (POST /api/notifications/read stamps
-    ``scope`` itself); this variant exists so the registry covers the whole
-    §1.2 dictionary and a mis-routed client event fails loudly, not
-    silently."""
-    kind: Literal["notifications.read"]
-
-
 _UiTelemetryEvent = Annotated[
     UiVisitEvent | UiNavEvent | KoraEnteredEvent | KoraIntentStartedEvent
     | KoraIntentCompletedEvent | KoraIntentAbandonedEvent
     | CmdkPaletteOpenedEvent | CmdkItemSelectedEvent
-    | LivingLayerToggledEvent | UiSurfaceErrorEvent | NotificationsReadEvent,
+    | LivingLayerToggledEvent | UiSurfaceErrorEvent,
     Field(discriminator="kind"),
 ]
 

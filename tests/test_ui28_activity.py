@@ -649,7 +649,18 @@ class TestTelemetryRegistryDrift:
     These are the binding pins: a registry kind of a NEW family that
     nobody adds to the store must fail RED here, not silently ride the
     audit tier while telemetry floods push executor.*/pairing.* out of
-    the retention window."""
+    the retention window.
+
+    Cascade P3-1 note (TL ruling 2026-09-30): notifications.read is
+    SERVER-OWNED — the client variant is refused at the ingest (422, out
+    of the registry) and never reaches the store, so the kind is absent
+    from every store telemetry list and rides the audit tier
+    AUTOMATICALLY: the server's own write path
+    (/api/notifications/read → log_board_event) lands in the events
+    table directly, bypassing the ingest and its classification. That is
+    why TELEMETRY_AUDIT_EXCEPTIONS is empty after P3-1 — a divergence
+    entry would only be needed again for a kind that IS client-
+    ingestible yet must evade the telemetry tier."""
 
     def test_registry_kinds_bound_to_retention_tiers(self, app_module):
         """Unit half: every server-registry kind is classified in the
