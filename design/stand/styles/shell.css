@@ -1124,7 +1124,10 @@ html[data-auth="anon"] .topsearch {
   opacity: 0;
 }
 .living-vein.is-breathing {
-  animation: vein-breath 10s var(--ease-breath) 1;
+  /* v11 (14 §2.1): полный вдох-выдох внутри duty-окна (3–5s) —
+   * длительность задаёт JS (--vein-breath-dur), обрыв на середине
+   * цикла и скачок opacity исключены */
+  animation: vein-breath var(--vein-breath-dur, 10s) var(--ease-breath) 1;
 }
 @keyframes vein-breath {
   0%, 100% { opacity: 0; }

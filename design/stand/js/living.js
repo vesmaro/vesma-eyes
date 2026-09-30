@@ -470,6 +470,11 @@
   }
   function veinBreath(vein, ms) {
     if (!vein || !vein.visible || effectiveMode() !== "full" || paused) return;
+    /* v11 (14 §2.1): длительность CSS-цикла = duty-окну — вдох-выдох
+     * завершается к концу окна, без обрыва на середине */
+    vein.el.style.setProperty("--vein-breath-dur", ms + "ms");
+    vein.el.classList.remove("is-breathing");
+    void vein.el.offsetWidth; /* перезапуск анимации */
     vein.el.classList.add("is-breathing");
     setTimeout(function () { vein.el.classList.remove("is-breathing"); }, ms);
   }
@@ -662,9 +667,14 @@
       hideErrorCard();
     }
     if (effectiveMode() !== "full") {
-      /* Спокойный: событие = мгновенный тинт + статичный цвет Нейры */
+      /* Спокойный: событие = мгновенный тинт + статичный цвет Нейры.
+       * Обзор — исключение (14 §2.1): событие уже отыграно колодцем,
+       * жилы молчат — «одно событие — одно проявление» (08 §3.2);
+       * ошибка дублируется всеми тканями (честный сигнал аварии) */
       var color = colorOf(ev.ev);
-      veinTint(ev.ev === "error" ? j1 : (j2 || j1), color);
+      if (ev.ev === "error" || !isOverview()) {
+        veinTint(ev.ev === "error" ? j1 : (j2 || j1), color);
+      }
       neuraFlash(ev.ev, performance.now());
       return;
     }
