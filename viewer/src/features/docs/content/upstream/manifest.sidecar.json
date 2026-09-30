@@ -89,16 +89,16 @@
       },
       "category": "api-overview",
       "order": 1,
-      "lastVerified": "2026-09-30",
+      "lastVerified": "2026-09-29",
       "locales": [
         "en",
         "ru"
       ],
       "provenance": {
         "repo": "vesmaro-eyes",
-        "source_path": "docs/api",
-        "sha": "09c5be80884db9b1992f623d9c0a0411ac65bb63",
-        "commit_date": "2026-09-30T12:23:46+03:00"
+        "source_path": "curated/api/{ru,en}/overview.md",
+        "sha": "aa2a4c815a564e80f84ae1a1294895b1a398ee65",
+        "commit_date": "2026-09-29T22:50:53+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -153,12 +153,14 @@
     {
       "slug": "api/vesmaro-eyes/assignments",
       "titles": {
+        "en": "Executor assignments",
         "ru": "Назначения исполнителям"
       },
       "category": "api-board",
       "order": 4,
       "lastVerified": "2026-09-30",
       "locales": [
+        "en",
         "ru"
       ],
       "provenance": {
@@ -168,18 +170,21 @@
         "commit_date": "2026-09-30T12:22:11+03:00"
       },
       "contentClass": {
+        "en": "corpus",
         "ru": "corpus"
       }
     },
     {
       "slug": "api/vesmaro-eyes/automation",
       "titles": {
+        "en": "Automation",
         "ru": "Автоматизация"
       },
       "category": "api-board",
       "order": 6,
       "lastVerified": "2026-09-30",
       "locales": [
+        "en",
         "ru"
       ],
       "provenance": {
@@ -189,18 +194,21 @@
         "commit_date": "2026-09-30T12:22:11+03:00"
       },
       "contentClass": {
+        "en": "corpus",
         "ru": "corpus"
       }
     },
     {
       "slug": "api/vesmaro-eyes/devices",
       "titles": {
+        "en": "Devices and pairing",
         "ru": "Устройства и пейринг"
       },
       "category": "api-board",
       "order": 7,
       "lastVerified": "2026-09-30",
       "locales": [
+        "en",
         "ru"
       ],
       "provenance": {
@@ -210,18 +218,21 @@
         "commit_date": "2026-09-30T12:22:11+03:00"
       },
       "contentClass": {
+        "en": "corpus",
         "ru": "corpus"
       }
     },
     {
       "slug": "api/vesmaro-eyes/executors",
       "titles": {
+        "en": "Executors, harnesses, specialists",
         "ru": "Исполнители, харнессы, специалисты"
       },
       "category": "api-board",
       "order": 5,
       "lastVerified": "2026-09-30",
       "locales": [
+        "en",
         "ru"
       ],
       "provenance": {
@@ -231,18 +242,21 @@
         "commit_date": "2026-09-30T12:22:11+03:00"
       },
       "contentClass": {
+        "en": "corpus",
         "ru": "corpus"
       }
     },
     {
       "slug": "api/vesmaro-eyes/feed",
       "titles": {
+        "en": "Notifications, activity, reports",
         "ru": "Уведомления, активность, отчёты"
       },
       "category": "api-board",
       "order": 11,
       "lastVerified": "2026-09-30",
       "locales": [
+        "en",
         "ru"
       ],
       "provenance": {
@@ -252,18 +266,21 @@
         "commit_date": "2026-09-30T12:22:11+03:00"
       },
       "contentClass": {
+        "en": "corpus",
         "ru": "corpus"
       }
     },
     {
       "slug": "api/vesmaro-eyes/index",
       "titles": {
+        "en": "Board API overview",
         "ru": "Обзор API борда"
       },
       "category": "api-board",
       "order": 1,
       "lastVerified": "2026-09-30",
       "locales": [
+        "en",
         "ru"
       ],
       "provenance": {
@@ -273,18 +290,21 @@
         "commit_date": "2026-09-30T12:22:11+03:00"
       },
       "contentClass": {
+        "en": "corpus",
         "ru": "corpus"
       }
     },
     {
       "slug": "api/vesmaro-eyes/kora",
       "titles": {
+        "en": "Kora sessions",
         "ru": "Сессии Kora"
       },
       "category": "api-board",
       "order": 8,
       "lastVerified": "2026-09-30",
       "locales": [
+        "en",
         "ru"
       ],
       "provenance": {
@@ -294,18 +314,21 @@
         "commit_date": "2026-09-30T12:22:11+03:00"
       },
       "contentClass": {
+        "en": "corpus",
         "ru": "corpus"
       }
     },
     {
       "slug": "api/vesmaro-eyes/memories",
       "titles": {
+        "en": "Memory, tags, and mnemos search",
         "ru": "Память, теги и поиск mnemos"
       },
       "category": "api-board",
       "order": 3,
       "lastVerified": "2026-09-30",
       "locales": [
+        "en",
         "ru"
       ],
       "provenance": {
@@ -315,18 +338,21 @@
         "commit_date": "2026-09-30T12:22:11+03:00"
       },
       "contentClass": {
+        "en": "corpus",
         "ru": "corpus"
       }
     },
     {
       "slug": "api/vesmaro-eyes/mesh",
       "titles": {
+        "en": "Mesh nodes",
         "ru": "Узлы меша"
       },
       "category": "api-board",
       "order": 9,
       "lastVerified": "2026-09-30",
       "locales": [
+        "en",
         "ru"
       ],
       "provenance": {
@@ -336,18 +362,21 @@
         "commit_date": "2026-09-30T12:22:11+03:00"
       },
       "contentClass": {
+        "en": "corpus",
         "ru": "corpus"
       }
     },
     {
       "slug": "api/vesmaro-eyes/poller",
       "titles": {
+        "en": "Poller artifacts",
         "ru": "Артефакты poller"
       },
       "category": "api-board",
       "order": 10,
       "lastVerified": "2026-09-30",
       "locales": [
+        "en",
         "ru"
       ],
       "provenance": {
@@ -357,18 +386,21 @@
         "commit_date": "2026-09-30T12:22:11+03:00"
       },
       "contentClass": {
+        "en": "corpus",
         "ru": "corpus"
       }
     },
     {
       "slug": "api/vesmaro-eyes/system",
       "titles": {
+        "en": "Board and service endpoints",
         "ru": "Борд и служебные эндпоинты"
       },
       "category": "api-board",
       "order": 12,
       "lastVerified": "2026-09-30",
       "locales": [
+        "en",
         "ru"
       ],
       "provenance": {
@@ -378,18 +410,21 @@
         "commit_date": "2026-09-30T12:22:11+03:00"
       },
       "contentClass": {
+        "en": "corpus",
         "ru": "corpus"
       }
     },
     {
       "slug": "api/vesmaro-eyes/tasks",
       "titles": {
+        "en": "Tasks and intake",
         "ru": "Задачи и входящие"
       },
       "category": "api-board",
       "order": 2,
       "lastVerified": "2026-09-30",
       "locales": [
+        "en",
         "ru"
       ],
       "provenance": {
@@ -399,6 +434,7 @@
         "commit_date": "2026-09-30T12:22:11+03:00"
       },
       "contentClass": {
+        "en": "corpus",
         "ru": "corpus"
       }
     },

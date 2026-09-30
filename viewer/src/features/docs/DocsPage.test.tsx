@@ -114,6 +114,20 @@ describe("our article (/docs/vesmaro-eyes/<slug>)", () => {
     expect(container.textContent).not.toContain("In the original language");
     await actUnmount(root);
   });
+
+  it("UI=en over a generated board-API page renders the EN mirror — no «оригинал» badge (ME-044)", async () => {
+    const { root, container } = await mountDocs("/docs/api/vesmaro-eyes/tasks", "en");
+    await actWaitUntil(() => {
+      expect(container.querySelector("h1")?.textContent).toBe("Tasks and intake");
+    });
+    const text = container.textContent ?? "";
+    // generated EN chrome, not the RU original under the locale badge
+    expect(text).toContain("Generated from the OpenAPI snapshot");
+    expect(text).toContain("Request body (required)");
+    expect(text).not.toContain("In the original language");
+    expect(text).not.toContain("Тело запроса");
+    await actUnmount(root);
+  });
 });
 
 describe("imported article (/docs/mnemos/**, spec §6)", () => {
@@ -261,9 +275,10 @@ describe("docs search combobox (design spec §8 + §7.3)", () => {
     });
     expect(container.textContent).toContain("Попробуйте одно слово");
     // The corpus carries single-language pages again BY DESIGN (ME-038 api
-    // hub: the board reference is RU v1, the agent protocol is EN under
-    // the original-language badge) → the locale-gap hint legitimately
-    // shows alongside zero results.
+    // hub: the agent protocol is EN-only under the original-language
+    // badge; ME-044 made the board reference bilingual, but RU-only/EN-only
+    // pages remain) → the locale-gap hint legitimately shows alongside
+    // zero results.
     expect(container.textContent).toContain("только на одном языке");
     const log = JSON.parse(localStorage.getItem(ZERO_RESULTS_KEY) ?? "[]");
     expect(log).toContain("квантомеханика");
