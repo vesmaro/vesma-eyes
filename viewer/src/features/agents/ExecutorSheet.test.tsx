@@ -450,3 +450,61 @@ describe("ExecutorSheet — AGW-11 paste-back approve (TOFU honesty)", () => {
   });
 });
 
+describe("ExecutorSheet — ME-064 «Detected on the host» inventory dropdowns", () => {
+  it("the fixture agent host renders the four category counters immediately; names sit behind the disclosure", async () => {
+    const mount = await mountCard("exec-laptop-zcode");
+    const text = mount.text();
+    // The section and the environment line (store id + kind).
+    expect(text).toContain("Detected on the host");
+    expect(text).toContain("zcode · cli");
+    // Counters visible collapsed (spec §3.1: «счётчики видны сразу») — the
+    // FULL counters, lists capped server-side.
+    expect(text).toContain("specialists");
+    expect(text).toContain("39");
+    expect(text).toContain("121");
+    expect(text).toContain("24");
+    // Names are NOT rendered while every dropdown is collapsed.
+    expect(text).not.toContain("bathys-researcher");
+    await actUnmount(mount.root);
+  });
+
+  it("a click opens the names list: capped names, the honest «…and N more», the gcw share", async () => {
+    const mount = await mountCard("exec-laptop-zcode");
+    await clickButton(mount, "specialists");
+    const text = mount.text();
+    expect(text).toContain("bathys-researcher");
+    expect(text).toContain("gcw-tech-lead");
+    // 39 counted, 3 listed → 36 more; the cut is visible, not silent.
+    expect(text).toContain("…and 36 more");
+    expect(text).toContain("gcw-* among them: 38");
+    // The disclosure is keyboard-shaped: aria-expanded flips true.
+    const toggles = mount
+      .query<HTMLButtonElement>("button[aria-controls]")
+      .filter((button) => button.textContent?.includes("specialists"));
+    expect(toggles[0].getAttribute("aria-expanded")).toBe("true");
+    await actUnmount(mount.root);
+  });
+
+  it("a host without an inventory (the poller case, Э3) renders «No data», never a skeleton", async () => {
+    // exec-laptop-hermes: fixture row with NO harness_inventory field.
+    const mount = await mountCard("exec-laptop-hermes");
+    const text = mount.text();
+    expect(text).toContain("Detected on the host");
+    expect(text).toContain("No data");
+    expect(text).toContain("after ME-056");
+    // No dropdown rows are fabricated.
+    expect(text).not.toContain("…and");
+    await actUnmount(mount.root);
+  });
+
+  it("a pre-ME-062 board row (field absent) degrades to the same honest empty", async () => {
+    const mount = await mountCard("exec-laptop-zcode", (page) => ({
+      ...page,
+      items: page.items.map((row) =>
+        row.id === "exec-laptop-zcode" ? { ...row, harness_inventory: undefined } : row,
+      ),
+    }));
+    expect(mount.text()).toContain("No data");
+    await actUnmount(mount.root);
+  });
+});

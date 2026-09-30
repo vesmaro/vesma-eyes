@@ -27,6 +27,7 @@ import { useHonestCopy } from "./useEnrollment";
 import { AssignmentStateBadge } from "./AssignmentStateBadge";
 import { ACTIVE_ASSIGNMENT_STATES } from "./assignmentStatus";
 import { ExecutorLinkCheck } from "./ExecutorLinkCheck";
+import { HarnessInventorySection } from "./HarnessInventorySection";
 import {
   EXECUTOR_CAPABILITIES_MAX,
   addCapability,
@@ -551,6 +552,9 @@ function ExecutorSheetForm({
           </Button>
         </div>
       ) : null}
+
+      {/* --- ME-064: discovered inventory (dropdowns, spec §3.1) -------- */}
+      <HarnessInventorySection executor={executor} />
 
       {/* --- Service facts, folded (persona-review: not primary text) --- */}
       <section

@@ -682,6 +682,28 @@ export const MOCK_EXECUTORS: ExecutorItem[] = [
     registered_via: "",
     registered_at: "2026-09-18T09:00:00+00:00",
     updated_at: "2026-09-19T08:00:00+00:00",
+    // ME-064: the agent-reported inventory snapshot (agents-ui-spec §3.2
+    // shape verbatim). Counts deliberately OVERFLOW the capped name lists
+    // (39 > 3, 121 > 2) — the playground must exercise the «…и ещё N»
+    // honesty line, not just the happy path.
+    harness_inventory: [
+      {
+        name: "zcode",
+        kind: "cli",
+        home_path: "/home/u/.zcode",
+        capabilities: {
+          specialists: ["bathys-researcher", "gcw-tech-lead", "gcw-senior-qa-engineer"],
+          specialists_count: 39,
+          gcw_specialists_count: 38,
+          skills: ["a11y-audit", "design-tokens"],
+          skills_count: 121,
+          plugins: [],
+          instructions: ["architectural-committee.md"],
+          instructions_count: 24,
+          notes: { agents_md: true, gcw_managed: true },
+        },
+      },
+    ],
   },
   {
     id: "exec-laptop-hermes",

@@ -1124,6 +1124,18 @@ export const en: Record<TranslationKey, string> = {
   "agents.card.enabledPendingHint":
     "Approve first — the dispatch switch appears after approval.",
   "agents.card.capsPlaceholder": "a specialist role, e.g. researcher",
+  // ME-064 «Detected on the host» (agents-ui-spec §3.1): inventory dropdowns.
+  "agents.card.sectionInventory": "Detected on the host",
+  "agents.card.inventoryNone": "No data",
+  "agents.card.inventoryNoneNote":
+    "Only the agent (Go) knows how to detect installations. A host connected via the poller will send the list after ME-056 — empty here is an honest answer, not a delay.",
+  "agents.card.inventorySpecialists": "specialists",
+  "agents.card.inventorySkills": "skills",
+  "agents.card.inventoryPlugins": "plugins",
+  "agents.card.inventoryInstructions": "instructions",
+  "agents.card.inventoryNoNames": "no names — counter only",
+  "agents.card.inventoryOverflow": "…and {{count}} more",
+  "agents.card.inventoryGcwShare": "gcw-* among them: {{count}}",
   "agents.card.capsInputAria": "New capability",
   "agents.card.capsAdd": "Add",
   "agents.card.capsClear": "Clear",

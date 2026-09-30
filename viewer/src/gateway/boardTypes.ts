@@ -345,6 +345,23 @@ export type ExecutorRegistryState = "pending" | "approved" | "revoked";
 export type ExecutorTransport = "local-poll" | "mesh-r4";
 
 /**
+ * ME-064 (agents-ui-spec §3.2/§3.3): one `environments[]` row of the
+ * `harness_inventory` snapshot — the additive executor field the discovery
+ * leg started storing (the LAST report, advisory mirror). `capabilities`
+ * stays a loose record: the object is AGENT-reported (never server-rebuilt),
+ * so the UI narrows it defensively at the model layer, never trusts shapes.
+ */
+export interface HarnessInventoryEnvironment {
+  /** Environment name — the harness-store id (server-checked non-empty). */
+  readonly name: string;
+  readonly kind?: string;
+  readonly home_path?: string;
+  /** Names+counters, lists server-capped (50/50/30/30), object ≤ 8 KiB. */
+  readonly capabilities?: Readonly<Record<string, unknown>>;
+  readonly [key: string]: unknown;
+}
+
+/**
  * One executor row — board `ExecutorOut` with the enum-ish strings narrowed
  * (presence/state/transport are closed server-side sets). The declared
  * identity (name/host/harness/version) is executor-claimed and
@@ -375,6 +392,12 @@ export interface ExecutorItem {
   readonly registered_via: string;
   readonly registered_at: string;
   readonly updated_at: string;
+  /**
+   * ME-064: the agent-reported harness-environments snapshot (last
+   * discovery report). OPTIONAL and honest-empty: poller hosts and
+   * pre-ME-062 boards carry none (Э3) — absence is an answer, not a gap.
+   */
+  readonly harness_inventory?: readonly HarnessInventoryEnvironment[];
 }
 
 /**

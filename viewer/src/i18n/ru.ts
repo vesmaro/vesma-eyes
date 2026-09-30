@@ -1147,6 +1147,18 @@ export const ru = {
   "agents.card.enabledPendingHint":
     "Сначала одобрите — переключатель диспетчеризации появится после одобрения.",
   "agents.card.capsPlaceholder": "роль специалиста, например researcher",
+  // ME-064 «Обнаружено на хосте» (agents-ui-spec §3.1): инвентарь-дропдауны.
+  "agents.card.sectionInventory": "Обнаружено на хосте",
+  "agents.card.inventoryNone": "Нет данных",
+  "agents.card.inventoryNoneNote":
+    "Обнаружение установок умеет только агент (Go). Хост, подключённый поллером, пришлёт список после ME-056 — пусто здесь честный ответ, а не задержка.",
+  "agents.card.inventorySpecialists": "специалисты",
+  "agents.card.inventorySkills": "скиллы",
+  "agents.card.inventoryPlugins": "плагины",
+  "agents.card.inventoryInstructions": "инструкции",
+  "agents.card.inventoryNoNames": "имён нет — только счётчик",
+  "agents.card.inventoryOverflow": "…и ещё {{count}}",
+  "agents.card.inventoryGcwShare": "из них gcw-*: {{count}}",
   "agents.card.capsInputAria": "Новая возможность",
   "agents.card.capsAdd": "Добавить",
   "agents.card.capsClear": "Очистить",
