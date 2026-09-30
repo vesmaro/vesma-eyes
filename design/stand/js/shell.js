@@ -663,11 +663,20 @@
       prefsChanged();
     },
     living: function () {
-      var v = store.get("vesmaro.livingLayer", "full");
-      return v === "calm" || v === "off" ? v : "full"; /* мусор → дефолт */
+      /* v11 (14 §0): дефолт «Спокойный» — канон объединения (11 §3.3:
+       * при мерже слой выключен, после включения дефолт calm, «Полный» —
+       * отдельной приёмкой). ?living=full|calm|off — демо-оверрайд вкладки
+       * (sessionStorage, не переписывает выбор пользователя). */
+      try {
+        var o = sessionStorage.getItem("stand-living-override");
+        if (o === "full" || o === "calm" || o === "off") return o;
+      } catch (e) {}
+      var v = store.get("vesmaro.livingLayer", "calm");
+      return v === "full" || v === "off" ? v : "calm"; /* мусор → дефолт */
     },
     setLiving: function (v) {
-      var val = v === "calm" || v === "off" ? v : "full";
+      var val = v === "full" || v === "calm" || v === "off" ? v : "calm";
+      try { sessionStorage.removeItem("stand-living-override"); } catch (e) {}
       store.set("vesmaro.livingLayer", val);
       root.setAttribute("data-living", val);
       doc.dispatchEvent(new CustomEvent("stand:living-change")); /* living.js перекладывает режим */

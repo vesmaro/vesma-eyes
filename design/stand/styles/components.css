@@ -786,14 +786,25 @@ button.chip:hover {
   border-radius: 50%;
   flex: none;
 }
-.feed-row[data-ev="recall"] .ev-dot {
+.feed-row[data-ev="recall"] .ev-dot,
+.feed-row[data-ev="task.start"] .ev-dot,
+.feed-row[data-ev="owner.clear"] .ev-dot {
   background: var(--synapse-recall);
 }
-.feed-row[data-ev="write"] .ev-dot {
+.feed-row[data-ev="write"] .ev-dot,
+.feed-row[data-ev="task.done"] .ev-dot {
   background: var(--synapse-write);
+}
+.feed-row[data-ev="index"] .ev-dot {
+  background: var(--color-confidence-dim);
 }
 .feed-row[data-ev="error"] .ev-dot {
   background: var(--synapse-error);
+}
+/* v11 (14 §2.2): внимание — кольцо (общий знак класса с курьером и Пульсом) */
+.feed-row[data-ev="owner.wait"] .ev-dot {
+  background: transparent;
+  border: 1.5px solid var(--synapse-write);
 }
 .feed-row .ev-time {
   margin-left: auto;
@@ -4563,7 +4574,9 @@ a.pulse-row:focus-visible {
   margin-top: 6px;
   flex: none;
 }
-.pulse-row[data-ev="recall"] .p-dot {
+.pulse-row[data-ev="recall"] .p-dot,
+.pulse-row[data-ev="task.start"] .p-dot,
+.pulse-row[data-ev="owner.clear"] .p-dot {
   background: var(--synapse-recall);
 }
 .pulse-row[data-ev="write"] .p-dot {
@@ -4574,6 +4587,15 @@ a.pulse-row:focus-visible {
 }
 .pulse-row[data-ev="error"] .p-dot {
   background: var(--synapse-error);
+}
+/* v11 (14 §2.2): внимание — кольцо, не пятно: общий знак класса с курьером */
+.pulse-row[data-ev="owner.wait"] .p-dot,
+.pulse-row[data-ev="task.done"] .p-dot {
+  background: var(--synapse-write);
+}
+.pulse-row[data-ev="owner.wait"] .p-dot {
+  background: transparent;
+  border: 1.5px solid var(--synapse-write);
 }
 .p-text {
   min-width: 0;

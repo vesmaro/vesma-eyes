@@ -428,14 +428,22 @@
    * канваса Обзора. minAgo — возраст от якоря загрузки страницы (канон 07j
    * §2.2: никаких рукописных часов); time остаётся для ленты Обзора.
    * ev: recall | write | index | error; index и error — события ленты без
-   * записи (не кликабельны), у них явные who/srv — провенанса записи нет. */
+   * записи (не кликабельны), у них явные who/srv — провенанса записи нет.
+   * v11 (14 §1.3): SSE-словарь v2 — жизненный цикл задач: task.start (агент
+   * начал), task.done (завершил), owner.wait (ждут владельца — класс
+   * «внимание»), owner.clear (владелец ответил). Классы импульсов:
+   * событие / внимание / ошибка (14 §2). */
   const feedSeed = [
     { ev: "recall", mem: "M-219", text: "поиск нашёл «Словарь импульсов» — точное совпадение по запросу", time: "14:06", minAgo: 2 },
+    { ev: "task.start", mem: "T-128", text: "задача T-128 «UI-10 проводник»: агент agb начал работу", who: "agb", srv: "mnemos-01", time: "14:04", minAgo: 4 },
     { ev: "write", mem: "M-233", text: "агент agb записал «Схему провенанса»", time: "14:02", minAgo: 6 },
+    { ev: "owner.wait", mem: "T-121", text: "задача T-121 «Пейринг QR» ждёт вашего решения", who: "core", srv: "mnemos-01", time: "13:59", minAgo: 9 },
     { ev: "recall", mem: "M-215", text: "поиск нашёл «Heartbeat-контракт» — ссылка из свитка", time: "13:58", minAgo: 10 },
     { ev: "index", text: "индекс: 214 записей переиндексировано", who: "core", srv: "mnemos-02", time: "13:57", minAgo: 11 },
     { ev: "write", mem: "M-219", text: "агент core обновил индекс «Словаря импульсов»", time: "13:51", minAgo: 17 },
     { ev: "error", text: "mnemos-02 не ответил — переподключились за 8 с", who: "core", srv: "mnemos-02", time: "13:47", minAgo: 21 },
+    { ev: "owner.clear", mem: "T-121", text: "вы ответили по задаче T-121 «Пейринг QR» — ждущих нет", who: "owner", srv: "mnemos-01", time: "13:46", minAgo: 22 },
+    { ev: "task.done", text: "задача T-117 «Сшивка колодца» завершена агентом agb", who: "agb", srv: "mnemos-01", time: "13:45", minAgo: 23 },
     { ev: "index", text: "индекс: уверенность «Схемы провенанса» пересчитана после правки", who: "core", srv: "mnemos-01", time: "13:44", minAgo: 24 },
     { ev: "recall", mem: "M-177", text: "поиск нашёл «Выбор шрифтов» — открытие записи", time: "13:40", minAgo: 28 },
     { ev: "write", mem: "M-241", text: "агент agb дополнил черновик тег-словаря", time: "13:32", minAgo: 36 },
@@ -446,9 +454,13 @@
   const feedPool = [
     { ev: "recall", mem: "M-215", text: "поиск нашёл «Heartbeat-контракт агентов» — точное совпадение" },
     { ev: "write", mem: "M-233", text: "агент agb внес правку в «Схему провенанса»" },
+    { ev: "task.start", text: "задача T-104 «Живая прокачка»: агент agb начал работу", who: "agb", srv: "mnemos-01" },
+    { ev: "owner.wait", mem: "T-121", text: "задача T-121 «Пейринг QR» ждёт вашего решения", who: "core", srv: "mnemos-01" },
     { ev: "recall", mem: "M-156", text: "поиск нашёл «Лестницу страт» — переход из свитка" },
+    { ev: "task.done", text: "задача T-117 «Сшивка колодца» завершена агентом agb", who: "agb", srv: "mnemos-01" },
     { ev: "index", text: "индекс: дозапись новых записей в обратный словарь", who: "core", srv: "mnemos-02" },
     { ev: "recall", mem: "M-219", text: "поиск нашёл «Словарь импульсов» — ссылка в отчёте" },
+    { ev: "owner.clear", mem: "T-121", text: "вы ответили по задаче T-121 «Пейринг QR» — ждущих нет", who: "owner", srv: "mnemos-01" },
     { ev: "write", mem: "M-241", text: "агент agb правит раздел тег-словаря" },
     { ev: "error", text: "mnemos-01 не ответил на дозапрос ленты", who: "core", srv: "mnemos-01" },
     { ev: "recall", mem: "M-177", text: "поиск нашёл «Выбор шрифтов» — открытие записи" },
@@ -1243,8 +1255,8 @@
   /* v6 (07k §1.1): the single source of the stand version. No markup may
    * duplicate it — footer status lines (sidebar, pair, auth) and the gallery
    * caption all read STAND.version / STAND.slice. */
-  const version = "1.41.0";
-  const slice = "v10";
+  const version = "1.42.0";
+  const slice = "v11";
 
   window.STAND = {
     version,

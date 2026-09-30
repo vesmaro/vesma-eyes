@@ -161,6 +161,7 @@
   /* ── State ──────────────────────────────────────────────────────────── */
   var pulses = []; // {e:[i,j], t0, color}
   var tints = []; // reduced-motion static edge tints {e, t0, color}
+  var rings = []; // v11 (14 §2.5): кольца внимания {n, t0} — owner.wait
   var hoverIdx = -1;
   var selIdx = -1;
   var fpsLow = false;
@@ -311,11 +312,26 @@
     if (reduced) render(0);
   });
 
-  /* ── Impulses: only on real feed events (06 §5) ─────────────────────── */
+  /* ── Impulses: only on real feed events (06 §5) ───────────────────────
+   * v11 (14 §2.5): колодец говорит теми же тремя классами, что и жилы —
+   * event = импульс по ребру, attention = золотое кольцо вокруг узла
+   * задачи (owner.wait), error = красный импульс. Один словарь на слой. */
   window.addEventListener("stand:pulse", function (e) {
-    var kind = e.detail.kind; // recall | write | error
-    var color = kind === "write" ? COL.write : kind === "error" ? COL.error : COL.recall;
+    var kind = e.detail.kind; // recall|write|error|index|task.*|owner.*
+    var color = (kind === "write" || kind === "task.done") ? COL.write
+      : kind === "error" ? COL.error : COL.recall;
     var memId = e.detail.mem;
+    if (kind === "owner.wait") {
+      /* внимание: кольцо на узле задачи; нет узла — честный фолбэк:
+       * импульс не выдумывается, событие несут лента и Нейра (14 §2.5) */
+      var n = memId && byId[memId];
+      if (n && !reduced) {
+        rings.push({ n: n, t0: performance.now() });
+        if (rings.length > 3) rings.shift(); /* ≤3 колец (глобальный бюджет) */
+        return;
+      }
+      color = COL.write; /* фолббек тем же золотом */
+    }
     // pick an edge touching that memory (fallback: any edge)
     var cand = [];
     edges.forEach(function (ed, i) {
@@ -453,6 +469,21 @@
         return true;
       });
       ctx.restore();
+      // v11 (14 §2.5): кольцо внимания — расходящаяся окружность вокруг
+      // узла задачи, 640ms (вдох-выдох), не в reduced (там событие несут
+      // лента и статичная Нейра)
+      rings = rings.filter(function (g) {
+        var dt = now - g.t0;
+        if (dt > 640) return false;
+        var k = dt / 640;
+        ctx.globalAlpha = 0.9 * (1 - k);
+        ctx.strokeStyle = COL.write;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(g.n.x, g.n.y, g.n.r + 2 + 6 * k, 0, Math.PI * 2);
+        ctx.stroke();
+        return true;
+      });
       ctx.globalAlpha = 1;
     }
   }

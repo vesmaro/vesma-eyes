@@ -1164,6 +1164,33 @@ html[data-auth="anon"] .topsearch {
   background:
     linear-gradient(to left, var(--courier-color, var(--color-iris)) 6px, transparent 22px);
 }
+/* v11 (14 §2.2): курьер ВНИМАНИЯ — кольцевая голова вместо сплошной:
+ * важное стучит, а не мелькает; форма различает от write при общем золоте */
+.living-courier.attention::before {
+  content: "";
+  position: absolute;
+  right: -3px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  border: 1.5px solid var(--courier-color, var(--color-confidence));
+  border-radius: var(--radius-full);
+  background: var(--color-bg-base);
+}
+.living-courier.attention.aggregated::before {
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+}
+/* v11 (14 §2.2): ▸N при прибытии внимания — число и свечение совпадают
+ * по времени; удержание --duration-attention-hold */
+[data-exec-count] {
+  transition: box-shadow var(--duration-instant) var(--ease-enter);
+}
+[data-exec-count].attention-hold {
+  box-shadow: 0 0 10px var(--color-confidence);
+}
 @keyframes living-courier-run {
   from { offset-distance: 0%; opacity: 0; }
   15% { opacity: 1; }   /* подъём первые 15% пути */

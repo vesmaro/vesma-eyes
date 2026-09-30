@@ -89,6 +89,10 @@
   --duration-courier: 1000ms;           /* база пробега В2; clamp(путь/600px/s; 400ms; 1600ms) */
   --neura-breath-alpha: 0.18;           /* потолок вздоха (≤ glow-бюджета 0.35) */
   --vein-breath-alpha: 0.10;            /* пик дыхания жилы (покой 0.07) */
+
+  /* v11 НЕЙРО-слой (14 §3): ритм внимания — только имена, без новых hue */
+  --duration-attention: 320ms;          /* пауза двойного удара прибытия (14 §2.2) */
+  --duration-attention-hold: 2400ms;    /* свечение счётчика ▸N при внимании */
 }
 
 /* ── Frozen core (names & values stable) ────────────────────────────── */
@@ -223,6 +227,8 @@
     --duration-iris: 0ms;      /* breath off → static canvas tint */
     --duration-neura: 0ms;     /* v10: вздохи/курьеры → статичные тинты (08 §8) */
     --duration-courier: 0ms;
+    --duration-attention: 0ms;     /* v11: двойной удар → один статичный тинт */
+    --duration-attention-hold: 0ms;
     --duration-slow: 0ms;
     --duration-normal: 0ms;
     --duration-fast: 80ms;     /* opacity-only ≤80ms */
@@ -233,6 +239,8 @@
   --duration-iris: 0ms;
   --duration-neura: 0ms;
   --duration-courier: 0ms;
+  --duration-attention: 0ms;
+  --duration-attention-hold: 0ms;
   --duration-slow: 0ms;
   --duration-normal: 0ms;
   --duration-fast: 80ms;
