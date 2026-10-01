@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 // Node-env test: read the sources straight from disk (Vitest stubs CSS
 // imports, so `?raw` is unreliable for stylesheets here).
 const tokensCss = readFileSync(new URL("./tokens.css", import.meta.url), "utf8");
+const globalCss = readFileSync(new URL("./global.css", import.meta.url), "utf8");
 const boardTokensCss = readFileSync(
   new URL("../../../web/styles/tokens.css", import.meta.url),
   "utf8",
@@ -226,9 +227,12 @@ const V12_GOLDEN_THEMED_TOKENS = ["--web-tone-update"];
 
 /** Map of custom property → normalised value for every top-level block
  * whose selector list includes `selector`. */
-function themeDecls(css: string, selector: string): Map<string, string> {
+function themeDecls(rawCss: string, selector: string): Map<string, string> {
   const decls = new Map<string, string>();
   const open = /([^{]+)\{/;
+  // The scanner is line-based; wrapped selector lists («[a],\n[b] {») must
+  // land on ONE line or every head selector would be silently lost.
+  const css = rawCss.replace(/,\s*\n/g, ", ");
   const lines = css.split("\n");
   let depth = 0;
   let active = false;
@@ -437,8 +441,11 @@ describe("Phase 1 value locks (design blueprint v1.1 §5.2 — Кора-орга
     // The owner-approved exception-image (2026-10-01): the hero stands on
     // the dark canvas in light «береста» too — the veil follows the well,
     // not the page. The scope block must carry the exact dark values.
+    // Fix round W1b: the viewer scope list grew the legend marker — the
+    // board keeps the bare selector (parity is about VALUES, not viewers).
     for (const css of [tokensCss, boardTokensCss]) {
-      const block = css.match(/\[data-well-window\]\s*\{([^}]*)\}/)?.[1] ?? "";
+      const block =
+        css.match(/\[data-well-window\](?:,\s*\[data-well-legend\])?\s*\{([^}]*)\}/)?.[1] ?? "";
       expect(block, "well-window scope present").not.toBe("");
       expect(block).toContain("--color-well-canvas: #090b0f");
       expect(block).toContain("--hud-veil: rgb(9 11 15 / 0.78)");
@@ -464,6 +471,28 @@ describe("Phase 1 value locks (design blueprint v1.1 §5.2 — Кора-орга
         ).toBe(value);
       }
     }
+  });
+
+  it("the tone legend rides the SAME dark column (fix round W1b — zero value changes)", () => {
+    // The selector list grew, the VALUES did not: [data-well-legend] shares
+    // the well-window block verbatim, so the legend swatches match the well
+    // pixel-for-pixel in both themes.
+    expect(tokensCss).toMatch(/\[data-well-window\],\s*\[data-well-legend\]\s*\{/);
+    const legend = themeDecls(tokensCss, "[data-well-legend]");
+    expect(legend.size).toBeGreaterThan(0);
+    for (const [name, value] of legend) {
+      expect(darkDecls.get(name), `legend ${name} must equal the dark column`).toBe(value);
+    }
+    // The dictionary swatches read the exact tokens the organ paints with.
+    // --web-tone-update is deliberately ABSENT from the scope: the ONLY
+    // themed v12 pair stays theme-following, so the legend swatch and the
+    // well tone show the same value in each theme (zero value changes).
+    expect(legend.get("--synapse-recall")).toBe("#4fc2ce");
+    expect(legend.get("--synapse-write")).toBe("#c9933a");
+    expect(legend.get("--color-success")).toBe("#3fbf7f");
+    expect(legend.get("--color-warning")).toBe("#d9a03f");
+    expect(legend.get("--color-error")).toBe("#e0655c");
+    expect(legend.has("--web-tone-update")).toBe(false);
   });
 });
 
@@ -788,5 +817,51 @@ describe("density bootstrap (Ф1, concept §3.3)", () => {
     expect(indexHtml).toContain("dataset.density"); // [data-density] switching
     // Only compact is an override; anything else falls back to comfortable.
     expect(indexHtml).toMatch(/density === "compact" \? "compact" : "comfortable"/);
+  });
+});
+
+describe("well substrate + tone consumers (W1b «Колодец — орган состояния»)", () => {
+  it("the substrate breathing is the FIRST consumer of the golden web tokens", () => {
+    // 15-WOW §14.1: --web-node/edge/wave-alpha and --duration-web-idle were
+    // recorded in W0 with no component consuming them — the substrate rules
+    // in global.css are their first wired consumers (W1b).
+    expect(globalCss).toMatch(/\.well-substrate\s*\{[^}]*--duration-web-idle/);
+    const breath =
+      globalCss.match(/@keyframes well-substrate-breath\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+    expect(breath).toContain("var(--web-node-alpha)");
+    expect(breath).toContain("var(--web-wave-alpha)");
+  });
+
+  it("breathing settles in calm/off and dies completely under reduced motion", () => {
+    expect(globalCss).toMatch(/\[data-live="calm"\] \.well-substrate[^\{]*\{[^}]*animation: none/s);
+    expect(globalCss).toMatch(/\[data-live="off"\] \.well-substrate[^\{]*\{[^}]*animation: none/s);
+    const media = globalCss.match(
+      /@media \(prefers-reduced-motion: reduce\)\s*\{(?:(?!\n\})[\s\S])*\}/g,
+    )?.find((block) => block.includes(".well-substrate"));
+    expect(media ?? "").toContain("animation: none");
+    expect(media ?? "").toContain("var(--web-node-alpha)"); // static rest opacity
+    const forced = globalCss.match(/\[data-motion="reduced"\] \.well-substrate\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(forced).toContain("animation: none");
+    expect(forced).toContain("var(--web-node-alpha)");
+  });
+
+  it("the node tint crossfades on --duration-tone-fade; only an active tone paints", () => {
+    expect(globalCss).toMatch(
+      /\.well-node\s*\{[^}]*transition: fill var\(--duration-tone-fade\)/s,
+    );
+    expect(globalCss).toMatch(
+      /\[data-well-tone="active"\] \.well-node\s*\{[^}]*fill: var\(--well-tone\)/s,
+    );
+  });
+
+  it("tokens.css stays untouched: --well-tone is an organ-written inline var, not a token", () => {
+    expect(tokensCss).not.toMatch(/--well-tone\s*:/);
+    // the [data-well-window] scope gains no W1b additions (lockstep is
+    // asserted by the scope tests above — this pins the count of its decls)
+    const scope =
+      tokensCss.match(/\[data-well-window\](?:,\s*\[data-well-legend\])?\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(scope, "well-window scope present").not.toBe("");
+    expect(scope).not.toContain("well-tone");
+    expect(scope).not.toContain("--web-node-alpha");
   });
 });

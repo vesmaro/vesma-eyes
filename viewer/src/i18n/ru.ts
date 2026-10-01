@@ -163,6 +163,23 @@ export const ru = {
   "overview.heroTitle": "Память жива",
   "overview.heroSubtitle": "Память ваших ИИ-помощников",
   "overview.heroMemories": "записей — {{count}}",
+  // Фикс-раунд W1b: счётчик честности заменяет пару «записей/тегов» —
+  // он описывает ровно нарисованное (выборку) по ответившим проводам.
+  "overview.heroShownOf": "показано — {{shown}} свежайших из {{total}}",
+  "overview.heroShown": "показано — {{shown}}",
+  // Легенда тонов (фикс-раунд W1b): строка на поверхности + полный словарь.
+  "overview.legendAbout": "О цветах",
+  "overview.legendProblem": "проблема",
+  "overview.legendAttention": "внимание",
+  "overview.legendUpdate": "обновление",
+  "overview.legendToneRecall": "покой · память читают",
+  "overview.legendToneWrite": "запись · ждёт подтверждения",
+  "overview.legendToneSuccess": "подключение",
+  "overview.legendToneWarning": "внимание (до минуты)",
+  "overview.legendToneError": "проблема (пока жива)",
+  "overview.legendToneUpdate": "обновление (пока не примут или не отклонят)",
+  "overview.legendNote":
+    "На колодце — {{shown}} свежайших записей и их связи. Связи показаны только между отображёнными записями.",
   "overview.heroTags": "тегов — {{count}}",
   "overview.waitingChip": "Ждут владельца: {{count}}",
   "overview.tickerItem": "{{time}} записано в память: {{title}} · {{server}}",

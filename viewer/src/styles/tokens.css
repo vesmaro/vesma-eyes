@@ -289,9 +289,14 @@
  * contrast pairs even on a light page. Page Theme Lock holds: this is a
  * recorded exception-image, not a second theme (no text surfaces outside
  * the hero). Values are the :root (dark) column — kept in lockstep with it
- * and asserted by tokens.test.ts. No frozen name is renamed or revalued. */
-[data-well-window] {
+ * and asserted by tokens.test.ts. No frozen name is renamed or revalued.
+ * Fix round W1b: the tone legend is the well's own vocabulary surface —
+ * [data-well-legend] rides the SAME dark column (zero value changes) so
+ * the swatches match the well pixel-for-pixel in both themes. */
+[data-well-window],
+[data-well-legend] {
   --color-well-canvas: #090b0f;
+  --color-bg-elevated: #161b23; /* fix round W1b: the legend panel surface */
   --hud-veil: rgb(9 11 15 / 0.78);
   --palette-scrim: rgb(9 11 15 / 0.55);
 
