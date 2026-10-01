@@ -53,7 +53,10 @@ export function TopBar({ sidebarTrigger }: TopBarProps) {
   const compact = density === "compact";
 
   return (
-    <header className="sticky top-0 z-40 flex h-topbar shrink-0 items-center gap-2 border-myelin-hairline border-b-hairline bg-well pl-2 pr-3 sm:gap-3 sm:pl-3">
+    <header
+      data-living-seam="topbar"
+      className="sticky top-0 z-40 flex h-topbar shrink-0 items-center gap-2 border-myelin-hairline border-b-hairline bg-well pl-2 pr-3 sm:gap-3 sm:pl-3"
+    >
       {sidebarTrigger}
       <Link
         to="/"

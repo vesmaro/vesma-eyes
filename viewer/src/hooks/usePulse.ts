@@ -30,8 +30,10 @@ export function usePulse(params: PulseParams = {}) {
   });
 }
 
-/** Per-store health detail for the Overview cards (same capability rule). */
-export function useBoardHealth() {
+/** Per-store health detail for the Overview cards (same capability rule).
+ * W1a living bridge: `opts.refetchInterval` turns the one-shot query into
+ * the 30s base-tone poll; omitted keeps the exact existing behaviour. */
+export function useBoardHealth(opts?: { refetchInterval?: number | false }) {
   const gateway = useGateway();
   const capable = isBoardHealthSource(gateway);
   return useQuery({
@@ -45,5 +47,6 @@ export function useBoardHealth() {
     enabled: capable,
     staleTime: STALE_TIMES.status,
     gcTime: GC_TIMES.status,
+    refetchInterval: opts?.refetchInterval,
   });
 }

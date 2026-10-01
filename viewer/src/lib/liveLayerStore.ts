@@ -1,17 +1,19 @@
 import { useSyncExternalStore } from "react";
 
 /**
- * `vesmaro.live` — the living-layer store (blueprint §6.6 В1, canon v11 §4).
- * The hero canvas and other ambient surfaces read this ONE store; the
- * indicator in the TopBar status zone cycles it with a click. Four levels of
- * disabling exist in the canon — the fourth is the reduced-motion regime
- * (`vesmaro.motion`), which zeroes the durations underneath everything and
- * is deliberately NOT rewritten here (the two stores stay orthogonal).
+ * `vesmaro.live` — the living-layer store (blueprint §6.6 В1, canon v11 §4;
+ * W1a semantics per the owner directive 2026-10-01 and АРХКОМ §1.6).
+ * The hero canvas, the settings hub and the living engine read this ONE
+ * store. Four levels of disabling exist in the canon — the fourth is the
+ * reduced-motion regime (`vesmaro.motion`), which zeroes the durations
+ * underneath everything and is deliberately NOT rewritten here (the two
+ * stores stay orthogonal).
  *
- * Levels:
- * - `live`  — ambient on (drift/breath); event reactions on (impulses).
- * - `calm`  — ambient off; data-event reactions stay on. «Покой силы».
- * - `off`   — the whole living layer settled; the data itself stays.
+ * Levels (settings hub labels):
+ * - `live`  — «Полный»: everything — breathing, tones AND event impulses.
+ * - `calm`  — «Спокойный» (the DEFAULT): breathing + state tones, no event
+ *             impulses (no festivals).
+ * - `off`   — «Выключен»: the whole living layer settled; the data stays.
  *
  * Light/data honesty is untouched: every impulse must still name a bus event
  * — this store only gates AMBIENT motion, never the data renders.
@@ -19,7 +21,7 @@ import { useSyncExternalStore } from "react";
 export type LiveLayer = "live" | "calm" | "off";
 
 export const LIVE_LAYER_STORAGE_KEY = "vesmaro.live";
-export const DEFAULT_LIVE_LAYER: LiveLayer = "live";
+export const DEFAULT_LIVE_LAYER: LiveLayer = "calm";
 
 /** Cycle order for the В1 indicator: live → calm → off → live. */
 export const LIVE_LAYERS = ["live", "calm", "off"] as const satisfies readonly LiveLayer[];
