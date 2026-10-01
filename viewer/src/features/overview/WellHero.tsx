@@ -400,15 +400,13 @@ export function WellHero() {
         </div>
       </div>
 
-      {/* The tone legend (fix round, two tiers): the surface strip carries the
-       * three alarm words, the disclosure opens the full six-colour dictionary
-       * + the sampling note. The legend is the well's own vocabulary surface —
-       * [data-well-legend] rides the same dark token column in BOTH themes so
-       * the swatches match the well exactly. It is page chrome (outside the
-       * canvas), not a living-layer signal — present muted too. */}
+      {/* The tone legend (fix round, two tiers; AA verdict — designer): the
+       * strip TEXT is page chrome (page text pair on the page background),
+       * while the MARKERS and the disclosure PANEL keep [data-well-legend] —
+       * the dark well column is the subject of the legend, the strip copy is
+       * not. Page chrome, not a living-layer signal — present muted too. */}
       <div
         ref={legendRef}
-        data-well-legend=""
         className="relative flex items-center justify-between gap-3"
         style={{ marginTop: "var(--space-2)" }}
       >
@@ -428,6 +426,7 @@ export function WellHero() {
               ) : null}
               <span
                 aria-hidden="true"
+                data-well-legend=""
                 className="well-legend-dot inline-block size-1.5 shrink-0 rounded-full"
                 style={{ background: `var(${token})` }}
               />
@@ -455,6 +454,7 @@ export function WellHero() {
             id="well-legend-panel"
             role="region"
             aria-labelledby="well-legend-button"
+            data-well-legend=""
             className="absolute right-0 top-full z-10 mt-1 w-[min(26rem,100%)] rounded-md border border-border-subtle bg-elevated p-4 shadow-float"
           >
             <ul className="space-y-2">

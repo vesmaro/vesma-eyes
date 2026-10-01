@@ -291,7 +291,11 @@ describe("WellHero — the tone legend (fix round, two tiers)", () => {
   it("surface strip: exactly three marks, the disclosure button, no panel at rest", async () => {
     const html = await renderHero(seedMemories);
     expect((html.match(/well-legend-dot/g) ?? []).length).toBe(3);
-    expect(html).toContain('data-well-legend=""');
+    // AA verdict (designer): the markers keep the dark well column, the
+    // strip copy and the button are page chrome — the container carries
+    // no scope marker, each dot does.
+    expect((html.match(/data-well-legend=""/g) ?? []).length).toBe(3);
+    expect(html).not.toMatch(/data-well-legend=""[^>]*class="relative flex/);
     expect(html).toContain("About the colors");
     expect(html).toContain("problem");
     expect(html).toContain("attention");
@@ -339,6 +343,9 @@ describe("WellHero — the tone legend (fix round, two tiers)", () => {
     expect(button.getAttribute("aria-expanded")).toBe("true");
     expect(container.querySelectorAll(".well-legend-swatch")).toHaveLength(6);
     expect(container.querySelectorAll(".well-legend-dot")).toHaveLength(3); // surface intact
+    // the PANEL keeps the dark column marker; the strip container does not
+    expect(panel.hasAttribute("data-well-legend")).toBe(true);
+    expect((container.innerHTML.match(/data-well-legend=""/g) ?? []).length).toBe(4);
     expect(panel.textContent).toContain("at rest · memory read");
     expect(panel.textContent).toContain("until accepted or dismissed");
     expect(panel.textContent).toContain("most recent records and their links");
