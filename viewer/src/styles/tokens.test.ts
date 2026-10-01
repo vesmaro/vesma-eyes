@@ -331,14 +331,16 @@ describe("tokens.css inventory (canon v2 — docs/design/02-TOKENS.md §1–§3)
     for (const token of V12_GOLDEN_STATIC_TOKENS) {
       expect(props, `${token} missing`).toContain(token);
     }
-    expect(
-      blockProps(darkDecls),
-      "--web-tone-update missing from dark theme",
-    ).toContain("--web-tone-update");
-    expect(
-      blockProps(lightDecls),
-      "--web-tone-update missing from light theme",
-    ).toContain("--web-tone-update");
+    for (const token of V12_GOLDEN_THEMED_TOKENS) {
+      expect(
+        blockProps(darkDecls),
+        `${token} missing from dark theme`,
+      ).toContain(token);
+      expect(
+        blockProps(lightDecls),
+        `${token} missing from light theme`,
+      ).toContain(token);
+    }
   });
 
   it("keeps the frozen iris seed value in both themes (ADR 0003 / D10)", () => {
