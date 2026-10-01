@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Link } from "react-router";
 import { useReducedMotion } from "@/lib/useReducedMotion";
 import { useLiveLayer } from "@/lib/liveLayerStore";
@@ -7,7 +7,13 @@ import { useTags } from "@/hooks/useTags";
 import { usePulse, useBoardHealth } from "@/hooks/usePulse";
 import { useT } from "@/i18n";
 import { useWaitingSummary } from "./useWaitingSummary";
-import { buildWellGraph, WELL_NODE_CAP, WELL_VIEW_H, WELL_VIEW_W } from "./wellGraph";
+import {
+  buildSubstrate,
+  buildWellGraph,
+  WELL_NODE_CAP,
+  WELL_VIEW_H,
+  WELL_VIEW_W,
+} from "./wellGraph";
 
 /**
  * The Overview hero (blueprint §12.3, direction §5): the well — ONE full-
@@ -50,6 +56,7 @@ export function WellHero() {
   const liveLayer = useLiveLayer();
   const reducedMotion = useReducedMotion();
   const waiting = useWaitingSummary();
+  const winRef = useRef<HTMLDivElement>(null);
 
   // The graph: real memories + their real links (one contemplative read).
   const memories = useMemories({ limit: WELL_NODE_CAP });
@@ -90,11 +97,31 @@ export function WellHero() {
         memories: (memories.data ?? []).map((m) => ({
           id: m.id ?? "",
           created_at: m.created_at ?? "",
+          title: m.title ?? null,
           derived_from: m.derived_from ?? null,
         })),
       }),
     [memories.data],
   );
+
+  // The substrate: a fixed deterministic fabric (zero data input) — the well
+  // is textured from the FIRST frame, before the wire answers (W1b).
+  const substrate = useMemo(() => buildSubstrate(), []);
+
+  // The state organ rides the lazy `web-tones` chunk (never the LCP path),
+  // mounted on the window element per the LivingLayer pattern.
+  useEffect(() => {
+    let destroy: (() => void) | undefined;
+    let cancelled = false;
+    void import("@/living/wellOrgan").then((m) => {
+      if (cancelled || !winRef.current) return;
+      destroy = m.mountWellOrgan(winRef.current);
+    });
+    return () => {
+      cancelled = true;
+      destroy?.();
+    };
+  }, []);
 
   // The ticker: the latest pulse event ONLY — a role="log" event line, never
   // a marquee (§2.2.2: zero auto-scroll); an empty feed renders nothing.
@@ -139,8 +166,12 @@ export function WellHero() {
       </div>
 
       {/* The well: dark canvas in BOTH themes via the [data-well-window]
-       * token scope; the only full-height gesture of the system. */}
+       * token scope; the only full-height gesture of the system. The state
+       * organ (lazy web-tones chunk) owns data-well-tone/--well-tone on the
+       * window and the readout text — deliberately NOT React state, so live
+       * re-renders never clobber the physiology. */}
       <div
+        ref={winRef}
         data-well-window=""
         data-live={liveLayer}
         data-awaken={awaken ? "true" : "false"}
@@ -152,6 +183,34 @@ export function WellHero() {
           className="h-full w-full"
           aria-hidden="true"
         >
+          {/* Substrate FIRST (z: ткань → рёбра → узлы → HUD): the
+           * deterministic myelin fabric, monochrome, aria-hidden, never
+           * toned, never beaded, never hover-responsive (W1b: цвет без
+           * источника невозможен конструктивно). */}
+          <g className="well-substrate" aria-hidden="true">
+            {substrate.strands.map((strand, i) => (
+              <line
+                // Deterministic build — index keys are stable across renders.
+                // eslint-disable-next-line react/no-array-index-key
+                key={`s${i}`}
+                x1={strand.a.x}
+                y1={strand.a.y}
+                x2={strand.b.x}
+                y2={strand.b.y}
+                className="well-substrate-strand"
+              />
+            ))}
+            {substrate.points.map((point, i) => (
+              <circle
+                // eslint-disable-next-line react/no-array-index-key
+                key={`p${i}`}
+                cx={point.x}
+                cy={point.y}
+                r={2.5}
+                className="well-substrate-node"
+              />
+            ))}
+          </g>
           {graph.edges.length > 0 ? (
             <g className="well-drift">
               {graph.edges.map((edge) => (
@@ -181,11 +240,17 @@ export function WellHero() {
                   cy={node.y}
                   r={node.hub ? 6 : 4}
                   className={node.hub ? "well-node fill-iris-bright" : "well-node fill-iris"}
+                  data-id={node.id}
+                  data-title={node.title ?? undefined}
+                  data-date={node.date ?? undefined}
                   style={{ "--awaken-band": node.band } as CSSProperties}
                 />
               ))}
             </g>
           ) : null}
+          {/* Organ overlay (beads + hover halo): React renders it EMPTY and
+           * never reconciles its children — the organ appends/removes here. */}
+          <g className="well-live" aria-hidden="true" />
         </svg>
 
         {/* Honest states (review P1-1): a FAILED wire is not «empty» — the
@@ -203,8 +268,10 @@ export function WellHero() {
         ) : null}
 
         {/* HUD strip: veil ONLY under the text it carries (§5.2) — the
-         * waiting chip + the event ticker. Chip hidden until the counter
-         * settles; absent when nothing waits (empty ≠ zero). */}
+         * waiting chip + the hover readout (middle slot) + the event ticker.
+         * Chip hidden until the counter settles; absent when nothing waits
+         * (empty ≠ zero). The readout is filled by the organ on hover; empty
+         * renders as nothing (`.well-readout:empty { display: none }`). */}
         <div className="well-hud absolute inset-x-0 bottom-0 border-t border-myelin-hairline bg-hud-veil">
           <div className="flex min-h-10 items-center justify-between gap-3 px-4 py-2">
             {waiting.capable &&
@@ -223,6 +290,11 @@ export function WellHero() {
             ) : (
               <span />
             )}
+            <p
+              data-well-readout=""
+              aria-hidden="true"
+              className="well-readout pointer-events-none min-w-0 truncate font-mono text-sm tabular-nums text-foreground-secondary"
+            />
             {latest ? (
               <p
                 role="log"

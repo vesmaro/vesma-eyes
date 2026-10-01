@@ -20,6 +20,27 @@
 
 type ToneKey = "recall" | "write" | "success" | "conf" | "warn" | "error";
 
+/** Deterministic 0..997 pick — shared by the engine (vein choice) and the
+ * well organ (edge choice/direction): the same event kind always starts the
+ * same way. Lives here so both web-tones consumers reuse one copy. */
+export function hashString(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0) % 997;
+}
+
+/** True when animation must not run at all (canon: a STATIC drawing). */
+export function isReducedMotion(): boolean {
+  return (
+    document.documentElement.dataset.motion === "reduced" ||
+    (typeof matchMedia === "function" &&
+      matchMedia("(prefers-reduced-motion: reduce)").matches)
+  );
+}
+
 /** Kind → [tone key, window ms, hold?] — the real SSE dictionary mapped by
  * MEANING onto the §14.6.1 §2 classes (no colour without a source). Kinds
  * absent here carry no tone of their own; the base health tone speaks. */
@@ -89,6 +110,26 @@ export interface Tones {
   setUpdate(on: boolean): void;
   /** Current vein colour as `rgb(r,g,b)`; null = strictly neutral (muted). */
   frame(now: number, dt: number): string | null;
+  /**
+   * Step-mode read for lazy consumers (W1b well organ): the tone TARGET
+   * right now — no crossfade state, the consumer's CSS owns the fade — plus
+   * the base colour (the 80%-window return target), whether the colour
+   * carries a REAL signal (a temp tone, or a base ≠ the resting recall
+   * family), and the ms until the dominant temp tone's next state change
+   * (0 = nothing pending → the consumer schedules NO timer). null = muted.
+   */
+  step(now: number): ToneStep | null;
+}
+
+export interface ToneStep {
+  /** Tone target now (temp tone, else base) as `rgb(r,g,b)`. */
+  readonly color: string;
+  /** The base colour — what the tone returns to at the 80% window mark. */
+  readonly base: string;
+  /** True when the colour carries a real signal (§14.6.1: no idle tint). */
+  readonly real: boolean;
+  /** Ms until the next scheduled change of the dominant temp tone. */
+  readonly nextIn: number;
 }
 
 export function createTones(
@@ -241,6 +282,56 @@ export function createTones(
         for (let i = 0; i < 3; i++) col[i] += (base[i] - col[i]) * f;
       }
       return `rgb(${col[0] | 0},${col[1] | 0},${col[2] | 0})`;
+    },
+    step(now) {
+      nowRef = now;
+      if (isMuted()) return null;
+      if (tones.some((t) => t.key === "error")) {
+        errorUntil = now + HOLD_CAP;
+      }
+      rebase();
+      base = target; // step mode: the consumer's CSS owns the fade
+      fadeLeft = 0;
+      for (let i = tones.length - 1; i >= 0; i--) {
+        if (!tones[i].hold && now - tones[i].t0 >= tones[i].dur) {
+          tones.splice(i, 1);
+        }
+      }
+      const baseCol = `rgb(${base[0] | 0},${base[1] | 0},${base[2] | 0})`;
+      const baseReal = baseKey() !== "recall";
+      let best: TempTone | null = null;
+      for (const t of tones) {
+        if (best === null || PRIORITY[t.key] > PRIORITY[best.key]) best = t;
+      }
+      if (best === null) {
+        return { color: baseCol, base: baseCol, real: baseReal, nextIn: 0 };
+      }
+      if (best.hold) {
+        // holds live until the terminal event of their family (§14.6.1 §2)
+        return {
+          color: `rgb(${best.rgb[0]},${best.rgb[1]},${best.rgb[2]})`,
+          base: baseCol,
+          real: true,
+          nextIn: 0,
+        };
+      }
+      const elapsed = now - best.t0;
+      if (elapsed < best.dur * 0.8) {
+        return {
+          color: `rgb(${best.rgb[0]},${best.rgb[1]},${best.rgb[2]})`,
+          base: baseCol,
+          real: true,
+          nextIn: best.dur * 0.8 - elapsed,
+        };
+      }
+      // last 20% of the window: back to the base tone (organ returns to
+      // «none» when the base itself is the resting recall family)
+      return {
+        color: baseCol,
+        base: baseCol,
+        real: baseReal,
+        nextIn: Math.max(0, best.dur - elapsed),
+      };
     },
   };
 }

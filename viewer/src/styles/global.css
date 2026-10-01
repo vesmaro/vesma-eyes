@@ -136,6 +136,90 @@
   animation: none;
 }
 
+/* ── Well substrate (W1b «Колодец — орган состояния») ────────────────────
+ * The deterministic myelin fabric breathes between the golden alphas —
+ * the FIRST consumers of --web-node-alpha ↔ --web-wave-alpha at the
+ * --duration-web-idle period (15-WOW §14.1). Breathing is the surface's
+ * idle ambience: settled in calm/off, zeroed in reduced (the token mirrors
+ * 0ms — gated explicitly so the static rest opacity is pinned). The tone
+ * NEVER touches the substrate: it is monochrome by construction. */
+@keyframes well-substrate-breath {
+  from {
+    opacity: var(--web-node-alpha);
+  }
+  to {
+    opacity: var(--web-wave-alpha);
+  }
+}
+
+.well-substrate {
+  animation: well-substrate-breath var(--duration-web-idle) var(--ease-breath)
+    infinite alternate;
+}
+
+[data-live="calm"] .well-substrate,
+[data-live="off"] .well-substrate {
+  animation: none;
+  opacity: var(--web-node-alpha);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .well-substrate {
+    animation: none;
+    opacity: var(--web-node-alpha);
+  }
+}
+
+[data-motion="reduced"] .well-substrate {
+  animation: none;
+  opacity: var(--web-node-alpha);
+}
+
+/* The tissue renders as the myelin-hue family at FULL element opacity so
+ * the golden alphas govern its NET visibility (the stand drew solid myelin
+ * pixels at globalAlpha 0.05–0.08 — an alpha-over-alpha stack would read as
+ * nothing and fail the «канва не чёрная яма» gate). Still strictly quieter
+ * than the data layer (solid iris nodes, hairline edges). */
+.well-substrate-node {
+  fill: var(--color-text-secondary);
+}
+
+.well-substrate-strand {
+  stroke: var(--color-text-secondary);
+  stroke-width: 0.75;
+  fill: none;
+}
+
+/* Tone (§14.6.1): the organ writes --well-tone + data-well-tone on the
+ * [data-well-window] scope; the crossfade is THIS transition (reduced
+ * mirrors → 0ms = static tint). Substrate nodes carry a different class
+ * and are structurally excluded. Colour is never the only carrier (1.4.1):
+ * the hub reads by size, the state by ticker/HUD/chip text. */
+.well-node {
+  transition: fill var(--duration-tone-fade) var(--ease-in-out);
+}
+
+[data-well-tone="active"] .well-node {
+  fill: var(--well-tone);
+}
+
+/* Hover halo: an instant STATE, not an animation (--duration-instant). */
+.well-node-halo {
+  fill: none;
+  stroke: var(--myelin-strong);
+}
+
+/* Bead trail: colour comes from the organ (the live event's tone). */
+.well-bead-trail {
+  stroke-width: 2;
+  fill: none;
+}
+
+/* The hover readout lives in the HUD's middle slot; empty = invisible. */
+.well-readout:empty {
+  display: none;
+}
+
 .gate-enter {
   animation: gate-enter var(--duration-normal) var(--ease-enter);
 }

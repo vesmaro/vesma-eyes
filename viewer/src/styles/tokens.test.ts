@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 // Node-env test: read the sources straight from disk (Vitest stubs CSS
 // imports, so `?raw` is unreliable for stylesheets here).
 const tokensCss = readFileSync(new URL("./tokens.css", import.meta.url), "utf8");
+const globalCss = readFileSync(new URL("./global.css", import.meta.url), "utf8");
 const boardTokensCss = readFileSync(
   new URL("../../../web/styles/tokens.css", import.meta.url),
   "utf8",
@@ -788,5 +789,49 @@ describe("density bootstrap (Ф1, concept §3.3)", () => {
     expect(indexHtml).toContain("dataset.density"); // [data-density] switching
     // Only compact is an override; anything else falls back to comfortable.
     expect(indexHtml).toMatch(/density === "compact" \? "compact" : "comfortable"/);
+  });
+});
+
+describe("well substrate + tone consumers (W1b «Колодец — орган состояния»)", () => {
+  it("the substrate breathing is the FIRST consumer of the golden web tokens", () => {
+    // 15-WOW §14.1: --web-node/edge/wave-alpha and --duration-web-idle were
+    // recorded in W0 with no component consuming them — the substrate rules
+    // in global.css are their first wired consumers (W1b).
+    expect(globalCss).toMatch(/\.well-substrate\s*\{[^}]*--duration-web-idle/);
+    const breath =
+      globalCss.match(/@keyframes well-substrate-breath\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+    expect(breath).toContain("var(--web-node-alpha)");
+    expect(breath).toContain("var(--web-wave-alpha)");
+  });
+
+  it("breathing settles in calm/off and dies completely under reduced motion", () => {
+    expect(globalCss).toMatch(/\[data-live="calm"\] \.well-substrate[^\{]*\{[^}]*animation: none/s);
+    expect(globalCss).toMatch(/\[data-live="off"\] \.well-substrate[^\{]*\{[^}]*animation: none/s);
+    const media = globalCss.match(
+      /@media \(prefers-reduced-motion: reduce\)\s*\{(?:(?!\n\})[\s\S])*\}/g,
+    )?.find((block) => block.includes(".well-substrate"));
+    expect(media ?? "").toContain("animation: none");
+    expect(media ?? "").toContain("var(--web-node-alpha)"); // static rest opacity
+    const forced = globalCss.match(/\[data-motion="reduced"\] \.well-substrate\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(forced).toContain("animation: none");
+    expect(forced).toContain("var(--web-node-alpha)");
+  });
+
+  it("the node tint crossfades on --duration-tone-fade; only an active tone paints", () => {
+    expect(globalCss).toMatch(
+      /\.well-node\s*\{[^}]*transition: fill var\(--duration-tone-fade\)/s,
+    );
+    expect(globalCss).toMatch(
+      /\[data-well-tone="active"\] \.well-node\s*\{[^}]*fill: var\(--well-tone\)/s,
+    );
+  });
+
+  it("tokens.css stays untouched: --well-tone is an organ-written inline var, not a token", () => {
+    expect(tokensCss).not.toMatch(/--well-tone\s*:/);
+    // the [data-well-window] scope gains no W1b additions (lockstep is
+    // asserted by the scope tests above — this pins the count of its decls)
+    const scope = tokensCss.match(/\[data-well-window\]\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(scope).not.toContain("well-tone");
+    expect(scope).not.toContain("--web-node-alpha");
   });
 });
