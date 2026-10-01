@@ -19,7 +19,7 @@ from pathlib import Path
 # ACTUAL viewer/index.html bytes, so editing a bootstrap without rotating
 # the CSP fails here instead of silently re-breaking the page console.
 CSP = ("default-src 'self'; "
-       "script-src 'self' 'sha256-lWvSm/qC0E+3fvAgio+zTRYXuJIbLdL0gPc54G9Q2OU=' "
+       "script-src 'self' 'sha256-gLnW2OEJF23VKQL4ot9PcYmiFHXeZWiMg0A52v/5MDM=' "
        "'sha256-k85nuNkWNWz2VjD38EcDAkNliknfzuSNN6HBSJQjvkc='; "
        "style-src 'self' 'unsafe-inline'; object-src 'none'; "
        "base-uri 'self'; frame-ancestors 'none'; connect-src 'self'; "
