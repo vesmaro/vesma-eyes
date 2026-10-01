@@ -188,7 +188,7 @@ export function WellHero() {
           ) : null}
         </svg>
 
-        {graph.nodes.length === 0 && memories.isSuccess ? (
+        {graph.nodes.length === 0 && !memories.isPending ? (
           <p className="well-hud absolute inset-x-0 top-1/2 -translate-y-1/2 px-6 text-center text-sm text-foreground-secondary">
             {t("overview.wellEmpty")}
           </p>
