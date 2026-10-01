@@ -536,8 +536,8 @@
 
 ### Файлы
 
-- Создаётся: `design/docs/07m-SETTINGS-MEMORY.md` (эта спека).
-- Правится: `design/docs/07k-AUTH-VERSION.md` — аддендум вердиктов в §10
+- Создаётся: `docs/design/07m-SETTINGS-MEMORY.md` (эта спека).
+- Правится: `docs/design/07k-AUTH-VERSION.md` — аддендум вердиктов в §10
   (сделано этим срезом).
 - Реализация (вне этой спеки, frontend):
   - новые страницы: `design/stand/settings.html`, `design/stand/tags.html`,

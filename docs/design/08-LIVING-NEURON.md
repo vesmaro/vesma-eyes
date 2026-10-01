@@ -481,7 +481,7 @@ glow/канваса, reduced-лестница, фокус-модель не см
 
 ### Файлы
 
-- Создаётся: `design/docs/08-LIVING-NEURON.md` (эта спека).
+- Создаётся: `docs/design/08-LIVING-NEURON.md` (эта спека).
 - Реализация (вне этой спеки, frontend): `design/stand/settings.html` — строка
   «Живой слой» (§4) + `standPrefs.livingLayer`; `design/stand/js/shell.js` —
   В1-кнопка в статус-зоне, `data-living`, пауза; `design/stand/js/data.js` —

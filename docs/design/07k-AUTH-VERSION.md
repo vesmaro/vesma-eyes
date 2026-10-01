@@ -498,7 +498,7 @@ Sign out», «аноним/anonymous», «вы: X/you: X», «Раздел „X�
 
 ### Файлы
 
-- Создаётся: `design/docs/07k-AUTH-VERSION.md` (эта спека).
+- Создаётся: `docs/design/07k-AUTH-VERSION.md` (эта спека).
 - Реализация (вне этой спеки, frontend): `design/stand/js/data.js`
   (+`STAND.version/slice`), `design/stand/js/shell.js` (hook сессии, футер,
   топбар, замки, гейт), новый `design/stand/auth.html`, правки футеров

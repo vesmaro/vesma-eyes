@@ -203,7 +203,7 @@ web-tone-update (сирень light) `#6E5A94` 5.9/5.5/5.2 — все AA.
  * vesma-eyes — «Живая кора» v2 tokens (stand + viewer).
  * Dark theme («фосфорный колодец») default on :root; light on [data-theme="light"].
  * Frozen names preserved (ADR 0006 / ui-contract §8); the neuro layer only ADDS
- * names. Contrast pairs computed per WCAG 2.2 — see design/docs/02-TOKENS.md §4.
+ * names. Contrast pairs computed per WCAG 2.2 — see docs/design/02-TOKENS.md §4.
  */
 
 /* ── Dark theme (default) ───────────────────────────────────────────── */

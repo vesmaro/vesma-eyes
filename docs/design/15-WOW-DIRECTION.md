@@ -655,7 +655,7 @@ breathing. Off — bare cortex."
 
 ### Файлы
 
-- Создаётся: `design/docs/15-WOW-DIRECTION.md` (этот документ).
+- Создаётся: `docs/design/15-WOW-DIRECTION.md` (этот документ).
 - Реализация (вне документа, frontend): новый стенд v12 в этой ветке по §8;
   `stand-v11-base/` — read-only материал. Правки-компаньоны за ТЛ:
   `12-UNION-ROADMAP` §1 п.6 и `11-CONVERGENCE` условие 3 (supersede дефолта
