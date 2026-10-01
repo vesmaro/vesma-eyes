@@ -285,7 +285,7 @@ describe("BoardAdapter wire contract", () => {
   it("health: projects the board payload onto the string-map HealthStatus", async () => {
     const fetchMock = respondingFetch({
       ok: true,
-      service: "vesmaro-eyes",
+      service: "vesma-eyes",
       board_tasks: 7,
       servers: [{ name: "mnemos-main" }],
       groups: [],
@@ -298,7 +298,7 @@ describe("BoardAdapter wire contract", () => {
 
     expect((fetchMock.mock.calls[0] as [string])[0]).toBe("/api/health");
     expect(health.status).toBe("ok");
-    expect(health.service).toBe("vesmaro-eyes");
+    expect(health.service).toBe("vesma-eyes");
     expect(health.board_tasks).toBe("7");
     // Nested arrays have no place in the string-map shape.
     expect(JSON.stringify(health)).not.toContain("mnemos-main");
@@ -429,7 +429,7 @@ describe("BoardAdapter wire contract", () => {
     // Recorded corpus (same session): servers[] carries the §7 dot contract.
     const fetchMock = respondingFetch({
       ok: true,
-      service: "vesmaro-eyes",
+      service: "vesma-eyes",
       board_tasks: 11,
       servers: [
         {
@@ -455,7 +455,7 @@ describe("BoardAdapter wire contract", () => {
     expect((fetchMock.mock.calls[0] as [string])[0]).toBe("/api/health");
     expect(health).toEqual({
       ok: true,
-      service: "vesmaro-eyes",
+      service: "vesma-eyes",
       board_tasks: 11,
       // legacy corpus (no app_version yet) → honest null
       app_version: null,
@@ -553,7 +553,7 @@ const CORPUS_TASK_MEMORIES = {
       title: "Session checkpoint — 2026-07-27T09:26:20.643279+00:00",
       excerpt: "# Session checkpoint — 2026-07-27T09:26:20.643279+00:00\n\n## Goals\n…",
       status: "published",
-      tags: ["project:mnemos-eyes", "mnemos:checkpoint"],
+      tags: ["project:vesma-eyes", "mnemos:checkpoint"],
     },
   },
   unresolved: [],
@@ -614,7 +614,7 @@ const CORPUS_BOARD_TASK = {
   env: "cluster",
   project: "mnemos-eyes",
   memory_ids: ["25cdc0e9-1912-4217-aaf0-0e7c48912df1"],
-  mnemos_tags: ["project:mnemos-eyes", "agent:zcode", "mnemos:decision"],
+  mnemos_tags: ["project:vesma-eyes", "agent:zcode", "mnemos:decision"],
   created_at: "2026-09-19T21:11:24+00:00",
   updated_at: "2026-09-19T21:11:24+00:00",
   archived: 0,

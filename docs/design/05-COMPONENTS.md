@@ -63,7 +63,7 @@
 ### 2.3 Карточка памяти
 
 Анатомия строки: [☑?] [точка confidence + 0.xx] [заголовок `--text-body`]
-[чипы ≤3 + «+N»] [провенанс mono `--text-caps` «agb · mnemos-01 · 2 ч»].
+[чипы ≤3 + «+N»] [провенанс mono `--text-caps` «agb · vesma-01 · 2 ч»].
 Свиток-версия: `--color-scroll-bg` + `--radius-lg` + Lora.
 
 | Состояние | Вид |
@@ -115,7 +115,7 @@
 ### 2.6 Терминал-панель
 
 Анатомия: фон `--color-bg-base`; текст `--font-mono` 13px `--color-text-primary`;
-prompt «mnemos@well:~$» — `--color-iris-bright`; ошибка — `--color-error` строкой;
+prompt «vesma@well:~$» — `--color-iris-bright`; ошибка — `--color-error` строкой;
 выход команды — secondary.
 
 | Состояние | Вид |

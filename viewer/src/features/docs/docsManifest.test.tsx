@@ -55,7 +55,7 @@ describe("frontmatter integrity", () => {
         expect(projectOfDocSlug(parsed.slug), path).toBe(parsed.project);
       } else {
         expect(parsed.slug, path).not.toContain("/");
-        expect(projectOfDocSlug(parsed.slug), path).toBe("vesmaro-eyes");
+        expect(projectOfDocSlug(parsed.slug), path).toBe("vesma-eyes");
       }
     }
   });

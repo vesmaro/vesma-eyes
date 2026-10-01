@@ -74,7 +74,7 @@ describe("AuthScreen", () => {
   it("renders an accessible token dialog when the overlay is open (anonymous)", () => {
     const html = renderWithProviders(<AuthScreen />);
     expect(html).toContain('role="dialog"');
-    expect(html).toContain("Sign in to mnemos");
+    expect(html).toContain("Sign in to vesma");
     expect(html).toContain('id="auth-token"');
     expect(html).toContain('type="password"');
     // Dismissal keeps read-only browsing available on permissive deployments.
@@ -127,7 +127,7 @@ describe("TopBar auth slot (AuthStatus)", () => {
       authValue([{ type: "SESSION_RESTORED" }]),
     );
     expect(html).toContain("Sign out");
-    expect(html).toContain("Sign out of mnemos");
+    expect(html).toContain("Sign out of vesma");
   });
 
   it("reports the live connection label on the mnemos adapter", () => {

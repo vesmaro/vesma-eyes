@@ -17,7 +17,7 @@ convenience into a hole.
 
 | Class | What it looks like | Who uses it | Rights |
 | --- | --- | --- | --- |
-| Store token | `mnk_…` | the board reaching into mnemos | memory read/write; `totp_required=0` |
+| Store token | `mnk_…` | the board reaching into vesma | memory read/write; `totp_required=0` |
 | ui | the value of `VESMARO_UI_TOKEN` | a person in the interface | every board mutation: tasks, archive, inbox, settings, automation |
 | machine | the value of `VESMARO_BOARD_TOKEN` | the poller and the agents | reports, claiming and pulsing assignments |
 | device | `mnd_…` | paired devices | read-only; issued by pairing |
@@ -107,7 +107,7 @@ All static tokens are cluster secrets. You can list the names and
 owners:
 
 ```bash
-kubectl -n kube-agents get secrets | grep vesmaro-eyes
+kubectl -n kube-agents get secrets | grep vesma-eyes
 ```
 
 | Secret | Key | Class |
@@ -115,7 +115,7 @@ kubectl -n kube-agents get secrets | grep vesmaro-eyes
 | `vesmaro-eyes-ui-token` | `VESMARO_UI_TOKEN` | ui |
 | `vesmaro-eyes-board-token` | `VESMARO_BOARD_TOKEN` | machine |
 | `vesmaro-eyes-mnemos` | `MNEMOS_TOKEN` | store token `mnk_…` |
-| `vesmaro-eyes-laptop` | `MNEMOS_LAPTOP_TOKEN` | the second store, `mnk_…` |
+| `vesma-eyes-laptop` | `MNEMOS_LAPTOP_TOKEN` | the second store, `mnk_…` |
 
 The chart generates two of its own secrets at first install and keeps
 them even across `helm uninstall`. How to fetch a value —

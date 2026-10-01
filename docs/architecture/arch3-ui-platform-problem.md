@@ -17,7 +17,7 @@
 
 ## 0. Стимул владельца (исходная постановка)
 
-1. **vesmaro-eyes вышел за рамки дашборда.** Кроме канбана уже есть: пульс
+1. **vesma-eyes вышел за рамки дашборда.** Кроме канбана уже есть: пульс
    памяти, поиск, входящие (AGG-1), отчёты агентов, карточки специалистов,
    merge-view хранилищ. Нужна архитектура **полноценной веб-утилиты работы с
    сервером памяти** — страницы/вкладки/подпрограммы. (UX-часть — у дизайнера;
@@ -37,14 +37,14 @@
 | --- | --- | --- |
 | Стек | no-build ES modules, один `app.js` | Vite + React 18 + TS (strict) + Router 7 + TanStack Query + shadcn/ui |
 | Статус | прод (кластер, v1.3.2), 6 раундов одобрения v0.3–v0.9, **feature-frozen** (ADR 0006) | рабочий каркас: 7 роутов (`App.tsx`), шлюз с 3 адаптерами (Mock/Http/Tauri, ADR 0002), auth-флоу c TOTP-challenge стейт-машиной, a11y-компоненты, vitest, openapi-codegen со schema-drift guard |
-| Data plane | **борд-merge API** своего сервера (`/api/tasks`, `/api/memories/*`, SSE `/api/events`) | **прямое подключение к одному mnemos** (`HttpAdapter`: `/search`, `/memories`, `/tags`, `/recall/agent/*`, `/auth/*`; снапшот = OpenAPI mnemos 4.1.0) |
+| Data plane | **борд-merge API** своего сервера (`/api/tasks`, `/api/memories/*`, SSE `/api/events`) | **прямое подключение к одному vesma** (`HttpAdapter`: `/search`, `/memories`, `/tags`, `/recall/agent/*`, `/auth/*`; снапшот = OpenAPI vesma 4.1.0) |
 | В образе | да (`Containerfile` копирует `web/`) | **нет** — `dist/` в контейнер не попадает |
 | URL | `https://vesmaro.abyss.lab/` (ingress path `/` Prefix → board service) | нигде не развёрнут |
 
-Ключевой факт: **каркас viewer готов, но его data plane — wire-контракт mnemos,
+Ключевой факт: **каркас viewer готов, но его data plane — wire-контракт vesma,
 а не merge-API борда.** `adapterConfig.ts` дефолтит на same-origin `/api`, но
 борд-сервер на этих путях отдаёт свою модель (multi-store merge, `per_server`
-provenance), не mnemos-словарь. Конвергенция ≠ «переложить борд в React» —
+provenance), не vesma-словарь. Конвергенция ≠ «переложить борд в React» —
 она требует BoardAdapter в шлюзе (см. §3.3).
 
 ### 1.2 Платформенные механизмы борд-сервера
@@ -53,8 +53,8 @@ provenance), не mnemos-словарь. Конвергенция ≠ «пере
   503 на любую мутацию, несовпадение → 401, constant-time
   (`server/app.py:1768–1784`). Токен один на всех писателей; ADR 0009 (на
   ратификации) разводит ui/machine-токены. **Чтения — открыты** (за ingress TLS).
-- **mnemos-токены:** борд ходит в хранилища с `mnk_`-токенами через
-  `token_ref` (env/file, SEC-2), TOTP-флаг на стороне mnemos
+- **vesma-токены:** борд ходит в хранилища с `mnk_`-токенами через
+  `token_ref` (env/file, SEC-2), TOTP-флаг на стороне vesma
   (`totp_required=0` в текущем контуре, `values.yaml`); viewer умеет
   mnk_-логин + TOTP-challenge (`gateway/auth.ts`).
 - **SSE** `/api/events` (`app.py:1788–1813`): in-process fan-out, at-most-once,
@@ -178,14 +178,14 @@ Self-signed секрет `vesmaro-eyes-tls` для `vesmaro.abyss.lab`
 
 ### 3.3 Честные сложности конвергенции (что надо сделать, а не только решить)
 
-1. **BoardAdapter в шлюзе.** Viewer говорит на wire-контракте mnemos;
+1. **BoardAdapter в шлюзе.** Viewer говорит на wire-контракте vesma;
    merge-API борда — другой словарь (`/api/memories/pulse` c `per_server`,
    `/api/tasks`, `/api/events`). Нужен адаптер `BoardAdapter implements
    MemoryGateway` (+расширения: SSE, tasks) — это же гейт 2→3 АРХКОМ-1
    («L1 потребляет /api/memories/*»). ADR 0007 запрещает L1 собственный
    multi-probe — конвергенция идёт **только** через борд-сервер, что и делает
    BoardAdapter единственной точкой.
-2. **Auth-двухконтурность.** В одном приложении живут: mnk_-логин в mnemos
+2. **Auth-двухконтурность.** В одном приложении живут: mnk_-логин в vesma
    (сегодняшний viewer) и ui-token борда (мутации, ADR 0009). После
    конвергенции mnk_ из UI уходит (борд сам держит token_ref хранилищ);
    фронт аутентифицируется только у борд-сервера. Это упрощение, но его
@@ -307,7 +307,7 @@ fetch из PWA-контекста может блокироваться. Вар�
 
 | | **PWA (поверх конвергентного web-app)** | Tauri 2.0 (ADR 0001 Phase 2) | Нативные (iOS/Android) |
 | --- | --- | --- | --- |
-| Что даёт | иконка на телефоне/десктопе, fullscreen, offline-shell позже (service worker), push позже (VAPID) | local-first: SQLite in-process, без HTTP-сервера mnemos на устройстве (ADR 0002, `TauriAdapter` — стаб) | максимум платформенных API |
+| Что даёт | иконка на телефоне/десктопе, fullscreen, offline-shell позже (service worker), push позже (VAPID) | local-first: SQLite in-process, без HTTP-сервера vesma на устройстве (ADR 0002, `TauriAdapter` — стаб) | максимум платформенных API |
 | Цена | ~дни (manifest+icons); требует доверенный TLS (см. §4.4) | Rust-тулчейн, подпись, отдельный релизный цикл | двойная разработка, сторы |
 | Когда | **сейчас (минимум)** | без изменений — Phase 2 по ADR 0001 | Not-doing (нет JTBD-сигнала) |
 | Связь с пейрингом | device-token хранится в PWA-хранилище — пейринг и есть «установка» | не конфликтует: Tauri-приложение = тот же фронт + другой адаптер | — |
@@ -492,8 +492,8 @@ RateLimiter:235–254), `server/store.py`, `Containerfile` (копирует т�
 `web/`; single worker), `deploy/chart/vesmaro-eyes/values.yaml` (host
 `vesmaro.abyss.lab`, self-signed TLS, allowlist, NetworkPolicy),
 `viewer/package.json`, `viewer/src/App.tsx` (роуты), `viewer/src/gateway/`
-(`adapterConfig.ts` — same-origin `/api`; `HttpAdapter.ts` — wire mnemos;
-`auth.ts` — mnk_/TOTP), `viewer/openapi-snapshot.json` (OpenAPI mnemos 4.1.0),
+(`adapterConfig.ts` — same-origin `/api`; `HttpAdapter.ts` — wire vesma;
+`auth.ts` — mnk_/TOTP), `viewer/openapi-snapshot.json` (OpenAPI vesma 4.1.0),
 `docs/decisions/0001/0002/0006/0007`, `docs/architecture/ui-contract.md`
 §10–11, `docs/architecture/archcom-2026-09-16…17…`, `docs/CHARTER.md` §8,
 `tests/test_openapi_contract.py`, `scripts/gen-tls-secret.sh`.

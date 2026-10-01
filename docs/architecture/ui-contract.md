@@ -1,4 +1,4 @@
-# vesmaro-eyes — UI Contract (archcom-approved)
+# vesma-eyes — UI Contract (archcom-approved)
 
 > Status: **Draft for archcom** (2026-09-16) — фиксирует стили, вложенности,
 > навигацию и правила взаимодействия. Изменения через PR + archcom.
@@ -307,20 +307,20 @@ REST-контракт: `GET /api/harnesses` (open read,
 ## 12. board-reflect data contract (v1, 2026-09-16)
 
 `POST /api/board-reflect` (`server/app.py:677–726`) пишет маркер refine-цикла
-(карточка специалиста → память) в mnemos первого активного сервера.
+(карточка специалиста → память) в vesma первого активного сервера.
 Запрос: `{specialist, problem, kind: agent-refine-request |
 agent-refine-commit}`; ответ: `{ok, memory_id, server}`.
 
 Инвариант контракта v1 (реализовано 2026-09-16, SEC-4/poisoning fix;
-дополнено 2026-09-16 — штампы строгого тег-контракта mnemos):
+дополнено 2026-09-16 — штампы строгого тег-контракта vesma):
 
-| Ветка | Теги в mnemos | source | Код |
+| Ветка | Теги в vesma | source | Код |
 | --- | --- | --- | --- |
 | `agent-refine-request` | `project:mnemos-eyes`, `agent:zcode`, `mnemos:open-question`, `source:board` | `mcp` | `app.py` `BOARD_REFLECT_TAGS` |
 | `agent-refine-commit` | `project:mnemos-eyes`, `agent:zcode`, `mnemos:open-question`, `source:board` | `mcp` | `app.py` `BOARD_REFLECT_TAGS` |
 | task-draft (UI-6) | `project:<slug из формы, санитизирован>`, `agent:zcode`, `mnemos:open-question`, `task-draft`, `source:board` | `mcp` | `app.py` `_draft_tags()` |
 
-- строгий тег-контракт mnemos требует ровно один `project:<slug>` и один
+- строгий тег-контракт vesma требует ровно один `project:<slug>` и один
   `agent:<slug>` на запись; борд штампует СВОЮ идентичность (`agent:zcode`),
   никогда не слаг специалиста;
 - `mnemos:decision` и любые другие decision-subtype из этих эндпоинтов

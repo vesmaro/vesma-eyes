@@ -83,7 +83,7 @@ describe("Sidebar overflow hygiene (UI-19)", () => {
     expect(html).toContain('title="Устройства и подключение"');
     expect(html).toContain('aria-label="Устройства и подключение"');
     expect(html).toContain('title="Безопасность и токены"');
-    expect(html).toContain('title="vesmaro-eyes"'); // project group row
+    expect(html).toContain('title="vesma-eyes"'); // project group row
   });
 
   it("the same holds for the EN dictionary", () => {
@@ -97,12 +97,12 @@ describe("Sidebar overflow hygiene (UI-19)", () => {
     const html = renderSidebar("/docs/c/devices", true);
     // The domain and the three PROJECT rows stay accessible by name.
     expect(html).toContain('aria-label="Документация"');
-    expect(html).toContain('aria-label="vesmaro-eyes"');
-    expect(html).toContain('aria-label="Mnemos"');
-    expect(html).toContain('aria-label="mnemos-mesh"');
+    expect(html).toContain('aria-label="vesma-eyes"');
+    expect(html).toContain('aria-label="Vesma"');
+    expect(html).toContain('aria-label="vesma-mesh"');
     // Categories never render in the rail — no second icon column (UI-19).
     expect(html).not.toContain("Устройства и подключение");
-    expect(html).toContain('<span class="hidden">vesmaro-eyes</span>');
+    expect(html).toContain('<span class="hidden">vesma-eyes</span>');
     expect(html).toContain('<span class="hidden">Документация</span>');
   });
 });

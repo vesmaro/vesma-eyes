@@ -20,7 +20,7 @@ export interface IrisLogoProps {
 }
 
 /**
- * The animated iris — mnemos-eyes' hero element (design-system.md §8.1, §8.4).
+ * The animated iris — vesma-eyes' hero element (design-system.md §8.1, §8.4).
  * Pure SVG + CSS animation (no rAF loops); every fill/stroke reads design
  * tokens, so the mark re-themes with `[data-theme]`.
  */
@@ -42,7 +42,7 @@ export function IrisLogo({
       height={size}
       viewBox="0 0 64 64"
       role={decorative ? undefined : "img"}
-      aria-label={decorative ? undefined : "mnemos-eyes iris"}
+      aria-label={decorative ? undefined : "vesma-eyes iris"}
       aria-hidden={decorative || undefined}
       className={cn(
         "iris-logo",

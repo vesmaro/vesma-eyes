@@ -1,29 +1,29 @@
 ---
-title: What mnemos is
+title: What vesma is
 slug: what-is-mnemos
 category: product
 order: 1
 last_verified: "1.14.0"
 ---
 
-# What mnemos is
+# What vesma is
 
-mnemos is a long-term memory engine: it stores entries, knows how to
+vesma is a long-term memory engine: it stores entries, knows how to
 search them, and serves them to people and agents. This page is the plain
 concept of the memory: what an entry is made of, how it lives, and how
-several stores relate. The vesmaro-eyes board is a separate layer on top
-of mnemos — it has its own page, [What vesmaro-eyes
+several stores relate. The vesma-eyes board is a separate layer on top
+of vesma — it has its own page, [What vesma-eyes
 is](what-is-vesmaro-eyes.md).
 
 ## A well, not a folder of files
 
-In the interface mnemos is called the well, and the metaphor is exact:
+In the interface vesma is called the well, and the metaphor is exact:
 entries pile up in a common depth — written by agents through the API and
 MCP, by scripts, by you. Every entry carries tags, a project and a source,
 so the memory never turns into a dump: you can search it, cross-check it
 by tags, and watch what arrived recently in the Pulse feed.
 
-mnemos itself is a server with no kanban and no buttons: storage, search,
+vesma itself is a server with no kanban and no buttons: storage, search,
 an API for agents, and pipeline traces. Everything else is the board's
 job.
 
@@ -79,14 +79,14 @@ see [Groups and the kanban board](groups-kanban.md).
 
 A task can also live in the store itself: entries tagged `task:queue` are
 put there by agents and scripts, and the board picks them up in the Inbox
-— see [What vesmaro-eyes is](what-is-vesmaro-eyes.md).
+— see [What vesma-eyes is](what-is-vesmaro-eyes.md).
 
 ## Tags
 
 A tag is an entry label, the main way to navigate the well. The
 Memory → Tags section is an inspector: click a tag to see everything it
 marks, across all connected stores. Tags also tie the two halves of the
-system together: a board task has a «mnemos tags» field, so a card finds
+system together: a board task has a «vesma tags» field, so a card finds
 its memory through shared labels.
 
 ## Hybrid search
@@ -107,7 +107,7 @@ words. The `/` key jumps into search from any page.
 ## Stores: several memory servers
 
 Memory does not have to live on one machine. The board connects several
-mnemos servers — for example, `cluster` (the main store) and `laptop` (a
+vesma servers — for example, `cluster` (the main store) and `laptop` (a
 second one over the home network). The board keeps the store registry:
 the Stores section on the left rail, the «+» button adds a server. Store
 tokens stay with the board — the browser never sees them.
@@ -118,31 +118,31 @@ part of the system. Every entry and every search hit is marked with its
 source server, and when one store is unreachable the interface honestly
 says so and keeps working with the rest.
 
-## mnemos-mesh: a federation of stores
+## vesma-mesh: a federation of stores
 
-When there are several stores on different machines, mnemos-mesh ties
+When there are several stores on different machines, vesma-mesh ties
 them together — the federation transport: store nodes know about each
 other, exchange data, and report peer availability. The board sees mesh
 nodes as observable entities: the Mesh nodes section on the rail shows
 each node's state, version, peer availability and uptime. Node management
 goes through the API: in this version the interface only observes.
 
-![The federation of mnemos stores](diagrams/mnemos-federation.svg)
+![The federation of vesma stores](diagrams/mnemos-federation.svg)
 
-*Federation: the cluster and laptop stores are linked by the mnemos-mesh
-transport; vesmaro-eyes reads both and marks every entry with its source
+*Federation: the cluster and laptop stores are linked by the vesma-mesh
+transport; vesma-eyes reads both and marks every entry with its source
 server.*
 
-## Where mnemos ends
+## Where vesma ends
 
-mnemos knows nothing of kanban, assignments or interface tokens — it is
+vesma knows nothing of kanban, assignments or interface tokens — it is
 pure memory: entries, search, federation. The desktop layer on top of it,
 where entries become tasks and agents take them on, is the board:
-[What vesmaro-eyes is](what-is-vesmaro-eyes.md).
+[What vesma-eyes is](what-is-vesmaro-eyes.md).
 
 ## See also
 
-- [What vesmaro-eyes is](what-is-vesmaro-eyes.md)
+- [What vesma-eyes is](what-is-vesmaro-eyes.md)
 - [Glossary](glossary.md)
 - [Groups and the kanban board](groups-kanban.md)
 - [Tokens and access](tokens.md)

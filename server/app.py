@@ -1,4 +1,4 @@
-"""vesmaro-eyes — task board server (FastAPI).
+"""vesma-eyes — task board server (FastAPI).
 
 Serves the vanilla-JS SPA from ``../web`` and a small JSON API over the
 board store, plus a narrow authenticated proxy to **one or more live
@@ -746,7 +746,7 @@ COLUMN_RU = {
 # route on server-loaded /docs (F5/deep-link). Swagger stays reachable at
 # /api/docs; board mode keeps the historical /docs.
 _docs_url = "/api/docs" if ROOT_APP == "app" else "/docs"
-app = FastAPI(title="vesmaro-eyes", version="1.52.0", lifespan=lifespan,
+app = FastAPI(title="vesma-eyes", version="1.52.0", lifespan=lifespan,
               docs_url=_docs_url)
 
 
@@ -2163,7 +2163,7 @@ async def health() -> dict[str, Any]:
                          for r, h in zip(mesh_rows, mesh_healths)]
     return {
         "ok": True,
-        "service": "vesmaro-eyes",
+        "service": "vesma-eyes",
         # Single version source (archcom C5: FastAPI(version=...)) exposed
         # for the UI version label (owner feedback: «какая версия перед
         # глазами» — Sidebar footer). Additive field.
@@ -2514,7 +2514,7 @@ async def memory_server_action(name: str, body: ServerAction, request: Request) 
         return {"ok": True, "server": _server_public(out) if out else None, "probe_status": code}
     elif act == "sync":
         # mark syncing, probe, then settle back to idle (a real store-level
-        # sync lands with mnemos-mesh; for now it validates connectivity)
+        # sync lands with vesma-mesh; for now it validates connectivity)
         registry.set_state(name, "syncing")
         s = next(x for x in registry.servers() if x["name"] == name)
         code, _ = await mnemos_client.post_json_async(s, "/search", {"query": "sync-check", "limit": 1}, timeout=8.0)
@@ -2760,7 +2760,7 @@ async def memory_pulse_all(project: str = "", limit: int = 12,
 
 
 @app.get("/api/memories/servers/{scope}/pulse")
-async def memory_pulse(scope: str, project: str = "mnemos-eyes", limit: int = 8) -> dict[str, Any]:
+async def memory_pulse(scope: str, project: str = "vesma-eyes", limit: int = 8) -> dict[str, Any]:
     return await memory_pulse_all(project=project, limit=limit, scope=scope)
 
 
@@ -3122,7 +3122,7 @@ async def board_reflect(body: ReflectBody, request: Request) -> ReflectOut:
     else:
         content = (
             f"AGENT-REFINE REQUEST for {body.specialist}: {body.problem} "
-            f"Owner feedback from the vesmaro-eyes specialist card. "
+            f"Owner feedback from the vesma-eyes specialist card. "
             f"@GCW: Agent Architect to analyze instructions/skills/rules and propose changes."
         )
         title = f"agent-refine request: {body.specialist}"
@@ -3163,7 +3163,7 @@ _draft_limiter = RateLimiter(limit=_DRAFT_RATE_LIMIT, window=_DRAFT_RATE_WINDOW)
 def _draft_tags(project: str) -> list[str]:
     slug = project.strip().lower().replace("_", "-")
     if not _DRAFT_PROJECT_SLUG.fullmatch(slug):
-        slug = "mnemos-eyes"
+        slug = "vesma-eyes"
     return [
         f"project:{slug}",
         BOARD_AGENT_TAG,

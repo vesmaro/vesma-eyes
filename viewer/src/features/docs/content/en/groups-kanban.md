@@ -56,7 +56,7 @@ first.
 1. Press the Task button above the board — the "New task" dialog opens.
 2. The first line of the text becomes the title (up to 200 characters),
    the rest becomes the summary.
-3. Pick a project and, if you like, comma-separated mnemos tags — handy
+3. Pick a project and, if you like, comma-separated vesma tags — handy
    for searching later.
 4. Press Create task. The card appears in the open column.
 
@@ -90,7 +90,7 @@ Clicking a card opens the task page with its tabs:
 | Details | summary, specification, project, environment, specialists, tags |
 | Reports | agents' messages along the way, the final report |
 | History | a single timeline: board events + related memory entries |
-| Memory | related entries from the mnemos stores with their source |
+| Memory | related entries from the vesma stores with their source |
 | Execution | assignments to agents for this task — see [Agents and assignments](agents-assignments.md) |
 
 Two handy buttons: Resume (puts a finished task back into "in

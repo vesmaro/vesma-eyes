@@ -33,7 +33,7 @@ async function mountDocs(path: string, lang: "ru" | "en" = "ru") {
       <I18nProvider initialLang={lang}>
         <MemoryRouter initialEntries={[path]}>
           <Routes>
-            <Route path="/docs" element={<Navigate to="/docs/vesmaro-eyes" replace />} />
+            <Route path="/docs" element={<Navigate to="/docs/vesma-eyes" replace />} />
             <Route path="/docs/c/:category" element={<DocsCategoryLegacyRedirect />} />
             <Route path="/docs/:project" element={<DocsHubPage />} />
             <Route
@@ -78,9 +78,9 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-describe("our article (/docs/vesmaro-eyes/<slug>)", () => {
+describe("our article (/docs/vesma-eyes/<slug>)", () => {
   it("renders chip, version badge, h1, body — no locale/provenance badges in ru", async () => {
-    const { root, container } = await mountDocs("/docs/vesmaro-eyes/upgrade");
+    const { root, container } = await mountDocs("/docs/vesma-eyes/upgrade");
     await actWaitUntil(() => {
       expect(container.querySelector("h1")?.textContent).toBe("Обновление борда");
     });
@@ -98,7 +98,7 @@ describe("our article (/docs/vesmaro-eyes/<slug>)", () => {
   });
 
   it("keeps one h1 per page (the body's own h1 is stripped)", async () => {
-    const { root, container } = await mountDocs("/docs/vesmaro-eyes/tokens");
+    const { root, container } = await mountDocs("/docs/vesma-eyes/tokens");
     await actWaitUntil(() => {
       expect(container.querySelector("article h1")).not.toBeNull();
     });
@@ -107,7 +107,7 @@ describe("our article (/docs/vesmaro-eyes/<slug>)", () => {
   });
 
   it("UI=en over a bilingual own page renders the EN mirror — no «оригинал» badge (post-W3)", async () => {
-    const { root, container } = await mountDocs("/docs/vesmaro-eyes/upgrade", "en");
+    const { root, container } = await mountDocs("/docs/vesma-eyes/upgrade", "en");
     await actWaitUntil(() => {
       expect(container.querySelector("h1")?.textContent).toBe("Upgrading the board");
     });
@@ -215,14 +215,14 @@ describe("legacy redirects and misses (spec §8)", () => {
   });
 
   it("unknown slug → not-found EmptyState with the CTA into the hub", async () => {
-    const { root, container } = await mountDocs("/docs/vesmaro-eyes/nope");
+    const { root, container } = await mountDocs("/docs/vesma-eyes/nope");
     await actWaitUntil(() => {
       expect(container.textContent).toContain("Такой страницы нет");
     });
     const cta = [...container.querySelectorAll("a")].find((link) =>
       link.textContent?.includes("Открыть документацию"),
     );
-    expect(cta?.getAttribute("href")).toBe("/docs/vesmaro-eyes");
+    expect(cta?.getAttribute("href")).toBe("/docs/vesma-eyes");
     await actUnmount(root);
   });
 
@@ -237,7 +237,7 @@ describe("legacy redirects and misses (spec §8)", () => {
 
 describe("docs search combobox (design spec §8 + §7.3)", () => {
   it("finds pages by a prefix and Enter opens the active hit at its hub URL", async () => {
-    const { root, container } = await mountDocs("/docs/vesmaro-eyes");
+    const { root, container } = await mountDocs("/docs/vesma-eyes");
     const input = await actWaitUntil(() => {
       const found = container.querySelector<HTMLInputElement>("input[role='combobox']");
       expect(found).not.toBeNull();
@@ -263,7 +263,7 @@ describe("docs search combobox (design spec §8 + §7.3)", () => {
   });
 
   it("zero results → honest empty text, hints and the localStorage log", async () => {
-    const { root, container } = await mountDocs("/docs/vesmaro-eyes");
+    const { root, container } = await mountDocs("/docs/vesma-eyes");
     const input = await actWaitUntil(() => {
       const found = container.querySelector<HTMLInputElement>("input[role='combobox']");
       expect(found).not.toBeNull();
@@ -287,16 +287,16 @@ describe("docs search combobox (design spec §8 + §7.3)", () => {
 });
 
 describe("hub covers (design spec §4)", () => {
-  it("vesmaro-eyes hub: 9 category rows with counts, NO provenance badge", async () => {
-    const { root, container } = await mountDocs("/docs/vesmaro-eyes");
+  it("vesma-eyes hub: 9 category rows with counts, NO provenance badge", async () => {
+    const { root, container } = await mountDocs("/docs/vesma-eyes");
     await actWaitUntil(() => {
-      expect(container.querySelector("h1")?.textContent).toBe("vesmaro-eyes");
+      expect(container.querySelector("h1")?.textContent).toBe("vesma-eyes");
     });
     const text = container.textContent ?? "";
     expect(text).toContain("С чего начать");
     expect(text).toContain("Первый вход");
     expect(text).toContain("Категории");
-    expect(container.querySelectorAll("a[href^='/docs/vesmaro-eyes/c/']")).toHaveLength(
+    expect(container.querySelectorAll("a[href^='/docs/vesma-eyes/c/']")).toHaveLength(
       9,
     );
     expect(text).toContain("2 страницы"); // getting-started
@@ -307,7 +307,7 @@ describe("hub covers (design spec §4)", () => {
   it("mnemos hub: bilingual coverage badge + provenance badge + 3 categories", async () => {
     const { root, container } = await mountDocs("/docs/mnemos");
     await actWaitUntil(() => {
-      expect(container.querySelector("h1")?.textContent).toBe("Mnemos");
+      expect(container.querySelector("h1")?.textContent).toBe("Vesma");
     });
     const text = container.textContent ?? "";
     expect(text).toContain("Доступно на русском и английском");
@@ -320,10 +320,10 @@ describe("hub covers (design spec §4)", () => {
     await actUnmount(root);
   });
 
-  it("mnemos-mesh hub: bilingual coverage after W3 curated translations", async () => {
+  it("vesma-mesh hub: bilingual coverage after W3 curated translations", async () => {
     const { root, container } = await mountDocs("/docs/mnemos-mesh");
     await actWaitUntil(() => {
-      expect(container.querySelector("h1")?.textContent).toBe("mnemos-mesh");
+      expect(container.querySelector("h1")?.textContent).toBe("vesma-mesh");
     });
     const text = container.textContent ?? "";
     expect(text).toContain("Доступно на русском и английском");
@@ -337,14 +337,14 @@ describe("hub covers (design spec §4)", () => {
 
 describe("category pages (project-scoped)", () => {
   it("lists pages with version stamps and hub-scoped links", async () => {
-    const { root, container } = await mountDocs("/docs/vesmaro-eyes/c/security");
+    const { root, container } = await mountDocs("/docs/vesma-eyes/c/security");
     await actWaitUntil(() => {
       expect(container.textContent).toContain("Токены и доступ");
     });
     const links = [...container.querySelectorAll("a[href]")].map((link) =>
       link.getAttribute("href"),
     );
-    expect(links).toContain("/docs/vesmaro-eyes/tokens");
+    expect(links).toContain("/docs/vesma-eyes/tokens");
     const raw = (await loadMarkdown("token-rotation", "ru")) ?? "";
     const verified = raw.match(/last_verified:\s*"([^"]+)"/)?.[1];
     expect(verified, "token-rotation declares last_verified").toBeTruthy();

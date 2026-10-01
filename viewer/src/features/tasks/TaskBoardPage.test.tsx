@@ -96,7 +96,7 @@ describe("TaskBoardPage (mock adapter — 7 WF-1 columns)", () => {
       "/tasks",
       seedBoard,
     );
-    // The in-progress column holds two project groups (mnemos-eyes, mnemos).
+    // The in-progress column holds two project groups (vesma-eyes, mnemos).
     expect(html).toContain('aria-expanded="true"');
     // Card titles link to the task page (keyboard/SR path) carrying the
     // board URL as ?return= (UI-18 pair 1).
@@ -164,7 +164,7 @@ describe("TaskBoardPage (mock adapter — 7 WF-1 columns)", () => {
 
   it("renders the honest unsupported state on a mnemos gateway", async () => {
     const html = await renderBoard(new HttpAdapter("/api"));
-    expect(html).toContain("The Tasks domain is unavailable in mnemos mode");
+    expect(html).toContain("The Tasks domain is unavailable in vesma mode");
     expect(html).not.toContain("Task kanban board");
   });
 });

@@ -144,7 +144,7 @@ asks the board "any work?" every 10 seconds and launches local processes
 against a strict allow-list of commands. The install summary:
 
 1. Python 3.10+ and the dependencies: `pip install --user httpx pyyaml`.
-2. The config `~/.config/mnemos-eyes/poller.yaml` (permissions 0600):
+2. The config `~/.config/vesma-eyes/poller.yaml` (permissions 0600):
    the board address, the executor name, the command allow-list, the
    lab-CA certificate.
 3. The machine token — through the environment only, for example

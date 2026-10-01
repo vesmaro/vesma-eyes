@@ -1,4 +1,4 @@
-# mnemos-eyes — Design Brief
+# vesma-eyes — Design Brief
 
 > Seed for the design system. Full design tokens, components, and motion specs
 > are owned by `@GCW: Senior Frontend Developer` (`docs/design-system.md`, TBD).
@@ -10,7 +10,7 @@
 
 **"Взгляд в себя — в свои мысли."** _(A gaze into oneself — into one's own thoughts.)_
 
-`mnemos-eyes` is the **eye of Mnemosyne** looking into the **well of memory**:
+`vesma-eyes` is the **eye of Mnemosyne** looking into the **well of memory**:
 
 - The **iris / pupil** is the focal element — the search focus.
 - **Memories surface from depth** — items rise out of darkness, with subtle
@@ -34,7 +34,7 @@
 
 ## 3. Visual seeds (to be refined into tokens)
 
-- **Theme:** "obsidian well" — deep dark base (nods to mnemos's Obsidian vault),
+- **Theme:** "obsidian well" — deep dark base (nods to vesma's Obsidian vault),
   optional light mode.
 - **Accent / iris:** either **Mnemosyne gold/amber** or **deep well teal/cyan** —
   Frontend Developer to A/B and pick.

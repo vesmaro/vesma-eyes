@@ -1,4 +1,4 @@
-# mnemos-eyes — Frontend Architecture Spec
+# vesma-eyes — Frontend Architecture Spec
 
 > Status: **Accepted** (P0.1 deliverable).
 > Owner: `@GCW: Senior Frontend Developer`.
@@ -8,9 +8,9 @@
 
 ## 1. Gating dependency (CORS + Auth)
 
-> ⚠️ The browser SPA cannot reach a production mnemos server until the backend ships:
+> ⚠️ The browser SPA cannot reach a production vesma server until the backend ships:
 >
-> 1. **CORS** — configurable `Allow-Origin` list (tracked in `mnemos` repo).
+> 1. **CORS** — configurable `Allow-Origin` list (tracked in `vesma` repo).
 > 2. **AuthN/AuthZ** — token-based; TOTP 2FA for remote access.
 >
 > During Phase 1 development, use a Vite dev-proxy (`vite.config.ts` → `server.proxy`) to forward `/api/*` → `http://127.0.0.1:8765`. No CORS headers required in that flow.
@@ -21,7 +21,7 @@
 ## 2. Folder / module structure
 
 ```
-mnemos-eyes/
+vesma-eyes/
 ├── index.html
 ├── vite.config.ts
 ├── tailwind.config.ts
@@ -33,7 +33,7 @@ mnemos-eyes/
 │   ├── gateway/                  # MemoryGateway interface + adapters
 │   │   ├── types.ts              # Re-exports from generated openapi types
 │   │   ├── MemoryGateway.ts      # Interface definition (see §4)
-│   │   ├── HttpAdapter.ts        # Phase 1: fetch → mnemos HTTP API
+│   │   ├── HttpAdapter.ts        # Phase 1: fetch → vesma HTTP API
 │   │   └── TauriAdapter.ts       # Phase 2: invoke() → Rust core (stub in Phase 1)
 │   │
 │   ├── lib/
@@ -334,7 +334,7 @@ npx openapi-typescript http://127.0.0.1:8765/openapi.json \
   --immutable-types
 ```
 
-Run on every mnemos API change. The file is committed. CI runs the script and fails if the output differs (schema drift guard).
+Run on every vesma API change. The file is committed. CI runs the script and fails if the output differs (schema drift guard).
 
 ---
 
@@ -345,7 +345,7 @@ When Phase 2 is greenlit:
 1. Add `@tauri-apps/api` + `@tauri-apps/cli` to dev dependencies.
 2. Implement `TauriAdapter` backed by Rust commands in a `src-tauri/` crate.
 3. In `src/main.tsx`, detect `window.__TAURI__` to pick the adapter at runtime.
-4. The Rust crate reads the SQLite store directly — no mnemos HTTP server needed on the device.
+4. The Rust crate reads the SQLite store directly — no vesma HTTP server needed on the device.
 5. Auth flow changes: no TOTP for local desktop (OS protection); TOTP retained for remote/mobile.
 
 No component or hook changes are required in the common 90% path.

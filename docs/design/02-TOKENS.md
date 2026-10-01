@@ -179,7 +179,7 @@ confidence 5.9 · success 6.2 · error 9.1 · border `#6A7488` 4.7/4.3 · focus 
 
 ```css
 /**
- * vesmaro-eyes — «Живая кора» v2 tokens (stand + viewer).
+ * vesma-eyes — «Живая кора» v2 tokens (stand + viewer).
  * Dark theme («фосфорный колодец») default on :root; light on [data-theme="light"].
  * Frozen names preserved (ADR 0006 / ui-contract §8); the neuro layer only ADDS
  * names. Contrast pairs computed per WCAG 2.2 — see design/docs/02-TOKENS.md §4.

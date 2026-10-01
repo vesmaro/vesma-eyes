@@ -51,7 +51,7 @@ describe("serializeTaskListParams (round-trip, clean URLs)", () => {
     const state = {
       status: "in-progress",
       priority: "high",
-      project: "mnemos-eyes",
+      project: "vesma-eyes",
       agent: "zcode",
       q: "viewer",
     };
@@ -91,7 +91,7 @@ describe("filterTasks (client-side over the board projection)", () => {
 
   it("combines filters with AND semantics", () => {
     const rows = filterTasks(MOCK_TASKS, {
-      project: "mnemos-eyes",
+      project: "vesma-eyes",
       priority: "critical",
     });
     expect(rows.map((t) => t.id)).toEqual(["TB-1", "TB-5"]);
@@ -110,7 +110,7 @@ describe("hasActiveTaskFilters / option derivation", () => {
   });
 
   it("derives sorted, distinct project and agent options from the rows", () => {
-    expect(projectOptions(MOCK_TASKS)).toEqual(["mnemos", "mnemos-eyes", "vesmaro"]);
+    expect(projectOptions(MOCK_TASKS)).toEqual(["mnemos", "vesma-eyes", "vesmaro"]);
     expect(agentOptions(MOCK_TASKS)).toEqual(["claude", "zcode"]);
   });
 });

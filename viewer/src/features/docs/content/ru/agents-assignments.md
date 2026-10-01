@@ -143,7 +143,7 @@ last_verified: "1.16.0"
 процессы по строгому списку разрешённых команд. Сводка установки:
 
 1. Python 3.10+ и зависимости: `pip install --user httpx pyyaml`.
-2. Конфиг `~/.config/mnemos-eyes/poller.yaml` (права 0600): адрес борда,
+2. Конфиг `~/.config/vesma-eyes/poller.yaml` (права 0600): адрес борда,
    имя исполнителя, allowlist команд, сертификат lab-CA.
 3. Машинный токен — только через окружение, например
    `/etc/vesmaro/poller.env` со строкой `VESMARO_BOARD_TOKEN=…` (где взять

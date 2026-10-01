@@ -71,7 +71,7 @@ describe("TaskListPage (mock adapter)", () => {
     expect(html).toContain("Status counts across the whole board");
     expect(html).toMatch(/open.*7/s);
     // Project group headers with counts.
-    expect(html).toContain("mnemos-eyes");
+    expect(html).toContain("vesma-eyes");
     // Dense table semantics + the row link (keyboard/SR path).
     expect(html).toContain("<table");
     expect(html).toMatch(/href="\/tasks\/TB-1\?return=/);
@@ -101,7 +101,7 @@ describe("TaskListPage (mock adapter)", () => {
   it("combines URL filters (project + priority) with AND semantics", async () => {
     const html = await renderTasks(
       new MockAdapter({ latency: false }),
-      "/tasks?project=mnemos-eyes&priority=critical",
+      "/tasks?project=vesma-eyes&priority=critical",
       seedBoard,
     );
     expect(html).toContain('href="/tasks/TB-1?return=');
@@ -191,7 +191,7 @@ describe("TaskListPage (mock adapter)", () => {
 
   it("renders the honest unsupported state on a mnemos gateway", async () => {
     const html = await renderTasks(new HttpAdapter("/api"));
-    expect(html).toContain("The Tasks domain is unavailable in mnemos mode");
+    expect(html).toContain("The Tasks domain is unavailable in vesma mode");
     expect(html).not.toContain("<table");
     // No mutation affordances outside the mutation-capable adapters.
     expect(html).not.toContain("Actions for task");

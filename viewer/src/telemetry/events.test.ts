@@ -23,7 +23,7 @@ describe("taxonomy mirror: pure mappers (ME-041, taxonomy §1.2)", () => {
     expect(surfaceFromPathname("/agents/hosts")).toBe("agents");
     expect(surfaceFromPathname("/kora")).toBe("kora");
     expect(surfaceFromPathname("/kora/session-1")).toBe("kora");
-    expect(surfaceFromPathname("/docs/vesmaro-eyes")).toBe("docs");
+    expect(surfaceFromPathname("/docs/vesma-eyes")).toBe("docs");
     expect(surfaceFromPathname("/system/status")).toBe("status");
     expect(surfaceFromPathname("/system/settings")).toBe("settings");
     expect(surfaceFromPathname("/system/sessions/xyz")).toBe("sessions");

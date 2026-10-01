@@ -265,7 +265,7 @@ describe("TaskDetailPage (mock adapter)", () => {
 
   it("renders the honest unsupported state on a mnemos gateway", async () => {
     const html = await renderTask(new HttpAdapter("/api"), "/tasks/TB-1");
-    expect(html).toContain("The Tasks domain is unavailable in mnemos mode");
+    expect(html).toContain("The Tasks domain is unavailable in vesma mode");
   });
 
   it("UI-18: tab links preserve ?return= (spec §2.2 rule 4)", async () => {

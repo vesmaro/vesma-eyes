@@ -75,7 +75,7 @@ check the certificate's lifetime: `./scripts/gen-tls-secret.sh --check`
 2. Check the address is on the allow-list (`memoryHostsAllowlist` in
    the values): without the host on the list the board refuses to even
    try — see [Deployment and first launch](deploy.md).
-3. Check mnemos itself and the cluster's network policy: the board is
+3. Check vesma itself and the cluster's network policy: the board is
    only allowed out to the listed addresses.
 4. If the laptop store keeps going offline, the `/api/health` probes get
    slow. Fix the link or temporarily turn the server off in the registry
@@ -84,9 +84,9 @@ check the certificate's lifetime: `./scripts/gen-tls-secret.sh --check`
 ## The Tasks, Agents, Automation sections are unavailable
 
 The board works in two modes: against the board (all domains present)
-and straight against mnemos (Memory only). If opening a domain shows
-"Section unavailable in mnemos mode", the data source is wrong: check
-`mnemos.cluster.url` in the values — it must point at a board-compatible
+and straight against vesma (Memory only). If opening a domain shows
+"Section unavailable in vesma mode", the data source is wrong: check
+`vesma.cluster.url` in the values — it must point at a board-compatible
 service.
 
 ## Tasks

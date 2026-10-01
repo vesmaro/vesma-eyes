@@ -93,7 +93,7 @@ x-kora-no-acp: >-
 
 servers:
   - url: /api
-    description: Board server (vesmaro-eyes), same origin as the viewer.
+    description: Board server (vesma-eyes), same origin as the viewer.
 
 tags:
   - name: kora-slice1

@@ -16,16 +16,16 @@ the page with the details.
 
 | Term | What it is |
 | --- | --- |
-| board | vesmaro-eyes as a whole: the working desktop with tasks, agents and automation on top of mnemos memory |
-| entry | one unit of mnemos memory: text, raw source, tags, project, agent, source and processing status |
-| store | one mnemos server connected to the board; there can be several — for example `cluster` and `laptop` |
+| board | vesma-eyes as a whole: the working desktop with tasks, agents and automation on top of vesma memory |
+| entry | one unit of vesma memory: text, raw source, tags, project, agent, source and processing status |
+| store | one vesma server connected to the board; there can be several — for example `cluster` and `laptop` |
 | store group | several stores joined into one pulse-and-search scope |
-| mnemos-mesh | the federation of stores: a transport linking store nodes to each other; the nodes are visible in the Mesh nodes section |
+| vesma-mesh | the federation of stores: a transport linking store nodes to each other; the nodes are visible in the Mesh nodes section |
 | pulse | the feed of fresh entries from the stores — Memory → Pulse, the "all stores" scope |
 | tag | an entry label; Memory → Tags shows everything marked with it, across all stores |
 | workflow status | a task's life stage: open, in progress, blocked, resolved, done, withdrawn (the backlog and validating columns read as "open") |
 | kanban | the Tasks → Kanban view: columns are workflow stages from backlog to done, cards are dragged with the mouse |
-| task | a card on the board: a title, a summary, a project, a priority and a workflow status; the task lives in the board's database, its memory lives in mnemos entries |
+| task | a card on the board: a title, a summary, a project, a priority and a workflow status; the task lives in the board's database, its memory lives in vesma entries |
 | archcom | a card badge: "owner decision required"; a task stuck in validating for over 24 hours is highlighted the same way |
 | inbox | the Tasks → Inbox section: `task:queue` entries from the memory stores, not yet adopted onto the board |
 | assignment | a task handed to an executor; created with Take into work on the task page |
@@ -46,34 +46,34 @@ the page with the details.
 
 The server determines a token's class by its prefix and checks it before
 anything else: `mnd_…` — a device, `mne_…` — enrollment, `mnk_…` — a
-store token the board uses to reach mnemos. That is why ui and machine
+store token the board uses to reach vesma. That is why ui and machine
 tokens cannot start with those combinations — and why token masking in
 logs works automatically.
 
 ## Project documentation terms
 
 The Documentation section now also carries the projects' own pages —
-mnemos and mnemos-mesh — imported from their repositories (every
-imported page shows provenance of the form "from mnemos@…"). The upstream
+vesma and vesma-mesh — imported from their repositories (every
+imported page shows provenance of the form "from vesma@…"). The upstream
 calls things its own way; this table translates into board language.
 
 | Upstream term | Board term | Comment |
 | --- | --- | --- |
 | memory, entry | entry | one unit of memory; the upstream says "memories"/"entries", the board says "entry" |
-| vault | originals directory | in the upstream a vault is the directory of a memory's source files (`~/.mnemos/vault`); the board calls the whole mnemos server a "store", not this directory |
-| store | memory store | the database inside mnemos; on the board a "store" is a connected mnemos server as a whole |
+| vault | originals directory | in the upstream a vault is the directory of a memory's source files (`~/.mnemos/vault`); the board calls the whole vesma server a "store", not this directory |
+| store | memory store | the database inside vesma; on the board a "store" is a connected vesma server as a whole |
 | harness | harness | the same term: an agent's runtime (`zcode`, `copilot`) |
 | pipeline | processing pipeline | cleaning an entry before it reaches a model; the board shows it as the "raw → processed" statuses |
 | DLQ | — (not shown) | the queue of entries that failed the pipeline; a service surface with no UI on the board |
 | traces | Traces | the pipeline's work log; the board shows them under System → Traces |
 | dashboard | Pulse, Overview | the upstream metrics power the Pulse feed and the Overview stats |
-| federation, peer | federation, mesh node | a participant of the mnemos federation; the board observes them as Mesh nodes |
-| trigger code | trigger code | a one-time peer-confirmation code in the mnemos federation; do not confuse it with the board's QR pairing |
-| tag contract | tag contract | the mandatory tag schema; the task's "mnemos tags" field follows it |
+| federation, peer | federation, mesh node | a participant of the vesma federation; the board observes them as Mesh nodes |
+| trigger code | trigger code | a one-time peer-confirmation code in the vesma federation; do not confuse it with the board's QR pairing |
+| tag contract | tag contract | the mandatory tag schema; the task's "vesma tags" field follows it |
 | mnemos_* (MCP) | MCP tools | the layer agents use to reach the memory; the board uses the same layer |
 
 ## See also
 
-- [What mnemos is](what-is-mnemos.md)
-- [What vesmaro-eyes is](what-is-vesmaro-eyes.md)
+- [What vesma is](what-is-mnemos.md)
+- [What vesma-eyes is](what-is-vesmaro-eyes.md)
 - [Tokens and access](tokens.md)

@@ -29,7 +29,7 @@ describe("StatusPanel", () => {
 
   it("marks latency and DLQ as not reported when the payload lacks them", () => {
     const html = renderPanel({ health: HEALTH, metrics: { memories_total: 7 } });
-    expect(html).toContain("mnemos /metrics carries no latency");
+    expect(html).toContain("vesma /metrics carries no latency");
     expect(html).toContain("no dlq key in /metrics");
     expect(html).toContain("7");
   });

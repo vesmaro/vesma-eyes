@@ -93,9 +93,9 @@ export function docsLocationFor(pathname: string): DocsLocation {
 
 /**
  * Breadcrumbs for /docs/* (design spec §5): imported article = 4 levels
- * (Документация → Проект → Категория → страница); vesmaro-eyes = 3 (the
+ * (Документация → Проект → Категория → страница); vesma-eyes = 3 (the
  * default project is eliminated — «Документация» already points at its hub).
- * Hubs: vesmaro-eyes has NO trail (section root), other projects get
+ * Hubs: vesma-eyes has NO trail (section root), other projects get
  * Документация → Проект. Unknown slugs keep a trail (the not-found page).
  */
 export function docsCrumbsFor(pathname: string): Crumb[] {

@@ -16,7 +16,7 @@ import {
 
 /**
  * Our own slugs, harvested from the glob keys (synchronous, no fetches).
- * Only unprefixed (vesmaro-eyes) files map from legacy URLs — imported slugs
+ * Only unprefixed (vesma-eyes) files map from legacy URLs — imported slugs
  * already carry their project segment and never lived at `/docs/<slug>`.
  */
 const OUR_SLUGS: ReadonlySet<string> = new Set(
@@ -31,10 +31,10 @@ const OUR_SLUGS: ReadonlySet<string> = new Set(
 
 /**
  * Redirect target for a legacy docs URL, null on a map miss:
- * - `/docs` → `/docs/vesmaro-eyes`
- * - `/docs/c/<cat>` → `/docs/vesmaro-eyes/c/<cat>` (any cat — the page then
+ * - `/docs` → `/docs/vesma-eyes`
+ * - `/docs/c/<cat>` → `/docs/vesma-eyes/c/<cat>` (any cat — the page then
  *   answers unknown slugs with the honest not-found, as before)
- * - `/docs/<slug>` → `/docs/vesmaro-eyes/<slug>` when `<slug>` is one of our
+ * - `/docs/<slug>` → `/docs/vesma-eyes/<slug>` when `<slug>` is one of our
  *   pages; unknown slugs return null (not-found, NOT a blind redirect).
  */
 export function legacyDocsTarget(pathname: string): string | null {

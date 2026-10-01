@@ -1,8 +1,8 @@
 {
-  "name": "mnemos-eyes-viewer",
+  "name": "vesma-eyes-viewer",
   "private": true,
   "version": "0.1.0",
-  "description": "mnemos-eyes L1 read-only viewer (React + Vite + TanStack Query)",
+  "description": "vesma-eyes L1 read-only viewer (React + Vite + TanStack Query)",
   "type": "module",
   "engines": {
     "node": ">=22.12"

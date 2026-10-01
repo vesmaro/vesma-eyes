@@ -3,7 +3,7 @@
 > Status: **PA-вердикт зафиксирован** — документ является формальным вердиктом
 > ME-020 (charter v2 §2.5 отсылает сюда) и ME-021; имплементация — отдельными
 > срезами (§6). Владелец записи: `@GCW: Product Architect`.
-> Автор: `@GCW: Product Architect`, 2026-09-30, борд mnemos-eyes **ME-020 /
+> Автор: `@GCW: Product Architect`, 2026-09-30, борд vesma-eyes **ME-020 /
 > ME-021**. Основа: ветка `docs/spec-agents-ui` от `f501c9e` (прод 1.51.0).
 > Источники: `vesmaro-agent` @ `dbd6054` — `docs/PROTOCOL.md` §3 (discovery
 > v3, capabilities-инвентарь), `docs/decisions/CHARTER-v2.md` §2.4–2.5 (D5
@@ -323,7 +323,7 @@ Honest-empty по §5. Отдельной страницы не строим (UX
 
 ## Источники
 
-- Борд mnemos-eyes: ME-020/ME-021 (дословные требования владельца
+- Борд vesma-eyes: ME-020/ME-021 (дословные требования владельца
   2026-09-28), ME-014 (ростер), ME-015 (discovery-роут, 1.38.0),
   ME-040 (сверка 0.6; seam kora-scan vs sessions[]), ME-056
   (декомиссия поллера; факт live laptop-go-1).
@@ -331,7 +331,7 @@ Honest-empty по §5. Отдельной страницы не строим (UX
   capabilities-инвентарь, статусы деплоя), §3.1 (бюджет 60/60 с);
   `docs/decisions/CHARTER-v2.md` §2.4 (атрибуция), §2.5 (D5 session-fact,
   fetch-on-demand), M2, never-list 5.
-- mnemos-eyes @ `f501c9e` (1.51.0): `server/app.py` — discovery-ингест
+- vesma-eyes @ `f501c9e` (1.51.0): `server/app.py` — discovery-ингест
   (accepted-and-ignored `environments`), kora-scan-ингест (auth
   executor-токеном, upsert/drop_missing), slice-2 transcript-маршрут;
   `scripts/kora/scan_common.py`, `scan_pi.py` (поллер-семья);

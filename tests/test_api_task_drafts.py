@@ -79,7 +79,7 @@ class TestDraftContract:
         writes = wired.memories_bodies()
         assert writes
         assert writes[-1]["tags"] == [
-            "project:mnemos-eyes", "agent:zcode",
+            "project:vesma-eyes", "agent:zcode",
             "mnemos:open-question", "task-draft", "source:board",
         ]
 
@@ -90,7 +90,7 @@ class TestDraftContract:
         assert r.status_code == 201
         assert wired.memories_bodies()[-1]["tags"][0] == "project:garage-iot"
         _draft(client, auth, project="project:evil")
-        assert wired.memories_bodies()[-1]["tags"][0] == "project:mnemos-eyes"
+        assert wired.memories_bodies()[-1]["tags"][0] == "project:vesma-eyes"
 
     def test_user_project_and_tags_never_become_memory_tags(self, client,
                                                             auth, wired):
@@ -104,7 +104,7 @@ class TestDraftContract:
         assert r.status_code == 201
         write = wired.memories_bodies()[-1]
         assert write["tags"] == [
-            "project:mnemos-eyes", "agent:zcode",
+            "project:vesma-eyes", "agent:zcode",
             "mnemos:open-question", "task-draft", "source:board",
         ]
         assert "mnemos:decision" not in write["tags"]
@@ -113,10 +113,10 @@ class TestDraftContract:
         assert "проект: project:evil" in write["content"]
 
     def test_project_and_tags_travel_in_content(self, client, auth, wired):
-        r = _draft(client, auth, project="mnemos-eyes", tags="research, api")
+        r = _draft(client, auth, project="vesma-eyes", tags="research, api")
         assert r.status_code == 201
         write = wired.memories_bodies()[-1]
-        assert "проект: mnemos-eyes" in write["content"]
+        assert "проект: vesma-eyes" in write["content"]
         assert "теги: research, api" in write["content"]
 
     def test_note_type_and_mcp_source(self, client, auth, wired):
@@ -178,7 +178,7 @@ class TestDraftToBoardChore:
 
     def test_chore_task_payload_contract(self, client, auth, wired,
                                          make_task):
-        draft = _draft(client, auth, project="vesmaro-eyes").json()
+        draft = _draft(client, auth, project="vesma-eyes").json()
         mid = draft["memory_id"]
         task = make_task(
             title=f"Оформить черновик задачи (memory {mid})",
@@ -190,7 +190,7 @@ class TestDraftToBoardChore:
             agents=["zcode"],
             specialists=["@GCW: Task Manager"],
             env="unknown",
-            project="vesmaro-eyes",
+            project="vesma-eyes",
             mnemos_tags=["task-draft"],
             memory_ids=[mid],
         )
@@ -199,6 +199,6 @@ class TestDraftToBoardChore:
         assert task["specialists"] == ["@GCW: Task Manager"]
         assert task["mnemos_tags"] == ["task-draft"]
         assert task["memory_ids"] == [mid]
-        assert task["project"] == "vesmaro-eyes"
+        assert task["project"] == "vesma-eyes"
         board = client.get("/api/board").json()
         assert any(t["id"] == task["id"] for t in board["tasks"])

@@ -43,7 +43,7 @@
 | --- | --- | --- | --- | --- |
 | `vesmaro.lang` | `ru` \| `en` | `ru`; зеркалится в `<html lang>` | LanguageToggle в шапке (`TopBar.tsx:83`) | `viewer/src/i18n/index.ts:26-27` |
 | `vesmaro.density` | `comfortable` \| `compact` | `comfortable`; применяется как `[data-density]` на html → `--row-h`/`--list-gap` | кнопка в шапке (`TopBar.tsx:84-102`) | `viewer/src/components/density-provider.tsx:23-26, 76-80`; токены `viewer/src/styles/tokens.css:141-162` |
-| `mnemos-eyes:theme` | `dark` \| `light` | **системная** (`prefers-color-scheme`, следование живое `theme-provider.tsx:63-72`); применяется `[data-theme="light"]`, тёмная = атрибута нет | кнопка в шапке (`TopBar.tsx:103-121`) | `viewer/src/components/theme-provider.tsx:14, 24-47` |
+| `vesma-eyes:theme` | `dark` \| `light` | **системная** (`prefers-color-scheme`, следование живое `theme-provider.tsx:63-72`); применяется `[data-theme="light"]`, тёмная = атрибута нет | кнопка в шапке (`TopBar.tsx:103-121`) | `viewer/src/components/theme-provider.tsx:14, 24-47` |
 | `vesmaro.boardStyle` | `groups` \| `classic` | `groups` (Ф3) | тумблер «Группы \| Классика» на канбане (`BoardStyleToggle.tsx`) | `viewer/src/features/tasks/tasksViewPrefs.ts:21-27` |
 | `vesmaro.sidebarCollapsed` | `1` \| `0` | `0` (развёрнут; `w-14`↔`w-64`) | кнопка в шапке сайдбара, `aria-expanded` (`Sidebar.tsx:83-92`) | `viewer/src/layout/Shell.tsx:33-54` |
 | `vesmaro.taskGroups` | JSON-массив slug'ов свёрнутых проектов | `[]` | аккордеоны групп на канбане и в списке | `viewer/src/features/tasks/taskGrouping.ts:10-11` |
@@ -59,7 +59,7 @@
 (`viewer/src/features/docs/docsSearch.ts:180`) — вне `vesmaro.*`, внутренний
 журнал поиска доков, интерфейса не касается.
 
-**Namespace-нарушение №1:** тема хранится под `mnemos-eyes:theme` — вне
+**Namespace-нарушение №1:** тема хранится под `vesma-eyes:theme` — вне
 `vesmaro.*`, вопреки сложившейся конвенции (и фиксировано в
 `docs/design-system.md §9`). v2 мигрирует ключ (§4.2).
 
@@ -229,7 +229,7 @@ type-guard (`isDensity`, `isBoardStyle`, `isLang`); guarded try/catch
 
 ### 4.2 Миграция ключа темы
 
-`mnemos-eyes:theme` → `vesmaro.theme`. Чтение: новое → легаси → системная.
+`vesma-eyes:theme` → `vesmaro.theme`. Чтение: новое → легаси → системная.
 Запись — только в новый ключ (легаси не удаляем: вторая вкладка старой
 версии не должна терять выбор; ключ умрёт естественно). Значение
 отсутствует = «системная» (текущая семантика провайдера сохраняется).
@@ -380,7 +380,7 @@ agents-капабилити — вырождение секции в `AgentsUnsu
    следует за `prefers-color-scheme` (unit на смену media-эвента);
    переключение из хаба и из шапки меняют одну и ту же позицию контрола
    (провайдер один).
-3. Миграция: браузер с легаси `mnemos-eyes:theme=light` после обновления
+3. Миграция: браузер с легаси `vesma-eyes:theme=light` после обновления
    показывает светлую тему и пишет `vesmaro.theme`.
 4. Плотность: клик в хабе мгновенно меняет `--row-h` на той же странице
    (проверка `data-density` на `<html>`) и позицию тумблера шапки.
@@ -450,5 +450,5 @@ in-app подтверждения вместо `window.confirm` (отдельн�
 ### 🔨 TODO (ждут владельца)
 
 - [ ] Ратифицировать §1.2-принцип «одно состояние, два управления» и состав 8 настроек (или расширить/сузить).
-- [ ] Решение по миграции `mnemos-eyes:theme` → `vesmaro.theme` (правка design-system.md §9).
+- [ ] Решение по миграции `vesma-eyes:theme` → `vesmaro.theme` (правка design-system.md §9).
 - [ ] Подтвердить отказ от тумблеров-вердиктов (DnD, подтверждения, скролл) как финальную позицию по «каждому компоненту».

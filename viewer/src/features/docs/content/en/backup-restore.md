@@ -9,7 +9,7 @@ last_verified: "1.19.0"
 # Backup and restore
 
 Everything the system accumulates lives in several SQLite databases: the
-board's tasks in `board.db` on the cluster PVC, the memory in `mnemos.db`
+board's tasks in `board.db` on the cluster PVC, the memory in `vesma.db`
 and `vectors.db` on the cluster and on the laptop. A volume failure, a
 bad upgrade or an accidental deletion costs less than a backup. This
 page is about how to copy, where to keep the copies, and how to put them
@@ -20,8 +20,8 @@ back.
 | Database | Where it lives | What is inside |
 | --- | --- | --- |
 | `board.db` | the board's PVC in the cluster + a local copy on a work machine | tasks, history, assignments, the store registry |
-| `mnemos.db` + `vectors.db` (cluster) | the mnemos PVC | the cluster's memory |
-| `mnemos.db` + `vectors.db` (laptop) | `~/.mnemos/data` | the local memory |
+| `vesma.db` + `vectors.db` (cluster) | the vesma PVC | the cluster's memory |
+| `vesma.db` + `vectors.db` (laptop) | `~/.mnemos/data` | the local memory |
 
 Copy all of it at once: the ready-made script does it in one command.
 
@@ -114,19 +114,19 @@ long downtime.
 `helm rollback` reverts only the release manifests — it does not restore
 data. Restoring data is always putting a file back from a copy.
 
-## Restore the mnemos memory
+## Restore the vesma memory
 
 The same order, different database owners:
 
-- The cluster mnemos: copy `mnemos.db` and `vectors.db` from the backup
-  onto its PVC with the mnemos pod stopped, then start it and check
-  `integrity_check`. Do not touch the mnemos Helm release during this
+- The cluster mnemos: copy `vesma.db` and `vectors.db` from the backup
+  onto its PVC with the vesma pod stopped, then start it and check
+  `integrity_check`. Do not touch the vesma Helm release during this
   window.
-- The laptop one: stop the local mnemos, put the files back into
+- The laptop one: stop the local vesma, put the files back into
   `~/.mnemos/data`, start it.
 
-Deeper into the mnemos databases themselves — the imported upstream
-runbook: [mnemos backup and
+Deeper into the vesma databases themselves — the imported upstream
+runbook: [vesma backup and
 restore](/docs/mnemos/admin/runbooks/backup-restore).
 
 ## Restore drills
@@ -141,4 +141,4 @@ there, and write down how long it took.
 - [Upgrading the board](upgrade.md)
 - [Troubleshooting](troubleshooting.md)
 - [Deployment and first launch](deploy.md)
-- [mnemos backup and restore — the upstream runbook](/docs/mnemos/admin/runbooks/backup-restore)
+- [vesma backup and restore — the upstream runbook](/docs/mnemos/admin/runbooks/backup-restore)

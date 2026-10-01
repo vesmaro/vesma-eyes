@@ -244,7 +244,7 @@ def revision_memory_body(rec: dict[str, Any], edits: dict[str, Any]) -> dict[str
         "memory_type": "note",
         "metadata": {
             "supersedes": rec.get("memory_id", ""),
-            "edited_by": "vesmaro-eyes:inbox-edit",
+            "edited_by": "vesma-eyes:inbox-edit",
         },
     }
 

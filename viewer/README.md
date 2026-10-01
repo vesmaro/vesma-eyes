@@ -1,4 +1,4 @@
-# mnemos-eyes — L1 viewer
+# vesma-eyes — L1 viewer
 
 Read-only SPA for browsing mnemos memory. Part of the two-frontend repo
 (ADR 0006): the operational board lives in `../web`, this viewer in `viewer/`.

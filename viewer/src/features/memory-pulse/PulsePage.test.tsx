@@ -54,7 +54,7 @@ describe("PulsePage (mock adapter — capable)", () => {
 
   it("renders the honest unavailable state on a mnemos gateway", async () => {
     const html = await renderPulse(new HttpAdapter("/api"));
-    expect(html).toContain("Pulse is unavailable in mnemos mode");
+    expect(html).toContain("Pulse is unavailable in vesma mode");
     expect(html).not.toContain("Pulse scope");
   });
 });

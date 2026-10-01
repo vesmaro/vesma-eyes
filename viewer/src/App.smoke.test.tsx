@@ -59,7 +59,7 @@ describe("App (smoke)", () => {
     const html = renderAppAt("/");
     // Brand + every Ф1 domain of the concept IA (§2.1).
     for (const label of [
-      "mnemos-eyes",
+      "vesma-eyes",
       "Overview",
       "Memory",
       "Tasks",

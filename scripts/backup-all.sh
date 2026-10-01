@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# vesmaro-eyes — daily backups of ALL memory stores + board DBs.
+# vesma-eyes — daily backups of ALL memory stores + board DBs.
 #
 #   scripts/backup-all.sh [DEST_DIR]
 #
 # Backs up (consistent SQLite snapshots, integrity-checked):
-#   1. laptop mnemos store   (~/.distrobox/vscode-box/home/.mnemos/data)
-#   2. cluster mnemos store  (k3s PVC agentsnode-mnemos-data, via kubectl exec)
+#   1. laptop vesma store   (~/.distrobox/vscode-box/home/.mnemos/data)
+#   2. cluster vesma store  (k3s PVC agentsnode-mnemos-data, via kubectl exec)
 #   3. board DBs             (cluster PVC + local ./data)
 #
 # Restore hint: each file is a plain SQLite DB — restore = stop the writer,
@@ -22,11 +22,11 @@ NS=kube-agents
 
 mkdir -p "$BK/laptop" "$BK/cluster" "$BK/board"
 
-echo "── 1. laptop mnemos store"
+echo "── 1. laptop vesma store"
 $PY - "$BK" <<'EOF'
 import sqlite3, sys
 bk = sys.argv[1] + "/laptop"
-for db in ("mnemos.db", "vectors.db"):
+for db in ("vesma.db", "vectors.db"):
     s = sqlite3.connect(f"/var/home/abyss/.distrobox/vscode-box/home/.mnemos/data/{db}")
     d = sqlite3.connect(f"{bk}/{db}")
     s.backup(d); d.close(); s.close()
@@ -35,22 +35,22 @@ for db in ("mnemos.db", "vectors.db"):
     print("  ok:", db)
 EOF
 
-echo "── 2. cluster mnemos store"
+echo "── 2. cluster vesma store"
 POD=$($PY -c "import subprocess;print(subprocess.run(['kubectl','-n','$NS','get','pod','-l','app.kubernetes.io/name=mnemos','-o','jsonpath={.items[0].metadata.name}'],capture_output=True,text=True).stdout)")
 kubectl exec "$POD" -n "$NS" -- python -c "
 import sqlite3, os
 os.makedirs('/tmp/bk', exist_ok=True)
-for db in ('mnemos.db','vectors.db'):
+for db in ('vesma.db','vectors.db'):
     s=sqlite3.connect(f'/data/{db}'); d=sqlite3.connect(f'/tmp/bk/{db}')
     s.backup(d); d.close(); s.close()
 "
-for f in mnemos.db vectors.db; do
+for f in vesma.db vectors.db; do
   kubectl cp "$NS/$POD:/tmp/bk/$f" "$BK/cluster/$f" 2>/dev/null | grep -v 'Removing leading' || true
 done
 kubectl exec "$POD" -n "$NS" -- rm -rf /tmp/bk
 $PY - "$BK" <<'EOF'
 import sqlite3, sys
-for db in ("mnemos.db", "vectors.db"):
+for db in ("vesma.db", "vectors.db"):
     c = sqlite3.connect(sys.argv[1] + f"/cluster/{db}")
     assert c.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
     print("  ok:", db)
@@ -82,9 +82,9 @@ echo "── 4. manifest"
   cd "$BK"
   find . -type f -name '*.db' -exec sha256sum {} \; | sort > SHA256SUMS
   {
-    echo "# vesmaro-eyes backup manifest — $TODAY"
-    echo "laptop: mnemos.db (memories) + vectors.db — sqlite .backup snapshots, integrity ok"
-    echo "cluster: mnemos.db + vectors.db — via kubectl exec snapshot"
+    echo "# vesma-eyes backup manifest — $TODAY"
+    echo "laptop: vesma.db (memories) + vectors.db — sqlite .backup snapshots, integrity ok"
+    echo "cluster: vesma.db + vectors.db — via kubectl exec snapshot"
     echo "board: board-cluster.db + board-local.db"
     echo "restore: stop writer → replace file → PRAGMA integrity_check"
   } > MANIFEST.txt

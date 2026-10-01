@@ -684,7 +684,7 @@ export class BoardAdapter implements BoardGateway {
     // have no place in it and are dropped (Ф1 status page goes board-native).
     return {
       status: payload?.ok === true ? "ok" : "degraded",
-      service: String(payload?.service ?? "vesmaro-eyes"),
+      service: String(payload?.service ?? "vesma-eyes"),
       board_tasks: String(payload?.board_tasks ?? 0),
     };
   }
@@ -1629,7 +1629,7 @@ export function normalizeBoardHealth(payload: unknown): BoardHealthDetail {
   const servers = Array.isArray(source.servers) ? source.servers : [];
   return {
     ok: source.ok === true,
-    service: str(source.service, "vesmaro-eyes"),
+    service: str(source.service, "vesma-eyes"),
     board_tasks: num(source.board_tasks),
     app_version: typeof source.app_version === "string" ? source.app_version : null,
     servers: servers.map((row): BoardHealthServer => {

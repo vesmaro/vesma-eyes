@@ -1,10 +1,10 @@
-# vesmaro-eyes — task board container
+# vesma-eyes — task board container
 #
 # Multi-stage (ADR 0011 Ф0a): the React viewer is built from viewer/ in a
 # Node stage and its dist/ ships inside the board image at /app/app
 # (VESMARO_APP_DIR) — one Deployment/Ingress/NetPol serves both the board
 # at / and the viewer at /app. Codegen for the viewer runs off the
-# committed viewer/openapi-snapshot.json (offline: no mnemos access, no
+# committed viewer/openapi-snapshot.json (offline: no vesma access, no
 # network API calls at build time). npm ci needs the registry; that is the
 # only network dependency of the build.
 #

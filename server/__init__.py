@@ -1,1 +1,1 @@
-"""vesmaro-eyes server package."""
+"""vesma-eyes server package."""

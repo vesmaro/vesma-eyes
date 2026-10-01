@@ -519,7 +519,7 @@ export class MockAdapter implements MemoryGateway {
     return {
       status: "ok",
       version: "4.1.0-mock",
-      project: "mnemos-eyes",
+      project: "vesma-eyes",
     };
   }
 
@@ -533,7 +533,7 @@ export class MockAdapter implements MemoryGateway {
     await this.delay(signal);
     return {
       ok: true,
-      service: "vesmaro-eyes",
+      service: "vesma-eyes",
       board_tasks: MOCK_TRACES.length,
       // The mock gateway serves no live server: honest absence — the Sidebar
       // version label hides when the field is absent.

@@ -173,9 +173,9 @@ export const en: Record<TranslationKey, string> = {
   "pulse.feedLabel": "Pulse memory feed",
   "pulse.untitled": "untitled",
   "pulse.degradedStores": "Some stores did not answer: {{servers}}",
-  "pulse.unavailableTitle": "Pulse is unavailable in mnemos mode",
+  "pulse.unavailableTitle": "Pulse is unavailable in vesma mode",
   "pulse.unavailableMessage":
-    "The pulse collects entries from every connected board. The app is currently talking to mnemos directly, so the feed has nowhere to come from yet — connect a board and the entries will appear.",
+    "The pulse collects entries from every connected board. The app is currently talking to vesma directly, so the feed has nowhere to come from yet — connect a board and the entries will appear.",
 
   // --- auth / connection --------------------------------------------------------
   "auth.localMock": "local (mock)",
@@ -185,11 +185,11 @@ export const en: Record<TranslationKey, string> = {
   "auth.connecting": "connecting…",
   "auth.signIn": "Sign in",
   "auth.signOut": "Sign out",
-  "auth.signOutAria": "Sign out of mnemos",
-  "auth.title": "Sign in to mnemos",
+  "auth.signOutAria": "Sign out of vesma",
+  "auth.title": "Sign in to vesma",
   "auth.title2fa": "Two-factor verification",
   "auth.description":
-    "Paste your mnk_ access token. It stays in this browser and is sent only to your mnemos instance.",
+    "Paste your mnk_ access token. It stays in this browser and is sent only to your vesma instance.",
   "auth.description2fa": "Enter the 6-digit code from your authenticator app.",
   "auth.sessionExpired": "Your session expired — sign in again to continue.",
   "auth.tokenLabel": "Access token",
@@ -251,7 +251,7 @@ export const en: Record<TranslationKey, string> = {
   "memories.noId": "No memory id in route",
   "memories.loadingOne": "Loading memory",
   "memories.notFoundTitle": "No such scroll",
-  "memories.notFoundMessage": "mnemos holds no memory with id “{{id}}”.",
+  "memories.notFoundMessage": "vesma holds no memory with id “{{id}}”.",
   "memories.loadOneFailed": "Could not load the memory",
 
   // --- memory card / scroll ------------------------------------------------------
@@ -290,7 +290,7 @@ export const en: Record<TranslationKey, string> = {
   "tags.all": "All tags",
   "tags.drilldownTitle": "Memories tagged",
   "tags.drilldownNote":
-    "Filtered client-side — mnemos has no by-tag list filter (ADR 0003 §9).",
+    "Filtered client-side — vesma has no by-tag list filter (ADR 0003 §9).",
   "tags.nothingCarries": "Nothing carries this tag",
   "tags.nothingCarriesMessage": "No memory is tagged {{tag}} right now.",
   // --- tags cloud (UI-17, spec 2026-09-21 §9; owner-approved copy) -----------
@@ -321,7 +321,7 @@ export const en: Record<TranslationKey, string> = {
   // --- status -----------------------------------------------------------------
   "status.title": "Status",
   "status.loading": "Loading status",
-  "status.unreachable": "mnemos is unreachable",
+  "status.unreachable": "vesma is unreachable",
   "status.metricsBroken": "Health is fine, metrics are not",
   "status.retryMetrics": "Retry metrics",
   "status.refreshHealth": "Refresh health",
@@ -329,7 +329,7 @@ export const en: Record<TranslationKey, string> = {
   "status.memoriesStat": "Memories",
   "status.publishedDetail": "{{count}} published",
   "status.avgLatency": "Avg search latency",
-  "status.avgLatencyNotReported": "mnemos /metrics carries no latency",
+  "status.avgLatencyNotReported": "vesma /metrics carries no latency",
   "status.dlq": "DLQ depth",
   "status.dlqNotReported": "no dlq key in /metrics",
   "status.tagsStat": "Tags",
@@ -353,15 +353,15 @@ export const en: Record<TranslationKey, string> = {
   "sessions.title": "A2A sessions",
   "sessions.loading": "Loading sessions",
   "sessions.loadFailed": "Could not load sessions",
-  "sessions.unavailableMnemos": "Session list is unavailable in mnemos 4.1",
+  "sessions.unavailableMnemos": "Session list is unavailable in vesma 4.1",
   "sessions.unavailableMnemosMessage":
-    "mnemos exposes no session-list endpoint — only POST /v1/sessions (create) and GET /v1/sessions/{id}. Open a session by id once you know it.",
+    "vesma exposes no session-list endpoint — only POST /v1/sessions (create) and GET /v1/sessions/{id}. Open a session by id once you know it.",
   "sessions.empty": "No A2A sessions yet",
-  "sessions.emptyMessage": "Sessions appear once agents talk through mnemos.",
+  "sessions.emptyMessage": "Sessions appear once agents talk through vesma.",
   "sessions.noId": "No session id in route",
   "sessions.loadingOne": "Loading session",
   "sessions.notFound": "No such session",
-  "sessions.notFoundMessage": "mnemos holds no session with id “{{id}}”.",
+  "sessions.notFoundMessage": "vesma holds no session with id “{{id}}”.",
   "sessions.loadOneFailed": "Could not load the session",
   "sessions.created": "created",
   "sessions.updated": "updated",
@@ -371,7 +371,7 @@ export const en: Record<TranslationKey, string> = {
   "sessions.metadata": "Metadata",
   "sessions.transcriptsHidden": "Turn transcripts are not exposed",
   "sessions.transcriptsHiddenMessage":
-    "mnemos 4.1 returns session counters and metadata only — individual turns and linked memories have no read endpoint. The turn count above is the honest total.",
+    "vesma 4.1 returns session counters and metadata only — individual turns and linked memories have no read endpoint. The turn count above is the honest total.",
   "sessions.all": "All sessions",
 
   // --- toasts (Ф3 mutation feedback) ---------------------------------------------
@@ -423,9 +423,9 @@ export const en: Record<TranslationKey, string> = {
   "tasks.title": "Tasks",
   "tasks.loading": "Loading tasks",
   "tasks.loadFailed": "Could not load tasks",
-  "tasks.unavailableTitle": "The Tasks domain is unavailable in mnemos mode",
+  "tasks.unavailableTitle": "The Tasks domain is unavailable in vesma mode",
   "tasks.unavailableMessage":
-    "Tasks live on the board, and the app is currently talking to mnemos directly, so there are none here. Connect a board and the board with the list will appear.",
+    "Tasks live on the board, and the app is currently talking to vesma directly, so there are none here. Connect a board and the board with the list will appear.",
   "tasks.statsLabel": "Status counts across the whole board",
   "tasks.filterLabel": "Task filter",
   "tasks.searchLabel": "Search",
@@ -581,7 +581,7 @@ export const en: Record<TranslationKey, string> = {
   "tasks.memoryLoading": "Loading linked memories",
   "tasks.memoryFailed": "Could not load linked memories",
   "tasks.memoryEmpty": "No linked memories",
-  "tasks.memoryEmptyHint": "The task does not reference mnemos records yet.",
+  "tasks.memoryEmptyHint": "The task does not reference vesma records yet.",
   "tasks.memoryLabel": "Linked memories",
   "tasks.memorySource": "source: {{server}}",
   "tasks.memoryOpenPrompt": "Open the memory record",
@@ -591,7 +591,7 @@ export const en: Record<TranslationKey, string> = {
   "tasks.detailsEnv": "Environment",
   "tasks.detailsProject": "Project",
   "tasks.detailsSpecialists": "Specialists",
-  "tasks.detailsTags": "mnemos tags",
+  "tasks.detailsTags": "vesma tags",
   "tasks.detailsMemoryIds": "Linked memories (ids)",
   "tasks.inboxTitle": "Inbox",
   "tasks.inboxLoading": "Loading inbox",
@@ -697,7 +697,7 @@ export const en: Record<TranslationKey, string> = {
   "tasks.edit.envLabel": "Environment",
   "tasks.edit.priorityLabel": "Priority",
   "tasks.edit.specialistsLabel": "Specialists (comma-separated)",
-  "tasks.edit.tagsLabel": "mnemos tags (comma-separated)",
+  "tasks.edit.tagsLabel": "vesma tags (comma-separated)",
   "tasks.edit.listPlaceholder": "value, value…",
   "tasks.edit.cancel": "Cancel",
   "tasks.edit.submit": "Save",
@@ -720,7 +720,7 @@ export const en: Record<TranslationKey, string> = {
   "tasks.create.textError":
     "The first line is required and must stay under 200 characters — it becomes the title.",
   "tasks.create.projectLabel": "Project",
-  "tasks.create.tagsLabel": "mnemos tags (comma-separated)",
+  "tasks.create.tagsLabel": "vesma tags (comma-separated)",
   "tasks.create.submit": "Create task",
 
   // --- tasks: row action menu (Ф3) ---------------------------------------------------
@@ -885,7 +885,7 @@ export const en: Record<TranslationKey, string> = {
   "agents.execution.emptyTitle": "No assignments",
   "agents.execution.emptyMessage":
     "No execution attempts right now — take a task into work from its page.",
-  "agents.unavailableTitle": "Section unavailable in mnemos mode",
+  "agents.unavailableTitle": "Section unavailable in vesma mode",
   "agents.unavailableMessage":
     "Execution is a board-native domain (ADR 0011); switch to board or mock mode.",
   "agents.strip.label": "Executors",
@@ -1299,7 +1299,7 @@ export const en: Record<TranslationKey, string> = {
   // --- automation section (SCHED-1-UI, ADR 0013 §8) ------------------------------
   "nav.systemAutomation": "Automation",
   "automation.title": "Automation",
-  "automation.unavailableTitle": "Section unavailable in mnemos mode",
+  "automation.unavailableTitle": "Section unavailable in vesma mode",
   "automation.unavailableMessage":
     "Automation is the board's S1 contract (ADR 0013); switch to board or mock mode.",
   "automation.statusLoading": "Loading engine status",
@@ -1481,7 +1481,7 @@ export const en: Record<TranslationKey, string> = {
   // --- docs section (ADR 0015/0016, contract 2026-09-23 §§4–6) ---------------------
   "nav.docs": "Documentation",
   "docs.cat.product": "About the product",
-  "docs.catDesc.product": "What mnemos and vesmaro-eyes are: concepts and glossary.",
+  "docs.catDesc.product": "What vesma and vesma-eyes are: concepts and glossary.",
   "docs.cat.gettingStarted": "Getting started",
   "docs.catDesc.gettingStarted":
     "Deploy the board and sign in — from zero to a workspace.",
@@ -1507,27 +1507,27 @@ export const en: Record<TranslationKey, string> = {
     "Install, first run, sync and references — everyday work with the memory server.",
   "docs.cat.mnemosAdmin": "For administrators",
   "docs.catDesc.mnemosAdmin":
-    "Security, federation and operational runbooks for the mnemos administrator.",
+    "Security, federation and operational runbooks for the vesma administrator.",
   "docs.cat.mnemosArchitecture": "Architecture",
   "docs.catDesc.mnemosArchitecture":
-    "How mnemos is built: hybrid memory and its control surfaces.",
+    "How vesma is built: hybrid memory and its control surfaces.",
   "docs.cat.meshUser": "For users",
-  "docs.catDesc.meshUser": "Run a mnemos-mesh node and configure the federation.",
+  "docs.catDesc.meshUser": "Run a vesma-mesh node and configure the federation.",
   "docs.cat.meshAdmin": "For administrators",
-  "docs.catDesc.meshAdmin": "Day-2 operations and security for a mnemos-mesh node.",
+  "docs.catDesc.meshAdmin": "Day-2 operations and security for a vesma-mesh node.",
   "docs.cat.apiOverview": "Hub overview",
   "docs.catDesc.apiOverview":
     "What lives here, the project API map, and the freshness rule.",
   "docs.cat.apiBoard": "Board API",
   "docs.catDesc.apiBoard":
-    "The vesmaro-eyes HTTP API reference, generated from the OpenAPI snapshot.",
-  "docs.cat.apiMnemos": "mnemos HTTP API",
+    "The vesma-eyes HTTP API reference, generated from the OpenAPI snapshot.",
+  "docs.cat.apiMnemos": "vesma HTTP API",
   "docs.catDesc.apiMnemos":
     "A map over the memory server surfaces and the A2A sessions contract.",
   "docs.cat.apiAgent": "vesmaro-agent protocol",
   "docs.catDesc.apiAgent":
     "The agent wire protocol and the service charter v2 digest.",
-  "docs.cat.apiMesh": "mnemos-mesh",
+  "docs.cat.apiMesh": "vesma-mesh",
   "docs.catDesc.apiMesh":
     "No public HTTP API — the internal protocol and the operator surface.",
   "docs.search.placeholder": "Search the docs",
@@ -1559,9 +1559,9 @@ export const en: Record<TranslationKey, string> = {
   "docs.hub.mnemos.lede":
     "A memory server for AI agents: a well of entries, semantic search and storage governed by the tag contract. This hub carries the user and administrator guides plus the architecture overview.",
   "docs.hub.mnemosMesh.lede":
-    "Federated storage: bring up a mnemos-mesh node, configure the channel and run two-instance operations.",
+    "Federated storage: bring up a vesma-mesh node, configure the channel and run two-instance operations.",
   "docs.hub.api.lede":
-    "The ecosystem's APIs in one place: the board reference from the OpenAPI snapshot, the mnemos HTTP surface, the vesmaro-agent protocol, and an honest note on mesh. Every page is synced from its source — pin and date on the badge.",
+    "The ecosystem's APIs in one place: the board reference from the OpenAPI snapshot, the vesma HTTP surface, the vesmaro-agent protocol, and an honest note on mesh. Every page is synced from its source — pin and date on the badge.",
   "docs.hub.coverage.both": "Available in Russian and English",
   "docs.hub.coverage.ru": "Available in Russian only",
   "docs.hub.coverage.en": "Available in English only",
@@ -1587,7 +1587,7 @@ export const en: Record<TranslationKey, string> = {
   // --- UI-27: TextEngine (author text — markdown engine) ----------------------------
   "text.showFull": "Show full text",
   "empty.offlineNote":
-    "If you are running against a live mnemos, check that the API is up and that the dev proxy (/api → mnemos) is reachable. Browser requests stay CORS-gated during development.",
+    "If you are running against a live vesma, check that the API is up and that the dev proxy (/api → vesma) is reachable. Browser requests stay CORS-gated during development.",
   "app.loadingView": "Loading view",
   "app.notFoundMessage": "This path does not exist in the well.",
 

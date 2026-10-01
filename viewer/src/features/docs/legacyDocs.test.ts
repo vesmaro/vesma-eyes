@@ -15,12 +15,12 @@ import {
 
 describe("legacy docs redirect map (spec §8)", () => {
   it("sends /docs and legacy category URLs into the default hub", () => {
-    expect(legacyDocsTarget("/docs")).toBe("/docs/vesmaro-eyes");
+    expect(legacyDocsTarget("/docs")).toBe("/docs/vesma-eyes");
     expect(legacyDocsTarget("/docs/c/maintenance")).toBe(
-      "/docs/vesmaro-eyes/c/maintenance",
+      "/docs/vesma-eyes/c/maintenance",
     );
     expect(legacyDocsTarget("/docs/c/unknown-cat")).toBe(
-      "/docs/vesmaro-eyes/c/unknown-cat",
+      "/docs/vesma-eyes/c/unknown-cat",
     );
   });
 
@@ -34,7 +34,7 @@ describe("legacy docs redirect map (spec §8)", () => {
       .map((parsed) => parsed.slug);
     expect(ourSlugs.length, "sanity: our corpus exists").toBeGreaterThanOrEqual(15);
     for (const slug of ourSlugs) {
-      expect(legacyDocsTarget(`/docs/${slug}`)).toBe(`/docs/vesmaro-eyes/${slug}`);
+      expect(legacyDocsTarget(`/docs/${slug}`)).toBe(`/docs/vesma-eyes/${slug}`);
       expect(isLegacyDocsSlug(slug)).toBe(true);
     }
   });
@@ -42,7 +42,7 @@ describe("legacy docs redirect map (spec §8)", () => {
   it("never touches deep links into imported projects", () => {
     expect(legacyDocsTarget("/docs/mnemos")).toBeNull();
     expect(legacyDocsTarget("/docs/mnemos/user/getting-started")).toBeNull();
-    expect(legacyDocsTarget("/docs/mnemos-mesh/admin/security")).toBeNull();
+    expect(legacyDocsTarget("/docs/vesma-mesh/admin/security")).toBeNull();
   });
 
   it("answers unknown single-segment slugs with a miss (not-found, not redirect)", () => {

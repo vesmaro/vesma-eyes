@@ -25,25 +25,25 @@ board (vesmaro.abyss.lab)                 laptop
 | Файл | Назначение |
 |---|---|
 | `scripts/assignment_poller.py` | сам поллер (единственный исполняемый файл) |
-| `poller.example.yaml` | пример конфига → `~/.config/mnemos-eyes/poller.yaml` (chmod 0600) |
+| `poller.example.yaml` | пример конфига → `~/.config/vesma-eyes/poller.yaml` (chmod 0600) |
 | `vesmaro-assignment-poller.service` | systemd unit (`/opt`-вариант), `Restart=always` |
 | `vesmaro-assignment-poller-user.service` | systemd **user** unit — laptop-вариант (distrobox), см. § ниже |
 | `poller-unit-launcher.sh` | хостовый лончер для user unit (пин HOME/python дистробокса) |
-| `~/.local/state/mnemos-eyes/poller-audit.jsonl` | локальный аудит-лог запусков (создаётся сам) |
-| `~/.local/state/mnemos-eyes/poller.lock` | flock-синглтон (создаётся сам) |
+| `~/.local/state/vesma-eyes/poller-audit.jsonl` | локальный аудит-лог запусков (создаётся сам) |
+| `~/.local/state/vesma-eyes/poller.lock` | flock-синглтон (создаётся сам) |
 
 ## Установка
 
 1. Зависимости (python ≥ 3.10): `pip install --user httpx pyyaml`.
 2. Конфиг:
    ```bash
-   mkdir -p ~/.config/mnemos-eyes
-   cp poller.example.yaml ~/.config/mnemos-eyes/poller.yaml
-   chmod 0600 ~/.config/mnemos-eyes/poller.yaml
-   $EDITOR ~/.config/mnemos-eyes/poller.yaml   # board_url, executor_name, allowlist
+   mkdir -p ~/.config/vesma-eyes
+   cp poller.example.yaml ~/.config/vesma-eyes/poller.yaml
+   chmod 0600 ~/.config/vesma-eyes/poller.yaml
+   $EDITOR ~/.config/vesma-eyes/poller.yaml   # board_url, executor_name, allowlist
    ```
    TLS борда — лабораторный self-signed: положи CA в
-   `~/.config/mnemos-eyes/lab-ca.crt` (ключ `ca_bundle` в конфиге; путь к
+   `~/.config/vesma-eyes/lab-ca.crt` (ключ `ca_bundle` в конфиге; путь к
    отсутствующему файлу = отказ старта, а не тихое отключение проверки).
 3. Токен — ТОЛЬКО окружение, никогда в конфиге и никогда в промпте агента:
    ```bash
@@ -52,7 +52,7 @@ board (vesmaro.abyss.lab)                 laptop
    ```
 4. Скрипт и unit:
    ```bash
-   sudo mkdir -p /opt/mnemos-eyes && sudo cp scripts/assignment_poller.py /opt/mnemos-eyes/
+   sudo mkdir -p /opt/vesma-eyes && sudo cp scripts/assignment_poller.py /opt/vesma-eyes/
    sudo cp vesmaro-assignment-poller.service /etc/systemd/system/
    sudo systemctl daemon-reload
    sudo systemctl enable --now vesmaro-assignment-poller
@@ -83,7 +83,7 @@ loginctl enable-linger "$USER"        # старт до логина в деск
 ```
 
 Лог с этого варианта — `journalctl --user -u vesmaro-assignment-poller-user`
-(не `~/.local/state/mnemos-eyes/poller.log` — файловый лог оставляли
+(не `~/.local/state/vesma-eyes/poller.log` — файловый лог оставляли
 nohup-редиректы прошлого; имя юнита несут `-user`-суффиксом — включение
 без него на чистом хосте поднимет несуществующий юнит). Две ловушки
 distrobox-exec, которые лончер пинит (подробнее в его шапке): (1)
@@ -92,7 +92,7 @@ exec-окружение протекает хостовым `$HOME` — все �
 `~/.local/bin/python3`, который перезапускает интерпретатор с чистым
 окружением — токен не доезжал; лончер зовёт абсолютный `/usr/bin/python3`
 контейнера. Рантайм-код — git-архив main в
-`~/.local/share/mnemos-eyes/bridge` (обновление: пере-архив +
+`~/.local/share/vesma-eyes/bridge` (обновление: пере-архив +
 `systemctl --user restart`; состояние в `~/.local/state` вне архива).
 Катофф со старого nohup: остановить старый pid (он держит flock), затем
 `enable --now`.
@@ -167,14 +167,14 @@ outcome `unreported` (уровень CRITICAL в журнале); задание
 |---|---|---|
 | задания копятся в `queued`, возраст растёт | поллер не запущен / падает | `systemctl status vesmaro-assignment-poller`, `journalctl -u … -n 100` |
 | `queued` копится, в журнале `at capacity` | все `max_concurrent` слотов заняты долгими детьми | сколько детей реально работают; поднять `max_concurrent` осознанно |
-| `queued` висит, в журнале `allowlist miss` | specialist/harness не в локальном allowlist | `~/.config/mnemos-eyes/poller.yaml`, refusal-report на карточке |
+| `queued` висит, в журнале `allowlist miss` | specialist/harness не в локальном allowlist | `~/.config/vesma-eyes/poller.yaml`, refusal-report на карточке |
 | `queued` висит, `401` в журнале | неверный/протухший machine-токен | `/etc/vesmaro/poller.env`, токен в чарте |
 | `5xx`/`transport` в журнале, потом всё дошло | борд был недоступен, поллер ретраил | строки `poll:`, `heartbeat … (will retry)`, `reporting … deferred (N/5)` |
 | в аудите `outcome: unreported` | борд не принял complete/fail за 5 попыток | задание на борде закрыть рестартом поллера (sweep) или руками |
 | `claimed`/`running` висит после рестарта поллера | sweep не отработал | аудит-лог `outcome: sweep-failed`; `journalctl` строки `recovery sweep` |
 | `running` без heartbeat > 30 мин | агент-процесс завис | heartbeat-409 kill; до фазы 3 (reaper) — `systemctl restart`, sweep закроет |
 | `exit ...` в `failed`-причине | агент упал | хвост stderr в причине fail, полный лог — временные файлы удаляются после отчёта |
-| второй инстанс не стартует, `rc=3` | flock-синглтон держит | `lsof ~/.local/state/mnemos-eyes/poller.lock` |
+| второй инстанс не стартует, `rc=3` | flock-синглтон держит | `lsof ~/.local/state/vesma-eyes/poller.lock` |
 
 Аудит-лог (одна JSON-строка на событие):
 `{ts, assignment_id, specialist, spec_hash, pid, outcome}` где outcome =
@@ -185,7 +185,7 @@ launch-error | start-failed | unreported`.
 
 - machine-токен: только env (`VESMARO_BOARD_TOKEN`), 0600 — `/opt`-вариант:
   `/etc/vesmaro/poller.env`, laptop-вариант:
-  `~/.config/mnemos-eyes/poller.env` (container-side); в конфиге, промпте
+  `~/.config/vesma-eyes/poller.env` (container-side); в конфиге, промпте
   и логах его нет (в промпте названа только переменная окружения —
   значение наследуется процессом).
 - аудит-лог и launch-артефакты (envelope/stdout/stderr детей) содержат

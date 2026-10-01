@@ -40,10 +40,10 @@ projects:
         order: 1
         note:
           en: >-
-            Curator: the complete first run of Mnemos — one-line install,
+            Curator: the complete first run of Vesma — one-line install,
             first memory, first search, connecting an agent harness.
           ru: >-
-            Куратор: полный первый прогон mnemos — установка одной командой,
+            Куратор: полный первый прогон vesma — установка одной командой,
             первая запись, первый поиск, подключение агента-харнеса.
       - path: user/integration-guide.md
         category: mnemos-user
@@ -61,11 +61,11 @@ projects:
         order: 3
         note:
           en: >-
-            Curator: offline batch sync between two Mnemos instances via
-            cron and rsync — Mnemos itself makes no network calls.
+            Curator: offline batch sync between two Vesma instances via
+            cron and rsync — Vesma itself makes no network calls.
           ru: >-
-            Куратор: офлайн-синхронизация двух инстансов mnemos по cron
-            и rsync — mnemos сам сетевых вызовов не делает.
+            Куратор: офлайн-синхронизация двух инстансов vesma по cron
+            и rsync — vesma сам сетевых вызовов не делает.
       - path: user/context-filter.md
         category: mnemos-user
         order: 4
@@ -81,11 +81,11 @@ projects:
         order: 5
         note:
           en: >-
-            Curator: the mandatory tag schema of Mnemos — prefixes, allowed
-            values, migration; the board's «Mnemos tags» field follows it.
+            Curator: the mandatory tag schema of Vesma — prefixes, allowed
+            values, migration; the board's «Vesma tags» field follows it.
           ru: >-
-            Куратор: обязательная схема тегов mnemos — префиксы, допустимые
-            значения, миграция; поле «Теги mnemos» у задач борда живёт по
+            Куратор: обязательная схема тегов vesma — префиксы, допустимые
+            значения, миграция; поле «Теги vesma» у задач борда живёт по
             этому контракту.
       - path: user/metrics.md
         category: mnemos-user
@@ -102,31 +102,31 @@ projects:
         order: 7
         note:
           en: >-
-            Curator: backup, move, and restore Mnemos memories via CLI or
+            Curator: backup, move, and restore Vesma memories via CLI or
             HTTP API — JSON with metadata or full SQLite snapshots.
           ru: >-
-            Куратор: резервные копии и перенос записей mnemos через CLI
+            Куратор: резервные копии и перенос записей vesma через CLI
             или HTTP API — JSON с метаданными или полные SQLite-снимки.
       - path: user/cli-reference.md
         category: mnemos-user
         order: 8
         note:
           en: >-
-            Curator: complete reference for the mnemos CLI — every
+            Curator: complete reference for the vesma CLI — every
             subcommand with runnable examples.
           ru: >-
-            Куратор: полный справочник CLI mnemos — все подкоманды
+            Куратор: полный справочник CLI vesma — все подкоманды
             с запускабельными примерами.
       - path: user/http-api.md
         category: mnemos-user
         order: 9
         note:
           en: >-
-            Curator: the full HTTP surface of Mnemos — memory, search,
+            Curator: the full HTTP surface of Vesma — memory, search,
             pipeline, DLQ, traces, A2A sessions; the requests the board
             makes to stores.
           ru: >-
-            Куратор: полная HTTP-поверхность mnemos — память, поиск,
+            Куратор: полная HTTP-поверхность vesma — память, поиск,
             конвейер, DLQ, трассировки, A2A-сессии; именно этими запросами
             борд читает хранилища.
       - path: user/mcp-tools.md
@@ -146,42 +146,42 @@ projects:
         order: 1
         note:
           en: >-
-            Curator: the Mnemos security posture — TOTP, non-loopback
+            Curator: the Vesma security posture — TOTP, non-loopback
             guard, threat model; background for the board's tokens page.
           ru: >-
-            Куратор: позиция безопасности mnemos — TOTP, не-loopback guard,
+            Куратор: позиция безопасности vesma — TOTP, не-loopback guard,
             модель угроз; фон для страницы борда «Токены и доступ».
       - path: admin/federation.md
         category: mnemos-admin
         order: 2
         note:
           en: >-
-            Curator: federation on the Mnemos side — per-peer ACL, trigger
+            Curator: federation on the Vesma side — per-peer ACL, trigger
             codes, access log; the foundation of the observed mesh nodes.
           ru: >-
-            Куратор: федерация на стороне mnemos — per-peer ACL, коды
+            Куратор: федерация на стороне vesma — per-peer ACL, коды
             триггера, журнал доступа; фундамент наблюдаемых «Узлов меша».
       - path: admin/runbooks/install.md
         category: mnemos-admin
         order: 3
         note:
           en: >-
-            Curator: installing Mnemos — the board's prerequisite: PyPI
+            Curator: installing Vesma — the board's prerequisite: PyPI
             install, first run, the mnk_… token for the store hookup.
           ru: >-
-            Куратор: установка mnemos — предпосылка борда: PyPI-установка,
+            Куратор: установка vesma — предпосылка борда: PyPI-установка,
             первый запуск, токен mnk_… для подключения хранилища.
       # W2, решение по кандидату: наша backup-restore.md копирует
-      # mnemos.db/vectors.db — апстрим-ранбук про то же, глубже.
+      # vesma.db/vectors.db — апстрим-ранбук про то же, глубже.
       - path: admin/runbooks/backup-restore.md
         category: mnemos-admin
         order: 4
         note:
           en: >-
             Curator: the upstream runbook for backing up and restoring
-            Mnemos data — goes deeper than the board's own backup page.
+            Vesma data — goes deeper than the board's own backup page.
           ru: >-
-            Куратор: апстрим-ранбук бэкапа и восстановления данных mnemos —
+            Куратор: апстрим-ранбук бэкапа и восстановления данных vesma —
             глубже нашей страницы «Бэкап и восстановление».
       # --- architecture/ — одна обзорная (контракт §3) ---------------------
       - path: architecture/overview.md
@@ -189,11 +189,11 @@ projects:
         order: 1
         note:
           en: >-
-            Curator: how Mnemos is built — hybrid memory, the CLI/HTTP/MCP
-            surfaces, and where vesmaro-eyes fits.
+            Curator: how Vesma is built — hybrid memory, the CLI/HTTP/MCP
+            surfaces, and where vesma-eyes fits.
           ru: >-
-            Куратор: как устроен mnemos — гибридная память, поверхности
-            CLI/HTTP/MCP и место vesmaro-eyes в картине.
+            Куратор: как устроен vesma — гибридная память, поверхности
+            CLI/HTTP/MCP и место vesma-eyes в картине.
     exclude:
       # --- W2-решения по висящим слагам (ссылки из включённых страниц) -----
       - path: architecture/a2a-sessions.md
@@ -214,8 +214,8 @@ projects:
           ссылка из admin/federation (en+ru) переписана overlay'ем на GitHub
       - path: admin/kubernetes-deployment.md
         reason: >-
-          решение W2: k8s-деплой самого mnemos — вне админ-списка (наш
-          deploy.md ходит в уже развёрнутый mnemos); упоминается только из
+          решение W2: k8s-деплой самого vesma — вне админ-списка (наш
+          deploy.md ходит в уже развёрнутый vesma); упоминается только из
           исключённого container-deployment
       - path: admin/ssh-sync-hardening.md
         reason: >-
@@ -229,12 +229,12 @@ projects:
       - path: admin/runbooks/container-deployment.md
         reason: >-
           решение W2: установочный путь апстрима (готовый образ/compose) —
-          наш deploy.md считает mnemos готовой предпосылкой и не смотрит на
+          наш deploy.md считает vesma готовой предпосылкой и не смотрит на
           этот ранбук; шесть входящих ссылок из getting-started/install
           (en+ru) переписаны overlay'ем на GitHub
       - path: admin/runbooks/dependency-updates.md
         reason: >-
-          решение W2: зависимости mnemos обновляют мейнтейнеры апстрима
+          решение W2: зависимости vesma обновляют мейнтейнеры апстрима
           (наш upgrade.md управляет только тегом образа борда); ссылка из
           getting-started (en+ru) переписана overlay'ем на GitHub
       - path: admin/runbooks/ci-cd.md
@@ -255,17 +255,17 @@ projects:
       # Демо-правила W1a (механика якорных замен; тело апстрима не
       # редактируется вне этого механизма — контракт §2).
       - file: en/architecture/overview.md
-        find: "A Web UI is planned as a separate project\n(mnemos-eyes)."
+        find: "A Web UI is planned as a separate project\n(vesma-eyes)."
         replace: >-
-          The Web UI for Mnemos is **vesmaro-eyes** — the board that serves
+          The Web UI for Vesma is **vesma-eyes** — the board that serves
           this documentation.
         reason: >-
           адаптация контекста: читателю указывают на живой борд вместо
           «запланирован» (решение АРХКОМ-7 о трёхпроектных доках)
       - file: ru/architecture/overview.md
-        find: "Web UI запланирован как отдельный\nпроект (mnemos-eyes)."
+        find: "Web UI запланирован как отдельный\nпроект (vesma-eyes)."
         replace: >-
-          Web UI для Mnemos — это **vesmaro-eyes**, борд, на котором вы
+          Web UI для Vesma — это **vesma-eyes**, борд, на котором вы
           читаете эту документацию.
         reason: RU-зеркало правила выше
 
@@ -337,7 +337,7 @@ projects:
         find: "see [container-deployment.md](../admin/runbooks/container-deployment.md) |"
         replace: "see [container-deployment.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/en/admin/runbooks/container-deployment.md) |"
         reason: >-
-          установочный путь апстрима; наш deploy.md считает mnemos готовой
+          установочный путь апстрима; наш deploy.md считает vesma готовой
           предпосылкой и на этот ранбук не смотрит
       - file: en/user/getting-started.md
         find: "Full guide: [container-deployment.md](../admin/runbooks/container-deployment.md)."
@@ -374,15 +374,15 @@ projects:
         replace: "[project/adr/](https://github.com/vesmaro/vesmaro/tree/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/project/adr)"
         reason: RU-зеркало правила выше
 
-  # ----------------------------------------------------------- mnemos-mesh ---
-  mnemos-mesh:
+  # ----------------------------------------------------------- vesma-mesh ---
+  vesma-mesh:
     repo: ../mnemos-mesh
     # Pinned 2026-09-29 (ME-039 re-sync; was 331ef3a, 2026-09-23/W1a —
     # 106 commits behind). b428ea9 = tag v1.6.8 — the release-charting
     # commit (== their main, merge PR #92: homehelper tunnel lifecycle
     # logging, release-pipeline repairs).
     ref: b428ea9b7ec9731fe4d53478702d0667cf3f53de
-    web_base: "https://github.com/Korrnals/mnemos-mesh/blob/{sha}"
+    web_base: "https://github.com/vesmaro/vesma-mesh/blob/{sha}"
     locale_dirs:
       en: docs/en
       # RU — разовый кураторский перевод 4 страниц, волна W3 (контракт §5);
@@ -395,7 +395,7 @@ projects:
         category: mesh-user
         order: 1
         note: >-
-          Куратор: поднять узел mnemos-mesh с нуля — сборка, конфиг двух
+          Куратор: поднять узел vesma-mesh с нуля — сборка, конфиг двух
           узлов, запуск и проверка канала федерации.
       - path: user/configuration.md
         category: mesh-user
@@ -429,16 +429,16 @@ projects:
       - path: ROADMAP-v2.md
         reason: роадмап апстрима (контракт §3)
     overlays:
-      # W2: ссылка на threat-model ADR уходит в соседний клон (mnemos) —
+      # W2: ссылка на threat-model ADR уходит в соседний клон (vesma) —
       # скрипт такие оставляет как есть («escapes»); переписываем на
-      # GitHub mnemos @ пина, чтобы в борде не было битого относительного
+      # GitHub vesma @ пина, чтобы в борде не было битого относительного
       # href (контракт §6.1).
       - file: en/admin/security.md
-        find: "- [ADR-0016 — federation threat model](../../../../mnemos/docs/project/adr/0016-federation-threat-model.md) (mnemos repo)"
-        replace: "- [ADR-0016 — federation threat model](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/project/adr/0016-federation-threat-model.md) (mnemos repo)"
+        find: "- [ADR-0016 — federation threat model](../../../../mnemos/docs/project/adr/0016-federation-threat-model.md) (vesma repo)"
+        replace: "- [ADR-0016 — federation threat model](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/project/adr/0016-federation-threat-model.md) (vesma repo)"
         reason: >-
-          cross-clone ссылка (mesh → mnemos project/adr): относительный путь
-          в корпусе борда мёртв — только GitHub @ пина mnemos
+          cross-clone ссылка (mesh → vesma project/adr): относительный путь
+          в корпусе борда мёртв — только GitHub @ пина vesma
     # Кураторские RU-переводы — НАШ слой (контракт §5: «кураторский перевод
     # 4 страниц»), переживают ре-синк: каждый синк переиздаёт ru-слот из
     # curated-источника (provenance kind "curated-translation"). Пути `source`
@@ -449,16 +449,16 @@ projects:
     translations:
       ru:
         - source_of: user/getting-started.md
-          source: viewer/src/features/docs/curated/mnemos-mesh/ru/user/getting-started.md
+          source: viewer/src/features/docs/curated/vesma-mesh/ru/user/getting-started.md
           translator_note: "Кураторский перевод W3; оригинал en@331ef3a785c1"
         - source_of: user/configuration.md
-          source: viewer/src/features/docs/curated/mnemos-mesh/ru/user/configuration.md
+          source: viewer/src/features/docs/curated/vesma-mesh/ru/user/configuration.md
           translator_note: "Кураторский перевод W3; оригинал en@331ef3a785c1"
         - source_of: admin/security.md
-          source: viewer/src/features/docs/curated/mnemos-mesh/ru/admin/security.md
+          source: viewer/src/features/docs/curated/vesma-mesh/ru/admin/security.md
           translator_note: "Кураторский перевод W3; оригинал en@331ef3a785c1"
         - source_of: admin/runbook.md
-          source: viewer/src/features/docs/curated/mnemos-mesh/ru/admin/runbook.md
+          source: viewer/src/features/docs/curated/vesma-mesh/ru/admin/runbook.md
           translator_note: "Кураторский перевод W3; оригинал en@331ef3a785c1"
 
 # ----------------------------------------------------------------------------
@@ -502,9 +502,9 @@ api_hub:
         en: docs/en
         ru: docs/ru
       include:
-        # A2A Sessions API — единственный API-контракт mnemos, который не
+        # A2A Sessions API — единственный API-контракт vesma, который не
         # входил ни в одну селекцию («поверхность разработчика», решение W2
-        # по хабу mnemos). В api-хабе ему законное место; заголовки/тела —
+        # по хабу vesma). В api-хабе ему законное место; заголовки/тела —
         # из апстрима, ссылки на project/adr уходят на GitHub @ пина.
         - path: architecture/a2a-sessions.md
           slug: mnemos/a2a-sessions
@@ -515,15 +515,15 @@ api_hub:
             ru: A2A Sessions API
           note:
             en: >-
-              Curator: the A2A sessions contract of Mnemos — session
+              Curator: the A2A sessions contract of Vesma — session
               lifecycle, envelopes, and the design rationale behind the API.
             ru: >-
-              Куратор: контракт A2A-сессий mnemos — жизненный цикл сессии,
+              Куратор: контракт A2A-сессий vesma — жизненный цикл сессии,
               конверты и обоснование дизайна API.
       exclude:
         - path: user/http-api.md
           reason: >-
-            полный HTTP-справочник уже в корпусе хаба mnemos
+            полный HTTP-справочник уже в корпусе хаба vesma
             (mnemos/user/http-api) — дубль в двух хабах = два пина одного
             документа; api-хаб держит кураторскую карту-указатель
             (curated api/mnemos/http-api)
@@ -531,14 +531,14 @@ api_hub:
           reason: >-
             2429 строк — не компактно (директива: CLI/MCP только если
             компактно); инструментальный слой MCP, не HTTP; уже в хабе
-            mnemos
+            vesma
         - path: user/cli-reference.md
           reason: >-
-            869 строк, CLI-поверхность (не HTTP API); уже в хабе mnemos
+            869 строк, CLI-поверхность (не HTTP API); уже в хабе vesma
         - path: user/metrics.md
           reason: >-
             три метрических эндпоинта описаны внутри http-api-справочника
-            хаба mnemos; отдельная страница в api-хабе не добавляет знания
+            хаба vesma; отдельная страница в api-хабе не добавляет знания
 
     vesmaro-agent:
       repo: ../vesmaro-agent
@@ -546,7 +546,7 @@ api_hub:
       # доки-обновление релиза 0.6.0 (+104/−40, intake addendum). Агент 0.6.0
       # (ADR 0021 lineage), код не менялся.
       ref: dbd6054ed22c70897247e83c14effbc2e0b7eead
-      web_base: "https://github.com/vesmaro/vesmaro-agent/blob/{sha}"
+      web_base: "https://github.com/vesmaro/vesma-agent/blob/{sha}"
       locale_dirs:
         en: docs
       include:
@@ -561,11 +561,11 @@ api_hub:
             executor'а, клеймы назначений, отчёты, discovery v3, native
             intake; текст апстрима (EN), статус v0.1-draft.
 
-    mnemos-mesh:
+    vesma-mesh:
       repo: ../mnemos-mesh
       # Пин для ПРОВЕРКИ кураторской заметки (само тело из curated-слоя).
       ref: b428ea9b7ec9731fe4d53478702d0667cf3f53de
-      web_base: "https://github.com/Korrnals/mnemos-mesh/blob/{sha}"
+      web_base: "https://github.com/vesmaro/vesma-mesh/blob/{sha}"
       locale_dirs:
         en: docs/en
       include: []
@@ -575,20 +575,20 @@ api_hub:
             публичного HTTP API у меша нет — внутренние gRPC-контракты
             (proto/federation.proto, proto/mnemos_core_api.proto); вместо
             выдумывания — честная кураторская заметка
-            (curated api/mnemos-mesh/index)
+            (curated api/vesma-mesh/index)
 
-  # --- vesmaro-eyes board API: OpenAPI-снапшот → страницы ru+en (ME-044) ---
+  # --- vesma-eyes board API: OpenAPI-снапшот → страницы ru+en (ME-044) ---
   # title/about — локале-маппинги {ru, en} (как title у include-записей
   # апстримов); отсутствующая локаль = FAIL генератора (fail-closed).
   board_api:
     spec: viewer/board-openapi-snapshot.json
     category: api-board
-    index_slug: vesmaro-eyes/index
+    index_slug: vesma-eyes/index
     # Группировка по первому сегменту пути после /api/. Несмапленный
     # префикс = DRIFT-FAIL генератора (новый эндпоинт требует осознанного
     # решения — та же дисциплина, что у overlay-якорей sync_docs).
     groups:
-      - slug: vesmaro-eyes/index
+      - slug: vesma-eyes/index
         prefixes: []
         order: 1
         title:
@@ -596,13 +596,13 @@ api_hub:
           en: Board API overview
         about:
           ru: >-
-            Карта HTTP API борда vesmaro-eyes: все группы эндпоинтов, счётчики
+            Карта HTTP API борда vesma-eyes: все группы эндпоинтов, счётчики
             операций и снимок OpenAPI, из которого справочник сгенерирован.
           en: >-
-            A map of the vesmaro-eyes board HTTP API: every endpoint group,
+            A map of the vesma-eyes board HTTP API: every endpoint group,
             operation counts, and the OpenAPI snapshot the reference is
             generated from.
-      - slug: vesmaro-eyes/tasks
+      - slug: vesma-eyes/tasks
         prefixes: [tasks, task-drafts]
         order: 2
         title:
@@ -615,20 +615,20 @@ api_hub:
           en: >-
             Task CRUD, moves, history, task memories and reports, archive,
             drafts, and memory inbox intake.
-      - slug: vesmaro-eyes/memories
-        prefixes: [memories, tags, mnemos]
+      - slug: vesma-eyes/memories
+        prefixes: [memories, tags, vesma]
         order: 3
         title:
-          ru: Память, теги и поиск mnemos
-          en: Memory, tags, and mnemos search
+          ru: Память, теги и поиск vesma
+          en: Memory, tags, and vesma search
         about:
           ru: >-
             Серверы памяти и их настройки, группы памяти, пульс и статистика,
-            записи, теги и семантический поиск mnemos.
+            записи, теги и семантический поиск vesma.
           en: >-
             Memory servers and their settings, memory groups, heartbeat and
-            stats, records, tags, and mnemos semantic search.
-      - slug: vesmaro-eyes/assignments
+            stats, records, tags, and vesma semantic search.
+      - slug: vesma-eyes/assignments
         prefixes: [assignments]
         order: 4
         title:
@@ -641,7 +641,7 @@ api_hub:
           en: >-
             The assignment lifecycle: creation, claim, start, heartbeat,
             completion, failure, cancellation.
-      - slug: vesmaro-eyes/executors
+      - slug: vesma-eyes/executors
         prefixes: [executors, harnesses, agents, specialists]
         order: 5
         title:
@@ -654,7 +654,7 @@ api_hub:
           en: >-
             Executor registry and enrollment, the harness dictionary, agent
             activity, specialist profiles, and provision jobs.
-      - slug: vesmaro-eyes/automation
+      - slug: vesma-eyes/automation
         prefixes: [automation]
         order: 6
         title:
@@ -667,7 +667,7 @@ api_hub:
           en: >-
             Rule hooks, schedules and their runs, automation settings, and
             engine status.
-      - slug: vesmaro-eyes/devices
+      - slug: vesma-eyes/devices
         prefixes: [devices, pairing]
         order: 7
         title:
@@ -678,7 +678,7 @@ api_hub:
             Спаренные устройства, гранты, QR-пейринг: код, обмен, подтверждение.
           en: >-
             Paired devices, grants, QR pairing: code, exchange, confirmation.
-      - slug: vesmaro-eyes/kora
+      - slug: vesma-eyes/kora
         prefixes: [kora]
         order: 8
         title:
@@ -687,7 +687,7 @@ api_hub:
         about:
           ru: Список сессий Kora и транскрипты, приём kora-scan.
           en: Kora session list and transcripts, kora-scan intake.
-      - slug: vesmaro-eyes/mesh
+      - slug: vesma-eyes/mesh
         prefixes: [mesh]
         order: 9
         title:
@@ -695,11 +695,11 @@ api_hub:
           en: Mesh nodes
         about:
           ru: >-
-            Наблюдаемые узлы mnemos-mesh: добавление, правка, удаление,
+            Наблюдаемые узлы vesma-mesh: добавление, правка, удаление,
             список.
           en: >-
-            Observed mnemos-mesh nodes: add, edit, delete, list.
-      - slug: vesmaro-eyes/poller
+            Observed vesma-mesh nodes: add, edit, delete, list.
+      - slug: vesma-eyes/poller
         prefixes: [poller]
         order: 10
         title:
@@ -712,7 +712,7 @@ api_hub:
           en: >-
             The assignment-poller bootstrap script and its artifacts: the CA
             certificate, service unit, script, and checksum.
-      - slug: vesmaro-eyes/feed
+      - slug: vesma-eyes/feed
         prefixes: [notifications, activity, reports, archive]
         order: 11
         title:
@@ -725,7 +725,7 @@ api_hub:
           en: >-
             The board feed: notifications and read marking, activity, task
             reports and the report feed, archive.
-      - slug: vesmaro-eyes/system
+      - slug: vesma-eyes/system
         prefixes: [board, board-reflect, health, settings, auth, events]
         order: 12
         title:
@@ -750,7 +750,7 @@ api_hub:
       category: api-mnemos
       order: 1
       verified_against:
-        source: mnemos
+        source: vesma
         path: docs/en/user/http-api.md
         sha: pin
     - slug: vesmaro-agent/charter
@@ -760,11 +760,11 @@ api_hub:
         source: vesmaro-agent
         path: docs/decisions/CHARTER-v2.md
         sha: pin
-    - slug: mnemos-mesh/index
+    - slug: vesma-mesh/index
       category: api-mesh
       order: 1
       verified_against:
-        source: mnemos-mesh
+        source: vesma-mesh
         path: proto/federation.proto
         sha: pin
 

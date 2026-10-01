@@ -115,7 +115,7 @@ scripts/deploy.sh rollback <rev> --skip-history-gate
 JOURNAL. `--skip-history-gate` для rollback разрешён явно: откат на
 ИЗВЕСТНУЮ хорошую ревизию — штатное восстановление при сломанной
 истории (`deploy` и `verify` флаг по-прежнему не принимают). Номер
-ревизии — `helm history vesmaro-eyes -n kube-agents`.
+ревизии — `helm history vesma-eyes -n kube-agents`.
 Откат не строит образ (только переключает релиз на существующую
 ревизию). Тег в JOURNAL-строке берётся из live-значений целевой
 ревизии (`helm get values --revision`), а не из git — журнал фиксирует,

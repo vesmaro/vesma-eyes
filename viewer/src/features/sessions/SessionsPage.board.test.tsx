@@ -83,7 +83,7 @@ describe("board mode honest 501 states (sessions)", () => {
       keys.sessions.list(),
       new ApiError(501, "HttpAdapter: GET /v1/sessions → 501"),
     );
-    expect(html).toContain("Список сессий недоступен в mnemos 4.1");
+    expect(html).toContain("Список сессий недоступен в vesma 4.1");
     expect(html).not.toContain("Сессии недоступны в board-режиме");
   });
 });

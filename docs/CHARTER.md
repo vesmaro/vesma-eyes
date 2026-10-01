@@ -1,9 +1,9 @@
-# vesmaro-eyes — Project Charter
+# vesma-eyes — Project Charter
 
-> Авторитетная запись согласованных решений по GUI-компаньону mnemos.
+> Авторитетная запись согласованных решений по GUI-компаньону vesma.
 > Владелец: `@GCW: Tech Lead`. Дизайн-система — `@GCW: Senior Frontend Developer`.
-> Продукт: **vesmaro-eyes**. Репозиторий: **mnemos-eyes**
-> (`github.com/Korrnals/mnemos-eyes`; запланирован переезд в org `vesmaro` —
+> Продукт: **vesma-eyes**. Репозиторий: **vesma-eyes**
+> (`github.com/vesmaro/vesma-eyes`; запланирован переезд в org `vesmaro` —
 > задача RB-1 на борде, статус blocked).
 > Status: **борд задеплоен** и живёт на `vesmaro.abyss.lab`; это не design
 > phase. Следующий этап — **конвергенция фронтендов в единое web-приложение**
@@ -14,8 +14,8 @@
 
 ## 1. Purpose & vision
 
-`vesmaro-eyes` — **графический интерфейс и операционный кокпит движка
-долгосрочной памяти mnemos**. Он позволяет человеку _заглянуть в_ память,
+`vesma-eyes` — **графический интерфейс и операционный кокпит движка
+долгосрочной памяти vesma**. Он позволяет человеку _заглянуть в_ память,
 которую накапливают агенты: искать, читать, понимать происхождение каждого
 факта и наблюдать память вживую.
 
@@ -29,7 +29,7 @@ lore-driven, никогда не отвлекает.
 ### Живёт сейчас: task board (v1.0.0)
 
 Первым деливераблом стал **борд задач** (pivot — [ADR 0004](decisions/0004-task-board-v0.md)):
-канбан, зеркалящий state machine mnemos (`open → in-progress → blocked →
+канбан, зеркалящий state machine vesma (`open → in-progress → blocked →
 resolved → done`), карточки с harness/specialist-провенансом, мульти-серверная
 память (по отдельности или merged в кластеры), SSE live updates. Задеплоен
 в кластер (`http://vesmaro.abyss.lab`). По [ADR 0006](decisions/0006-two-frontends-fate.md)
@@ -63,13 +63,13 @@ resolved → done`), карточки с harness/specialist-провенансо
 
 | # | Decision | Rationale |
 | --- | --- | --- |
-| **D1** | **Отдельный репозиторий** `mnemos-eyes` (`github.com/Korrnals/mnemos-eyes`), sibling к `mnemos`. Переезд в org `vesmaro` запланирован (RB-1, blocked — план, не свершившийся факт). | Чистое разделение ответственности; UI эволюционирует независимо от движка. |
-| **D2** | **Имя продукта** = `vesmaro-eyes`; имя репозитория = `mnemos-eyes` (переименование — в волне ребрендинга, RB-1). Внутренний lore может ссылаться на _Mnemosyne / Anamnesis_. | Связность экосистемы с `mnemos` важнее отдельного имени. |
+| **D1** | **Отдельный репозиторий** `vesma-eyes` (`github.com/vesmaro/vesma-eyes`), sibling к `vesma`. Переезд в org `vesmaro` запланирован (RB-1, blocked — план, не свершившийся факт). | Чистое разделение ответственности; UI эволюционирует независимо от движка. |
+| **D2** | **Имя продукта** = `vesma-eyes`; имя репозитория = `vesma-eyes` (переименование — в волне ребрендинга, RB-1). Внутренний lore может ссылаться на _Mnemosyne / Anamnesis_. | Связность экосистемы с `vesma` важнее отдельного имени. |
 | **D3** | **MVP = L1 read-only viewer.** | Быстрое доказательство ценности; минимальный риск; никаких деструктивных операций в v1. |
 | **D4** | **Стек L1 = React + TypeScript + Vite + TanStack Query + Tailwind/shadcn.** | Зрелый, быстрый, гибкий в дизайне, большой пул талантов и инструментария. |
 | **D5** | **Web-first сейчас, Tauri 2.0 native shell позже** (отложено архкомом). | Web SPA выходит быстрее; Tauri добавляет desktop + mobile + local-first, переиспользуя ~90% фронтенда. |
 | **D6** | **Изолированная абстракция слоя данных** (`MemoryGateway` с `HttpAdapter` и будущим `TauriAdapter`). | Снимает lock-in «web vs native»; один и тот же UI-код в обоих режимах. |
-| **D7** | **Типы генерируются автоматически** из `/openapi.json` mnemos через `openapi-typescript`. | Единый источник истины; никакого ручного дрифта между API и UI-типами. |
+| **D7** | **Типы генерируются автоматически** из `/openapi.json` vesma через `openapi-typescript`. | Единый источник истины; никакого ручного дрифта между API и UI-типами. |
 | **D8** | **Auth обязателен; 2FA (TOTP) для remote/mobile-доступа.** | См. §5 — локальный desktop опирается на ОС + опциональный app-lock; 2FA оправдана, как только память доступна по сети. |
 | **D9** | **Дизайн lore-driven** (глаз / ирис / колодец, «взгляд в себя»), красивый, но не отвлекающий, с лёгкой «живой» анимацией. | Дифференциатор; совпадает с метафорой памяти. |
 
@@ -85,7 +85,7 @@ ADR 0006 (судьба двух фронтендов), 0007 (merged views vs mes
 
 Текущее состояние (борд v1.0.0): vanilla ES-modules SPA (`web/`, zero build)
 + FastAPI board server (`server/`, SQLite WAL на примонтированном томе) +
-узкий серверный прокси к одному или нескольким mnemos API — см. README,
+узкий серверный прокси к одному или нескольким vesma API — см. README,
 раздел Architecture.
 
 Целевая архитектура L1 (React):
@@ -101,11 +101,11 @@ ADR 0006 (судьба двух фронтендов), 0007 (merged views vs mes
         │ web mode                  │ desktop / mobile
 ┌───────▼─────────┐         ┌───────▼──────────────┐
 │  HttpAdapter    │         │  TauriAdapter        │
-│  → mnemos API   │         │  → Rust → SQLite      │
+│  → vesma API   │         │  → Rust → SQLite      │
 └─────────────────┘         └──────────────────────┘
 ```
 
-- **Сначала:** только `HttpAdapter` → mnemos HTTP API.
+- **Сначала:** только `HttpAdapter` → vesma HTTP API.
 - **Позже:** добавить `TauriAdapter` → Rust core читает стор in-process
   (API не выставляется в сеть).
 
@@ -118,10 +118,10 @@ ADR 0006 (судьба двух фронтендов), 0007 (merged views vs mes
 ## 5. Auth & security posture
 
 - **Весь доступ аутентифицирован.** Никакого анонимного чтения, даже на loopback.
-- **2FA (TOTP)** обязательна для **remote/mobile-доступа** (телефон → домашний mnemos).
+- **2FA (TOTP)** обязательна для **remote/mobile-доступа** (телефон → домашний vesma).
 - **Локальный desktop (Tauri)** может опираться на защиту ОС + опциональный in-app lock.
 - Текущая поза борда — **LAN-trust** ([ADR 0004](decisions/0004-task-board-v0.md)):
-  борд-сервер — единственный держатель mnemos-токенов; находки ревью SEC-1..4
+  борд-сервер — единственный держатель vesma-токенов; находки ревью SEC-1..4
   в трекере; SEC-3 закрывается переходом на Helm + ingress вместо hostNetwork
   (задача SRE-1), write-guard — fail-closed.
 - **Окончательный threat model** — у `@GCW: Senior Security Engineer`
@@ -129,14 +129,14 @@ ADR 0006 (судьба двух фронтендов), 0007 (merged views vs mes
 
 ---
 
-## 6. Prerequisites on `mnemos` (backend work)
+## 6. Prerequisites on `vesma` (backend work)
 
-Трекаются отдельными PR в репо `mnemos`, владельцы —
+Трекаются отдельными PR в репо `vesma`, владельцы —
 `@GCW: Senior System Engineer` и `@GCW: Senior Security Engineer`:
 
 1. **CORS** (конфигурируемый allow-list) — нужен для прямого браузерного
-   доступа к mnemos API из SPA L1.
-2. **AuthN/AuthZ** (токены `mnk_…`; TOTP 2FA для remote) — живёт в mnemos;
+   доступа к vesma API из SPA L1.
+2. **AuthN/AuthZ** (токены `mnk_…`; TOTP 2FA для remote) — живёт в vesma;
    борд ходит под выделенным токеном (`totp_required=0`), секрет — только
    в k8s secret.
 3. **`/openapi.json`** стабильный и документированный (FastAPI отдаёт) —
@@ -147,7 +147,7 @@ ADR 0006 (судьба двух фронтендов), 0007 (merged views vs mes
 
 > Борд обходит CORS серверным прокси (bearer остаётся server-side) — поэтому
 > CORS не блокирует текущий деплой, но остаётся условием прямого доступа
-> браузерного L1 к mnemos API.
+> браузерного L1 к vesma API.
 
 ---
 

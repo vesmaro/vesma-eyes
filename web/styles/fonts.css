@@ -1,4 +1,4 @@
-/* vesmaro-eyes — self-hosted fonts (FE-5).
+/* vesma-eyes — self-hosted fonts (FE-5).
    Inter = UI face, Lora = memory/scroll content face (docs/design-brief.md §3).
    latin + cyrillic subsets, font-display: swap; the system stack in tokens.css
    (--font-ui / --font-scroll) remains the fallback while files load.

@@ -17,7 +17,7 @@ sync_docs (ARCHCOM-7 contract §2 layers):
 Sections (categories.ts registry on the viewer side):
   api-overview        curated hub cover (what lives here, source map,
                       freshness rule);
-  api-board           vesmaro-eyes board API — DETERMINISTIC rendering of
+  api-board           vesma-eyes board API — DETERMINISTIC rendering of
       viewer/board-openapi-snapshot.json (ru + en mirror, ME-044): path
       groups from the `board_api.groups` map, one page per group + an
       index page, built per locale (group title/about are locale mappings
@@ -27,14 +27,14 @@ Sections (categories.ts registry on the viewer side):
       generated page = the spec's git blob SHA + the date of the last
       commit touching the spec (in frontmatter `source:` and in the
       sidecar provenance block) — identical for both locales.
-  api-mnemos          mnemos HTTP API surfaces: the upstream A2A Sessions
+  api-mnemos          vesma HTTP API surfaces: the upstream A2A Sessions
       API spec (docs/en|ru/architecture/a2a-sessions.md, previously outside
       every selection) + a curated map page over the full HTTP reference
-      that already lives in the mnemos hub (no duplicate corpus copies).
+      that already lives in the vesma hub (no duplicate corpus copies).
   api-agent           vesmaro-agent: the wire protocol body from the repo
       (docs/PROTOCOL.md, EN — shown under the original-language badge) + a
       curated digest of the service charter v2 with provenance.
-  api-mesh            an HONEST short note: mnemos-mesh has no public HTTP
+  api-mesh            an HONEST short note: vesma-mesh has no public HTTP
       API — internal gRPC contracts only (verified against the mesh pin).
 
 Curated bodies are authored OUTSIDE the wiped zone, in
@@ -589,7 +589,7 @@ def build_board_pages(
     banner = GEN_SPEC_BANNER_TEMPLATE.format(sha12=prov["sha"][:12], version=version)
     extra_fields = [("source", f"spec@{prov['sha'][:12]}"), ("spec_version", version)]
     provenance = {
-        "repo": "vesmaro-eyes",
+        "repo": "vesma-eyes",
         "source_path": board_api["spec"],
         "sha": prov["sha"],
         "commit_date": prov["commit_date"],
@@ -631,7 +631,7 @@ def build_board_pages(
                 index_about,
                 "",
                 str(labels["snapshot_line"]).format(
-                    title=info.get("title", "vesmaro-eyes"),
+                    title=info.get("title", "vesma-eyes"),
                     version=version,
                     ops=total_ops,
                     schemas=len(schemas),
@@ -857,14 +857,14 @@ def hub_internal_provenance(
     if not log:
         head = run_git(repo, "rev-parse", "HEAD")
         return {
-            "repo": "vesmaro-eyes",
+            "repo": "vesma-eyes",
             "source_path": source_path,
             "sha": head,
             "commit_date": run_git(repo, "log", "-1", "--format=%cI"),
         }
     sha, date = log.split("\x00")
     return {
-        "repo": "vesmaro-eyes",
+        "repo": "vesma-eyes",
         "source_path": source_path,
         "sha": sha,
         "commit_date": date,

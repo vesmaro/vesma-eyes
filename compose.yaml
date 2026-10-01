@@ -1,4 +1,4 @@
-# vesmaro-eyes — task board (docker / podman compose)
+# vesma-eyes — task board (docker / podman compose)
 #
 # Run:    docker compose up -d  (или podman-compose up -d)
 # Stop:   docker compose down
@@ -7,19 +7,19 @@
 # The image is published on ghcr — public, no login needed
 # (https://github.com/Korrnals?tab=packages). Pin a release with
 # image: ghcr.io/korrnals/vesmaro-eyes:<x.y.z>; build locally instead:
-#   docker build -t vesmaro-eyes:local -f Containerfile .
+#   docker build -t vesma-eyes:local -f Containerfile .
 #
 # The board DB lives in ./data (bind mount into the project directory),
 # so board state survives rebuilds and is inspectable from the host.
 #
-# MNEMOS_URL points at the host machine's mnemos (compose port 8787).
+# MNEMOS_URL points at the host machine's vesma (compose port 8787).
 # MNEMOS_TOKEN: export MNEMOS_TOKEN='mnk_...' before `up` — token with
-# totp_required=0 from the mnemos operator (see mnemos docs, api-key).
+# totp_required=0 from the vesma operator (see vesma docs, api-key).
 
 services:
   eyes:
     image: ghcr.io/korrnals/vesmaro-eyes:latest
-    container_name: vesmaro-eyes
+    container_name: vesma-eyes
     restart: unless-stopped
     ports:
       - "8090:8080"
@@ -35,7 +35,7 @@ services:
       # mode (board token passes ui mutations too); set a distinct value to
       # exercise the split locally.
       - VESMARO_UI_TOKEN=${VESMARO_UI_TOKEN:-}
-      # SEC-1: egress allowlist for memory-server hosts (dev: local mnemos).
+      # SEC-1: egress allowlist for memory-server hosts (dev: local vesma).
       - VESMARO_ALLOWED_MEMORY_HOSTS=${VESMARO_ALLOWED_MEMORY_HOSTS:-host.containers.internal,localhost,127.0.0.1}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=4).status==200 else 1)"]

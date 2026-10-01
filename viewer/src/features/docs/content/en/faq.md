@@ -11,9 +11,9 @@ last_verified: "1.13.0"
 Short answers to what is asked most often. The link after an answer
 leads to the details.
 
-## How is the board different from mnemos?
+## How is the board different from vesma?
 
-mnemos is the storage and the search. The board is the working desktop
+vesma is the storage and the search. The board is the working desktop
 on top of it: tasks, agent executors and automation. The board reads
 memory from one or several stores and lays it all out on one desk.
 

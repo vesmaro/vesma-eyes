@@ -163,7 +163,7 @@ describe("MockAdapter.listTags", () => {
 
 describe("MockAdapter.agentRecall", () => {
   it("filters by agent tag/field, project and query", async () => {
-    const hits = await makeAdapter().agentRecall("zed", "mnemos-eyes", "gateway");
+    const hits = await makeAdapter().agentRecall("zed", "vesma-eyes", "gateway");
     // mem-0015 (newest, content match) then mem-0001 — recency-ranked.
     expect(hits.map((hit) => hit.id)).toEqual(["mem-0015", "mem-0001"]);
     expect(hits[0].score).toBe(1);
@@ -185,7 +185,7 @@ describe("MockAdapter.status and traces", () => {
     expect(await makeAdapter().health()).toEqual({
       status: "ok",
       version: "4.1.0-mock",
-      project: "mnemos-eyes",
+      project: "vesma-eyes",
     });
   });
 

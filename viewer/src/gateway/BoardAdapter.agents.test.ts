@@ -51,7 +51,7 @@ const ASSIGNMENT_ROW = {
   started_at: null,
   heartbeat_at: null,
   finished_at: null,
-  topics: ["project:mnemos-eyes"],
+  topics: ["project:vesma-eyes"],
   routing: { resolved: "exec-laptop-zcode", reason: "specialist" },
 };
 

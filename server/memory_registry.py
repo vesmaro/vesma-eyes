@@ -217,7 +217,7 @@ def write_config_template(path: Path) -> None:
         return
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        "# vesmaro-eyes — memory servers registry (legacy seed file).\n"
+        "# vesma-eyes — memory servers registry (legacy seed file).\n"
         "# Since v0.3 servers are managed in the board UI (stored in board.db);\n"
         "# this file is only read once to seed the registry.\n",
         encoding="utf-8",

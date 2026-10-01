@@ -32,7 +32,7 @@ export interface DocProvenance {
 
 export interface DocPage {
   slug: string;
-  /** Owning hub project (`vesmaro-eyes` for our own pages). */
+  /** Owning hub project (`vesma-eyes` for our own pages). */
   project: string;
   /** Per-locale titles; the fallback chain lives in `titleFor`. */
   titles: Partial<Record<DocLocale, string>>;
@@ -240,7 +240,7 @@ function pagesFromSidecar(sidecar: Awaited<ReturnType<typeof loadSidecar>>): Map
       continue;
     }
     const project = projectOfDocSlug(entry.slug);
-    if (project === "vesmaro-eyes") {
+    if (project === "vesma-eyes") {
       console.error(
         `[docs] sidecar slug "${entry.slug}" collides with the default project namespace, skipped`,
       );
@@ -354,7 +354,7 @@ async function buildManifest(): Promise<DocsManifest> {
       }
       bySlug.set(slug, {
         slug,
-        project: "vesmaro-eyes",
+        project: "vesma-eyes",
         titles: { [locale]: fields.title },
         category: fields.category,
         order,

@@ -325,7 +325,7 @@ async function runSmoke(page) {
   // -- 2. category page renders, NO «GENERATED» in card previews ----------
   // (post-ME-009 regression guard — banner cut lives in the excerpt path).
   console.log("\n[2/8] category page: no GENERATED banner in card previews");
-  await page.goto(`${docs}/vesmaro-eyes/c/getting-started`, {
+  await page.goto(`${docs}/vesma-eyes/c/getting-started`, {
     waitUntil: "domcontentloaded",
   });
   await page.waitForSelector("main", { timeout: 20_000 });

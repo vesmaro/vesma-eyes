@@ -50,9 +50,9 @@ if [[ -n "$VERSION_ARG" ]]; then
     echo "--check ignores a version argument" >&2
     exit 2
   fi
-  sed -i -E "s/(FastAPI\(title=\"vesmaro-eyes\", version=\")$SEMVER_RE(\")/\1$VERSION\2/" "$APP_PY"
+  sed -i -E "s/(FastAPI\(title=\"vesma-eyes\", version=\")$SEMVER_RE(\")/\1$VERSION\2/" "$APP_PY"
 else
-  VERSION="$(grep -oP 'FastAPI\(title="vesmaro-eyes", version="\K'"$SEMVER_RE" "$APP_PY" | head -1)"
+  VERSION="$(grep -oP 'FastAPI\(title="vesma-eyes", version="\K'"$SEMVER_RE" "$APP_PY" | head -1)"
   [[ -n "$VERSION" ]] || { echo "cannot parse version from $APP_PY" >&2; exit 2; }
 fi
 

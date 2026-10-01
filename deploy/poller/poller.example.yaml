@@ -1,6 +1,6 @@
-# vesmaro-eyes assignment poller — example configuration (ADR 0009 phase 2).
+# vesma-eyes assignment poller — example configuration (ADR 0009 phase 2).
 #
-# Install as ~/.config/mnemos-eyes/poller.yaml and `chmod 0600` it. The file
+# Install as ~/.config/vesma-eyes/poller.yaml and `chmod 0600` it. The file
 # carries NO secrets: the machine token is read only from the environment
 # variable VESMARO_BOARD_TOKEN (systemd EnvironmentFile, shell export, …).
 #
@@ -34,7 +34,7 @@ max_concurrent: 2
 # The board's TLS is lab-issued (self-signed): point at the lab CA instead
 # of disabling verification. Empty/absent = system trust store; a path to a
 # MISSING file refuses to start (fail-closed, not silent TLS-off).
-# ca_bundle: ~/.config/mnemos-eyes/lab-ca.crt
+# ca_bundle: ~/.config/vesma-eyes/lab-ca.crt
 
 # A3 allowlist: THE launch gate. (harness, specialist) → command template.
 # The template is a list of argv tokens (NO shell). Allowed placeholders:
@@ -74,5 +74,5 @@ allowlist:
       - gcw-senior-frontend-developer
 
 # Optional local overrides (defaults shown):
-# audit_path: ~/.local/state/mnemos-eyes/poller-audit.jsonl
-# lock_path:  ~/.local/state/mnemos-eyes/poller.lock
+# audit_path: ~/.local/state/vesma-eyes/poller-audit.jsonl
+# lock_path:  ~/.local/state/vesma-eyes/poller.lock

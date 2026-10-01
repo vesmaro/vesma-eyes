@@ -359,7 +359,7 @@ ACCEPTANCE (verbatim from the snapshot):
 DEPENDS: {depends}
 
 SCOPE: task {task_id} only, as specified in the snapshot. Anything
-outside this scope is out of bounds — open a mnemos open-question
+outside this scope is out of bounds — open a vesma open-question
 instead of doing it.
 
 REPORTS (primary channel, ADR 0009 §7):
@@ -1173,7 +1173,7 @@ def acquire_singleton_lock(lock_path: Path) -> "int | None":
 # ---------------------------------------------------------------------- main
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="vesmaro-eyes assignment poller (ADR 0009 phase 2)")
+        description="vesma-eyes assignment poller (ADR 0009 phase 2)")
     parser.add_argument("--config", default=str(_config_dir() / "poller.yaml"),
                         help="path to poller.yaml (default: ~/.config/mnemos-eyes/poller.yaml)")
     parser.add_argument("--once", action="store_true",

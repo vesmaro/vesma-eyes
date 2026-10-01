@@ -269,7 +269,7 @@ describe("docs domain (ADR 0015 + ADR 0016)", () => {
     expect(docs?.key).toBe("nav.docs");
     // ADR 0016: the flat section list is replaced by THREE project groups
     // rendered by DocsSidebarGroups; the domain link enters at the hub.
-    expect(docs?.linkTo).toBe("/docs/vesmaro-eyes");
+    expect(docs?.linkTo).toBe("/docs/vesma-eyes");
     expect(docs?.sections).toBeUndefined();
   });
 
@@ -281,9 +281,9 @@ describe("docs domain (ADR 0015 + ADR 0016)", () => {
   it("article trail: Документация → категория → заголовок (legacy frame)", async () => {
     await getManifest(); // hydrate the lazy docs manifest
     const crumbs = crumbsFor("/docs/upgrade");
-    expect(crumbs[0]).toEqual({ to: "/docs/vesmaro-eyes", key: "nav.docs" });
+    expect(crumbs[0]).toEqual({ to: "/docs/vesma-eyes", key: "nav.docs" });
     expect(crumbs[1]).toEqual({
-      to: "/docs/vesmaro-eyes/c/maintenance",
+      to: "/docs/vesma-eyes/c/maintenance",
       key: "docs.cat.maintenance",
     });
     // The page title is CONTENT (frontmatter), not a dictionary key.
@@ -302,19 +302,19 @@ describe("docs domain (ADR 0015 + ADR 0016)", () => {
   });
 
   it("the default hub has no trail (section root), imported hubs keep one", () => {
-    expect(crumbsFor("/docs/vesmaro-eyes")).toEqual([]);
+    expect(crumbsFor("/docs/vesma-eyes")).toEqual([]);
     const mnemos = crumbsFor("/docs/mnemos");
-    expect(mnemos[0]).toEqual({ to: "/docs/vesmaro-eyes", key: "nav.docs" });
-    expect(mnemos[1]?.label).toBe("Mnemos");
+    expect(mnemos[0]).toEqual({ to: "/docs/vesma-eyes", key: "nav.docs" });
+    expect(mnemos[1]?.label).toBe("Vesma");
   });
 
   it("category trail: Документация → категория (project-scoped and legacy)", () => {
-    expect(crumbsFor("/docs/vesmaro-eyes/c/maintenance")).toEqual([
-      { to: "/docs/vesmaro-eyes", key: "nav.docs" },
+    expect(crumbsFor("/docs/vesma-eyes/c/maintenance")).toEqual([
+      { to: "/docs/vesma-eyes", key: "nav.docs" },
       { key: "docs.cat.maintenance" },
     ]);
     expect(crumbsFor("/docs/c/maintenance")).toEqual([
-      { to: "/docs/vesmaro-eyes", key: "nav.docs" },
+      { to: "/docs/vesma-eyes", key: "nav.docs" },
       { key: "docs.cat.maintenance" },
     ]);
   });
@@ -329,13 +329,13 @@ describe("docs domain (ADR 0015 + ADR 0016)", () => {
 
   it("a docs group lights on its own hub; the category of the active article is current", async () => {
     await getManifest();
-    expect(docsLocationFor("/docs/vesmaro-eyes")).toEqual({
-      project: "vesmaro-eyes",
+    expect(docsLocationFor("/docs/vesma-eyes")).toEqual({
+      project: "vesma-eyes",
       category: null,
       slug: null,
     });
     expect(docsLocationFor("/docs/upgrade")).toEqual({
-      project: "vesmaro-eyes",
+      project: "vesma-eyes",
       category: "maintenance",
       slug: "upgrade",
     });

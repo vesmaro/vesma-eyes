@@ -23,7 +23,7 @@ import { AuthProvider } from "@/features/auth/AuthProvider";
  * search-ranker subset note (the BE-13 caveat is closed, not hidden).
  */
 
-const TAG = "project:mnemos-eyes";
+const TAG = "project:vesma-eyes";
 
 let container: HTMLDivElement | null = null;
 let root: Root | null = null;

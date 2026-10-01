@@ -32,7 +32,7 @@ function storageStub(initial: Record<string, string> = {}): Storage {
 describe("groupTasksByProject", () => {
   it("buckets by project, sorts groups by name, no-project last", () => {
     const groups = groupTasksByProject(MOCK_TASKS);
-    expect(groups.map((g) => g.project)).toEqual(["mnemos", "mnemos-eyes", "vesmaro"]);
+    expect(groups.map((g) => g.project)).toEqual(["mnemos", "vesma-eyes", "vesmaro"]);
     for (const group of groups) {
       for (const task of group.tasks) {
         expect(task.project).toBe(group.project);

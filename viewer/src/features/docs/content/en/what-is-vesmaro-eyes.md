@@ -1,15 +1,15 @@
 ---
-title: What vesmaro-eyes is
+title: What vesma-eyes is
 slug: what-is-vesmaro-eyes
 category: product
 order: 2
 last_verified: "1.14.0"
 ---
 
-# What vesmaro-eyes is
+# What vesma-eyes is
 
-vesmaro-eyes is the board: a working desktop on top of mnemos memory.
-Where mnemos is the well of entries, the board is where entries become
+vesma-eyes is the board: a working desktop on top of vesma memory.
+Where vesma is the well of entries, the board is where entries become
 tasks, agents take tasks on, and schedules start work on their own.
 Everything you do in the browser lives here; this page explains how the
 board is built and what it can do — section by section.
@@ -19,19 +19,19 @@ board is built and what it can do — section by section.
 Three layers inside. The browser shows the interface and stores nothing
 but your sign-in session: a cookie for the whole browser plus the pasted
 ui token in the current tab. The board server is the conductor: it keeps
-its own task database, and only it holds the store tokens. The mnemos
-stores are that memory itself — see [What mnemos is](what-is-mnemos.md).
+its own task database, and only it holds the store tokens. The vesma
+stores are that memory itself — see [What vesma is](what-is-mnemos.md).
 
 Live updates ride an SSE event stream: when another client (a second
 tab, the API, an agent) moves a card, your tab updates on its own. If
 the stream drops for a moment, an honest «data as of HH:MM» note appears
 above the lists.
 
-![How vesmaro-eyes is built](diagrams/vesmaro-stack.svg)
+![How vesma-eyes is built](diagrams/vesmaro-stack.svg)
 
 *Board layers: the browser talks only to the board server; the board
-server keeps the task database and the tokens and talks to the mnemos
-stores; the stores are linked by mnemos-mesh when needed.*
+server keeps the task database and the tokens and talks to the vesma
+stores; the stores are linked by vesma-mesh when needed.*
 
 ## Tasks and kanban
 
@@ -123,10 +123,10 @@ device](pairing.md).
 ## Tasks remember memory
 
 A task on the board is linked to memory directly: the "Related memories
-(ids)" field holds references to mnemos entries. The Memory tab on the
+(ids)" field holds references to vesma entries. The Memory tab on the
 task page shows those entries from the stores with their source server;
 the History tab builds a single timeline — board events interleaved with
-the related memory entries. The "mnemos tags" field ties the task into
+the related memory entries. The "vesma tags" field ties the task into
 the tag cloud the memory is searched through.
 
 The task page is the center of the world: reports, history, memory and
@@ -151,7 +151,7 @@ rights — see [Tokens and access](tokens.md).
 
 ## See also
 
-- [What mnemos is](what-is-mnemos.md)
+- [What vesma is](what-is-mnemos.md)
 - [Glossary](glossary.md)
 - [Agents and assignments](agents-assignments.md)
 - [Automation: rules and schedules](automation-rules.md)

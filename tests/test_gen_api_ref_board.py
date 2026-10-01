@@ -33,7 +33,7 @@ SyncError = gen_api_ref.SyncError
 
 SPEC = {
     "openapi": "3.1.0",
-    "info": {"title": "vesmaro-eyes", "version": "9.9.9"},
+    "info": {"title": "vesma-eyes", "version": "9.9.9"},
     "paths": {
         "/api/tasks": {
             "get": {
@@ -156,7 +156,7 @@ def test_ru_pages_keep_the_original_chrome(board_pages) -> None:
     assert "массив из строк" in tasks["body"]  # render_type via labels
     index = next(p for p in pages if p["locale"] == "ru" and p["path"] == "board/index.md")
     assert "| Раздел | Операций | Что покрывает |" in index["body"]
-    assert "Снимок OpenAPI: **vesmaro-eyes v9.9.9**, 2 операций, 1 схем." in index["body"]
+    assert "Снимок OpenAPI: **vesma-eyes v9.9.9**, 2 операций, 1 схем." in index["body"]
 
 
 def test_en_pages_render_en_chrome(board_pages) -> None:
@@ -173,7 +173,7 @@ def test_en_pages_render_en_chrome(board_pages) -> None:
     assert "array of strings" in tasks["body"]
     index = next(p for p in pages if p["locale"] == "en" and p["path"] == "board/index.md")
     assert "| Section | Operations | Coverage |" in index["body"]
-    assert "OpenAPI snapshot: **vesmaro-eyes v9.9.9**, 2 operations, 1 schemas." in index["body"]
+    assert "OpenAPI snapshot: **vesma-eyes v9.9.9**, 2 operations, 1 schemas." in index["body"]
     # no RU chrome leaks into the EN mirror
     assert "Параметры" not in tasks["body"]
     assert "Сгенерировано" not in tasks["body"]
@@ -184,7 +184,7 @@ def test_both_locales_share_spec_provenance_and_banner(board_pages) -> None:
     tasks_ru = next(p for p in pages if p["path"] == "board/tasks.md" and p["locale"] == "ru")
     tasks_en = next(p for p in pages if p["path"] == "board/tasks.md" and p["locale"] == "en")
     assert tasks_ru["provenance"] == tasks_en["provenance"] == {
-        "repo": "vesmaro-eyes",
+        "repo": "vesma-eyes",
         "source_path": "spec.json",
         "sha": PROV["sha"],
         "commit_date": PROV["commit_date"],

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# vesmaro-eyes poller bootstrap — the ONE-COMMAND onboarding (wave 3D).
+# vesma-eyes poller bootstrap — the ONE-COMMAND onboarding (wave 3D).
 #
 #   curl -kfsSL https://<board>/api/poller/bootstrap.sh | sudo bash -s -- \
 #     --url https://<board> --token mne_… [--name vps-1] [--harness zcode]
@@ -48,7 +48,7 @@ set -euo pipefail
 # ----------------------------------------------------------------- config
 BOARD_URL="" TOKEN="" EXEC_NAME="" HARNESS="zcode" HOST_NAME=""
 EXPECT_FP="${VESMARO_EXPECT_FP:-}"   # --expect-fp wins over the env synonym
-BASE_DIR="/opt/mnemos-eyes"
+BASE_DIR="/opt/vesma-eyes"
 VENV_DIR="$BASE_DIR/venv"
 POLLER_PY="$BASE_DIR/assignment_poller.py"
 ENV_FILE="/etc/vesmaro/poller.env"
@@ -58,7 +58,7 @@ MARKER_FILE="/etc/vesmaro/poller-bootstrap.json"
 # contour off /etc) — the pre-placed path reads the same variable.
 CA_FILE="${VESMARO_CA_FILE:-/etc/vesmaro/lab-ca.crt}"
 UNIT_FILE="/etc/systemd/system/vesmaro-assignment-poller.service"
-STATE_DIR="/var/lib/vesmaro-eyes"
+STATE_DIR="/var/lib/vesma-eyes"
 
 usage() {
   cat <<'USAGE'
@@ -320,13 +320,13 @@ curl "${CURL_CA[@]}" -fsSL "$BOARD_URL/api/poller/artifacts/vesmaro-assignment-p
 # hardcoded laptop user), config at /etc/vesmaro, state under $STATE_DIR —
 # and the ExecStart poller path to where THIS script put the artifact
 # ($POLLER_PY): the repo unit names the laptop layout
-# (/opt/mnemos-eyes/scripts/...), nobody creates that scripts/ dir here —
+# (/opt/vesma-eyes/scripts/...), nobody creates that scripts/ dir here —
 # an unpatched ExecStart is a guaranteed 203/EXEC at first start.
 RUN_USER="${SUDO_USER:-root}"
 sed -e "s|^User=.*|User=$RUN_USER|" \
     -e "s|--config [^ ]*|--config $YAML_FILE|" \
     -e "s|^ReadWritePaths=.*|ReadWritePaths=$STATE_DIR|" \
-    -e "s|/opt/mnemos-eyes/scripts/assignment_poller.py|$POLLER_PY|" \
+    -e "s|/opt/vesma-eyes/scripts/assignment_poller.py|$POLLER_PY|" \
     "$UNIT_DL" > "$UNIT_FILE"
 rm -f "$UNIT_DL"
 chmod 0644 "$UNIT_FILE"
@@ -344,7 +344,7 @@ fi
 if [[ "$UPDATE_MODE" -eq 1 && -n "${PRESERVE_AWL:-}" ]]; then
   # Managed keys are rewritten; the user-owned allowlist block survives.
   { cat <<YAML
-# vesmaro-eyes poller config — MANAGED KEYS rewritten by bootstrap.sh;
+# vesma-eyes poller config — MANAGED KEYS rewritten by bootstrap.sh;
 # everything from 'allowlist:' down is USER-OWNED and survives re-runs.
 board_url: $BOARD_URL
 executor_id: $EXEC_ID
@@ -359,7 +359,7 @@ YAML
   } > "$YAML_FILE.new"
 else
   cat > "$YAML_FILE.new" <<YAML
-# vesmaro-eyes poller config — MANAGED KEYS rewritten by bootstrap.sh;
+# vesma-eyes poller config — MANAGED KEYS rewritten by bootstrap.sh;
 # everything from 'allowlist:' down is USER-OWNED and survives re-runs.
 board_url: $BOARD_URL
 executor_id: $EXEC_ID

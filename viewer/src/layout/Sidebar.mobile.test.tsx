@@ -113,10 +113,10 @@ function backdrop(container: HTMLElement): HTMLElement | null {
 }
 
 /** The docs third-layer list (project groups): the ul that OWNS the
- * vesmaro-eyes group row (the outer DocsSidebarGroups list). */
+ * vesma-eyes group row (the outer DocsSidebarGroups list). */
 function docsGroupsList(container: HTMLElement): HTMLUListElement {
   const link = container.querySelector<HTMLAnchorElement>(
-    'a[aria-label="vesmaro-eyes"]',
+    'a[aria-label="vesma-eyes"]',
   );
   if (!link) throw new Error("docs project group not found");
   const list = link.closest("ul");
@@ -282,8 +282,8 @@ describe("docs categories across the sidebar states (third layer × UI-22)", () 
       path: "/docs/c/devices",
     });
     // Groups are reachable by name…
-    expect(container.querySelector('a[aria-label="vesmaro-eyes"]')).not.toBeNull();
-    expect(container.querySelector('a[aria-label="Mnemos"]')).not.toBeNull();
+    expect(container.querySelector('a[aria-label="vesma-eyes"]')).not.toBeNull();
+    expect(container.querySelector('a[aria-label="Vesma"]')).not.toBeNull();
     // …categories are NOT (the rail never pulls a second icon column).
     expect(
       container.querySelector('a[aria-label="Устройства и подключение"]'),

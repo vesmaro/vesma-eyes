@@ -7,12 +7,12 @@ import type { TranslationKey } from "@/i18n";
  * the project hubs plus the cross-cutting API hub (owner directive
  * 2026-09-29). The project name is the first URL segment and the slug
  * prefix of every imported page — a brand string, deliberately untranslated
- * (spec §2). vesmaro-eyes is the DEFAULT project: its pages keep their
+ * (spec §2). vesma-eyes is the DEFAULT project: its pages keep their
  * unprefixed slugs (`tokens`), its hub is the section root, and old
  * `/docs/<slug>` URLs redirect into it.
  */
 
-export const DEFAULT_PROJECT = "vesmaro-eyes";
+export const DEFAULT_PROJECT = "vesma-eyes";
 
 export interface DocProject {
   /** URL segment + slug prefix (brand, lowercase). */
@@ -22,7 +22,7 @@ export interface DocProject {
   icon: LucideIcon;
   /** true → imported corpus: provenance badges apply (contract §4). */
   upstream: boolean;
-  /** Sidebar/hub/reading order (vesmaro-eyes first — the section root). */
+  /** Sidebar/hub/reading order (vesma-eyes first — the section root). */
   order: number;
   /** One-line hub intro — chrome copy owned here, NOT upstream content. */
   ledeKey: TranslationKey;
@@ -32,8 +32,8 @@ export interface DocProject {
 
 export const DOC_PROJECTS: readonly DocProject[] = [
   {
-    slug: "vesmaro-eyes",
-    name: "vesmaro-eyes",
+    slug: "vesma-eyes",
+    name: "vesma-eyes",
     icon: KanbanSquare,
     upstream: false,
     order: 0,
@@ -42,7 +42,7 @@ export const DOC_PROJECTS: readonly DocProject[] = [
   },
   {
     slug: "mnemos",
-    name: "Mnemos",
+    name: "Vesma",
     icon: Brain,
     upstream: true,
     order: 1,
@@ -55,7 +55,7 @@ export const DOC_PROJECTS: readonly DocProject[] = [
   },
   {
     slug: "mnemos-mesh",
-    name: "mnemos-mesh",
+    name: "vesma-mesh",
     icon: Network,
     upstream: true,
     order: 2,
@@ -91,7 +91,7 @@ export function docProjectsSorted(): readonly DocProject[] {
 
 /**
  * The project owning a page slug: the prefix before the first `/` when it
- * names a project, else the default (vesmaro-eyes pages have bare slugs).
+ * names a project, else the default (vesma-eyes pages have bare slugs).
  */
 export function projectOfDocSlug(slug: string): string {
   const slash = slug.indexOf("/");
@@ -99,7 +99,7 @@ export function projectOfDocSlug(slug: string): string {
   return DEFAULT_PROJECT;
 }
 
-/** App-relative URL of a page from its manifest slug (`tokens` → /docs/vesmaro-eyes/tokens). */
+/** App-relative URL of a page from its manifest slug (`tokens` → /docs/vesma-eyes/tokens). */
 export function docUrl(slug: string): string {
   const project = projectOfDocSlug(slug);
   const rest = project === DEFAULT_PROJECT ? slug : slug.slice(project.length + 1);

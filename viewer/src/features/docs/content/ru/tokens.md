@@ -16,7 +16,7 @@ last_verified: "1.16.0"
 
 | Класс | Как выглядит | Кто пользуется | На что права |
 | --- | --- | --- | --- |
-| Токен хранилища | `mnk_…` | борд ходит в mnemos | чтение/запись памяти; `totp_required=0` |
+| Токен хранилища | `mnk_…` | борд ходит в vesma | чтение/запись памяти; `totp_required=0` |
 | ui | значение `VESMARO_UI_TOKEN` | человек в интерфейсе | все мутации доски: задачи, архив, входящие, настройки, автоматизация |
 | machine | значение `VESMARO_BOARD_TOKEN` | поллер и агенты | отчёты, взятие/пульс поручений |
 | device | `mnd_…` | спаренные устройства | только чтение; выдаётся пейрингом |
@@ -103,7 +103,7 @@ last_verified: "1.16.0"
 можно так:
 
 ```bash
-kubectl -n kube-agents get secrets | grep vesmaro-eyes
+kubectl -n kube-agents get secrets | grep vesma-eyes
 ```
 
 | Секрет | Ключ | Класс |
@@ -111,7 +111,7 @@ kubectl -n kube-agents get secrets | grep vesmaro-eyes
 | `vesmaro-eyes-ui-token` | `VESMARO_UI_TOKEN` | ui |
 | `vesmaro-eyes-board-token` | `VESMARO_BOARD_TOKEN` | machine |
 | `vesmaro-eyes-mnemos` | `MNEMOS_TOKEN` | токен хранилища `mnk_…` |
-| `vesmaro-eyes-laptop` | `MNEMOS_LAPTOP_TOKEN` | второе хранилище, `mnk_…` |
+| `vesma-eyes-laptop` | `MNEMOS_LAPTOP_TOKEN` | второе хранилище, `mnk_…` |
 
 Чарт генерирует два своих секрета сам при первой установке и сохраняет их
 даже после `helm uninstall`. Как достать значение —

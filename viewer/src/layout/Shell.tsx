@@ -62,7 +62,7 @@ export function Shell() {
   const location = useLocation();
   const t = useT();
   // Content-derived docs titles ride crumbs; brand is the fallback.
-  const title = routeTitle(location.pathname, t) ?? "mnemos-eyes";
+  const title = routeTitle(location.pathname, t) ?? "vesma-eyes";
   // Subscribe the chrome to the lazy docs manifest ONLY inside the section:
   // mounting the subscription kicks getManifest(), which fetches EVERY md
   // chunk — an unconditional call here would download the whole corpus on

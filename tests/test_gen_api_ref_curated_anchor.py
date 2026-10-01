@@ -79,7 +79,7 @@ def test_anchor_is_the_last_curated_change_not_head(tmp_path: Path) -> None:
     assert prov["sha"] != unrelated
     assert prov["commit_date"] == _git(repo, "log", "-1", "--format=%cI", content_commit)
     assert prov["source_path"] == "curated/api/{ru,en}/overview.md"
-    assert prov["repo"] == "vesmaro-eyes"
+    assert prov["repo"] == "vesma-eyes"
 
 
 def test_anchor_moves_only_on_an_actual_curated_edit(tmp_path: Path) -> None:

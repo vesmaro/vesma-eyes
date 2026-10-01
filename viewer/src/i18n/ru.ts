@@ -186,9 +186,9 @@ export const ru = {
   "pulse.feedLabel": "Лента записей пульса",
   "pulse.untitled": "без заголовка",
   "pulse.degradedStores": "Часть хранилищ не ответила: {{servers}}",
-  "pulse.unavailableTitle": "Пульс недоступен в mnemos-режиме",
+  "pulse.unavailableTitle": "Пульс недоступен в vesma-режиме",
   "pulse.unavailableMessage":
-    "Пульс собирает записи со всех подключённых бордов. Сейчас приложение связано с mnemos напрямую, поэтому ленте пока неоткуда взяться — подключите борд, и записи появятся.",
+    "Пульс собирает записи со всех подключённых бордов. Сейчас приложение связано с vesma напрямую, поэтому ленте пока неоткуда взяться — подключите борд, и записи появятся.",
 
   // --- auth / connection --------------------------------------------------------
   "auth.localMock": "локально (mock)",
@@ -198,11 +198,11 @@ export const ru = {
   "auth.connecting": "подключение…",
   "auth.signIn": "Войти",
   "auth.signOut": "Выйти",
-  "auth.signOutAria": "Выйти из mnemos",
-  "auth.title": "Вход в mnemos",
+  "auth.signOutAria": "Выйти из vesma",
+  "auth.title": "Вход в vesma",
   "auth.title2fa": "Двухфакторная проверка",
   "auth.description":
-    "Вставьте mnk_-токен доступа. Он остаётся в этом браузере и уходит только в ваш mnemos.",
+    "Вставьте mnk_-токен доступа. Он остаётся в этом браузере и уходит только в ваш vesma.",
   "auth.description2fa": "Введите 6-значный код из приложения-аутентификатора.",
   "auth.sessionExpired": "Сессия истекла — войдите снова, чтобы продолжить.",
   "auth.tokenLabel": "Токен доступа",
@@ -264,7 +264,7 @@ export const ru = {
   "memories.noId": "В маршруте нет id воспоминания",
   "memories.loadingOne": "Загружаем воспоминание",
   "memories.notFoundTitle": "Нет такого свитка",
-  "memories.notFoundMessage": "В mnemos нет воспоминания с id «{{id}}».",
+  "memories.notFoundMessage": "В vesma нет воспоминания с id «{{id}}».",
   "memories.loadOneFailed": "Не удалось загрузить воспоминание",
 
   // --- memory card / scroll ------------------------------------------------------
@@ -303,7 +303,7 @@ export const ru = {
   "tags.all": "Все теги",
   "tags.drilldownTitle": "Воспоминания с тегом",
   "tags.drilldownNote":
-    "Фильтрация на клиенте — у mnemos нет выборки по тегу (ADR 0003 §9).",
+    "Фильтрация на клиенте — у vesma нет выборки по тегу (ADR 0003 §9).",
   "tags.nothingCarries": "Под этим тегом ничего нет",
   "tags.nothingCarriesMessage": "Сейчас нет воспоминаний с тегом {{tag}}.",
   // --- tags cloud (UI-17, spec 2026-09-21 §9; owner-approved copy) -----------
@@ -334,7 +334,7 @@ export const ru = {
   // --- status -----------------------------------------------------------------
   "status.title": "Статус",
   "status.loading": "Загружаем статус",
-  "status.unreachable": "mnemos недоступен",
+  "status.unreachable": "vesma недоступен",
   "status.metricsBroken": "Со здоровьем порядок, с метриками — нет",
   "status.retryMetrics": "Повторить метрики",
   "status.refreshHealth": "Обновить состояние",
@@ -342,7 +342,7 @@ export const ru = {
   "status.memoriesStat": "Воспоминания",
   "status.publishedDetail": "{{count}} опубликовано",
   "status.avgLatency": "Средняя задержка поиска",
-  "status.avgLatencyNotReported": "в /metrics mnemos нет задержки",
+  "status.avgLatencyNotReported": "в /metrics vesma нет задержки",
   "status.dlq": "Глубина DLQ",
   "status.dlqNotReported": "нет ключа dlq в /metrics",
   "status.tagsStat": "Теги",
@@ -367,16 +367,16 @@ export const ru = {
   "sessions.title": "Сессии A2A",
   "sessions.loading": "Загружаем сессии",
   "sessions.loadFailed": "Не удалось загрузить сессии",
-  "sessions.unavailableMnemos": "Список сессий недоступен в mnemos 4.1",
+  "sessions.unavailableMnemos": "Список сессий недоступен в vesma 4.1",
   "sessions.unavailableMnemosMessage":
-    "У mnemos нет эндпоинта списка сессий — только POST /v1/sessions (создать) и GET /v1/sessions/{id}. Открывайте сессию по id, когда он известен.",
+    "У vesma нет эндпоинта списка сессий — только POST /v1/sessions (создать) и GET /v1/sessions/{id}. Открывайте сессию по id, когда он известен.",
   "sessions.empty": "Сессий A2A пока нет",
   "sessions.emptyMessage":
-    "Сессии появятся, когда агенты начнут говорить через mnemos.",
+    "Сессии появятся, когда агенты начнут говорить через vesma.",
   "sessions.noId": "В маршруте нет id сессии",
   "sessions.loadingOne": "Загружаем сессию",
   "sessions.notFound": "Нет такой сессии",
-  "sessions.notFoundMessage": "В mnemos нет сессии с id «{{id}}».",
+  "sessions.notFoundMessage": "В vesma нет сессии с id «{{id}}».",
   "sessions.loadOneFailed": "Не удалось загрузить сессию",
   "sessions.created": "создана",
   "sessions.updated": "обновлена",
@@ -386,7 +386,7 @@ export const ru = {
   "sessions.metadata": "Метаданные",
   "sessions.transcriptsHidden": "Расшифровки ходов не отдаются",
   "sessions.transcriptsHiddenMessage":
-    "mnemos 4.1 возвращает только счётчики и метаданные сессии — отдельных ходов и связанных воспоминаний у него нет read-эндпоинта. Счётчик выше — честный итог.",
+    "vesma 4.1 возвращает только счётчики и метаданные сессии — отдельных ходов и связанных воспоминаний у него нет read-эндпоинта. Счётчик выше — честный итог.",
   "sessions.all": "Все сессии",
 
   // --- toasts (Ф3 mutation feedback) ---------------------------------------------
@@ -441,9 +441,9 @@ export const ru = {
   "tasks.title": "Задачи",
   "tasks.loading": "Загружаем задачи",
   "tasks.loadFailed": "Не удалось загрузить задачи",
-  "tasks.unavailableTitle": "Домен «Задачи» недоступен в mnemos-режиме",
+  "tasks.unavailableTitle": "Домен «Задачи» недоступен в vesma-режиме",
   "tasks.unavailableMessage":
-    "Задачи живут на борде, а приложение сейчас связано с mnemos напрямую, поэтому здесь их нет. Подключите борд — и доска со списком появятся.",
+    "Задачи живут на борде, а приложение сейчас связано с vesma напрямую, поэтому здесь их нет. Подключите борд — и доска со списком появятся.",
   "tasks.statsLabel": "Статистика статусов по всей доске",
   "tasks.filterLabel": "Фильтр задач",
   "tasks.searchLabel": "Поиск",
@@ -601,7 +601,7 @@ export const ru = {
   "tasks.memoryLoading": "Загружаем связанные памяти",
   "tasks.memoryFailed": "Не удалось загрузить связанные памяти",
   "tasks.memoryEmpty": "Связанных памятей нет",
-  "tasks.memoryEmptyHint": "Задача пока не ссылается на записи mnemos.",
+  "tasks.memoryEmptyHint": "Задача пока не ссылается на записи vesma.",
   "tasks.memoryLabel": "Связанные памяти",
   "tasks.memorySource": "источник: {{server}}",
   "tasks.memoryOpenPrompt": "Открыть запись памяти",
@@ -611,7 +611,7 @@ export const ru = {
   "tasks.detailsEnv": "Среда",
   "tasks.detailsProject": "Проект",
   "tasks.detailsSpecialists": "Специалисты",
-  "tasks.detailsTags": "Теги mnemos",
+  "tasks.detailsTags": "Теги vesma",
   "tasks.detailsMemoryIds": "Связанные памяти (id)",
   "tasks.inboxTitle": "Входящие",
   "tasks.inboxLoading": "Загружаем входящие",
@@ -719,7 +719,7 @@ export const ru = {
   "tasks.edit.envLabel": "Среда",
   "tasks.edit.priorityLabel": "Приоритет",
   "tasks.edit.specialistsLabel": "Специалисты (через запятую)",
-  "tasks.edit.tagsLabel": "Теги mnemos (через запятую)",
+  "tasks.edit.tagsLabel": "Теги vesma (через запятую)",
   "tasks.edit.listPlaceholder": "значение, значение…",
   "tasks.edit.cancel": "Отмена",
   "tasks.edit.submit": "Сохранить",
@@ -742,7 +742,7 @@ export const ru = {
   "tasks.create.textError":
     "Первая строка обязательна и должна быть короче 200 символов — из неё получается название.",
   "tasks.create.projectLabel": "Проект",
-  "tasks.create.tagsLabel": "Теги mnemos (через запятую)",
+  "tasks.create.tagsLabel": "Теги vesma (через запятую)",
   "tasks.create.submit": "Создать задачу",
 
   // --- tasks: row action menu (Ф3) ---------------------------------------------------
@@ -905,7 +905,7 @@ export const ru = {
   "agents.execution.emptyTitle": "Поручений нет",
   "agents.execution.emptyMessage":
     "Активных попыток исполнения сейчас нет — возьмите задачу в работу на её странице.",
-  "agents.unavailableTitle": "Раздел недоступен в режиме mnemos",
+  "agents.unavailableTitle": "Раздел недоступен в режиме vesma",
   "agents.unavailableMessage":
     "Исполнение — доска-нативный домен (ADR 0011); переключитесь в режим board или mock.",
   "agents.strip.label": "Исполнители",
@@ -1326,7 +1326,7 @@ export const ru = {
   // --- automation section (SCHED-1-UI, ADR 0013 §8) ------------------------------
   "nav.systemAutomation": "Автоматизация",
   "automation.title": "Автоматизация",
-  "automation.unavailableTitle": "Раздел недоступен в режиме mnemos",
+  "automation.unavailableTitle": "Раздел недоступен в режиме vesma",
   "automation.unavailableMessage":
     "Автоматизация — контракт S1 борда (ADR 0013); переключитесь в режим board или mock.",
   "automation.statusLoading": "Загружаем статус движка",
@@ -1511,7 +1511,7 @@ export const ru = {
   // --- docs section (ADR 0015/0016, contract 2026-09-23 §§4–6) ---------------------
   "nav.docs": "Документация",
   "docs.cat.product": "О продукте",
-  "docs.catDesc.product": "Что такое mnemos и vesmaro-eyes: концепции и словарь.",
+  "docs.catDesc.product": "Что такое vesma и vesma-eyes: концепции и словарь.",
   "docs.cat.gettingStarted": "Начало работы",
   "docs.catDesc.gettingStarted":
     "Развёртывание борда и первый вход — с нуля до рабочего места.",
@@ -1537,27 +1537,27 @@ export const ru = {
     "Установка, первый прогон, синхронизация и справочники — повседневная работа с сервером памяти.",
   "docs.cat.mnemosAdmin": "Администратору",
   "docs.catDesc.mnemosAdmin":
-    "Безопасность, федерация и операционные ранбуки для администратора mnemos.",
+    "Безопасность, федерация и операционные ранбуки для администратора vesma.",
   "docs.cat.mnemosArchitecture": "Архитектура",
   "docs.catDesc.mnemosArchitecture":
     "Обзор устройства mnemos: гибридная память и поверхности управления.",
   "docs.cat.meshUser": "Пользователю",
-  "docs.catDesc.meshUser": "Запуск узла mnemos-mesh и настройка федерации.",
+  "docs.catDesc.meshUser": "Запуск узла vesma-mesh и настройка федерации.",
   "docs.cat.meshAdmin": "Администратору",
-  "docs.catDesc.meshAdmin": "Эксплуатация и безопасность узла mnemos-mesh.",
+  "docs.catDesc.meshAdmin": "Эксплуатация и безопасность узла vesma-mesh.",
   "docs.cat.apiOverview": "Обзор хаба",
   "docs.catDesc.apiOverview":
     "Что здесь живёт, карта API проектов и правило свежести.",
   "docs.cat.apiBoard": "API борда",
   "docs.catDesc.apiBoard":
-    "Референс HTTP API vesmaro-eyes, сгенерированный из OpenAPI-снапшота.",
-  "docs.cat.apiMnemos": "HTTP API mnemos",
+    "Референс HTTP API vesma-eyes, сгенерированный из OpenAPI-снапшота.",
+  "docs.cat.apiMnemos": "HTTP API vesma",
   "docs.catDesc.apiMnemos":
     "Карта поверхностей сервера памяти и контракт A2A-сессий.",
   "docs.cat.apiAgent": "Протокол vesmaro-agent",
   "docs.catDesc.apiAgent":
     "Проводной протокол агента и выжимка service charter v2.",
-  "docs.cat.apiMesh": "mnemos-mesh",
+  "docs.cat.apiMesh": "vesma-mesh",
   "docs.catDesc.apiMesh":
     "Публичного HTTP API нет — внутренний протокол и поверхность оператора.",
   "docs.search.placeholder": "Поиск по документации",
@@ -1590,9 +1590,9 @@ export const ru = {
   "docs.hub.mnemos.lede":
     "Сервер памяти для ИИ-агентов: колодец записей, поиск по смыслу и хранилище под контрактом тегов. Здесь — руководства пользователя и администратора и обзорная архитектура.",
   "docs.hub.mnemosMesh.lede":
-    "Федерация хранилищ: поднять узел mnemos-mesh, настроить канал и эксплуатировать связку двух инстансов.",
+    "Федерация хранилищ: поднять узел vesma-mesh, настроить канал и эксплуатировать связку двух инстансов.",
   "docs.hub.api.lede":
-    "API экосистемы в одном месте: референс борда из OpenAPI-снапшота, HTTP-поверхность mnemos, протокол vesmaro-agent и заметка про mesh. Каждая страница синхронизирована из источника — пин и дата на бейдже.",
+    "API экосистемы в одном месте: референс борда из OpenAPI-снапшота, HTTP-поверхность vesma, протокол vesmaro-agent и заметка про mesh. Каждая страница синхронизирована из источника — пин и дата на бейдже.",
   "docs.hub.coverage.both": "Доступно на русском и английском",
   "docs.hub.coverage.ru": "Доступно на русском",
   "docs.hub.coverage.en": "Доступно на английском",
@@ -1618,7 +1618,7 @@ export const ru = {
   // --- UI-27: TextEngine (авторский текст — markdown-движок) ------------------------
   "text.showFull": "Показать полностью",
   "empty.offlineNote":
-    "Если вы работаете с живым mnemos — проверьте, что API поднят и что dev-прокси (/api → mnemos) доступен. В разработке запросы из браузера остаются под CORS.",
+    "Если вы работаете с живым vesma — проверьте, что API поднят и что dev-прокси (/api → vesma) доступен. В разработке запросы из браузера остаются под CORS.",
   "app.loadingView": "Загружаем раздел",
   "app.notFoundMessage": "Такого пути в колодце нет.",
 
@@ -1710,7 +1710,7 @@ export const ru = {
   "pairing.devices.grantsFailed": "Не удалось обновить доступы",
   "pairing.unsupportedTitle": "Пейринг недоступен в этом режиме",
   "pairing.unsupportedMessage":
-    "Домен устройств говорит на merge-API борда (ADR 0012); в режиме прямого mnemos этой страницы нет.",
+    "Домен устройств говорит на merge-API борда (ADR 0012); в режиме прямого vesma этой страницы нет.",
 
   // Страница устройства (/pair, §2.3 — без аутентификации).
   "pair.title": "Подключение устройства",

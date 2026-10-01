@@ -1,4 +1,4 @@
-"""vesmaro-eyes task board — persistent SQLite layer.
+"""vesma-eyes task board — persistent SQLite layer.
 
 The board is deliberately a thin projection over two sources of truth:
 
@@ -1330,7 +1330,7 @@ class Store:
         `control` IN PLACE — already-paired devices gain board mutations
         without re-pairing and without re-issuing tokens (the hash-only
         rows stay valid; the owner's ruling: «управление — центральная
-        фишка vesmaro-eyes; лишать управления подключённое через QR
+        фишка vesma-eyes; лишать управления подключённое через QR
         устройство глупо и бессмысленно»).
 
         Idempotent: a second boot finds no active `read` rows and writes
@@ -1591,7 +1591,7 @@ class Store:
                     json.dumps(task.get("agents", [])),
                     json.dumps(task.get("specialists", [])),
                     task.get("env", "unknown"),
-                    task.get("project", "mnemos-eyes"),
+                    task.get("project", "vesma-eyes"),
                     json.dumps(task.get("memory_ids", [])),
                     json.dumps(task.get("mnemos_tags", [])),
                     task.get("created_at", _now()),

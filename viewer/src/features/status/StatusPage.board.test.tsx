@@ -34,7 +34,7 @@ function renderStatus(adapterMode: AdapterKind): string {
   health.setState({
     status: "success",
     fetchStatus: "idle",
-    data: { status: "ok", service: "vesmaro-eyes" },
+    data: { status: "ok", service: "vesma-eyes" },
     dataUpdatedAt: Date.now(),
   });
   // Metrics: honest 501 from the BoardAdapter.

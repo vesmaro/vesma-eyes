@@ -147,7 +147,7 @@ def config(upstream_repo: dict[str, object]) -> dict[str, object]:
                     }
                 ],
             },
-            # mirrors the mnemos-mesh shape: en-only upstream, ru comes from
+            # mirrors the vesma-mesh shape: en-only upstream, ru comes from
             # a curated translation (our layer, survives re-sync)
             "fakemesh": {
                 "repo": str(upstream_repo["repo"]),

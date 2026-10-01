@@ -1,4 +1,4 @@
-// vesmaro-eyes — task board SPA (vanilla ES modules, no build step).
+// vesma-eyes — task board SPA (vanilla ES modules, no build step).
 
 const $ = (sel, root = document) => root.querySelector(sel);
 

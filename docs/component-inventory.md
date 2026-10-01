@@ -1,4 +1,4 @@
-# mnemos-eyes — Component Inventory (L1 Viewer)
+# vesma-eyes — Component Inventory (L1 Viewer)
 
 > Status: **Accepted** (P0.1 deliverable).
 > Owner: `@GCW: Senior Frontend Developer`.
@@ -86,7 +86,7 @@
 
 **Variants:** `idle`, `focused`, `loading` (pupil pulses), `error` (iris dims to `--color-error`).
 
-**Accessibility:** `role="img"`, `aria-label="Mnemos — memory engine"`. Animation pauses on `prefers-reduced-motion`.
+**Accessibility:** `role="img"`, `aria-label="Vesma — memory engine"`. Animation pauses on `prefers-reduced-motion`.
 
 ---
 
@@ -387,8 +387,8 @@ All skeletons use `--color-bg-elevated` with a subtle `shimmer` keyframe animati
 
 ## 12. Open questions for Tech Lead / user
 
-1. **Dedicated `/tags` endpoint:** The current mnemos API has no `GET /tags` endpoint. The `TagsPage` aggregates tags client-side from `listMemories`. A backend `/tags` endpoint would be cleaner — should this be requested as a mnemos prereq?
+1. **Dedicated `/tags` endpoint:** The current vesma API has no `GET /tags` endpoint. The `TagsPage` aggregates tags client-side from `listMemories`. A backend `/tags` endpoint would be cleaner — should this be requested as a vesma prereq?
 2. **Cluster API surface:** `metrics()` returns `mgr.stats()` which may include cluster data, but there is no dedicated `GET /clusters` endpoint. Confirm whether cluster visualization is feasible in L1 or deferred to L2.
 3. **Graph library:** `@xyflow/react` (React Flow v12, ~26 KB gz) vs `d3-force` (~8 KB gz, more animation control). React Flow recommendation: better a11y, built-in zoom/pan, labeled nodes. Needs Tech Lead sign-off on the bundle addition (>10 KB threshold from hard rules).
-4. **A2A session routes:** The sessions API is mounted under `/v1/` in mnemos. Confirm the exact session list and detail endpoint shapes before implementing `HttpAdapter` session methods.
+4. **A2A session routes:** The sessions API is mounted under `/v1/` in vesma. Confirm the exact session list and detail endpoint shapes before implementing `HttpAdapter` session methods.
 5. **Memory scroll font:** Lora (serif) vs JetBrains Mono (mono) — see [design-system.md](design-system.md) §10.

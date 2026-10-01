@@ -73,7 +73,7 @@ function useIsDesktop(): boolean {
  *   regardless of the stored flag, and a mobile toggle click never touches
  *   the persisted desktop intent.
  *
- * Labels are translated via useT(); the "mnemos-eyes" brand is
+ * Labels are translated via useT(); the "vesma-eyes" brand is
  * language-independent.
  *
  * Horizontal-overflow hygiene (UI-19 owner feedback): labels never force the
@@ -213,7 +213,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               hideLabels,
             )}
           >
-            mnemos-eyes
+            vesma-eyes
           </span>
           <Button
             ref={toggleRef}

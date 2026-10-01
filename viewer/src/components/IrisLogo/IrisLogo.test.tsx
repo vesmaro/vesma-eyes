@@ -17,7 +17,7 @@ describe("IrisLogo", () => {
   it("is static and announced by default", () => {
     const html = renderToString(<IrisLogo />);
     expect(html).toContain('role="img"');
-    expect(html).toContain("mnemos-eyes iris");
+    expect(html).toContain("vesma-eyes iris");
     expect(html).not.toContain("iris-breathing");
     expect(html).not.toContain("iris-logo-glow");
   });

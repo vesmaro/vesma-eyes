@@ -1,4 +1,4 @@
-"""QA-1 pytest contour for vesmaro-eyes (sprint-1 stabilization gate).
+"""QA-1 pytest contour for vesma-eyes (sprint-1 stabilization gate).
 
 Shared fixtures:
 - ``client``        — in-process fastapi TestClient over server.app
@@ -339,7 +339,7 @@ class FakeMeshNode:
         self.payload = {
             "status": "ok", "version": self.version, "node_id": self.node_id,
             "uptime_seconds": self.uptime,
-            "unix_socket": {"path": "/run/mnemos-mesh/core.sock",
+            "unix_socket": {"path": "/run/vesma-mesh/core.sock",
                             "core_connected": True},
             "peers": [
                 {"id": "peer-a", "address": "10.1.0.2:9000", "reachable": True,

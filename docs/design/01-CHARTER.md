@@ -1,4 +1,4 @@
-# 01 — Устав арт-дирекции: «Живая кора» (vesmaro-eyes v2)
+# 01 — Устав арт-дирекции: «Живая кора» (vesma-eyes v2)
 
 > Status: **v2.0, дизайн-лид, 2026-09-25**. База: design-brief.md («взгляд в себя»),
 > design-system.md v1 (teal-ирис, золото-confidence, Inter+Lora+JetBrains Mono),

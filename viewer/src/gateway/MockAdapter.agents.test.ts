@@ -174,7 +174,7 @@ describe("MockAdapter agents — executor registry + settings", () => {
       mock.putExecutionSettings({
         default_executor: "exec-mesh-qa",
         fallback_executor: "exec-laptop-zcode",
-        scope: "project:mnemos-eyes",
+        scope: "project:vesma-eyes",
       }),
       422,
     );
@@ -183,9 +183,9 @@ describe("MockAdapter agents — executor registry + settings", () => {
     const result = await mock.putExecutionSettings({
       default_executor: "exec-mesh-qa",
       fallback_executor: "",
-      scope: "  project:mnemos-eyes  ",
+      scope: "  project:vesma-eyes  ",
     });
-    expect(result.scope).toBe("project:mnemos-eyes");
+    expect(result.scope).toBe("project:vesma-eyes");
     const global = await mock.getExecutionSettings();
     expect(global.default_executor).toBe("exec-laptop-zcode"); // untouched
   });

@@ -87,9 +87,9 @@ The poller survives a short window when the board is already on the new
 token and the poller is still on the old one: auth attempts repeat, and
 nothing is lost.
 
-## Rotating a mnemos store token
+## Rotating a vesma store token
 
-1. On the mnemos side, issue a new `mnk_…` token (with
+1. On the vesma side, issue a new `mnk_…` token (with
    `totp_required=0`) and revoke the old one.
 2. Update the `vesmaro-eyes-mnemos` secret (the `MNEMOS_TOKEN` key) and
    roll the board, as above.

@@ -179,7 +179,7 @@ describe("corpus link internalization (W1c)", () => {
     await getManifest(); // the resolver reads the hydrated manifest
     const html = renderWithSlug("[токены](tokens.md)\n", "pairing");
     const href = /href="([^"]*)"/.exec(html)?.[1];
-    expect(href).toBe("/docs/vesmaro-eyes/tokens");
+    expect(href).toBe("/docs/vesma-eyes/tokens");
   });
 
   it("resolves upstream board slugs (sync form) into project-scoped URLs", async () => {

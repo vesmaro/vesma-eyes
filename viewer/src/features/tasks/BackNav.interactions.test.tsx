@@ -44,7 +44,7 @@ import { AuthProvider } from "@/features/auth/AuthProvider";
  * (POP + ScrollRestoration), untouched by this wave.
  */
 
-const DRILL_TAG = "project:mnemos-eyes";
+const DRILL_TAG = "project:vesma-eyes";
 const DRILL_RETURN = `%2Fmemory%2Ftags%3Ftag%3D${encodeURIComponent(DRILL_TAG)}`;
 const ARCHIVE_Q = "регистрац";
 const ARCHIVE_RETURN = `/tasks/RB-1?return=%2Ftasks%2Farchive%3Fq%3D${encodeURIComponent(ARCHIVE_Q)}`;

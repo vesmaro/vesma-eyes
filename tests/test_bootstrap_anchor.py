@@ -7,7 +7,7 @@ execs the real interpreter otherwise (normalize_fp rides real python).
 openssl stays REAL: the fingerprint pipeline and the CA:TRUE check must
 be the production ones.
 
-Happy-path runs stop at the venv step: ``python3 -m venv /opt/mnemos-eyes``
+Happy-path runs stop at the venv step: ``python3 -m venv /opt/vesma-eyes``
 fails for a non-root CI user — a deterministic, assertable proof the run
 got PAST the anchor gate (die message names the venv, exit 3).
 

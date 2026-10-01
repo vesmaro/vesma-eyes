@@ -18,12 +18,12 @@
 переходного периода (решение владельца:
 `docs/design/2026-09-23-connect-provisioning.md` §C). Резидентный
 сервис-представитель борда — **Go-агент `vesmaro-agent`** (репозиторий
-`vesmaro/vesmaro-agent`, релиз 0.6.0, service charter v2 / ME-016) —
+`vesmaro/vesma-agent`, релиз 0.6.0, service charter v2 / ME-016) —
 пока ставится руками из релизов агента. Это drop-in замена поллера
 против того же борда (тот же проводной протокол, PROTOCOL §7), плюс то,
 чего у поллера нет:
 
-- `transport: mesh` — борд-нога через релей mnemos-mesh (пин mesh-core);
+- `transport: mesh` — борд-нога через релей vesma-mesh (пин mesh-core);
 - discovery v2/v3 — факты об установленных харнесах/средах/умениях хоста
   (`POST /api/executors/{id}/discovery`; маршрут уже в API борда);
 - loopback intake отчётов детей (compat-канал + native Canon edge,
@@ -236,7 +236,7 @@ curl -sS -X POST "$BOARD_URL/api/executors" \
    sudo install -m 0600 -o root -g root /dev/null /etc/vesmaro/poller.env
    echo 'VESMARO_BOARD_TOKEN=<executor_secret>' | sudo tee /etc/vesmaro/poller.env >/dev/null
    ```
-2. `~/.config/mnemos-eyes/poller.yaml` (chmod 0600) — ключевые поля
+2. `~/.config/vesma-eyes/poller.yaml` (chmod 0600) — ключевые поля
    относительно laptop-варианта:
    - `board_url` — адрес, резолвящийся с VPS (§2);
    - `executor_id` — **`executor.id` из ответа 4б**: presence-пиггибэк
@@ -300,7 +300,7 @@ curl -sS -X PATCH "$BOARD_URL/api/executors/<executor_id>" \
   zcode launcher, bootstrap.sh (исходник установщика).
 - Go-агент `vesmaro-agent` — протокол и charter v2: doc-хаб борда
   (`/docs` → API → vesmaro-agent) либо репозиторий
-  `vesmaro/vesmaro-agent` (`docs/PROTOCOL.md`,
+  `vesmaro/vesma-agent` (`docs/PROTOCOL.md`,
   `docs/decisions/CHARTER-v2.md`); ADR 0021 — native intake
   (`docs/decisions/0021-agent-intake-contract.md`).
 - RUNBOOK чарта §11 (`deploy/chart/vesmaro-eyes/RUNBOOK.md`) —

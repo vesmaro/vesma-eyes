@@ -26,7 +26,7 @@ import { DEFAULT_PROJECT } from "./projects";
  * hub rows, category pages and search all consume the same entries, so names
  * can never diverge (design spec §3.1 — единый источник ключей `docs.cat.*`).
  * Every category belongs to ONE project hub (contract §4: категории импорта
- * носят префикс-слаги — no collisions with the nine vesmaro-eyes ones).
+ * носят префикс-слаги — no collisions with the nine vesma-eyes ones).
  */
 export interface DocCategory {
   slug: string;
@@ -40,7 +40,7 @@ export interface DocCategory {
 }
 
 export const DOC_CATEGORIES: readonly DocCategory[] = [
-  // --- vesmaro-eyes (the 9 existing — migrate into the default hub) ---------
+  // --- vesma-eyes (the 9 existing — migrate into the default hub) ---------
   {
     slug: "product",
     project: DEFAULT_PROJECT,
@@ -113,7 +113,7 @@ export const DOC_CATEGORIES: readonly DocCategory[] = [
     icon: HelpCircle,
     order: 8,
   },
-  // --- imported hubs (contract §4: префикс-слаги, no vesmaro-eyes clashes) --
+  // --- imported hubs (contract §4: префикс-слаги, no vesma-eyes clashes) --
   {
     slug: "mnemos-user",
     project: "mnemos",

@@ -265,11 +265,11 @@ class TestEditWindow:
     def test_project_is_editable(self, client, auth, make_task):
         """Allow-list confirmation: project editing stays available (and is
         window-guarded like every other content field)."""
-        task = make_task(title="be12-project", project="mnemos-eyes")
+        task = make_task(title="be12-project", project="vesma-eyes")
         r = client.patch(f"/api/tasks/{task['id']}",
-                         json={"project": "mnemos-mesh"}, headers=auth)
+                         json={"project": "vesma-mesh"}, headers=auth)
         assert r.status_code == 200
-        assert r.json()["project"] == "mnemos-mesh"
+        assert r.json()["project"] == "vesma-mesh"
 
 
 # ---------------------------------------------------- store-level window
