@@ -193,7 +193,7 @@ describe("Sidebar on desktop (>=md, inline panel)", () => {
     expect(expand).not.toBeNull();
     expect(expand?.getAttribute("aria-expanded")).toBe("false");
     // Rail = icons only: the docs third layer waits for the expand (И1).
-    expect(rail.querySelector('a[aria-label="vesmaro-eyes"]')).toBeNull();
+    expect(rail.querySelector('a[aria-label="vesma-eyes"]')).toBeNull();
   });
 });
 

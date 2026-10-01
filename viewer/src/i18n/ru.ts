@@ -351,7 +351,7 @@ export const ru = {
   "tags.all": "Все теги",
   "tags.drilldownTitle": "Воспоминания с тегом",
   "tags.drilldownNote":
-    "Фильтрация на клиенте — у vesma нет выборки по тегу (ADR 0003 §9).",
+    "Фильтрация на клиенте — у vesma нет выборки по тегу.",
   "tags.nothingCarries": "Под этим тегом ничего нет",
   "tags.nothingCarriesMessage": "Сейчас нет воспоминаний с тегом {{tag}}.",
   // --- tags cloud (UI-17, spec 2026-09-21 §9; owner-approved copy) -----------
@@ -1799,7 +1799,7 @@ export const ru = {
   "pairing.devices.grantsFailed": "Не удалось обновить доступы",
   "pairing.unsupportedTitle": "Пейринг недоступен в этом режиме",
   "pairing.unsupportedMessage":
-    "Домен устройств говорит на merge-API борда (ADR 0012); в режиме прямого vesma этой страницы нет.",
+    "Домен устройств говорит на merge-API борда; в режиме прямого vesma этой страницы нет.",
 
   // Страница устройства (/pair, §2.3 — без аутентификации).
   "pair.title": "Подключение устройства",

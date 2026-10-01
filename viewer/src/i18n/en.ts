@@ -333,7 +333,7 @@ export const en: Record<TranslationKey, string> = {
   "tags.all": "All tags",
   "tags.drilldownTitle": "Memories tagged",
   "tags.drilldownNote":
-    "Filtered client-side — vesma has no by-tag list filter (ADR 0003 §9).",
+    "Filtered client-side — vesma has no by-tag list filter.",
   "tags.nothingCarries": "Nothing carries this tag",
   "tags.nothingCarriesMessage": "No memory is tagged {{tag}} right now.",
   // --- tags cloud (UI-17, spec 2026-09-21 §9; owner-approved copy) -----------

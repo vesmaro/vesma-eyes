@@ -87,7 +87,7 @@ describe("Sidebar overflow hygiene (UI-19)", () => {
     expect(html).toContain('title="Устройства и подключение"');
     expect(html).toContain('aria-label="Устройства и подключение"');
     expect(html).toContain('title="Безопасность и токены"');
-    expect(html).toContain('title="vesmaro-eyes"'); // project group row
+    expect(html).toContain('title="vesma-eyes"'); // project group row
   });
 
   it("the same holds for the EN dictionary", () => {
