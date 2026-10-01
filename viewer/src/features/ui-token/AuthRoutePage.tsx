@@ -37,7 +37,7 @@ import { useUiToken } from "./UiTokenContext";
  */
 
 /** Brand wordmark — language-independent, hence not in the dictionaries. */
-const BRAND_NAME = "mnemos-eyes";
+const BRAND_NAME = "vesma-eyes"; // brand canon: main's rebrand (union policy)
 
 export function AuthRoutePage() {
   const t = useT();
