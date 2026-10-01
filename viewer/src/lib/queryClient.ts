@@ -33,6 +33,10 @@ export const STALE_TIMES = {
   taskInbox: 60_000,
   /** UI-28 activity — a live feed: SSE prepends, refetch is the fallback */
   taskActivity: 15_000,
+  /** ME-063 session facts — no SSE vocabulary in v0, so every tab mount
+   * refetches (staleTime 0, the search posture); ages tick off the shared
+   * 1 Hz clock between mounts. */
+  taskSessions: 0,
   /** AGW-1 assignment queue — SSE transitions invalidate; refetch is the fallback */
   agentsAssignments: 15_000,
   /** AGW-1 executor registry — presence is computed per GET (TTLs in meta) */
@@ -63,6 +67,7 @@ export const GC_TIMES = {
   taskArchive: 10 * 60_000,
   taskInbox: 5 * 60_000,
   taskActivity: 5 * 60_000,
+  taskSessions: 60_000,
   agentsAssignments: 5 * 60_000,
   agentsExecutors: 60_000,
   agentsSettings: 10 * 60_000,

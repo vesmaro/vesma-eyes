@@ -22,6 +22,7 @@ import type {
   TaskMutationAck,
   TaskPatchInput,
   TaskReports,
+  TaskSessionsPage,
   TaskUnarchiveResult,
 } from "./boardTypes";
 import type {
@@ -232,6 +233,12 @@ export interface AgentsSource {
   getExecutionSettings(signal?: AbortSignal): Promise<ExecutionSettings>;
   /** Harness dictionary (`GET /api/harnesses`, open read; wave 3C). */
   listHarnesses(signal?: AbortSignal): Promise<HarnessesPage>;
+  /**
+   * Specialist session facts (`GET /api/tasks/{id}/sessions`, ME-063) —
+   * ui-class read (the fact carries a host path): the owner session cookie
+   * on the browser, the honest 403 explanatory wall for mnd_ devices.
+   */
+  listTaskSessions(taskId: string, signal?: AbortSignal): Promise<TaskSessionsPage>;
 }
 
 /** Gateway type that also serves the agents-domain reads. */
@@ -242,7 +249,8 @@ export function isAgentsSource(gateway: MemoryGateway): gateway is AgentsGateway
     typeof (gateway as Partial<AgentsSource>).listAssignments === "function" &&
     typeof (gateway as Partial<AgentsSource>).listExecutors === "function" &&
     typeof (gateway as Partial<AgentsSource>).getExecutionSettings === "function" &&
-    typeof (gateway as Partial<AgentsSource>).listHarnesses === "function"
+    typeof (gateway as Partial<AgentsSource>).listHarnesses === "function" &&
+    typeof (gateway as Partial<AgentsSource>).listTaskSessions === "function"
   );
 }
 
@@ -305,9 +313,7 @@ export interface AgentsMutationSource {
    * 409 one live job per host:port or live-token quota; 429 anti-spray
    * (rate, per-host cooldown, global live cap); 503 provisioner disabled.
    */
-  createProvisionJob(
-    payload: ProvisionCreateInput,
-  ): Promise<ProvisionCreatedResult>;
+  createProvisionJob(payload: ProvisionCreateInput): Promise<ProvisionCreatedResult>;
   /**
    * Job progress for the connect card (`GET /api/executors/provision/{id}`,
    * ui-token): state, steps, the pinned host-key fingerprint, the linked
@@ -335,7 +341,8 @@ export function isAgentsMutationSource(
     typeof (gateway as Partial<AgentsMutationSource>).revokeEnrollment === "function" &&
     typeof (gateway as Partial<AgentsMutationSource>).createHarness === "function" &&
     typeof (gateway as Partial<AgentsMutationSource>).deleteHarness === "function" &&
-    typeof (gateway as Partial<AgentsMutationSource>).createProvisionJob === "function" &&
+    typeof (gateway as Partial<AgentsMutationSource>).createProvisionJob ===
+      "function" &&
     typeof (gateway as Partial<AgentsMutationSource>).getProvisionJob === "function"
   );
 }
@@ -362,7 +369,8 @@ export function isAutomationSource(
 ): gateway is AutomationGateway {
   return (
     typeof (gateway as Partial<AutomationSource>).automationStatus === "function" &&
-    typeof (gateway as Partial<AutomationSource>).getAutomationSettings === "function" &&
+    typeof (gateway as Partial<AutomationSource>).getAutomationSettings ===
+      "function" &&
     typeof (gateway as Partial<AutomationSource>).listSchedules === "function" &&
     typeof (gateway as Partial<AutomationSource>).listHooks === "function" &&
     typeof (gateway as Partial<AutomationSource>).listLaunches === "function"
@@ -404,7 +412,8 @@ export function isAutomationMutationSource(
       "function" &&
     typeof (gateway as Partial<AutomationMutationSource>).createHook === "function" &&
     typeof (gateway as Partial<AutomationMutationSource>).deleteHook === "function" &&
-    typeof (gateway as Partial<AutomationMutationSource>).putAutomationSettings === "function"
+    typeof (gateway as Partial<AutomationMutationSource>).putAutomationSettings ===
+      "function"
   );
 }
 

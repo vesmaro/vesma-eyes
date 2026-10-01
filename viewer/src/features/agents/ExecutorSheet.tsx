@@ -11,7 +11,12 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { ExecutorItem } from "@/gateway/boardTypes";
 import { useI18n, useT } from "@/i18n";
 import type { TranslationKey } from "@/i18n";
@@ -22,6 +27,7 @@ import { useHonestCopy } from "./useEnrollment";
 import { AssignmentStateBadge } from "./AssignmentStateBadge";
 import { ACTIVE_ASSIGNMENT_STATES } from "./assignmentStatus";
 import { ExecutorLinkCheck } from "./ExecutorLinkCheck";
+import { HarnessInventorySection } from "./HarnessInventorySection";
 import {
   EXECUTOR_CAPABILITIES_MAX,
   addCapability,
@@ -86,7 +92,8 @@ export function ExecutorSheet({
   // comes from the form's dirty effect) — no refs touched during render.
   const [formDirty, setFormDirty] = useState(false);
   const [frozenStamp, setFrozenStamp] = useState<string | null>(null);
-  const stamp = row === null ? "" : `${row.id}|${row.updated_at}|${row.state}|${row.enabled}`;
+  const stamp =
+    row === null ? "" : `${row.id}|${row.updated_at}|${row.state}|${row.enabled}`;
   const handleDirty = useCallback(
     (next: boolean) => {
       setFormDirty(next);
@@ -152,17 +159,12 @@ function NowWorkingSection({ executorId }: { executorId: string }) {
     (board.data?.tasks ?? []).find((task) => task.id === taskId)?.title ?? "";
 
   return (
-    <section
-      aria-label={t("agents.card.nowWorking")}
-      className="flex flex-col gap-2"
-    >
+    <section aria-label={t("agents.card.nowWorking")} className="flex flex-col gap-2">
       <h3 className="text-xs font-medium text-foreground-secondary">
         {t("agents.card.nowWorking")}
       </h3>
       {active.length === 0 ? (
-        <p className="text-sm text-foreground-secondary">
-          {t("agents.card.nowIdle")}
-        </p>
+        <p className="text-sm text-foreground-secondary">{t("agents.card.nowIdle")}</p>
       ) : (
         <ul className="flex flex-col gap-1.5">
           {active.map((row) => (
@@ -231,8 +233,9 @@ function ExecutorSheetForm({
   // pending — no flash of the plain button mid-invalidation.
   const peeked =
     executor.state === "pending" ? peekProvisionApprove(executor.id) : null;
-  const [latchedContext, setLatchedContext] =
-    useState<ProvisionApproveContext | null>(peeked);
+  const [latchedContext, setLatchedContext] = useState<ProvisionApproveContext | null>(
+    peeked,
+  );
   useEffect(() => {
     if (executor.state !== "pending") return;
     const onPublished = (event: Event): void => {
@@ -242,8 +245,7 @@ function ExecutorSheetForm({
       if (fresh !== null) setLatchedContext(fresh);
     };
     window.addEventListener(PROVISION_APPROVE_PUBLISHED, onPublished);
-    return () =>
-      window.removeEventListener(PROVISION_APPROVE_PUBLISHED, onPublished);
+    return () => window.removeEventListener(PROVISION_APPROVE_PUBLISHED, onPublished);
   }, [executor.id, executor.state]);
   const approveContext = peeked ?? latchedContext;
 
@@ -330,7 +332,9 @@ function ExecutorSheetForm({
     },
     {
       label: t("agents.card.registeredAt"),
-      value: executor.registered_at ? formatTaskDate(executor.registered_at, lang) : "—",
+      value: executor.registered_at
+        ? formatTaskDate(executor.registered_at, lang)
+        : "—",
     },
     {
       label: t("agents.card.updatedAt"),
@@ -357,7 +361,10 @@ function ExecutorSheetForm({
       <NowWorkingSection executorId={executor.id} />
 
       {/* --- Link ----------------------------------------------------- */}
-      <section aria-label={t("agents.card.sectionLink")} className="flex flex-col gap-2">
+      <section
+        aria-label={t("agents.card.sectionLink")}
+        className="flex flex-col gap-2"
+      >
         <h3 className="text-xs font-medium text-foreground-secondary">
           {t("agents.card.sectionLink")}
         </h3>
@@ -365,7 +372,10 @@ function ExecutorSheetForm({
       </section>
 
       {/* --- Access --------------------------------------------------- */}
-      <section aria-label={t("agents.card.sectionAccess")} className="flex flex-col gap-2">
+      <section
+        aria-label={t("agents.card.sectionAccess")}
+        className="flex flex-col gap-2"
+      >
         <h3 className="text-xs font-medium text-foreground-secondary">
           {t("agents.card.sectionAccess")}
         </h3>
@@ -374,7 +384,11 @@ function ExecutorSheetForm({
             {t(stateBadge().key)}
           </Badge>
           {pending && approveContext === null ? (
-            <Button size="sm" className="h-7 px-2 text-xs" onClick={() => mutations.approveExecutor(executor)}>
+            <Button
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => mutations.approveExecutor(executor)}
+            >
               {t("agents.registry.approve")}
             </Button>
           ) : null}
@@ -405,12 +419,17 @@ function ExecutorSheetForm({
           </label>
         ) : null}
         {pending ? (
-          <p className="text-xs text-foreground-muted">{t("agents.card.enabledPendingHint")}</p>
+          <p className="text-xs text-foreground-muted">
+            {t("agents.card.enabledPendingHint")}
+          </p>
         ) : null}
       </section>
 
       {/* --- Identity (editable working field) -------------------------- */}
-      <section aria-label={t("agents.card.sectionIdentity")} className="flex flex-col gap-2">
+      <section
+        aria-label={t("agents.card.sectionIdentity")}
+        className="flex flex-col gap-2"
+      >
         <h3 className="text-xs font-medium text-foreground-secondary">
           {t("agents.card.sectionIdentity")}
         </h3>
@@ -445,7 +464,10 @@ function ExecutorSheetForm({
       </section>
 
       {/* --- Declared capabilities ------------------------------------- */}
-      <section aria-label={t("agents.card.sectionCaps")} className="flex flex-col gap-2">
+      <section
+        aria-label={t("agents.card.sectionCaps")}
+        className="flex flex-col gap-2"
+      >
         <h3 className="text-xs font-medium text-foreground-secondary">
           {t("agents.card.sectionCaps")}
         </h3>
@@ -467,7 +489,9 @@ function ExecutorSheetForm({
                     aria-label={t("agents.card.capsRemoveAria", { capability })}
                     className="rounded-sm text-foreground-muted transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
                     onClick={() =>
-                      setCapabilities((list) => list.filter((item) => item !== capability))
+                      setCapabilities((list) =>
+                        list.filter((item) => item !== capability),
+                      )
                     }
                   >
                     <X className="size-3" aria-hidden="true" />
@@ -529,8 +553,14 @@ function ExecutorSheetForm({
         </div>
       ) : null}
 
+      {/* --- ME-064: discovered inventory (dropdowns, spec §3.1) -------- */}
+      <HarnessInventorySection executor={executor} />
+
       {/* --- Service facts, folded (persona-review: not primary text) --- */}
-      <section aria-label={t("agents.card.techDetails")} className="flex flex-col gap-2">
+      <section
+        aria-label={t("agents.card.techDetails")}
+        className="flex flex-col gap-2"
+      >
         <button
           type="button"
           aria-expanded={techOpen}
@@ -544,7 +574,10 @@ function ExecutorSheetForm({
           <div className="flex flex-col gap-2">
             <dl className="flex flex-col gap-1 text-sm">
               {facts.map((fact) => (
-                <div key={fact.label} className="flex items-baseline justify-between gap-3">
+                <div
+                  key={fact.label}
+                  className="flex items-baseline justify-between gap-3"
+                >
                   <dt className="shrink-0 text-foreground-muted">{fact.label}</dt>
                   <dd className="min-w-0 break-all text-right font-mono text-xs text-foreground-secondary">
                     {fact.value}
@@ -553,13 +586,18 @@ function ExecutorSheetForm({
               ))}
             </dl>
             {/* WHY harness is not editable (the honest refusal). */}
-            <p className="text-xs text-foreground-muted">{t("agents.card.harnessNote")}</p>
+            <p className="text-xs text-foreground-muted">
+              {t("agents.card.harnessNote")}
+            </p>
           </div>
         ) : null}
       </section>
 
       {/* --- Danger zone ------------------------------------------------ */}
-      <section aria-label={t("agents.card.sectionDanger")} className="flex flex-col gap-2">
+      <section
+        aria-label={t("agents.card.sectionDanger")}
+        className="flex flex-col gap-2"
+      >
         <h3 className="flex items-center gap-1 text-xs font-medium text-foreground-secondary">
           <AlertTriangle className="size-3.5" aria-hidden="true" />
           {t("agents.card.sectionDanger")}

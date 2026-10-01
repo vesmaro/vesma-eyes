@@ -87,7 +87,8 @@ export const en: Record<TranslationKey, string> = {
   "hotkeys.subtitle":
     "The shell hotkey layer. ⌘K works inside form fields too — the rest stay quiet there.",
   "hotkeys.openPalette": "Open search (the palette)",
-  "hotkeys.openPaletteAnywhere": "The palette — from anywhere, even inside a form field",
+  "hotkeys.openPaletteAnywhere":
+    "The palette — from anywhere, even inside a form field",
   "hotkeys.cheatsheet": "This cheatsheet",
   "hotkeys.closeDialog": "Close the dialog",
   "hotkeys.escKey": "Esc",
@@ -491,14 +492,34 @@ export const en: Record<TranslationKey, string> = {
   "tasks.workersPartial":
     "Showing the latest {{limit}} events — the list may be incomplete.",
   "tasks.workersEmptyTitle": "No known executor",
-  "tasks.workersEmpty":
-    "No audit events for this task — it never reached execution.",
+  "tasks.workersEmpty": "No audit events for this task — it never reached execution.",
   "tasks.workersNoAttribution":
     "No attribution: the audit log did not record who worked on tasks before version 1.35.",
   "tasks.workersEvents": "events: {{count}}",
   "tasks.workersLast": "last: {{time}}",
   "tasks.workersAgents": "Declared agents",
   "tasks.workersReportsLink": "Task reports: {{count}}",
+
+  // --- ME-063 «Specialists and sessions» (agents-ui-spec §6.2) ---------------
+  "tasks.sessionsLabel": "Specialists and sessions",
+  "tasks.sessionsLoading": "Loading specialist sessions",
+  "tasks.sessionsUnavailableTitle": "Sessions unavailable in this mode",
+  "tasks.sessionsUnavailableMessage":
+    "This data source does not serve specialist sessions — the block will show them once the board is connected.",
+  "tasks.sessionsFailed": "Failed to load sessions",
+  "tasks.sessionsFailedMessage":
+    "The board did not answer the sessions request — please retry.",
+  "tasks.sessionsEmptyTitle": "The agent has not reported any sessions yet",
+  "tasks.sessionsEmptyMessage":
+    "Specialist sessions are reported by the executor's agent. None so far — an honest absence, not a breakage: tasks run by the poller or an agent-less executor yield no sessions.",
+  "tasks.sessionsLive": "running",
+  "tasks.sessionsIdle": "finished",
+  "tasks.sessionsToolCalls": "tool calls: {{count}}",
+  "tasks.sessionsAge": "{{age}} ago",
+  "tasks.sessionsExecutor": "reported by {{name}}",
+  "tasks.sessionsOpenTranscript": "Open transcript",
+  "tasks.sessionsReportedHint":
+    "Facts are the agent's advisory mirror, never authority; the age counts from the session start.",
 
   // --- UI-28 «Activity» (spec 2026-09-27 §6 + row grammar §2) ----------------
   "nav.taskActivity": "Activity",
@@ -995,8 +1016,7 @@ export const en: Record<TranslationKey, string> = {
     "The agent is installed; it usually reports within {{silentMax}} — check the link.",
   "agents.lifecycle.next.online": "Last report {{age}} ago.",
   "agents.lifecycle.next.silent": "No reports for {{age}} — check the link.",
-  "agents.lifecycle.next.offline":
-    "Last link {{age}} ago — check the link.",
+  "agents.lifecycle.next.offline": "Last link {{age}} ago — check the link.",
   "agents.lifecycle.next.disabled": "Receives no new tasks; reports continue.",
   "agents.lifecycle.next.revoked": "Access revoked. The secret no longer works.",
   "agents.lifecycle.reportAgo": "{{age}} ago",
@@ -1104,6 +1124,18 @@ export const en: Record<TranslationKey, string> = {
   "agents.card.enabledPendingHint":
     "Approve first — the dispatch switch appears after approval.",
   "agents.card.capsPlaceholder": "a specialist role, e.g. researcher",
+  // ME-064 «Detected on the host» (agents-ui-spec §3.1): inventory dropdowns.
+  "agents.card.sectionInventory": "Detected on the host",
+  "agents.card.inventoryNone": "No data",
+  "agents.card.inventoryNoneNote":
+    "Only the agent (Go) knows how to detect installations. A host connected via the poller will send the list after ME-056 — empty here is an honest answer, not a delay.",
+  "agents.card.inventorySpecialists": "specialists",
+  "agents.card.inventorySkills": "skills",
+  "agents.card.inventoryPlugins": "plugins",
+  "agents.card.inventoryInstructions": "instructions",
+  "agents.card.inventoryNoNames": "no names — counter only",
+  "agents.card.inventoryOverflow": "…and {{count}} more",
+  "agents.card.inventoryGcwShare": "gcw-* among them: {{count}}",
   "agents.card.capsInputAria": "New capability",
   "agents.card.capsAdd": "Add",
   "agents.card.capsClear": "Clear",
@@ -1748,8 +1780,7 @@ export const en: Record<TranslationKey, string> = {
   "kora.list.inactiveHint": "Sign in — host sessions will appear here",
   // UX-overhaul §5/§9.3 (Ф1): honest empty, branched by the executor count.
   "kora.list.emptyNoExecutors": "Connect an agent — its sessions will appear here",
-  "kora.list.emptyNoSessions":
-    "Sessions will appear once the host scanner starts",
+  "kora.list.emptyNoSessions": "Sessions will appear once the host scanner starts",
   "kora.list.emptyAction": "Connect an agent",
   "kora.list.emptyStatusLink": "Open system status",
   "kora.session.open": "Open",
@@ -1764,6 +1795,10 @@ export const en: Record<TranslationKey, string> = {
   "kora.session.noId": "No session id in the route",
   "kora.session.notFound": "Session not found",
   "kora.session.notFoundMessage": "Session '{{id}}' is not in the Kora registry.",
+  // ME-063: the coverage reason on the 404 plate — a return from the task
+  // card with an explanation, never an empty screen (agents-ui-spec §5).
+  "kora.session.notFoundCoverage":
+    "The host is not available for viewing: the board reads transcripts only from hosts with a scanner. Head back to the session list or the task card — the link will work once the host becomes readable.",
   "kora.session.backToList": "Back to the session list",
   "kora.session.inactiveTitle": "Session not active",
   "kora.session.readonlyPlate": "Someone else's session — read-only",

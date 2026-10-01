@@ -87,6 +87,7 @@ import type {
   TaskMutationAck,
   TaskPatchInput,
   TaskReports,
+  TaskSessionsPage,
   TaskUnarchiveResult,
 } from "./boardTypes";
 import type {
@@ -405,6 +406,14 @@ export interface BoardGateway extends MemoryGateway {
    */
   listHarnesses(signal?: AbortSignal): Promise<HarnessesPage>;
   /**
+   * Specialist session facts (`GET /api/tasks/{id}/sessions`, ME-063 —
+   * agents-ui-spec §4). UI-class read: rides the owner session (same-origin
+   * cookie while it lives — the reads-never-carry-Authorization rule; an
+   * mnd_-only device meets the server's honest 403 wall). Oldest reported
+   * first; `session_id` is the Kora deep-link glue as-is. 404 unknown task.
+   */
+  listTaskSessions(taskId: string, signal?: AbortSignal): Promise<TaskSessionsPage>;
+  /**
    * Add a harness (`POST /api/harnesses`, ui-token; wave 3C). 201 row;
    * 422 bad name (server-side sanitization is authoritative) or
    * dictionary cap (≤64); 409 duplicate.
@@ -422,9 +431,7 @@ export interface BoardGateway extends MemoryGateway {
    * rides the answer (transit-only server-side). The ssh secret travels
    * in the request body ONCE and is never logged by this adapter.
    */
-  createProvisionJob(
-    payload: ProvisionCreateInput,
-  ): Promise<ProvisionCreatedResult>;
+  createProvisionJob(payload: ProvisionCreateInput): Promise<ProvisionCreatedResult>;
   /**
    * Job progress (`GET /api/executors/provision/{job_id}`, ui-token):
    * state, steps, pinned host-key fingerprint, the linked enrollment.
@@ -912,7 +919,10 @@ export class BoardAdapter implements BoardGateway {
     );
   }
 
-  async patchInboxItem(memoryId: string, patch: InboxEditInput): Promise<TaskInboxEntry> {
+  async patchInboxItem(
+    memoryId: string,
+    patch: InboxEditInput,
+  ): Promise<TaskInboxEntry> {
     return this.request<TaskInboxEntry>(
       `/tasks/inbox/${encodeURIComponent(memoryId)}`,
       { method: "PATCH", auth: true, body: patch },
@@ -1043,6 +1053,21 @@ export class BoardAdapter implements BoardGateway {
     return this.request<HarnessesPage>("/harnesses", { signal });
   }
 
+  async listTaskSessions(
+    taskId: string,
+    signal?: AbortSignal,
+  ): Promise<TaskSessionsPage> {
+    // Read-identity discipline (ME-063): the route is ui-class but the
+    // owner session rides the same-origin cookie — the default (non-auth)
+    // request path, exactly the Kora reads' posture. A browser without an
+    // owner session but WITH a paired device sends its mnd_ bearer and the
+    // server answers the honest 403 explanatory wall (never mocked here).
+    return this.request<TaskSessionsPage>(
+      `/tasks/${encodeURIComponent(taskId)}/sessions`,
+      { signal },
+    );
+  }
+
   async createHarness(payload: HarnessCreateInput): Promise<HarnessStateResult> {
     return this.request<HarnessStateResult>("/harnesses", {
       method: "POST",
@@ -1078,9 +1103,7 @@ export class BoardAdapter implements BoardGateway {
         auth: {
           kind: payload.auth.kind,
           secret: payload.auth.secret ?? "",
-          ...(payload.auth.passphrase
-            ? { passphrase: payload.auth.passphrase }
-            : {}),
+          ...(payload.auth.passphrase ? { passphrase: payload.auth.passphrase } : {}),
         },
         ...(payload.harness_hint ? { harness_hint: payload.harness_hint } : {}),
         ...(payload.board_url_for_host
@@ -1088,8 +1111,7 @@ export class BoardAdapter implements BoardGateway {
           : {}),
         ...(payload.expected_host_key_fingerprint
           ? {
-              expected_host_key_fingerprint:
-                payload.expected_host_key_fingerprint,
+              expected_host_key_fingerprint: payload.expected_host_key_fingerprint,
             }
           : {}),
         ...(payload.reuse_enrollment_id

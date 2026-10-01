@@ -1236,6 +1236,31 @@ CREATE TABLE IF NOT EXISTS kora_sessions (
 );
 CREATE INDEX IF NOT EXISTS idx_kora_sessions_scan
 ON kora_sessions (executor_id, last_scan_at);
+-- ME-062 (agents-ui-spec §2/§4): the AGENT-authored session-fact mirror —
+-- which specialist children worked a task, per the executor's discovery
+-- report. ADVISORY (the agent is the source, the board stores+serves);
+-- deliberately SEPARATE from kora_sessions (ADR 0019 frozen contracts
+-- untouched — this table carries task-linkage, kora rows never did).
+-- PK mirrors the Kora glue id '{executor_id}:{native_id}' so the task
+-- card's deep-link needs no translation.
+CREATE TABLE IF NOT EXISTS task_session_facts (
+    executor_id      TEXT NOT NULL,
+    native_id        TEXT NOT NULL,
+    task_id          TEXT NOT NULL,
+    harness          TEXT NOT NULL CHECK (harness IN ('zcode','vscode','pi')),
+    specialist       TEXT NOT NULL DEFAULT '',
+    path             TEXT NOT NULL DEFAULT '',
+    tool_calls       INTEGER NOT NULL DEFAULT 0,
+    duration_s       INTEGER NOT NULL DEFAULT 0,
+    started_at       TEXT NOT NULL DEFAULT '',
+    ended_at         TEXT NOT NULL DEFAULT '',
+    parent_native_id TEXT NOT NULL DEFAULT '',
+    first_seen_at    TEXT NOT NULL,
+    reported_at      TEXT NOT NULL,
+    PRIMARY KEY (executor_id, native_id)
+);
+CREATE INDEX IF NOT EXISTS idx_task_session_facts_task
+ON task_session_facts (task_id, reported_at);
 """
 
 # WF-1 table-rebuild target (Store._rebuild_tasks_for_wf1): the full
@@ -1493,6 +1518,15 @@ class Store:
             db.execute(
                 "ALTER TABLE executors "
                 "ADD COLUMN discovered TEXT NOT NULL DEFAULT '[]'")
+        # ME-062 (agents-ui-spec §3.3/§4): harness capabilities inventory —
+        # the additive per-executor snapshot of the last discovery report's
+        # ``environments[]`` (names/counters only, never content). Additive
+        # ALTER — the '[]' DEFAULT covers pre-ME-062 rows; no SEED_VERSION
+        # bump (discovered precedent).
+        if "harness_inventory" not in ecols:
+            db.execute(
+                "ALTER TABLE executors "
+                "ADD COLUMN harness_inventory TEXT NOT NULL DEFAULT '[]'")
         # P2-1: provision_host_pins was reshaped from host-PK to (host,port)
         # PK while still WIP (unreleased). A dev DB carrying the old shape
         # would silently break every pin call — drop it; pins are TOFU
@@ -3531,6 +3565,259 @@ class Store:
                     "names": sorted(f["name"] for f in accepted),
                     "rejected": len(rejected)})
             return self._executor(db, executor_id), len(accepted), len(rejected), sorted(rejected)
+
+    # ------------------------------------------- ME-062 session facts + inventory
+    # agents-ui-spec §2/§4: the discovery leg's additive ``sessions[]``
+    # (task-linked child-session facts) and ``environments[]`` (harness
+    # capabilities inventory). Advisory mirrors — the agent reports, the
+    # board stores and serves; task-linkage is validated against the
+    # board's OWN attribution (claimed_by_executor), never self-asserted.
+
+    # Spec §2.1: dedup by id, ≤ 32 rows per post (the ROUTE enforces the
+    # per-post cap → 422); the STORE bounds the table per executor in the
+    # spirit of the agent cap (spec §4: "размер bounded (≤ 32 живых строк
+    # на исполнителя)").
+    SESSION_FACTS_EXECUTOR_CAP = 32
+    SESSION_FACT_HARNESS_DICT = ("zcode", "vscode", "pi")
+
+    def report_session_facts(
+            self, executor_id: str,
+            facts: list[dict[str, Any]]) -> dict[str, Any]:
+        """Session-fact ingest (ME-062, spec §2): upsert by the
+        (executor_id, native_id) PK, task-linkage validated against
+        task_assignments.claimed_by_executor — the board's AUTHORITATIVE
+        attribution (spec §2.2: an assignment claimed by THIS executor
+        must exist, else the fact is dropped and audited; a child or a
+        foreign executor can never mint linkage the board did not grant).
+
+        Grammar violations are DROPS + audit (the discovery.rejected
+        pattern — spec §2.1: missing task_id / unknown harness never 422):
+        - ``task_id`` empty, or no assignment on that task claimed by this
+          executor → reason ``task_linkage``;
+        - ``harness`` outside zcode|vscode|pi → reason ``harness``;
+        - ``native_id`` empty → reason ``native_id``.
+        Wire-level type violations stay the route's pydantic 422s.
+        Duplicates within one post are last-wins: an invalid LAST row for
+        an id drops the earlier valid one too (the agent dedups by id
+        before sending; this is the tail of the same discipline).
+
+        Bounded store: after upserts the executor's rows are trimmed to
+        the newest SESSION_FACTS_EXECUTOR_CAP by reported_at (trimmed
+        count is audited, never silent). Audits: sessions.rejected (any
+        report carrying drops), sessions.reported (when facts landed),
+        sessions.trimmed (when the bound shaved rows).
+
+        Returns {"accepted", "dropped", "dropped_reasons",
+        "dropped_native_ids", "listed"} — ``listed`` counts first-seen
+        (executor_id, native_id) pairs (the honest ingest response).
+        """
+
+        def _int_field(value: Any) -> int:
+            try:
+                return max(0, int(value or 0))
+            except (TypeError, ValueError):
+                return 0
+
+        accepted = listed = trimmed = 0
+        drops: list[tuple[str, str]] = []   # (native_id-or-'', reason)
+        reasons: dict[str, int] = {}
+        now = _now()
+        with self._lock, self._conn() as db:
+            row = db.execute(
+                "SELECT state FROM executors WHERE id=?",
+                (executor_id,)).fetchone()
+            if row is None or row["state"] == "revoked":
+                return {"accepted": 0, "dropped": len(facts),
+                        "dropped_reasons": {}, "dropped_native_ids": [],
+                        "listed": 0}
+            merged: dict[str, dict[str, Any]] = {}
+            for f in facts:
+                if not isinstance(f, dict):
+                    continue
+                native_id = str(f.get("native_id") or "").strip()[:512]
+                reason = ""
+                if not native_id:
+                    reason = "native_id"
+                elif str(f.get("harness") or "").strip() \
+                        not in self.SESSION_FACT_HARNESS_DICT:
+                    reason = "harness"
+                else:
+                    task_id = str(f.get("task_id") or "").strip()[:120]
+                    linked = db.execute(
+                        "SELECT 1 FROM task_assignments "
+                        "WHERE task_id=? AND claimed_by_executor=? "
+                        "LIMIT 1", (task_id, executor_id)).fetchone() \
+                        if task_id else None
+                    if linked is None:
+                        reason = "task_linkage"
+                if reason:
+                    merged.pop(native_id, None)
+                    drops.append((native_id, reason))
+                    continue
+                merged[native_id] = {
+                    "task_id": str(f.get("task_id") or "").strip()[:120],
+                    "harness": str(f.get("harness") or "").strip(),
+                    "specialist": str(f.get("specialist") or "").strip()[:120],
+                    "path": str(f.get("path") or "").strip()[:1024],
+                    "tool_calls": _int_field(f.get("tool_calls")),
+                    "duration_s": _int_field(f.get("duration_s")),
+                    "started_at": str(f.get("started_at") or "").strip()[:40],
+                    "ended_at": str(f.get("ended_at") or "").strip()[:40],
+                    "parent_native_id":
+                        str(f.get("parent_native_id") or "").strip()[:512],
+                }
+            for _, reason in drops:
+                reasons[reason] = reasons.get(reason, 0) + 1
+            if drops:
+                self._log(db, "sessions.rejected", None, {
+                    "executor_id": executor_id,
+                    "reasons": reasons,
+                    "count": len(drops),
+                    "native_ids": [n or "<empty>" for n, _ in drops][:32]})
+            for native_id, fact in merged.items():
+                existing = db.execute(
+                    "SELECT 1 FROM task_session_facts "
+                    "WHERE executor_id=? AND native_id=?",
+                    (executor_id, native_id)).fetchone()
+                db.execute(
+                    """INSERT INTO task_session_facts
+                       (executor_id, native_id, task_id, harness,
+                        specialist, path, tool_calls, duration_s,
+                        started_at, ended_at, parent_native_id,
+                        first_seen_at, reported_at)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                       ON CONFLICT(executor_id, native_id) DO UPDATE SET
+                         task_id=excluded.task_id,
+                         harness=excluded.harness,
+                         specialist=excluded.specialist,
+                         path=excluded.path,
+                         tool_calls=excluded.tool_calls,
+                         duration_s=excluded.duration_s,
+                         started_at=excluded.started_at,
+                         ended_at=excluded.ended_at,
+                         parent_native_id=excluded.parent_native_id,
+                         reported_at=excluded.reported_at""",
+                    (executor_id, native_id, fact["task_id"],
+                     fact["harness"], fact["specialist"], fact["path"],
+                     fact["tool_calls"], fact["duration_s"],
+                     fact["started_at"], fact["ended_at"],
+                     fact["parent_native_id"], now, now))
+                accepted += 1
+                if existing is None:
+                    listed += 1
+            # Bound the per-executor mirror (spec §4): keep the newest
+            # CAP rows by reported_at, rowid DESC as the deterministic
+            # tiebreak — board timestamps are SECONDS-precision, so a
+            # same-second burst would otherwise tie arbitrarily; rowid
+            # makes "last inserted wins" the tie rule (the upsert's
+            # last-report-wins semantics carried into the bound).
+            # Trimming is AUDITED, never silent.
+            cur = db.execute(
+                "DELETE FROM task_session_facts WHERE executor_id=? "
+                "AND native_id NOT IN ("
+                "  SELECT native_id FROM task_session_facts"
+                "  WHERE executor_id=?"
+                "  ORDER BY reported_at DESC, rowid DESC LIMIT ?)",
+                (executor_id, executor_id,
+                 self.SESSION_FACTS_EXECUTOR_CAP))
+            trimmed = cur.rowcount
+            if accepted:
+                self._log(db, "sessions.reported", None, {
+                    "executor_id": executor_id, "accepted": accepted,
+                    "listed": listed})
+            if trimmed:
+                self._log(db, "sessions.trimmed", None, {
+                    "executor_id": executor_id, "trimmed": trimmed,
+                    "cap": self.SESSION_FACTS_EXECUTOR_CAP})
+        return {"accepted": accepted, "dropped": len(drops),
+                "dropped_reasons": reasons,
+                "dropped_native_ids": [n for n, _ in drops],
+                "listed": listed}
+
+    def task_session_facts(self, task_id: str) -> list[dict[str, Any]] | None:
+        """Facts for the task card (ME-062, spec §4): oldest reported
+        first (the reports-listing convention — a work story reads
+        chronologically), executor name/host joined for row context.
+        Returns None when the task does not exist (the route's honest
+        404), [] when it exists with no facts (the honest-empty state,
+        spec §5)."""
+        with self._lock, self._conn() as db:
+            if db.execute("SELECT 1 FROM tasks WHERE id=?",
+                          (task_id,)).fetchone() is None:
+                return None
+            rows = db.execute(
+                "SELECT f.*, e.name AS executor_name, "
+                "       e.host AS executor_host "
+                "FROM task_session_facts f "
+                "LEFT JOIN executors e ON e.id = f.executor_id "
+                "WHERE f.task_id=? "
+                "ORDER BY f.reported_at ASC, f.native_id ASC",
+                (task_id,)).fetchall()
+        return [dict(r) for r in rows]
+
+    def report_executor_inventory(
+            self, executor_id: str,
+            environments: list[dict[str, Any]]) -> dict[str, Any] | None:
+        """Harness-inventory ingest (ME-062, spec §3.3/§4): store the last
+        discovery report's ``environments[]`` as the additive
+        ``harness_inventory`` snapshot — names/counters only, advisory,
+        OPEN-read like the ``discovered`` mirror. The route has ALREADY
+        validated the caps (lists ≤ 50/50/30/30, object ≤ 8 KiB, rows
+        ≤ 32 — honest 422s upstream); this method normalizes top-level
+        string lengths and writes.
+
+        Discovery semantics unchanged (spec §4): last-report snapshot, an
+        identical re-report is a silent no-op, and a report with NO
+        environments never wipes the last valid snapshot (the P3-1
+        precedent). Audit: inventory.reported, only when the snapshot
+        changed. Returns the fresh executor row, or None when the
+        executor is gone/revoked.
+        """
+        normalized: list[dict[str, Any]] = []
+        for env in environments:
+            if not isinstance(env, dict):
+                continue
+            name = str(env.get("name") or "").strip()[:60]
+            if not name:
+                continue
+            row = {
+                "name": name,
+                "kind": str(env.get("kind") or "").strip()[:30],
+                "home_path": str(env.get("home_path") or "").strip()[:200],
+            }
+            # v2 advisory fields ride along verbatim-but-bounded
+            for key, cap in (("markers", 64), ("config_paths", 64)):
+                vals = env.get(key)
+                if isinstance(vals, list):
+                    row[key] = [str(v)[:200] for v in vals[:cap]]
+            hints = env.get("session_hints")
+            if isinstance(hints, dict):
+                row["session_hints"] = {
+                    str(k)[:60]: v for k, v in list(hints.items())[:16]}
+            version = str(env.get("version") or "").strip()[:60]
+            if version:
+                row["version"] = version
+            caps = env.get("capabilities")
+            if isinstance(caps, dict):
+                row["capabilities"] = caps  # caps-validated at the route
+            normalized.append(row)
+        normalized.sort(key=lambda r: r["name"])
+        with self._lock, self._conn() as db:
+            row = db.execute(
+                "SELECT * FROM executors WHERE id=?", (executor_id,)).fetchone()
+            if row is None or row["state"] == "revoked":
+                return None
+            stored = [e for e in _loads(row["harness_inventory"])
+                      if isinstance(e, dict)]
+            if normalized and normalized != stored:
+                db.execute(
+                    "UPDATE executors SET harness_inventory=?, "
+                    "updated_at=? WHERE id=? AND state<>'revoked'",
+                    (json.dumps(normalized), _now(), executor_id))
+                self._log(db, "inventory.reported", None, {
+                    "executor_id": executor_id,
+                    "environments": [r["name"] for r in normalized]})
+            return self._executor(db, executor_id)
 
 
     def update_executor(self, executor_id: str, patch: dict[str, Any],

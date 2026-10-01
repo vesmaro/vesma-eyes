@@ -42,7 +42,9 @@ async function mountCard(
   transform: (page: ExecutorsPage) => ExecutorsPage = (page) => page,
 ): Promise<Mount> {
   const gateway = new MockAdapter({ latency: false });
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   const page = transform(await gateway.listExecutors());
   queryClient.setQueryData(keys.agents.executors.list(), page);
   const container = document.createElement("div");
@@ -133,7 +135,13 @@ describe("ExecutorSheet — identity + the diff PATCH discipline", () => {
     expect(html).toContain("Idle — nothing in progress");
     expect(html).toContain("All tasks");
     expect(html).toContain("Refresh pulse");
-    for (const section of ["Identity", "Link", "Access", "Capabilities", "Danger zone"]) {
+    for (const section of [
+      "Identity",
+      "Link",
+      "Access",
+      "Capabilities",
+      "Danger zone",
+    ]) {
       expect(html).toContain(section);
     }
     // П2: the harness WHY-note (a service fact) sits under the FOLDED
@@ -286,10 +294,14 @@ describe("ExecutorSheet — the revoked tombstone", () => {
     expect(nameInput?.disabled).toBe(true);
     expect(html).not.toContain("New capability");
     expect(
-      mount.query<HTMLButtonElement>("button").some((b) => b.textContent?.includes("Revoke")),
+      mount
+        .query<HTMLButtonElement>("button")
+        .some((b) => b.textContent?.includes("Revoke")),
     ).toBe(false);
     expect(
-      mount.query<HTMLButtonElement>("button").some((b) => b.textContent?.includes("Delete")),
+      mount
+        .query<HTMLButtonElement>("button")
+        .some((b) => b.textContent?.includes("Delete")),
     ).toBe(true);
     // The secret is NEVER rendered — only the honest hint about it.
     expect(html).toContain("The secret is never shown");
@@ -299,8 +311,7 @@ describe("ExecutorSheet — the revoked tombstone", () => {
 });
 
 describe("ExecutorSheet — AGW-11 paste-back approve (TOFU honesty)", () => {
-  const hexPin =
-    "3f2a9c1d5b7e40a68d93c1f0b2e4d6a8c0e2f4b6d8a0c2e4f60482a6c8e0d2f4";
+  const hexPin = "3f2a9c1d5b7e40a68d93c1f0b2e4d6a8c0e2f4b6d8a0c2e4f60482a6c8e0d2f4";
   const tail = hexPin.slice(-8);
 
   it("a pending row WITH provision context demands the fingerprint tail", async () => {
@@ -351,7 +362,9 @@ describe("ExecutorSheet — AGW-11 paste-back approve (TOFU honesty)", () => {
       expect(spy).toHaveBeenCalledWith("exec-copilot-pending", { state: "approved" });
     });
     // The context is one-shot: consumed by the successful verify.
-    expect(sessionStorage.getItem("vesmaro.provision-approve.exec-copilot-pending")).toBeNull();
+    expect(
+      sessionStorage.getItem("vesmaro.provision-approve.exec-copilot-pending"),
+    ).toBeNull();
     await actUnmount(mount.root);
   });
 
@@ -433,6 +446,65 @@ describe("ExecutorSheet — AGW-11 paste-back approve (TOFU honesty)", () => {
     await actWaitUntil(() => {
       expect(mount.text()).toContain("Last 8 hex chars");
     });
+    await actUnmount(mount.root);
+  });
+});
+
+describe("ExecutorSheet — ME-064 «Detected on the host» inventory dropdowns", () => {
+  it("the fixture agent host renders the four category counters immediately; names sit behind the disclosure", async () => {
+    const mount = await mountCard("exec-laptop-zcode");
+    const text = mount.text();
+    // The section and the environment line (store id + kind).
+    expect(text).toContain("Detected on the host");
+    expect(text).toContain("zcode · cli");
+    // Counters visible collapsed (spec §3.1: «счётчики видны сразу») — the
+    // FULL counters, lists capped server-side.
+    expect(text).toContain("specialists");
+    expect(text).toContain("39");
+    expect(text).toContain("121");
+    expect(text).toContain("24");
+    // Names are NOT rendered while every dropdown is collapsed.
+    expect(text).not.toContain("bathys-researcher");
+    await actUnmount(mount.root);
+  });
+
+  it("a click opens the names list: capped names, the honest «…and N more», the gcw share", async () => {
+    const mount = await mountCard("exec-laptop-zcode");
+    await clickButton(mount, "specialists");
+    const text = mount.text();
+    expect(text).toContain("bathys-researcher");
+    expect(text).toContain("gcw-tech-lead");
+    // 39 counted, 3 listed → 36 more; the cut is visible, not silent.
+    expect(text).toContain("…and 36 more");
+    expect(text).toContain("gcw-* among them: 38");
+    // The disclosure is keyboard-shaped: aria-expanded flips true.
+    const toggles = mount
+      .query<HTMLButtonElement>("button[aria-controls]")
+      .filter((button) => button.textContent?.includes("specialists"));
+    expect(toggles[0].getAttribute("aria-expanded")).toBe("true");
+    await actUnmount(mount.root);
+  });
+
+  it("a host without an inventory (the poller case, Э3) renders «No data», never a skeleton", async () => {
+    // exec-laptop-hermes: fixture row with NO harness_inventory field.
+    const mount = await mountCard("exec-laptop-hermes");
+    const text = mount.text();
+    expect(text).toContain("Detected on the host");
+    expect(text).toContain("No data");
+    expect(text).toContain("after ME-056");
+    // No dropdown rows are fabricated.
+    expect(text).not.toContain("…and");
+    await actUnmount(mount.root);
+  });
+
+  it("a pre-ME-062 board row (field absent) degrades to the same honest empty", async () => {
+    const mount = await mountCard("exec-laptop-zcode", (page) => ({
+      ...page,
+      items: page.items.map((row) =>
+        row.id === "exec-laptop-zcode" ? { ...row, harness_inventory: undefined } : row,
+      ),
+    }));
+    expect(mount.text()).toContain("No data");
     await actUnmount(mount.root);
   });
 });

@@ -154,7 +154,10 @@ describe("MockAdapter agents — executor registry + settings", () => {
     expect(after.scope).toBe("");
 
     await rejectsApiError(
-      mock.putExecutionSettings({ default_executor: "exec-unknown", fallback_executor: "" }),
+      mock.putExecutionSettings({
+        default_executor: "exec-unknown",
+        fallback_executor: "",
+      }),
       422,
     );
     // Revoked executors never route (kill-switch).
@@ -451,5 +454,35 @@ describe("MockAdapter agents — automation settings (UI-21 hub)", () => {
     expect(status.daily_cap).toBe(777);
     expect(status.daily_used).toBe(0); // the honest S1 counter
     expect(status.engine).toBe(false);
+  });
+});
+
+describe("MockAdapter agents — ME-063 task session facts", () => {
+  it("serves the corpus snapshot for the seeded task, oldest reported first", async () => {
+    const page = await adapter().listTaskSessions("TB-11");
+    expect(page.task_id).toBe("TB-11");
+    expect(page.count).toBe(2);
+    expect(page.items.map((fact) => fact.session_id)).toEqual([
+      "exec-laptop-zcode:sess_4d81aa07",
+      "exec-laptop-zcode:sess_c3f9e120",
+    ]);
+    // The liveness pair the panel branches on.
+    expect(page.items[0].ended_at).not.toBe("");
+    expect(page.items[1].ended_at).toBe("");
+  });
+
+  it("computes reported_age_s against the frozen mock clock (server parity)", async () => {
+    const page = await adapter().listTaskSessions("TB-11");
+    // Reported 08:47:05, clock 09:00:00 → 12 min 55 s = 775 s.
+    expect(page.items[0].reported_age_s).toBe(775);
+  });
+
+  it("a known task without facts is an honest empty page, never a 404", async () => {
+    const page = await adapter().listTaskSessions("TB-1");
+    expect(page).toEqual({ ok: true, task_id: "TB-1", count: 0, items: [] });
+  });
+
+  it("an unknown task is the server's honest 404", async () => {
+    await rejectsApiError(adapter().listTaskSessions("NOPE-1"), 404);
   });
 });

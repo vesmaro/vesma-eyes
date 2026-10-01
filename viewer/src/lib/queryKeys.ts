@@ -59,6 +59,8 @@ export const keys = {
     },
     history: (taskId: string) => ["tasks", "history", taskId] as const,
     memories: (taskId: string) => ["tasks", "memories", taskId] as const,
+    /** ME-063: specialist session facts (ui-class read, per-task). */
+    sessions: (taskId: string) => ["tasks", "sessions", taskId] as const,
     archive: (params: ArchiveParams = {}) => ["tasks", "archive", params] as const,
     archiveAll: ["tasks", "archive"] as const,
     inbox: (params: InboxParams = {}) => ["tasks", "inbox", params] as const,
@@ -172,6 +174,7 @@ export type TaskDetailKey = ReturnType<typeof keys.tasks.detail>;
 export type TaskReportsKey = ReturnType<typeof keys.tasks.reports.detail>;
 export type TaskHistoryKey = ReturnType<typeof keys.tasks.history>;
 export type TaskMemoriesKey = ReturnType<typeof keys.tasks.memories>;
+export type TaskSessionsKey = ReturnType<typeof keys.tasks.sessions>;
 export type TaskArchiveKey = ReturnType<typeof keys.tasks.archive>;
 export type TaskInboxKey = ReturnType<typeof keys.tasks.inbox>;
 export type TracesListKey = ReturnType<typeof keys.traces.list>;

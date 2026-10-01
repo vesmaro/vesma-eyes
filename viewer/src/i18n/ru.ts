@@ -520,6 +520,27 @@ export const ru = {
   "tasks.workersAgents": "Заявленные агенты",
   "tasks.workersReportsLink": "Отчёты по задаче: {{count}}",
 
+  // --- ME-063 «Специалисты и сессии» (agents-ui-spec §6.2) --------------------
+  "tasks.sessionsLabel": "Специалисты и сессии",
+  "tasks.sessionsLoading": "Загружаем сессии специалистов",
+  "tasks.sessionsUnavailableTitle": "Сессии недоступны в этом режиме",
+  "tasks.sessionsUnavailableMessage":
+    "Этот источник данных не отдаёт сессии специалистов — блок покажет их, когда борд подключён.",
+  "tasks.sessionsFailed": "Не удалось загрузить сессии",
+  "tasks.sessionsFailedMessage":
+    "Борд не ответил на запрос сессий — повторите попытку.",
+  "tasks.sessionsEmptyTitle": "Агент ещё не отчитался о сессиях",
+  "tasks.sessionsEmptyMessage":
+    "Сессии специалистов сообщает агент исполнителя. Пока их нет — это честное отсутствие, а не поломка: задачи, которые ведёт поллер или исполнитель без агента, сессий не дают.",
+  "tasks.sessionsLive": "работает",
+  "tasks.sessionsIdle": "завершилась",
+  "tasks.sessionsToolCalls": "тул-каллов: {{count}}",
+  "tasks.sessionsAge": "{{age}} назад",
+  "tasks.sessionsExecutor": "докладал {{name}}",
+  "tasks.sessionsOpenTranscript": "Открыть транскрипт",
+  "tasks.sessionsReportedHint":
+    "Факты — зеркальный отчёт агента (совещательный, не авторитетный); возраст считается от начала сессии.",
+
   // --- UI-28 «Активность» (spec 2026-09-27 §6 + row grammar §2) --------------
   "nav.taskActivity": "Активность",
   "activity.title": "Активность",
@@ -1008,17 +1029,14 @@ export const ru = {
   "agents.lifecycle.state.offline": "не на связи",
   "agents.lifecycle.state.disabled": "выключен владельцем",
   "agents.lifecycle.state.revoked": "отозван",
-  "agents.lifecycle.next.provisioning":
-    "Ставим агента на машину — обычно пара минут.",
+  "agents.lifecycle.next.provisioning": "Ставим агента на машину — обычно пара минут.",
   "agents.lifecycle.next.awaiting-approval":
     "Хост зарегистрировался. Проверьте данные и одобрите.",
   "agents.lifecycle.next.awaiting-first-report":
     "Агент установлен; обычно докладывается до {{silentMax}} — проверить связь.",
   "agents.lifecycle.next.online": "Последний доклад {{age}} назад.",
-  "agents.lifecycle.next.silent":
-    "Докладов нет {{age}} — проверить связь.",
-  "agents.lifecycle.next.offline":
-    "Последняя связь {{age}} назад — проверить связь.",
+  "agents.lifecycle.next.silent": "Докладов нет {{age}} — проверить связь.",
+  "agents.lifecycle.next.offline": "Последняя связь {{age}} назад — проверить связь.",
   "agents.lifecycle.next.disabled": "Новые задачи не получает; доклады продолжаются.",
   "agents.lifecycle.next.revoked": "Доступ отозван. Секрет больше не действует.",
   "agents.lifecycle.reportAgo": "{{age}} назад",
@@ -1129,6 +1147,18 @@ export const ru = {
   "agents.card.enabledPendingHint":
     "Сначала одобрите — переключатель диспетчеризации появится после одобрения.",
   "agents.card.capsPlaceholder": "роль специалиста, например researcher",
+  // ME-064 «Обнаружено на хосте» (agents-ui-spec §3.1): инвентарь-дропдауны.
+  "agents.card.sectionInventory": "Обнаружено на хосте",
+  "agents.card.inventoryNone": "Нет данных",
+  "agents.card.inventoryNoneNote":
+    "Обнаружение установок умеет только агент (Go). Хост, подключённый поллером, пришлёт список после ME-056 — пусто здесь честный ответ, а не задержка.",
+  "agents.card.inventorySpecialists": "специалисты",
+  "agents.card.inventorySkills": "скиллы",
+  "agents.card.inventoryPlugins": "плагины",
+  "agents.card.inventoryInstructions": "инструкции",
+  "agents.card.inventoryNoNames": "имён нет — только счётчик",
+  "agents.card.inventoryOverflow": "…и ещё {{count}}",
+  "agents.card.inventoryGcwShare": "из них gcw-*: {{count}}",
   "agents.card.capsInputAria": "Новая возможность",
   "agents.card.capsAdd": "Добавить",
   "agents.card.capsClear": "Очистить",
@@ -1546,8 +1576,7 @@ export const ru = {
   "docs.cat.meshAdmin": "Администратору",
   "docs.catDesc.meshAdmin": "Эксплуатация и безопасность узла vesma-mesh.",
   "docs.cat.apiOverview": "Обзор хаба",
-  "docs.catDesc.apiOverview":
-    "Что здесь живёт, карта API проектов и правило свежести.",
+  "docs.catDesc.apiOverview": "Что здесь живёт, карта API проектов и правило свежести.",
   "docs.cat.apiBoard": "API борда",
   "docs.catDesc.apiBoard":
     "Референс HTTP API vesma-eyes, сгенерированный из OpenAPI-снапшота.",
@@ -1783,8 +1812,7 @@ export const ru = {
   // Вариант A (исполнителей 0) — призыв подключить; вариант B (исполнители
   // есть, сканер ещё не приносил сессии) — без обещания «появятся сами».
   "kora.list.emptyNoExecutors": "Подключите агента — его сессии появятся здесь",
-  "kora.list.emptyNoSessions":
-    "Сессии появятся, когда сканер хостов начнёт работу",
+  "kora.list.emptyNoSessions": "Сессии появятся, когда сканер хостов начнёт работу",
   "kora.list.emptyAction": "Подключить агента",
   "kora.list.emptyStatusLink": "Открыть статус системы",
   "kora.session.open": "Открыть",
@@ -1799,6 +1827,10 @@ export const ru = {
   "kora.session.noId": "В маршруте нет id сессии",
   "kora.session.notFound": "Сессия не найдена",
   "kora.session.notFoundMessage": "Сессии «{{id}}» нет в реестре Коры.",
+  // ME-063: причина покрытия на 404-плашке — возврат из карточки задачи
+  // с объяснением, а не пустой экран (agents-ui-spec §5).
+  "kora.session.notFoundCoverage":
+    "Хост недоступен для просмотра: борд читает транскрипты только хостов со сканером. Вернитесь к списку сессий или в карточку задачи — ссылка останется рабочей, когда хост станет читаемым.",
   "kora.session.backToList": "К списку сессий",
   "kora.session.inactiveTitle": "Сессия не активна",
   "kora.session.readonlyPlate": "Чужая сессия — только чтение",
@@ -1807,8 +1839,7 @@ export const ru = {
   "kora.transcript.title": "Транскрипт (только чтение)",
   "kora.transcript.loading": "Загружаем транскрипт",
   "kora.transcript.loadFailed": "Не удалось загрузить транскрипт",
-  "kora.transcript.inactiveHint":
-    "Войдите — и транскрипт этой сессии появится здесь",
+  "kora.transcript.inactiveHint": "Войдите — и транскрипт этой сессии появится здесь",
   "kora.transcript.empty": "Записей нет",
   "kora.transcript.emptyMessage":
     "Сессия в реестре, но записей в сторе нет — или ридер ещё не дошёл до неё.",

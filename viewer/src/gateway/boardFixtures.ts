@@ -18,6 +18,7 @@ import type {
   TaskInbox,
   TaskMemories,
   TaskReports,
+  TaskSessionFact,
 } from "./boardTypes";
 import type { BoardTask } from "./boardTypes";
 
@@ -401,8 +402,7 @@ export const MOCK_TASKS: BoardTask[] = [
     position: 2,
     title: "ME-013 smoke: untrusted mermaid fixture",
     summary: "Browser render smoke fixture.",
-    spec:
-      "## Diagram (untrusted surface)\n\n```mermaid\nflowchart LR\n  UNTRUSTED[fixture] --> GATE\n```",
+    spec: "## Diagram (untrusted surface)\n\n```mermaid\nflowchart LR\n  UNTRUSTED[fixture] --> GATE\n```",
     agents: ["zcode"],
     specialists: ["@GCW: Senior Frontend Developer"],
     env: "laptop",
@@ -682,6 +682,28 @@ export const MOCK_EXECUTORS: ExecutorItem[] = [
     registered_via: "",
     registered_at: "2026-09-18T09:00:00+00:00",
     updated_at: "2026-09-19T08:00:00+00:00",
+    // ME-064: the agent-reported inventory snapshot (agents-ui-spec §3.2
+    // shape verbatim). Counts deliberately OVERFLOW the capped name lists
+    // (39 > 3, 121 > 2) — the playground must exercise the «…и ещё N»
+    // honesty line, not just the happy path.
+    harness_inventory: [
+      {
+        name: "zcode",
+        kind: "cli",
+        home_path: "/home/u/.zcode",
+        capabilities: {
+          specialists: ["bathys-researcher", "gcw-tech-lead", "gcw-senior-qa-engineer"],
+          specialists_count: 39,
+          gcw_specialists_count: 38,
+          skills: ["a11y-audit", "design-tokens"],
+          skills_count: 121,
+          plugins: [],
+          instructions: ["architectural-committee.md"],
+          instructions_count: 24,
+          notes: { agents_md: true, gcw_managed: true },
+        },
+      },
+    ],
   },
   {
     id: "exec-laptop-hermes",
@@ -1092,6 +1114,54 @@ export const MOCK_ASSIGNMENTS_PAGE: AssignmentsPage = {
   items: MOCK_ASSIGNMENTS.map((assignment) => ({ ...assignment })),
 };
 
+// --- ME-063 specialist session facts (agents-ui-spec §2.1) ----------------------
+// The agent-leg mirror: one finished child + one LIVE child on the running
+// TB-11 attempt, so the playground exercises both liveness branches and the
+// deep-link glue. Every other task honestly answers count 0 (the §5
+// honest-empty — before the agent leg deploys that is EVERY task's truth).
+
+export const MOCK_TASK_SESSIONS: TaskSessionFact[] = [
+  {
+    session_id: "exec-laptop-zcode:sess_4d81aa07",
+    executor_id: "exec-laptop-zcode",
+    executor_name: "zcode@laptop",
+    native_id: "sess_4d81aa07",
+    task_id: "TB-11",
+    harness: "zcode",
+    specialist: "@GCW: Researcher",
+    path: "/home/u/.zcode/cli/sess_4d81aa07.jsonl",
+    tool_calls: 34,
+    duration_s: 960,
+    started_at: "2026-09-19T08:31:00+00:00",
+    ended_at: "2026-09-19T08:47:00+00:00",
+    parent_native_id: "",
+    first_seen_at: "2026-09-19T08:47:05+00:00",
+    reported_at: "2026-09-19T08:47:05+00:00",
+    reported_age_s: 0,
+  },
+  {
+    session_id: "exec-laptop-zcode:sess_c3f9e120",
+    executor_id: "exec-laptop-zcode",
+    executor_name: "zcode@laptop",
+    native_id: "sess_c3f9e120",
+    task_id: "TB-11",
+    harness: "zcode",
+    // Best-effort field: the spawn-registry may not know the role — the
+    // native id is the honest fallback label then.
+    specialist: "",
+    path: "/home/u/.zcode/cli/sess_c3f9e120.jsonl",
+    tool_calls: 12,
+    duration_s: 0,
+    started_at: "2026-09-19T08:52:00+00:00",
+    // LIVE child (mid-run sweep report): no ended_at yet.
+    ended_at: "",
+    parent_native_id: "",
+    first_seen_at: "2026-09-19T08:52:40+00:00",
+    reported_at: "2026-09-19T08:52:40+00:00",
+    reported_age_s: 0,
+  },
+];
+
 /** Default-executor pair (Amd 2 §5): the laptop poller routes, mesh backs. */
 export const MOCK_EXECUTION_SETTINGS: ExecutionSettings = {
   ok: true,
@@ -1336,7 +1406,8 @@ export function buildMockActivityCorpus(nowMs: number): ActivityItem[] {
       executor_id: "exec-laptop-zcode",
       host: "laptop",
       report_kind: "intermediate",
-      detail: "Прогнал vitest: 164 файла зелёные, tsc чист; осталось добить fallback у archcom-флага.",
+      detail:
+        "Прогнал vitest: 164 файла зелёные, tsc чист; осталось добить fallback у archcom-флага.",
     }),
     row(11, "assignment.started", "TB-1", {
       actor: "machine:exec-laptop-zcode",
@@ -1350,7 +1421,8 @@ export function buildMockActivityCorpus(nowMs: number): ActivityItem[] {
       executor_id: "exec-laptop-hermes",
       host: "laptop",
       report_kind: "final",
-      detail: "HttpAdapter подключён к живому API, TOTP-флоу проверен на remote-сессии.",
+      detail:
+        "HttpAdapter подключён к живому API, TOTP-флоу проверен на remote-сессии.",
     }),
     row(52, "assignment.done", "T6", {
       actor: "machine:exec-laptop-hermes",
@@ -1373,7 +1445,10 @@ export function buildMockActivityCorpus(nowMs: number): ActivityItem[] {
       host: "old-laptop",
       detail: "bootstrap: harness не поднялся",
     }),
-    row(97, "task.moved", "TB-3", { actor: "machine:board", detail: "в работе → блокировано" }),
+    row(97, "task.moved", "TB-3", {
+      actor: "machine:board",
+      detail: "в работе → блокировано",
+    }),
     row(120, "assignment.expired", "TB-4", { actor: "machine:reaper" }),
     row(132, "task.updated", "TB-5", { actor: "ui" }),
     row(150, "task.created", "TB-5", { actor: "device:dev-7pad night-tablet" }),
@@ -1387,7 +1462,10 @@ export function buildMockActivityCorpus(nowMs: number): ActivityItem[] {
     }),
     row(210, "task.unarchived", "TB-6", { actor: "ui" }),
     // evening belt — hours 5..10 back, feeding the histogram's mid bars
-    row(322, "task.moved", "T6", { actor: "machine:board", detail: "открыто → в работе" }),
+    row(322, "task.moved", "T6", {
+      actor: "machine:board",
+      detail: "открыто → в работе",
+    }),
     row(341, "task.created", "T6", { actor: "ui" }),
     row(410, "assignment.started", "TB-2", {
       actor: "machine:exec-mesh-qa",
