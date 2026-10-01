@@ -122,9 +122,6 @@ export const ru = {
   "cmdk.hintNavigate": "↑↓ — выбор",
   "cmdk.hintOpen": "Enter — открыть",
   "cmdk.hintClose": "Esc — закрыть",
-  "cmdk.noResultsHint": "Ищите по заголовку, тегу или имени агента.",
-  "cmdk.memoryUnavailable": "Память недоступна — показаны локальные разделы",
-  "cmdk.willOpen": "Откроется:",
 
   // --- overview cockpit (UX-overhaul §3, Ф2 — live blocks) ------------------------
   "cockpit.busyTitle": "Кто занят",
@@ -157,6 +154,7 @@ export const ru = {
   "overview.waitingChip": "Ждут владельца: {{count}}",
   "overview.tickerItem": "{{time}} записано в память: {{title}} · {{server}}",
   "overview.wellEmpty": "Колодец ждёт первой записи — их пишут агенты.",
+  "overview.wellError": "Колодец недоступен — шина не ответила",
   // UX-overhaul §3/§8 (Ф1): Обзор ведёт в рабочие домены (Задачи/Агенты)
   // и говорит одной строкой, что ещё не живо (персона-ревью: формулировка).
   // Review P3-4: Sessions/Traces left the nav in Ф1 — the line tells the
@@ -238,7 +236,6 @@ export const ru = {
     "Попаданий типа {{type}} по запросу «{{query}}» нет. Возможно, конвейер ранжирует этот запрос иначе.",
   "search.noMatchesHint":
     "Попробуйте меньше или другие слова — колодец глубок, но буквален.",
-  "search.noMatchesAction": "Или поискайте по тегам",
   "search.hitsCount": "Найдено {{count}} по запросу «{{query}}»",
   "search.hitsTypedSuffix": " (клиентский фильтр по типу)",
   "search.relevanceTitle": "релевантность {{value}}",

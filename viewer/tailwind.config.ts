@@ -155,9 +155,6 @@ export default {
         "glow-gold": "var(--glow-gold)",
         "glow-live": "var(--glow-live)",
         "glow-error": "var(--glow-error)",
-        // Phase 1: the palette's active-row leading edge (§6.2 — left focus
-        // bar; the ring itself never moves layout).
-        "inset-focus": "inset 2px 0 0 0 var(--color-focus)",
       },
       transitionDuration: {
         instant: "var(--duration-instant)",

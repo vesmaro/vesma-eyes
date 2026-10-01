@@ -109,9 +109,6 @@ export const en: Record<TranslationKey, string> = {
   "cmdk.hintNavigate": "↑↓ — navigate",
   "cmdk.hintOpen": "Enter — open",
   "cmdk.hintClose": "Esc — close",
-  "cmdk.noResultsHint": "Search by title, tag, or agent name.",
-  "cmdk.memoryUnavailable": "Memory is unavailable — showing local sections",
-  "cmdk.willOpen": "Opens:",
 
   // --- overview cockpit (UX-overhaul §3, Ф2 — live blocks) ------------------------
   "cockpit.busyTitle": "Who is busy",
@@ -144,6 +141,7 @@ export const en: Record<TranslationKey, string> = {
   "overview.waitingChip": "Waiting for you: {{count}}",
   "overview.tickerItem": "{{time}} written to memory: {{title}} · {{server}}",
   "overview.wellEmpty": "The well awaits its first record — agents write them.",
+  "overview.wellError": "The well is unreachable — the bus did not answer",
   // UX-overhaul §3/§8 (Ф1): the overview leads into the working domains and
   // states what is not live yet in one honest line.
   // Review P3-4: Sessions/Traces left the nav in Ф1 — the line tells the
@@ -225,7 +223,6 @@ export const en: Record<TranslationKey, string> = {
     "No {{type}} hits for “{{query}}”. The pipeline may rank this query differently.",
   "search.noMatchesHint":
     "Try fewer or different words — the well is deep but literal.",
-  "search.noMatchesAction": "Or browse the tags",
   "search.hitsCount": "{{count}} found for “{{query}}”",
   "search.hitsTypedSuffix": " (client-side filter of server-ranked hits)",
   "search.relevanceTitle": "relevance {{value}}",

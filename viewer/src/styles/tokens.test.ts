@@ -391,6 +391,25 @@ describe("Phase 1 value locks (design blueprint v1.1 §5.2 — Кора-орга
       expect(block).toContain("--color-text-primary: #e6edf3");
       expect(block).toContain("--color-focus: #4fc2ce");
     }
+    // Full lockstep (review P2-3): EVERY declaration in the [data-well-window]
+    // scope must equal the dark :root value it mirrors — spot-checks above
+    // let a drifted name pass silently, the map diff does not.
+    for (const [css, dark] of [
+      [tokensCss, darkDecls],
+      [boardTokensCss, boardDarkDecls],
+    ] as const) {
+      const wellWindow = themeDecls(css, "[data-well-window]");
+      expect(
+        wellWindow.size,
+        "the well-window scope must pin at least the hero surface set",
+      ).toBeGreaterThan(0);
+      for (const [name, value] of wellWindow) {
+        expect(
+          dark.get(name),
+          `well-window ${name} must equal the dark :root column`,
+        ).toBe(value);
+      }
+    }
   });
 });
 

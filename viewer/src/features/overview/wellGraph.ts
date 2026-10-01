@@ -87,9 +87,13 @@ export function buildWellGraph({ memories }: WellGraphInput): {
     // Depth: newer → shallower; the 1.25 exponent packs the bottom.
     const y = TOP_MARGIN + rank ** 1.25 * usableH;
     // Stable x with a mild two-column jitter so rows never read as a grid.
+    // The jitter multiplies the span, so the raw x can leave the margins —
+    // clamped to [X_MARGIN, W - X_MARGIN] (review P3-3: rare nodes must not
+    // clip past the viewBox edge).
     const jitter = (stableUnit(memory.id, 7) - 0.5) * 0.06;
     const column = stableUnit(memory.id, 13);
-    const x = X_MARGIN + column * (WELL_VIEW_W - 2 * X_MARGIN) * (1 + jitter);
+    const rawX = X_MARGIN + column * (WELL_VIEW_W - 2 * X_MARGIN) * (1 + jitter);
+    const x = Math.min(Math.max(rawX, X_MARGIN), WELL_VIEW_W - X_MARGIN);
     return {
       id: memory.id,
       x,

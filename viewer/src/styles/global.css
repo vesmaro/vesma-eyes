@@ -66,56 +66,6 @@
   animation: docs-pop var(--duration-fast) var(--ease-out);
 }
 
-/* ── Command palette (blueprint §6.2/§10) ──────────────────────────────
- * The scrim is --palette-scrim + blur(4px) — the ONLY blur in the system;
- * its value lives in the token spec (§5.2), reduced regimes drop the blur
- * and keep the tint. Opening rides opacity+scale .98→1 on --duration-fast
- * (the recorded deviation: +30ms over the ratified 120ms ceiling — §10);
- * closing is Radix unmount = instant, which satisfies ≤120ms. */
-.palette-scrim {
-  background-color: var(--palette-scrim);
-  backdrop-filter: blur(4px);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .palette-scrim {
-    backdrop-filter: none;
-  }
-}
-
-[data-motion="reduced"] .palette-scrim {
-  backdrop-filter: none;
-}
-
-@keyframes palette-panel-in {
-  from {
-    opacity: 0;
-    transform: translateY(-4px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@keyframes palette-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.palette-panel[data-state="open"] {
-  transform-origin: top center; /* scale reads from the top-bar trigger */
-  animation: palette-panel-in var(--duration-fast) var(--ease-enter);
-}
-
-.palette-scrim[data-state="open"] {
-  animation: palette-fade-in var(--duration-fast) var(--ease-out);
-}
-
 /* ── Well hero (blueprint §10 — Overview awakening + drift) ────────────
  * Awakening = once per session (sessionStorage-gated by the hero): nodes
  * surface bottom-up in 8 depth bands — 240ms per node (--duration-impulse
@@ -150,7 +100,6 @@
 
 [data-awaken="true"] .well-hud {
   animation: well-hud-awaken var(--duration-fast) var(--ease-out) both;
-  animation-delay: calc(var(--hud-step) * var(--duration-stagger));
 }
 
 /* Drift: the well is not a photograph — ≤4px/s ambient, --duration-iris
@@ -168,10 +117,6 @@
 .well-drift {
   animation: well-drift var(--duration-iris) var(--ease-breath) infinite
     alternate;
-}
-
-.well-drift[data-drift-phase="late"] {
-  animation-delay: calc(var(--duration-iris) / -2);
 }
 
 [data-live="calm"] .well-drift,

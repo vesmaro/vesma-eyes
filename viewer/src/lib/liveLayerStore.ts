@@ -58,16 +58,20 @@ export function persistLiveLayer(
   try {
     storage?.setItem(LIVE_LAYER_STORAGE_KEY, layer);
   } catch {
-    // Swallow: the in-memory level still applies for this session.
+    // Swallow: persist is best-effort. snapshot() reads storage only ONCE
+    // and serves the cache afterwards, so the in-memory level stays
+    // authoritative until the next setLiveLayer — a failed write cannot
+    // silently revert it.
   }
 }
 
 // --- the one store -----------------------------------------------------------------
 
-let current: LiveLayer | null = null; // last known value (cache only)
+/** The authoritative in-memory level; null until the first read resolves it. */
+let current: LiveLayer | null = null;
 
 function snapshot(): LiveLayer {
-  current = readStoredLiveLayer() ?? DEFAULT_LIVE_LAYER;
+  current ??= readStoredLiveLayer() ?? DEFAULT_LIVE_LAYER;
   return current;
 }
 

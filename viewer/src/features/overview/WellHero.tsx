@@ -16,7 +16,7 @@ import { buildWellGraph, WELL_NODE_CAP, WELL_VIEW_H, WELL_VIEW_W } from "./wellG
  * глубокий»; the veil follows the well, not the page). Nodes are real
  * memories, edges are real derived_from links — data-as-decoration is the
  * only imagery route (§5.4); with no data there is no graph, only the honest
- * empty line.
+ * empty line — and a failed wire names itself (the honest error line).
  *
  * HUD discipline (§7.1): every text pixel inside the canvas sits on the
  * --hud-veil strip and carries ONLY the text-primary/secondary pairs —
@@ -188,8 +188,16 @@ export function WellHero() {
           ) : null}
         </svg>
 
-        {graph.nodes.length === 0 && !memories.isPending ? (
-          <p className="well-hud absolute inset-x-0 top-1/2 -translate-y-1/2 px-6 text-center text-sm text-foreground-secondary">
+        {/* Honest states (review P1-1): a FAILED wire is not «empty» — the
+         * error line names the failure; the invitation shows only when the
+         * wire answered and found nothing. Pending renders nothing. Both
+         * lines sit on the veil (§5.2 canvas-text discipline). */}
+        {memories.isError ? (
+          <p className="well-hud absolute inset-x-0 top-1/2 -translate-y-1/2 px-6 text-center text-sm text-foreground-secondary bg-hud-veil">
+            {t("overview.wellError")}
+          </p>
+        ) : !memories.isPending && graph.nodes.length === 0 ? (
+          <p className="well-hud absolute inset-x-0 top-1/2 -translate-y-1/2 px-6 text-center text-sm text-foreground-secondary bg-hud-veil">
             {t("overview.wellEmpty")}
           </p>
         ) : null}
