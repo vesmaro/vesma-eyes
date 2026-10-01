@@ -283,11 +283,11 @@ source of truth for the version is `FastAPI(version=…)` in
 
 ## Ecosystem
 
-```text
-vesma        → the memory engine (storage, API, MCP, traces)
-vesma-mesh   → cross-store federation (Go transport)
-vesma-eyes  → the eye + the cockpit                       (this repo)
-```
+- [vesma](https://github.com/vesmaro/vesma) — the memory engine (storage, API, MCP, traces)
+- [vesma-agent](https://github.com/vesmaro/vesma-agent) — outbound agent: board tasks → local harnesses
+- [vesma-mesh](https://github.com/vesmaro/vesma-mesh) — cross-store federation (Go transport)
+- [vesma-vitals](https://github.com/vesmaro/vesma-vitals) — honest measurement of the server's work (health + value)
+- [vesma-eyes](https://github.com/vesmaro/vesma-eyes) — the eye + the cockpit (this repo)
 
 ---
 
