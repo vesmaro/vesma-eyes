@@ -227,9 +227,12 @@ const V12_GOLDEN_THEMED_TOKENS = ["--web-tone-update"];
 
 /** Map of custom property → normalised value for every top-level block
  * whose selector list includes `selector`. */
-function themeDecls(css: string, selector: string): Map<string, string> {
+function themeDecls(rawCss: string, selector: string): Map<string, string> {
   const decls = new Map<string, string>();
   const open = /([^{]+)\{/;
+  // The scanner is line-based; wrapped selector lists («[a],\n[b] {») must
+  // land on ONE line or every head selector would be silently lost.
+  const css = rawCss.replace(/,\s*\n/g, ", ");
   const lines = css.split("\n");
   let depth = 0;
   let active = false;
@@ -438,8 +441,11 @@ describe("Phase 1 value locks (design blueprint v1.1 §5.2 — Кора-орга
     // The owner-approved exception-image (2026-10-01): the hero stands on
     // the dark canvas in light «береста» too — the veil follows the well,
     // not the page. The scope block must carry the exact dark values.
+    // Fix round W1b: the viewer scope list grew the legend marker — the
+    // board keeps the bare selector (parity is about VALUES, not viewers).
     for (const css of [tokensCss, boardTokensCss]) {
-      const block = css.match(/\[data-well-window\]\s*\{([^}]*)\}/)?.[1] ?? "";
+      const block =
+        css.match(/\[data-well-window\](?:,\s*\[data-well-legend\])?\s*\{([^}]*)\}/)?.[1] ?? "";
       expect(block, "well-window scope present").not.toBe("");
       expect(block).toContain("--color-well-canvas: #090b0f");
       expect(block).toContain("--hud-veil: rgb(9 11 15 / 0.78)");
@@ -465,6 +471,28 @@ describe("Phase 1 value locks (design blueprint v1.1 §5.2 — Кора-орга
         ).toBe(value);
       }
     }
+  });
+
+  it("the tone legend rides the SAME dark column (fix round W1b — zero value changes)", () => {
+    // The selector list grew, the VALUES did not: [data-well-legend] shares
+    // the well-window block verbatim, so the legend swatches match the well
+    // pixel-for-pixel in both themes.
+    expect(tokensCss).toMatch(/\[data-well-window\],\s*\[data-well-legend\]\s*\{/);
+    const legend = themeDecls(tokensCss, "[data-well-legend]");
+    expect(legend.size).toBeGreaterThan(0);
+    for (const [name, value] of legend) {
+      expect(darkDecls.get(name), `legend ${name} must equal the dark column`).toBe(value);
+    }
+    // The dictionary swatches read the exact tokens the organ paints with.
+    // --web-tone-update is deliberately ABSENT from the scope: the ONLY
+    // themed v12 pair stays theme-following, so the legend swatch and the
+    // well tone show the same value in each theme (zero value changes).
+    expect(legend.get("--synapse-recall")).toBe("#4fc2ce");
+    expect(legend.get("--synapse-write")).toBe("#c9933a");
+    expect(legend.get("--color-success")).toBe("#3fbf7f");
+    expect(legend.get("--color-warning")).toBe("#d9a03f");
+    expect(legend.get("--color-error")).toBe("#e0655c");
+    expect(legend.has("--web-tone-update")).toBe(false);
   });
 });
 
@@ -830,7 +858,9 @@ describe("well substrate + tone consumers (W1b «Колодец — орган �
     expect(tokensCss).not.toMatch(/--well-tone\s*:/);
     // the [data-well-window] scope gains no W1b additions (lockstep is
     // asserted by the scope tests above — this pins the count of its decls)
-    const scope = tokensCss.match(/\[data-well-window\]\s*\{([^}]*)\}/)?.[1] ?? "";
+    const scope =
+      tokensCss.match(/\[data-well-window\](?:,\s*\[data-well-legend\])?\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(scope, "well-window scope present").not.toBe("");
     expect(scope).not.toContain("well-tone");
     expect(scope).not.toContain("--web-node-alpha");
   });

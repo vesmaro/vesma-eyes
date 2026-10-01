@@ -145,6 +145,23 @@ export const en: Record<TranslationKey, string> = {
   "overview.heroTitle": "The memory is alive",
   "overview.heroSubtitle": "Your AI helpers’ memory",
   "overview.heroMemories": "{{count}} records",
+  // Fix round W1b: the honesty counter replaces the records/tags pair — it
+  // describes exactly what is drawn (the shown sample) from answered wires.
+  "overview.heroShownOf": "showing {{shown}} most recent of {{total}}",
+  "overview.heroShown": "showing {{shown}}",
+  // The tone legend (fix round W1b): surface strip + the full dictionary.
+  "overview.legendAbout": "About the colors",
+  "overview.legendProblem": "problem",
+  "overview.legendAttention": "attention",
+  "overview.legendUpdate": "update",
+  "overview.legendToneRecall": "at rest · memory read",
+  "overview.legendToneWrite": "writing · awaiting confirmation",
+  "overview.legendToneSuccess": "connected",
+  "overview.legendToneWarning": "attention (up to a minute)",
+  "overview.legendToneError": "problem (while it lives)",
+  "overview.legendToneUpdate": "update (until accepted or dismissed)",
+  "overview.legendNote":
+    "The well shows {{shown}} most recent records and their links. Links appear only between displayed records.",
   "overview.heroTags": "{{count}} tags",
   "overview.waitingChip": "Waiting for you: {{count}}",
   "overview.tickerItem": "{{time}} written to memory: {{title}} · {{server}}",

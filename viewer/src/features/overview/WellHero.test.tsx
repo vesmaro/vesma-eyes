@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+// @vitest-environment happy-dom
 import { describe, expect, it } from "vitest";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
@@ -6,7 +7,7 @@ import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-import { WellHero } from "./WellHero";
+import { normalizeTickerTitle, WellHero } from "./WellHero";
 import { MockAdapter } from "@/gateway/MockAdapter";
 import { GatewayContext } from "@/gateway/GatewayContext";
 import { keys } from "@/lib/queryKeys";
@@ -139,35 +140,92 @@ describe("WellHero — the honest states (P1-1)", () => {
   });
 });
 
-describe("WellHero — counters only from sources that answered", () => {
-  it("a failed health wire drops its counter; the answered tag wire keeps its own", async () => {
+describe("WellHero — the honesty counter (fix round: replaces the pair)", () => {
+  it("both wires: the drawn sample of the answered total", async () => {
     const html = await renderHero(async (client, gateway) => {
+      await seedMemories(client, gateway);
       await client.prefetchQuery({
         queryKey: keys.status.boardHealth(),
-        queryFn: () => Promise.reject(new Error("health down")),
-      });
-      await client.prefetchQuery({
-        queryKey: keys.tags.list(),
-        queryFn: () => gateway.listTags(),
+        queryFn: () => gateway.boardHealth(),
       });
     });
-    expect(html).not.toContain("records");
-    expect(html).toMatch(/\d+ tags/);
+    // shown = graph.nodes.length (the drawn sample), total from the health
+    // wire; the mock fixtures hold 18 memories — shown of total, honestly.
+    expect(html).toMatch(/showing 18 most recent of 18/);
+    expect(html).not.toContain("tags");
   });
 
-  it("both answered → both counters on the subtitle line", async () => {
+  it("list wire only: no total claimed without the health wire", async () => {
+    const html = await renderHero(seedMemories);
+    expect(html).toMatch(/showing 18/);
+    expect(html).not.toContain("most recent of");
+  });
+
+  it("health wire only (the list pending): today's fallback, nothing invented", async () => {
     const html = await renderHero(async (client, gateway) => {
       await client.prefetchQuery({
         queryKey: keys.status.boardHealth(),
         queryFn: () => gateway.boardHealth(),
       });
+    });
+    expect(html).toMatch(/18 records/);
+    expect(html).not.toContain("showing");
+  });
+
+  it("pending wires render no segment at all", async () => {
+    const html = await renderHero(async () => undefined);
+    expect(html).not.toContain("showing");
+    expect(html).not.toContain("records");
+  });
+
+  it("an answered empty well: the invitation, never a zero counter", async () => {
+    const html = await renderHero(async (client, gateway) => {
+      const empty = await gateway.listMemories({ limit: 42, tags: "vesmaro:nothing" });
+      client.setQueryData(keys.memories.list({ limit: 42 }), empty);
+      client.setQueryData(keys.status.boardHealth(), { servers: [] });
+    });
+    expect(html).toContain("The well awaits its first record");
+    expect(html).not.toContain("showing");
+    expect(html).not.toContain("records");
+  });
+});
+
+describe("WellHero — ticker normalization (fix round)", () => {
+  it("unit: ISO stamps cut — Z, offset and space-separated wire shapes", () => {
+    expect(normalizeTickerTitle("Session checkpoint — 2026-10-01T21:23:58Z done", "x").display).toBe(
+      "Session checkpoint — done",
+    );
+    expect(
+      normalizeTickerTitle("Report 2026-10-01T21:23:58.279460+00:00 shipped", "x").display,
+    ).toBe("Report shipped");
+    expect(normalizeTickerTitle("Note 2026-10-01 21:23:58 kept", "x").display).toBe("Note kept");
+  });
+
+  it("unit: a title that is only a stamp falls back to id.slice(0,8)", () => {
+    const out = normalizeTickerTitle("2026-10-01T21:23:58Z", "abcdef12-3333");
+    expect(out.display).toBe("abcdef12");
+    expect(out.full).toBe("abcdef12");
+  });
+
+  it("unit: display caps at 64 chars with «…»; the full text survives", () => {
+    const long = "x".repeat(70);
+    const out = normalizeTickerTitle(long, "id");
+    expect(out.display).toHaveLength(65);
+    expect(out.display.endsWith("…")).toBe(true);
+    expect(out.full).toBe(long);
+  });
+
+  it("integration: the pulse title rides the ticker, normalized for display", async () => {
+    const html = await renderHero(async (client, gateway) => {
+      await seedMemories(client, gateway);
       await client.prefetchQuery({
-        queryKey: keys.tags.list(),
-        queryFn: () => gateway.listTags(),
+        queryKey: keys.pulse.feed({ scope: "all", limit: 5 }),
+        queryFn: () => gateway.pulse({ scope: "all", limit: 5 }),
       });
     });
-    expect(html).toMatch(/\d+ records/);
-    expect(html).toMatch(/\d+ tags/);
+    // The mock fixture title carries no ISO stamp — it must pass through
+    // untouched (normalization is idempotent on clean titles).
+    expect(html).toContain("memory: Checkpoint: L1 wave status");
   });
 });
 
@@ -226,5 +284,83 @@ describe("WellHero — scene shape: substrate first, decorative, organ slots", (
     const html = await renderHero(seedMemories);
     expect(html).toContain('data-title="ADR: gateway via same-origin /api proxy"');
     expect(html).toContain('data-date="2026-09-14"');
+  });
+});
+
+describe("WellHero — the tone legend (fix round, two tiers)", () => {
+  it("surface strip: exactly three marks, the disclosure button, no panel at rest", async () => {
+    const html = await renderHero(seedMemories);
+    expect((html.match(/well-legend-dot/g) ?? []).length).toBe(3);
+    expect(html).toContain('data-well-legend=""');
+    expect(html).toContain("About the colors");
+    expect(html).toContain("problem");
+    expect(html).toContain("attention");
+    expect(html).toContain("update");
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain('aria-controls="well-legend-panel"');
+    expect(html).not.toContain('id="well-legend-panel"');
+  });
+
+  it("disclosure: the six-colour dictionary + sampling note, Esc returns focus, outside closes", async () => {
+    const gateway = new MockAdapter({ latency: false });
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false, retryOnMount: false, refetchOnMount: false },
+      },
+    });
+    await seedMemories(client, gateway);
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(
+        <GatewayContext.Provider value={gateway}>
+          <QueryClientProvider client={client}>
+            <I18nProvider initialLang="en">
+              <MemoryRouter>
+                <WellHero />
+              </MemoryRouter>
+            </I18nProvider>
+          </QueryClientProvider>
+        </GatewayContext.Provider>,
+      );
+    });
+    const button = container.querySelector<HTMLButtonElement>("#well-legend-button")!;
+    const click = (): Promise<void> =>
+      act(async () => {
+        button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      });
+
+    await click();
+    const panel = container.querySelector("#well-legend-panel")!;
+    expect(panel).toBeTruthy();
+    expect(panel.getAttribute("role")).toBe("region");
+    expect(panel.getAttribute("aria-labelledby")).toBe("well-legend-button");
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+    expect(container.querySelectorAll(".well-legend-swatch")).toHaveLength(6);
+    expect(container.querySelectorAll(".well-legend-dot")).toHaveLength(3); // surface intact
+    expect(panel.textContent).toContain("at rest · memory read");
+    expect(panel.textContent).toContain("until accepted or dismissed");
+    expect(panel.textContent).toContain("most recent records and their links");
+    expect(panel.textContent).toContain("only between displayed records");
+
+    // Esc closes and returns focus to the disclosure button (2.1.2/3.2.1).
+    button.focus();
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    });
+    expect(container.querySelector("#well-legend-panel")).toBeNull();
+    expect(document.activeElement).toBe(button);
+    expect(button.getAttribute("aria-expanded")).toBe("false");
+
+    // Re-open, then an outside pointer closes it.
+    await click();
+    expect(container.querySelector("#well-legend-panel")).toBeTruthy();
+    await act(async () => {
+      document.body.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
+    });
+    expect(container.querySelector("#well-legend-panel")).toBeNull();
+
+    root.unmount();
   });
 });
