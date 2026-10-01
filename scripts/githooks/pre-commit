@@ -11,7 +11,7 @@ set -euo pipefail
 
 ALLOWED_NAME="Korrnals"
 ALLOWED_EMAIL="153223100+Korrnals@users.noreply.github.com"
-CANONICAL_ROOT="$(cd /var/home/abyss/LABs/Projects/Project-Mnemos/mnemos-eyes && pwd -P)"
+CANONICAL_ROOT="$(cd /var/home/abyss/LABs/Projects/Project-Vesma/vesma-eyes && pwd -P)"
 
 toplevel="$(git rev-parse --show-toplevel 2>/dev/null || pwd -P)"
 toplevel="$(cd "$toplevel" && pwd -P)"
