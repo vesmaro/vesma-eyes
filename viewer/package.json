@@ -1,7 +1,7 @@
 {
   "name": "vesma-eyes-viewer",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.53.0",
   "description": "vesma-eyes L1 read-only viewer (React + Vite + TanStack Query)",
   "type": "module",
   "engines": {
