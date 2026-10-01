@@ -62,6 +62,11 @@ export const ru = {
   // UI-30: the domain-row aggregate badge («Задачи») — live tooltip/SR name.
   // Deliberately noun-free (works for any future counter joined to the sum).
   "nav.newCount": "новых: {{count}}",
+  // Union И1 (stand 03 §2–§3): the shell landmark label and the sidebar
+  // footer affordances («Палитра» / «Шпаргалка» ride below the nav).
+  "nav.sections": "Разделы",
+  "nav.palette": "Палитра",
+  "nav.cheatsheet": "Шпаргалка",
   "shell.skipToContent": "Перейти к содержимому",
   "shell.viewFell": "Этот вид упал в колодец",
   // Update banner (owner feedback: остывшие вкладки должны «чиниться сами»
@@ -89,7 +94,11 @@ export const ru = {
   "topbar.liveCalm": "пауза",
   "topbar.liveOff": "выкл",
   "topbar.langLabel": "Язык интерфейса",
-  "topbar.searchPlaceholder": "Поиск",
+  // Union И1 (stand 03 §4): the topbar global search — a REAL input now;
+  // Enter carries the query to /memory/search, `/` focuses the field.
+  "topbar.searchPlaceholder": "Поиск по памяти и задачам…",
+  "topbar.searchLabel": "Глобальный поиск по памяти и задачам",
+  "topbar.openSidebar": "Открыть разделы",
   "topbar.densityToCompact": "Переключить плотность на компактную",
   "topbar.densityToComfortable": "Переключить плотность на комфортную",
   "topbar.densityCompact": "Компактная плотность",
@@ -99,8 +108,12 @@ export const ru = {
   "hotkeys.title": "Горячие клавиши",
   "hotkeys.subtitle":
     "Клавиатурный слой оболочки. ⌘K работает и в полях ввода — остальные хоткеи там отключены.",
-  "hotkeys.openPalette": "Открыть поиск (палитру)",
+  "hotkeys.openPalette": "Открыть палитру",
   "hotkeys.openPaletteAnywhere": "Палитра — откуда угодно, даже из поля ввода",
+  // Union И1 (stand 03 §7): `/` focuses the global search, `[` flips the
+  // sidebar rail — both with the inInput guard (see hotkeyActions.ts).
+  "hotkeys.focusSearch": "Фокус глобального поиска",
+  "hotkeys.toggleSidebar": "Свернуть или развернуть сайдбар",
   "hotkeys.cheatsheet": "Эта шпаргалка",
   "hotkeys.closeDialog": "Закрыть диалог",
   "hotkeys.escKey": "Esc",
@@ -213,6 +226,41 @@ export const ru = {
   "auth.signingIn": "Входим…",
   "auth.verify": "Подтвердить",
 
+  // --- auth session + gates v6 (union И1, 07k §1–§4; копии — карта И1 §1.3) ----
+  "auth.status.anonymous": "аноним",
+  "auth.status.signedIn": "вы: владелец",
+  "auth.lock.why": "откроется после входа",
+  "auth.gate.heading": "Раздел „{{domain}}“ откроется после входа",
+  "auth.gate.inside.memory": "Записи, поиск по смыслу, пульс и теги — содержимое памяти",
+  "auth.gate.inside.tasks": "Канбан, список, входящие и архив — работа и поручения",
+  "auth.gate.inside.agents": "Исполнение, хосты и подключение новых машин",
+  "auth.gate.inside.kora": "Журнал сессий всех хостов: что агент делал и говорил",
+  "auth.gate.inside.system": "Статус, устройства и трассировки — служебная зона",
+  "auth.gate.elsewhere": "Статистика открыта всем — она на Обзоре.",
+  "auth.gate.goOverview": "Открыть Обзор",
+  "auth.gate.signUp": "Создать аккаунт",
+  "auth.gate.signUpNote":
+    "Аккаунты создаёт владелец борта. Первый созданный аккаунт становится владельцем.",
+  "auth.gate.seeMore": "Что я увижу после входа",
+  "auth.gate.seeMore.memoryRecords": "Записи памяти: список, фильтры, теги",
+  "auth.gate.seeMore.memorySearch": "Поиск по смыслу по всем записям",
+  "auth.gate.seeMore.memoryPulse": "Пульс памяти: что добавилось и когда",
+  "auth.gate.seeMore.tasksBoard": "Канбан и список ваших задач",
+  "auth.gate.seeMore.tasksInbox": "Входящие: что ждёт вашего решения",
+  "auth.gate.seeMore.tasksArchive": "Архив и история изменений",
+  "auth.gate.seeMore.agentsHosts": "Хосты: какие машины на связи и чем заняты",
+  "auth.gate.seeMore.agentsExecution": "Исполнение: кто какую работу ведёт",
+  "auth.gate.seeMore.agentsConnect": "Подключение новой машины к борту",
+  "auth.gate.seeMore.koraJournal": "Сессии всех хостов в одном журнале",
+  "auth.gate.seeMore.koraTranscripts": "Транскрипты: что агент делал и говорил",
+  "auth.gate.seeMore.koraCoverage": "Покрытие: что видно с ваших машин",
+  "auth.gate.seeMore.systemStatus": "Статус борта и хранилищ памяти",
+  "auth.gate.seeMore.systemSettings": "Настройки и автоматизация",
+  "auth.gate.seeMore.systemDevices": "Подключённые устройства",
+  "auth.gate.checkingSession": "Проверяем сессию…",
+  "auth.route.back": "← На борт",
+  "auth.route.alreadySignedIn": "Вы уже вошли",
+
   // --- search -------------------------------------------------------------------
   "search.title": "Поиск",
   "search.tagline": "взгляд внутрь себя",
@@ -303,7 +351,7 @@ export const ru = {
   "tags.all": "Все теги",
   "tags.drilldownTitle": "Воспоминания с тегом",
   "tags.drilldownNote":
-    "Фильтрация на клиенте — у vesma нет выборки по тегу (ADR 0003 §9).",
+    "Фильтрация на клиенте — у vesma нет выборки по тегу.",
   "tags.nothingCarries": "Под этим тегом ничего нет",
   "tags.nothingCarriesMessage": "Сейчас нет воспоминаний с тегом {{tag}}.",
   // --- tags cloud (UI-17, spec 2026-09-21 §9; owner-approved copy) -----------
@@ -433,7 +481,7 @@ export const ru = {
   // mutates; closed routes refuse with the server's own honest detail.
   "login.deviceForbidden": "Действия с устройства закрыты",
   "login.deviceForbiddenDetail":
-    "Скоуп этого устройства — только чтение: мутации выполняются в сессии владельца (ADR 0012).",
+    "Скоуп этого устройства — только чтение: мутации выполняются в сессии владельца.",
   "login.logoutFailed":
     "Не удалось завершить сессию на сервере — вы всё ещё вошли. Проверьте связь и повторите.",
 
@@ -928,7 +976,7 @@ export const ru = {
     "Активных попыток исполнения сейчас нет — возьмите задачу в работу на её странице.",
   "agents.unavailableTitle": "Раздел недоступен в режиме vesma",
   "agents.unavailableMessage":
-    "Исполнение — доска-нативный домен (ADR 0011); переключитесь в режим board или mock.",
+    "Исполнение — доска-нативный домен; переключитесь в режим board или mock.",
   "agents.strip.label": "Исполнители",
   "agents.strip.empty": "Нет подключённых исполнителей",
   "agents.strip.emptyHint": "Исполнители появятся, когда агент подключится",
@@ -1358,7 +1406,7 @@ export const ru = {
   "automation.title": "Автоматизация",
   "automation.unavailableTitle": "Раздел недоступен в режиме vesma",
   "automation.unavailableMessage":
-    "Автоматизация — контракт S1 борда (ADR 0013); переключитесь в режим board или mock.",
+    "Автоматизация — контракт борда; переключитесь в режим board или mock.",
   "automation.statusLoading": "Загружаем статус движка",
   "automation.statusFailed": "Не удалось загрузить статус",
   "automation.tabSchedules": "Расписания",
@@ -1419,6 +1467,18 @@ export const ru = {
   "settings.hub.motionReduced": "Минимум",
   "settings.hub.motionHint":
     "«Минимум» отключает движение и мерцания независимо от настроек ОС.",
+  // Union И1: «Живой слой» placeholder (roadmap И1 шаг 3) — visually the
+  // future control, functionally INERT until И3 wires the living engine.
+  // Honest caption: what it will do and when. Value pinned to «Спокойный»
+  // (the post-enable default, АРХКОМ union rule §1.6).
+  "settings.hub.livingLabel": "Живой слой",
+  "settings.hub.livingFull": "Полный",
+  "settings.hub.livingCalm": "Спокойный",
+  "settings.hub.livingOff": "Выключен",
+  "settings.hub.livingHint":
+    "Нейра и жилы оживут позже — сейчас интерфейс статичен. Когда слой включится, по умолчанию будет «Спокойный».",
+  "settings.hub.livingAriaNote":
+    "Настройка появится вместе с Живым слоем — сейчас интерфейс статичен",
   "settings.hub.sidebarLabel": "Сайдбар",
   "settings.hub.sidebarExpanded": "Развёрнут",
   "settings.hub.sidebarCollapsed": "Свёрнут",
@@ -1739,7 +1799,7 @@ export const ru = {
   "pairing.devices.grantsFailed": "Не удалось обновить доступы",
   "pairing.unsupportedTitle": "Пейринг недоступен в этом режиме",
   "pairing.unsupportedMessage":
-    "Домен устройств говорит на merge-API борда (ADR 0012); в режиме прямого vesma этой страницы нет.",
+    "Домен устройств говорит на merge-API борда; в режиме прямого vesma этой страницы нет.",
 
   // Страница устройства (/pair, §2.3 — без аутентификации).
   "pair.title": "Подключение устройства",
@@ -1778,31 +1838,62 @@ export const ru = {
   "pair.err503": "Пейринг отключён на сервере",
   "pair.errGeneric": "Подключить не удалось",
 
-  // --- Кора (ADR 0019 rev.2 — week-0 contract mocks) -----------------------------
-  // UX-overhaul §5/§8 (Ф1): корень = реестр сессий (П2), мета — свёрнутым
-  // блоком внизу; словарь разработчика уходит (П4).
-  "kora.title": "Кора — сессии всех хостов",
-  "kora.week0Badge": "Демо-данные",
-  "kora.week0Note":
-    "Сейчас в Коре демо-данные: списки и транскрипты — примеры, а не живые сессии. Настоящие сессии появятся, когда сканер хостов начнёт работу.",
-  "kora.metaToggle": "Что такое Кора и чего в ней пока нет",
-  "kora.coverage.title": "Что вижу / чего нет",
+  // --- Кора (ADR 0019 rev.2; union И1 — рабочее пространство 07j/07l) ------------
+  // Развязка И1 (i1-dressing-map §1.2/§1.3): каркас v7 — рабочая зона +
+  // дерево + Пульт. Строки одной волной ru/en; внутренних кодов фаз
+  // («И1…И5», «срез», ADR) в пользовательских строках нет (07a §3.5).
+  "kora.workspace.title": "Кора · сессии хостов",
+  "kora.workspace.hint":
+    "Кора — журнал сессий всех хостов: что агент делал и что говорил. Записи только для чтения",
+  "kora.summary.hosts": "хостов: {{n}}",
+  "kora.summary.running": "идёт сессий: {{n}}",
+  "kora.summary.day": "за 24 ч: {{n}}",
+  "kora.filter.label": "Фильтр по хосту",
+  "kora.filter.all": "Все хосты",
+  "kora.side.region": "Хосты и сессии",
+  "kora.tree.title": "Хосты и агенты",
+  "kora.tree.explain":
+    "Агенты — программы, через которые на машине идёт работа: например, zcode",
+  "kora.tree.noAgents": "агентов ещё нет",
+  "kora.tree.emptyNoExecutors": "Хостов нет — подключите агента, и он появится здесь:",
+  "kora.tree.expand": "раскрыть",
+  "kora.tree.collapse": "свернуть",
+  "kora.block2.section": "Сессии",
+  "kora.block2.titleAll": "Сессии · все хосты",
+  "kora.block2.titleHost": "Сессии · {{host}}",
+  "kora.block2.titleAgent": "Сессии · {{harness}} на {{host}}",
+  "kora.block2.titleExecutor": "Сессии · {{name}}",
+  "kora.block2.qfRunning": "идущие",
+  "kora.block2.qfDay": "за 24 ч",
+  "kora.block2.emptyContext": "Здесь сессий нет",
+  "kora.block2.emptyFiltered": "Под этот фильтр сессий нет",
+  "kora.about.title": "О сессии",
+  "kora.about.started": "Начало",
+  "kora.about.lastActivity": "Активность",
+  "kora.about.coverage": "Покрытие этой сессии",
+  "kora.about.harness": "Источник",
+  "kora.about.copyLink": "Скопировать ссылку на сессию",
+  "kora.about.copied": "Ссылка скопирована",
+  "kora.about.copyFailed": "Не удалось скопировать — скопируйте из адресной строки",
+  // Два имени покрытия (07j §3.5): формулировка сессии — по строке покрытия
+  // харнеса из реестра; «unknown» — строки покрытия у харнеса нет.
+  "kora.sessionCov.full": "полный ход",
+  "kora.sessionCov.partial": "видим начало",
+  "kora.sessionCov.metadata-only": "только метаданные",
+  "kora.sessionCov.absent": "не сканируем",
+  "kora.sessionCov.unknown": "покрытие пока не названо",
+  "kora.pill.liveAge": "идёт · {{age}}",
+  "kora.age.min": "{{n}} мин",
+  "kora.age.hour": "{{n}} ч",
+  "kora.age.day": "{{n}} сут",
   "kora.coverage.support.full": "полностью",
   "kora.coverage.support.lists-only": "только списки",
   "kora.coverage.support.metadata-only": "только метаданные",
   "kora.coverage.support.absent": "не сканируется",
   "kora.coverage.gaps": "Известные пробелы",
-  "kora.onboarding.title": "Зачем Кора",
-  "kora.onboarding.case1.title": "Видеть всё",
-  "kora.onboarding.case1.body":
-    "Все сессии zcode, vscode и pi на подключённых хостах — одним списком, без прыжков по консолям.",
-  "kora.onboarding.case2.title": "Досмотреть",
-  "kora.onboarding.case2.body":
-    "Read-only транскрипт любой сессии: что происходило и на чём остановились, ничего не меняя.",
-  "kora.onboarding.case3.title": "Порулить с телефона",
-  "kora.onboarding.case3.body":
-    "Новая сессия или промпт в свою — через реле; телефон видит тот же интерфейс, что и рабочий стол.",
-  "kora.list.title": "Сессии",
+  "kora.legend.title": "Что мы видим с ваших машин",
+  "kora.legend.growNote":
+    "Покрытие растёт по мере готовности сканеров — список обновим",
   "kora.list.loading": "Загружаем сессии",
   "kora.list.loadMore": "Показать ещё",
   "kora.list.loadFailed": "Не удалось загрузить список сессий",
@@ -1815,16 +1906,12 @@ export const ru = {
   "kora.list.emptyNoSessions": "Сессии появятся, когда сканер хостов начнёт работу",
   "kora.list.emptyAction": "Подключить агента",
   "kora.list.emptyStatusLink": "Открыть статус системы",
-  "kora.session.open": "Открыть",
-  "kora.session.age": "возраст: {{age}}",
-  "kora.session.noPreview": "Нет превью последней строки",
   "kora.session.steerable": "можно рулить",
   "kora.session.origin.relay": "реле",
   "kora.session.origin.local": "локальная",
   "kora.session.state.live": "живая",
   "kora.session.state.idle": "ожидает",
   "kora.session.state.dead": "процесс мёртв",
-  "kora.session.noId": "В маршруте нет id сессии",
   "kora.session.notFound": "Сессия не найдена",
   "kora.session.notFoundMessage": "Сессии «{{id}}» нет в реестре Коры.",
   // ME-063: причина покрытия на 404-плашке — возврат из карточки задачи
@@ -1833,14 +1920,10 @@ export const ru = {
     "Хост недоступен для просмотра: борд читает транскрипты только хостов со сканером. Вернитесь к списку сессий или в карточку задачи — ссылка останется рабочей, когда хост станет читаемым.",
   "kora.session.backToList": "К списку сессий",
   "kora.session.inactiveTitle": "Сессия не активна",
-  "kora.session.readonlyPlate": "Чужая сессия — только чтение",
-  "kora.session.readonlyPlateNote":
-    "Продолжение доступно только для сессий relay-происхождения или после явного усыновления.",
-  "kora.transcript.title": "Транскрипт (только чтение)",
+  "kora.transcript.region": "Ход сессии",
   "kora.transcript.loading": "Загружаем транскрипт",
   "kora.transcript.loadFailed": "Не удалось загрузить транскрипт",
   "kora.transcript.inactiveHint": "Войдите — и транскрипт этой сессии появится здесь",
-  "kora.transcript.empty": "Записей нет",
   "kora.transcript.emptyMessage":
     "Сессия в реестре, но записей в сторе нет — или ридер ещё не дошёл до неё.",
   "kora.transcript.redacted": "маскировано",
@@ -1849,26 +1932,42 @@ export const ru = {
   // UX-overhaul П4 (Ф1): строки транскрипта без таймстемпа показывают
   // нейтральную метку; курсор seq — служебная метрика, живёт в тултипе.
   "kora.transcript.line": "строка транскрипта",
-  "kora.chat.title": "Чат",
-  "kora.chat.placeholder": "Промпт в сессию…",
-  "kora.chat.send": "Отправить",
-  "kora.chat.confirmMode": "Confirm-режим: промпт подтверждается на хосте",
-  "kora.chat.delivery.ok": "Доставлено в реле",
-  "kora.chat.delivery.failed": "Не доставлено — повторите",
-  "kora.chat.freshness": "Свежесть: хвост стора перечитывается, цель ≤60 с",
-  // UX-overhaul П4 (Ф1): внутренний SLA (≤60 с) уходит в тултип; видимая
-  // строка говорит только то, что важно владельцу после отправки.
-  "kora.chat.freshnessHint":
-    "После отправки ответ перечитывается из сессии автоматически",
-  "kora.chat.unavailable":
-    "Руление недоступно: сессия локальная. Только чтение — инвариант NO-DRIFT.",
-  "kora.chat.stepUp.label": "PIN руления",
-  "kora.chat.stepUp.enable": "Включить руление",
-  "kora.chat.stepUp.active": "Руление активно (TTL ≤ 15 минут)",
-  "kora.chat.stepUp.required": "Руление заблокировано — сначала введите PIN",
-  "kora.chat.stepUp.failed": "Не удалось включить руление",
-  "kora.chat.stepUp.note":
-    "Чтение — без PIN; руление — после короткого PIN-ритуала (step-up, TTL ≤ 15 минут).",
+  // Рабочая зона (07j §3.1): приглашение без выбора; инструменты чтения.
+  "kora.workzone.invite": "Выберите сессию — здесь откроется её ход",
+  "kora.workzone.openedAnnounce": "Открыта сессия: {{name}}",
+  "kora.workzone.followTail": "Следить за хвостом",
+  "kora.workzone.searchLabel": "Найти в сессии",
+  "kora.workzone.searchPlaceholder": "Найти в сессии…",
+  "kora.workzone.matches": "совпадений: {{n}}",
+  // Пульт (07j §4, И1-решение dressing map §1.2.3): стартует свёрнутым,
+  // содержимое вкладок честно называет, что появится.
+  "kora.pult.title": "Пульт",
+  "kora.pult.explain": "Пульт — лента событий и разбор сессии",
+  "kora.pult.tabsLabel": "Вкладки Пульта",
+  "kora.pult.digest": "Дайджест",
+  "kora.pult.ether": "Эфир",
+  "kora.pult.hint": "Выберите сессию — её разбор появится здесь",
+  "kora.pult.digestEmpty": "Разбор сессии собирается автоматически — появится позже",
+  "kora.pult.etherEmpty":
+    "Лента событий появится позже — пока читайте ход сессий в транскриптах",
+  "kora.pult.readTranscript": "Читать транскрипт",
+  "kora.pult.waiting": "ждут владельца: {{n}}",
+  "kora.pult.waitingHint": "Задачи, которые ждут вашего решения",
+  "kora.pult.expand": "Развернуть",
+  "kora.pult.collapse": "Свернуть",
+  // Композер (07j §4.6, И1-срез dressing map §1.2.4): поле и машина
+  // реальны, отправка честно отложена; фейк доставки запрещён (07a §1).
+  "kora.composer.label": "Написать агенту в эту сессию",
+  "kora.composer.placeholder": "Написать агенту…",
+  "kora.composer.send": "Отправить",
+  "kora.composer.sendLaterChip": "Отправка появится позже",
+  "kora.composer.sendLaterNote":
+    "Отправка сообщений агенту появится позже — пока Кора показывает ход сессий. Черновик живёт, пока вы на странице сессии.",
+  // «Завершена» в реестре сессий пока нет (live/idle/dead) — строка ждёт
+  // своего состояния; «прервана» = процесс мёртв.
+  "kora.composer.finishedNote":
+    "Сессия завершена — писать некому; начните новую на хосте",
+  "kora.composer.interruptedNote": "Сессия прервана — агент здесь уже не слушает",
 } as const;
 
 export type TranslationKey = keyof typeof ru;

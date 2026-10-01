@@ -600,3 +600,88 @@ describe("UiTokenGate server verify (ADR 0014)", () => {
     expect(gate.getState().open).toBe(false);
   });
 });
+
+/**
+ * Cascade P2 (ME-043): the READ-side 401 beat — a stale/foreign stored
+ * token the server refuses on a READ (TanStack queries) must rebuild the
+ * session verdict: re-probe first (the cookie leg may still be live — the
+ * rotation case), at most ONE recovery per gate lifetime, otherwise flip
+ * to anonymous WITHOUT forcing the login window open (the gate screen
+ * takes over; the tokenRejected event still fires for the toast).
+ */
+describe("UiTokenGate.rebuildAfterReadUnauthorized (cascade P2, ME-043)", () => {
+  /**
+   * The storage-backed gate WITH the adapter's cookie flag modelled
+   * faithfully (BoardAdapter: hasUiToken = sessionStorage token OR the
+   * cookieLive flag the probe itself sets — the provider injects exactly
+   * this pair).
+   */
+  function storageBackedGate(probeAnswer: () => Promise<boolean>): {
+    gate: UiTokenGate;
+    probe: ReturnType<typeof vi.fn>;
+  } {
+    sessionStorage.setItem(UI_TOKEN_STORAGE_KEY, "stale-header-token");
+    let cookieLive = false;
+    const probe = vi.fn(async () => {
+      cookieLive = await probeAnswer();
+      return cookieLive;
+    });
+    const gate = new UiTokenGate({
+      hasToken: () => hasUiToken() || cookieLive,
+      probe,
+    });
+    return { gate, probe };
+  }
+
+  it("a live cookie beside the stale header token: drop the header, session RIDES the cookie leg (recovered)", async () => {
+    const { gate } = storageBackedGate(async () => true); // 204 — the cookie answers
+    expect(gate.getState().tokenPresent).toBe(true);
+    const outcome = await gate.rebuildAfterReadUnauthorized();
+    expect(outcome).toBe("recovered");
+    // The header value is stale BY DEFINITION — scrubbed; the cookie flag
+    // keeps tokenPresent true.
+    expect(hasUiToken()).toBe(false);
+    expect(gate.getState().tokenPresent).toBe(true);
+    expect(gate.getState().open).toBe(false); // no modal from a background read
+  });
+
+  it("no cookie either: the verdict flips to anonymous, the window is NOT forced open, tokenRejected fires", async () => {
+    const { gate } = storageBackedGate(async () => false); // 200 {live:false}
+    const events: string[] = [];
+    gate.listen((event) => events.push(event.type));
+    const outcome = await gate.rebuildAfterReadUnauthorized();
+    expect(outcome).toBe("anonymous");
+    expect(hasUiToken()).toBe(false);
+    expect(gate.getState().tokenPresent).toBe(false);
+    expect(gate.getState().open).toBe(false); // never a modal interruption
+    expect(gate.getState().rejectKind).toBe("session");
+    expect(events).toEqual(["tokenRejected"]); // the provider toasts the beat
+  });
+
+  it("ONE recovery per gate lifetime: a second read-401 after a 204 recovery goes straight anonymous (no loop)", async () => {
+    const { gate, probe } = storageBackedGate(async () => true); // always 204
+    expect(await gate.rebuildAfterReadUnauthorized()).toBe("recovered");
+    // The refetch 401s again (server-side contradiction): no second probe,
+    // the verdict lands anonymous — the beat cannot loop.
+    expect(await gate.rebuildAfterReadUnauthorized()).toBe("anonymous");
+    expect(probe).toHaveBeenCalledTimes(1);
+    expect(gate.getState().tokenPresent).toBe(false);
+  });
+
+  it("an already-anonymous gate stays settled — nothing to rebuild", async () => {
+    const probe = vi.fn(async () => false);
+    const gate = new UiTokenGate({ hasToken: () => false, probe });
+    expect(await gate.rebuildAfterReadUnauthorized()).toBe("anonymous");
+    expect(gate.getState().tokenPresent).toBe(false);
+    expect(gate.getState().open).toBe(false);
+  });
+
+  it("an open login window is not stomped by the flip (the user is mid-sign-in)", async () => {
+    const { gate } = storageBackedGate(async () => false);
+    gate.openLogin(); // the user opened the window before the read failed
+    await gate.rebuildAfterReadUnauthorized();
+    expect(gate.getState().open).toBe(true);
+    expect(gate.getState().tokenPresent).toBe(false);
+    expect(gate.getState().rejectKind).toBe("session");
+  });
+});

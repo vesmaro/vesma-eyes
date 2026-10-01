@@ -518,7 +518,9 @@ function buildDistSmoke() {
   try {
     execSync("npx tsc --noEmit -p tsconfig.json && npx vite build --outDir dist-smoke", {
       cwd: VIEWER_DIR,
-      env: { ...process.env, VITE_ADAPTER: "mock" },
+      // ME-043 cascade P3-4: the adapter pin forbids prod+mock unless the
+      // smoke harness explicitly opts in for THIS dist-smoke build.
+      env: { ...process.env, VITE_ADAPTER: "mock", VITE_SMOKE_ALLOW_MOCK: "1" },
       stdio: "inherit",
     });
     console.log("[smoke] dist-smoke built");

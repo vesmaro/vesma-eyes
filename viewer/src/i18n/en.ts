@@ -51,6 +51,9 @@ export const en: Record<TranslationKey, string> = {
   "nav.versionAria": "App version {{version}}",
   // UI-30: the domain-row aggregate badge («Задачи») — see ru.ts.
   "nav.newCount": "new: {{count}}",
+  "nav.sections": "Sections",
+  "nav.palette": "Palette",
+  "nav.cheatsheet": "Cheatsheet",
   "shell.skipToContent": "Skip to content",
   "shell.viewFell": "This view fell into the well",
   // Update banner (stale-tab self-healing) — see ru.ts.
@@ -76,7 +79,9 @@ export const en: Record<TranslationKey, string> = {
   "topbar.liveCalm": "paused",
   "topbar.liveOff": "off",
   "topbar.langLabel": "Interface language",
-  "topbar.searchPlaceholder": "Search",
+  "topbar.searchPlaceholder": "Search memory and tasks…",
+  "topbar.searchLabel": "Global search across memory and tasks",
+  "topbar.openSidebar": "Open sections",
   "topbar.densityToCompact": "Switch density to compact",
   "topbar.densityToComfortable": "Switch density to comfortable",
   "topbar.densityCompact": "Compact density",
@@ -86,9 +91,11 @@ export const en: Record<TranslationKey, string> = {
   "hotkeys.title": "Keyboard shortcuts",
   "hotkeys.subtitle":
     "The shell hotkey layer. ⌘K works inside form fields too — the rest stay quiet there.",
-  "hotkeys.openPalette": "Open search (the palette)",
+  "hotkeys.openPalette": "Open the palette",
   "hotkeys.openPaletteAnywhere":
     "The palette — from anywhere, even inside a form field",
+  "hotkeys.focusSearch": "Focus the global search",
+  "hotkeys.toggleSidebar": "Collapse or expand the sidebar",
   "hotkeys.cheatsheet": "This cheatsheet",
   "hotkeys.closeDialog": "Close the dialog",
   "hotkeys.escKey": "Esc",
@@ -201,6 +208,41 @@ export const en: Record<TranslationKey, string> = {
   "auth.signingIn": "Signing in…",
   "auth.verify": "Verify",
 
+  // --- auth session + gates v6 (union И1, 07k §1–§4; копии — карта И1 §1.3) ----
+  "auth.status.anonymous": "anonymous",
+  "auth.status.signedIn": "you: owner",
+  "auth.lock.why": "opens after you sign in",
+  "auth.gate.heading": "The “{{domain}}” section opens after you sign in",
+  "auth.gate.inside.memory": "Records, search by meaning, pulse and tags — the contents of memory",
+  "auth.gate.inside.tasks": "Kanban, list, inbox and archive — your work and assignments",
+  "auth.gate.inside.agents": "Execution, hosts and connecting new machines",
+  "auth.gate.inside.kora": "A journal of sessions from every host: what the agent did and said",
+  "auth.gate.inside.system": "Status, devices and traces — the service area",
+  "auth.gate.elsewhere": "The statistics are open to everyone — they live on the Overview.",
+  "auth.gate.goOverview": "Open the Overview",
+  "auth.gate.signUp": "Create an account",
+  "auth.gate.signUpNote":
+    "Accounts are created by the board owner. The first account created becomes the owner.",
+  "auth.gate.seeMore": "What will I see after signing in",
+  "auth.gate.seeMore.memoryRecords": "Memory records: the list, filters, tags",
+  "auth.gate.seeMore.memorySearch": "Search by meaning across every record",
+  "auth.gate.seeMore.memoryPulse": "Memory pulse: what was added and when",
+  "auth.gate.seeMore.tasksBoard": "Kanban and the list of your tasks",
+  "auth.gate.seeMore.tasksInbox": "Inbox: what awaits your decision",
+  "auth.gate.seeMore.tasksArchive": "Archive and change history",
+  "auth.gate.seeMore.agentsHosts": "Hosts: which machines are online and busy",
+  "auth.gate.seeMore.agentsExecution": "Execution: who is running what",
+  "auth.gate.seeMore.agentsConnect": "Connecting a new machine to the board",
+  "auth.gate.seeMore.koraJournal": "Every host's sessions in one journal",
+  "auth.gate.seeMore.koraTranscripts": "Transcripts: what the agent did and said",
+  "auth.gate.seeMore.koraCoverage": "Coverage: what is visible from your machines",
+  "auth.gate.seeMore.systemStatus": "Board status and memory stores",
+  "auth.gate.seeMore.systemSettings": "Settings and automation",
+  "auth.gate.seeMore.systemDevices": "Connected devices",
+  "auth.gate.checkingSession": "Checking your session…",
+  "auth.route.back": "← Back to the board",
+  "auth.route.alreadySignedIn": "You are already signed in",
+
   // --- search -------------------------------------------------------------------
   "search.title": "Search",
   "search.tagline": "a gaze into oneself",
@@ -291,7 +333,7 @@ export const en: Record<TranslationKey, string> = {
   "tags.all": "All tags",
   "tags.drilldownTitle": "Memories tagged",
   "tags.drilldownNote":
-    "Filtered client-side — vesma has no by-tag list filter (ADR 0003 §9).",
+    "Filtered client-side — vesma has no by-tag list filter.",
   "tags.nothingCarries": "Nothing carries this tag",
   "tags.nothingCarriesMessage": "No memory is tagged {{tag}} right now.",
   // --- tags cloud (UI-17, spec 2026-09-21 §9; owner-approved copy) -----------
@@ -416,7 +458,7 @@ export const en: Record<TranslationKey, string> = {
   // UI-22 device beat — see ru.ts (scope v1: read-scope devices only).
   "login.deviceForbidden": "Actions from this device are closed",
   "login.deviceForbiddenDetail":
-    "This device's scope is read-only: mutations run in an owner session (ADR 0012).",
+    "This device's scope is read-only: mutations run in an owner session.",
   "login.logoutFailed":
     "Could not end the server session — you are still signed in. Check the connection and try again.",
 
@@ -908,7 +950,7 @@ export const en: Record<TranslationKey, string> = {
     "No execution attempts right now — take a task into work from its page.",
   "agents.unavailableTitle": "Section unavailable in vesma mode",
   "agents.unavailableMessage":
-    "Execution is a board-native domain (ADR 0011); switch to board or mock mode.",
+    "Execution is a board-native domain; switch to board or mock mode.",
   "agents.strip.label": "Executors",
   "agents.strip.empty": "No executors connected",
   "agents.strip.emptyHint": "Executors appear when an agent connects",
@@ -1333,7 +1375,7 @@ export const en: Record<TranslationKey, string> = {
   "automation.title": "Automation",
   "automation.unavailableTitle": "Section unavailable in vesma mode",
   "automation.unavailableMessage":
-    "Automation is the board's S1 contract (ADR 0013); switch to board or mock mode.",
+    "Automation is the board's contract; switch to board or mock mode.",
   "automation.statusLoading": "Loading engine status",
   "automation.statusFailed": "Failed to load the status",
   "automation.tabSchedules": "Schedules",
@@ -1393,6 +1435,14 @@ export const en: Record<TranslationKey, string> = {
   "settings.hub.motionReduced": "Minimal",
   "settings.hub.motionHint":
     "“Minimal” disables motion and shimmer regardless of the OS setting.",
+  "settings.hub.livingLabel": "Living layer",
+  "settings.hub.livingFull": "Full",
+  "settings.hub.livingCalm": "Calm",
+  "settings.hub.livingOff": "Off",
+  "settings.hub.livingHint":
+    "Neura and the veins come alive later — the interface is static for now. Once the layer ships, “Calm” is the default.",
+  "settings.hub.livingAriaNote":
+    "The setting arrives together with the living layer — the interface is static for now",
   "settings.hub.sidebarLabel": "Sidebar",
   "settings.hub.sidebarExpanded": "Expanded",
   "settings.hub.sidebarCollapsed": "Collapsed",
@@ -1711,7 +1761,7 @@ export const en: Record<TranslationKey, string> = {
   "pairing.devices.grantsFailed": "Could not update the grants",
   "pairing.unsupportedTitle": "Pairing is unavailable in this mode",
   "pairing.unsupportedMessage":
-    "The devices domain speaks the board merge-API (ADR 0012); the direct-mnemos mode has no such page.",
+    "The devices domain speaks the board merge-API; the direct-mnemos mode has no such page.",
 
   // The device page (/pair, §2.3 — no authentication).
   "pair.title": "Connect this device",
@@ -1750,29 +1800,58 @@ export const en: Record<TranslationKey, string> = {
   "pair.err503": "Pairing is disabled on the server",
   "pair.errGeneric": "Could not connect",
 
-  // --- Kora (ADR 0019 rev.2 — week-0 contract mocks) -----------------------------
-  "kora.title": "Kora — sessions across all hosts",
-  "kora.week0Badge": "Demo data",
-  "kora.week0Note":
-    "Kora currently shows demo data: the lists and transcripts are samples, not live sessions. Real sessions will appear once the host scanner starts.",
-  "kora.metaToggle": "About Kora — and what it cannot see yet",
-  "kora.coverage.title": "What I see / what I don't",
+  // --- Kora (ADR 0019 rev.2; union И1 — the 07j/07l workspace) -------------------
+  "kora.workspace.title": "Kora · host sessions",
+  "kora.workspace.hint":
+    "Kora — the journal of every host's sessions: what the agent did and said. Read-only records",
+  "kora.summary.hosts": "hosts: {{n}}",
+  "kora.summary.running": "running sessions: {{n}}",
+  "kora.summary.day": "in 24h: {{n}}",
+  "kora.filter.label": "Filter by host",
+  "kora.filter.all": "All hosts",
+  "kora.side.region": "Hosts and sessions",
+  "kora.tree.title": "Hosts and agents",
+  "kora.tree.explain":
+    "Agents are the programs work runs through on a machine: for example, zcode",
+  "kora.tree.noAgents": "no agents yet",
+  "kora.tree.emptyNoExecutors":
+    "No hosts yet — connect an agent and it will appear here:",
+  "kora.tree.expand": "expand",
+  "kora.tree.collapse": "collapse",
+  "kora.block2.section": "Sessions",
+  "kora.block2.titleAll": "Sessions · all hosts",
+  "kora.block2.titleHost": "Sessions · {{host}}",
+  "kora.block2.titleAgent": "Sessions · {{harness}} on {{host}}",
+  "kora.block2.titleExecutor": "Sessions · {{name}}",
+  "kora.block2.qfRunning": "running",
+  "kora.block2.qfDay": "in 24h",
+  "kora.block2.emptyContext": "No sessions here",
+  "kora.block2.emptyFiltered": "No sessions match this filter",
+  "kora.about.title": "About the session",
+  "kora.about.started": "Started",
+  "kora.about.lastActivity": "Last activity",
+  "kora.about.coverage": "This session's coverage",
+  "kora.about.harness": "Source",
+  "kora.about.copyLink": "Copy session link",
+  "kora.about.copied": "Link copied",
+  "kora.about.copyFailed": "Couldn't copy — copy it from the address bar",
+  "kora.sessionCov.full": "full run",
+  "kora.sessionCov.partial": "beginning only",
+  "kora.sessionCov.metadata-only": "metadata only",
+  "kora.sessionCov.absent": "not scanned",
+  "kora.sessionCov.unknown": "coverage not named yet",
+  "kora.pill.liveAge": "running · {{age}}",
+  "kora.age.min": "{{n}} min",
+  "kora.age.hour": "{{n}} h",
+  "kora.age.day": "{{n}} d",
   "kora.coverage.support.full": "full",
   "kora.coverage.support.lists-only": "lists only",
   "kora.coverage.support.metadata-only": "metadata only",
   "kora.coverage.support.absent": "not scanned",
   "kora.coverage.gaps": "Known gaps",
-  "kora.onboarding.title": "Why Kora",
-  "kora.onboarding.case1.title": "See everything",
-  "kora.onboarding.case1.body":
-    "All zcode, vscode and pi sessions on connected hosts — one list, no console hopping.",
-  "kora.onboarding.case2.title": "Catch up",
-  "kora.onboarding.case2.body":
-    "A read-only transcript of any session: what happened and where it stopped, changing nothing.",
-  "kora.onboarding.case3.title": "Steer from the phone",
-  "kora.onboarding.case3.body":
-    "A new session or a prompt into your own — via the relay; the phone sees the same UI as the desktop.",
-  "kora.list.title": "Sessions",
+  "kora.legend.title": "What we see from your machines",
+  "kora.legend.growNote":
+    "Coverage grows as scanners become ready — we'll update this list",
   "kora.list.loading": "Loading sessions",
   "kora.list.loadMore": "Load more",
   "kora.list.loadFailed": "Failed to load the session list",
@@ -1783,16 +1862,12 @@ export const en: Record<TranslationKey, string> = {
   "kora.list.emptyNoSessions": "Sessions will appear once the host scanner starts",
   "kora.list.emptyAction": "Connect an agent",
   "kora.list.emptyStatusLink": "Open system status",
-  "kora.session.open": "Open",
-  "kora.session.age": "age: {{age}}",
-  "kora.session.noPreview": "No last-line preview",
   "kora.session.steerable": "steerable",
   "kora.session.origin.relay": "relay",
   "kora.session.origin.local": "local",
   "kora.session.state.live": "live",
   "kora.session.state.idle": "idle",
   "kora.session.state.dead": "process dead",
-  "kora.session.noId": "No session id in the route",
   "kora.session.notFound": "Session not found",
   "kora.session.notFoundMessage": "Session '{{id}}' is not in the Kora registry.",
   // ME-063: the coverage reason on the 404 plate — a return from the task
@@ -1801,15 +1876,11 @@ export const en: Record<TranslationKey, string> = {
     "The host is not available for viewing: the board reads transcripts only from hosts with a scanner. Head back to the session list or the task card — the link will work once the host becomes readable.",
   "kora.session.backToList": "Back to the session list",
   "kora.session.inactiveTitle": "Session not active",
-  "kora.session.readonlyPlate": "Someone else's session — read-only",
-  "kora.session.readonlyPlateNote":
-    "Continuation is available only for relay-origin sessions or after explicit adoption.",
-  "kora.transcript.title": "Transcript (read-only)",
+  "kora.transcript.region": "Session run",
   "kora.transcript.loading": "Loading the transcript",
   "kora.transcript.loadFailed": "Failed to load the transcript",
   "kora.transcript.inactiveHint":
     "Sign in — the transcript of this session will appear here",
-  "kora.transcript.empty": "No entries",
   "kora.transcript.emptyMessage":
     "The session is in the registry but the store has no entries — or the reader has not reached it yet.",
   "kora.transcript.redacted": "redacted",
@@ -1818,24 +1889,35 @@ export const en: Record<TranslationKey, string> = {
   // UX-overhaul П4 (Ф1): timestamp-less transcript lines get a neutral
   // label; the seq cursor is an internal metric — it lives in the tooltip.
   "kora.transcript.line": "transcript line",
-  "kora.chat.title": "Chat",
-  "kora.chat.placeholder": "Prompt into the session…",
-  "kora.chat.send": "Send",
-  "kora.chat.confirmMode": "Confirm-mode: the prompt is confirmed on the host",
-  "kora.chat.delivery.ok": "Delivered to the relay",
-  "kora.chat.delivery.failed": "Not delivered — please retry",
-  "kora.chat.freshness": "Freshness: the store tail is re-read, target ≤60s",
-  // UX-overhaul П4 (Ф1): the internal SLA (≤60s) moves to the tooltip; the
-  // visible line says only what matters to the owner after a send.
-  "kora.chat.freshnessHint":
-    "After a send, the answer is re-read from the session automatically",
-  "kora.chat.unavailable":
-    "Steering unavailable: local session. Read-only — the NO-DRIFT invariant.",
-  "kora.chat.stepUp.label": "Steering PIN",
-  "kora.chat.stepUp.enable": "Enable steering",
-  "kora.chat.stepUp.active": "Steering active (TTL ≤ 15 minutes)",
-  "kora.chat.stepUp.required": "Steering is locked — enter the PIN first",
-  "kora.chat.stepUp.failed": "Failed to enable steering",
-  "kora.chat.stepUp.note":
-    "Reading needs no PIN; steering — after a short PIN ritual (step-up, TTL ≤ 15 minutes).",
+  "kora.workzone.invite": "Pick a session — its run opens here",
+  "kora.workzone.openedAnnounce": "Opened session: {{name}}",
+  "kora.workzone.followTail": "Follow the tail",
+  "kora.workzone.searchLabel": "Find in this session",
+  "kora.workzone.searchPlaceholder": "Find in this session…",
+  "kora.workzone.matches": "matches: {{n}}",
+  "kora.pult.title": "Console",
+  "kora.pult.explain": "The console — the event feed and the session digest",
+  "kora.pult.tabsLabel": "Console tabs",
+  "kora.pult.digest": "Digest",
+  "kora.pult.ether": "Feed",
+  "kora.pult.hint": "Pick a session — its digest will appear here",
+  "kora.pult.digestEmpty":
+    "The session digest is built automatically — it will arrive later",
+  "kora.pult.etherEmpty":
+    "The event feed will arrive later — for now read session transcripts",
+  "kora.pult.readTranscript": "Read the transcript",
+  "kora.pult.waiting": "awaiting owner: {{n}}",
+  "kora.pult.waitingHint": "Tasks waiting for your decision",
+  "kora.pult.expand": "Expand",
+  "kora.pult.collapse": "Collapse",
+  "kora.composer.label": "Write to the agent in this session",
+  "kora.composer.placeholder": "Write to the agent…",
+  "kora.composer.send": "Send",
+  "kora.composer.sendLaterChip": "Sending will arrive later",
+  "kora.composer.sendLaterNote":
+    "Sending messages to the agent will arrive later — for now Kora shows how sessions run. Your draft stays while you are on this page.",
+  "kora.composer.finishedNote":
+    "The session is finished — there is no one to write to; start a new one on the host",
+  "kora.composer.interruptedNote":
+    "The session was interrupted — the agent is no longer listening here",
 };

@@ -21,9 +21,23 @@ import { actUnmount, actWaitUntil } from "@/test/actTools";
  * disclaimer rides under EVERY verdict, and the second stage («Check for
  * real») leads to the real dispatch flow. Card mode shows the verdict on
  * mount; menu mode shows it only after the explicit trigger.
+ *
+ * ME-048 flake hardening: the verdict age is per-second
+ * (`Math.floor((now - at)/1000)` in linkVerdict) and the asserts pin the
+ * EXACT rendered string («…answered a poll 5 s ago»), so the fixture and
+ * the render clock must share one instant. The old module-level
+ * `Date.now() - 5_000` fixture drifted to «6 s ago» once >1 s passed
+ * between the module import and the second test's render — REPRODUCED in
+ * the ME-048 protocol (full suite under 16-core saturation: run 10,
+ * "expected '…answered a poll…' to contain '…5 s ago'"; the first test
+ * in the file stayed green — it asserted before the boundary). Same
+ * hardening as ExecutionPage: pin Date ONLY (`toFake: ["Date"]`) so
+ * timers stay real and act/QueryClient behaviour is unchanged.
  */
 
-const FRESH: ExecutorItem = {
+/** Fixed base shared by fixtures and the pinned render clock. */
+const NOW = new Date(2026, 8, 15, 12, 0, 0, 0).getTime();
+const fresh = (): ExecutorItem => ({
   id: "exec-x",
   name: "x@host",
   harness: "zcode",
@@ -33,14 +47,14 @@ const FRESH: ExecutorItem = {
   version: "",
   enabled: true,
   state: "approved",
-  last_seen: new Date(Date.now() - 5_000).toISOString(), // 5 s → online
+  last_seen: new Date(NOW - 5_000).toISOString(), // 5 s → online
   presence: "online",
   registered_via: "",
-  registered_at: new Date(Date.now() - 86_400_000).toISOString(),
-  updated_at: new Date(Date.now() - 3_600_000).toISOString(),
-};
+  registered_at: new Date(NOW - 86_400_000).toISOString(),
+  updated_at: new Date(NOW - 3_600_000).toISOString(),
+});
 
-const REVOKED: ExecutorItem = { ...FRESH, state: "revoked", presence: "offline" };
+const revoked = (): ExecutorItem => ({ ...fresh(), state: "revoked", presence: "offline" });
 
 interface Mount {
   root: Root;
@@ -85,17 +99,20 @@ async function mountCheck(
 }
 
 beforeEach(() => {
+  // ME-048: pin the wall clock to the fixture base (Date only — header).
+  vi.useFakeTimers({ toFake: ["Date"], now: NOW });
   localStorage.clear();
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   document.body.innerHTML = "";
   vi.restoreAllMocks();
 });
 
 describe("ExecutorLinkCheck — the honest check", () => {
   it("card mode shows the verdict ON MOUNT (the card IS the check surface)", async () => {
-    const mount = await mountCheck(FRESH, "card", true);
+    const mount = await mountCheck(fresh(), "card", true);
     const html = mount.text();
     expect(html).toContain("online — answered a poll 5 s ago");
     expect(html).toContain("The board never pings agents (outbound-only)");
@@ -104,7 +121,7 @@ describe("ExecutorLinkCheck — the honest check", () => {
   });
 
   it("menu mode: no verdict before the trigger; the trigger REFETCHES the registry", async () => {
-    const mount = await mountCheck(FRESH, "menu-item");
+    const mount = await mountCheck(fresh(), "menu-item");
     expect(mount.text()).not.toContain("The board never pings agents");
     const spy = vi.spyOn(mount.gateway, "listExecutors");
     const callsBefore = spy.mock.calls.length;
@@ -124,7 +141,7 @@ describe("ExecutorLinkCheck — the honest check", () => {
   });
 
   it("a revoked row shows the goned-presence verdict with NO trigger at all", async () => {
-    const mount = await mountCheck(REVOKED, "card", true);
+    const mount = await mountCheck(revoked(), "card", true);
     const html = mount.text();
     expect(html).toContain("revoked — presence is gone");
     expect(html).toContain("The board never pings agents (outbound-only)");
@@ -134,7 +151,7 @@ describe("ExecutorLinkCheck — the honest check", () => {
   });
 
   it("P2: a PENDING row offers the check but NOT the second stage (no presence yet)", async () => {
-    const pending: ExecutorItem = { ...FRESH, state: "pending", last_seen: "" };
+    const pending: ExecutorItem = { ...fresh(), state: "pending", last_seen: "" };
     const mount = await mountCheck(pending, "card", true);
     const html = mount.text();
     // The verdict is honest without any check: «has never answered a poll».

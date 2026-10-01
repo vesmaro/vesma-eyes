@@ -16,18 +16,19 @@ import {
 } from "@/components/ui/dialog";
 import { useT } from "@/i18n";
 import { openPalette } from "@/lib/paletteState";
+import { toggleSidebarCollapsed } from "@/lib/sidebarState";
 import { resolveGlobalHotkey, resolveHotkey } from "./hotkeyActions";
 
 /**
  * Global hotkeys (redesign concept §2.2-6, ARCHCOM-3 verdict §2 — the proven
- * ai-brain canon with the `inInput` guard). The layer is intentionally three
- * keys: `/` opens the command palette (UX-overhaul §7.3 Ф2 — the palette
- * keeps the old focus-search promise, memory is its first section), `?`
- * opens this cheatsheet (Esc closes — Radix), and ⌘K / Ctrl+K opens the
- * palette from anywhere INCLUDING editable surfaces (resolveGlobalHotkey).
- * The list below never advertises keys that do not exist yet (`g`-prefix,
- * j/k arrive with their waves). Resolution rules live in hotkeyActions.ts
- * (pure, unit-tested).
+ * ai-brain canon with the `inInput` guard). Union И1 (stand 03 §7): `/`
+ * focuses the TopBar global search field (a REAL input now — Enter carries
+ * the query to /memory/search), `[` flips the sidebar rail, `?` opens this
+ * cheatsheet (Esc closes — Radix), and ⌘K / Ctrl+K opens the palette from
+ * anywhere INCLUDING editable surfaces (resolveGlobalHotkey). The list below
+ * never advertises keys that do not exist yet (`g`-prefix, j/k arrive with
+ * their waves). Resolution rules live in hotkeyActions.ts (pure,
+ * unit-tested).
  *
  * The PALETTE DIALOG itself is mounted by the Shell (inside the data
  * router): this provider sits above the router, so its keydown listener
@@ -39,6 +40,13 @@ interface HotkeysContextValue {
 }
 
 const HotkeysContext = createContext<HotkeysContextValue | null>(null);
+
+/**
+ * The TopBar global-search field's stable DOM id — the `/` hotkey focuses it
+ * by id (the field remounts across route changes; a ref would go stale from
+ * this provider's vantage point above the router).
+ */
+export const GLOBAL_SEARCH_INPUT_ID = "global-search-input";
 
 export function HotkeysProvider({ children }: { children: ReactNode }) {
   const t = useT();
@@ -60,6 +68,14 @@ export function HotkeysProvider({ children }: { children: ReactNode }) {
         setHelpOpen(true);
         return;
       }
+      if (action === "focus-search") {
+        document.getElementById(GLOBAL_SEARCH_INPUT_ID)?.focus();
+        return;
+      }
+      if (action === "toggle-sidebar") {
+        toggleSidebarCollapsed();
+        return;
+      }
       openPalette();
     };
     window.addEventListener("keydown", onKeyDown);
@@ -78,8 +94,9 @@ export function HotkeysProvider({ children }: { children: ReactNode }) {
             <DialogDescription>{t("hotkeys.subtitle")}</DialogDescription>
           </DialogHeader>
           <ul className="space-y-2">
-            <HotkeyRow keys="/" label={t("hotkeys.openPalette")} />
+            <HotkeyRow keys="/" label={t("hotkeys.focusSearch")} />
             <HotkeyRow keys="⌘K / Ctrl+K" label={t("hotkeys.openPaletteAnywhere")} />
+            <HotkeyRow keys="[" label={t("hotkeys.toggleSidebar")} />
             <HotkeyRow keys="?" label={t("hotkeys.cheatsheet")} />
             <HotkeyRow keys={t("hotkeys.escKey")} label={t("hotkeys.closeDialog")} />
           </ul>

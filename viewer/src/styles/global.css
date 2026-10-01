@@ -93,6 +93,18 @@
   }
 }
 
+/* Gate-screen entrance (union И1, 07k §7): opacity-dominant, no layout
+ * shift; duration/ease ride the motion tokens, so both reduced-motion
+ * regimes flatten it (250ms → 0ms) with no extra guard needed. */
+@keyframes gate-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 [data-awaken="true"] .well-node {
   animation: well-node-awaken var(--duration-impulse) var(--ease-enter) both;
   animation-delay: calc(var(--awaken-band) * var(--duration-stagger) * 3);
@@ -122,4 +134,8 @@
 [data-live="calm"] .well-drift,
 [data-live="off"] .well-drift {
   animation: none;
+}
+
+.gate-enter {
+  animation: gate-enter var(--duration-normal) var(--ease-enter);
 }

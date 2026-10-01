@@ -1,128 +1,97 @@
-import { Keyboard, Moon, Rows2, Rows3, Search, Sun } from "lucide-react";
+import type { ReactNode } from "react";
+import { Link, useNavigate } from "react-router";
+import { Moon, Rows2, Rows3, Search, Sun } from "lucide-react";
+import { IrisLogo } from "@/components/IrisLogo/IrisLogo";
 import { useTheme } from "@/components/theme-provider";
 import { useDensity } from "@/components/density-provider";
 import { Button } from "@/components/ui/button";
 import { AuthStatus } from "@/features/auth/AuthStatus";
 import { useT } from "@/i18n";
 import { openPalette } from "@/lib/paletteState";
-import {
-  cycleLiveLayer,
-  useLiveLayer,
-  type LiveLayer,
-} from "@/lib/liveLayerStore";
-import { useHotkeys } from "./Hotkeys";
+import { GLOBAL_SEARCH_INPUT_ID } from "./Hotkeys";
 import { LanguageToggle } from "./LanguageToggle";
 
 /**
- * Top bar (redesign concept §2.2): the GLOBAL search entry — UX-overhaul
- * §7.3 (Ф2) the oval is the command palette's TRIGGER (click opens the
- * palette; ⌘K/Ctrl+K and the bare `/` do the same from anywhere) — plus the
- * В1 live-layer indicator (blueprint §6.6, canon v11 §4), the density toggle
- * (§3.3), the RU|EN switcher, theme, the `?` cheatsheet button and the T6
- * auth/connection slot. The route label is a `<p>`, not a heading: each page
- * owns the single h1 (WCAG 1.3.1/2.4.6).
+ * Top bar (union И1, stand 03 §4 — one shell for all screens): the bar now
+ * spans the FULL WIDTH above the sidebar; the brand, the global search and
+ * the status zone live here.
+ *
+ * - Brand: the iris mark + «vesma-eyes» link to the root. The label folds
+ *   away on the smallest widths (the mark stays — recognition over recall).
+ * - Global search: a REAL input (stand composition; the UX-overhaul Ф2
+ *   «oval opens the palette» move is superseded by the union rule «движок
+ *   main / вид стенда» — the palette keeps ⌘K/Ctrl+K, the sidebar footer
+ *   button and the crumbs-row button). Enter carries the query to
+ *   /memory/search (the page already owns ?q=); the bare `/` focuses the
+ *   field (Hotkeys.tsx); Esc blurs. Mobile keeps the palette icon as the
+ *   search affordance — the field would own the whole 48px bar.
+ * - Status zone (right): the T6 auth/connection slot, density, RU|EN and
+ *   theme — the main engines, dressed in the stand's icon-button look.
+ *   The stand's live pill / exec counter / bell stay OUT until their
+ *   engines are wired (honest absence over fake pills).
+ *
+ * The route label is gone: the crumbs row (03 §5) carries the location; the
+ * bar stays a landmark, not a heading (WCAG 1.3.1/2.4.6 — pages own the h1).
  */
 export interface TopBarProps {
-  /** Current route label (already translated by the caller). */
-  title: string;
+  /**
+   * The mobile sidebar opener (a Radix Dialog.Trigger — must render inside
+   * the Dialog.Root Shell wraps the app in). Visible below md only.
+   */
+  sidebarTrigger?: ReactNode;
 }
 
-/** The В1 word per living-layer level (live = dot + word; calm/off word). */
-const LIVE_LAYER_LABEL_KEY: Record<
-  LiveLayer,
-  "topbar.liveLive" | "topbar.liveCalm" | "topbar.liveOff"
-> = {
-  live: "topbar.liveLive",
-  calm: "topbar.liveCalm",
-  off: "topbar.liveOff",
-};
+/** Brand wordmark — language-independent, hence not in the dictionaries. */
+const BRAND_NAME = "vesma-eyes";
 
-export function TopBar({ title }: TopBarProps) {
+export function TopBar({ sidebarTrigger }: TopBarProps) {
   const { theme, toggleTheme } = useTheme();
   const { density, toggleDensity } = useDensity();
-  const { openHelp } = useHotkeys();
-  const liveLayer = useLiveLayer();
+  const navigate = useNavigate();
   const t = useT();
   const nextTheme = theme === "dark" ? "light" : "dark";
   const compact = density === "compact";
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border-subtle px-3 sm:px-6">
-      {/* Route label, not a heading — pages own the (single) h1. */}
-      <p className="hidden min-w-0 truncate text-sm font-semibold text-foreground-secondary lg:block">
-        {title}
-      </p>
-      {/* The palette trigger: a button styled as the search oval — the
-       * promise is honest now (one palette covering memory, tasks, agents
-       * and navigation — J3), the kbd affordance mirrors ⌘K. */}
-      <button
-        type="button"
+    <header className="sticky top-0 z-40 flex h-topbar shrink-0 items-center gap-2 border-myelin-hairline border-b-hairline bg-well pl-2 pr-3 sm:gap-3 sm:pl-3">
+      {sidebarTrigger}
+      <Link
+        to="/"
+        className="flex min-w-0 items-center gap-2 rounded-md py-1 font-semibold text-foreground transition-colors duration-instant hover:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+      >
+        <IrisLogo size={20} decorative />
+        <span className="hidden whitespace-nowrap text-sm tracking-wide sm:inline">
+          {BRAND_NAME}
+        </span>
+      </Link>
+
+      <GlobalSearchField />
+      {/* Mobile: the palette stays the search affordance — the field would
+       * own the whole 48px bar (03 §4 collapses it into an icon too). */}
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={() => openPalette("button")}
         aria-label={t("cmdk.openAria")}
         aria-haspopup="dialog"
-        aria-expanded={false}
-        className={
-          "flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md border border-border-subtle bg-well px-3 text-left " +
-          "transition-colors duration-instant hover:border-iris-bright " +
-          "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus " +
-          "sm:max-w-md lg:ml-auto"
-        }
+        className="h-8 w-8 shrink-0 md:hidden"
       >
-        <Search
-          className="size-4 shrink-0 text-foreground-secondary"
-          aria-hidden="true"
-        />
-        <span className="min-w-0 flex-1 truncate text-sm text-foreground-muted">
-          {t("topbar.searchPlaceholder")}
-        </span>
-        {/* The affordance mirroring the ⌘K hotkey (kbd semantics). */}
-        <kbd className="hidden shrink-0 rounded border border-border-subtle px-1.5 font-mono text-xs text-foreground-muted sm:inline">
-          ⌘K
-        </kbd>
-      </button>
-      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+        <Search className="size-4" aria-hidden="true" />
+      </Button>
+
+      <div className="flex-1" />
+
+      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
         <AuthStatus />
-        {/* В1 live-layer indicator (blueprint §6.6): click cycles
-         * live → calm → off; the fourth canon level (reduced) lives in the
-         * motion store and is never rewritten here. Never colour-only — the
-         * dot always rides the word. */}
-        <button
-          type="button"
-          onClick={cycleLiveLayer}
-          aria-pressed={liveLayer !== "live"}
-          aria-label={t("topbar.liveLayerAria", {
-            state: t(LIVE_LAYER_LABEL_KEY[liveLayer]),
-          })}
-          title={t("topbar.liveLayerTitle")}
-          className="inline-flex min-h-6 items-center gap-1.5 rounded-sm border border-transparent px-1.5 text-xs text-foreground-secondary transition-colors duration-instant hover:border-myelin-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-        >
-          {liveLayer === "live" ? (
-            <span
-              aria-hidden="true"
-              className="size-1.5 shrink-0 rounded-full bg-success"
-            />
-          ) : null}
-          {t(LIVE_LAYER_LABEL_KEY[liveLayer])}
-        </button>
         <Button
           variant="ghost"
           size="icon"
-          onClick={openHelp}
-          aria-label={t("hotkeys.openAria")}
-          title={t("hotkeys.openAria")}
-          className="hidden sm:inline-flex"
-        >
-          <Keyboard className="size-4" aria-hidden="true" />
-        </Button>
-        <LanguageToggle />
-        <Button
-          variant="ghost"
-          size="sm"
           onClick={toggleDensity}
           aria-label={t(
             compact ? "topbar.densityToComfortable" : "topbar.densityToCompact",
           )}
           title={t(compact ? "topbar.densityToComfortable" : "topbar.densityToCompact")}
+          className="h-8 w-8"
         >
           {/* Compact packs MORE rows; comfortable keeps them roomy. */}
           {compact ? (
@@ -130,30 +99,66 @@ export function TopBar({ title }: TopBarProps) {
           ) : (
             <Rows2 className="size-4" aria-hidden="true" />
           )}
-          <span className="sr-only">
-            {t(compact ? "topbar.densityComfortable" : "topbar.densityCompact")}
-          </span>
         </Button>
+        <LanguageToggle />
         <Button
           variant="ghost"
-          size="sm"
+          size="icon"
           onClick={toggleTheme}
           aria-label={t(
             nextTheme === "light" ? "topbar.themeToLight" : "topbar.themeToDark",
           )}
+          title={t(nextTheme === "light" ? "topbar.themeToLight" : "topbar.themeToDark")}
+          className="h-8 w-8"
         >
           {theme === "dark" ? (
             <Sun className="size-4" aria-hidden="true" />
           ) : (
             <Moon className="size-4" aria-hidden="true" />
           )}
-          {/* Label shortens below sm so the bar reflows at 320px (WCAG 1.4.10);
-           * the aria-label carries the full wording for AT. */}
-          <span className="hidden sm:inline">
-            {t(nextTheme === "light" ? "topbar.themeLight" : "topbar.themeDark")}
-          </span>
         </Button>
       </div>
     </header>
   );
+
+  /** The stand's topsearch field (03 §4): clamp width, `/` hint, Enter → search. */
+  function GlobalSearchField() {
+    const submit = (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      const raw = new FormData(event.currentTarget).get("global-query");
+      const trimmed = typeof raw === "string" ? raw.trim() : "";
+      navigate(
+        trimmed ? `/memory/search?q=${encodeURIComponent(trimmed)}` : "/memory/search",
+      );
+    };
+    return (
+      <form role="search" onSubmit={submit} className="relative hidden md:block">
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-foreground-muted"
+          aria-hidden="true"
+        />
+        <input
+          type="search"
+          name="global-query"
+          id={GLOBAL_SEARCH_INPUT_ID}
+          aria-label={t("topbar.searchLabel")}
+          placeholder={t("topbar.searchPlaceholder")}
+          autoComplete="off"
+          onKeyDown={(event) => {
+            // Stand 03 §4: Esc снимает фокус (the native search Esc clears).
+            if (event.key === "Escape") event.currentTarget.blur();
+          }}
+          className="h-8 w-search rounded-md border border-border bg-elevated pr-10 pl-9 text-sm text-foreground transition-[border-color,box-shadow] duration-instant placeholder:text-foreground-muted hover:border-myelin-strong focus-visible:border-iris-bright focus-visible:shadow-iris focus-visible:outline-none"
+        />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute right-2 top-1/2 flex -translate-y-1/2 gap-0.5"
+        >
+          <kbd className="inline-flex h-5 min-w-5 items-center justify-center rounded-sm border border-border-subtle border-b-2 bg-elevated px-1 font-mono text-caps text-foreground-secondary">
+            /
+          </kbd>
+        </span>
+      </form>
+    );
+  }
 }

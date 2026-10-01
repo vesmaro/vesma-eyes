@@ -214,10 +214,25 @@ describe("freeze gate: /tasks navigation cycle with live SSE", () => {
 
       // Leaving the domain closed every stream the layout opened (no leak,
       // no orphan EventSource patching the cache from the outside).
-      expect(gateway!.sseSources.length).toBeGreaterThanOrEqual(6);
+      // ME-048: this used to demand ≥6 sources — one NEW EventSource per
+      // /tasks ENTRY. That over-specified the contract (see the header):
+      // under scheduler contention React Router may coalesce an
+      // instantaneous /tasks → / → /tasks bounce — the middle navigation
+      // never commits, the layout stays mounted and REUSES its live
+      // stream, so an entry opens no NEW source. REPRODUCED on base
+      // 35456fc (ME-048 protocol, full suite under 16-core saturation):
+      // "AssertionError: expected 5 to be greater than or equal to 6" —
+      // one catch in 6 base runs, every OTHER invariant of this test green
+      // at the moment of the catch (exactly-one-open per entry, frame
+      // delivery through the real SSE → cache path, all-closed after).
+      // Per-entry openness is asserted INSIDE the loop; what must hold
+      // after the cycle is the leak contract: the seam really ran (≥1)
+      // and nothing is left open (loop below).
+      expect(gateway!.sseSources.length).toBeGreaterThanOrEqual(1);
       for (const source of gateway!.sseSources) {
         expect(source.closed).toBe(true);
       }
+      expect(gateway!.sseSources.filter((source) => !source.closed)).toHaveLength(0);
 
       // (c) The exact frozen-build symptom: after the cycle, navigation must
       // still SWAP page content. /memory renders the memories heading; the

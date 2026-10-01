@@ -15,7 +15,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useKoraGateway } from "./koraGatewayContext";
-import type { KoraSession, KoraSessionsList } from "./koraTypes";
+import type { KoraSession, KoraSessionsList, KoraTranscriptItem } from "./koraTypes";
 
 export const koraKeys = {
   all: ["kora"] as const,
@@ -26,6 +26,9 @@ export const koraKeys = {
   session: (sessionId: string) => [...koraKeys.all, "session", sessionId] as const,
   transcript: (sessionId: string) =>
     [...koraKeys.all, "transcript", sessionId] as const,
+  /** И1 paged transcript key (the page size is part of the key). */
+  transcriptPaged: (sessionId: string, pageSize: number) =>
+    [...koraKeys.all, "transcript", "paged", pageSize, sessionId] as const,
   stepUp: () => [...koraKeys.all, "steering", "step-up"] as const,
 };
 
@@ -103,6 +106,62 @@ export function useKoraTranscript(sessionId: string | undefined) {
       gateway.getTranscript(sessionId as string, { after_seq: 0 }, signal),
     enabled: sessionId !== undefined,
   });
+}
+
+/** P4-7-style paged transcript state (union И1, 07j §3 scroll canon). */
+export interface KoraTranscriptPages {
+  items: KoraTranscriptItem[];
+  hasMore: boolean;
+  isPending: boolean;
+  isLoadingMore: boolean;
+  error: Error | null;
+  loadMore: () => Promise<void>;
+  refetch: () => Promise<void>;
+}
+
+/**
+ * Union И1 (07j §3.1 Б): the session scroll reads the frozen cursor GET
+ * forward from seq 0 — «Показать ещё» appends the next page, `has_more` is
+ * the contract's own honest end marker (same discipline as the session
+ * list's P4-7 hook). No second content channel, no tail polling — the tail
+ * re-reads by USER action (follow-tail/load-more) until the SSE bus (И4).
+ */
+export function useKoraTranscriptPages(
+  sessionId: string | undefined,
+  pageSize = 50,
+): KoraTranscriptPages {
+  const gateway = useKoraGateway();
+  const query = useInfiniteQuery({
+    queryKey: koraKeys.transcriptPaged(sessionId ?? "none", pageSize),
+    initialPageParam: 0,
+    queryFn: ({ signal, pageParam }) =>
+      gateway.getTranscript(
+        sessionId as string,
+        { after_seq: pageParam as number, limit: pageSize },
+        signal,
+      ),
+    getNextPageParam: (lastPage) =>
+      lastPage.has_more ? lastPage.next_after_seq : undefined,
+    enabled: sessionId !== undefined,
+  });
+
+  const loadMore = useCallback(async () => {
+    await query.fetchNextPage();
+  }, [query]);
+
+  const refetch = useCallback(async () => {
+    await query.refetch();
+  }, [query]);
+
+  return {
+    items: query.data ? query.data.pages.flatMap((page) => [...page.items]) : [],
+    hasMore: query.hasNextPage,
+    isPending: query.isPending,
+    isLoadingMore: query.isFetchingNextPage,
+    error: query.error,
+    loadMore,
+    refetch,
+  };
 }
 
 /** Slice 3 — prompt send; success invalidates the store tail (chat v1). */

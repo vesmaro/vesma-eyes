@@ -1,6 +1,4 @@
-import { useState } from "react";
-import { Eye, EyeOff, LogIn } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { LogIn } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -9,14 +7,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useT } from "@/i18n";
+import { UiTokenLoginForm } from "./UiTokenLoginForm";
 import type { UiTokenWindowReason } from "./uiTokenGate";
 
 /**
- * The ONE login window of the app (Ф3, fix/login-window redesign). Replaces
- * the old "token panel" surface: a plain sign-in dialog the user opens from
- * the TopBar («Войти») or that opens itself when a mutation needs a ui
- * token — same window either way, the contextual line is the only
- * difference. Read-only pages stay mounted and browsable underneath.
+ * The ONE login window of the app (Ф3, fix/login-window redesign; the form
+ * body itself lives in UiTokenLoginForm — the /auth route hosts the same
+ * beats, union И1). A plain sign-in dialog the user opens from the TopBar
+ * («Войти») or that opens itself when a mutation needs a ui token — same
+ * window either way, the contextual line is the only difference. Read-only
+ * pages stay mounted and browsable underneath.
  *
  * A11y: Radix Dialog (Esc, cross, focus trap, aria-modal free), the value is
  * masked behind type=password with an explicit reveal toggle, the submit is
@@ -54,23 +54,12 @@ export function LoginDialog({
   rejectDetail,
 }: LoginDialogProps) {
   const t = useT();
-  const [value, setValue] = useState("");
-  const [reveal, setReveal] = useState(false);
 
-  // The field resets through the callbacks (submit / dismiss), never through
-  // an effect: a half-typed secret never survives the window either way.
+  // The field resets through the form's own callbacks (submit / secondary),
+  // never through an effect: a half-typed secret never survives the window.
   const dismiss = () => {
     if (verifyPending) return; // a verify in flight owns the window
     onDismiss();
-    setValue("");
-    setReveal(false);
-  };
-
-  const submit = () => {
-    const trimmed = value.trim();
-    if (trimmed.length === 0 || verifyPending) return;
-    onSubmitToken(trimmed);
-    setValue("");
   };
 
   return (
@@ -96,97 +85,17 @@ export function LoginDialog({
             {t("login.continueQueued")}
           </p>
         ) : null}
-        {/* Inline sign-in error — two distinct beats (ADR 0014): refused
-         * AT THE DOOR (wrong value or a machine-class token) vs the
-         * mid-flight «сессия истекла». Assertive, inside the window. */}
-        {reason === "rejected" ? (
-          <>
-            <p role="alert" className="text-xs text-error">
-              {t(rejectKind === "session" ? "login.sessionExpired" : "login.rejected")}
-            </p>
-            {rejectDetail ? (
-              <p className="text-xs text-foreground-secondary">{rejectDetail}</p>
-            ) : null}
-          </>
-        ) : null}
 
-        <form
-          className="space-y-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            submit();
-          }}
-        >
-          <div className="flex flex-col gap-1">
-            <label htmlFor="login-token-value" className="text-xs text-foreground-secondary">
-              {t("login.fieldLabel")}
-            </label>
-            <div className="flex items-center gap-1">
-              <input
-                id="login-token-value"
-                // Masked by default — the value is a secret; the reveal
-                // toggle is the explicit, user-driven exception.
-                type={reveal ? "text" : "password"}
-                value={value}
-                onChange={(event) => setValue(event.target.value)}
-                autoComplete="off"
-                spellCheck={false}
-                autoFocus
-                disabled={verifyPending}
-                aria-describedby="login-token-hint"
-                className="h-9 min-w-0 flex-1 rounded-md border border-border bg-well px-2 font-mono text-sm text-foreground focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright disabled:opacity-60"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                disabled={verifyPending}
-                onClick={() => setReveal((current) => !current)}
-                aria-label={t(reveal ? "login.hideValue" : "login.showValue")}
-                aria-pressed={reveal}
-              >
-                {reveal ? (
-                  <EyeOff className="size-4" aria-hidden="true" />
-                ) : (
-                  <Eye className="size-4" aria-hidden="true" />
-                )}
-              </Button>
-            </div>
-          </div>
-
-          {/* ME-028: the guidance leads («спросите у администратора»); the
-           * kubectl command sits under a native disclosure — closed by
-           * default, so the dialog no longer opens with a wall of shell, but
-           * it stays one click away for the admin (content remains in the
-           * DOM and the a11y tree). */}
-          <p
-            id="login-token-hint"
-            className="rounded-md bg-elevated p-2 text-xs text-foreground-muted"
-          >
-            {t("login.hint")}
-          </p>
-          <details className="rounded-md bg-elevated px-2 py-1.5 text-xs text-foreground-muted">
-            <summary className="cursor-pointer select-none rounded-sm py-0.5 text-foreground-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright">
-              {t("login.hintCommandSummary")}
-            </summary>
-            <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-foreground-muted">
-              {t("login.hintCommand")}
-            </pre>
-          </details>
-
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={dismiss} disabled={verifyPending}>
-              {t("login.continueReadOnly")}
-            </Button>
-            <Button
-              type="submit"
-              size="sm"
-              disabled={verifyPending || value.trim().length === 0}
-            >
-              {verifyPending ? t("login.verifying") : t("login.submit")}
-            </Button>
-          </div>
-        </form>
+        <UiTokenLoginForm
+          onSubmitToken={onSubmitToken}
+          verifyPending={verifyPending}
+          // A rejected window always carries a beat; a legacy harness that
+          // mounts it without one gets the at-the-door text (the default).
+          rejectKind={reason === "rejected" ? (rejectKind ?? "verify") : undefined}
+          rejectDetail={rejectDetail}
+          secondaryLabel={t("login.continueReadOnly")}
+          onSecondary={dismiss}
+        />
       </DialogContent>
     </Dialog>
   );

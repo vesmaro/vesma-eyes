@@ -63,6 +63,20 @@ export const ADAPTER: AdapterKind = resolveAdapterKind(
  * bootstrap pays one microtask, nothing more.
  */
 export async function createGateway(): Promise<MemoryGateway> {
+  // Cascade P3-4 (ME-043): the mock adapter is a dev playground — no auth
+  // wall, gates v6 inactive BY DESIGN. A production build booted with
+  // VITE_ADAPTER=mock would silently ship the public surface WITHOUT the
+  // gates; the combo is forbidden and must fail LOUD at bootstrap instead
+  // of degrading quietly. The single deliberate exception is the render
+  // smoke harness (scripts/smoke-render.mjs), which opts in per build via
+  // VITE_SMOKE_ALLOW_MOCK=1 — never set it for a deployment.
+  if (isForbiddenAdapterCombo(import.meta.env.PROD, ADAPTER)) {
+    throw new Error(
+      "VITE_ADAPTER=mock cannot boot a production build: the mock playground has " +
+        "no auth wall and the gates-v6 public surface would be silently disabled " +
+        "(ME-043 cascade P3-4). Build and deploy with VITE_ADAPTER=board.",
+    );
+  }
   switch (ADAPTER) {
     case "mock": {
       const { MockAdapter } = await import("./MockAdapter");
@@ -77,6 +91,21 @@ export async function createGateway(): Promise<MemoryGateway> {
     default:
       return new HttpAdapter(MNEMOS_BASE_URL);
   }
+}
+
+/**
+ * The forbidden-combo predicate (cascade P3-4), pure for unit tests:
+ * prod + mock is barred unless the render-smoke harness explicitly opted
+ * in for its dist-smoke build. In source form the opt-in is read through
+ * `import.meta.env` (a build-time constant), so an accidental production
+ * deploy can never inherit it from the environment at runtime.
+ */
+export function isForbiddenAdapterCombo(
+  isProd: boolean,
+  adapter: AdapterKind,
+  smokeOptIn = import.meta.env.VITE_SMOKE_ALLOW_MOCK === "1",
+): boolean {
+  return isProd && adapter === "mock" && !smokeOptIn;
 }
 
 /** Human-facing backend label for the TopBar indicator. */

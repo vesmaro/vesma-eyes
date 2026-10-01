@@ -82,6 +82,16 @@ const NEURO_STATIC_TOKENS = [
   "--numeric-tnum",
 ];
 
+/** Shell geometry (union И1 — stand 03-IA-NAVIGATION §2–§5, theme-independent
+ * :root additions; the parity describe below keeps viewer ↔ board identical). */
+const SHELL_GEOMETRY_TOKENS = [
+  "--shell-topbar-h",
+  "--shell-sidebar-w",
+  "--shell-sidebar-rail-w",
+  "--shell-crumbs-h",
+  "--shell-search-w",
+];
+
 const TYPE_TOKENS = [
   "--font-ui",
   "--font-scroll",
@@ -271,6 +281,7 @@ describe("tokens.css inventory (canon v2 — docs/design/02-TOKENS.md §1–§3)
       ...MOTION_TOKENS,
       ...NEURO_STATIC_TOKENS,
       ...PHASE1_STATIC_TOKENS,
+      ...SHELL_GEOMETRY_TOKENS,
     ]) {
       expect(props, `${token} missing`).toContain(token);
     }

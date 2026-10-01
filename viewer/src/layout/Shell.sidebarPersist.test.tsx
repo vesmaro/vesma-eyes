@@ -20,8 +20,11 @@ import { actUnmount, actWaitUntil } from "@/test/actTools";
  * Sidebar collapse persistence (UI-19 owner feedback): the collapsed rail
  * must survive F5. The flag rides "vesmaro.sidebarCollapsed" (the `vesmaro.*`
  * namespace) — read lazily on mount, written on every toggle. UI-22 scope:
- * it is the DESKTOP intent — the mobile (<md) overlay toggle never reaches
- * Shell's setter, so a phone can neither read nor corrupt the stored flag.
+ * it is the DESKTOP intent — the mobile (<md) drawer never reaches Shell's
+ * setter, so a phone can neither read nor corrupt the stored flag.
+ * Union И1: the desktop control is the FOOTER «Свернуть» row; below md the
+ * inline panel does not render at all — the drawer (Radix dialog) opens from
+ * the TopBar trigger and is session-only.
  * Pattern: DocsPage.test.tsx — happy-dom pragma, createRoot + real click
  * events. The expansion is state-driven (matchMedia seam): happy-dom answers
  * "no match" (= phone) by default, so the mobile describe runs unstumped and
@@ -80,7 +83,7 @@ async function mountShell(path = "/memory") {
   return { root, container };
 }
 
-/** The header collapse control (identified by its ru aria-label). */
+/** The footer collapse control (identified by its ru aria-label). */
 function toggleButton(container: HTMLElement): HTMLButtonElement {
   const button = container.querySelector<HTMLButtonElement>(
     'button[aria-label="Свернуть панель"], button[aria-label="Развернуть панель"]',
@@ -128,8 +131,9 @@ describe("Shell sidebar collapse persistence (UI-19)", () => {
       expect(container.querySelector("aside")).not.toBeNull();
     });
     const aside = container.querySelector("aside");
-    expect(aside?.className).toContain("w-14");
-    expect(aside?.className).not.toContain("w-64");
+    expect(aside?.className).toContain("w-sidebar-rail");
+    // Exact token — "w-sidebar" is a PREFIX of "w-sidebar-rail".
+    expect(aside?.className.split(" ")).not.toContain("w-sidebar");
     expect(toggleButton(container).getAttribute("aria-expanded")).toBe("false");
     expect(toggleButton(container).getAttribute("aria-label")).toBe(
       "Развернуть панель",
@@ -145,12 +149,12 @@ describe("Shell sidebar collapse persistence (UI-19)", () => {
 
     click(button); // collapse
     expect(button.getAttribute("aria-expanded")).toBe("false");
-    expect(container.querySelector("aside")?.className).toContain("w-14");
+    expect(container.querySelector("aside")?.className).toContain("w-sidebar-rail");
     expect(localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY)).toBe("1");
 
     click(button); // expand back
     expect(button.getAttribute("aria-expanded")).toBe("true");
-    expect(container.querySelector("aside")?.className).toContain("w-64");
+    expect(container.querySelector("aside")?.className).toContain("w-sidebar");
     expect(localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY)).toBe("0");
   });
 
@@ -164,40 +168,58 @@ describe("Shell sidebar collapse persistence (UI-19)", () => {
   });
 });
 
-describe("Shell sidebar on a phone (UI-22): overlay is session-only", () => {
+describe("Shell sidebar on a phone (UI-22): the drawer is session-only", () => {
   beforeEach(() => stubMatchMedia(false)); // <md — the phone viewport
 
-  it("mounts COLLAPSED regardless of the stored desktop flag; the toggle opens the overlay", async () => {
+  function drawerTrigger(container: HTMLElement): HTMLButtonElement {
+    const button = container.querySelector<HTMLButtonElement>(
+      'button[aria-label="Открыть разделы"]',
+    );
+    if (!button) throw new Error("drawer trigger not found");
+    return button;
+  }
+
+  it("no inline panel below md; the drawer opens from the TopBar and never writes storage", async () => {
     localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, "0");
     const { container } = await mountShell();
     await actWaitUntil(() => {
-      expect(container.querySelector("aside")).not.toBeNull();
+      expect(drawerTrigger(container)).toBeTruthy();
     });
-    // Entry state on <md: the icon rail, NEVER a pre-opened overlay —
-    // the stored "0" (desktop intent) does not leak into the phone.
-    const aside = container.querySelector("aside");
-    expect(aside?.className).toContain("w-14");
-    expect(aside?.className).not.toContain("fixed");
-    expect(toggleButton(container).getAttribute("aria-expanded")).toBe("false");
+    // Entry state on <md: NO inline panel and NO pre-opened drawer — the
+    // stored "0" (desktop intent) does not leak into the phone.
+    expect(container.querySelector("aside")).toBeNull();
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    expect(drawerTrigger(container).getAttribute("aria-expanded")).toBe("false");
 
-    click(toggleButton(container)); // mobile expand → overlay
-    expect(container.querySelector("aside")?.className).toContain("fixed");
-    expect(toggleButton(container).getAttribute("aria-expanded")).toBe("true");
-    // …and the stored flag is UNTOUCHED by the mobile click.
+    click(drawerTrigger(container)); // open the drawer (portal)
+    await actWaitUntil(() => {
+      expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+    });
+    expect(drawerTrigger(container).getAttribute("aria-expanded")).toBe("true");
+    // …and the stored flag is UNTOUCHED by the drawer.
     expect(localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY)).toBe("0");
 
-    click(toggleButton(container)); // back to the rail
-    expect(container.querySelector("aside")?.className).not.toContain("fixed");
+    // The footer «Свернуть» row is the dialog's Close — back to no drawer.
+    const close = document.querySelector<HTMLButtonElement>(
+      'button[aria-label="Свернуть панель"]',
+    );
+    expect(close).not.toBeNull();
+    click(close as HTMLButtonElement);
+    await actWaitUntil(() => {
+      expect(document.querySelector('[role="dialog"]')).toBeNull();
+    });
     expect(localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY)).toBe("0");
   });
 
-  it("a remount (F5) starts collapsed again — the mobile overlay is session-only", async () => {
+  it("a remount (F5) starts with the drawer closed — session-only state", async () => {
     const first = await mountShell();
     await actWaitUntil(() => {
-      expect(first.container.querySelector("aside")).not.toBeNull();
+      expect(drawerTrigger(first.container)).toBeTruthy();
     });
-    click(toggleButton(first.container)); // open the overlay
-    expect(first.container.querySelector("aside")?.className).toContain("fixed");
+    click(drawerTrigger(first.container)); // open the drawer
+    await actWaitUntil(() => {
+      expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+    });
     await act(async () => {
       await actUnmount(first.root);
     });
@@ -205,11 +227,8 @@ describe("Shell sidebar on a phone (UI-22): overlay is session-only", () => {
 
     const second = await mountShell();
     await actWaitUntil(() => {
-      expect(second.container.querySelector("aside")).not.toBeNull();
+      expect(drawerTrigger(second.container)).toBeTruthy();
     });
-    expect(second.container.querySelector("aside")?.className).toContain("w-14");
-    expect(second.container.querySelector("aside")?.className).not.toContain(
-      "fixed",
-    );
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
   });
 });

@@ -2,8 +2,8 @@ import { lazy } from "react";
 import { Navigate } from "react-router";
 import type { RouteObject } from "react-router";
 import { Shell } from "@/layout/Shell";
-import { SearchPage } from "@/features/search/SearchPage"; // eager — only eagerly loaded chunk (§3)
 import { TelemetryRouteObserver } from "@/telemetry/TelemetryRouteObserver"; // ME-041: ui.nav emitter
+import { SearchPage } from "@/features/search/SearchPage"; // eager — only eagerly loaded chunk (§3)
 import {
   KoraGatewayContext,
   makeKoraGateway,
@@ -126,6 +126,15 @@ const DevicesPage = lazy(() =>
 const PairPage = lazy(() =>
   import("@/features/pairing/PairPage").then((m) => ({ default: m.PairPage })),
 );
+// The auth entry route (union И1, 07k §4 — gates v6): the sign-in form as a
+// PUBLIC page outside the Shell, same rule as /pair — no sidebar, no locks;
+// the deep-link back-transport is `?return=` (returnParams, ME-026: the
+// query must survive the round trip).
+const AuthRoutePage = lazy(() =>
+  import("@/features/ui-token/AuthRoutePage").then((m) => ({
+    default: m.AuthRoutePage,
+  })),
+);
 const DocsHubPage = lazy(() =>
   import("@/features/docs/DocsHubPage").then((m) => ({ default: m.DocsHubPage })),
 );
@@ -157,9 +166,13 @@ const DocsCategoryLegacyRedirect = lazy(() =>
  */
 export function buildRoutes(): RouteObject[] {
   return [
-    // ME-041: one pathless layout route observes every committed location
-    // change (incl. /pair, outside the Shell) and emits ui.nav — additive
-    // wrapper, renders nothing but <Outlet/>.
+    // ME-041: one pathless LAYOUT route observes every committed location
+    // change (incl. /pair and /auth, outside the Shell) and emits ui.nav —
+    // additive wrapper, renders nothing but <Outlet/>. Stitch note: the
+    // element and the children MUST live in ONE route object — a separate
+    // `{ element: <Observer/> }` without children matches nothing and the
+    // observer never mounts (the ui.nav loss the stitch reconciliation
+    // caught).
     {
       element: <TelemetryRouteObserver />,
       children: [
@@ -171,6 +184,17 @@ export function buildRoutes(): RouteObject[] {
           element: (
             <Page>
               <PairPage />
+            </Page>
+          ),
+        },
+        // /auth — the public sign-in page (ME-043, gates v6): outside the Shell
+        // BEFORE it, so it never inherits the sidebar/gate chrome; the page is
+        // self-contained (own header, the app's ONE login form).
+        {
+          path: "/auth",
+          element: (
+            <Page>
+              <AuthRoutePage />
             </Page>
           ),
         },
@@ -307,7 +331,7 @@ export function buildRoutes(): RouteObject[] {
             },
 
             // Документация domain (ADR 0015 + ADR 0016): three project hubs +
-        // the cross-cutting API hub (ME-038).
+            // the cross-cutting API hub (ME-038).
             // /docs answers with an instant replace-redirect into the default
             // hub (design spec §2/§8 — the section root is /docs/vesma-eyes);
             // legacy single-segment URLs resolve through the redirect map in
