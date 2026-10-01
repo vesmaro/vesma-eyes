@@ -111,6 +111,17 @@ describe("translation", () => {
     expect(interpolate("{{a}} + {{missing}}", { a: 1 })).toBe("1 + {{missing}}");
   });
 
+  it("interpolates the palette's noResults query (review P1-2: no raw {{ in the UI)", async () => {
+    const { translate } = await import("./index");
+    // The component must pass the live query; a raw «{{query}}» in the
+    // rendered line is the regression this guards.
+    for (const lang of ["en", "ru"] as const) {
+      const line = translate(lang, "cmdk.noResults", { query: "zzz-drift" });
+      expect(line).not.toContain("{{");
+      expect(line).toContain("zzz-drift");
+    }
+  });
+
   it("en.ts implements every ru.ts key (dictionary parity)", async () => {
     const { ru } = await import("./ru");
     const { en } = await import("./en");

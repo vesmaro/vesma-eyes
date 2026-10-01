@@ -305,7 +305,9 @@ function PaletteBody() {
             role="status"
             className="px-2 py-6 text-center text-sm text-foreground-secondary"
           >
-            {searchReady && search.isPending ? t("cmdk.searching") : t("cmdk.noResults")}
+            {searchReady && search.isPending
+              ? t("cmdk.searching")
+              : t("cmdk.noResults", { query })}
           </p>
         ) : (
           (() => {

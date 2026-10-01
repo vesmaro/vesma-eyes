@@ -186,7 +186,8 @@ describe("CockpitBusy (§9.1 matrix)", () => {
       </GatewayContext.Provider>,
     );
     expect(html).toContain("Who is busy");
-    expect(html).toContain("animate-pulse");
+    // Static skeletons (blueprint §6.3 slop-pass): no pulse on mounts.
+    expect(html).toContain("bg-elevated");
     expect(html).not.toContain("executors connected");
     expect(html).not.toContain("waiting for you:");
   });

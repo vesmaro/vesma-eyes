@@ -1,6 +1,5 @@
 import { Link } from "react-router";
 import { ArrowRight } from "lucide-react";
-import { IrisLogo } from "@/components/IrisLogo/IrisLogo";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -10,6 +9,7 @@ import type { BoardHealthServer } from "@/gateway/boardTypes";
 import { useGateway } from "@/gateway/GatewayContext";
 import { usePulse, useBoardHealth } from "@/hooks/usePulse";
 import { PulseFeed } from "@/features/memory-pulse/PulseFeed";
+import { WellHero } from "./WellHero";
 import { CockpitBusy } from "./CockpitBusy";
 import { CockpitWaiting } from "./CockpitWaiting";
 import {
@@ -19,15 +19,13 @@ import {
 import { useT } from "@/i18n";
 
 /**
- * `/` — «Обзор» (UX-overhaul §3, Ф2): the working cockpit. The well stays
- * the signature (one breathing iris, nothing else moves); below it the
- * blocks read in the J1 order — «кто занят → что ждёт меня → что в памяти →
- * строка честности». Anti-dashification rules apply unchanged: a block with
+ * `/` — «Обзор» (blueprint §12.3, Phase 1 of «Кора-организм»): the page
+ * opens with the WELL — one dark full-height hero canvas (`WellHero`), the
+ * only bold element on the surface; the awakening plays once per session
+ * and the rest is working quiet. Below the fold the cockpit blocks keep
+ * their J1 order — «кто занят → что ждёт меня → что в памяти → строка
+ * честности». Anti-dashification rules apply unchanged: a block with
  * nothing to say does not render, and every figure LEADS somewhere.
- *
- * Ф2 removals: the quick-links trio (search/records/tags — memory lives in
- * «Что в памяти» and in the palette now) and the solo agents auto-launch
- * line (the counter moved inside «Кто занят»).
  */
 export function OverviewPage() {
   const t = useT();
@@ -47,17 +45,10 @@ export function OverviewPage() {
   const showMemory = showStores || showPulse;
 
   return (
-    <section aria-labelledby="overview-title" className="mx-auto max-w-4xl space-y-8">
-      <h1 id="overview-title" className="sr-only">
-        {t("overview.title")}
-      </h1>
-
-      {/* The well: signature moment — one breathing iris, nothing else moves. */}
-      <div className="flex flex-col items-center gap-4 pt-8 text-center">
-        <IrisLogo size={120} glow breathing />
-        <p className="text-xl text-foreground-secondary">{t("overview.tagline")}</p>
-        <p className="text-xs text-foreground-muted">{t("overview.searchHint")}</p>
-      </div>
+    <section aria-labelledby="well-hero-title" className="mx-auto max-w-4xl space-y-8">
+      {/* The well hero: display headline + HUD on the dark canvas (§12.3).
+       * The page's single h1 lives inside (visible, --text-display). */}
+      <WellHero />
 
       {/* КТО ЗАНЯТ (§3.1): executors' presence + the work counts, leading to
        * the agents/tasks surfaces. Renders its own honest states (zero
@@ -108,7 +99,7 @@ export function OverviewPage() {
                 </h3>
                 <Link
                   to="/memory/pulse"
-                  className="inline-flex min-h-6 items-center gap-1 text-sm text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+                  className="inline-flex min-h-6 items-center gap-1 text-sm text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                 >
                   {t("overview.pulseAll")}{" "}
                   <ArrowRight className="size-4" aria-hidden="true" />

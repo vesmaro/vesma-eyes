@@ -34,7 +34,7 @@ export function BoardStyleToggle() {
       "px-3 py-1.5 text-sm transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright " +
       extra +
       (style === value
-        ? "bg-iris/15 text-iris-bright"
+        ? "bg-iris-tint text-iris-bright"
         : "text-foreground-secondary hover:text-foreground"),
   });
 

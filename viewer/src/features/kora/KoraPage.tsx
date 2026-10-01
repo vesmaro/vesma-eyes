@@ -207,7 +207,7 @@ function formatAge(seconds: number): string {
 }
 
 const STATE_TONE: Record<KoraSession["state"], string> = {
-  live: "bg-success/15 text-success",
+  live: "bg-success-tint text-success",
   idle: "bg-elevated text-foreground-secondary",
   dead: "bg-elevated text-foreground-muted",
 };

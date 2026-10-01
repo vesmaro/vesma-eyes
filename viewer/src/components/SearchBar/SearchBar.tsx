@@ -63,9 +63,16 @@ export function SearchBar({
     >
       <div
         className={cn(
-          "flex items-center gap-2 rounded-xl border border-border bg-well py-1.5 pl-5 pr-1.5",
-          "transition-[box-shadow,border-color] duration-normal ease-out",
-          "focus-within:border-iris-bright focus-within:shadow-iris",
+          // State matrix (blueprint §6.1): default = elevated surface with a
+          // FUNCTIONAL edge (≥3:1); hover = myelin edge + quiet tint, zero
+          // displacement; focus-visible = --color-focus ring on this wrapper
+          // (has-[] pattern); loading = aria-busy + a STATIC strata tint —
+          // the old pulse broke the frequency gate (§10 slop-pass).
+          "flex items-center gap-2 rounded-xl border border-border bg-elevated py-1.5 pl-5 pr-1.5",
+          "transition-colors duration-instant ease-out",
+          "hover:border-myelin-strong hover:bg-strata-memory",
+          "has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-focus",
+          isSearching && "bg-strata-memory",
         )}
       >
         <label htmlFor={inputId} className="sr-only">
@@ -92,9 +99,8 @@ export function SearchBar({
           className={cn(
             "inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-iris-strong text-foreground-inverse",
             "transition-colors duration-instant hover:bg-iris-strong-hover", // AA in both themes
-            "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
+            "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
             "disabled:pointer-events-none disabled:opacity-60",
-            isSearching && "animate-pulse",
           )}
         >
           <Search className="size-4" aria-hidden="true" />
@@ -110,9 +116,9 @@ export function SearchBar({
               title={t(option.titleKey)}
               className={cn(
                 "cursor-pointer rounded-full border px-3 py-1 text-xs transition-colors duration-instant",
-                "has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-iris-bright",
+                "has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-focus",
                 searchType === option.value
-                  ? "border-iris bg-iris/15 text-iris-bright" // AA in both themes
+                  ? "border-iris bg-iris-tint text-iris-bright" // AA in both themes
                   : "border-border-subtle text-foreground-secondary hover:bg-elevated",
               )}
             >

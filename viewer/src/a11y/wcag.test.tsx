@@ -98,10 +98,10 @@ describe("Page headings (WCAG 1.3.1)", () => {
 describe("Badge variants (WCAG 1.4.3 — AA tint composition)", () => {
   it("iris and confidence badges use the 15% tint + bright-text combination", () => {
     const iris = renderToString(<Badge variant="iris">hybrid</Badge>);
-    expect(iris).toContain("bg-iris/15");
+    expect(iris).toContain("bg-iris-tint");
     expect(iris).toContain("text-iris-bright");
     const confidence = renderToString(<Badge variant="confidence">semantic</Badge>);
-    expect(confidence).toContain("bg-confidence/15");
+    expect(confidence).toContain("bg-confidence-tint");
     expect(confidence).toContain("text-confidence");
   });
 });

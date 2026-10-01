@@ -157,7 +157,9 @@ describe("TagsPage — state matrix (§6)", () => {
   it("renders the empty corpus state", async () => {
     const gateway = new MockAdapter({ latency: false, tagCorpus: [] });
     const html = await renderTags(gateway);
-    expect(html).toContain("No tags yet");
+    // Blueprint v1.1 §11: empty states invite action in the lore voice.
+    expect(html).toContain("Tags appear once memories carry topics");
+    expect(html).toContain("Open the memory — the agents will tag it.");
   });
 
   it("renders the loading skeleton before data arrives", async () => {

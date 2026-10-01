@@ -32,7 +32,7 @@ export function TasksViewToggle() {
           "px-3 py-1.5 text-sm transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright " +
           (onList
             ? "text-foreground-secondary hover:text-foreground"
-            : "bg-iris/15 text-iris-bright")
+            : "bg-iris-tint text-iris-bright")
         }
       >
         {t("tasks.view.kanban")}
@@ -43,7 +43,7 @@ export function TasksViewToggle() {
         className={
           "border-l border-border px-3 py-1.5 text-sm transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright " +
           (onList
-            ? "bg-iris/15 text-iris-bright"
+            ? "bg-iris-tint text-iris-bright"
             : "text-foreground-secondary hover:text-foreground")
         }
       >

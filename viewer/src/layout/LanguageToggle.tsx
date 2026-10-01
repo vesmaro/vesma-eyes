@@ -26,9 +26,9 @@ export function LanguageToggle() {
             aria-pressed={active}
             className={cn(
               "min-h-6 px-2.5 py-1 text-xs font-semibold uppercase transition-colors duration-instant",
-              "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
+              "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
               active
-                ? "bg-iris/15 text-iris-bright" // AA in both themes
+                ? "bg-iris-tint text-iris-bright" // AA in both themes
                 : "text-foreground-secondary hover:bg-elevated hover:text-foreground",
             )}
           >

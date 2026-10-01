@@ -44,7 +44,7 @@ export function TagBadge({
         type="button"
         onClick={onClick}
         className={cn(
-          "rounded-sm transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
+          "rounded-sm transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
           className,
         )}
         aria-label={`Filter by tag ${tag}`}

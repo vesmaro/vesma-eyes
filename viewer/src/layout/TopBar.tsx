@@ -5,6 +5,11 @@ import { Button } from "@/components/ui/button";
 import { AuthStatus } from "@/features/auth/AuthStatus";
 import { useT } from "@/i18n";
 import { openPalette } from "@/lib/paletteState";
+import {
+  cycleLiveLayer,
+  useLiveLayer,
+  type LiveLayer,
+} from "@/lib/liveLayerStore";
 import { useHotkeys } from "./Hotkeys";
 import { LanguageToggle } from "./LanguageToggle";
 
@@ -12,19 +17,31 @@ import { LanguageToggle } from "./LanguageToggle";
  * Top bar (redesign concept §2.2): the GLOBAL search entry — UX-overhaul
  * §7.3 (Ф2) the oval is the command palette's TRIGGER (click opens the
  * palette; ⌘K/Ctrl+K and the bare `/` do the same from anywhere) — plus the
- * density toggle (§3.3), the RU|EN switcher, theme, the `?` cheatsheet
- * button and the T6 auth/connection slot. The route label is a `<p>`, not a
- * heading: each page owns the single h1 (WCAG 1.3.1/2.4.6).
+ * В1 live-layer indicator (blueprint §6.6, canon v11 §4), the density toggle
+ * (§3.3), the RU|EN switcher, theme, the `?` cheatsheet button and the T6
+ * auth/connection slot. The route label is a `<p>`, not a heading: each page
+ * owns the single h1 (WCAG 1.3.1/2.4.6).
  */
 export interface TopBarProps {
   /** Current route label (already translated by the caller). */
   title: string;
 }
 
+/** The В1 word per living-layer level (live = dot + word; calm/off word). */
+const LIVE_LAYER_LABEL_KEY: Record<
+  LiveLayer,
+  "topbar.liveLive" | "topbar.liveCalm" | "topbar.liveOff"
+> = {
+  live: "topbar.liveLive",
+  calm: "topbar.liveCalm",
+  off: "topbar.liveOff",
+};
+
 export function TopBar({ title }: TopBarProps) {
   const { theme, toggleTheme } = useTheme();
   const { density, toggleDensity } = useDensity();
   const { openHelp } = useHotkeys();
+  const liveLayer = useLiveLayer();
   const t = useT();
   const nextTheme = theme === "dark" ? "light" : "dark";
   const compact = density === "compact";
@@ -47,7 +64,7 @@ export function TopBar({ title }: TopBarProps) {
         className={
           "flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md border border-border-subtle bg-well px-3 text-left " +
           "transition-colors duration-instant hover:border-iris-bright " +
-          "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright " +
+          "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus " +
           "sm:max-w-md lg:ml-auto"
         }
       >
@@ -65,6 +82,28 @@ export function TopBar({ title }: TopBarProps) {
       </button>
       <div className="flex shrink-0 items-center gap-2 sm:gap-3">
         <AuthStatus />
+        {/* В1 live-layer indicator (blueprint §6.6): click cycles
+         * live → calm → off; the fourth canon level (reduced) lives in the
+         * motion store and is never rewritten here. Never colour-only — the
+         * dot always rides the word. */}
+        <button
+          type="button"
+          onClick={cycleLiveLayer}
+          aria-pressed={liveLayer !== "live"}
+          aria-label={t("topbar.liveLayerAria", {
+            state: t(LIVE_LAYER_LABEL_KEY[liveLayer]),
+          })}
+          title={t("topbar.liveLayerTitle")}
+          className="inline-flex min-h-6 items-center gap-1.5 rounded-sm border border-transparent px-1.5 text-xs text-foreground-secondary transition-colors duration-instant hover:border-myelin-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+        >
+          {liveLayer === "live" ? (
+            <span
+              aria-hidden="true"
+              className="size-1.5 shrink-0 rounded-full bg-success"
+            />
+          ) : null}
+          {t(LIVE_LAYER_LABEL_KEY[liveLayer])}
+        </button>
         <Button
           variant="ghost"
           size="icon"

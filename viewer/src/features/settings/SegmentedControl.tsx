@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
  * Segmented control of the settings hub (UI-23, spec §3.2): buttons with
  * `aria-pressed` inside a `role="group"` — exactly the BoardStyleToggle
  * pattern («buttons change a display state, they don't move the user»), no
- * new control library. Active option `bg-iris/15 text-iris-bright`, inactive
+ * new control library. Active option `bg-iris-tint text-iris-bright`, inactive
  * `text-foreground-secondary hover:text-foreground` — state is never carried
  * by colour alone (1.4.1), targets are ≥24px (2.5.8), focus ring is the
  * project token ring.
@@ -63,7 +63,7 @@ export function SegmentedControl<T extends string>({
                   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
                   index > 0 && "border-l border-border-subtle",
                   active
-                    ? "bg-iris/15 text-iris-bright"
+                    ? "bg-iris-tint text-iris-bright"
                     : "text-foreground-secondary hover:bg-elevated hover:text-foreground",
                 )}
               >

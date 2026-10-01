@@ -263,17 +263,17 @@ function TagsCloudSkeleton() {
     <div role="status" className="space-y-6" aria-busy="true">
       <div className="flex flex-wrap gap-2" aria-hidden="true">
         {Array.from({ length: 6 }, (_, index) => (
-          <div key={index} className="h-6 w-20 animate-pulse rounded-sm bg-elevated" />
+          <div key={index} className="h-6 w-20 rounded-sm bg-elevated" />
         ))}
       </div>
       {Array.from({ length: 2 }, (_, section) => (
         <div key={section} className="space-y-2" aria-hidden="true">
-          <div className="h-4 w-32 animate-pulse rounded-sm bg-elevated" />
+          <div className="h-4 w-32 rounded-sm bg-elevated" />
           <div className="flex flex-wrap gap-2">
             {Array.from({ length: 8 }, (_, index) => (
               <div
                 key={index}
-                className="h-6 animate-pulse rounded-sm bg-elevated"
+                className="h-6 rounded-sm bg-elevated"
                 style={{ width: `${5 + ((index * 13 + section * 7) % 9)}rem` }}
               />
             ))}

@@ -14,11 +14,19 @@
 
   body {
     @apply bg-background text-foreground font-ui text-base antialiased;
+    /* Theme crossfade (blueprint §10): a rare gesture — background/color only,
+     * no global `*{transition}`; body carries the page-level fade while
+     * surfaces resolve their tokens in the same frame. Reduced-motion zeroes
+     * --duration-normal → the switch is instant. */
+    transition:
+      background-color var(--duration-normal) var(--ease-in-out),
+      color var(--duration-normal) var(--ease-in-out);
   }
 
-  /* Visible, iris-tinted focus ring for keyboard users (WCAG 2.2 AA). */
+  /* Visible focus ring for keyboard users (WCAG 2.2 AA, blueprint §6):
+   * unified on --color-focus — the dedicated focus token (2.4.7/2.4.11). */
   :focus-visible {
-    outline: 2px solid var(--color-iris-bright);
+    outline: 2px solid var(--color-focus);
     outline-offset: 2px;
   }
 
@@ -56,4 +64,62 @@
 
 .docs-pop {
   animation: docs-pop var(--duration-fast) var(--ease-out);
+}
+
+/* ── Well hero (blueprint §10 — Overview awakening + drift) ────────────
+ * Awakening = once per session (sessionStorage-gated by the hero): nodes
+ * surface bottom-up in 8 depth bands — 240ms per node (--duration-impulse
+ * window) offset by 8 × 3 × --duration-stagger = 960ms, total ≤1.2s
+ * (--duration-awaken); the HUD cascades ≤8 × --duration-stagger. Any input
+ * cancels (the hero drops [data-awaken]); reduced-motion zeroes every
+ * duration → the static graph paints immediately (the reduced FINAL state). */
+@keyframes well-node-awaken {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes well-hud-awaken {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+[data-awaken="true"] .well-node {
+  animation: well-node-awaken var(--duration-impulse) var(--ease-enter) both;
+  animation-delay: calc(var(--awaken-band) * var(--duration-stagger) * 3);
+}
+
+[data-awaken="true"] .well-hud {
+  animation: well-hud-awaken var(--duration-fast) var(--ease-out) both;
+}
+
+/* Drift: the well is not a photograph — ≤4px/s ambient, --duration-iris
+ * breath rhythm, gated by the live-layer store (calm/off settle it) and by
+ * reduced-motion (zeroed --duration-iris → static composition). */
+@keyframes well-drift {
+  from {
+    transform: translateY(-4px);
+  }
+  to {
+    transform: translateY(4px);
+  }
+}
+
+.well-drift {
+  animation: well-drift var(--duration-iris) var(--ease-breath) infinite
+    alternate;
+}
+
+[data-live="calm"] .well-drift,
+[data-live="off"] .well-drift {
+  animation: none;
 }

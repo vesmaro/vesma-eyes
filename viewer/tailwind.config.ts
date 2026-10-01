@@ -65,6 +65,23 @@ export default {
           write: "var(--synapse-write)",
           error: "var(--synapse-error)",
         },
+        // Phase 1 (blueprint §5.2): the functional HUD backdrop on canvas and
+        // the palette backdrop tint — both themed (light values serve non-hero
+        // light canvases; the hero pins the dark column via [data-well-window]).
+        "hud-veil": "var(--hud-veil)",
+        "palette-scrim": "var(--palette-scrim)",
+        // Token-derived 15% tints (the /15 alpha pattern in Badge variants).
+        // Tailwind v3 cannot resolve alpha modifiers against var() colours —
+        // `bg-iris/15` silently produced NO utility; these generate real
+        // color-mix() output bound to the same canon tokens.
+        "iris-tint": "color-mix(in srgb, var(--color-iris) 15%, transparent)",
+        "confidence-tint":
+          "color-mix(in srgb, var(--color-confidence) 15%, transparent)",
+        "success-tint":
+          "color-mix(in srgb, var(--color-success) 15%, transparent)",
+        "warning-tint":
+          "color-mix(in srgb, var(--color-warning) 15%, transparent)",
+        "error-tint": "color-mix(in srgb, var(--color-error) 15%, transparent)",
       },
       // Neuro strata washes (canvas/hero surfaces only — never on text cards).
       backgroundImage: {
@@ -91,6 +108,13 @@ export default {
         "row-airy": "var(--row-h-airy)",
         "list-gap": "var(--list-gap)",
       },
+      height: {
+        // Phase 1: the Overview hero is the only full-height gesture (§5.2).
+        "well-hero": "var(--well-hero-h)",
+      },
+      minHeight: {
+        "well-hero": "var(--well-hero-h)",
+      },
       maxWidth: {
         scroll: "var(--measure-scroll)",
       },
@@ -107,6 +131,8 @@ export default {
         data: "var(--text-data)",
         ui: "var(--text-ui)",
         body: "var(--text-body)",
+        // Phase 1: the single display step — Overview hero only (§5.2).
+        display: "var(--text-display)",
       },
       letterSpacing: {
         caps: "var(--tracking-caps)",
@@ -138,6 +164,11 @@ export default {
         iris: "var(--duration-iris)",
         // Neuro: synapse pulse lifetime (reduced-motion zeroes it in CSS).
         impulse: "var(--duration-impulse)",
+        // Phase 1 (§10): awakening wave + attention rhythm — reduced-motion
+        // zeroes all three in tokens.css.
+        awaken: "var(--duration-awaken)",
+        attention: "var(--duration-attention)",
+        "attention-hold": "var(--duration-attention-hold)",
       },
       transitionTimingFunction: {
         "in-out": "var(--ease-in-out)",

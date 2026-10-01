@@ -69,7 +69,7 @@ export function Breadcrumbs({ pathname, search }: { pathname: string; search: st
                 {crumb.to && crumb.key && !last ? (
                   <Link
                     to={crumb.to}
-                    className="inline-flex min-h-6 items-center rounded-sm text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+                    className="inline-flex min-h-6 items-center rounded-sm text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                   >
                     {t(crumb.key)}
                   </Link>
@@ -123,7 +123,7 @@ function BackControl({
     <Link
       to={target}
       aria-label={t("nav.backTo", { place })}
-      className="inline-flex min-h-6 min-w-6 shrink-0 items-center gap-1 rounded-sm text-sm text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+      className="inline-flex min-h-6 min-w-6 shrink-0 items-center gap-1 rounded-sm text-sm text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
     >
       <ArrowLeft className="size-4 shrink-0" aria-hidden="true" />
       <span className="hidden sm:inline">{place}</span>

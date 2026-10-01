@@ -111,7 +111,7 @@ export function ActivityPulseChart({
                   aria-pressed={selected}
                   title={range}
                   onClick={() => onSelect(selected ? undefined : slot.ts)}
-                  className="flex h-full min-w-0 flex-1 cursor-pointer flex-col justify-end rounded-t-sm px-px transition-colors duration-instant hover:bg-iris/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright aria-pressed:bg-iris/15 aria-pressed:outline aria-pressed:outline-2 aria-pressed:outline-iris-bright"
+                  className="flex h-full min-w-0 flex-1 cursor-pointer flex-col justify-end rounded-t-sm px-px transition-colors duration-instant hover:bg-iris/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright aria-pressed:bg-iris-tint aria-pressed:outline aria-pressed:outline-2 aria-pressed:outline-iris-bright"
                 >
                   {/* The one motion on the surface: a short height ease on
                    * data change; reduced motion renders it instant (§8.10). */}
