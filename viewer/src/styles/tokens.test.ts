@@ -190,6 +190,32 @@ const BOARD_ONLY_TOKENS = [
   "--color-error-bright",
 ];
 
+/**
+ * v12 golden (ME-071 W0 — docs/design/15-WOW-DIRECTION §14.1, §14.3.7,
+ * §14.6.1 §4): additive canon records, NO component consumes them yet
+ * (W1 wires the web layer / satellite / tone engine). `--web-tone-update`
+ * (сирень — sixth semantic color, owner directive v12.2) is the only
+ * themed pair; everything else is theme-independent :root. Reduced
+ * mirrors: durations only — alphas/geometry keep their values (reduced
+ * web layer = static drawing, §14.1; satellite clamps to «Спокойный»,
+ * §14.3.5).
+ */
+const V12_GOLDEN_STATIC_TOKENS = [
+  "--web-node-alpha",
+  "--web-edge-alpha",
+  "--web-wave-alpha",
+  "--web-wave-speed",
+  "--duration-web-idle",
+  "--satellite-size",
+  "--satellite-rest",
+  "--duration-flight",
+  "--duration-flash-hold",
+  "--duration-tone-temp",
+  "--duration-tone-hold",
+  "--duration-tone-fade",
+];
+const V12_GOLDEN_THEMED_TOKENS = ["--web-tone-update"];
+
 // --- CSS parsing helpers --------------------------------------------------
 //
 // The files are flat (no nested rules outside @media wrappers), so a simple
@@ -298,6 +324,21 @@ describe("tokens.css inventory (canon v2 — docs/design/02-TOKENS.md §1–§3)
         `${token} missing from light theme`,
       ).toContain(token);
     }
+  });
+
+  it("defines the v12 golden tokens (additive canon — ME-071 W0)", () => {
+    const props = allProps(tokensCss);
+    for (const token of V12_GOLDEN_STATIC_TOKENS) {
+      expect(props, `${token} missing`).toContain(token);
+    }
+    expect(
+      blockProps(darkDecls),
+      "--web-tone-update missing from dark theme",
+    ).toContain("--web-tone-update");
+    expect(
+      blockProps(lightDecls),
+      "--web-tone-update missing from light theme",
+    ).toContain("--web-tone-update");
   });
 
   it("keeps the frozen iris seed value in both themes (ADR 0003 / D10)", () => {
@@ -424,6 +465,48 @@ describe("Phase 1 value locks (design blueprint v1.1 §5.2 — Кора-орга
   });
 });
 
+describe("v12 golden value locks (ME-071 W0 — 15-WOW §14.1/§14.3.7/§14.6.1 §4)", () => {
+  it("pins the web-layer «Ткань коры» constants", () => {
+    expect(darkDecls.get("--web-node-alpha")).toBe("0.05");
+    expect(darkDecls.get("--web-edge-alpha")).toBe("0.07");
+    expect(darkDecls.get("--web-wave-alpha")).toBe("0.08");
+    expect(darkDecls.get("--web-wave-speed")).toBe("160px/s");
+    expect(darkDecls.get("--duration-web-idle")).toBe("10000ms");
+  });
+
+  it("pins the satellite constants (creature Ø64 inside the 96×96 nest slot)", () => {
+    expect(darkDecls.get("--satellite-size")).toBe("64px");
+    expect(darkDecls.get("--satellite-rest")).toBe("60s");
+    expect(darkDecls.get("--duration-flight")).toBe("800ms");
+    // task.done gold flash hold (13.8 §2) — distinct from --duration-impulse
+    // (240ms, pulse lifetime) and --duration-attention-hold (2400ms).
+    expect(darkDecls.get("--duration-flash-hold")).toBe("600ms");
+  });
+
+  it("pins the tone layer with lilac as the sixth semantic color", () => {
+    expect(darkDecls.get("--web-tone-update")).toBe("#a88fc7");
+    expect(lightDecls.get("--web-tone-update")).toBe("#6e5a94");
+    expect(darkDecls.get("--duration-tone-temp")).toBe("12000ms");
+    expect(darkDecls.get("--duration-tone-hold")).toBe("60000ms");
+    expect(darkDecls.get("--duration-tone-fade")).toBe("1200ms");
+  });
+
+  it("clamps the v12 durations in the OS reduced-motion block", () => {
+    const mediaIndex = tokensCss.indexOf("@media (prefers-reduced-motion: reduce)");
+    const flashIndex = tokensCss.indexOf("--duration-flash-hold", mediaIndex);
+    const media = tokensCss.slice(
+      mediaIndex,
+      tokensCss.indexOf("}", flashIndex) + 1,
+    );
+    expect(media).toContain("--duration-web-idle: 0ms");
+    expect(media).toContain("--duration-flight: 0ms");
+    expect(media).toContain("--duration-tone-temp: 1500ms");
+    expect(media).toContain("--duration-tone-hold: 1500ms");
+    expect(media).toContain("--duration-tone-fade: 0ms");
+    expect(media).toContain("--duration-flash-hold: 1500ms");
+  });
+});
+
 describe("reduced-motion overrides (design-system.md §7, 06-MOTION §7)", () => {
   it("zeroes ambient and long transitions while keeping instant feedback", () => {
     const mediaIndex = tokensCss.indexOf("@media (prefers-reduced-motion: reduce)");
@@ -528,6 +611,7 @@ describe("contrast pairs — dark theme (02-TOKENS.md §4)", () => {
     "--color-warning",
     "--color-error",
     "--color-info", // v1 value failed on elevated (4.2) — v2 recomputed
+    "--web-tone-update", // lilac «пришло обновление» — ≈6.8:1 on dark base (15-WOW §14.6.1 §4)
   ])("%s clears AA 4.5:1 on base/well/elevated", (token) => {
     expectTextOn(darkDecls, token, textSurfaces);
   });
@@ -567,6 +651,7 @@ describe("contrast pairs — light theme (02-TOKENS.md §4; activated in И5)", 
     "--color-success",
     "--color-error",
     "--color-info",
+    "--web-tone-update", // lilac light column #6e5a94 — ≈5.5:1 on light base (15-WOW §14.6.1 §4)
   ])("%s clears AA 4.5:1 on well/base/elevated", (token) => {
     expectTextOn(lightDecls, token, textSurfaces);
   });
@@ -685,6 +770,13 @@ describe("motion attribute (UI-23, vesmaro.motion reduced branches)", () => {
     expect(forced).toContain("--duration-awaken: 0ms");
     expect(forced).toContain("--duration-attention: 0ms");
     expect(forced).toContain("--duration-attention-hold: 0ms");
+    // v12 golden (ME-071 W0): the forced regime mirrors the OS block.
+    expect(forced).toContain("--duration-web-idle: 0ms");
+    expect(forced).toContain("--duration-flight: 0ms");
+    expect(forced).toContain("--duration-tone-temp: 1500ms");
+    expect(forced).toContain("--duration-tone-hold: 1500ms");
+    expect(forced).toContain("--duration-tone-fade: 0ms");
+    expect(forced).toContain("--duration-flash-hold: 1500ms");
   });
 });
 

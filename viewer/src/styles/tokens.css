@@ -107,6 +107,46 @@
   --shell-sidebar-rail-w: 56px;  /* collapsed icon rail (03 §3) */
   --shell-crumbs-h: 40px;        /* breadcrumbs row (03 §5) */
   --shell-search-w: clamp(320px, 34vw, 480px); /* global search (03 §4) */
+
+  /* ── v12 golden (ME-071 W0) — additive canon, docs/design/15-WOW ──────
+   * Recorded values only: NO component consumes these yet (W1 wires the
+   * web layer / satellite / tone engine). Sources — 15-WOW-DIRECTION:
+   * §14.1 (web layer), §14.3.7 (satellite), §14.6.1 §4 (tone layer).
+   * Golden rule (§14.6.1 §4): only NEW names, zero new values on
+   * existing names. Reduced mirrors below follow the shipped stand
+   * interpretation (stand-v12 tokens-v12.css): DURATIONS gate motion;
+   * the alpha/geometry tokens keep their values — in reduced the web
+   * layer renders as a STATIC drawing and the satellite clamps to
+   * «Спокойный» (§14.1 modes, §14.3.5). */
+
+  /* Паутина-фон «Ткань коры» (§14.1). Events never paint waves — they
+   * spawn small neurons; the wave is ambient «дыхание» and runs always. */
+  --web-node-alpha: 0.05;        /* resting nodes (тишина шины) */
+  --web-edge-alpha: 0.07;        /* resting edges over --myelin-hairline */
+  --web-wave-alpha: 0.08;        /* wave/composite alpha ceiling */
+  --web-wave-speed: 160px/s;     /* small-neuron travel speed («погода памяти») */
+  --duration-web-idle: 10000ms;  /* always-on wave period (8–12s window) */
+
+  /* Нейра-Спутник «Весма» (§14.3.7; имя — §14.6.1 §0). --satellite-size
+   * is the CREATURE (Ø64); the nest SLOT it sits in is 96×96 (§14.3.1,
+   * mobile 64×64) — slot = creature + myelin horseshoe perch + clearance.
+   * Mobile shrink is a W1 layout concern; the canon token is the desktop
+   * creature. */
+  --satellite-size: 64px;
+  --satellite-rest: 60s;         /* min rest between flights (дозировка §14.3.2) */
+  --duration-flight: 800ms;      /* targeted flight, 600–900ms window */
+  /* task.done gold flash HOLD (13.8 §2: flash 240ms = --duration-impulse,
+   * hold 600ms — a separate beat; NOT the 2400ms attention-hold). */
+  --duration-flash-hold: 600ms;
+
+  /* Тоновый слой паутины (§14.6.1 §4). Сирень is the SIXTH semantic
+   * color — owner directive v12.2, the recorded exception to the palette
+   * limit (01 §3; mirrored in docs/design/02-TOKENS). A signal layer, NOT
+   * a theme: no lilac surfaces, no gradients — nodes only, crossfaded. */
+  --web-tone-update: #a88fc7;    /* «пришло обновление»; ≈6.8:1 on dark base */
+  --duration-tone-temp: 12000ms; /* ordinary-importance window (10–15s class) */
+  --duration-tone-hold: 60000ms; /* elevated-importance ceiling (≤60s) */
+  --duration-tone-fade: 1200ms;  /* tone crossfade in/out — never instant */
 }
 
 /* ── Frozen core (names & values stable) ────────────────────────────── */
@@ -235,6 +275,10 @@
    * well-window scope below (owner-approved exception-image, 2026-10-01). */
   --hud-veil: rgb(245 246 248 / 0.85);
   --palette-scrim: rgb(245 246 248 / 0.6);
+
+  /* v12 golden (ME-071 W0) — light column of the ONLY themed v12 token
+   * (15-WOW §14.6.1 §4): lilac «пришло обновление», ≈5.5:1 on light base. */
+  --web-tone-update: #6e5a94;
 }
 
 /* ── Well window (тёмное окно колодца, owner-approved 2026-10-01) ────────
@@ -307,6 +351,15 @@
     --duration-awaken: 0ms;    /* awakening → static graph immediately (§10) */
     --duration-attention: 0ms; /* double beat → single static highlight */
     --duration-attention-hold: 0ms; /* no glow hold */
+    /* v12 golden (ME-071 W0 — 15-WOW §14.1/§14.3.7/§14.6.1 §4, 13.8 §2):
+     * always-wave and flights off; tone windows and the flash hold clamp
+     * to the static 1.5s tint; crossfade gone (spec: reduced mirrors → 0). */
+    --duration-web-idle: 0ms;
+    --duration-flight: 0ms;
+    --duration-tone-temp: 1500ms;  /* static tone tint (§14.6.1 §4) */
+    --duration-tone-hold: 1500ms;
+    --duration-tone-fade: 0ms;
+    --duration-flash-hold: 1500ms; /* static gold tint 1.5s (13.8 §2) */
   }
 }
 [data-motion="reduced"] {
@@ -318,4 +371,11 @@
   --duration-awaken: 0ms;
   --duration-attention: 0ms;
   --duration-attention-hold: 0ms;
+  /* v12 golden (ME-071 W0) — forced-reduced mirror of the OS block. */
+  --duration-web-idle: 0ms;
+  --duration-flight: 0ms;
+  --duration-tone-temp: 1500ms;
+  --duration-tone-hold: 1500ms;
+  --duration-tone-fade: 0ms;
+  --duration-flash-hold: 1500ms;
 }
