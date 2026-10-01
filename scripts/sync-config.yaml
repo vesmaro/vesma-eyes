@@ -376,7 +376,7 @@ projects:
 
   # ----------------------------------------------------------- vesma-mesh ---
   vesma-mesh:
-    repo: ../mnemos-mesh
+    repo: ../vesma-mesh
     # Pinned 2026-09-29 (ME-039 re-sync; was 331ef3a, 2026-09-23/W1a —
     # 106 commits behind). b428ea9 = tag v1.6.8 — the release-charting
     # commit (== their main, merge PR #92: homehelper tunnel lifecycle
@@ -541,7 +541,7 @@ api_hub:
             хаба vesma; отдельная страница в api-хабе не добавляет знания
 
     vesmaro-agent:
-      repo: ../vesmaro-agent
+      repo: ../vesma-agent
       # Main после squash-мержа PR #2 (ME-053): в протокол вернуто утонувшее
       # доки-обновление релиза 0.6.0 (+104/−40, intake addendum). Агент 0.6.0
       # (ADR 0021 lineage), код не менялся.
@@ -562,7 +562,7 @@ api_hub:
             intake; текст апстрима (EN), статус v0.1-draft.
 
     vesma-mesh:
-      repo: ../mnemos-mesh
+      repo: ../vesma-mesh
       # Пин для ПРОВЕРКИ кураторской заметки (само тело из curated-слоя).
       ref: b428ea9b7ec9731fe4d53478702d0667cf3f53de
       web_base: "https://github.com/vesmaro/vesma-mesh/blob/{sha}"
@@ -770,16 +770,16 @@ api_hub:
 
   # --- репозитории экосистемы, в api-хаб НЕ входящие (решения на записи) ---
   excluded_repos:
-    - repo: vesmaro-cortex
+    - repo: vesma-cortex
       reason: >-
         исследовательский проект (локальная модель решений mnema-роутер,
         волна A0); публичного API-контракта нет, включение — только по
         директиве владельца
-    - repo: vesmaro-canon
+    - repo: vesma-canon
       reason: >-
         внутренний канон форматов артефактов памяти; это стандарты данных,
         не вызываемый API; без директивы владельца в хаб не входит
-    - repo: vesmaro-canon-data
+    - repo: vesma-canon-data
       reason: >-
         закрытая репа датасетов калибровки (никогда не получает remote,
         сырые записи памяти); публичных интерфейсов нет в принципе
