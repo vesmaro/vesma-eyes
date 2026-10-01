@@ -1440,9 +1440,7 @@ export const en: Record<TranslationKey, string> = {
   "settings.hub.livingCalm": "Calm",
   "settings.hub.livingOff": "Off",
   "settings.hub.livingHint":
-    "Neura and the veins come alive later — the interface is static for now. Once the layer ships, “Calm” is the default.",
-  "settings.hub.livingAriaNote":
-    "The setting arrives together with the living layer — the interface is static for now",
+    "The vein background breathes and tints from real data only. Calm (default): breathing and tones. Full: adds event impulses along the veins.",
   "settings.hub.sidebarLabel": "Sidebar",
   "settings.hub.sidebarExpanded": "Expanded",
   "settings.hub.sidebarCollapsed": "Collapsed",

@@ -24,6 +24,7 @@ import { BOARD_STYLE_STORAGE_KEY } from "@/features/tasks/tasksViewPrefs";
 import { setBoardStyle } from "@/lib/boardStyleStore";
 import type { ExecutorsPage } from "@/gateway/boardTypes";
 import { actUnmount } from "@/test/actTools";
+import { getLiveLayer } from "@/lib/liveLayerStore";
 
 /**
  * UI-23 hub v2 (spec §3, acceptance §8): one h1 + six anchored sibling
@@ -334,14 +335,13 @@ describe("Verdict blocks (spec §3.4, acceptance §8.10)", () => {
     expect(fonts).toBeDefined(); // present in the DOM while collapsed
     await actUnmount(root);
   });
-  it("union И1: the «Живой слой» placeholder is INERT and honest (roadmap шаг 3)", async () => {
+  it("W1a: the «Живой слой» control is live — it drives vesmaro.live (АРХКОМ §1.6 default: Calm)", async () => {
     const { container } = await mountHub();
-    // The three future options render with «Спокойный» visually pinned…
+    // The three options render with «Спокойный» as the default…
     const group = container.querySelector(
       '#settings-living-label',
     )?.parentElement?.querySelector('[role="group"]');
     expect(group).not.toBeNull();
-    expect(group?.getAttribute("aria-disabled")).toBe("true");
     const buttons = Array.from(group?.querySelectorAll("button") ?? []);
     expect(buttons.map((b) => b.textContent)).toEqual([
       "Full",
@@ -351,13 +351,18 @@ describe("Verdict blocks (spec §3.4, acceptance §8.10)", () => {
     expect(
       buttons.find((b) => b.getAttribute("aria-pressed") === "true")?.textContent,
     ).toBe("Calm");
-    // …but INERT: nothing is clickable (the engine lands in И3).
-    for (const button of buttons) {
-      expect(button.disabled).toBe(true);
-    }
-    // The honest caption says it arrives later.
-    expect(container.textContent).toContain("come alive later");
-    expect(container.textContent).toContain("static for now");
+    // …and the control is LIVE (W1a): it drives the SAME store the engine
+    // reads (vesmaro.live), persisted for the next visit.
+    press(container, "behavior", "Full");
+    expect(getLiveLayer()).toBe("live");
+    expect(localStorage.getItem("vesmaro.live")).toBe("live");
+    expect(
+      buttons.find((b) => b.getAttribute("aria-pressed") === "true")?.textContent,
+    ).toBe("Full");
+    press(container, "behavior", "Off");
+    expect(getLiveLayer()).toBe("off");
+    // The honest caption: light follows real data only.
+    expect(container.textContent).toContain("real data only");
   });
 
 });

@@ -1467,18 +1467,15 @@ export const ru = {
   "settings.hub.motionReduced": "Минимум",
   "settings.hub.motionHint":
     "«Минимум» отключает движение и мерцания независимо от настроек ОС.",
-  // Union И1: «Живой слой» placeholder (roadmap И1 шаг 3) — visually the
-  // future control, functionally INERT until И3 wires the living engine.
-  // Honest caption: what it will do and when. Value pinned to «Спокойный»
-  // (the post-enable default, АРХКОМ union rule §1.6).
+  // «Живой слой» (ME-071 W1a): the control is live — it drives the veins
+  // background through lib/liveLayerStore. «Спокойный» is the default
+  // (АРХКОМ union rule §1.6); honesty: light follows real data only.
   "settings.hub.livingLabel": "Живой слой",
   "settings.hub.livingFull": "Полный",
   "settings.hub.livingCalm": "Спокойный",
   "settings.hub.livingOff": "Выключен",
   "settings.hub.livingHint":
-    "Нейра и жилы оживут позже — сейчас интерфейс статичен. Когда слой включится, по умолчанию будет «Спокойный».",
-  "settings.hub.livingAriaNote":
-    "Настройка появится вместе с Живым слоем — сейчас интерфейс статичен",
+    "Фон-жилы дышит и красится только реальными данными. Спокойный (по умолчанию): дыхание и тона. Полный: ещё и импульсы событий по жилам.",
   "settings.hub.sidebarLabel": "Сайдбар",
   "settings.hub.sidebarExpanded": "Развёрнут",
   "settings.hub.sidebarCollapsed": "Свёрнут",

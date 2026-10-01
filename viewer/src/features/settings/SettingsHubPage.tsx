@@ -7,6 +7,7 @@ import { LANGUAGES, useI18n, useT } from "@/i18n";
 import { setSidebarCollapsed, useSidebarCollapsed } from "@/lib/sidebarState";
 import { setBoardStyle, useBoardStyle } from "@/lib/boardStyleStore";
 import { setMotion, useMotion, MOTIONS, type Motion } from "@/lib/motionStore";
+import { setLiveLayer, useLiveLayer, type LiveLayer } from "@/lib/liveLayerStore";
 import { ExecutionSettingsSection } from "@/features/agents/ExecutionSettingsPage";
 import { AutomationSettingsSection } from "./AutomationSettingsSection";
 import { NotCustomizable } from "./NotCustomizable";
@@ -198,6 +199,7 @@ function BehaviorSection() {
   const t = useT();
   const motion = useMotion();
   const [replayed, setReplayed] = useState(false);
+  const live = useLiveLayer();
 
   return (
     <HubSection id="behavior" title={t("settings.hub.behaviorTitle")}>
@@ -217,22 +219,20 @@ function BehaviorSection() {
           ),
         }))}
       />
-      {/* Union И1 (roadmap шаг 3): the «Живой слой» / «Спокойный режим»
-       * PLACEHOLDER — visually the future control (07m §1: Полный /
-       * Спокойный / Выключен, «Спокойный» pinned — the post-enable default,
-       * АРХКОМ union rule §1.6), functionally INERT until И3 wires the
-       * living engine; the hint says so honestly. */}
-      <SegmentedControl
+      {/* «Живой слой» (07m §1: Полный / Спокойный / Выключен; «Спокойный» is
+       * the default — АРХКОМ union rule §1.6). W1a wired it to the veins
+       * background: this control drives the SAME store the engine reads
+       * (lib/liveLayerStore, persisted `vesmaro.live`) — «одно состояние,
+       * два управления» (§0/§4.3). */}
+      <SegmentedControl<LiveLayer>
         label={t("settings.hub.livingLabel")}
         labelId="settings-living-label"
         hint={t("settings.hub.livingHint")}
         hintId="settings-living-hint"
-        value={"calm" as const}
-        onChange={() => undefined}
-        disabled
-        ariaNote={t("settings.hub.livingAriaNote")}
+        value={live}
+        onChange={setLiveLayer}
         options={[
-          { value: "full", label: t("settings.hub.livingFull") },
+          { value: "live", label: t("settings.hub.livingFull") },
           { value: "calm", label: t("settings.hub.livingCalm") },
           { value: "off", label: t("settings.hub.livingOff") },
         ]}

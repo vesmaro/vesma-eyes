@@ -73,6 +73,19 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         manualChunks: docsVendorPool,
+        // ME-071 W1a: the living layer's dynamic chunks carry their canon
+        // names — scripts/budget-check.mjs measures exactly these masks
+        // (living-extra ≤4 KiB gz, web-tones ≤2 KiB gz). Naming via
+        // chunkFileNames (NOT manualChunks): natural code splitting keeps
+        // shared modules (react, the eager feed/store) in the entry chunk —
+        // pinning them into a manual chunk made rollup DUPLICATE react into
+        // the living chunk (measured +5 KiB gz). Both chunks load AFTER
+        // first paint via the dynamic import in layout/LivingLayer.
+        chunkFileNames: (chunkInfo) => {
+          if (chunkInfo.name === "engine") return "living-extra-[hash].js";
+          if (chunkInfo.name === "tones") return "web-tones-[hash].js";
+          return "[name]-[hash].js";
+        },
       },
     },
   },

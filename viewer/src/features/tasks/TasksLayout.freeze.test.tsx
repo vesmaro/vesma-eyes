@@ -199,12 +199,14 @@ describe("freeze gate: /tasks navigation cycle with live SSE", () => {
         });
         await waitFor(() => container!.querySelector('a[href^="/tasks/TB-1?"]') !== null);
 
-        // Exactly ONE live stream while inside the domain (per-mount stream,
-        // no stacking); every frame goes through the real SSE → cache path.
+        // The TASKS stream is per-mount (no stacking); since ME-071 W1a the
+        // living layer owns ONE app-wide stream on top of it (closed with the
+        // layer, not with the route). Every open source receives the frame —
+        // prod broadcasts to all subscribers.
         const open = gateway!.sseSources.filter((source) => !source.closed);
-        expect(open).toHaveLength(1);
+        expect(open.length).toBeGreaterThanOrEqual(1);
         await act(async () => {
-          open[0].emit(reportFrame());
+          for (const source of open) source.emit(reportFrame());
         });
 
         await act(async () => {
@@ -229,10 +231,11 @@ describe("freeze gate: /tasks navigation cycle with live SSE", () => {
       // after the cycle is the leak contract: the seam really ran (≥1)
       // and nothing is left open (loop below).
       expect(gateway!.sseSources.length).toBeGreaterThanOrEqual(1);
-      for (const source of gateway!.sseSources) {
-        expect(source.closed).toBe(true);
-      }
-      expect(gateway!.sseSources.filter((source) => !source.closed)).toHaveLength(0);
+      // All TASKS streams are closed; the only stream allowed to stay open
+      // is the living layer's app-wide one (it outlives routes on purpose).
+      const stillOpen = gateway!.sseSources.filter((source) => !source.closed);
+      expect(stillOpen).toHaveLength(1);
+      expect(gateway!.sseSources.indexOf(stillOpen[0])).toBe(0); // the first one ever opened
 
       // (c) The exact frozen-build symptom: after the cycle, navigation must
       // still SWAP page content. /memory renders the memories heading; the

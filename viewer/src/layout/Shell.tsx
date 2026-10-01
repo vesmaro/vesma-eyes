@@ -13,6 +13,8 @@ import {
   useSidebarCollapsed,
 } from "@/lib/sidebarState";
 import { setSidebarOverlayOpen } from "@/lib/sidebarOverlayState";
+import { LivingBridge } from "@/lib/livingBridge";
+import { LivingLayer } from "./LivingLayer";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { CommandPalette } from "./CommandPalette";
 import { MobileSidebar, Sidebar } from "./Sidebar";
@@ -110,7 +112,15 @@ export function Shell() {
 
   return (
     <DialogPrimitive.Root open={mobileOpen} onOpenChange={setMobileOpen}>
-      <div className="flex min-h-dvh flex-col bg-background text-foreground">
+      {/* `isolate` makes the shell a stacking context so the living canvas
+       * (fixed, -z) paints ABOVE the page background but UNDER every panel —
+       * the W1a veil discipline: data never sits on the canvas. */}
+      <div className="isolate flex min-h-dvh flex-col bg-background text-foreground">
+        {/* ME-071 W1a «Живой фон»: the veins canvas under all content —
+         * decorative only, never interactive, dimmed in quiet zones. The
+         * bridge is a LEAF: its poll re-renders itself, not the shell. */}
+        <LivingLayer />
+        <LivingBridge />
         {/* Bypass the repeated nav (WCAG 2.4.1): visible only on keyboard
          * focus. Inert while the mobile sidebar dialog is open (ME-002). */}
         <a
@@ -125,8 +135,12 @@ export function Shell() {
           <Sidebar collapsed={collapsed} onToggle={toggle} />
           <div className="flex min-w-0 flex-1 flex-col">
             {/* Crumb row (03 §5): sticky under the top bar, on every page —
-             * the root carries its single crumb + the palette affordance. */}
-            <div className="sticky top-topbar z-20 h-crumbs border-b border-border-subtle bg-background/95 px-4 backdrop-blur-sm md:px-8">
+             * the root carries its single crumb + the palette affordance.
+             * Its bottom seam is living vein Ж3 (ME-071 W1a). */}
+            <div
+              data-living-seam="crumbs"
+              className="sticky top-topbar z-20 h-crumbs border-b border-border-subtle bg-background/95 px-4 backdrop-blur-sm md:px-8"
+            >
               <Breadcrumbs pathname={location.pathname} search={location.search} />
             </div>
             <main id="main" tabIndex={-1} className="flex-1 p-6 focus:outline-none">

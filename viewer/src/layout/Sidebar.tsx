@@ -105,6 +105,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   return (
     <aside
       aria-label={t("nav.sections")}
+      data-living-seam="sidebar"
       className={cn(
         "sticky top-topbar z-30 flex h-[calc(100dvh-var(--shell-topbar-h))] shrink-0 flex-col",
         // Order matters under tailwind-merge: the border COLOUR first, the
