@@ -46,7 +46,7 @@ NAMESPACE="${GHCR_CHECK_NAMESPACE:-kube-agents}"
 # shellcheck disable=SC2206
 SECRETS=(${GHCR_CHECK_SECRETS:-ghcr-pull ghcr-pull-w26})
 REPO="$(sed -n 's/^  repository: *\([^ #]*\).*/\1/p' "$VALUES_FILE" 2>/dev/null | head -1)"
-REPO="${GHCR_CHECK_REPO:-${REPO:-ghcr.io/korrnals/vesmaro-eyes}}"
+REPO="${GHCR_CHECK_REPO:-${REPO:-ghcr.io/vesmaro/vesma-eyes}}"
 TAG="$(sed -n 's/^  tag: *"\?\([^"#]*\)"\?.*/\1/p' "$VALUES_FILE" 2>/dev/null | head -1)"
 TAG="${GHCR_CHECK_TAG:-${TAG:-$(sed -n 's/^appVersion: *"\?\([^"#]*\)"\?.*/\1/p' "$CHART_YAML" 2>/dev/null | head -1)}}"
 TIMEOUT="${GHCR_CHECK_TIMEOUT:-15}"
@@ -60,7 +60,7 @@ for bin in "$KUBECTL" curl "$PY" base64; do
     || die "required tool not on PATH: $bin (env knobs: GHCR_CHECK_KUBECTL / GHCR_CHECK_PYTHON)" 2
 done
 
-# ghcr.io/korrnals/vesmaro-eyes -> korrnals/vesmaro-eyes (scope + v2 path)
+# ghcr.io/vesmaro/vesma-eyes -> vesmaro/vesma-eyes (scope + v2 path)
 REPO_PATH="${REPO#ghcr.io/}"
 [[ -n "$REPO_PATH" ]] || die "empty image repository (GHCR_CHECK_REPO / chart values)" 2
 if [[ -z "$TAG" ]]; then

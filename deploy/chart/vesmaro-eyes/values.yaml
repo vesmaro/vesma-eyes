@@ -10,7 +10,7 @@ fullnameOverride: ""
 # vesmaro-eyes*) are adopted instead of colliding.
 
 image:
-  repository: ghcr.io/korrnals/vesmaro-eyes
+  repository: ghcr.io/vesmaro/vesma-eyes
   # Explicit tag synced from server/app.py by scripts/sync-version.sh.
   # If left empty, .Chart.AppVersion is used.
   tag: "1.52.0"

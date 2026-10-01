@@ -184,7 +184,7 @@ hostNetwork-порт 8080 при откате снова займётся под
    канареечный: `scripts/check-ghcr-pull.sh` read-only повторяет ровно то,
    что делает kubelet, — по каждому из секретов `ghcr-pull`/`ghcr-pull-w26`
    (namespace `kube-agents`) Basic-рукопожатие с
-   `https://ghcr.io/token?scope=repository:korrnals/vesmaro-eyes:pull`
+   `https://ghcr.io/token?scope=repository:vesmaro/vesma-eyes:pull`
    плюс GET манифеста текущего тега из чарта (полный pull-путь, не только
    аутентификация); креды нигде не печатаются и не попадают в argv
    (curl-конфиг через `-K`, тела ответов — во временных файлах 0600,

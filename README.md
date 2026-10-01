@@ -78,7 +78,7 @@ notification toast:
 The image is public on ghcr — no login needed:
 
 ```bash
-docker pull ghcr.io/korrnals/vesmaro-eyes:latest   # or pin :1.2.0
+docker pull ghcr.io/vesmaro/vesma-eyes:latest   # or pin :1.2.0
 ```
 
 ### Docker Compose (simplest)
@@ -91,7 +91,7 @@ git clone https://github.com/vesmaro/vesma-eyes.git && cd vesma-eyes
 export MNEMOS_URL=http://your-mnemos-host:8787
 export MNEMOS_TOKEN=mnk_...   # a vesma API token (totp_required=0)
 
-# 3. up (pulls ghcr.io/korrnals/vesmaro-eyes:latest)
+# 3. up (pulls ghcr.io/vesmaro/vesma-eyes:latest)
 docker compose up -d
 # → http://localhost:8090
 ```
@@ -108,7 +108,7 @@ docker run -d --name vesma-eyes -p 8090:8080 -v vesmaro-eyes-data:/data \
   -e MNEMOS_URL=http://your-mnemos-host:8787 \
   -e MNEMOS_TOKEN=mnk_... \
   -e VESMARO_BOARD_TOKEN=change-me \
-  ghcr.io/korrnals/vesmaro-eyes:latest
+  ghcr.io/vesmaro/vesma-eyes:latest
 ```
 
 ### Kubernetes / K3s (Helm chart)
@@ -267,7 +267,7 @@ SSRF pivot.
 
 Images for every release tag plus `latest` are published to ghcr
 (public — no login needed):
-[`ghcr.io/korrnals/vesmaro-eyes`](https://github.com/vesmaro?tab=packages).
+[`ghcr.io/vesmaro/vesma-eyes`](https://github.com/vesmaro?tab=packages).
 The release workflow ([`.github/workflows/release.yml`](.github/workflows/release.yml))
 builds, pushes and drafts GitHub Release notes on `v*` tags; the single
 source of truth for the version is `FastAPI(version=…)` in

@@ -5,8 +5,8 @@
 # Logs:   docker compose logs -f eyes
 #
 # The image is published on ghcr — public, no login needed
-# (https://github.com/Korrnals?tab=packages). Pin a release with
-# image: ghcr.io/korrnals/vesmaro-eyes:<x.y.z>; build locally instead:
+# (https://github.com/vesmaro?tab=packages). Pin a release with
+# image: ghcr.io/vesmaro/vesma-eyes:<x.y.z>; build locally instead:
 #   docker build -t vesma-eyes:local -f Containerfile .
 #
 # The board DB lives in ./data (bind mount into the project directory),
@@ -18,7 +18,7 @@
 
 services:
   eyes:
-    image: ghcr.io/korrnals/vesmaro-eyes:latest
+    image: ghcr.io/vesmaro/vesma-eyes:latest
     container_name: vesma-eyes
     restart: unless-stopped
     ports:
