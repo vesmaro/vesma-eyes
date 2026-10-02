@@ -114,10 +114,11 @@ describe("/tasks routes + view toggle (CV-4 §1)", () => {
   it("renders the KANBAN at /tasks by default (no stored preference)", async () => {
     await renderAt("/tasks");
     await waitFor(() => container!.querySelector('a[href^="/tasks/TB-1?"]') !== null);
-    // The board region + its 7 lanes (aria-labels + EN column titles).
+    // The board region + its 7 lanes (aria-labels + EN column titles;
+    // ME-072 C: labels lead with a capital).
     expect(container!.querySelector('[aria-label="Task kanban board"]')).not.toBeNull();
-    expect(container!.textContent).toContain("backlog");
-    expect(container!.textContent).toContain("in progress");
+    expect(container!.textContent).toContain("Backlog");
+    expect(container!.textContent).toContain("In progress");
     // The dense table is NOT the default view anymore.
     expect(container!.querySelector("table")).toBeNull();
   });

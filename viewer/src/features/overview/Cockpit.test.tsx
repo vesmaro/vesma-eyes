@@ -266,8 +266,11 @@ describe("CockpitWaiting (§3.1 + persona round 1)", () => {
   it("default: ONE summary number-action leading to the most urgent list; owner language", async () => {
     const html = await renderCockpit(new MockAdapter({ latency: false }));
     expect(html).toContain("Waiting for you");
-    // 3 inbox + 2 in-review + 4 queued = 9 waiting (fixtures).
-    expect(html).toContain("waiting for you: 9");
+    // 3 inbox + 2 in-review + 4 queued = 9 waiting (fixtures). ME-072 C:
+    // the numeral IS the count — the label no longer repeats the number.
+    expect(html).toContain(">9</span>");
+    expect(html).toContain("waiting for you</span>");
+    expect(html).not.toContain("waiting for you: 9");
     // The summary's click target is the MOST URGENT list — the inbox first.
     expect(html).toContain('href="/tasks/inbox"');
     // The source rows are quiet links with the owner's wording.
@@ -281,7 +284,7 @@ describe("CockpitWaiting (§3.1 + persona round 1)", () => {
   it("zero: nothing waits — the block does not render (anti-dashboard)", async () => {
     const html = await renderCockpit(new EmptyCockpitAdapter());
     expect(html).not.toContain("Waiting for you");
-    expect(html).not.toContain("waiting for you:");
+    expect(html).not.toContain("waiting for you");
   });
 
   it("source error (§10.12): the WHOLE block becomes one HonestLine — no partial sum (review P3-2/P3-5)", async () => {
@@ -299,7 +302,7 @@ describe("CockpitWaiting (§3.1 + persona round 1)", () => {
     );
     // No partial sum beside the error: the honest state replaces the count
     // (a partial "waiting: N" would silently undercount).
-    expect(document.body.textContent).not.toContain("waiting for you:");
+    expect(document.body.textContent).not.toContain("waiting for you");
     expect(document.body.textContent).not.toContain("Inbox:");
     expect(document.body.textContent).toContain("Retry");
   });

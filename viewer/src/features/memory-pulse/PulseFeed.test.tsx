@@ -130,6 +130,59 @@ describe("PulseFeed", () => {
       expect(html).toContain("items-center");
     }
   });
+
+  // ME-072 C: raw bodies often open with the title line — the card must not
+  // read it twice. Exact prefix (case/whitespace-normalized) is stripped;
+  // anything else passes verbatim — no smarter heuristics.
+  it("strips a body that opens with the exact title (normalized case/whitespace)", () => {
+    const doubled: MemoryPulseItem = {
+      ...WITH_CONTENT,
+      id: "m-6",
+      title: "Shell plan",
+      content: "shell  PLAN\nThe body continues after the duplicated heading.",
+    };
+    const html = renderFeed(<PulseFeed items={[doubled]} />);
+    expect(html).toContain("Shell plan"); // the title link stays
+    expect(html).toContain("The body continues after the duplicated heading.");
+    expect(html).not.toContain("shell  PLAN");
+  });
+
+  it("renders the body verbatim when the title match is not a prefix", () => {
+    const partial: MemoryPulseItem = {
+      ...WITH_CONTENT,
+      id: "m-7",
+      title: "Shell plan",
+      content: "Notes on the shell plan review.\nSecond line stays.",
+    };
+    const html = renderFeed(<PulseFeed items={[partial]} />);
+    expect(html).toContain("Shell plan"); // title link
+    expect(html).toContain("Notes on the shell plan review."); // body intact
+    expect(html).toContain("Second line stays.");
+  });
+
+  it("a body equal to the title alone collapses to the honest single line", () => {
+    const same: MemoryPulseItem = { ...WITH_CONTENT, id: "m-8", content: "Fragmented" };
+    const html = renderFeed(<PulseFeed items={[same]} />);
+    expect(html).not.toContain("whitespace-pre-wrap");
+    expect(html).toContain("items-center");
+  });
+
+  it("pulse status badges explain processed/published in title/aria (no legend block)", () => {
+    const html = renderFeed(
+      <PulseFeed
+        items={[
+          { ...ITEMS[0], status: "published" },
+          { ...ITEMS[1], status: "processed" },
+        ]}
+      />,
+    );
+    expect(html).toContain("visible in the well and in search");
+    expect(html).toContain("parsed, waiting to be published");
+    // aria-label carries status word + explanation.
+    expect(html).toMatch(/aria-label="published: record published/);
+    // Other statuses keep the bare word — no guessed explanations.
+    expect(html).not.toMatch(/aria-label="raw:/);
+  });
 });
 
 describe("PulseSkeleton", () => {

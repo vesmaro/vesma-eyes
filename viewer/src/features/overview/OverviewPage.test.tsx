@@ -101,7 +101,11 @@ describe("OverviewPage (mock gateway — capable)", () => {
     // «Что ждёт меня»: one summary number-action; the fixtures have inbox
     // items — the urgent target is the inbox; the source rows are links.
     expect(html).toContain("Waiting for you");
-    expect(html).toContain("waiting for you:");
+    // ME-072 C: the cockpit chip = numeral + label (no repeated count);
+    // the hero chip carries the «waiting in total» wording.
+    expect(html).toContain("waiting for you");
+    expect(html).not.toContain("waiting for you:");
+    expect(html).toContain("Waiting in total:");
     expect(html).toContain('href="/tasks/inbox"');
     expect(html).toContain("In review:"); // «на проверке», never "validating"
     expect(html).not.toContain("validating");

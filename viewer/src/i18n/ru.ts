@@ -149,7 +149,9 @@ export const ru = {
   "cockpit.agentsNoneAction": "Подключить агента",
   "cockpit.busyError": "Не удалось получить занятость",
   "cockpit.waitingTitle": "Что ждёт меня",
-  "cockpit.waitingSummary": "ждут вас: {{count}}",
+  // ME-072 C: the chip renders the number and this LABEL side by side —
+  // the count lives only in the numeral (no «3 … ждут вас: 3» double).
+  "cockpit.waitingSummaryLabel": "ждут вас",
   "cockpit.waitingSummaryTitle": "Открыть самое срочное",
   "cockpit.waitingInbox": "Входящие: {{count}}",
   "cockpit.waitingReview": "На проверке: {{count}}",
@@ -184,7 +186,7 @@ export const ru = {
   "overview.legendNote":
     "На колодце — {{shown}} свежайших записей и их связи. Связи показаны только между отображёнными записями.",
   "overview.heroTags": "тегов — {{count}}",
-  "overview.waitingChip": "Ждут владельца: {{count}}",
+  "overview.waitingChip": "Ждут всего: {{count}}",
   "overview.tickerItem": "{{time}} записано в память: {{title}} · {{server}}",
   "overview.wellEmpty": "Колодец ждёт первой записи — их пишут агенты.",
   "overview.wellError": "Колодец недоступен — шина не ответила",
@@ -352,14 +354,18 @@ export const ru = {
   "memstatus.raw": "сырое",
   "memstatus.processing": "в обработке",
   "memstatus.processed": "обработано",
+  // ME-072 C: the pulse badge carries this human explanation in
+  // title/aria-label — a legend block was deliberately NOT added.
+  "memstatus.processedHint": "запись прошла обработку и ждёт публикации",
   "memstatus.published": "опубликовано",
+  "memstatus.publishedHint": "запись опубликована — видна в колодце и в поиске",
   "memstatus.archived": "в архиве",
 
   // --- tags -------------------------------------------------------------------
   "tags.title": "Теги",
   "tags.familyRowLabel": "Теги этого семейства",
   "tags.filterLabel": "Фильтр тегов",
-  "tags.filterPlaceholder": "напр. topic:fts",
+  "tags.filterPlaceholder": "по подстроке имени…",
   "tags.loading": "Загружаем теги",
   "tags.loadFailed": "Не удалось загрузить теги",
   "tags.noMatch": "Нет подходящих тегов",
@@ -765,13 +771,15 @@ export const ru = {
   "tasks.status.unknown": "неизвестно",
 
   // --- tasks: WF-1 kanban column titles (7 lanes; mirror server COLUMN_RU) ---------
-  "tasks.column.backlog": "бэклог",
-  "tasks.column.validating": "на валидации",
-  "tasks.column.open": "открыто",
-  "tasks.column.in-progress": "в работе",
-  "tasks.column.blocked": "блокировано",
-  "tasks.column.resolved": "решено",
-  "tasks.column.done": "готово",
+  // ME-072 C: column labels lead with a capital (the board header + every
+  // «колонка: …» / «… → …» embedding reads list-like after a colon).
+  "tasks.column.backlog": "Бэклог",
+  "tasks.column.validating": "На валидации",
+  "tasks.column.open": "Открыто",
+  "tasks.column.in-progress": "В работе",
+  "tasks.column.blocked": "Блокировано",
+  "tasks.column.resolved": "Решено",
+  "tasks.column.done": "Готово",
 
   // --- tasks: kanban board (Ф3, CV-4 — ARCHCOM-3 verdict §3) ------------------------
   "tasks.view.toggleLabel": "Вид задач",
@@ -877,11 +885,13 @@ export const ru = {
   // --- traces -----------------------------------------------------------------
   "traces.title": "Трассировки",
   "traces.filterLabel": "Фильтр по метке задачи",
-  "traces.filterPlaceholder": "напр. l1-t2-gateway",
+  "traces.filterPlaceholder": "по подстроке id или имени…",
   "traces.loading": "Загружаем трассировки",
   "traces.loadFailed": "Не удалось загрузить трассировки",
   "traces.empty": "Трассировок нет",
   "traces.emptyFiltered": "Нет трассировок с меткой «{{label}}».",
+  // ME-072 C: the filtered-empty state carries the one-click way out.
+  "traces.clearFilter": "Сбросить фильтр",
   "traces.emptyPlain": "Конвейер ещё не записал ни одной трассировки.",
   "traces.caption": "Трассировки конвейера, новые сверху",
   "traces.colTrace": "Трассировка",
@@ -977,8 +987,8 @@ export const ru = {
   "nav.agentsExecution": "Исполнение",
   "nav.systemSettings": "Настройки",
   // ME-014: the host roster («Хосты») — the section's default landing.
+  // ME-072 C: agents.roster.title retired — the visible h1 reads the nav key.
   "nav.agentsHosts": "Хосты",
-  "agents.roster.title": "Хосты",
   "agents.roster.loading": "Загружаем ростер агентов",
   "agents.roster.failed": "Не удалось загрузить ростер",
   "agents.roster.emptyTitle": "Агентов ещё нет",
@@ -1875,7 +1885,7 @@ export const ru = {
   "kora.tree.explain":
     "Агенты — программы, через которые на машине идёт работа: например, zcode",
   "kora.tree.noAgents": "агентов ещё нет",
-  "kora.tree.emptyNoExecutors": "Хостов нет — подключите агента, и он появится здесь:",
+  "kora.tree.emptyNoExecutors": "Хостов пока нет",
   "kora.tree.expand": "раскрыть",
   "kora.tree.collapse": "свернуть",
   "kora.block2.section": "Сессии",
@@ -1922,7 +1932,9 @@ export const ru = {
   // UX-overhaul §5/§9.3 (Ф1): честное пустое — ветвление по числу исполнителей.
   // Вариант A (исполнителей 0) — призыв подключить; вариант B (исполнители
   // есть, сканер ещё не приносил сессии) — без обещания «появятся сами».
-  "kora.list.emptyNoExecutors": "Подключите агента — его сессии появятся здесь",
+  // ME-072 №7: CTA «Подключить агента» живёт ОДИН раз на экране — в центре
+  // воркзона; строки правой панели факт констатируют, без действий.
+  "kora.list.emptyNoExecutors": "Сессии появятся, когда подключите агента",
   "kora.list.emptyNoSessions": "Сессии появятся, когда сканер хостов начнёт работу",
   "kora.list.emptyAction": "Подключить агента",
   "kora.list.emptyStatusLink": "Открыть статус системы",

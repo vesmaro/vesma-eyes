@@ -75,13 +75,16 @@ afterEach(async () => {
 });
 
 describe("KoraPult (union И1, dressing map §1.2.3)", () => {
-  it("starts COLLAPSED: the strip with tabs + hint, no tab content", () => {
+  it("starts COLLAPSED: a pure control strip (no pseudo-tab hint), no tab content", () => {
     const { container } = mountPult({ inboxCount: 2 });
     const html = container.innerHTML;
     expect(html).toContain("Пульт");
     expect(html).toContain("Дайджест");
     expect(html).toContain("Эфир");
-    expect(html).toContain("Выберите сессию — её разбор появится здесь");
+    // ME-072 №6: the hint never renders in the strip — between the tabs
+    // and the badge, same size, it read as a broken third tab. It lives
+    // only in the expanded Дайджест body (asserted below).
+    expect(html).not.toContain("Выберите сессию — её разбор появится здесь");
     expect(html).toContain("Развернуть");
     // Collapsed ⇒ no tab panels leaked.
     expect(html).not.toContain('role="tabpanel"');

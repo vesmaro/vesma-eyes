@@ -322,26 +322,27 @@ describe("kanban card context menu (fix/kanban-context-menu)", () => {
     const moveItems = [
       ...container!.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
     ];
+    // ME-072 C: column labels lead with a capital.
     expect(moveItems.map((item) => item.textContent)).toEqual([
       "Назад",
-      "бэклог",
-      "на валидации",
-      "открыто",
-      "в работе",
-      "блокировано",
-      "решено",
-      "готово",
+      "Бэклог",
+      "На валидации",
+      "Открыто",
+      "В работе",
+      "Блокировано",
+      "Решено",
+      "Готово",
     ]);
     // The task's own column is the disabled one.
     expect(
-      moveItems.find((item) => item.textContent === "открыто")!.disabled,
+      moveItems.find((item) => item.textContent === "Открыто")!.disabled,
     ).toBe(true);
 
     // Gateless pick: the menu closes, the login window opens (Radix portal
     // into document.body), and NO wire move was requested.
     await act(async () => {
       moveItems
-        .find((item) => item.textContent === "в работе")!
+        .find((item) => item.textContent === "В работе")!
         .click();
       await new Promise((resolve) => setTimeout(resolve, 0));
     });

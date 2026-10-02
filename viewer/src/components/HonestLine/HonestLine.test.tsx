@@ -58,7 +58,7 @@ describe("HonestLine (UX-overhaul §7.1)", () => {
     expect(warning).toContain("text-warning");
   });
 
-  it("renders the action slot inline with the line text", () => {
+  it("renders the action slot with the line text (own row — never mid-phrase)", () => {
     const html = renderLine(
       "ru",
       undefined,

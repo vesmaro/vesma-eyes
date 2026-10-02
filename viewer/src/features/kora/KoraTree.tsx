@@ -77,17 +77,12 @@ export function KoraTree({
   };
 
   if (!hasAnyHost) {
-    // No executors → no hosts: the honest variant-A line, a link out, no
-    // dead ends (07j §1.2).
+    // No executors → no hosts: the honest one-liner (07j §1.2). ME-072 №7:
+    // action-free — the connect CTA lives ONCE, in the center; the panel
+    // states the fact, it does not repeat the command.
     return (
       <p className="text-sm text-foreground-secondary">
-        {t("kora.tree.emptyNoExecutors")}{" "}
-        <Link
-          to="/agents/harnesses"
-          className="inline-flex min-h-6 items-center text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
-        >
-          {t("kora.list.emptyAction")}
-        </Link>
+        {t("kora.tree.emptyNoExecutors")}
       </p>
     );
   }

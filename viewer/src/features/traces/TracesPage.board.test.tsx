@@ -17,24 +17,37 @@ import { keys } from "@/lib/queryKeys";
  * The 501 is seeded into the query cache so renderToString hits the error
  * branch synchronously; ru copy is the no-provider default.
  */
-function renderTraces(adapterMode: "board" | "vesma", error: ApiError): string {
+function renderTraces(
+  adapterMode: "board" | "vesma",
+  error: ApiError | null,
+  taskLabel?: string,
+): string {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  const queryKey = keys.traces.list({ task_label: undefined, limit: 50 });
+  const queryKey = keys.traces.list({ task_label: taskLabel, limit: 50 });
   const query = queryClient
     .getQueryCache()
     .build(queryClient, { queryKey, queryFn: () => Promise.resolve([]) });
-  query.setState({ status: "error", fetchStatus: "idle", error });
-  // Keep the observer's optimistic result on the seeded error (see the
-  // sessions board test for the retryOnMount rationale).
-  queryClient.setQueryDefaults(queryKey, { retryOnMount: false, retry: false });
+  if (error) {
+    query.setState({ status: "error", fetchStatus: "idle", error });
+    // Keep the observer's optimistic result on the seeded error (see the
+    // sessions board test for the retryOnMount rationale).
+    queryClient.setQueryDefaults(queryKey, { retryOnMount: false, retry: false });
+  } else {
+    // ME-072 C case: a SETTLED empty listing (the honest zero, not pending).
+    query.setState({ status: "success", fetchStatus: "idle", data: [] });
+  }
 
   return renderToString(
     <GatewayContext.Provider value={new MockAdapter({ latency: false })}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider adapterMode={adapterMode} endpoint="/api">
-          <MemoryRouter initialEntries={["/traces"]}>
+          <MemoryRouter
+            initialEntries={[
+              taskLabel ? `/traces?task_label=${taskLabel}` : "/traces",
+            ]}
+          >
             <TracesPage />
           </MemoryRouter>
         </AuthProvider>
@@ -67,5 +80,17 @@ describe("traces board-mode 501", () => {
     expect(html).not.toContain("Трассировки недоступны в board-режиме");
     expect(html).toContain('role="alert"'); // generic error branch
     expect(html).toContain("Не удалось загрузить трассировки");
+  });
+
+  // ME-072 C: a filtered EMPTY page carries the one-click way out — the
+  // reset action renders ONLY with an active label (the plain empty state
+  // stays action-free), and the placeholder reads in the tasks home style.
+  it("filtered empty state carries the reset-filter action (ME-072 C)", () => {
+    const filtered = renderTraces("vesma", null, "zzz-nope");
+    expect(filtered).toContain("Нет трассировок с меткой");
+    expect(filtered).toContain("Сбросить фильтр");
+    const plain = renderTraces("vesma", null);
+    expect(plain).toContain("Конвейер ещё не записал");
+    expect(plain).not.toContain("Сбросить фильтр");
   });
 });

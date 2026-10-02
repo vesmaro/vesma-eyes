@@ -72,17 +72,22 @@ export function KoraPult({ hasSession }: { hasSession: boolean }) {
     // central column's ONE contour comes from the workspace; the Пульт
     // contributes only the myelin seam.
     <section aria-label={t("kora.pult.title")} className="border-t border-myelin">
-      <div className="flex min-h-10 flex-wrap items-center gap-x-3 gap-y-1 px-3">
+      {/* ME-072 C: the strip wraps ONLY below sm — from sm up every control
+       * is shrink-0 so «Развернуть» never folds to a second line at 1024+.
+       * The lg rail (20rem) can still squeeze the workzone below the content
+       * width at 1024–1279: there the strip scrolls on its ONE line instead
+       * of wrapping (the control stays reachable, nothing clips silently). */}
+      <div className="flex min-h-10 flex-wrap items-center gap-x-3 gap-y-1 px-3 sm:flex-nowrap sm:overflow-x-auto">
         <span
           title={t("kora.pult.explain")}
-          className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary"
+          className="shrink-0 text-xs font-semibold uppercase tracking-wide text-foreground-secondary"
         >
           {t("kora.pult.title")}
         </span>
         <div
           role="tablist"
           aria-label={t("kora.pult.tabsLabel")}
-          className="flex items-center gap-1"
+          className="flex shrink-0 items-center gap-1"
         >
           <button
             type="button"
@@ -117,11 +122,12 @@ export function KoraPult({ hasSession }: { hasSession: boolean }) {
             {t("kora.pult.ether")}
           </button>
         </div>
-        {/* The strip names what will appear (07j §4.2 invitation) — the
-         * non-clickable part never pretends to be an action. */}
-        <span className="hidden min-w-0 flex-1 truncate text-xs text-foreground-muted sm:block">
-          {t("kora.pult.hint")}
-        </span>
+        {/* ME-072 №6: the strip is a pure control row (caps + tabs + badge
+         * + Развернуть). The session hint lives ONLY in the expanded
+         * Дайджест body — in the strip, same-size and between the tabs and
+         * the badge, it read as a broken third tab. The empty flex spacer
+         * keeps the badge and Развернуть pinned to the right. */}
+        <span aria-hidden className="min-w-0 flex-1" />
         {/* The real inbox badge: hidden when the source is unknown, muted at
          * 0, always a link to the real /tasks/inbox route. */}
         {waiting !== null ? (
@@ -129,7 +135,7 @@ export function KoraPult({ hasSession }: { hasSession: boolean }) {
             to="/tasks/inbox"
             title={t("kora.pult.waitingHint")}
             className={cn(
-              "inline-flex min-h-6 items-center rounded-full border border-border-subtle px-2 font-mono text-xs tabular-nums focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
+              "inline-flex min-h-6 shrink-0 items-center rounded-full border border-border-subtle px-2 font-mono text-xs tabular-nums focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
               waiting === 0
                 ? "text-foreground-muted"
                 : "border-iris/40 text-iris-bright",
@@ -143,7 +149,7 @@ export function KoraPult({ hasSession }: { hasSession: boolean }) {
           aria-expanded={expanded}
           aria-controls="kora-pult-body"
           onClick={() => setExpanded((value) => !value)}
-          className="inline-flex min-h-6 items-center gap-1 rounded-sm px-2 text-xs text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+          className="inline-flex min-h-6 shrink-0 items-center gap-1 rounded-sm px-2 text-xs text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
         >
           {expanded ? (
             <ChevronUp aria-hidden className="size-4" />

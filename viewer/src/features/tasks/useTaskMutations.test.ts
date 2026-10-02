@@ -189,7 +189,8 @@ describe("task mutations on the mock adapter", () => {
     expect(boardRow(queryClient, "TB-3")?.status).toBe("blocked"); // synced on move
     expect(boardCounts(queryClient)).toMatchObject({ open: 2, blocked: 3 });
     expect(toasts.at(-1)?.title).toBe("TB-3: moved");
-    expect(toasts.at(-1)?.detail).toBe("column: blocked");
+    // ME-072 C: the column label leads with a capital.
+    expect(toasts.at(-1)?.detail).toBe("column: Blocked");
   });
 
   it("archive: row leaves the board, counts drop, archive queries invalidated", async () => {

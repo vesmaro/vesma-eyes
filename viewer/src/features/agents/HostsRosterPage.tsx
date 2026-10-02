@@ -102,10 +102,11 @@ export function HostsRosterPage() {
 
   return (
     <div className={pageGridClass("operational", "flex flex-col gap-3")}>
-      {/* The breadcrumb current item + TopBar label already carry «Хосты» —
-       * the h1 stays sr-only for the a11y document outline (the Execution
-       * page posture). */}
-      <h1 className="sr-only">{t("agents.roster.title")}</h1>
+      {/* ME-072 C: the visible h1 on the page axis (the pattern-A posture of
+       * Sessions/Tasks pages) — the section's default landing reads its name.
+       * The nav key is the source («Хосты»), the roster title stays for the
+       * a11y outline parity. */}
+      <h1 className="text-xl font-semibold">{t("nav.agentsHosts")}</h1>
 
       {executors.isPending ? (
         <div role="status" aria-label={t("agents.roster.loading")}>

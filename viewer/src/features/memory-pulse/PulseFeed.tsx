@@ -39,6 +39,56 @@ export interface PulseFeedProps {
   returnSource?: { pathname: string; search: string };
 }
 
+/**
+ * ME-072 C: raw memories often carry the title as their body's first line —
+ * the card then read the title twice. If the body STARTS with the exact
+ * title (case- and whitespace-normalized), the prefix goes; anything else
+ * passes through verbatim. No smarter heuristics: a partial or paraphrased
+ * overlap stays as-is (the honest cut is the provable one).
+ */
+function withoutDuplicatedTitle(title: string, content: string): string {
+  if (!title.trim() || !content) return content;
+  const pattern = title
+    .trim()
+    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    .replace(/\s+/g, "\\s+");
+  return content.replace(new RegExp(`^${pattern}\\s*`, "i"), "");
+}
+
+/**
+ * ME-072 C: the two lifecycle words a feed reader actually stumbles on get
+ * a human explanation (title/aria on the badge); the rest keep the bare
+ * word — an unexplained badge beats a guessed explanation.
+ */
+function statusHintKey(status: string): "memstatus.processedHint" | "memstatus.publishedHint" | null {
+  switch (status) {
+    case "processed":
+      return "memstatus.processedHint";
+    case "published":
+      return "memstatus.publishedHint";
+    default:
+      return null;
+  }
+}
+
+/** The row's status badge: word + (for processed/published) the human
+ * explanation riding title/aria-label (ME-072 C — no legend block). */
+function PulseStatusBadge({ status }: { status: string }) {
+  const t = useT();
+  const hintKey = statusHintKey(status);
+  const label = t(statusLabelKey(status));
+  return (
+    <Badge
+      variant={statusBadgeVariant(status)}
+      className="shrink-0"
+      title={hintKey ? t(hintKey) : undefined}
+      aria-label={hintKey ? `${label}: ${t(hintKey)}` : undefined}
+    >
+      {label}
+    </Badge>
+  );
+}
+
 export function PulseFeed({
   items,
   perServer,
@@ -68,7 +118,13 @@ export function PulseFeed({
         {items.map((item, index) => {
           // A fragment turns the row into a title+body block: top-align the
           // chrome so the provenance badge hangs from the title line.
-          const hasContent = typeof item.content === "string" && item.content.length > 0;
+          // ME-072 C: a body that merely repeats the title renders nothing —
+          // the honest single-line row, not a doubled heading.
+          const body =
+            typeof item.content === "string"
+              ? withoutDuplicatedTitle(item.title, item.content).trim()
+              : "";
+          const hasContent = body.length > 0;
           return (
             <li
               key={`${item.server}:${item.id}:${index}`}
@@ -101,7 +157,7 @@ export function PulseFeed({
                   // (plain passthrough or lazy markdown chunk); `clamp` adds
                   // «показать полностью» only on real measured overflow.
                   <TextEngine
-                    text={item.content}
+                    text={body}
                     variant="compact"
                     clamp
                     className="mt-1 font-scroll text-sm leading-relaxed text-foreground-secondary"
@@ -115,9 +171,10 @@ export function PulseFeed({
                   </p>
                 ) : null}
               </div>
-              <Badge variant={statusBadgeVariant(item.status)} className="shrink-0">
-                {t(statusLabelKey(item.status))}
-              </Badge>
+              {/* ME-072 C: the status word carries its human explanation in
+               * title/aria-label — a permanent legend block was deliberately
+               * NOT added (the caveat asked for context, not chrome). */}
+              <PulseStatusBadge status={item.status} />
               <time
                 dateTime={item.created_at || undefined}
                 className="shrink-0 text-xs text-foreground-secondary"

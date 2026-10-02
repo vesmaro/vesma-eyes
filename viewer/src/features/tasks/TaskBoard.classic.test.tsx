@@ -275,7 +275,7 @@ describe("classic board style (CV-5 — render)", () => {
     // The alpha group header is a BUTTON inside the open column…
     expect(
       Array.from(
-        container!.querySelectorAll('section[aria-label="Колонка «открыто»"] button'),
+        container!.querySelectorAll('section[aria-label="Колонка «Открыто»"] button'),
       ).some((button) => button.textContent?.includes("alpha")),
     ).toBe(true);
     // …and the toggle marks "groups" as pressed.
@@ -292,12 +292,12 @@ describe("classic board style (CV-5 — render)", () => {
     expect(container!.querySelector('button[aria-expanded="true"]')).toBeNull();
     expect(
       Array.from(
-        container!.querySelectorAll('section[aria-label="Колонка «открыто»"] button'),
+        container!.querySelectorAll('section[aria-label="Колонка «Открыто»"] button'),
       ).some((button) => button.textContent?.includes("alpha")),
     ).toBe(false);
     // One flat card list per column, classic order: high → normal → low,
     // NOT the wire position order (lo=0, hi=1, no=2).
-    expect(columnCardHrefs('Колонка «открыто»')).toEqual([
+    expect(columnCardHrefs('Колонка «Открыто»')).toEqual([
       "/tasks/O-hi",
       "/tasks/O-no",
       "/tasks/O-lo",
@@ -316,7 +316,7 @@ describe("classic board style (CV-5 — render)", () => {
       styleButton("Классика")!.click();
     });
     expect(container!.querySelector('button[aria-expanded="true"]')).toBeNull();
-    expect(columnCardHrefs('Колонка «открыто»')).toEqual([
+    expect(columnCardHrefs('Колонка «Открыто»')).toEqual([
       "/tasks/O-hi",
       "/tasks/O-no",
       "/tasks/O-lo",
@@ -371,7 +371,7 @@ describe("classic board style (CV-5 — DnD chain)", () => {
         .tasks.find((task) => task.id === id);
 
     // The card starts in the blocked column (classic skin, flat list).
-    expect(columnCardHrefs('Колонка «блокировано»')).toContain("/tasks/RB-2");
+    expect(columnCardHrefs('Колонка «Блокировано»')).toContain("/tasks/RB-2");
 
     await act(async () => {
       Array.from(container!.querySelectorAll<HTMLButtonElement>("button"))
@@ -394,7 +394,7 @@ describe("classic board style (CV-5 — DnD chain)", () => {
     expect(boardTask("RB-2")?.col).toBe("in-progress");
     expect(boardTask("RB-2")?.position).toBe(0);
     // The classic board renders the moved card in its new lane.
-    expect(columnCardHrefs('Колонка «в работе»')).toContain("/tasks/RB-2");
-    expect(columnCardHrefs('Колонка «блокировано»')).not.toContain("/tasks/RB-2");
+    expect(columnCardHrefs('Колонка «В работе»')).toContain("/tasks/RB-2");
+    expect(columnCardHrefs('Колонка «Блокировано»')).not.toContain("/tasks/RB-2");
   });
 });

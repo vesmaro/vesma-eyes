@@ -90,8 +90,10 @@ export function CockpitWaiting() {
         <span className="font-mono text-2xl font-semibold text-iris-bright">
           {waiting.total}
         </span>
+        {/* ME-072 C: the numeral IS the count — the label rides beside it
+         * WITHOUT repeating the number (the old «3 … ждут вас: 3» double). */}
         <span className="text-sm font-medium text-foreground">
-          {t("cockpit.waitingSummary", { count: waiting.total })}
+          {t("cockpit.waitingSummaryLabel")}
         </span>
         <ArrowRight className="size-4 text-foreground-secondary" aria-hidden="true" />
       </Link>
