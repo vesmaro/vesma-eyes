@@ -74,10 +74,10 @@ describe("TaskBoardPage (mock adapter — 7 WF-1 columns)", () => {
     for (const title of [
       "Backlog",
       "Validating",
-      "Open",
+      "Queued", // ME-077: ex-"Open"
       "In progress",
       "Blocked",
-      "Resolved",
+      "Awaiting review", // ME-077: ex-"Resolved"
       "Done",
     ]) {
       expect(html).toContain(title);

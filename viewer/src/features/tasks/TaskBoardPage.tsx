@@ -17,14 +17,23 @@ import { useGateway } from "@/gateway/GatewayContext";
 import { useUiToken } from "@/features/ui-token/UiTokenContext";
 import { hasDeviceToken } from "@/gateway/deviceToken";
 import { useT } from "@/i18n";
+import { columnLabelKey } from "./taskStatus";
 import { buildOrderedColumns } from "./boardDnd";
+import { BoardColumnsToggle } from "./BoardColumnsToggle";
 import { CreateTaskDialog } from "./CreateTaskDialog";
 import { TaskBoardColumn } from "./TaskBoardColumn";
 import { TaskBoardCardGhost } from "./TaskBoardCard";
+import { TaskDateFilter } from "./TaskDateFilter";
 import { TaskFilterSelect } from "./TaskFilterSelect";
 import { TasksUnsupported } from "./TasksUnsupported";
 import { TasksViewToggle } from "./TasksViewToggle";
 import { loadCollapsedGroups, saveCollapsedGroups } from "./taskGrouping";
+import {
+  loadBoardColumnsMode,
+  saveBoardColumnsMode,
+  visibleColumnsFor,
+  type BoardColumnsMode,
+} from "./tasksViewPrefs";
 import {
   agentOptions,
   filterTasks,
@@ -98,6 +107,28 @@ function TaskBoardView() {
   // the kanban toggle and the settings hub are two controls of ONE state
   // (spec §4.3); both styles share columns, DnD and filters.
   const [boardStyle] = useBoardStyle();
+  // ME-077: column visibility («5 колонок | все 7») — a persisted board
+  // setting; the pre-validation lanes fold by default while empty.
+  const [columnsMode, setColumnsMode] = useState<BoardColumnsMode>(
+    () => loadBoardColumnsMode(),
+  );
+  const changeColumnsMode = (mode: BoardColumnsMode) => {
+    setColumnsMode(mode);
+    saveBoardColumnsMode(mode);
+  };
+  // Session-local unfold overrides for the folded-empty lanes ("all" mode):
+  // the DEFAULT is folded, the owner's unfold does not persist — the fold
+  // is a de-clutter affordance, not a second board configuration.
+  const [unfoldedEmpty, setUnfoldedEmpty] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const toggleEmptyCollapse = (column: string) =>
+    setUnfoldedEmpty((prev) => {
+      const next = new Set(prev);
+      if (next.has(column)) next.delete(column);
+      else next.add(column);
+      return next;
+    });
   const [createOpen, setCreateOpen] = useState(false);
   const mutations = useTaskMutations();
 
@@ -126,6 +157,14 @@ function TaskBoardView() {
     () => buildOrderedColumns(board.data?.columns ?? [], filteredTasks),
     [board.data, filteredTasks],
   );
+  // ME-077 projection: compact shows the 5 workflow lanes; "all" shows the
+  // full wire order. Hidden lanes with live cards surface in the honest
+  // note row below — nothing disappears silently.
+  const visibleColumns = useMemo(
+    () => visibleColumnsFor(board.data?.columns ?? [], columnsMode),
+    [board.data, columnsMode],
+  );
+  const preValidationLanes = new Set(["backlog", "validating"]);
   const dnd = useKanbanDnd({
     columns,
     canDrag,
@@ -168,6 +207,8 @@ function TaskBoardView() {
           {/* CV-5: board style lives ONLY on the kanban — the list has no
            * accordion/classic distinction. The toggle owns the store write. */}
           <BoardStyleToggle />
+          {/* ME-077: column visibility (компакт 5 / все 7), persisted. */}
+          <BoardColumnsToggle mode={columnsMode} onChange={changeColumnsMode} />
           {canMutate ? (
             <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
               <Plus className="size-4" aria-hidden="true" />
@@ -215,6 +256,12 @@ function TaskBoardView() {
   const projectChoices = projectOptions(tasks);
   const agentChoices = agentOptions(tasks);
   const filtered = hasActiveTaskFilters(state);
+  // ME-077 honest-degradation note: compact mode hides the pre-validation
+  // lanes — when they hold live cards the board says so explicitly instead
+  // of letting them vanish.
+  const hiddenNonEmpty = (board.data?.columns ?? [])
+    .filter((c) => !visibleColumns.includes(c))
+    .filter((c) => (wholeBoardCounts[c] ?? 0) > 0);
 
   return (
     <section aria-labelledby="tasks-title" className={pageGridClass("operational", "space-y-4")}>
@@ -259,12 +306,22 @@ function TaskBoardView() {
           allLabel={t("tasks.allAgents")}
           options={agentChoices.map((agent) => ({ value: agent, label: agent }))}
         />
+        {/* ME-075: arrival/completion date bounds + presets (shared URL dialect). */}
+        <TaskDateFilter state={state} patch={patch} />
         {filteredTasks.length === 0 && filtered ? (
           <Button
             variant="outline"
             size="sm"
             onClick={() =>
-              patch({ project: undefined, agent: undefined, q: undefined })
+              patch({
+                project: undefined,
+                agent: undefined,
+                q: undefined,
+                created_from: undefined,
+                created_to: undefined,
+                completed_from: undefined,
+                completed_to: undefined,
+              })
             }
           >
             {t("tasks.clearFilters")}
@@ -285,63 +342,85 @@ function TaskBoardView() {
           message={t("tasks.noMatchHint")}
         />
       ) : (
-        <DndContext {...dnd.dndContextProps}>
-          {/* ME-072 A: the board row stretches its columns to ONE height
-           * (items-stretch — empty columns no longer collapse) and the
-           * horizontal scroll is an explicit AFFORDANCE: .board-scroll-x
-           * keeps the scrollbar visible where the platform draws classic
-           * ones, tabIndex keeps it keyboard-able (WCAG 2.1.1), and the
-           * measured right-edge fade (below) signals the offscreen columns
-           * on overlay-scroll platforms — at 1440 the 4th column peeks cut
-           * and the cut reads as scrollable, not broken. */}
-          <div className="relative">
-            <div
-              ref={boardRef}
-              aria-label={t("tasks.board.label")}
-              tabIndex={0}
-              className="board-scroll-x flex items-stretch gap-3 overflow-x-auto pb-2"
-            >
-              {[...(board.data?.columns ?? [])].map((column) => (
-                <TaskBoardColumn
-                  key={column}
-                  column={column}
-                  tasks={columns.get(column) ?? []}
-                  totalCount={wholeBoardCounts[column] ?? 0}
-                  canDrag={canDrag}
-                  showMenu={canMutate}
-                  reportCounts={reportCounts}
-                  query={state.q}
-                  collapsed={collapsed}
-                  onToggleGroup={toggleGroup}
-                  compact={density === "compact"}
-                  style={boardStyle}
-                />
-              ))}
-            </div>
-            {/* The scroll affordance (ME-072 A): only when the board really
-             * overflows — a page-background fade over the clipped last
-             * column. Decorative: aria-hidden + pointer-events-none, the
-             * scroll stays on the row (wheel/keyboard/drag). */}
-            {boardOverflows ? (
+        <>
+          {/* ME-077: hidden-but-non-empty lanes stay honest — the note names
+           * them with their live counts. */}
+          {columnsMode === "compact" && hiddenNonEmpty.length > 0 ? (
+            <p className="text-xs text-foreground-muted" role="note">
+              {t("tasks.board.hiddenColumns", {
+                cols: hiddenNonEmpty
+                  .map(
+                    (c) =>
+                      `${t(columnLabelKey(c))} (${wholeBoardCounts[c] ?? 0})`,
+                  )
+                  .join(", "),
+              })}
+            </p>
+          ) : null}
+          <DndContext {...dnd.dndContextProps}>
+            {/* ME-072 A: the board row stretches its columns to ONE height
+             * (items-stretch — empty columns no longer collapse) and the
+             * horizontal scroll is an explicit AFFORDANCE: .board-scroll-x
+             * keeps the scrollbar visible where the platform draws classic
+             * ones, tabIndex keeps it keyboard-able (WCAG 2.1.1), and the
+             * measured right-edge fade (below) signals the offscreen columns
+             * on overlay-scroll platforms — at 1440 the 4th column peeks cut
+             * and the cut reads as scrollable, not broken. */}
+            <div className="relative">
               <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-background to-transparent"
-              />
-            ) : null}
-          </div>
-          <DragOverlay dropAnimation={reducedMotion ? null : undefined}>
-            {dnd.activeTask ? (
-              <TaskBoardCardGhost
-                task={dnd.activeTask}
-                reportCount={reportCounts[dnd.activeTask.id]}
-                showMenu={false}
-                query={state.q}
-                skin={boardStyle === "classic" ? "classic" : "dense"}
-                reducedMotion={reducedMotion}
-              />
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+                ref={boardRef}
+                aria-label={t("tasks.board.label")}
+                tabIndex={0}
+                className="board-scroll-x flex items-stretch gap-3 overflow-x-auto pb-2"
+              >
+                {visibleColumns.map((column) => (
+                  <TaskBoardColumn
+                    key={column}
+                    column={column}
+                    tasks={columns.get(column) ?? []}
+                    totalCount={wholeBoardCounts[column] ?? 0}
+                    canDrag={canDrag}
+                    showMenu={canMutate}
+                    reportCounts={reportCounts}
+                    query={state.q}
+                    collapsed={collapsed}
+                    onToggleGroup={toggleGroup}
+                    compact={density === "compact"}
+                    style={boardStyle}
+                    emptyCollapsed={
+                      columnsMode === "all" &&
+                      preValidationLanes.has(column) &&
+                      !unfoldedEmpty.has(column)
+                    }
+                    onToggleEmptyCollapse={() => toggleEmptyCollapse(column)}
+                  />
+                ))}
+              </div>
+              {/* The scroll affordance (ME-072 A): only when the board really
+               * overflows — a page-background fade over the clipped last
+               * column. Decorative: aria-hidden + pointer-events-none, the
+               * scroll stays on the row (wheel/keyboard/drag). */}
+              {boardOverflows ? (
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-background to-transparent"
+                />
+              ) : null}
+            </div>
+            <DragOverlay dropAnimation={reducedMotion ? null : undefined}>
+              {dnd.activeTask ? (
+                <TaskBoardCardGhost
+                  task={dnd.activeTask}
+                  reportCount={reportCounts[dnd.activeTask.id]}
+                  showMenu={false}
+                  query={state.q}
+                  skin={boardStyle === "classic" ? "classic" : "dense"}
+                  reducedMotion={reducedMotion}
+                />
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        </>
       )}
     </section>
   );

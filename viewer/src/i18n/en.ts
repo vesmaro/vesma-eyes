@@ -720,6 +720,10 @@ export const en: Record<TranslationKey, string> = {
   "tasks.scanLabel": "Scan stores",
   "tasks.scanBusy": "Scanning…",
   "tasks.adoptLabel": "Adopt to board",
+  "tasks.adoptAllLabel": "Accept all",
+  "tasks.adoptAllConfirm": "Accept all records to the board ({{count}})?",
+  "tasks.adoptAllBusy": "Accepting…",
+  "tasks.adoptAllNone": "No records to accept",
   "tasks.archiveTitle": "Archive",
   "tasks.archiveLoading": "Loading archive",
   "tasks.archiveFailed": "Could not load the archive",
@@ -745,13 +749,24 @@ export const en: Record<TranslationKey, string> = {
   // --- tasks: WF-1 kanban column titles (7 lanes; mirror server COLUMN_RU) ---------
   // ME-072 C: column labels lead with a capital (the board header + every
   // «column: …» / «… → …» embedding reads list-like after a colon).
+  // ME-077: owner-facing renames (Open→Queued, Resolved→Awaiting review) —
+  // the WIRE column ids never change.
   "tasks.column.backlog": "Backlog",
   "tasks.column.validating": "Validating",
-  "tasks.column.open": "Open",
+  "tasks.column.open": "Queued",
   "tasks.column.in-progress": "In progress",
   "tasks.column.blocked": "Blocked",
-  "tasks.column.resolved": "Resolved",
+  "tasks.column.resolved": "Awaiting review",
   "tasks.column.done": "Done",
+
+  // --- ME-077: column hints (whose action moves the card onward) -------------------
+  "tasks.columnHint.backlog": "moves: owner — queue for work",
+  "tasks.columnHint.validating": "moves: owner — accept or return",
+  "tasks.columnHint.open": "moves: executor — take into work",
+  "tasks.columnHint.in-progress": "moves: executor — finish or block",
+  "tasks.columnHint.blocked": "moves: executor — lift the block",
+  "tasks.columnHint.resolved": "moves: owner — accept or return to the executor",
+  "tasks.columnHint.done": "auto-archives after 3 days · restore manually",
 
   // --- tasks: kanban board (Ф3, CV-4 — ARCHCOM-3 verdict §3) ------------------------
   "tasks.view.toggleLabel": "Task view",
@@ -770,6 +785,29 @@ export const en: Record<TranslationKey, string> = {
   "tasks.board.styleLabel": "Board layout",
   "tasks.board.styleGroups": "Groups",
   "tasks.board.styleClassic": "Classic",
+  // ME-077: column visibility (compact 5 / all 7), persisted board setting.
+  "tasks.board.columnsLabel": "Columns",
+  "tasks.board.columnsCompact": "5 columns",
+  "tasks.board.columnsAll": "all 7",
+  "tasks.board.hiddenColumns": "Hidden: {{cols}}",
+  "tasks.board.expandColumn": "Expand the empty “{{col}}” column",
+  "tasks.board.collapseColumn": "Collapse the empty “{{col}}” column",
+
+  // --- ME-074: lifecycle time labels on cards ---------------------------------------
+  "tasks.card.arrived": "arrived {{date}}",
+  "tasks.card.hanging": "open for {{duration}}",
+  "tasks.card.completed": "completed {{date}}",
+
+  // --- ME-075: date filters (arrival / completion + presets) -------------------------
+  "tasks.date.label": "Dates",
+  "tasks.date.arrivalLabel": "Arrived",
+  "tasks.date.completedLabel": "Completed",
+  "tasks.date.from": "from",
+  "tasks.date.to": "to",
+  "tasks.date.presetToday": "Today",
+  "tasks.date.presetWeek": "Week",
+  "tasks.date.presetAll": "All",
+  "tasks.date.clear": "Clear dates",
   "tasks.priority.critical": "critical",
   "tasks.priority.high": "high",
   "tasks.priority.normal": "normal",
@@ -848,6 +886,11 @@ export const en: Record<TranslationKey, string> = {
   "tasks.mutation.adoptConflictTitle": "Record already adopted",
   "tasks.mutation.adoptConflictDetail": "task {{id}} already exists",
   "tasks.mutation.adopted": "Adopted to board: {{id}}",
+  "tasks.mutation.adoptBatchDone": "Records accepted",
+  "tasks.mutation.adoptBatchDetailAll": "records accepted: {{count}}",
+  "tasks.mutation.adoptBatchDetailPartial":
+    "accepted: {{adopted}} · failed: {{failed}} — details in the server report",
+  "tasks.mutation.adoptBatchFailed": "Could not accept the records",
   "tasks.mutation.inboxEditFailed": "Could not save the record edits",
   "tasks.mutation.inboxEditSaved": "Edits saved — adoption will use this version",
   "tasks.mutation.scanFailed": "Could not scan the stores",

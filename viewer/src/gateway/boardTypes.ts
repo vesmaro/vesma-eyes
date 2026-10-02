@@ -184,6 +184,19 @@ export type InboxRefreshResult = Schemas["TaskInboxRefreshOut"];
  */
 export type InboxEditInput = Schemas["TaskInboxEditSpec"];
 
+// --- ME-073 batch adopt (`POST /api/tasks/inbox/adopt-batch`) --------------------
+// Generated schemas exist (AdoptBatchOut/AdoptBatchItem); re-exported as
+// narrower readonly views. The body IS the per-record report — one failed
+// record never aborts the rest.
+
+export type AdoptBatchItemResult = Schemas["AdoptBatchItem"];
+
+export interface AdoptBatchResult {
+  readonly results: readonly AdoptBatchItemResult[];
+  readonly adopted: number;
+  readonly failed: number;
+}
+
 // --- AGW-1 agents-domain wire types (ARCH-9, ADR 0009 Amd 2; SCHED-1) ----------
 // Hand-written refinements over the generated schemas where the server
 // answers anonymous dicts (routing, executor-list meta) or enum-ish strings;

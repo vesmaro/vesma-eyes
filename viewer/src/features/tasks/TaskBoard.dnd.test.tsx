@@ -74,6 +74,8 @@ const CORPUS: {
       priority: "high",
       archived_from: "",
       validating_since: "",
+      resolved_at: "",
+      done_at: "",
     },
     {
       id: "O-1",
@@ -95,6 +97,8 @@ const CORPUS: {
       priority: "normal",
       archived_from: "",
       validating_since: "",
+      resolved_at: "",
+      done_at: "",
     },
   ],
   counts: {

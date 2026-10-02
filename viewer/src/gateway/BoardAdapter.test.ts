@@ -622,6 +622,8 @@ const CORPUS_BOARD_TASK = {
   priority: "normal",
   archived_from: "",
   validating_since: "",
+  resolved_at: "",
+  done_at: "",
 };
 
 describe("BoardAdapter Ф2 task reads (recorded corpus)", () => {

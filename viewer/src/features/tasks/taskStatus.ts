@@ -91,6 +91,14 @@ export function columnLabelKey(column: string): TranslationKey {
     : "tasks.status.unknown";
 }
 
+/** Column hint key (ME-077): whose action moves the card onward. Null for
+ * unknown columns — callers simply render no hint line. */
+export function columnHintKey(column: string): TranslationKey | null {
+  return isTaskColumn(column)
+    ? (`tasks.columnHint.${column}` as const)
+    : null;
+}
+
 /** Status label key (workflow vocabulary — filters, list rows). */
 export function statusLabelKey(status: string): TranslationKey {
   return isTaskStatus(status)
@@ -189,6 +197,120 @@ export function formatTaskDate(
     year: "numeric",
     timeZone: "UTC",
   }).format(date);
+}
+
+/** Compact UTC date (dd.MM ru / "28 Sep" en); '' for empty/unparsable. */
+export function formatTaskDateShort(
+  iso: string | null | undefined,
+  lang: "ru" | "en",
+): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return lang === "ru"
+    ? new Intl.DateTimeFormat("ru-RU", {
+        day: "2-digit",
+        month: "2-digit",
+        timeZone: "UTC",
+      }).format(date)
+    : new Intl.DateTimeFormat("en-GB", {
+        day: "numeric",
+        month: "short",
+        timeZone: "UTC",
+      }).format(date);
+}
+
+/**
+ * Human UTC timestamp «01.10 в 14:05» / «1 Oct, 14:05» (ME-074 completion
+ * label). '' for empty/unparsable — unknown is never a guessed value.
+ */
+export function formatTaskTimestamp(
+  iso: string | null | undefined,
+  lang: "ru" | "en",
+): string {
+  const datePart = formatTaskDateShort(iso, lang);
+  if (!datePart || !iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const time = new Intl.DateTimeFormat("ru-RU", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "UTC",
+  }).format(date);
+  return lang === "ru" ? `${datePart} в ${time}` : `${datePart}, ${time}`;
+}
+
+/** Word tables for humanDuration (ru plural forms: one/few/many). */
+const DURATION_RU = {
+  minute: ["минута", "минуты", "минут"],
+  hour: ["час", "часа", "часов"],
+  day: ["день", "дня", "дней"],
+} as const;
+const DURATION_EN = {
+  minute: ["minute", "minutes"],
+  hour: ["hour", "hours"],
+  day: ["day", "days"],
+} as const;
+type DurationUnit = keyof typeof DURATION_RU;
+
+function pluralUnit(count: number, unit: DurationUnit, lang: "ru" | "en"): string {
+  if (lang === "en") {
+    const [one, many] = DURATION_EN[unit];
+    return `${count} ${count === 1 ? one : many}`;
+  }
+  const forms = DURATION_RU[unit];
+  const category = new Intl.PluralRules("ru").select(count);
+  const index = category === "one" ? 0 : category === "few" ? 1 : 2;
+  return `${count} ${forms[index]}`;
+}
+
+/** Human duration «2 дня» / «2 days» (ME-074 «висит N»): the largest whole
+ * unit — days ≥ 24h, hours ≥ 60min, minutes below that. */
+export function humanDuration(ms: number, lang: "ru" | "en"): string {
+  const minutes = Math.floor(ms / 60_000);
+  if (minutes < 1) return lang === "ru" ? "меньше минуты" : "under a minute";
+  if (minutes < 60) return pluralUnit(minutes, "minute", lang);
+  if (minutes < 1440) return pluralUnit(Math.floor(minutes / 60), "hour", lang);
+  return pluralUnit(Math.floor(minutes / 1440), "day", lang);
+}
+
+/**
+ * The ME-074 card meta line: «поступила 28.09 · висит 2 дня» on live
+ * columns, «… · завершена 01.10 в 14:05» on resolved/done. Empty wire
+ * stamps (pre-ME-074 rows) degrade honestly — the part simply never
+ * renders; a task with no arrival date shows nothing at all.
+ */
+export function taskLifecycleLabel(
+  task: Pick<BoardTask, "col" | "created_at" | "resolved_at" | "done_at">,
+  lang: "ru" | "en",
+  now: number,
+  t: (key: TranslationKey, vars?: Record<string, string | number>) => string,
+): string {
+  const parts: string[] = [];
+  const arrival = formatTaskDateShort(task.created_at, lang);
+  if (arrival) parts.push(t("tasks.card.arrived", { date: arrival }));
+  const stamp =
+    task.col === "done"
+      ? task.done_at || task.resolved_at
+      : task.col === "resolved"
+        ? task.resolved_at
+        : "";
+  if (stamp) {
+    const completed = formatTaskTimestamp(stamp, lang);
+    if (completed) parts.push(t("tasks.card.completed", { date: completed }));
+  } else if (task.col !== "done" && task.col !== "resolved") {
+    // «Висит N» is for LIVE lanes only: a completed task with no stamp
+    // (pre-ME-074 row) is not hanging — it is finished, we just do not
+    // know when. Showing an age there would lie.
+    const created = Date.parse(task.created_at ?? "");
+    if (!Number.isNaN(created) && now > created) {
+      parts.push(
+        t("tasks.card.hanging", { duration: humanDuration(now - created, lang) }),
+      );
+    }
+  }
+  return parts.join(" · ");
 }
 
 /** Row-level view helper: agents label for chips ("—" when none). */

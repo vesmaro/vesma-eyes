@@ -30,6 +30,8 @@ const TASK: BoardTask = {
   priority: "normal",
   archived_from: "",
   validating_since: "",
+  resolved_at: "",
+  done_at: "",
 };
 
 /** Recording fetch stub — resolves JSON, captures method/url/headers/body. */

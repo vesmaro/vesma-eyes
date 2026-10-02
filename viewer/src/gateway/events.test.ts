@@ -36,6 +36,8 @@ const TASK = {
   priority: "P2",
   archived_from: "",
   validating_since: "",
+  resolved_at: "",
+  done_at: "",
 };
 
 const NOTIFICATION = {

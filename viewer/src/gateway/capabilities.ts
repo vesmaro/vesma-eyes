@@ -5,6 +5,7 @@ import type {
   ActivityBuckets,
   ActivityPage,
   ActivityParams,
+  AdoptBatchResult,
   ArchivePage,
   ArchiveParams,
   BoardHealthDetail,
@@ -166,6 +167,8 @@ export interface TaskMutationSource {
   archiveTask(taskId: string): Promise<TaskMutationAck>;
   unarchiveTask(taskId: string): Promise<TaskUnarchiveResult>;
   adoptInboxItem(memoryId: string): Promise<BoardTask>;
+  /** ME-073 «Принять все»: batch adopt with a per-record report. */
+  adoptInboxBatch(memoryIds: string[]): Promise<AdoptBatchResult>;
   /** UI-25: owner corrections to an inbox row BEFORE adoption. */
   patchInboxItem(memoryId: string, patch: InboxEditInput): Promise<TaskInboxEntry>;
   refreshInbox(): Promise<InboxRefreshResult>;
@@ -182,6 +185,7 @@ export function isTaskMutationSource(
     typeof (gateway as Partial<TaskMutationSource>).moveTask === "function" &&
     typeof (gateway as Partial<TaskMutationSource>).archiveTask === "function" &&
     typeof (gateway as Partial<TaskMutationSource>).adoptInboxItem === "function" &&
+    typeof (gateway as Partial<TaskMutationSource>).adoptInboxBatch === "function" &&
     typeof (gateway as Partial<TaskMutationSource>).hasUiToken === "function"
   );
 }

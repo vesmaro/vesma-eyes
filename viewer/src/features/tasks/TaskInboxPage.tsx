@@ -32,10 +32,12 @@ import { pageGridClass } from "@/layout/pageGrid";
  * `/tasks/inbox` — the AGG-1 mirror of `task:queue` records (ADR 0010):
  * projections with provenance, NOT native tasks. Ф3 wires the mutations in:
  * «Принять в борд» (POST adopt → toast with an «открыть задачу» link; a 409
- * toast links the existing task) and «Сканировать хранилища» (POST refresh,
- * spinner, found/new toast). Stale rows (the source stopped returning the
- * record) are dimmed and cannot be adopted; adopted rows return behind
- * `?adopted=1`.
+ * toast links the existing task), «Сканировать хранилища» (POST refresh,
+ * spinner, found/new toast) and the ME-073 «Принять все» (one batch call
+ * for everything adoptable — confirm with the counter first, then a single
+ * result toast; the server answers with the per-record report). Stale rows
+ * (the source stopped returning the record) are dimmed and cannot be
+ * adopted; adopted rows return behind `?adopted=1`.
  *
  * UI-25 (owner feedback): every card header is a row of colored key:value
  * chips («приоритет: обычный», «проект: hysteria», «сервер: laptop»), the
@@ -112,7 +114,12 @@ export function TaskInboxPage() {
 
   return (
     <InboxShell>
-      {canMutate ? <ScanButton scanning={scanning} onSetScanning={setScanning} /> : null}
+      {canMutate ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <ScanButton scanning={scanning} onSetScanning={setScanning} />
+          <AdoptAllButton />
+        </div>
+      ) : null}
 
       {/* Adopted toggle — URL state (?adopted=1), honest checkbox semantics. */}
       <div className="flex items-center justify-between gap-3">
@@ -204,6 +211,38 @@ function InboxShell({ children }: { children: React.ReactNode }) {
       </h1>
       {children}
     </section>
+  );
+}
+
+/**
+ * ME-073 «Принять все» — one batch adopt for everything adoptable (not
+ * stale, not already adopted). The count comes from the SAME cached inbox
+ * query the page renders (no extra wire call); the confirmation names the
+ * count («Принять все записи в борд (12)?») — the established native
+ * confirm pattern — and ONE result toast follows the server's per-record
+ * report. Hidden entirely when there is nothing to adopt (honest absence).
+ */
+function AdoptAllButton() {
+  const t = useT();
+  const inbox = useTaskInbox({ include_adopted: false });
+  const { adoptInboxBatch } = useTaskMutations();
+  const adoptable = (inbox.data?.items ?? []).filter(
+    (item) => !item.stale && !item.adopted,
+  );
+  if (inbox.isPending || adoptable.length === 0) return null;
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => {
+        const message = t("tasks.adoptAllConfirm", { count: adoptable.length });
+        if (!window.confirm(message)) return;
+        adoptInboxBatch(adoptable.map((item) => item.memory_id));
+      }}
+    >
+      <Inbox className="size-4" aria-hidden="true" />
+      {t("tasks.adoptAllLabel")}
+    </Button>
   );
 }
 
