@@ -70,24 +70,24 @@ describe("TaskBoardPage (mock adapter — 7 WF-1 columns)", () => {
       seedBoard,
     );
     expect(html).toContain("Task kanban board");
-    // All 7 WF-1 lanes in wire order.
+    // All 7 WF-1 lanes in wire order (ME-072 C: labels lead with a capital).
     for (const title of [
-      "backlog",
-      "validating",
-      "open",
-      "in progress",
-      "blocked",
-      "resolved",
-      "done",
+      "Backlog",
+      "Validating",
+      "Open",
+      "In progress",
+      "Blocked",
+      "Resolved",
+      "Done",
     ]) {
       expect(html).toContain(title);
     }
     // Column counters come from the wire counts (whole-board, never filtered).
     // (ME-013: TB-15 — the smoke's untrusted-mermaid fixture — joined
     // in-progress, so the lane carries 4 cards.)
-    expect(html).toMatch(/backlog.*>1</s);
-    expect(html).toMatch(/validating.*>2</s);
-    expect(html).toMatch(/in progress.*>4</s);
+    expect(html).toMatch(/Backlog.*>1</s);
+    expect(html).toMatch(/Validating.*>2</s);
+    expect(html).toMatch(/In progress.*>4</s);
   });
 
   it("renders project-group accordions inside columns with aria-expanded", async () => {

@@ -131,7 +131,9 @@ export const en: Record<TranslationKey, string> = {
   "cockpit.agentsNoneAction": "Connect an agent",
   "cockpit.busyError": "Could not load who is busy",
   "cockpit.waitingTitle": "Waiting for you",
-  "cockpit.waitingSummary": "waiting for you: {{count}}",
+  // ME-072 C: the chip renders the number and this LABEL side by side —
+  // the count lives only in the numeral (no «3 … waiting for you: 3» double).
+  "cockpit.waitingSummaryLabel": "waiting for you",
   "cockpit.waitingSummaryTitle": "Open the most urgent",
   "cockpit.waitingInbox": "Inbox: {{count}}",
   "cockpit.waitingReview": "In review: {{count}}",
@@ -166,7 +168,7 @@ export const en: Record<TranslationKey, string> = {
   "overview.legendNote":
     "The well shows {{shown}} most recent records and their links. Links appear only between displayed records.",
   "overview.heroTags": "{{count}} tags",
-  "overview.waitingChip": "Waiting for you: {{count}}",
+  "overview.waitingChip": "Waiting in total: {{count}}",
   "overview.tickerItem": "{{time}} written to memory: {{title}} · {{server}}",
   "overview.wellEmpty": "The well awaits its first record — agents write them.",
   "overview.wellError": "The well is unreachable — the bus did not answer",
@@ -334,14 +336,18 @@ export const en: Record<TranslationKey, string> = {
   "memstatus.raw": "raw",
   "memstatus.processing": "processing",
   "memstatus.processed": "processed",
+  // ME-072 C: the pulse badge carries this human explanation in
+  // title/aria-label — a legend block was deliberately NOT added.
+  "memstatus.processedHint": "record parsed, waiting to be published",
   "memstatus.published": "published",
+  "memstatus.publishedHint": "record published — visible in the well and in search",
   "memstatus.archived": "archived",
 
   // --- tags -------------------------------------------------------------------
   "tags.title": "Tags",
   "tags.familyRowLabel": "Tags in this family",
   "tags.filterLabel": "Filter tags",
-  "tags.filterPlaceholder": "e.g. topic:fts",
+  "tags.filterPlaceholder": "by name substring…",
   "tags.loading": "Loading tags",
   "tags.loadFailed": "Could not load tags",
   "tags.noMatch": "No tags match",
@@ -737,13 +743,15 @@ export const en: Record<TranslationKey, string> = {
   "tasks.status.unknown": "unknown",
 
   // --- tasks: WF-1 kanban column titles (7 lanes; mirror server COLUMN_RU) ---------
-  "tasks.column.backlog": "backlog",
-  "tasks.column.validating": "validating",
-  "tasks.column.open": "open",
-  "tasks.column.in-progress": "in progress",
-  "tasks.column.blocked": "blocked",
-  "tasks.column.resolved": "resolved",
-  "tasks.column.done": "done",
+  // ME-072 C: column labels lead with a capital (the board header + every
+  // «column: …» / «… → …» embedding reads list-like after a colon).
+  "tasks.column.backlog": "Backlog",
+  "tasks.column.validating": "Validating",
+  "tasks.column.open": "Open",
+  "tasks.column.in-progress": "In progress",
+  "tasks.column.blocked": "Blocked",
+  "tasks.column.resolved": "Resolved",
+  "tasks.column.done": "Done",
 
   // --- tasks: kanban board (Ф3, CV-4 — ARCHCOM-3 verdict §3) ------------------------
   "tasks.view.toggleLabel": "Task view",
@@ -849,11 +857,13 @@ export const en: Record<TranslationKey, string> = {
   // --- traces -----------------------------------------------------------------
   "traces.title": "Traces",
   "traces.filterLabel": "Filter by task label",
-  "traces.filterPlaceholder": "e.g. l1-t2-gateway",
+  "traces.filterPlaceholder": "by id or name substring…",
   "traces.loading": "Loading traces",
   "traces.loadFailed": "Could not load traces",
   "traces.empty": "No traces found",
   "traces.emptyFiltered": "No pipeline traces carry the label “{{label}}”.",
+  // ME-072 C: the filtered-empty state carries the one-click way out.
+  "traces.clearFilter": "Reset filter",
   "traces.emptyPlain": "The pipeline has not recorded any traces yet.",
   "traces.caption": "Pipeline traces, newest first",
   "traces.colTrace": "Trace",
@@ -950,8 +960,8 @@ export const en: Record<TranslationKey, string> = {
   "nav.agentsExecution": "Execution",
   "nav.systemSettings": "Settings",
   // ME-014: the host roster («Хосты») — the section's default landing.
+  // ME-072 C: agents.roster.title retired — the visible h1 reads the nav key.
   "nav.agentsHosts": "Hosts",
-  "agents.roster.title": "Hosts",
   "agents.roster.loading": "Loading the agent roster",
   "agents.roster.failed": "Failed to load the roster",
   "agents.roster.emptyTitle": "No agents yet",

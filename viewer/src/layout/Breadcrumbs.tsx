@@ -54,7 +54,10 @@ export function Breadcrumbs({ pathname, search }: { pathname: string; search: st
   const fallback = full[1]?.to ?? full[0]?.to ?? "/";
 
   return (
-    <div className="flex h-crumbs min-w-0 flex-1 items-center gap-2">
+    // ME-072 C: the back control and the trail sit on ONE row with a FIXED
+    // spacing-token gap (gap-4, was gap-2) — at 8px «‹ Канбан» and the trail's
+    // first crumb read as one glued phrase; 16px is the stand's row gap.
+    <div className="flex h-crumbs min-w-0 flex-1 items-center gap-4">
       {detail ? <BackControl pathname={pathname} search={search} fallback={fallback} /> : null}
       <nav aria-label={t("breadcrumbs.label")} className="min-w-0">
         <ol className="flex min-w-0 items-center gap-2 text-sm">

@@ -111,6 +111,23 @@ export function TracesPage() {
               ? t("traces.emptyFiltered", { label: taskLabel })
               : t("traces.emptyPlain")
           }
+          /* ME-072 C: a filtered empty page carries the one-click way out —
+           * the same posture as the memories list «Сбросить фильтры». */
+          action={
+            taskLabel ? (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDraft(null);
+                  if (timer.current) clearTimeout(timer.current);
+                  timer.current = null;
+                  commit("");
+                }}
+              >
+                {t("traces.clearFilter")}
+              </Button>
+            ) : undefined
+          }
         />
       ) : (
         <div className="overflow-x-auto rounded-md border border-border-subtle">

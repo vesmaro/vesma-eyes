@@ -32,11 +32,15 @@ export function ToastViewport() {
   if (!view) return null;
   const { entries, dismiss } = view;
   if (entries.length === 0) return null;
+  // ME-072 C: bottom-16 (was bottom-3) — on the Overview the well's bottom
+  // HUD strip (min-h-10 ticker/chip corner) sits at the viewport edge in the
+  // «looking at the well» scroll state; the toast no longer covers that
+  // corner. Position offset only — animation untouched.
   return (
     <div
       aria-label={t("toasts.regionLabel")}
       inert={sidebarOverlayOpen ? "" : undefined}
-      className="fixed bottom-3 right-3 z-40 flex w-[min(22rem,calc(100vw-1.5rem))] flex-col gap-2"
+      className="fixed bottom-16 right-3 z-40 flex w-[min(22rem,calc(100vw-1.5rem))] flex-col gap-2"
     >
       {entries.map((entry) => (
         <ToastCard key={entry.key} entry={entry} onDismiss={dismiss} />
