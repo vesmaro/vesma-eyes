@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation, useParams, useSearchParams } from "react-router";
 import {
+  Code2,
   Cog,
   FileText,
   History,
@@ -33,6 +34,7 @@ import {
   statusLabelKey,
 } from "./taskStatus";
 import { EditTaskDialog } from "./EditTaskDialog";
+import { humanOrRaw } from "./humanChannel";
 import { useTaskMutations } from "./useTaskMutations";
 import {
   useSyncReportCount,
@@ -97,6 +99,9 @@ export function TaskDetailPage() {
   const reports = useTaskReports(id);
   const { resumeTask } = useTaskMutations();
   const [editOpen, setEditOpen] = useState(false);
+  // ME-078: the card shows the human channel by default; «исходник» flips
+  // the description to the raw spec (what the agent reads). Session-only.
+  const [showRawSpec, setShowRawSpec] = useState(false);
   const [searchParams] = useSearchParams();
   // UI-31 «Связанное» links: return= carries THIS card's pathname+search.
   const location = useLocation();
@@ -201,6 +206,15 @@ export function TaskDetailPage() {
   // detail header's single source for the gate.
   const archived = current.archived === 1;
   const canEdit = canMutate && !archived;
+  // ME-078: human channel first, raw spec as the «исходник» view. The
+  // toggle only renders when the two channels actually differ — a dead
+  // control (human == raw, or nothing to flip to) would be noise.
+  const humanSpec = humanOrRaw(current.human_view, current.spec);
+  const showSourceToggle =
+    current.spec.trim().length > 0 &&
+    humanSpec.trim().length > 0 &&
+    humanSpec !== current.spec;
+  const descriptionText = showRawSpec ? current.spec : humanSpec;
 
   return (
     <TaskDetailShell>
@@ -262,18 +276,51 @@ export function TaskDetailPage() {
       </header>
 
       {/* UI-31: the description IS the first screen — the owner opens a task
-       * to read WHAT it is, everything else hangs off the tabs. The spec is
-       * author markdown → the TextEngine primitive (clamped: a long document
-       * must not push the tabs below the fold; «показать полностью» opens).
-       * An empty spec is an honest empty — with the edit hint while the row
+       * to read WHAT it is, everything else hangs off the tabs. ME-078: the
+       * section renders the HUMAN channel (server-normalized markdown;
+       * empty human_view falls back to the raw spec verbatim) and the
+       * «исходник» toggle flips to the raw spec — what the model reads. The
+       * TextEngine primitive (clamped: a long document must not push the
+       * tabs below the fold; «показать полностью» opens). An empty
+       * description is an honest empty — with the edit hint while the row
        * is mutable (archived rows are read-only, ME-005). */}
       <section aria-label={t("tasks.descriptionLabel")}>
-        <h2 className="text-sm font-medium text-foreground-secondary">
-          {t("tasks.descriptionLabel")}
-        </h2>
-        {current.spec ? (
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-medium text-foreground-secondary">
+            {t("tasks.descriptionLabel")}
+          </h2>
+          {showSourceToggle ? (
+            <button
+              type="button"
+              aria-pressed={showRawSpec}
+              aria-label={
+                showRawSpec
+                  ? t("tasks.sourceToggleAria.human")
+                  : t("tasks.sourceToggleAria.raw")
+              }
+              title={
+                showRawSpec
+                  ? t("tasks.sourceToggleAria.human")
+                  : t("tasks.sourceToggleAria.raw")
+              }
+              onClick={() => setShowRawSpec((value) => !value)}
+              className="flex items-center gap-1 rounded-sm text-xs text-foreground-muted underline-offset-2 transition-colors duration-instant hover:text-foreground hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+            >
+              <Code2 className="size-3.5" aria-hidden="true" />
+              {showRawSpec
+                ? t("tasks.sourceToggle.human")
+                : t("tasks.sourceToggle.raw")}
+            </button>
+          ) : null}
+        </div>
+        {descriptionText ? (
           <div className="mt-1 rounded-md border border-border-subtle bg-well p-3">
-            <TextEngine text={current.spec} variant="full" clamp className="text-sm" />
+            <TextEngine
+              text={descriptionText}
+              variant="full"
+              clamp
+              className="text-sm"
+            />
           </div>
         ) : (
           <p className="mt-1 text-sm text-foreground-muted">
@@ -462,12 +509,18 @@ function ReportsTab({ taskId, lang }: { taskId: string; lang: "ru" | "en" }) {
             </summary>
             {/* UI-27: agent report bodies are markdown almost by definition —
              * they render through the TextEngine primitive (plain fallback
-             * keeps legacy output for terse one-liners). The <details> row is
-             * a disclosure, so the body clamps with «показать полностью» —
-             * a long report opens to its height, the tab never turns into an
-             * unbounded wall of report text (owner directive: clamp on every
-             * disclosure). */}
-            <TextEngine text={report.body} variant="full" clamp className="mt-2" />
+             * keeps legacy output for terse one-liners). ME-078: the HUMAN
+             * channel (human_body) renders by default; empty falls back to
+             * the raw body. The <details> row is a disclosure, so the body
+             * clamps with «показать полностью» — a long report opens to its
+             * height, the tab never turns into an unbounded wall of report
+             * text (owner directive: clamp on every disclosure). */}
+            <TextEngine
+              text={humanOrRaw(report.human_body, report.body)}
+              variant="full"
+              clamp
+              className="mt-2"
+            />
           </details>
         </li>
       ))}
@@ -692,7 +745,10 @@ function DetailsTab({ task, lang }: { task: BoardTask; lang: "ru" | "en" }) {
           {t("tasks.detailsSummaryLabel")}
         </h2>
         {current.summary ? (
-          /* UI-27: summary is author text — through the TextEngine primitive. */
+          /* UI-27: summary is author text — through the TextEngine primitive.
+           * ME-078: stays RAW — the wire has no per-summary human column
+           * (human_view is the whole composite summary+spec document, the
+           * description section above already renders it). */
           <TextEngine
             text={current.summary}
             variant="compact"

@@ -48,6 +48,7 @@ function validatingTask(validatingSince: string): BoardTask {
     validating_since: validatingSince,
     resolved_at: "",
     done_at: "",
+    human_view: "",
   };
 }
 

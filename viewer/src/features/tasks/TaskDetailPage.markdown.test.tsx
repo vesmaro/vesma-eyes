@@ -44,14 +44,33 @@ const MARKDOWN_SPEC = [
 
 const MARKDOWN_SUMMARY = "Свести corpus: **записано 142 задачи**, дифф пустой.";
 
-async function mountTask(tab: "reports" | "details"): Promise<HTMLDivElement> {
+// ME-078: the HUMAN channel — the server-normalized view (what textnorm
+// would emit). Distinct from MARKDOWN_SPEC/MARKDOWN_REPORT so the tests can
+// pin WHICH channel the card renders.
+const HUMAN_VIEW = [
+  "### Итог работы",
+  "",
+  "- корпус снят",
+  "- [x] дифф пустой",
+].join("\n");
+
+const HUMAN_BODY = ["### Результат", "", "Корпус зафиксирован: **142 задачи**."].join(
+  "\n",
+);
+
+async function mountTask(
+  tab: "reports" | "details",
+  human: { view?: string; body?: string } = {},
+): Promise<HTMLDivElement> {
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =
     true;
   sessionStorage.setItem(UI_TOKEN_STORAGE_KEY, "dev-token");
   const gateway = new MockAdapter({ latency: false });
   // Patch the projection: TB-1 carries markdown author text (spec/summary),
   // and the report fixture becomes a markdown agent report — the real-world
-  // shape the engine must render instead of printing raw.
+  // shape the engine must render instead of printing raw. ME-078: the human
+  // channel defaults to "" (the wire's pre-backfill shape) unless the test
+  // opts in — the fallback tests ride the same default.
   const baseBoard = gateway.board.bind(gateway);
   gateway.board = (async (): Promise<BoardSummary> => {
     const board = await baseBoard(undefined);
@@ -59,7 +78,12 @@ async function mountTask(tab: "reports" | "details"): Promise<HTMLDivElement> {
       ...board,
       tasks: board.tasks.map((task) =>
         task.id === "TB-1"
-          ? { ...task, spec: MARKDOWN_SPEC, summary: MARKDOWN_SUMMARY }
+          ? {
+              ...task,
+              spec: MARKDOWN_SPEC,
+              summary: MARKDOWN_SUMMARY,
+              human_view: human.view ?? "",
+            }
           : task,
       ),
     };
@@ -75,6 +99,7 @@ async function mountTask(tab: "reports" | "details"): Promise<HTMLDivElement> {
         kind: "final",
         agent: "zcode",
         body: MARKDOWN_REPORT,
+        human_body: human.body ?? "",
         superseded: false,
         created_at: "2026-09-21T10:00:00+00:00",
       },
@@ -333,5 +358,124 @@ describe("TaskDetailPage reports tab — disclosure clamp", () => {
     expect(details, "report disclosure renders").not.toBeNull();
     expect(details!.querySelector(".max-h-48")).not.toBeNull();
     expect(details!.querySelector("button")).toBeNull();
+  });
+});
+
+/**
+ * ME-078 two-channel render: the card shows the HUMAN channel
+ * (TaskOut.human_view / ReportOut.human_body — server-normalized markdown)
+ * with the raw channel verbatim as the fallback, plus the session-only
+ * «исходник» toggle on the description.
+ */
+describe("TaskDetailPage × ME-078 human channel", () => {
+  it("description renders the human view instead of the raw spec", async () => {
+    const el = await mountTask("details", { view: HUMAN_VIEW });
+    const specSection = () =>
+      [...el.querySelectorAll("section")].find(
+        (section) => section.getAttribute("aria-label") === "Description",
+      );
+    await waitFor("human view heading", () =>
+      Boolean(
+        [...(specSection()?.querySelectorAll("h3") ?? [])].find(
+          (heading) => heading.textContent === "Итог работы",
+        ),
+      ),
+    );
+    // The human channel renders markdown.
+    expect(specSection()?.querySelector("input[type='checkbox']")).not.toBeNull();
+    // The raw spec does NOT leak into the human default view.
+    expect(specSection()?.textContent).not.toContain("Критерий приёмки");
+  });
+
+  it("empty human view falls back to the raw spec («пустой не ломается»)", async () => {
+    const el = await mountTask("details", { view: "" });
+    const specSection = () =>
+      [...el.querySelectorAll("section")].find(
+        (section) => section.getAttribute("aria-label") === "Description",
+      );
+    await waitFor("raw spec heading", () =>
+      Boolean(
+        [...(specSection()?.querySelectorAll("h2") ?? [])].find(
+          (heading) => heading.textContent === "Критерий приёмки",
+        ),
+      ),
+    );
+    expect(specSection()?.textContent).not.toContain("Итог работы");
+  });
+
+  it("«исходник» toggle flips the description to the raw spec and back", async () => {
+    const el = await mountTask("details", { view: HUMAN_VIEW });
+    const specSection = () =>
+      [...el.querySelectorAll("section")].find(
+        (section) => section.getAttribute("aria-label") === "Description",
+      );
+    const toggle = () =>
+      specSection()?.querySelector<HTMLButtonElement>("button[aria-pressed]");
+    await waitFor("human view heading", () =>
+      Boolean(
+        [...(specSection()?.querySelectorAll("h3") ?? [])].find(
+          (heading) => heading.textContent === "Итог работы",
+        ),
+      ),
+    );
+    expect(toggle(), "toggle renders when the channels differ").not.toBeNull();
+    expect(toggle()!.getAttribute("aria-pressed")).toBe("false");
+    expect(toggle()!.getAttribute("aria-label")).toBe(
+      "Raw source: show the spec as the agent sees it",
+    );
+
+    await click(toggle()!);
+    // Raw spec now renders verbatim — what the agent reads.
+    await waitFor("raw spec heading", () =>
+      Boolean(
+        [...(specSection()?.querySelectorAll("h2") ?? [])].find(
+          (heading) => heading.textContent === "Критерий приёмки",
+        ),
+      ),
+    );
+    expect(specSection()?.textContent).not.toContain("Итог работы");
+    expect(toggle()!.getAttribute("aria-pressed")).toBe("true");
+    expect(toggle()!.getAttribute("aria-label")).toBe(
+      "Human view: back to the normalized view",
+    );
+
+    await click(toggle()!);
+    await waitFor("human view heading again", () =>
+      Boolean(
+        [...(specSection()?.querySelectorAll("h3") ?? [])].find(
+          (heading) => heading.textContent === "Итог работы",
+        ),
+      ),
+    );
+    expect(toggle()!.getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("toggle is hidden when the human view matches the raw spec (no dead control)", async () => {
+    const el = await mountTask("details", { view: MARKDOWN_SPEC });
+    const specSection = () =>
+      [...el.querySelectorAll("section")].find(
+        (section) => section.getAttribute("aria-label") === "Description",
+      );
+    await waitFor("spec markdown heading", () =>
+      Boolean(
+        [...(specSection()?.querySelectorAll("h2") ?? [])].find(
+          (heading) => heading.textContent === "Критерий приёмки",
+        ),
+      ),
+    );
+    expect(specSection()?.querySelector("button[aria-pressed]")).toBeNull();
+  });
+
+  it("reports tab renders the human body instead of the raw body", async () => {
+    const el = await mountTask("reports", { body: HUMAN_BODY });
+    await waitFor("human body heading", () =>
+      Boolean([...el.querySelectorAll("details h3")].find(
+        (heading) => heading.textContent === "Результат",
+      )),
+    );
+    // The raw body does NOT leak into the human default view.
+    expect(el.querySelector("details")?.textContent).not.toContain(
+      "форма ответов зафиксирована",
+    );
   });
 });

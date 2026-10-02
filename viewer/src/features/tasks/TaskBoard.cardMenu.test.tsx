@@ -76,6 +76,7 @@ const CORPUS: {
       validating_since: "",
       resolved_at: "",
       done_at: "",
+      human_view: "",
     },
     {
       id: "O-1",
@@ -99,6 +100,7 @@ const CORPUS: {
       validating_since: "",
       resolved_at: "",
       done_at: "",
+      human_view: "",
     },
   ],
   counts: {

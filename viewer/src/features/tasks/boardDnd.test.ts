@@ -37,6 +37,7 @@ function task(id: string, col: string, position: number, project = "p1"): BoardT
     validating_since: "",
     resolved_at: "",
     done_at: "",
+    human_view: "",
   };
 }
 

@@ -572,6 +572,12 @@ export const ru = {
   "tasks.descriptionLabel": "Описание",
   "tasks.descriptionEmpty": "Описания пока нет.",
   "tasks.descriptionEmptyHint": "Добавьте его через «Изменить».",
+  // ME-078: «для человека / исходник» toggle on the task card description.
+  "tasks.sourceToggle.raw": "Исходник",
+  "tasks.sourceToggle.human": "Для человека",
+  "tasks.sourceToggleAria.raw": "Исходник: показать spec, как его видит агент",
+  "tasks.sourceToggleAria.human":
+    "Для человека: вернуться к нормализованному виду",
   "tasks.relatedLabel": "Связанное",
   "tasks.relatedActivity": "Активность по задаче",
   "tasks.relatedKora": "Рабочие сессии (Кора)",

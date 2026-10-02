@@ -31,10 +31,18 @@ const MARKDOWN_FINAL = [
   "Корпус снят: **142 задачи**, форма зафиксирована.",
 ].join("\n");
 
+// ME-078: the human-normalized body, distinct from the raw one above.
+const HUMAN_BODY_FINAL = ["### Результат", "", "Корпус: **142 задачи**."].join(
+  "\n",
+);
+
 let container: HTMLDivElement | null = null;
 let root: Root | null = null;
 
-async function mountDrawer(finalBody: string): Promise<void> {
+async function mountDrawer(
+  finalBody: string,
+  humanBody = "",
+): Promise<void> {
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =
     true;
   sessionStorage.setItem(UI_TOKEN_STORAGE_KEY, "dev-token");
@@ -52,6 +60,7 @@ async function mountDrawer(finalBody: string): Promise<void> {
         kind: "final",
         agent: "zcode",
         body: finalBody,
+        human_body: humanBody,
         superseded: false,
         created_at: "2026-09-21T10:00:00+00:00",
       },
@@ -196,5 +205,34 @@ describe("AssignmentDrawer report preview × TextEngine clamp", () => {
       if (savedOffset) Object.defineProperty(HTMLElement.prototype, "offsetHeight", savedOffset);
       if (savedClient) Object.defineProperty(HTMLElement.prototype, "clientHeight", savedClient);
     }
+  });
+});
+
+/**
+ * ME-078: the drawer is the OWNER's peek (spec §1.1) — the final-report
+ * preview renders the HUMAN channel (human_body) and falls back to the raw
+ * body when the human column is empty.
+ */
+describe("AssignmentDrawer × ME-078 human channel", () => {
+  it("final report renders the human body instead of the raw body", async () => {
+    await mountDrawer(MARKDOWN_FINAL, HUMAN_BODY_FINAL);
+    await waitFor("human body heading", () =>
+      Boolean([...document.querySelectorAll("h3")].find(
+        (h) => h.textContent === "Результат",
+      )),
+    );
+    expect(document.querySelector("strong")?.textContent).toBe("142 задачи");
+    // The raw body does NOT leak into the human default view.
+    expect(document.body.textContent).not.toContain("форма зафиксирована");
+  });
+
+  it("empty human body falls back to the raw body", async () => {
+    await mountDrawer(MARKDOWN_FINAL, "");
+    await waitFor("raw body heading", () =>
+      Boolean([...document.querySelectorAll("h2")].find(
+        (h) => h.textContent === "Итог",
+      )),
+    );
+    expect(document.body.textContent).not.toContain("Результат");
   });
 });
