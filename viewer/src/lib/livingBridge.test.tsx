@@ -116,7 +116,12 @@ describe("livingBridge — real sources only, one stream, honest off", () => {
     await act(async () => {
       source.emit("task.created");
     });
-    expect(seen).toContainEqual({ type: "event", kind: "task.created" });
+    expect(seen).toContainEqual({
+      type: "event",
+      kind: "task.created",
+      // W2: the parsed payload rides along (Весма reads notification.title).
+      data: expect.objectContaining({ kind: "task.created" }),
+    });
     await unmount();
     expect(source.closed).toBe(true); // the layer owns exactly one stream
     off();

@@ -1518,7 +1518,17 @@ export const en: Record<TranslationKey, string> = {
   "settings.hub.livingCalm": "Calm",
   "settings.hub.livingOff": "Off",
   "settings.hub.livingHint":
-    "The vein background breathes and tints from real data only. Calm (default): breathing and tones. Full: adds event impulses along the veins.",
+    "The vein background breathes and tints from real data only. Calm (default): breathing, tones, and Vesma in her nest. Full: adds web impulses and Vesma's flights.",
+  // Vesma, the nest keeper (ME-071 W2): her lines. No ids in phrases (ME-078).
+  "living.vesma.intro": "I'm Vesma — I look after your memory.",
+  "living.vesma.done": "“{{task}}” has a decision waiting for you.",
+  "living.vesma.doneGeneric": "Work has finished — the result waits in Tasks.",
+  "living.vesma.report": "A report came in for “{{task}}”.",
+  "living.vesma.expired": "The assignment for “{{task}}” didn't finish — take a look.",
+  "living.vesma.health": "Memory is responding worse than usual — check its health.",
+  "living.vesma.healthOk": "The memory connection is restored.",
+  "living.vesma.provision": "The device couldn't be connected — see Connections.",
+  "living.vesma.gotIt": "Got it",
   "settings.hub.sidebarLabel": "Sidebar",
   "settings.hub.sidebarExpanded": "Expanded",
   "settings.hub.sidebarCollapsed": "Collapsed",

@@ -1554,7 +1554,18 @@ export const ru = {
   "settings.hub.livingCalm": "Спокойный",
   "settings.hub.livingOff": "Выключен",
   "settings.hub.livingHint":
-    "Фон-жилы дышит и красится только реальными данными. Спокойный (по умолчанию): дыхание и тона. Полный: ещё и импульсы событий по жилам.",
+    "Фон-жилы дышат и красятся только реальными данными. Спокойный (по умолчанию): дыхание, тона и Весма в гнезде. Полный: ещё и импульсы и полёты Весмы.",
+  // Весма, смотритель гнезда (ME-071 W2): her lines. Жаргон-норма ME-078:
+  // zero ids in the phrases — {task} is the human notification title only.
+  "living.vesma.intro": "Я Весма, смотрю за памятью.",
+  "living.vesma.done": "Есть решение по «{{task}}» — ждёт вас.",
+  "living.vesma.doneGeneric": "Работа закончилась — результат ждёт в задачах.",
+  "living.vesma.report": "По «{{task}}» пришёл отчёт.",
+  "living.vesma.expired": "Поручение по «{{task}}» не завершилось — посмотрите.",
+  "living.vesma.health": "Память отвечает хуже обычного — посмотрите здоровье.",
+  "living.vesma.healthOk": "Связь с памятью восстановлена.",
+  "living.vesma.provision": "Устройство подключить не вышло — смотрите в подключениях.",
+  "living.vesma.gotIt": "Понятно",
   "settings.hub.sidebarLabel": "Сайдбар",
   "settings.hub.sidebarExpanded": "Развёрнут",
   "settings.hub.sidebarCollapsed": "Свёрнут",

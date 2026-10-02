@@ -10,7 +10,10 @@
  * Signals:
  * - `event`  — a real bus event kind (SSE ui-contract §11 dictionary). The
  *              bridge (lib/livingBridge.ts) forwards raw kinds; the lazy
- *              tone engine maps kind → tone class per §14.6.1 §2.
+ *              tone engine maps kind → tone class per §14.6.1 §2. The
+ *              optional parsed payload rides along (W2: the Весма keeper
+ *              reads notification.title for the named phrases) — a TYPE-ONLY
+ *              import, the eager bundle pays ~30 B.
  * - `health` — the per-store health states from GET /api/health
  *              (servers[].state). `null` = no data yet (honest neutral).
  * - `update` — the «пришло обновление» flag. NO automatic source is wired
@@ -23,8 +26,10 @@
  * HERE (the feed drops muted input), so no consumer can bypass it.
  */
 
+import type { BoardEvent } from "@/gateway/events";
+
 export type LivingSignal =
-  | { type: "event"; kind: string }
+  | { type: "event"; kind: string; data?: BoardEvent }
   | { type: "health"; states: readonly string[] | null }
   | { type: "update"; on: boolean }
   | { type: "mute" };
@@ -48,10 +53,10 @@ export function muteLiving(): void {
   emit({ type: "mute" });
 }
 
-/** Forward one real bus event kind to the living engine. */
-export function feedLivingEvent(kind: string): void {
+/** Forward one real bus event kind (plus its parsed payload) to the layer. */
+export function feedLivingEvent(kind: string, data?: BoardEvent): void {
   if (muted || !kind) return;
-  emit({ type: "event", kind });
+  emit({ type: "event", kind, data });
 }
 
 /**
