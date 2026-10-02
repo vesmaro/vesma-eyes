@@ -24,6 +24,7 @@ import { formatSyncDate } from "./sidecar";
 import { legacyDocsTarget } from "./legacyDocs";
 import { DocsNotFound } from "./DocsRedirects";
 import { DocsSearch } from "./DocsSearch";
+import { pageGridClass } from "@/layout/pageGrid";
 
 /**
  * `/docs/:project` — the hub cover (design spec §4): a book title page, not
@@ -233,7 +234,7 @@ function HubCover({ project }: { project: DocProject }) {
   const manifest = useDocsManifest();
   const pages = manifest?.pages.filter((page) => page.project === project.slug);
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className={pageGridClass("operational")}>
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="flex min-w-0 items-start gap-3">
           <Icon
@@ -279,7 +280,7 @@ export function DocsHubPage() {
   const target = legacyDocsTarget(`/docs/${project}`);
   if (target !== null) return <Navigate to={target} replace />;
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className={pageGridClass("operational")}>
       <DocsNotFound />
     </div>
   );

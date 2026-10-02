@@ -6,6 +6,7 @@ import { usePulse } from "@/hooks/usePulse";
 import { useGateway } from "@/gateway/GatewayContext";
 import { useT } from "@/i18n";
 import { PulseFeed, PulseSkeleton } from "./PulseFeed";
+import { pageGridClass } from "@/layout/pageGrid";
 
 /**
  * `/memory/pulse` — the live memory pulse (redesign concept §2.1 / §4.2:
@@ -48,7 +49,7 @@ export function PulsePage() {
   };
 
   return (
-    <section aria-labelledby="pulse-title" className="mx-auto max-w-3xl space-y-4">
+    <section aria-labelledby="pulse-title" className={pageGridClass("showcase", "space-y-4")}>
       <h1 id="pulse-title" className="text-xl font-semibold">
         {t("pulse.title")}
       </h1>
@@ -108,7 +109,7 @@ export function PulsePage() {
 function PulseUnsupported() {
   const t = useT();
   return (
-    <section aria-labelledby="pulse-title" className="mx-auto max-w-3xl space-y-4">
+    <section aria-labelledby="pulse-title" className={pageGridClass("showcase", "space-y-4")}>
       <h1 id="pulse-title" className="text-xl font-semibold">
         {t("pulse.title")}
       </h1>

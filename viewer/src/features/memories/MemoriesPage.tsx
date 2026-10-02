@@ -16,6 +16,7 @@ import {
   toListParams,
 } from "./listParams";
 import { useProjectOptions } from "./useProjectOptions";
+import { pageGridClass } from "@/layout/pageGrid";
 
 /**
  * `/memory` — paginated, filterable memory list (component-inventory §4).
@@ -65,7 +66,7 @@ export function MemoriesPage() {
   const filtered = hasActiveFilters(state);
 
   return (
-    <section aria-labelledby="memories-title" className="mx-auto max-w-3xl space-y-4">
+    <section aria-labelledby="memories-title" className={pageGridClass("showcase", "space-y-4")}>
       <h1 id="memories-title" className="text-xl font-semibold">
         {t("memories.title")}
       </h1>

@@ -7,6 +7,7 @@ import { isApiError } from "@/lib/errors";
 import { useSessions } from "@/hooks/useSessions";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useT } from "@/i18n";
+import { pageGridClass } from "@/layout/pageGrid";
 
 /**
  * `/sessions` — A2A session list (component-inventory §9). The route stays
@@ -21,7 +22,7 @@ export function SessionsPage() {
   const sessions = useSessions();
 
   return (
-    <section aria-labelledby="sessions-title" className="mx-auto max-w-3xl space-y-4">
+    <section aria-labelledby="sessions-title" className={pageGridClass("operational", "space-y-4")}>
       <h1 id="sessions-title" className="text-xl font-semibold">
         {t("sessions.title")}
       </h1>

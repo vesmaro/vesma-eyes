@@ -380,6 +380,17 @@ export function buildRoutes(): RouteObject[] {
             },
 
             // Система domain (temporary honest home for the legacy views).
+            // ME-072 A: the /system root is an ALIAS — replace-redirect to
+            // the first live section (the /agents precedent), so the domain
+            // link and old bookmarks never fall into the `*` 404 dead-end.
+            {
+              path: "/system",
+              element: (
+                <Page>
+                  <Navigate to="/system/status" replace />
+                </Page>
+              ),
+            },
             {
               path: "/system/status",
               element: (

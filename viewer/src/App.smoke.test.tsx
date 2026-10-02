@@ -106,9 +106,10 @@ describe("App (smoke)", () => {
     expect(html).toContain('aria-label="Switch to light theme"');
   });
 
-  it("renders a not-found EmptyState for unknown paths", () => {
+  it("renders the ONE not-found pattern for unknown paths (ME-072 A: explain + action)", () => {
     const html = renderAppAt("/definitely-not-a-route");
-    expect(html).toContain("404");
+    expect(html).toContain("Page not found"); // en dictionary title — a human line, not a bare code
     expect(html).toContain('role="alert"');
+    expect(html).toContain('href="/"'); // the way home
   });
 });

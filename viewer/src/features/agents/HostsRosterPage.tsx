@@ -29,6 +29,7 @@ import {
 import { activeAssignmentForExecutor, groupExecutorsByHost } from "./rosterModel";
 import { useAssignments, useExecutors } from "./useAgents";
 import { useAssignmentMutations } from "./useAssignmentMutations";
+import { pageGridClass } from "@/layout/pageGrid";
 
 /**
  * `/agents/hosts` — «Хосты» (ME-014, product verdict 2026-09-27): the agent
@@ -100,7 +101,7 @@ export function HostsRosterPage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-3">
+    <div className={pageGridClass("operational", "flex flex-col gap-3")}>
       {/* The breadcrumb current item + TopBar label already carry «Хосты» —
        * the h1 stays sr-only for the a11y document outline (the Execution
        * page posture). */}

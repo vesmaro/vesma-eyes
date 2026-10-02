@@ -41,6 +41,7 @@ import {
   useTaskMemories,
   useTaskReports,
 } from "./useTasks";
+import { pageGridClass } from "@/layout/pageGrid";
 
 /**
  * `/tasks/:id` — the task PAGE (concept §4.1: a route, not the board's modal
@@ -388,7 +389,7 @@ function TaskDetailShell({ children }: { children: React.ReactNode }) {
   return (
     <section
       aria-labelledby="task-title"
-      className="mx-auto flex max-w-3xl flex-col gap-4"
+      className={pageGridClass("operational", "flex flex-col gap-4")}
     >
       {children}
     </section>

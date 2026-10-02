@@ -22,6 +22,7 @@ import {
 } from "./taskStatus";
 import { useTaskMutations } from "./useTaskMutations";
 import { useTaskArchive } from "./useTasks";
+import { pageGridClass } from "@/layout/pageGrid";
 
 /**
  * `/tasks/archive` — the archive reading surface (BE-11b). Every control is
@@ -377,7 +378,7 @@ function ArchiveRow({
 function ArchiveShell({ children }: { children: React.ReactNode }) {
   const t = useT();
   return (
-    <section aria-labelledby="archive-title" className="mx-auto max-w-3xl space-y-4">
+    <section aria-labelledby="archive-title" className={pageGridClass("operational", "space-y-4")}>
       <h1 id="archive-title" className="flex items-center gap-2 text-xl font-semibold">
         <Archive className="size-5" aria-hidden="true" />
         {t("tasks.archiveTitle")}

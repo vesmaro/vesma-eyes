@@ -18,6 +18,7 @@ import { useUiToken } from "@/features/ui-token/UiTokenContext";
 import { formatTaskDate } from "@/features/tasks/taskStatus";
 import { PairingDialog } from "./PairingDialog";
 import { useDevices, useDevicesEventBridge, usePairingActions } from "./usePairing";
+import { pageGridClass } from "@/layout/pageGrid";
 
 /**
  * `/system/devices` — the owner's device panel (CV-7, ADR 0012
@@ -305,7 +306,7 @@ function GrantsEditor({
 function PairingUnsupported() {
   const t = useT();
   return (
-    <section aria-labelledby="devices-title" className="mx-auto max-w-5xl space-y-4">
+    <section aria-labelledby="devices-title" className={pageGridClass("operational", "space-y-4")}>
       <h1 id="devices-title" className="text-xl font-semibold">
         {t("pairing.devices.title")}
       </h1>

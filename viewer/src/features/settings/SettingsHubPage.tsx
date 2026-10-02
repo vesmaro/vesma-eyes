@@ -12,6 +12,7 @@ import { ExecutionSettingsSection } from "@/features/agents/ExecutionSettingsPag
 import { AutomationSettingsSection } from "./AutomationSettingsSection";
 import { NotCustomizable } from "./NotCustomizable";
 import { SegmentedControl } from "./SegmentedControl";
+import { pageGridClass } from "@/layout/pageGrid";
 
 /**
  * `/system/settings` — the settings hub v2 (UI-23, spec 2026-09-23): ONE h1
@@ -63,7 +64,7 @@ export function SettingsHubPage() {
   }, [location.hash]);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
+    <div className={pageGridClass("operational", "space-y-4")}>
       <h1 id="settings-title" className="text-xl font-semibold">
         {t("nav.systemSettings")}
       </h1>

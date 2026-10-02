@@ -122,25 +122,6 @@ export function statusBadgeVariant(status: string): BadgeProps["variant"] {
   }
 }
 
-/** Badge variant per kanban column (WF-1: lanes left of `open` are quiet). */
-export function columnBadgeVariant(column: string): BadgeProps["variant"] {
-  switch (column) {
-    case "validating":
-      return "iris";
-    case "in-progress":
-      return "iris";
-    case "blocked":
-      return "error";
-    case "resolved":
-      return "success";
-    case "backlog":
-    case "done":
-      return "outline";
-    default:
-      return "default";
-  }
-}
-
 /** Badge variant per priority (critical is the loudest, low the quietest). */
 export function priorityBadgeVariant(priority: string): BadgeProps["variant"] {
   switch (priority) {

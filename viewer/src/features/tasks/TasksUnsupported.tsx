@@ -1,11 +1,12 @@
 import { useT } from "@/i18n";
 import { EmptyState } from "@/components/EmptyState/EmptyState";
+import { pageGridClass } from "@/layout/pageGrid";
 
 /** Honest mnemos-mode state: the task domain is a board-native view (Ф2). */
 export function TasksUnsupported() {
   const t = useT();
   return (
-    <section aria-labelledby="tasks-title" className="mx-auto max-w-5xl space-y-4">
+    <section aria-labelledby="tasks-title" className={pageGridClass("operational", "space-y-4")}>
       <h1 id="tasks-title" className="text-xl font-semibold">
         {t("tasks.title")}
       </h1>

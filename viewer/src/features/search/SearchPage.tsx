@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { Button } from "@/components/ui/button";
 import { useSearch } from "@/hooks/useSearch";
 import { useT } from "@/i18n";
+import { pageGridClass } from "@/layout/pageGrid";
 
 /**
  * `/memory/search` — the well: hero + unified search (component-inventory §3,
@@ -94,7 +95,7 @@ export function SearchPage() {
 
   if (!hasQuery) {
     return (
-      <div className="mx-auto flex min-h-[70vh] max-w-3xl flex-col items-center justify-center gap-8">
+      <div className={pageGridClass("showcase", "flex min-h-[70vh] flex-col items-center justify-center gap-8")}>
         {/* The hero is imagery + a form; the h1 keeps one heading per page. */}
         <h1 className="sr-only">{t("search.title")}</h1>
         {/* §8.1 hero: single breathing iris, glow on (motion budget). */}
@@ -108,7 +109,7 @@ export function SearchPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className={pageGridClass("showcase", "space-y-6")}>
       <h1 className="sr-only">{t("search.title")}</h1>
       <div>{searchBar}</div>
       <SearchResults query={urlQuery} type={type} returnSource={returnSource} />

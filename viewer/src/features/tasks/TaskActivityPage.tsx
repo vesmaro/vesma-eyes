@@ -39,6 +39,7 @@ import {
 import { useActivityBuckets, useActivityFeed, useActivityLive } from "./useActivity";
 import { ActivityPulseChart } from "./ActivityPulseChart";
 import { TasksUnsupported } from "./TasksUnsupported";
+import { pageGridClass } from "@/layout/pageGrid";
 
 /**
  * `/tasks/activity` — UI-28 «Активность» (spec 2026-09-27): the task-centred
@@ -303,7 +304,7 @@ export function TaskActivityPage() {
 
   if (feed.isPending) {
     return (
-      <section aria-labelledby="activity-title" className="mx-auto max-w-5xl space-y-4">
+      <section aria-labelledby="activity-title" className={pageGridClass("operational", "space-y-4")}>
         {header}
         <div role="status" aria-label={t("activity.loading")}>
           <ActivityFeedSkeleton />
@@ -314,7 +315,7 @@ export function TaskActivityPage() {
 
   if (feed.isError) {
     return (
-      <section aria-labelledby="activity-title" className="mx-auto max-w-5xl space-y-4">
+      <section aria-labelledby="activity-title" className={pageGridClass("operational", "space-y-4")}>
         {header}
         <EmptyState
           variant="error"
@@ -331,7 +332,7 @@ export function TaskActivityPage() {
   }
 
   return (
-    <section aria-labelledby="activity-title" className="mx-auto max-w-5xl space-y-4">
+    <section aria-labelledby="activity-title" className={pageGridClass("operational", "space-y-4")}>
       {header}
 
       {/* Filters — ALL state in the URL (§5.3); direct-open reproduces the view. */}

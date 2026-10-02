@@ -38,23 +38,31 @@ describe("domain map", () => {
     expect(slots).toEqual(["/stores"]);
   });
 
-  it("UX-overhaul §6 (Ф1): Sessions/Traces are honest SECTION slots — disabled in the menu, routes alive", () => {
+  it("UX-overhaul §6 (Ф1) + ME-072 A: Sessions/Traces are honest LATER slots — disabled in the menu, routes alive", () => {
     // The System domain keeps its live sections and gains two section-level
-    // soon-slots; the DOMAIN stays linkable (it still has live sections).
+    // slots; the DOMAIN stays linkable (it still has live sections).
+    // ME-072 A badge honesty: the slots' ROUTES answer, so they carry
+    // `laterKey` («позже»), not `soonKey` («скоро» — that stays with the
+    // never-built /stores domain).
     const system = NAV_DOMAINS.find((d) => d.to === "/system");
     expect(system?.soonKey).toBeUndefined();
     const sections = system?.sections ?? [];
     const slotKeys = sections
-      .filter((section) => section.soonKey !== undefined)
-      .map((section) => ({ to: section.to, soonKey: section.soonKey }));
-    // The two dead menu items become disabled slots with "later" tooltips.
+      .filter(
+        (section) => section.soonKey !== undefined || section.laterKey !== undefined,
+      )
+      .map((section) => ({ to: section.to, laterKey: section.laterKey }));
+    // The two blocked-but-live menu items stay disabled slots with "later"
+    // tooltips.
     expect(slotKeys).toEqual([
-      { to: "/system/sessions", soonKey: "nav.soonSessions" },
-      { to: "/system/traces", soonKey: "nav.soonTraces" },
+      { to: "/system/sessions", laterKey: "nav.soonSessions" },
+      { to: "/system/traces", laterKey: "nav.soonTraces" },
     ]);
-    // The live sections stay live — no collateral soon-marks.
+    // The live sections stay live — no collateral slot marks.
     for (const live of ["/system/status", "/system/settings", "/system/automation", "/system/devices"]) {
-      expect(sections.find((section) => section.to === live)?.soonKey).toBeUndefined();
+      const section = sections.find((item) => item.to === live);
+      expect(section?.soonKey).toBeUndefined();
+      expect(section?.laterKey).toBeUndefined();
     }
     // The ROUTES stay alive for breadcrumbs/legacy redirects (§6): the
     // crumbs and TopBar titles still resolve — bookmarks keep working.

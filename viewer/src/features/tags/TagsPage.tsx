@@ -21,6 +21,7 @@ import { TagTaxonomyView } from "./TagTaxonomyView";
 import { TagDrillView } from "./TagDrillView";
 import { TagBreadcrumbs } from "./TagSections";
 import { TagChip } from "./TagChip";
+import { pageGridClass } from "@/layout/pageGrid";
 
 /**
  * `/memory/tags` — облако тегов по диапазонам + матрёшка-дрилл (UI-17,
@@ -47,7 +48,7 @@ export function TagsPage() {
     return (
       // The drill's mono tag heading IS the page h1 here — one h1 per view;
       // «Теги» stays reachable through the «← Все теги» return.
-      <section className="mx-auto max-w-3xl">
+      <section className={pageGridClass("showcase")}>
         <TagDrillView
           tag={state.tag}
           cloudTags={cloud.tags}
@@ -75,7 +76,7 @@ export function TagsPage() {
     sectionVisibleCount(total, state.bandVisible[key]);
 
   return (
-    <section aria-labelledby="tags-title" className="mx-auto max-w-3xl space-y-4">
+    <section aria-labelledby="tags-title" className={pageGridClass("showcase", "space-y-4")}>
       <header className="space-y-1">
         <h1 id="tags-title" className="text-xl font-semibold">
           {t("tags.title")}

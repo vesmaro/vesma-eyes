@@ -44,10 +44,10 @@ function renderSidebar(path: string, collapsed: boolean, lang: "ru" | "en" = "ru
   );
 }
 
-describe("Sidebar section disabled-slots (UX-overhaul §6, Ф1)", () => {
-  it("renders Sessions/Traces as inert slots with a «later» badge — never links", () => {
-    // On the System domain page the sections render; the two dead items
-    // are disabled slots: inert spans with the "soon" badge + tooltip.
+describe("Sidebar section disabled-slots (UX-overhaul §6, Ф1 + ME-072 A)", () => {
+  it("renders Sessions/Traces as inert slots with an honest «later» badge — never links", () => {
+    // On the System domain page the sections render; the two blocked items
+    // are disabled slots: inert buttons with the «позже» badge + tooltip.
     const html = renderSidebar("/system/status", false);
     expect(html).toContain("Сессии появятся позже"); // tooltip promise
     expect(html).toContain("Трассировки появятся позже");
@@ -55,8 +55,18 @@ describe("Sidebar section disabled-slots (UX-overhaul §6, Ф1)", () => {
     // The slot is NOT a link — no href to the placeholder route.
     expect(html).not.toContain('href="/system/sessions"');
     expect(html).not.toContain('href="/system/traces"');
-    // The badge says "soon" in words (never colour-only, WCAG 1.4.1).
+    // The badge reads «позже» in words (ME-072 A: the ROUTES answer — the
+    // slot is honest about the blockage, never colour-only, WCAG 1.4.1).
+    expect(html).toContain(">позже<");
+    // (The /stores DOMAIN slot still reads «скоро» — it renders on every
+    // page; its honesty is covered by the dedicated test below.)
+  });
+
+  it("keeps «скоро» for the never-built /stores domain slot (ME-072 A)", () => {
+    // The stores DOMAIN has no route at all — its badge stays «скоро».
+    const html = renderSidebar("/", false);
     expect(html).toContain(">скоро<");
+    expect(html).toContain("cursor-not-allowed");
   });
 
   it("keeps the LIVE System sections as links next to the slots", () => {

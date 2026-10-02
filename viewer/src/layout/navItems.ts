@@ -55,6 +55,13 @@ export interface NavSection {
    * sidebar row becomes a disabled button with a "soon" badge.
    */
   soonKey?: TranslationKey;
+  /**
+   * ME-072 A: the honest-blocked slot — a section whose ROUTE already
+   * answers but the menu keeps non-navigable (System Sessions/Traces).
+   * Badge reads «позже» (not «скоро»: the surface exists), tooltip carries
+   * the promise word. Mutually exclusive with `soonKey` by contract.
+   */
+  laterKey?: TranslationKey;
 }
 
 export interface NavDomain {
@@ -182,21 +189,23 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
       { to: "/system/devices", key: "nav.devices", icon: Smartphone, end: true },
       // UX-overhaul §6 (Ф1): Sessions/Traces are dead MENU items — they
       // promised a live surface and delivered a 501 screen (audit #2, J8).
-      // They stay as honest disabled slots (soonKey); the ROUTES survive
-      // untouched (legacyRedirects + bookmarks keep working, the pages
-      // render an HonestLine placeholder instead of a fullscreen dead-end).
+      // They stay as honest disabled slots; the ROUTES survive untouched
+      // (legacyRedirects + bookmarks keep working, the pages render an
+      // HonestLine placeholder instead of a fullscreen dead-end).
+      // ME-072 A: the badge is «позже» (laterKey) — the routes DO answer,
+      // unlike the /stores domain that never existed («скоро» stays there).
       {
         to: "/system/sessions",
         key: "nav.sessions",
         icon: Users,
-        soonKey: "nav.soonSessions",
+        laterKey: "nav.soonSessions",
       },
       {
         to: "/system/traces",
         key: "nav.traces",
         icon: Layers,
         end: true,
-        soonKey: "nav.soonTraces",
+        laterKey: "nav.soonTraces",
       },
     ],
   },

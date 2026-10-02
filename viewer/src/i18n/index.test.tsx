@@ -139,6 +139,19 @@ describe("translation", () => {
     }
   });
 
+  it("ME-072 A: the honest slot badge + not-found keys pair across ru/en", async () => {
+    const { translate } = await import("./index");
+    // «позже» — for a blocked-but-EXISTING section; «скоро» stays with the
+    // never-built domains.
+    expect(translate("ru", "nav.later")).toBe("позже");
+    expect(translate("en", "nav.later")).toBe("later");
+    // The ONE 404 pattern: explain + an action, both dictionaries.
+    expect(translate("ru", "app.notFoundTitle")).toBe("Нет такой страницы");
+    expect(translate("en", "app.notFoundTitle")).toBe("Page not found");
+    expect(translate("ru", "app.notFoundAction")).toBe("Вернуться к обзору");
+    expect(translate("en", "app.notFoundAction")).toBe("Back to overview");
+  });
+
   it("no dictionary string leaks internal phase codes (union review gate, карта И1 §1.3)", async () => {
     const { ru } = await import("./ru");
     const { en } = await import("./en");

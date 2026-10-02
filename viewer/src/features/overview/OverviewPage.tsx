@@ -17,6 +17,7 @@ import {
   useSessionMode,
 } from "@/features/ui-token/useSessionControl";
 import { useT } from "@/i18n";
+import { pageGridClass } from "@/layout/pageGrid";
 
 /**
  * `/` — «Обзор» (blueprint §12.3, Phase 1 of «Кора-организм»): the page
@@ -45,7 +46,7 @@ export function OverviewPage() {
   const showMemory = showStores || showPulse;
 
   return (
-    <section aria-labelledby="well-hero-title" className="mx-auto max-w-4xl space-y-8">
+    <section aria-labelledby="well-hero-title" className={pageGridClass("showcase", "space-y-8")}>
       {/* The well hero: display headline + HUD on the dark canvas (§12.3).
        * The page's single h1 lives inside (visible, --text-display). */}
       <WellHero />
