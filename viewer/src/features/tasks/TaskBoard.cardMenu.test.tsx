@@ -74,6 +74,8 @@ const CORPUS: {
       priority: "high",
       archived_from: "",
       validating_since: "",
+      resolved_at: "",
+      done_at: "",
     },
     {
       id: "O-1",
@@ -95,6 +97,8 @@ const CORPUS: {
       priority: "normal",
       archived_from: "",
       validating_since: "",
+      resolved_at: "",
+      done_at: "",
     },
   ],
   counts: {
@@ -327,15 +331,15 @@ describe("kanban card context menu (fix/kanban-context-menu)", () => {
       "Назад",
       "Бэклог",
       "На валидации",
-      "Открыто",
+      "В очереди",
       "В работе",
       "Блокировано",
-      "Решено",
+      "Ждёт проверки",
       "Готово",
     ]);
     // The task's own column is the disabled one.
     expect(
-      moveItems.find((item) => item.textContent === "Открыто")!.disabled,
+      moveItems.find((item) => item.textContent === "В очереди")!.disabled,
     ).toBe(true);
 
     // Gateless pick: the menu closes, the login window opens (Radix portal

@@ -82,6 +82,8 @@ import type {
   HookPatchInput,
   HookRule,
   HooksPage,
+  AdoptBatchItemResult,
+  AdoptBatchResult,
   InboxEditInput,
   InboxRefreshResult,
   LaunchRow,
@@ -768,6 +770,10 @@ export class MockAdapter implements MemoryGateway {
       archived_from: "",
       // WF-1: a task born in the validation lane starts its clock now.
       validating_since: col === "validating" ? this.stamp() : "",
+      // ME-074: the mock never simulates transitions, so the lifecycle
+      // stamps stay empty (honest unknown) — the real server fills them.
+      resolved_at: "",
+      done_at: "",
     };
     this.tasks.push(task);
     this.logActivity("task.created", task);
@@ -939,6 +945,34 @@ export class MockAdapter implements MemoryGateway {
       adopted_task_id: created.id,
     };
     return created;
+  }
+
+  /**
+   * ME-073 batch adopt over the mock mirror: per-record isolation mirroring
+   * the wire contract — one failed row never aborts the rest, the answer is
+   * the full per-record report.
+   */
+  async adoptInboxBatch(memoryIds: string[]): Promise<AdoptBatchResult> {
+    await this.delay();
+    const results: AdoptBatchItemResult[] = [];
+    for (const memoryId of memoryIds) {
+      try {
+        const task = await this.adoptInboxItem(memoryId);
+        results.push({
+          memory_id: memoryId, ok: true, task_id: task.id, detail: "",
+        });
+      } catch (error) {
+        const existing = this.inboxItems.find((row) => row.memory_id === memoryId);
+        results.push({
+          memory_id: memoryId,
+          ok: false,
+          task_id: existing?.adopted_task_id ?? "",
+          detail: error instanceof Error ? error.message : "adopt failed",
+        });
+      }
+    }
+    const adopted = results.filter((row) => row.ok).length;
+    return { results, adopted, failed: results.length - adopted };
   }
 
   /**

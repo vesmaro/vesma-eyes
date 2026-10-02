@@ -37,6 +37,7 @@ import {
 } from "./taskGrouping";
 import { CreateTaskDialog } from "./CreateTaskDialog";
 import { TaskFilterSelect } from "./TaskFilterSelect";
+import { TaskDateFilter } from "./TaskDateFilter";
 import { TaskRowMenu } from "./TaskRowMenu";
 import { TasksUnsupported } from "./TasksUnsupported";
 import { TasksViewToggle } from "./TasksViewToggle";
@@ -257,6 +258,8 @@ export function TaskListPage() {
           allLabel={t("tasks.allAgents")}
           options={agentChoices.map((agent) => ({ value: agent, label: agent }))}
         />
+        {/* ME-075: arrival/completion date bounds + presets (shared URL dialect). */}
+        <TaskDateFilter state={state} patch={patch} />
       </form>
 
       {groups.length === 0 ? (
@@ -275,6 +278,10 @@ export function TaskListPage() {
                     project: undefined,
                     agent: undefined,
                     q: undefined,
+                    created_from: undefined,
+                    created_to: undefined,
+                    completed_from: undefined,
+                    completed_to: undefined,
                   })
                 }
               >

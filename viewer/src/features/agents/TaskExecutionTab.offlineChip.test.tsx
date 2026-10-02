@@ -42,6 +42,8 @@ const TASK: BoardTask = {
   priority: "normal",
   archived_from: "",
   validating_since: "",
+  resolved_at: "",
+  done_at: "",
 };
 
 const ROW: AssignmentItem = {

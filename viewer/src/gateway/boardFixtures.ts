@@ -81,6 +81,8 @@ export const MOCK_TASKS: BoardTask[] = [
     priority: "critical",
     archived_from: "",
     validating_since: "",
+    resolved_at: "",
+    done_at: "",
   },
   {
     id: "T6",
@@ -106,6 +108,8 @@ export const MOCK_TASKS: BoardTask[] = [
     priority: "high",
     archived_from: "",
     validating_since: "",
+    resolved_at: "",
+    done_at: "",
   },
   {
     id: "TB-3",
@@ -127,6 +131,8 @@ export const MOCK_TASKS: BoardTask[] = [
     priority: "normal",
     archived_from: "",
     validating_since: "",
+    resolved_at: "",
+    done_at: "",
   },
   {
     id: "TB-4",
@@ -148,6 +154,8 @@ export const MOCK_TASKS: BoardTask[] = [
     priority: "low",
     archived_from: "",
     validating_since: "",
+    resolved_at: "",
+    done_at: "",
   },
   {
     id: "RB-2",
@@ -170,6 +178,8 @@ export const MOCK_TASKS: BoardTask[] = [
     priority: "high",
     archived_from: "",
     validating_since: "",
+    resolved_at: "",
+    done_at: "",
   },
   {
     id: "TB-5",
@@ -191,6 +201,8 @@ export const MOCK_TASKS: BoardTask[] = [
     priority: "critical",
     archived_from: "",
     validating_since: "",
+    resolved_at: "",
+    done_at: "",
   },
   {
     id: "TB-6",
@@ -213,6 +225,8 @@ export const MOCK_TASKS: BoardTask[] = [
     priority: "normal",
     archived_from: "",
     validating_since: "",
+    resolved_at: "",
+    done_at: "",
   },
   {
     id: "TB-7",
@@ -235,6 +249,8 @@ export const MOCK_TASKS: BoardTask[] = [
     priority: "low",
     archived_from: "",
     validating_since: "",
+    resolved_at: "",
+    done_at: "",
   },
   {
     id: "TB-8",
@@ -256,6 +272,8 @@ export const MOCK_TASKS: BoardTask[] = [
     priority: "high",
     archived_from: "",
     validating_since: "",
+    resolved_at: "",
+    done_at: "",
   },
   {
     id: "TB-9",
@@ -277,6 +295,8 @@ export const MOCK_TASKS: BoardTask[] = [
     priority: "normal",
     archived_from: "",
     validating_since: "",
+    resolved_at: "",
+    done_at: "",
   },
   {
     id: "TB-10",
@@ -298,6 +318,8 @@ export const MOCK_TASKS: BoardTask[] = [
     priority: "normal",
     archived_from: "",
     validating_since: "",
+    resolved_at: "",
+    done_at: "",
   },
   {
     id: "TB-11",
@@ -319,6 +341,8 @@ export const MOCK_TASKS: BoardTask[] = [
     priority: "low",
     archived_from: "",
     validating_since: "",
+    resolved_at: "",
+    done_at: "",
   },
   {
     id: "TB-12",
@@ -340,6 +364,8 @@ export const MOCK_TASKS: BoardTask[] = [
     priority: "normal",
     archived_from: "",
     validating_since: "",
+    resolved_at: "",
+    done_at: "",
   },
   {
     id: "TB-13",
@@ -362,6 +388,8 @@ export const MOCK_TASKS: BoardTask[] = [
     archived_from: "",
     // Fresh clock: ~6h before the 2026-09-19 corpus reference point.
     validating_since: "2026-09-19T04:00:00+00:00",
+    resolved_at: "",
+    done_at: "",
   },
   {
     id: "TB-14",
@@ -384,6 +412,8 @@ export const MOCK_TASKS: BoardTask[] = [
     archived_from: "",
     // Overdue clock: >24h before the corpus reference point (sweep output).
     validating_since: "2026-09-17T09:30:00+00:00",
+    resolved_at: "",
+    done_at: "",
   },
   // ME-013 (ADR 0020 Amendment 1): the UNTRUSTED-surface mermaid fixture,
   // restored for the render-smoke FLIP (Ф0 shipped it with an honest skip;
@@ -416,6 +446,8 @@ export const MOCK_TASKS: BoardTask[] = [
     priority: "normal",
     archived_from: "",
     validating_since: "",
+    resolved_at: "",
+    done_at: "",
   },
 ];
 
@@ -440,6 +472,8 @@ export const MOCK_ARCHIVED_TASK: BoardTask = {
   priority: "normal",
   archived_from: "blocked",
   validating_since: "",
+  resolved_at: "",
+  done_at: "",
 };
 
 function countByColumn(tasks: readonly BoardTask[]): Record<string, number> {

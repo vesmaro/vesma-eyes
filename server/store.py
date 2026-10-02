@@ -1488,6 +1488,21 @@ class Store:
             db.execute(
                 "ALTER TABLE tasks "
                 "ADD COLUMN validating_since TEXT NOT NULL DEFAULT ''")
+        # ME-074: lifecycle timestamps — when the executor finished
+        # (``resolved_at``) and when the owner accepted (``done_at``).
+        # Stamps are COLUMN-driven (move_task writes/clears them); status
+        # PATCHes are a soft overlay and never touch them. Honest
+        # degradation for history: pre-ME-074 rows keep '' — "время
+        # неизвестно", never a guessed value. No backfill, no SEED_VERSION
+        # bump (archived_from precedent).
+        if "resolved_at" not in cols:
+            db.execute(
+                "ALTER TABLE tasks "
+                "ADD COLUMN resolved_at TEXT NOT NULL DEFAULT ''")
+        if "done_at" not in cols:
+            db.execute(
+                "ALTER TABLE tasks "
+                "ADD COLUMN done_at TEXT NOT NULL DEFAULT ''")
         # ARCH-9: denormalized topics on assignments (Amd 2 §9). Additive
         # ALTER for pre-ARCH-9 databases — the '[]' DEFAULT covers existing
         # rows; new rows are filled at creation. executors and the partial
@@ -1651,17 +1666,40 @@ class Store:
             )
 
     # ----------------------------------------------------------------- read
-    def board(self, status: str | None = None) -> dict[str, Any]:
+    def board(self, status: str | None = None, *,
+              created_from: str = "", created_to: str = "",
+              completed_from: str = "", completed_to: str = "") -> dict[str, Any]:
         """Board projection. Optional ``status`` filter (BE-10) narrows the
         task list; ``counts`` always describe the whole board, not the
-        filtered view."""
+        filtered view.
+
+        ME-075 date filters (additive, inclusive bounds, ISO timestamps
+        compared lexicographically — every store-written stamp is the same
+        ``timespec='seconds'`` UTC format): ``created_from/created_to``
+        bound ``created_at`` (поступила), ``completed_from/completed_to``
+        bound the FIRST completion stamp — ``resolved_at`` falling back to
+        ``done_at`` (завершена). Tasks with no completion stamp never
+        match a completion-bounded listing; empty bounds are no-ops."""
+        where = ["archived=0"]
+        params: list[Any] = []
+        if status is not None:
+            where.append("status=?")
+            params.append(status)
+        if created_from:
+            where.append("created_at >= ?")
+            params.append(created_from)
+        if created_to:
+            where.append("created_at <= ?")
+            params.append(created_to)
+        if completed_from:
+            where.append("COALESCE(NULLIF(resolved_at,''), NULLIF(done_at,'')) >= ?")
+            params.append(completed_from)
+        if completed_to:
+            where.append("COALESCE(NULLIF(resolved_at,''), NULLIF(done_at,'')) <= ?")
+            params.append(completed_to)
+        q = (f"SELECT * FROM tasks WHERE {' AND '.join(where)} "  # noqa: S608 — fragments from a fixed allow-list
+             "ORDER BY col, position")
         with self._lock, self._conn() as db:
-            q = "SELECT * FROM tasks WHERE archived=0"
-            params: tuple[Any, ...] = ()
-            if status is not None:
-                q += " AND status=?"
-                params = (status,)
-            q += " ORDER BY col, position"
             tasks = [dict(r) for r in db.execute(q, params).fetchall()]
             stats = db.execute(
                 """SELECT col, COUNT(*) AS n FROM tasks GROUP BY col"""
@@ -1771,6 +1809,11 @@ class Store:
           (starts the 24h sweep window); LEAVING the lane clears it; a
           same-column reorder keeps the clock (position-only moves must
           not reset the deadline).
+        - ME-074 lifecycle stamps: ENTERING resolved stamps
+          ``resolved_at`` (исполнитель закончил), ENTERING done stamps
+          ``done_at`` (владелец принял; ``resolved_at`` survives — the
+          completion moment stays honest); LEAVING either clears its
+          stamp. Same-column reorders never touch the stamps.
         """
         if col not in VALID_STATUSES:
             raise ValueError(f"invalid col: {col}")
@@ -1789,24 +1832,32 @@ class Store:
                     (col,),
                 ).fetchone()["p"]
             status = COLUMN_STATUS_MAP[col]
+            now = _now()
+            # One UPDATE built from the transition delta (ME-074): the
+            # validating clock and the lifecycle stamps are independent —
+            # a move may touch either, both or neither (same-column
+            # reorder touches neither).
+            sets: dict[str, Any] = {"col": col, "status": status,
+                                    "position": position, "updated_at": now}
             if col == "validating" and src != "validating":
-                db.execute(
-                    "UPDATE tasks SET col=?, status=?, position=?, "
-                    "validating_since=?, updated_at=? WHERE id=?",
-                    (col, status, position, _now(), _now(), task_id),
-                )
+                sets["validating_since"] = now
             elif col != "validating":
-                db.execute(
-                    "UPDATE tasks SET col=?, status=?, position=?, "
-                    "validating_since='', updated_at=? WHERE id=?",
-                    (col, status, position, _now(), task_id),
-                )
-            else:
-                # reorder inside validating — clock untouched
-                db.execute(
-                    "UPDATE tasks SET col=?, status=?, position=?, updated_at=? WHERE id=?",
-                    (col, status, position, _now(), task_id),
-                )
+                sets["validating_since"] = ""
+            # resolved→done keeps ``resolved_at``: the completion moment is
+            # the executor's fact, the owner's acceptance rides ``done_at``.
+            if col == "resolved" and src != "resolved":
+                sets["resolved_at"] = now
+            elif src == "resolved" and col not in ("resolved", "done"):
+                sets["resolved_at"] = ""
+            if col == "done" and src != "done":
+                sets["done_at"] = now
+            elif src == "done" and col != "done":
+                sets["done_at"] = ""
+            assign = ", ".join(f"{k}=?" for k in sets)
+            db.execute(
+                f"UPDATE tasks SET {assign} WHERE id=?",  # noqa: S608 — keys from a fixed dict above
+                (*sets.values(), task_id),
+            )
             payload: dict[str, Any] = {"from": src, "to": col}
             if actor:
                 payload["actor"] = actor[:120]
@@ -3229,13 +3280,7 @@ class Store:
                    ORDER BY validating_since ASC""",
                 (cut, f'%"{ARCHCOM_REVIEW_TAG}"%'),
             ).fetchall()
-        out: list[dict[str, Any]] = []
-        for r in rows:
-            t = dict(r)
-            for k in ("agents", "specialists", "memory_ids", "mnemos_tags"):
-                t[k] = _loads(t[k])
-            out.append(t)
-        return out
+        return self._task_rows(rows)
 
     def mark_validation_timeout(self, task_id: str) -> dict[str, Any] | None:
         """Flag one overdue validating task for the archcom branch (WF-1
@@ -3270,6 +3315,51 @@ class Store:
                 "validating_since": row["validating_since"],
             })
             return self._task_in_txn(db, task_id)
+
+    # -------------------------------------- ME-076 auto-archive selectors
+    # Scan halves of the archive TTL pass; the write half lives in
+    # archive_task (done — the move) and the app-level notification dedupe
+    # (resolved — a reminder, NEVER a move). The cutoff is a caller-built
+    # ISO stamp compared lexicographically against the stored stamps, so
+    # tests inject age by writing an old stamp — no fake-clock machinery.
+
+    def stale_done_tasks(self, cutoff: str) -> list[dict[str, Any]]:
+        """Live tasks in ``done`` accepted (``done_at``) before ``cutoff`` —
+        the auto-archive batch. Rows with an empty stamp (accepted before
+        ME-074) are honestly NOT ageable: no stamp, no silent archive."""
+        with self._lock, self._conn() as db:
+            rows = db.execute(
+                """SELECT * FROM tasks
+                   WHERE col='done' AND archived=0
+                     AND done_at != '' AND done_at < ?
+                   ORDER BY done_at ASC""",
+                (cutoff,),
+            ).fetchall()
+        return self._task_rows(rows)
+
+    def stale_resolved_tasks(self, cutoff: str) -> list[dict[str, Any]]:
+        """Live tasks in ``resolved`` finished (``resolved_at``) before
+        ``cutoff`` — the reminder batch. The sweep only NOTIFIES about
+        these: a resolved task without the owner's validation is never
+        archived silently (ME-076 rule)."""
+        with self._lock, self._conn() as db:
+            rows = db.execute(
+                """SELECT * FROM tasks
+                   WHERE col='resolved' AND archived=0
+                     AND resolved_at != '' AND resolved_at < ?
+                   ORDER BY resolved_at ASC""",
+                (cutoff,),
+            ).fetchall()
+        return self._task_rows(rows)
+
+    def _task_rows(self, rows: list[Any]) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = []
+        for r in rows:
+            t = dict(r)
+            for k in ("agents", "specialists", "memory_ids", "mnemos_tags"):
+                t[k] = _loads(t[k])
+            out.append(t)
+        return out
     # ------------------------------------------------ executors (ARCH-9)
     def _executor(self, db: sqlite3.Connection,
                   executor_id: str) -> dict[str, Any] | None:

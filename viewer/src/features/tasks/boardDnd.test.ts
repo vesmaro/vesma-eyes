@@ -35,6 +35,8 @@ function task(id: string, col: string, position: number, project = "p1"): BoardT
     priority: "normal",
     archived_from: "",
     validating_since: "",
+    resolved_at: "",
+    done_at: "",
   };
 }
 

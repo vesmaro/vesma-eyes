@@ -301,6 +301,39 @@ export function createTaskMutations(deps: TaskMutationDeps) {
   };
 
   /**
+   * ME-073 «Принять все»: one batch call for the accumulated inbox. The
+   * SERVER does the per-record isolation — the answer is the report, so the
+   * toast sums it up (all-good vs partial with counts) instead of spawning
+   * N toasts. Every created task folds into the cache through the same
+   * SSE mapping; the inbox + counters invalidate once.
+   */
+  /**
+   * ME-073 «Принять все»: one batch call for the accumulated inbox. The
+   * SERVER does the per-record isolation — the answer is the report, so
+   * ONE toast sums it up (all-good vs partial with counts) instead of
+   * spawning N toasts; the board + inbox caches invalidate once (the batch
+   * report carries ids only, so the created rows land via the refetch).
+   */
+  const adoptInboxBatch = (memoryIds: readonly string[]): void => {
+    run({ errorTitleKey: "tasks.mutation.adoptBatchFailed" }, async () => {
+      const result = await mutations().adoptInboxBatch([...memoryIds]);
+      invalidate(keys.tasks.board());
+      invalidate(keys.tasks.inboxAll);
+      toast.push({
+        kind: result.failed > 0 ? "error" : "ok",
+        title: t("tasks.mutation.adoptBatchDone"),
+        detail:
+          result.failed > 0
+            ? t("tasks.mutation.adoptBatchDetailPartial", {
+                adopted: result.adopted,
+                failed: result.failed,
+              })
+            : t("tasks.mutation.adoptBatchDetailAll", { count: result.adopted }),
+      });
+    });
+  };
+
+  /**
    * UI-25 pre-adoption edit of an inbox row. The server answer (the updated
    * row with effective fields) replaces the cached item in place — the card
    * reflects the edit immediately, and «Принять в борд» then adopts the
@@ -370,6 +403,7 @@ export function createTaskMutations(deps: TaskMutationDeps) {
     unarchiveTask,
     createTask,
     adoptInboxItem,
+    adoptInboxBatch,
     editInboxItem,
     refreshInbox,
   };

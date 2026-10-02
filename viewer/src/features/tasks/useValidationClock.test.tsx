@@ -46,6 +46,8 @@ function validatingTask(validatingSince: string): BoardTask {
     priority: "normal",
     archived_from: "",
     validating_since: validatingSince,
+    resolved_at: "",
+    done_at: "",
   };
 }
 

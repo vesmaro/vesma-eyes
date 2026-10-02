@@ -79,6 +79,7 @@ import type {
   TagDrillParams,
   TagDrillStoreError,
   TagDrillTask,
+  AdoptBatchResult,
   TaskCreateInput,
   TaskHistory,
   TaskInbox,
@@ -140,6 +141,7 @@ import type {
  * - archiveTask    POST   /api/tasks/{id}/archive           → 200 OkOut
  * - unarchiveTask  POST   /api/tasks/{id}/unarchive         → 200 UnarchiveOut
  * - adoptInboxItem POST   /api/tasks/inbox/{memory_id}/adopt → 201 TaskOut | 409
+ * - adoptInboxBatch POST  /api/tasks/inbox/adopt-batch      → 200 per-record report (ME-073)
  * - refreshInbox   POST   /api/tasks/inbox/refresh          → 200 counters
  *
  * ADR 0014 owner session (one login per browser; cookie `vesmaro_ui` is
@@ -317,6 +319,13 @@ export interface BoardGateway extends MemoryGateway {
    * (UI-25 overlay) win over the mirror fields and sync back to mnemos.
    */
   adoptInboxItem(memoryId: string): Promise<BoardTask>;
+  /**
+   * ME-073 «Принять все»: adopt a batch of inbox records in ONE call
+   * (`POST /api/tasks/inbox/adopt-batch`). Per-record isolation is the
+   * wire contract — the answer is the per-record report
+   * (`AdoptBatchResult`), HTTP 200 even with failures.
+   */
+  adoptInboxBatch(memoryIds: string[]): Promise<AdoptBatchResult>;
   /**
    * Correct a queue record BEFORE adoption
    * (`PATCH /api/tasks/inbox/{memory_id}`, UI-25, ui-token). 409 once the
@@ -917,6 +926,14 @@ export class BoardAdapter implements BoardGateway {
       `/tasks/inbox/${encodeURIComponent(memoryId)}/adopt`,
       { method: "POST", auth: true },
     );
+  }
+
+  async adoptInboxBatch(memoryIds: string[]): Promise<AdoptBatchResult> {
+    return this.request<AdoptBatchResult>("/tasks/inbox/adopt-batch", {
+      method: "POST",
+      auth: true,
+      body: { memory_ids: memoryIds },
+    });
   }
 
   async patchInboxItem(

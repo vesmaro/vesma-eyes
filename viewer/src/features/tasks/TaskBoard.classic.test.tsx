@@ -71,6 +71,8 @@ const CORPUS: {
       priority: "low",
       archived_from: "",
       validating_since: "",
+      resolved_at: "",
+      done_at: "",
     },
     {
       id: "O-hi",
@@ -92,6 +94,8 @@ const CORPUS: {
       priority: "high",
       archived_from: "",
       validating_since: "",
+      resolved_at: "",
+      done_at: "",
     },
     {
       id: "O-no",
@@ -113,6 +117,8 @@ const CORPUS: {
       priority: "normal",
       archived_from: "",
       validating_since: "",
+      resolved_at: "",
+      done_at: "",
     },
     {
       id: "RB-2",
@@ -134,6 +140,8 @@ const CORPUS: {
       priority: "high",
       archived_from: "",
       validating_since: "",
+      resolved_at: "",
+      done_at: "",
     },
   ],
   counts: {
@@ -275,7 +283,7 @@ describe("classic board style (CV-5 — render)", () => {
     // The alpha group header is a BUTTON inside the open column…
     expect(
       Array.from(
-        container!.querySelectorAll('section[aria-label="Колонка «Открыто»"] button'),
+        container!.querySelectorAll('section[aria-label="Колонка «В очереди»"] button'),
       ).some((button) => button.textContent?.includes("alpha")),
     ).toBe(true);
     // …and the toggle marks "groups" as pressed.
@@ -292,12 +300,12 @@ describe("classic board style (CV-5 — render)", () => {
     expect(container!.querySelector('button[aria-expanded="true"]')).toBeNull();
     expect(
       Array.from(
-        container!.querySelectorAll('section[aria-label="Колонка «Открыто»"] button'),
+        container!.querySelectorAll('section[aria-label="Колонка «В очереди»"] button'),
       ).some((button) => button.textContent?.includes("alpha")),
     ).toBe(false);
     // One flat card list per column, classic order: high → normal → low,
     // NOT the wire position order (lo=0, hi=1, no=2).
-    expect(columnCardHrefs('Колонка «Открыто»')).toEqual([
+    expect(columnCardHrefs('Колонка «В очереди»')).toEqual([
       "/tasks/O-hi",
       "/tasks/O-no",
       "/tasks/O-lo",
@@ -316,7 +324,7 @@ describe("classic board style (CV-5 — render)", () => {
       styleButton("Классика")!.click();
     });
     expect(container!.querySelector('button[aria-expanded="true"]')).toBeNull();
-    expect(columnCardHrefs('Колонка «Открыто»')).toEqual([
+    expect(columnCardHrefs('Колонка «В очереди»')).toEqual([
       "/tasks/O-hi",
       "/tasks/O-no",
       "/tasks/O-lo",

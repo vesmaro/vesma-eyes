@@ -4,7 +4,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { BoardTask } from "@/gateway/boardTypes";
 import { useT } from "@/i18n";
-import { columnLabelKey } from "./taskStatus";
+import { columnHintKey, columnLabelKey } from "./taskStatus";
 import { groupTasksByProject, sortGroupTasks } from "./taskGrouping";
 import { columnDropId, groupDropId } from "./boardDnd";
 import { TaskBoardCard } from "./TaskBoardCard";
@@ -32,6 +32,13 @@ import type { BoardStyle } from "./tasksViewPrefs";
  * so a classic-view drop resolves against the wire order and the priority
  * projection re-sorts the resting place — the standard behaviour of a
  * sorted kanban, never a second resolver.
+ *
+ * ME-077: the header carries a hint line (whose action moves the card
+ * onward — owner vs executor) and the column can render COLLAPSED to a
+ * narrow strip when it is empty (`emptyCollapsed` — the page defaults the
+ * pre-validation lanes to folded in the "all 7" mode; one click unfolds).
+ * The collapsed strip keeps the column-root droppable so a drag onto it
+ * still appends into the lane.
  */
 export function TaskBoardColumn({
   column,
@@ -45,6 +52,8 @@ export function TaskBoardColumn({
   onToggleGroup,
   compact,
   style,
+  emptyCollapsed = false,
+  onToggleEmptyCollapse,
 }: {
   column: string;
   /** Position-ordered tasks of THIS column (already filtered). */
@@ -61,6 +70,9 @@ export function TaskBoardColumn({
   compact: boolean;
   /** Board render style (CV-5): "groups" accordions or "classic" flat flow. */
   style: BoardStyle;
+  /** ME-077: fold the column to a narrow strip while it is empty. */
+  emptyCollapsed?: boolean;
+  onToggleEmptyCollapse?: () => void;
 }) {
   const t = useT();
   const groups = groupTasksByProject(tasks);
@@ -72,10 +84,50 @@ export function TaskBoardColumn({
     disabled: !canDrag,
     data: { type: "column", col: column },
   });
+  const hint = columnHintKey(column);
+  const label = t(columnLabelKey(column));
+
+  // ME-077 collapsed-empty strip: the lane stays visible and keeps its
+  // append droppable (drag onto the strip appends), it just stops taking
+  // horizontal space. The fold keys off the WHOLE-BOARD count — a column
+  // emptied by the active filters still renders unfolded. aria-expanded +
+  // a labelled unfold button keep the keyboard/screen-reader path equal to
+  // the pointer path.
+  if (emptyCollapsed && totalCount === 0) {
+    return (
+      <section
+        ref={setNodeRef}
+        aria-label={t("tasks.board.columnLabel", { col: label })}
+        className={
+          "flex w-11 shrink-0 flex-col items-center gap-1 rounded-lg border border-border-subtle bg-base/40 py-2 " +
+          (isOver ? " border-iris-bright/60" : "")
+        }
+      >
+        <button
+          type="button"
+          onClick={onToggleEmptyCollapse}
+          aria-expanded={false}
+          aria-label={t("tasks.board.expandColumn", { col: label })}
+          className="flex flex-col items-center gap-1 rounded-sm py-0.5 text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+        >
+          <ChevronRight className="size-3.5" aria-hidden="true" />
+          <span
+            className="text-xs font-semibold [writing-mode:vertical-rl]"
+            aria-hidden="true"
+          >
+            {label}
+          </span>
+        </button>
+        <Badge variant="outline" className="font-mono">
+          {totalCount}
+        </Badge>
+      </section>
+    );
+  }
 
   return (
     <section
-      aria-label={t("tasks.board.columnLabel", { col: t(columnLabelKey(column)) })}
+      aria-label={t("tasks.board.columnLabel", { col: label })}
       className={
         "flex shrink-0 flex-col rounded-lg border border-border-subtle bg-base/40 " +
         (compact ? "w-60" : "w-72") +
@@ -84,13 +136,22 @@ export function TaskBoardColumn({
     >
       <header
         className={
-          "flex items-center justify-between gap-2 border-b border-border-subtle px-3 " +
+          "flex items-start justify-between gap-2 border-b border-border-subtle px-3 " +
           (compact ? "py-1.5" : "py-2")
         }
       >
-        <h2 className="text-sm font-semibold text-foreground-secondary">
-          {t(columnLabelKey(column))}
-        </h2>
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold text-foreground-secondary">
+            {label}
+          </h2>
+          {/* ME-077: whose action moves the card onward — the owner's
+           * accept/validate lanes vs the executor's work lanes. */}
+          {hint ? (
+            <p className="mt-0.5 text-[11px] leading-tight text-foreground-muted">
+              {t(hint)}
+            </p>
+          ) : null}
+        </div>
         {/* ME-072 A: ONE header pattern — the framed outline counter for
          * EVERY column. Per-column colour chips (iris/error/success) made
          * two header looks (framed vs floating) and read as different

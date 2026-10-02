@@ -748,6 +748,10 @@ export const ru = {
   "tasks.scanLabel": "Сканировать хранилища",
   "tasks.scanBusy": "Сканируем…",
   "tasks.adoptLabel": "Принять в борд",
+  "tasks.adoptAllLabel": "Принять все",
+  "tasks.adoptAllConfirm": "Принять все записи в борд ({{count}})?",
+  "tasks.adoptAllBusy": "Принимаем…",
+  "tasks.adoptAllNone": "Нет записей для принятия",
   "tasks.archiveTitle": "Архив",
   "tasks.archiveLoading": "Загружаем архив",
   "tasks.archiveFailed": "Не удалось загрузить архив",
@@ -773,13 +777,24 @@ export const ru = {
   // --- tasks: WF-1 kanban column titles (7 lanes; mirror server COLUMN_RU) ---------
   // ME-072 C: column labels lead with a capital (the board header + every
   // «колонка: …» / «… → …» embedding reads list-like after a colon).
+  // ME-077: owner-facing renames («Открыто»→«В очереди»,
+  // «Решено»→«Ждёт проверки») — the WIRE column ids never change.
   "tasks.column.backlog": "Бэклог",
   "tasks.column.validating": "На валидации",
-  "tasks.column.open": "Открыто",
+  "tasks.column.open": "В очереди",
   "tasks.column.in-progress": "В работе",
   "tasks.column.blocked": "Блокировано",
-  "tasks.column.resolved": "Решено",
+  "tasks.column.resolved": "Ждёт проверки",
   "tasks.column.done": "Готово",
+
+  // --- ME-077: column hints (whose action moves the card onward) -------------------
+  "tasks.columnHint.backlog": "переход: владелец — поставить в работу",
+  "tasks.columnHint.validating": "переход: владелец — подтвердить или вернуть",
+  "tasks.columnHint.open": "переход: исполнитель — взять в работу",
+  "tasks.columnHint.in-progress": "переход: исполнитель — завершить или заблокировать",
+  "tasks.columnHint.blocked": "переход: исполнитель — снять блокировку",
+  "tasks.columnHint.resolved": "переход: владелец — принять или вернуть исполнителю",
+  "tasks.columnHint.done": "авто-архив через 3 дня · возврат вручную",
 
   // --- tasks: kanban board (Ф3, CV-4 — ARCHCOM-3 verdict §3) ------------------------
   "tasks.view.toggleLabel": "Вид задач",
@@ -798,6 +813,29 @@ export const ru = {
   "tasks.board.styleLabel": "Вид доски",
   "tasks.board.styleGroups": "Группы",
   "tasks.board.styleClassic": "Классика",
+  // ME-077: column visibility (компакт 5 / все 7), persisted board setting.
+  "tasks.board.columnsLabel": "Колонки",
+  "tasks.board.columnsCompact": "5 колонок",
+  "tasks.board.columnsAll": "все 7",
+  "tasks.board.hiddenColumns": "Скрыто: {{cols}}",
+  "tasks.board.expandColumn": "Развернуть пустую колонку «{{col}}»",
+  "tasks.board.collapseColumn": "Свернуть пустую колонку «{{col}}»",
+
+  // --- ME-074: lifecycle time labels on cards ---------------------------------------
+  "tasks.card.arrived": "поступила {{date}}",
+  "tasks.card.hanging": "висит {{duration}}",
+  "tasks.card.completed": "завершена {{date}}",
+
+  // --- ME-075: date filters (поступила / завершена + пресеты) -----------------------
+  "tasks.date.label": "Даты",
+  "tasks.date.arrivalLabel": "Поступила",
+  "tasks.date.completedLabel": "Завершена",
+  "tasks.date.from": "с",
+  "tasks.date.to": "по",
+  "tasks.date.presetToday": "Сегодня",
+  "tasks.date.presetWeek": "Неделя",
+  "tasks.date.presetAll": "Всё",
+  "tasks.date.clear": "Очистить даты",
   "tasks.priority.critical": "критический",
   "tasks.priority.high": "высокий",
   "tasks.priority.normal": "обычный",
@@ -876,6 +914,11 @@ export const ru = {
   "tasks.mutation.adoptConflictTitle": "Запись уже принята",
   "tasks.mutation.adoptConflictDetail": "уже существует задача {{id}}",
   "tasks.mutation.adopted": "Принята в борд: {{id}}",
+  "tasks.mutation.adoptBatchDone": "Записи приняты",
+  "tasks.mutation.adoptBatchDetailAll": "принято записей: {{count}}",
+  "tasks.mutation.adoptBatchDetailPartial":
+    "принято: {{adopted}} · с ошибками: {{failed}} — детали в отчёте сервера",
+  "tasks.mutation.adoptBatchFailed": "Не удалось принять записи",
   "tasks.mutation.inboxEditFailed": "Не удалось сохранить правку записи",
   "tasks.mutation.inboxEditSaved": "Правка сохранена — примётся в борд в этой версии",
   "tasks.mutation.scanFailed": "Не удалось просканировать хранилища",

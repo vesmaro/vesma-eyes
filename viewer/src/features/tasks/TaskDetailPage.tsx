@@ -25,6 +25,7 @@ import type { TranslationKey } from "@/i18n";
 import { withReturn } from "@/lib/returnParams";
 import {
   formatTaskDate,
+  formatTaskTimestamp,
   historyEventLabelKey,
   priorityBadgeVariant,
   priorityLabelKey,
@@ -712,6 +713,14 @@ function DetailsTab({ task, lang }: { task: BoardTask; lang: "ru" | "en" }) {
           <dd>{current.project || "—"}</dd>
           <dt className="text-foreground-muted">{t("tasks.createdLabel")}</dt>
           <dd>{formatTaskDate(current.created_at, lang)}</dd>
+          {/* ME-074: completion stamps — «—» honestly marks the rows the
+           * wire has no stamp for (pre-ME-074 history). */}
+          <dt className="text-foreground-muted">{t("tasks.date.completedLabel")}</dt>
+          <dd>
+            {formatTaskTimestamp(
+              current.done_at || current.resolved_at, lang,
+            ) || "—"}
+          </dd>
           <dt className="text-foreground-muted">{t("tasks.updatedLabel")}</dt>
           <dd>{formatTaskDate(current.updated_at, lang)}</dd>
           <dt className="text-foreground-muted">{t("tasks.detailsSpecialists")}</dt>

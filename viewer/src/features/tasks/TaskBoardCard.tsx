@@ -14,8 +14,10 @@ import {
   isValidatingTask,
   priorityBadgeVariant,
   priorityLabelKey,
+  taskLifecycleLabel,
 } from "./taskStatus";
 import { HighlightedTitle, ValidatingClock } from "./taskCardParts";
+import { useValidationNow } from "./useValidationClock";
 import { TaskRowMenu } from "./TaskRowMenu";
 
 /**
@@ -102,6 +104,12 @@ const TaskCardBody = forwardRef<
 ) {
   const t = useT();
   const { lang } = useI18n();
+  // ME-074: the card's lifecycle line — «поступила 28.09 · висит 2 дня» on
+  // live lanes, «… · завершена 01.10 в 14:05» on resolved/done. The shared
+  // 1 Hz domain clock (useValidationClock) supplies "now": one interval for
+  // the whole board, ages stay live, SSR renders deterministic (snapshot 0
+  // → arrival only, the browser fills the age on mount).
+  const now = useValidationNow();
   // UI-18 pair 1: the board URL (filters included) rides along as `return=`
   // so the detail page's back control leads home. Read once per render —
   // no effects, no subscriptions (freeze-gate safe by construction).
@@ -219,8 +227,12 @@ const TaskCardBody = forwardRef<
             {(task.agents ?? []).join(", ")}
           </span>
         ) : null}
-        <span className="ml-auto whitespace-nowrap text-foreground-muted">
-          {formatTaskDate(task.updated_at, lang)}
+        <span
+          className="ml-auto whitespace-nowrap text-foreground-muted"
+          title={`${t("tasks.updatedLabel")}: ${formatTaskDate(task.updated_at, lang)}`}
+        >
+          {taskLifecycleLabel(task, lang, now, t) ||
+            formatTaskDate(task.updated_at, lang)}
         </span>
         {reportCount ? (
           <span
