@@ -130,10 +130,10 @@ describe("TopBar auth slot (AuthStatus)", () => {
     expect(html).toContain("Sign out of vesma");
   });
 
-  it("reports the live connection label on the mnemos adapter", () => {
+  it("reports the live connection label on the vesma adapter", () => {
     const html = renderWithProviders(
       <TopBar />,
-      authValue([], { adapterMode: "mnemos", endpoint: "/api" }),
+      authValue([], { adapterMode: "vesma", endpoint: "/api" }),
     );
     // Queries are disabled in this harness → still connecting (honest state).
     expect(html).toContain("connecting…");

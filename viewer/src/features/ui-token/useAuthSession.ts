@@ -33,7 +33,7 @@ import { UiTokenContext } from "./UiTokenContext";
  *
  * `gatesActive` — whether the v6 gates run in this deployment at all: only
  * the board adapter speaks the ui-token session wire. The mock playground
- * (no auth wall by design) and the mnemos L1 adapter (reads open by
+ * (no auth wall by design) and the vesma L1 adapter (reads open by
  * ADR 0011 §7, a different auth model) render NO locks and NO gate screens —
  * a lock that lies about a deployment that genuinely serves anonymous reads
  * is the blocker the dressing map §1.1.6 forbids.

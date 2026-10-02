@@ -62,7 +62,7 @@ it.
 - The device reaches the board over HTTPS with a trusted certificate.
   For a lab domain with a self-signed certificate, install your own CA
   on the device — the setup ritual and the SHA-256 fingerprint check
-  are described in `deploy/chart/vesmaro-eyes/RUNBOOK.md` in the
+  are described in `deploy/chart/vesma-eyes/RUNBOOK.md` in the
   repository.
 
 ## Through the API: the same protocol for scripts

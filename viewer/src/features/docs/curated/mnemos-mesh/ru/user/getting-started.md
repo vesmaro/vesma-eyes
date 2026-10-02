@@ -1,15 +1,15 @@
 ---
-title: Первый запуск mnemos-mesh
+title: Первый запуск vesma-mesh
 ---
 
-# Первый запуск mnemos-mesh
+# Первый запуск vesma-mesh
 
 Соберите бинарник, настройте федерацию из двух узлов, запустите её и
 проверьте канал. Гайд проводит один узел от начала до конца; шаги со
 стороны пира повторите на удалённом узле.
 
 > **Аудитория:** операторы, поднимающие пир федерации. Предполагаются
-> работающий инстанс mnemos и установленный Go 1.25+.
+> работающий инстанс vesma и установленный Go 1.25+.
 
 ---
 
@@ -18,7 +18,7 @@ title: Первый запуск mnemos-mesh
 | Инструмент | Версия | Зачем |
 |---|---|---|
 | **Go** | 1.25+ | Сборка бинарника; версия зафиксирована в `go.mod` |
-| **mnemos** | v2.x | Локальный сервер памяти; меш подключается к нему через Unix-сокет |
+| **vesma** | v2.x | Локальный сервер памяти; меш подключается к нему через Unix-сокет |
 | **buf** | 1.72+ | Перегенерация proto-заглушек (только при правках `.proto`) |
 | **openssl** | любой | Генерация приватного CA и сертификатов узлов для mTLS |
 | **golangci-lint** | v2.1+ | Линт-гейт в CI (`make lint`) |
@@ -39,7 +39,7 @@ export PATH="$HOME/go/bin:$PATH"
 
 ```bash
 git clone https://github.com/Korrnals/mnemos-mesh.git
-cd mnemos-mesh
+cd vesma-mesh
 make build
 ./bin/mnemos-mesh version
 ```
@@ -52,7 +52,7 @@ make build
 
 ## 2 · Материал mTLS
 
-mnemos-mesh работает на **приватном CA** со взаимной аутентификацией и
+vesma-mesh работает на **приватном CA** со взаимной аутентификацией и
 зафиксированными отпечатками (критерий 3). CA генерируется один раз на
 федерацию, сертификат узла — на каждый пир.
 
@@ -61,7 +61,7 @@ mnemos-mesh работает на **приватном CA** со взаимно�
 ```bash
 openssl genrsa -out ca.key 4096
 openssl req -x509 -new -key ca.key -sha256 -days 3650 \
-  -subj "/CN=mnemos-mesh-ca" -out ca.pem
+  -subj "/CN=vesma-mesh-ca" -out ca.pem
 ```
 
 `ca.key` держите офлайн. Раздайте `ca.pem` всем узлам.
@@ -135,26 +135,26 @@ metrics:
 ## 4 · Запуск
 
 ```bash
-mnemos-mesh serve --config ~/.mnemos/mesh.yaml
+vesma-mesh serve --config ~/.mnemos/mesh.yaml
 ```
 
 Меш открывает mTLS-слушатель для пиров (`listen`) и подключается к
-mnemos через Unix-сокет (`unix_socket`). На M2 обе половины — заглушки:
+vesma через Unix-сокет (`unix_socket`). На M2 обе половины — заглушки:
 любой RPC отвечает `codes.Unimplemented`. Логика появляется в M3
 (Python-клиент) и дальше.
 
 Для продакшена запускайте под systemd. Шаблон юнита запланирован на M5
-(production hardening); до тех пор — `mnemos-mesh serve` под любым
+(production hardening); до тех пор — `vesma-mesh serve` под любым
 супервизором процессов (systemd, supervisord или init-скрипт).
 
 ---
 
-## 5 · Подключение mnemos (M3)
+## 5 · Подключение vesma (M3)
 
-На стороне mnemos включите MeshClient, чтобы mnemos подключался к
-`/run/mnemos/core.sock`. Клиент живёт в репозитории mnemos
+На стороне vesma включите MeshClient, чтобы vesma подключался к
+`/run/mnemos/core.sock`. Клиент живёт в репозитории vesma
 (`mnemos/src/mnemos/mesh_client.py`) и поставляется в M3. Пока M3 не
-вышел, меш держит слушатель для пиров, но mnemos с ним ещё не говорит.
+вышел, меш держит слушатель для пиров, но vesma с ним ещё не говорит.
 
 ---
 
@@ -163,17 +163,17 @@ mnemos через Unix-сокет (`unix_socket`). На M2 обе половин
 Когда M3 выйдет, проверьте канал ответом heartbeat:
 
 ```bash
-# На узле A, с запущенными mnemos и мешем
-mnemos mesh heartbeat --peer mnemos-B
+# На узле A, с запущенными vesma и мешем
+vesma mesh heartbeat --peer mnemos-B
 # Ожидание: непустое поле версии от бинарника M2
 ```
 
-На M2 (заглушка) инструмент проверки — `mnemos-mesh doctor`: он
+На M2 (заглушка) инструмент проверки — `vesma-mesh doctor`: он
 проверяет путь Unix-сокета, валидность сертификатов и досягаемость
 пиров (заглушка). Запустите после `serve`:
 
 ```bash
-mnemos-mesh doctor --config ~/.mnemos/mesh.yaml
+vesma-mesh doctor --config ~/.mnemos/mesh.yaml
 ```
 
 ---
@@ -186,8 +186,8 @@ mnemos-mesh doctor --config ~/.mnemos/mesh.yaml
 config: read /run/mnemos/core.sock: no such file or directory
 ```
 
-Сокет создаёт меш, mnemos к нему подключается. Убедитесь, что каталог
-существует и процесс mnemos не занял другой путь. Сверьте
+Сокет создаёт меш, vesma к нему подключается. Убедитесь, что каталог
+существует и процесс vesma не занял другой путь. Сверьте
 `unix_socket` в обоих конфигах.
 
 ### Отказ mTLS — неизвестный пир

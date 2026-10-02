@@ -303,9 +303,9 @@ describe("docs domain (ADR 0015 + ADR 0016)", () => {
 
   it("the default hub has no trail (section root), imported hubs keep one", () => {
     expect(crumbsFor("/docs/vesma-eyes")).toEqual([]);
-    const mnemos = crumbsFor("/docs/mnemos");
-    expect(mnemos[0]).toEqual({ to: "/docs/vesma-eyes", key: "nav.docs" });
-    expect(mnemos[1]?.label).toBe("Vesma");
+    const vesma = crumbsFor("/docs/mnemos");
+    expect(vesma[0]).toEqual({ to: "/docs/vesma-eyes", key: "nav.docs" });
+    expect(vesma[1]?.label).toBe("Vesma");
   });
 
   it("category trail: Документация → категория (project-scoped and legacy)", () => {

@@ -17,7 +17,7 @@ import { keys } from "@/lib/queryKeys";
  * The 501 is seeded into the query cache so renderToString hits the error
  * branch synchronously; ru copy is the no-provider default.
  */
-function renderTraces(adapterMode: "board" | "mnemos", error: ApiError): string {
+function renderTraces(adapterMode: "board" | "vesma", error: ApiError): string {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -49,7 +49,7 @@ describe("traces board-mode 501", () => {
       "board",
       new ApiError(
         501,
-        "BoardAdapter.listTraces: the board merge-API does not expose the mnemos /traces view (ADR 0011 §6).",
+        "BoardAdapter.listTraces: the board merge-API does not expose the vesma /traces view (ADR 0011 §6).",
       ),
     );
     // UX-overhaul §6 (Ф1, П1): the 501 is ONE HonestLine matching the nav
@@ -62,8 +62,8 @@ describe("traces board-mode 501", () => {
     expect(html).not.toContain("501");
   });
 
-  it("keeps the plain error state on the mnemos adapter (501 there is an anomaly)", () => {
-    const html = renderTraces("mnemos", new ApiError(501, "HttpAdapter: 501"));
+  it("keeps the plain error state on the vesma adapter (501 there is an anomaly)", () => {
+    const html = renderTraces("vesma", new ApiError(501, "HttpAdapter: 501"));
     expect(html).not.toContain("Трассировки недоступны в board-режиме");
     expect(html).toContain('role="alert"'); // generic error branch
     expect(html).toContain("Не удалось загрузить трассировки");

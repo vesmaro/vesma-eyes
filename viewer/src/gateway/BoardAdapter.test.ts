@@ -355,7 +355,7 @@ describe("BoardAdapter wire contract", () => {
     stream.close();
   });
 
-  // Recorded corpus (2026-09-19, live board 1.4.1 + stub mnemos store): the
+  // Recorded corpus (2026-09-19, live board 1.4.1 + stub vesma store): the
   // exact anonymous dict `GET /api/memories/pulse` answers with — QA rule
   // "recorded corpus instead of an invented double".
   const PULSE_WIRE_FIXTURE = {
@@ -478,7 +478,7 @@ describe("BoardAdapter wire contract", () => {
 
 // --- Ф2 task-domain reads ------------------------------------------------------
 // Recorded corpus (2026-09-19, live board on :8141 — seeded store + the real
-// mnemos on :8787 registered as "laptop"): the exact wire bodies the new
+// vesma on :8787 registered as "laptop"): the exact wire bodies the new
 // endpoints answered with, trimmed to representative rows (QA rule: recorded
 // corpus instead of an invented double).
 
@@ -570,7 +570,7 @@ const CORPUS_ARCHIVED_ROW = {
   agents: ["zcode"],
   specialists: ["@GCW: Tech Lead", "owner"],
   env: "laptop",
-  project: "mnemos",
+  project: "vesma",
   memory_ids: [],
   mnemos_tags: ["project:mnemos", "naming"],
   created_at: "2026-09-19T21:11:24+00:00",
@@ -612,7 +612,7 @@ const CORPUS_BOARD_TASK = {
   agents: ["zcode"],
   specialists: ["@GCW: Senior Frontend Developer", "@GCW: Tech Lead"],
   env: "cluster",
-  project: "mnemos-eyes",
+  project: "vesma-eyes",
   memory_ids: ["25cdc0e9-1912-4217-aaf0-0e7c48912df1"],
   mnemos_tags: ["project:vesma-eyes", "agent:zcode", "mnemos:decision"],
   created_at: "2026-09-19T21:11:24+00:00",
@@ -676,14 +676,14 @@ describe("BoardAdapter Ф2 task reads (recorded corpus)", () => {
       status: "blocked",
       col: "blocked",
       agent: "zcode",
-      project: "mnemos",
+      project: "vesma",
       limit: 5,
       offset: 0,
     });
 
     expect((fetchMock.mock.calls[0] as [string])[0]).toBe(
       "/api/archive?q=%D1%80%D0%B5%D0%B3%D0%B8%D1%81%D1%82%D1%80%D0%B0%D1%86" +
-        "&status=blocked&col=blocked&agent=zcode&project=mnemos&limit=5&offset=0",
+        "&status=blocked&col=blocked&agent=zcode&project=vesma&limit=5&offset=0",
     );
     expect(page.total).toBe(1);
     expect(page.items[0].archived).toBe(1);
@@ -768,7 +768,7 @@ describe("BoardAdapter error and auth behaviour", () => {
     expect(getToken()).toBe("mnk_should_never_leave"); // untouched, just unused
   });
 
-  it("a 401 never raises the mnemos unauthorized flag (reads are open)", async () => {
+  it("a 401 never raises the vesma unauthorized flag (reads are open)", async () => {
     const fetchMock = respondingFetch({ detail: "nope" }, 401);
     const adapter = new BoardAdapter({
       fetchImpl: fetchMock as unknown as typeof fetch,

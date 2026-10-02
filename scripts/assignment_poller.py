@@ -94,12 +94,12 @@ def _now_iso() -> str:
 
 def _state_dir() -> Path:
     base = os.environ.get("XDG_STATE_HOME") or "~/.local/state"
-    return Path(base).expanduser() / "mnemos-eyes"
+    return Path(base).expanduser() / "vesma-eyes"
 
 
 def _config_dir() -> Path:
     base = os.environ.get("XDG_CONFIG_HOME") or "~/.config"
-    return Path(base).expanduser() / "mnemos-eyes"
+    return Path(base).expanduser() / "vesma-eyes"
 
 
 # --------------------------------------------------------------------- errors
@@ -342,7 +342,7 @@ def render_envelope(assignment: dict[str, Any], *, board_url: str,
                      "checklist as the acceptance criteria)")
     depends = _extract_section(snapshot, _DEPENDS_RE) or "—"
     fence = _fence(snapshot)
-    return f"""[GCW ASSIGNMENT {aid} | task {task_id} | mnemos {memory_id}]
+    return f"""[GCW ASSIGNMENT {aid} | task {task_id} | vesma {memory_id}]
 MODE: assignment-run
 SPECIALIST: {specialist} (harness: {harness}, executor: {executor_name})
 
@@ -1175,7 +1175,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="vesma-eyes assignment poller (ADR 0009 phase 2)")
     parser.add_argument("--config", default=str(_config_dir() / "poller.yaml"),
-                        help="path to poller.yaml (default: ~/.config/mnemos-eyes/poller.yaml)")
+                        help="path to poller.yaml (default: ~/.config/vesma-eyes/poller.yaml)")
     parser.add_argument("--once", action="store_true",
                         help="single cycle in DRY-RUN mode: log the launch "
                              "decision per queued assignment, then exit — "

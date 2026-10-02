@@ -26,7 +26,7 @@ import type { BoardTask } from "./boardTypes";
  * Deterministic task-domain dataset for the MockAdapter (Ф2, ADR 0011 §6).
  *
  * Shaped from the RECORDED CORPUS (2026-09-19, live board 1.5.0-dev on
- * :8141 — seeded store, real mnemos on :8787 as the "laptop" server): every
+ * :8141 — seeded store, real vesma on :8787 as the "laptop" server): every
  * row mirrors the exact `TaskOut`/`ReportOut`/`EventItem`/`MemoryItem`/
  * `TaskInboxItem` keys the wire serves, so mock mode renders what production
  * renders. Like fixtures.ts: no `Date.now()`, no `Math.random()` — two
@@ -90,7 +90,7 @@ export const MOCK_TASKS: BoardTask[] = [
     summary:
       "Backend-гейт (CORS + auth/2FA) снят 2026-06-17. Осталось подключить HttpAdapter к живому API.",
     spec:
-      "Контекст: бэкенд-сессия mnemos завершена (HEAD 4331a22).\n\n" +
+      "Контекст: бэкенд-сессия vesma завершена (HEAD 4331a22).\n\n" +
       "Acceptance criteria:\n— [ ] Authorization: Bearer mnk_… работает в HttpAdapter\n" +
       "— [ ] TOTP-флоу для remote-сессий",
     agents: ["zcode", "claude"],
@@ -138,7 +138,7 @@ export const MOCK_TASKS: BoardTask[] = [
     agents: [],
     specialists: ["owner"],
     env: "laptop",
-    project: "mnemos",
+    project: "vesma",
     memory_ids: [],
     mnemos_tags: ["project:mnemos"],
     created_at: "2026-09-15T10:05:00+00:00",
@@ -160,7 +160,7 @@ export const MOCK_TASKS: BoardTask[] = [
     agents: ["zcode"],
     specialists: ["@GCW: Tech Lead", "@GCW: Senior Security Engineer"],
     env: "laptop",
-    project: "mnemos",
+    project: "vesma",
     memory_ids: ["754f83a7-466e-4a42-a884-76382c7ea6d4"],
     mnemos_tags: ["project:mnemos", "topic:security"],
     created_at: "2026-09-11T13:00:00+00:00",
@@ -225,7 +225,7 @@ export const MOCK_TASKS: BoardTask[] = [
     agents: [],
     specialists: ["@GCW: Architectural Committee"],
     env: "cloud",
-    project: "mnemos",
+    project: "vesma",
     memory_ids: [],
     mnemos_tags: ["project:mnemos", "mnemos:decision"],
     created_at: "2026-09-09T12:00:00+00:00",
@@ -309,7 +309,7 @@ export const MOCK_TASKS: BoardTask[] = [
     agents: [],
     specialists: ["@GCW: Senior Frontend Developer"],
     env: "local",
-    project: "mnemos",
+    project: "vesma",
     memory_ids: [],
     mnemos_tags: ["project:mnemos", "topic:design"],
     created_at: "2026-09-18T06:25:00+00:00",
@@ -373,7 +373,7 @@ export const MOCK_TASKS: BoardTask[] = [
     agents: ["zcode"],
     specialists: ["@GCW: Architectural Committee"],
     env: "cloud",
-    project: "mnemos",
+    project: "vesma",
     memory_ids: [],
     mnemos_tags: ["project:mnemos", "task:stage:archcom-review"],
     created_at: "2026-09-17T09:00:00+00:00",
@@ -430,7 +430,7 @@ export const MOCK_ARCHIVED_TASK: BoardTask = {
   agents: ["zcode"],
   specialists: ["@GCW: Tech Lead", "owner"],
   env: "laptop",
-  project: "mnemos",
+  project: "vesma",
   memory_ids: [],
   mnemos_tags: ["project:mnemos", "naming"],
   created_at: "2026-09-10T09:00:00+00:00",
@@ -525,7 +525,7 @@ export const MOCK_HISTORY: TaskHistory = {
       title: "Session checkpoint — 2026-07-27",
       source: "laptop",
       detail:
-        "# Session checkpoint\n\n## Goals\nUpdate mnemos to latest version, run full code+QA review…",
+        "# Session checkpoint\n\n## Goals\nUpdate vesma to latest version, run full code+QA review…",
     },
   ],
 };
@@ -536,7 +536,7 @@ export const MOCK_TASK_MEMORIES: TaskMemories = {
     "25cdc0e9-1912-4217-aaf0-0e7c48912df1": {
       id: "25cdc0e9-1912-4217-aaf0-0e7c48912df1",
       title: "Session checkpoint — 2026-07-27",
-      excerpt: "# Session checkpoint\n\n## Goals\nUpdate mnemos to latest version…",
+      excerpt: "# Session checkpoint\n\n## Goals\nUpdate vesma to latest version…",
       status: "published",
       tags: ["project:vesma-eyes", "mnemos:checkpoint"],
     },
@@ -557,7 +557,7 @@ export const MOCK_INBOX: TaskInbox = {
     {
       memory_id: "bd945a48-0888-4b1f-9ebb-841519e5f8b9",
       server: "laptop",
-      project: "mnemos",
+      project: "vesma",
       title: "Снять corpus с живого борда для Ф2",
       excerpt: "Правило QA: recorded corpus вместо выдуманного дубля…",
       tags: ["project:mnemos", "task:queue"],
@@ -590,7 +590,7 @@ export const MOCK_INBOX: TaskInbox = {
     {
       memory_id: "d41b22c4-6b55-4cc8-8e1f-7a8b3c4d5e6f",
       server: "ai-agent",
-      project: "mnemos",
+      project: "vesma",
       title: "Устранить дрейф FTS5 после переименования тегов",
       excerpt: "Симптом: поиск отдаёт устаревшие сниппеты…",
       tags: ["project:mnemos", "task:queue"],

@@ -29,7 +29,7 @@ import { startVisit } from "@/telemetry/telemetry";
  *                             confirmation means no session is claimed.
  * 3. Gateways without the session wire resolve from their own capability,
  *    synchronously, with no probe: the mock playground answers "user" (no
- *    auth wall by design), the mnemos L1 adapter "anonymous" (its reads are
+ *    auth wall by design), the vesma L1 adapter "anonymous" (its reads are
  *    open, ADR 0011 §7, and the v6 gates stay inactive there — see
  *    useAuthSession).
  *

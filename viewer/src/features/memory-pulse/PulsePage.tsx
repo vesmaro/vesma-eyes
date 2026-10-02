@@ -104,7 +104,7 @@ export function PulsePage() {
   );
 }
 
-/** Mnemos-mode honest state: the pulse is a merge-API view, not a mnemos one. */
+/** Mnemos-mode honest state: the pulse is a merge-API view, not a vesma one. */
 function PulseUnsupported() {
   const t = useT();
   return (

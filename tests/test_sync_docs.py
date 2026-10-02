@@ -600,11 +600,11 @@ def test_mermaid_labels_never_requoted() -> None:
     src = (
         "```mermaid\n"
         "flowchart TB\n"
-        "    L1[scanner\\nruns] -->|tag| DB[(mnemos store)]\n"
+        "    L1[scanner\\nruns] -->|tag| DB[(vesma store)]\n"
         "```\n"
     )
     fixed = sync_docs.normalize_mermaid_labels(src)
-    assert "DB[(mnemos store)]" in fixed  # cylinder shape preserved
+    assert "DB[(vesma store)]" in fixed  # cylinder shape preserved
     assert '"' not in fixed  # no label gained quotes
     assert "L1[scanner<br/>runs]" in fixed
 

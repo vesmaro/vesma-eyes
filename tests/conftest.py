@@ -12,7 +12,7 @@ Shared fixtures:
 - ``split_tokens``  — ADR 0009 A1 split mode: ui token configured with a
                       value distinct from the board token
 - ``no_board_token`` — fail-closed mode (no token class configured -> 503)
-- ``fake_mnemos``   — local threaded HTTP double of the mnemos engine that
+- ``fake_mnemos``   — local threaded HTTP double of the vesma engine that
                       records every request (method, path, Authorization
                       presence, JSON body)
 - ``decoy``         — TCP listener that must stay at zero connections
@@ -97,7 +97,7 @@ def get_app_module():
     return _app_module
 
 
-# -------------------------------------------------------------- fake mnemos
+# -------------------------------------------------------------- fake vesma
 class _FakeMnemosHandler(BaseHTTPRequestHandler):
     """Records every request on the owning FakeMnemos; never authenticates."""
 
@@ -155,7 +155,7 @@ class _FakeMnemosHandler(BaseHTTPRequestHandler):
                           if limit else fake.memories_result)
                 self._reply(200, window)
         elif self.path.startswith("/tags"):
-            # Ф0b: aggregated tag listing primitive (mnemos TagCount[])
+            # Ф0b: aggregated tag listing primitive (vesma TagCount[])
             self._reply(200, fake.tags_result)
         else:  # /health and anything else
             self._reply(200, {"status": "ok"})
@@ -184,7 +184,7 @@ class _FakeMnemosHandler(BaseHTTPRequestHandler):
 
 
 class FakeMnemos:
-    """Loopback mnemos engine double. ``fail_memories`` / ``fail_search`` /
+    """Loopback vesma engine double. ``fail_memories`` / ``fail_search`` /
     ``fail_list`` flip its write/search/listing endpoints to 500 to
     exercise failure paths."""
 
@@ -206,7 +206,7 @@ class FakeMnemos:
         # has-more signal (full page ⇒ maybe more); default [] keeps the
         # legacy pulse replies intact
         self.memories_result: list[dict] = []
-        # Ф0b: GET /tags reply (mnemos TagCount[] shape)
+        # Ф0b: GET /tags reply (vesma TagCount[] shape)
         self.tags_result: list[dict] = []
         # memory id -> full card dict served by GET /memories/{id}
         # (BE-7 history tests wire task-linked checkpoints here)

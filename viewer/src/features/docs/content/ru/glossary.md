@@ -75,5 +75,5 @@ vesma и vesma-mesh, — импортированные из их репозит
 ## См. также
 
 - [Что такое vesma](what-is-mnemos.md)
-- [Что такое vesma-eyes](what-is-vesmaro-eyes.md)
+- [Что такое vesma-eyes](what-is-vesma-eyes.md)
 - [Токены и доступ](tokens.md)

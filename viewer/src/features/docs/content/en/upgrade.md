@@ -24,8 +24,8 @@ the operator, all you need is the release number from the release notes.
 | Where | What | Who changes it |
 | --- | --- | --- |
 | `server/app.py` | the source of truth for the version | the release PR |
-| `deploy/chart/vesmaro-eyes/Chart.yaml` | the chart and app version | the release PR |
-| `deploy/chart/vesmaro-eyes/values.yaml` | the default image tag | the release PR |
+| `deploy/chart/vesma-eyes/Chart.yaml` | the chart and app version | the release PR |
+| `deploy/chart/vesma-eyes/values.yaml` | the default image tag | the release PR |
 | the bottom of the interface's left panel | the live version on the board | comes from `/api/health` |
 
 ## Before upgrading
@@ -42,7 +42,7 @@ the operator, all you need is the release number from the release notes.
    the interface's left panel, or:
 
    ```bash
-   kubectl -n kube-agents get deploy vesmaro-eyes \
+   kubectl -n kube-agents get deploy vesma-eyes \
      -o jsonpath='{.spec.template.spec.containers[0].image}'
    ```
 
@@ -58,19 +58,19 @@ a new one is not given: the pod restarts but stays on the old version —
 an upgrade without an upgrade.
 
 ```bash
-helm upgrade --install vesmaro-eyes deploy/chart/vesmaro-eyes \
+helm upgrade --install vesma-eyes deploy/chart/vesma-eyes \
   -n kube-agents --atomic --timeout 5m \
   -f my-values.yaml \
   --set image.tag=<new version>
 
-kubectl -n kube-agents rollout status deployment/vesmaro-eyes --timeout=300s
+kubectl -n kube-agents rollout status deployment/vesma-eyes --timeout=300s
 ```
 
 Then — the mandatory check of the pod's actual image (it must match the
 tag from the command):
 
 ```bash
-kubectl -n kube-agents get deploy vesmaro-eyes \
+kubectl -n kube-agents get deploy vesma-eyes \
   -o jsonpath='{.spec.template.spec.containers[0].image}'
 ```
 
@@ -92,9 +92,9 @@ A rollback returns the release to its previous version — the data stays
 as it is:
 
 ```bash
-helm history vesmaro-eyes -n kube-agents      # find the previous revision
-helm rollback vesmaro-eyes <revision> -n kube-agents
-kubectl -n kube-agents rollout status deployment/vesmaro-eyes
+helm history vesma-eyes -n kube-agents      # find the previous revision
+helm rollback vesma-eyes <revision> -n kube-agents
+kubectl -n kube-agents rollout status deployment/vesma-eyes
 ```
 
 After a rollback — the same pod image check: the revision must show the

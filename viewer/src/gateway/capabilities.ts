@@ -78,7 +78,7 @@ import type { UiTokenVerifyResult } from "./uiToken";
 /**
  * Board-native read capabilities (ADR 0011 Ф1). The three adapters share the
  * `MemoryGateway` surface, but only the board and mock adapters speak the
- * merge-API extras; the mnemos HttpAdapter legitimately does not. Pages probe
+ * merge-API extras; the vesma HttpAdapter legitimately does not. Pages probe
  * the gateway through these structural guards instead of branching on the
  * adapter-mode string — an adapter that grows the method lights the section
  * up with no page change (capability, not configuration).
@@ -113,8 +113,8 @@ export function isBoardHealthSource(
 /**
  * Ф2 task-domain read surface: board projection, inbox, reports, history,
  * memory links, archive and the SSE stream. Structural, like the Ф1 guards —
- * the mnemos HttpAdapter legitimately lacks every method and the pages render
- * their honest "unsupported in mnemos mode" states.
+ * the vesma HttpAdapter legitimately lacks every method and the pages render
+ * their honest "unsupported in vesma mode" states.
  */
 export interface TaskSource {
   board(status?: string, signal?: AbortSignal): Promise<BoardSummary>;
@@ -216,7 +216,7 @@ export function isUiTokenSessionSource(
 /**
  * AGW-1 agents-domain read surface (spec 2026-09-19 §5): the assignment
  * queue, the executor registry and the default-executor settings. Structural,
- * like every guard above — the mnemos HttpAdapter legitimately lacks the
+ * like every guard above — the vesma HttpAdapter legitimately lacks the
  * methods and agents pages render their honest unsupported states. The
  * SCHED-1 automation surface deliberately has NO guard: it is consumed by a
  * later wave, adapter methods suffice for now.
@@ -350,7 +350,7 @@ export function isAgentsMutationSource(
 /**
  * SCHED-1 automation read surface (ADR 0013 §8 — capability-gated on the
  * S1 API): status (with the condition meta-dictionary), both rule lists
- * and the launch journal. Structural like every guard — mnemos mode has
+ * and the launch journal. Structural like every guard — vesma mode has
  * none of it and the section renders its honest unsupported state.
  */
 export interface AutomationSource {
@@ -420,7 +420,7 @@ export function isAutomationMutationSource(
 /**
  * UI-17 tags cloud (spec 2026-09-21 §6): raw aggregated tag view with
  * per-store honesty (`errors[]` + `servers_scanned` on the board
- * `TagListOut`). Structural like every guard — the mnemos HttpAdapter
+ * `TagListOut`). Structural like every guard — the vesma HttpAdapter
  * legitimately has no store-failure concept (single store) and the page
  * falls back to the plain `listTags` projection without the partial marker.
  */
@@ -501,7 +501,7 @@ export function isPairingExchangeSource(
 /**
  * UI-28 «Активность» read surface (`GET /api/activity` + the hour-bucket
  * view). Structural like every guard above: board and mock speak it, the
- * mnemos HttpAdapter legitimately does not, and the page renders its honest
+ * vesma HttpAdapter legitimately does not, and the page renders its honest
  * unsupported state — an adapter that grows the methods lights the section
  * up with no page change.
  */

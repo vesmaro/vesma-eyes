@@ -29,7 +29,7 @@ describe("MemoryScroll (the scroll)", () => {
     // mem-0001 has raw_content ≠ effective content.
     const effective = render(MOCK_MEMORIES[0], false);
     expect(effective).toContain(
-      "Viewer talks to mnemos through the same-origin /api prefix",
+      "Viewer talks to vesma through the same-origin /api prefix",
     );
 
     const raw = render(MOCK_MEMORIES[0], true);

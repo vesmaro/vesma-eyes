@@ -19,10 +19,10 @@ describe("memory list URL params", () => {
   });
 
   it("maps page+limit to an offset for the gateway", () => {
-    const state = parseMemoryListParams(new URLSearchParams("page=3&limit=10&status=published&project=mnemos"));
+    const state = parseMemoryListParams(new URLSearchParams("page=3&limit=10&status=published&project=vesma"));
     expect(toListParams(state)).toEqual({
       status: "published",
-      project: "mnemos",
+      project: "vesma",
       limit: 10,
       offset: 20,
     });

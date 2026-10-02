@@ -100,7 +100,7 @@ def _legacy_specs() -> list[dict[str, Any]]:
             "url": os.environ["MNEMOS_URL"],
             "token_env": "MNEMOS_TOKEN",
             "group": "abyss",
-            "description": "mnemos in the ai-agent k3s cluster",
+            "description": "vesma in the ai-agent k3s cluster",
         }]
     out: list[dict[str, Any]] = []
     for spec in raw:

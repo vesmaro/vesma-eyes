@@ -3,7 +3,7 @@ import { AuthClient, clearToken, getToken } from "./auth";
 import { ApiError } from "@/lib/errors";
 
 /**
- * T6 auth flow against an in-test "mock mnemos server": a stateful fetch
+ * T6 auth flow against an in-test "mock vesma server": a stateful fetch
  * implementation that routes /auth/* like the live wire contract
  * (openapi-snapshot.json) — phase 1 `POST /auth/login {token}` answers either
  * with `{ session, expires_at }` (TOTP-less) or `{ challenge_id }`
@@ -103,7 +103,7 @@ function mockMnemosServer({ totpEnrolled, validCode }: MockMnemosOptions) {
   return { state, fetchImpl: serve as unknown as typeof fetch };
 }
 
-describe("AuthClient flow on a mock mnemos server", () => {
+describe("AuthClient flow on a mock vesma server", () => {
   beforeEach(() => {
     vi.stubGlobal("localStorage", new MemoryStorage());
     clearToken();

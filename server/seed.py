@@ -1,4 +1,4 @@
-"""Board seed: real mnemos-eyes / vesmaro program tasks.
+"""Board seed: real vesma-eyes / vesmaro program tasks.
 
 Task canon (GCW Task Manager style) — every task carries:
   - id          short slug (T*, RB-*, TB-*)
@@ -9,11 +9,11 @@ Task canon (GCW Task Manager style) — every task carries:
   - specialists @GCW-роли или owner
   - env         где исполняется: cluster | laptop | local | cloud
   - project     slug проекта
-  - memory_ids  реальные id памятей mnemos (лаптопный стор)
+  - memory_ids  реальные id памятей vesma (лаптопный стор)
   - mnemos_tags теги по контракту tag-contract
 
-Every ``memory_ids`` entry is a REAL mnemos memory id (verified via the
-mnemos MCP channel on 2026-09-15).
+Every ``memory_ids`` entry is a REAL vesma memory id (verified via the
+vesma MCP channel on 2026-09-15).
 """
 
 from __future__ import annotations
@@ -46,9 +46,9 @@ SEED_TASKS: list[dict[str, Any]] = [
         "agents": ["zcode"],
         "specialists": ["@GCW: Tech Lead"],
         "env": "cluster",
-        "project": "mnemos-eyes",
+        "project": "vesma-eyes",
         "memory_ids": ["25cdc0e9-1912-4217-aaf0-0e7c48912df1"],
-        "mnemos_tags": ["project:mnemos-eyes", "agent:zcode", "mnemos:session"],
+        "mnemos_tags": ["project:vesma-eyes", "agent:zcode", "mnemos:session"],
     },
     {
         "id": "T6",
@@ -56,18 +56,18 @@ SEED_TASKS: list[dict[str, Any]] = [
         "title": "Подключить L1 viewer к живому mnemos: HttpAdapter + auth flow",
         "summary": "Backend-гейт (CORS + auth/2FA) снят 2026-06-17. Осталось подключить HttpAdapter "
                    "к живому API с mnk_ bearer токенами и TOTP для удалённых сессий.",
-        "spec": "Контекст: бэкенд-сессия mnemos завершена (HEAD 4331a22, make verify зелёный).\n\n"
+        "spec": "Контекст: бэкенд-сессия vesma завершена (HEAD 4331a22, make verify зелёный).\n\n"
                "Acceptance criteria:\n"
                "— [ ] Authorization: Bearer mnk_… работает в HttpAdapter\n"
                "— [ ] TOTP-флоу для remote-сессий (POST /auth/verify)\n"
                "— [ ] CORS allow-list включает origin вьюера\n"
-               "— [ ] смоук на живом mnemos зелёный",
+               "— [ ] смоук на живом vesma зелёный",
         "agents": ["zcode"],
         "specialists": ["@GCW: Senior Frontend Developer", "@GCW: Tech Lead"],
         "env": "cluster",
-        "project": "mnemos-eyes",
+        "project": "vesma-eyes",
         "memory_ids": ["25cdc0e9-1912-4217-aaf0-0e7c48912df1"],
-        "mnemos_tags": ["project:mnemos-eyes", "agent:zcode", "mnemos:decision"],
+        "mnemos_tags": ["project:vesma-eyes", "agent:zcode", "mnemos:decision"],
     },
     {
         "id": "RB-1",
@@ -87,7 +87,7 @@ SEED_TASKS: list[dict[str, Any]] = [
         "agents": ["zcode"],
         "specialists": ["@GCW: Tech Lead", "owner"],
         "env": "laptop",
-        "project": "mnemos",
+        "project": "vesma",
         "memory_ids": [
             "86ce17e7-1099-4e94-aa1b-eba431522560",
             "bc6a6504-b269-41d2-b30f-0c28e0974efc",
@@ -110,7 +110,7 @@ SEED_TASKS: list[dict[str, Any]] = [
         "agents": ["zcode"],
         "specialists": ["@GCW: Tech Lead", "@GCW: Senior Security Engineer"],
         "env": "laptop",
-        "project": "mnemos",
+        "project": "vesma",
         "memory_ids": ["754f83a7-466e-4a42-a884-76382c7ea6d4"],
         "mnemos_tags": ["project:mnemos", "agent:zcode", "mnemos:decision", "rebrand-plan"],
     },
@@ -128,9 +128,9 @@ SEED_TASKS: list[dict[str, Any]] = [
         "agents": ["zcode"],
         "specialists": ["@GCW: Senior Frontend Developer"],
         "env": "laptop",
-        "project": "mnemos-eyes",
+        "project": "vesma-eyes",
         "memory_ids": ["25cdc0e9-1912-4217-aaf0-0e7c48912df1"],
-        "mnemos_tags": ["project:mnemos-eyes", "agent:zcode", "mnemos:session"],
+        "mnemos_tags": ["project:vesma-eyes", "agent:zcode", "mnemos:session"],
     },
     {
         "id": "T2",
@@ -146,9 +146,9 @@ SEED_TASKS: list[dict[str, Any]] = [
         "agents": ["zcode"],
         "specialists": ["@GCW: Senior Frontend Developer"],
         "env": "laptop",
-        "project": "mnemos-eyes",
+        "project": "vesma-eyes",
         "memory_ids": [],
-        "mnemos_tags": ["project:mnemos-eyes", "agent:zcode", "mnemos:session"],
+        "mnemos_tags": ["project:vesma-eyes", "agent:zcode", "mnemos:session"],
     },
     {
         "id": "T4",
@@ -164,14 +164,14 @@ SEED_TASKS: list[dict[str, Any]] = [
         "agents": ["zcode"],
         "specialists": ["@GCW: Senior Frontend Developer"],
         "env": "laptop",
-        "project": "mnemos-eyes",
+        "project": "vesma-eyes",
         "memory_ids": [],
-        "mnemos_tags": ["project:mnemos-eyes", "agent:zcode", "mnemos:session"],
+        "mnemos_tags": ["project:vesma-eyes", "agent:zcode", "mnemos:session"],
     },
     {
         "id": "T3",
         "col": "open",
-        "title": "Включить codegen openapi-typescript из mnemos /openapi.json",
+        "title": "Включить codegen openapi-typescript из vesma /openapi.json",
         "summary": "scripts/codegen.sh на живую схему; сгенерированные типы коммитятся; "
                    "CI-гард на дрейф схемы.",
         "spec": "Acceptance criteria:\n"
@@ -181,9 +181,9 @@ SEED_TASKS: list[dict[str, Any]] = [
         "agents": ["zcode"],
         "specialists": ["@GCW: Senior Frontend Developer"],
         "env": "laptop",
-        "project": "mnemos-eyes",
+        "project": "vesma-eyes",
         "memory_ids": [],
-        "mnemos_tags": ["project:mnemos-eyes", "agent:zcode", "mnemos:session"],
+        "mnemos_tags": ["project:vesma-eyes", "agent:zcode", "mnemos:session"],
     },
     {
         "id": "T5",
@@ -199,9 +199,9 @@ SEED_TASKS: list[dict[str, Any]] = [
         "agents": ["zcode"],
         "specialists": ["@GCW: Senior Frontend Developer"],
         "env": "laptop",
-        "project": "mnemos-eyes",
+        "project": "vesma-eyes",
         "memory_ids": [],
-        "mnemos_tags": ["project:mnemos-eyes", "agent:zcode", "mnemos:session"],
+        "mnemos_tags": ["project:vesma-eyes", "agent:zcode", "mnemos:session"],
     },
     {
         "id": "T7",
@@ -216,9 +216,9 @@ SEED_TASKS: list[dict[str, Any]] = [
         "agents": ["zcode"],
         "specialists": ["@GCW: Senior Frontend Developer"],
         "env": "laptop",
-        "project": "mnemos-eyes",
+        "project": "vesma-eyes",
         "memory_ids": [],
-        "mnemos_tags": ["project:mnemos-eyes", "agent:zcode", "mnemos:session"],
+        "mnemos_tags": ["project:vesma-eyes", "agent:zcode", "mnemos:session"],
     },
     {
         "id": "MSH-1",
@@ -227,7 +227,7 @@ SEED_TASKS: list[dict[str, Any]] = [
         "summary": "Оба стора уже видны борду как отдельные серверы; federation даст сквозные "
                    "ссылки на памяти (RB-1/RB-2 перестанут показывать 404 в кластерном борде).",
         "spec": "Контекст: mnemos-mesh (Go) в ../mnemos-mesh; у обоих сторов включён auth; "
-               "лаптопный LAN-бинд 8788 с токеном vesmaro-eyes-board.\n\n"
+               "лаптопный LAN-бинд 8788 с токеном vesma-eyes-board.\n\n"
                "Acceptance criteria:\n"
                "— [ ] peer-пара laptop⇄cluster зарегистрирована\n"
                "— [ ] контрольный seed виден с обеих сторон\n"

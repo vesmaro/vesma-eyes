@@ -21,7 +21,7 @@ import { UiTokenSlot } from "@/features/ui-token/UiTokenSlot";
  *   correct state immediately (the /auth/me confirmation follows async).
  *
  * Board adapter (Ф0/Ф3): reads are open and token-free (ADR 0011 §7) — the
- * mnemos sign-in never appears. The ui-token entry is the UiTokenSlot sign-in
+ * vesma sign-in never appears. The ui-token entry is the UiTokenSlot sign-in
  * pair (accent «Войти» / «Выйти»), reactive off the gate state — no reload.
  */
 export function AuthStatus() {
@@ -35,7 +35,7 @@ export function AuthStatus() {
     connection = { state: "ok", label: t("auth.localMock") };
   } else {
     const health = deriveHealthStatus(status.data, status.isPending, status.isError);
-    const backend = isBoard ? "board" : "mnemos";
+    const backend = isBoard ? "board" : "vesma";
     const LABEL: Record<HealthState, TranslationKey> = {
       ok: "auth.connected",
       degraded: "auth.degraded",

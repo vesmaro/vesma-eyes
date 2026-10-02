@@ -23,8 +23,8 @@ import "@/styles/global.css";
  *
  * Adapter selection lives in gateway/adapterConfig.ts (`VITE_ADAPTER`):
  * "board" (production default — the read-only merge-API, no auth wall),
- * "mock" (in-memory fixtures, dev default) and "mnemos" (HttpAdapter against
- * the mnemos API, via VITE_ADAPTER=mnemos).
+ * "mock" (in-memory fixtures, dev default) and "vesma" (HttpAdapter against
+ * the vesma API, via VITE_ADAPTER=vesma).
  *
  * The router mounts under the Vite base ("/app" in production, root in dev)
  * so the deployed `/app` deep links resolve client-side (ADR 0011 §2 Ф0a:

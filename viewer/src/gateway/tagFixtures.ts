@@ -49,7 +49,7 @@ const FAMILY_PLAN: readonly FamilyQuota[] = [
   { prefix: "agent", segment: "", frequent: 1, middle: 4, rare: 26 },
   { prefix: "issue", segment: "", frequent: 0, middle: 0, rare: 37 },
   { prefix: "topic", segment: "", frequent: 1, middle: 0, rare: 17 },
-  { prefix: "mnemos", segment: "", frequent: 0, middle: 0, rare: 8 },
+  { prefix: "vesma", segment: "", frequent: 0, middle: 0, rare: 8 },
   { prefix: "gcw", segment: "component", frequent: 0, middle: 2, rare: 2 },
   { prefix: "gcw", segment: "release", frequent: 0, middle: 2, rare: 0 },
   { prefix: "gcw", segment: "", frequent: 0, middle: 0, rare: 2 },

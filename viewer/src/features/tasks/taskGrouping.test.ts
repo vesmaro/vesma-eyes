@@ -32,7 +32,7 @@ function storageStub(initial: Record<string, string> = {}): Storage {
 describe("groupTasksByProject", () => {
   it("buckets by project, sorts groups by name, no-project last", () => {
     const groups = groupTasksByProject(MOCK_TASKS);
-    expect(groups.map((g) => g.project)).toEqual(["mnemos", "vesma-eyes", "vesmaro"]);
+    expect(groups.map((g) => g.project)).toEqual(["vesma", "vesma-eyes", "vesmaro"]);
     for (const group of groups) {
       for (const task of group.tasks) {
         expect(task.project).toBe(group.project);
@@ -77,9 +77,9 @@ describe("sortGroupTasks (priority → position → id)", () => {
 describe("collapsed-group persistence (vesmaro.taskGroups)", () => {
   it("round-trips the collapse set through the storage stub", () => {
     const storage = storageStub();
-    const collapsed = new Set(["mnemos", "vesmaro"]);
+    const collapsed = new Set(["vesma", "vesmaro"]);
     saveCollapsedGroups(collapsed, storage);
-    expect(storage.getItem(TASK_GROUPS_STORAGE_KEY)).toBe('["mnemos","vesmaro"]');
+    expect(storage.getItem(TASK_GROUPS_STORAGE_KEY)).toBe('["vesma","vesmaro"]');
     expect(loadCollapsedGroups(storage)).toEqual(collapsed);
   });
 
@@ -91,8 +91,8 @@ describe("collapsed-group persistence (vesmaro.taskGroups)", () => {
   });
 
   it("drops non-string entries while keeping valid ones", () => {
-    const storage = storageStub({ [TASK_GROUPS_STORAGE_KEY]: '["mnemos", 42, null]' });
-    expect(loadCollapsedGroups(storage)).toEqual(new Set(["mnemos"]));
+    const storage = storageStub({ [TASK_GROUPS_STORAGE_KEY]: '["vesma", 42, null]' });
+    expect(loadCollapsedGroups(storage)).toEqual(new Set(["vesma"]));
   });
 
   it("survives a missing storage (node env / private mode)", () => {

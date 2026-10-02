@@ -49,7 +49,7 @@ function renderStatus(adapterMode: AdapterKind): string {
     fetchStatus: "idle",
     error: new ApiError(
       501,
-      "BoardAdapter.metrics: the board merge-API does not expose the mnemos /metrics view (ADR 0011 §6).",
+      "BoardAdapter.metrics: the board merge-API does not expose the vesma /metrics view (ADR 0011 §6).",
     ),
   });
   // Keep observers on the seeded states (retryOnMount rationale: see the
@@ -89,12 +89,12 @@ describe("status board-mode 501 (metrics)", () => {
     expect(html).not.toContain('role="alert"');
     // П4: the raw 501 wire text is gone from open copy (techDetail only).
     expect(html).not.toContain("501");
-    // The board copy — not the mnemos "health fine, metrics broken" error.
+    // The board copy — not the vesma "health fine, metrics broken" error.
     expect(html).not.toContain("Со здоровьем порядок, с метриками — нет");
   });
 
-  it("keeps the mnemos error treatment on the mnemos adapter", () => {
-    const html = renderStatus("mnemos");
+  it("keeps the vesma error treatment on the vesma adapter", () => {
+    const html = renderStatus("vesma");
     expect(html).toContain("Со здоровьем порядок, с метриками — нет");
     expect(html).not.toContain("Метрики недоступны в board-режиме");
   });

@@ -28,7 +28,7 @@ import {
  * (anonymous) on the board without an owner session, «вы: владелец»
  * (you: owner) with a ui token or in the mock playground, «device
  * connected» with a paired device (ADR 0012 §5, scope v1), and the honest
- * legacy «read-only» on the mnemos L1 adapter (its reads are open and its
+ * legacy «read-only» on the vesma L1 adapter (its reads are open and its
  * auth model is different — the v6 session words would lie there). The
  * reactive flip (login without reload) lives in LoginDialog.flow.test.tsx
  * under happy-dom; these renderToString cases pin the static states (SSR
@@ -106,7 +106,7 @@ describe("Sidebar footer mode line (session-aware)", () => {
     expect(html).not.toContain("anonymous");
   });
 
-  it("mnemos adapter: keeps its honest read-only word (no v6 session there)", () => {
+  it("vesma adapter: keeps its honest read-only word (no v6 session there)", () => {
     const html = renderSidebar(new HttpAdapter("/api"), true);
     expect(html).toContain("read-only");
     expect(html).not.toContain("you: owner");
@@ -177,7 +177,7 @@ describe("Sidebar footer mode line (device state, UI-22 + scope v1)", () => {
     expect(html).not.toContain("device connected");
   });
 
-  it("mnemos adapter with a device identity: still read-only (no device wire in L1)", () => {
+  it("vesma adapter with a device identity: still read-only (no device wire in L1)", () => {
     saveDeviceIdentity({
       token: "mnd_paired-device",
       deviceId: "dev_1",

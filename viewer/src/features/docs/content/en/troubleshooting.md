@@ -61,7 +61,7 @@ check the certificate's lifetime: `./scripts/gen-tls-secret.sh --check`
 
 | Symptom | Cause and cure |
 | --- | --- |
-| "The server did not accept the token — check the value and try again" | the sign-in failed verification at the door: the value is stale or it is a token of another class. Under the error line the server explains which class arrived and which one is needed (say, a machine token pasted where a ui token belongs). Take a fresh value from the `vesmaro-eyes-ui-token` secret and paste it again |
+| "The server did not accept the token — check the value and try again" | the sign-in failed verification at the door: the value is stale or it is a token of another class. Under the error line the server explains which class arrived and which one is needed (say, a machine token pasted where a ui token belongs). Take a fresh value from the `vesma-eyes-ui-token` secret and paste it again |
 | "Your session expired — sign in again" | the session closed: 6 hours of idle, or a ui token rotation on the server. Sign in again — the new session covers all the browser's tabs once more |
 | Mutations answer `503` | the token class is not configured on the board — enable `uiToken.enabled` (see [Tokens and access](tokens.md)) |
 | Sign-in answers `429` | the attempt limit fired: at most 10 per minute from one address. Wait a minute and try again |

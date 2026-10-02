@@ -27,7 +27,7 @@ LISTING_QUERY = {"tags": ["task:queue"], "limit": ["200"]}
 def hit(memory_id: str, title: str = "queue item", content: str = "body",
         tags: list[str] | None = None,
         created: str = "2026-09-01T00:00:00+00:00") -> dict:
-    """One mnemos /memories listing record shaped like a task:queue memory."""
+    """One vesma /memories listing record shaped like a task:queue memory."""
     return {"id": memory_id, "title": title, "content": content,
             "tags": tags or [], "created_at": created}
 
@@ -609,7 +609,7 @@ class TestAdoptWithEdits:
 
     def test_adopt_without_edits_keeps_legacy_behavior(
             self, inbox_env, client, auth, fake_mnemos):
-        """No edits → no mnemos write at all: adopt is byte-identical to the
+        """No edits → no vesma write at all: adopt is byte-identical to the
         pre-UI-25 contract (link-only, standard summary)."""
         mid = self._seed(inbox_env)
         r = client.post(f"/api/tasks/inbox/{mid}/adopt", headers=auth)

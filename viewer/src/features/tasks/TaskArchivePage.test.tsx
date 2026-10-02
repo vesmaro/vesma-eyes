@@ -170,7 +170,7 @@ describe("TaskArchivePage (mock adapter)", () => {
     expect(html).toContain("Retry");
   });
 
-  it("renders the honest unsupported state on a mnemos gateway", async () => {
+  it("renders the honest unsupported state on a vesma gateway", async () => {
     const html = await renderArchive(new HttpAdapter("/api"));
     expect(html).toContain("The Tasks domain is unavailable in vesma mode");
   });

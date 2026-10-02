@@ -112,8 +112,8 @@ kubectl -n kube-agents get secrets | grep vesma-eyes
 
 | Secret | Key | Class |
 | --- | --- | --- |
-| `vesmaro-eyes-ui-token` | `VESMARO_UI_TOKEN` | ui |
-| `vesmaro-eyes-board-token` | `VESMARO_BOARD_TOKEN` | machine |
+| `vesma-eyes-ui-token` | `VESMARO_UI_TOKEN` | ui |
+| `vesma-eyes-board-token` | `VESMARO_BOARD_TOKEN` | machine |
 | `vesmaro-eyes-mnemos` | `MNEMOS_TOKEN` | store token `mnk_…` |
 | `vesma-eyes-laptop` | `MNEMOS_LAPTOP_TOKEN` | the second store, `mnk_…` |
 

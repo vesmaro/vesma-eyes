@@ -12,7 +12,7 @@ import type { HealthStatus, Metrics } from "@/gateway/types";
 
 /**
  * Health indicators, counts and pipeline metrics in a scannable grid
- * (component-inventory §7). Honesty rules: anything the mnemos 4.1 payload
+ * (component-inventory §7). Honesty rules: anything the vesma 4.1 payload
  * does not carry (latency, DLQ depth) is shown as "not reported", never as a
  * fabricated zero.
  *

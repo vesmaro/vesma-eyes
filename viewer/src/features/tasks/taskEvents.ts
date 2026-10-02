@@ -168,7 +168,7 @@ function applyReportEvent(
  * RECOVERY open — SSE is at-most-once, so the drop window may have missed
  * feed facts (§5.9 / UI-28 §8.7).
  *
- * Capability-gated — a gateway without `events()` (mnemos mode) simply
+ * Capability-gated — a gateway without `events()` (vesma mode) simply
  * never subscribes, and the pages keep their refetch-on-mount behaviour.
  */
 export function useTaskEvents(): void {

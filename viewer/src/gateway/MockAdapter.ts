@@ -126,7 +126,7 @@ import type {
   Trace,
 } from "./types";
 
-/** Default wire limit for search (mirrors mnemos `SearchQuery.limit`). */
+/** Default wire limit for search (mirrors vesma `SearchQuery.limit`). */
 const DEFAULT_SEARCH_LIMIT = 20;
 /** Default wire limit for the traces list. */
 const DEFAULT_TRACE_LIMIT = 50;
@@ -193,7 +193,7 @@ export interface MockAdapterOptions {
 }
 
 /**
- * In-memory adapter for UI development without a live mnemos (task T2).
+ * In-memory adapter for UI development without a live vesma (task T2).
  * Full `MemoryGateway` implementation over the deterministic fixtures
  * (fixtures.ts): substring search with a surface-weighted rank that imitates
  * FTS+semantic behaviour, wire-compatible pagination and filters, and honest

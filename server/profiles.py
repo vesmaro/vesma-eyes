@@ -31,7 +31,7 @@ fields were added. Old section semantics are preserved: the agent's own
 file lands in ``instructions``, referenced ``*.instructions.md`` canon in
 ``rules`` (as the sync script categorized them).
 
-The mnemos index (scripts/sync-gcw-profiles.py) remains useful for
+The vesma index (scripts/sync-gcw-profiles.py) remains useful for
 search/recall, but the board profile no longer depends on it: when the
 GCW plugin tree is reachable, profiles are built straight from files,
 which makes duplication structurally impossible.

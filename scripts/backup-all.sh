@@ -36,7 +36,7 @@ for db in ("vesma.db", "vectors.db"):
 EOF
 
 echo "── 2. cluster vesma store"
-POD=$($PY -c "import subprocess;print(subprocess.run(['kubectl','-n','$NS','get','pod','-l','app.kubernetes.io/name=mnemos','-o','jsonpath={.items[0].metadata.name}'],capture_output=True,text=True).stdout)")
+POD=$($PY -c "import subprocess;print(subprocess.run(['kubectl','-n','$NS','get','pod','-l','app.kubernetes.io/name=vesma','-o','jsonpath={.items[0].metadata.name}'],capture_output=True,text=True).stdout)")
 kubectl exec "$POD" -n "$NS" -- python -c "
 import sqlite3, os
 os.makedirs('/tmp/bk', exist_ok=True)
@@ -68,7 +68,7 @@ kubectl cp "$NS/$EPOD:/tmp/bk/board.db" "$BK/board/board-cluster.db" 2>/dev/null
 kubectl exec "$EPOD" -n "$NS" -- rm -rf /tmp/bk
 $PY - "$BK" <<'EOF'
 import sqlite3, sys
-s = sqlite3.connect("/var/home/abyss/LABs/Projects/Project-Mnemos/mnemos-eyes/data/board.db")
+s = sqlite3.connect("/var/home/abyss/LABs/Projects/Project-Mnemos/vesma-eyes/data/board.db")
 d = sqlite3.connect(sys.argv[1] + "/board/board-local.db")
 s.backup(d); d.close(); s.close()
 for tag in ("cluster", "local"):

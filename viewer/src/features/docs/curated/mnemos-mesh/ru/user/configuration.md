@@ -19,7 +19,7 @@ M2). Полная валидация схемы (формы ACL, формат о
 
 | По умолчанию | Переопределение |
 |---|---|
-| `~/.mnemos/mesh.yaml` | `mnemos-mesh serve --config PATH` |
+| `~/.mnemos/mesh.yaml` | `vesma-mesh serve --config PATH` |
 
 Если `--config` пуст, загрузчик использует `~/.mnemos/mesh.yaml`.
 
@@ -31,10 +31,10 @@ M2). Полная валидация схемы (формы ACL, формат о
 |---|---|---|---|
 | `node_id` | string | *(обязательно)* | id пира этого узла. Привязан к CN mTLS-сертификата (критерий 3, архитектура §7). Используется как `peer_id` в проверке ACL и в `federation_access_log`. Пусто → `ErrEmptyNodeID`. |
 | `listen` | string | `:8443` | Адрес gRPC-слушателя для пиров (mTLS), `host:port`. |
-| `unix_socket` | string | `/run/mnemos/core.sock` | Путь Unix-сокета меш↔mnemos. Сокет создаёт меш, mnemos к нему подключается. |
+| `unix_socket` | string | `/run/mnemos/core.sock` | Путь Unix-сокета меш↔mnemos. Сокет создаёт меш, vesma к нему подключается. |
 | `mtls` | объект | *(обязательно)* | Настройки mTLS — ниже. |
 | `peers` | список | `[]` | Реестр пиров — ниже. |
-| `mnemos` | объект | *(дефолты)* | Поведение подключения меш→mnemos — ниже. |
+| `vesma` | объект | *(дефолты)* | Поведение подключения меш→vesma — ниже. |
 | `logging` | объект | `info` / `json` | Уровень и формат структурированного журнала — ниже. |
 | `metrics` | объект | *(пусто)* | Опциональный Prometheus-слушатель — ниже. |
 
@@ -78,26 +78,26 @@ openssl x509 -in node.pem -noout -fingerprint -sha256 | sed 's/://g'
 | `id` | string | *(обязательно)* | A2A-id пира; совпадает с привязкой CN сертификата. |
 | `address` | string | *(обязательно)* | mTLS gRPC-адрес меша пира, `host:port`. |
 | `fingerprint` | string | `""` | Зафиксированный отпечаток сертификата пира (`sha256:<hex>`). На этапе загрузки конфига опционален (формат проверит M5); фактическую проверку mTLS в M2 выполняет `mtls.peer_fingerprints`. |
-| `projects` | list[string] | `[]` | Per-peer ACL — разрешённые проектные скоупы. Меш **передаёт** их в RPC; **проверяет** их mnemos как шлюз (критерий 5). Меш НЕ инспектирует контент ради ACL. |
+| `projects` | list[string] | `[]` | Per-peer ACL — разрешённые проектные скоупы. Меш **передаёт** их в RPC; **проверяет** их vesma как шлюз (критерий 5). Меш НЕ инспектирует контент ради ACL. |
 
 > **ACL — на стороне mnemos.** Меш передаёт в RPC `peer_id` +
-> `project_scope` и фильтры запроса; mnemos сверяет их со своим
+> `project_scope` и фильтры запроса; vesma сверяет их со своим
 > per-peer конфигом, прежде чем вернуть какую-либо запись. Не
 > реализуйте проверку ACL в меше — жёсткое правило 4 в
 > [CONTRIBUTING.md](https://github.com/Korrnals/mnemos-mesh/blob/331ef3a785c1a74fb9f8972ff93cd6db5a8fc174/CONTRIBUTING.md).
 
 ---
 
-## `mnemos`
+## `vesma`
 
-Канал меш→mnemos (W2.5: транспорт выбирается явно, ADR-0019, вариант 1).
+Канал меш→vesma (W2.5: транспорт выбирается явно, ADR-0019, вариант 1).
 
 | Поле | Тип | По умолчанию | Описание |
 |---|---|---|---|
 | `transport` | string | `unix` | Транспорт ядра: `unix` (AF_UNIX-сокет на той же машине по пути `unix_socket`) или `tcp` (сетевой gRPC+mTLS). Явный выбор — **автофолбэка нет**. |
 | `address` | string | `""` | Обязательно для `transport: tcp` — host:port gRPC ядра (порт mnemos-core 8790; сайдкар фазы 1 слушает `127.0.0.1`). На unix-плече отвергается. |
 | `core_fingerprint` | string | `""` | Опционально (только `tcp`): зафиксировать сертификат сервера ядра, `sha256:<64 hex>` — усиление поверх обязательной проверки цепочки mesh-CA. На unix-плече отвергается. |
-| `dial_timeout` | duration | `2s` | Таймаут установления соединения с локальным mnemos (Unix-сокет или TCP — по `transport`). |
+| `dial_timeout` | duration | `2s` | Таймаут установления соединения с локальным vesma (Unix-сокет или TCP — по `transport`). |
 | `heartbeat_interval` | duration | `30s` | Периодичность проб `Heartbeat`. M2 читает поле, но heartbeats пока не планирует (M3+). |
 
 На tcp-плече меш предъявляет свой `mtls.node_cert` и проверяет

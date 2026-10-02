@@ -19,7 +19,7 @@ import pytest
 
 @pytest.fixture()
 def fake_server(app_module, fake_mnemos):
-    """Register an enabled fake mnemos server for memory resolution;
+    """Register an enabled fake vesma server for memory resolution;
     removed again on teardown (same pattern as test_api_memory_servers)."""
     name = "histfake"
     app_module.store.upsert_server({

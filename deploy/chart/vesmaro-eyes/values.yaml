@@ -267,7 +267,7 @@ networkPolicy:
       - to:
           - podSelector:
               matchLabels:
-                mnemos-mesh.korrnals.com/node: cluster
+                vesma-mesh.korrnals.com/node: cluster
         ports:
           - port: 9090
             protocol: TCP

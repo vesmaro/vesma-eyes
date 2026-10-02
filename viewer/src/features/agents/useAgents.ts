@@ -18,7 +18,7 @@ import { activeAssignmentOf } from "./assignmentStatus";
 /**
  * AGW-1 agents-domain data hooks (spec 2026-09-19). Reads are
  * capability-gated exactly like the Ф2 task hooks (`isAgentsSource`): on
- * the mnemos adapter the queries stay idle and pages render their honest
+ * the vesma adapter the queries stay idle and pages render their honest
  * unsupported states. `useExecutors` returns the WHOLE page — `meta` (the
  * presence TTL constants and sweeper cadence) is server-owned DATA the UI
  * reads and re-renders thresholds from, never hardcodes (§5.1).
@@ -116,7 +116,7 @@ export function useExecutionSettings() {
  * unfiltered queue query through a `select` — every card, list row and the
  * detail page observe ONE wire call (the same single-projection decision as
  * tasks.board). undefined = no active attempt (or no agents capability —
- * mnemos mode renders no badge, which is the honest state).
+ * vesma mode renders no badge, which is the honest state).
  */
 export function useActiveAssignment(taskId: string | undefined) {
   const gateway = useGateway();

@@ -13,7 +13,7 @@ function renderPanel(props: React.ComponentProps<typeof StatusPanel>): string {
   );
 }
 
-const HEALTH = { status: "ok", version: "4.1.0-mock", project: "mnemos-eyes" };
+const HEALTH = { status: "ok", version: "4.1.0-mock", project: "vesma-eyes" };
 
 describe("StatusPanel", () => {
   it("renders honest counters from the mock metrics payload", async () => {

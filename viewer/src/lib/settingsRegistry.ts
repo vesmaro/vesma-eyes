@@ -59,7 +59,7 @@ export const SETTINGS_REGISTRY = [
     default: "system",
     scope: "global",
     owner: "src/components/theme-provider.tsx",
-    note: "v2 migration: legacy read fallback mnemos-eyes:theme (light|dark); writes go to the new key only; «system» removes both records.",
+    note: "v2 migration: legacy read fallback vesma-eyes:theme (light|dark); writes go to the new key only; «system» removes both records.",
   },
   {
     key: "vesmaro.motion",
@@ -108,4 +108,4 @@ export const SETTINGS_REGISTRY = [
 ] as const satisfies readonly SettingsRegistryEntry[];
 
 /** The one legacy key the theme migration still READS (never written). */
-export const LEGACY_THEME_KEY = "mnemos-eyes:theme";
+export const LEGACY_THEME_KEY = "vesma-eyes:theme";

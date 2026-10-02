@@ -28,7 +28,7 @@ describe("gatedDomainFor (the public-surface table)", () => {
   it("public surfaces answer null: Обзор, Документы, the entry routes", () => {
     expect(gatedDomainFor("/")).toBeNull();
     expect(gatedDomainFor("/docs")).toBeNull();
-    expect(gatedDomainFor("/docs/vesmaro-eyes")).toBeNull();
+    expect(gatedDomainFor("/docs/vesma-eyes")).toBeNull();
     expect(gatedDomainFor("/pair")).toBeNull();
     expect(gatedDomainFor("/auth")).toBeNull();
   });

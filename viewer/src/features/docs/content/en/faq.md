@@ -34,7 +34,7 @@ they never travel further.
 ## I lost my token. What now?
 
 Nothing broke: ask the administrator to fetch the value from the
-`vesmaro-eyes-ui-token` secret or issue a new one — see [Token
+`vesma-eyes-ui-token` secret or issue a new one — see [Token
 rotation](token-rotation.md). The data does not suffer.
 
 ## Can I work from a phone?

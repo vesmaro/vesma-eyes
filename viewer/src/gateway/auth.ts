@@ -3,7 +3,7 @@ import { DEFAULT_TIMEOUT_MS, requestJson } from "./http";
 import type { RequestConfig } from "./http";
 
 /**
- * Auth skeleton for the mnemos wire contract (task T2 — full UI flow is T6).
+ * Auth skeleton for the vesma wire contract (task T2 — full UI flow is T6).
  *
  * Wire endpoints (openapi-snapshot.json):
  * - `POST /auth/login`   body `{ token }` — an `mnk_` bearer token. TOTP-less
@@ -13,16 +13,16 @@ import type { RequestConfig } from "./http";
  * - `POST /auth/logout`  invalidates the session server-side.
  * - `GET  /auth/me`      metadata about the current session/token.
  *
- * Note: mnemos authenticates with a bearer token, not username/password —
+ * Note: vesma authenticates with a bearer token, not username/password —
  * `login()` therefore takes the token, per the wire contract.
  */
 
 /** Storage key mirroring the in-memory token across reloads (local mode). */
-export const AUTH_STORAGE_KEY = "mnemos-eyes:auth";
+export const AUTH_STORAGE_KEY = "vesma-eyes:auth";
 
 /**
  * Where the token mirror lives (ADR 0011 §7 audit point Ф0):
- * - "local"    localStorage — survives reloads (mnemos dev default);
+ * - "local"    localStorage — survives reloads (vesma dev default);
  * - "session"  sessionStorage — dropped when the tab closes (opt-in hardening
  *              against `mnk_` lingering in persistent browser storage).
  * Selected via `VITE_AUTH_STORAGE=session`; memory always stays correct.
@@ -150,7 +150,7 @@ export interface AuthClientOptions {
   timeoutMs?: number;
 }
 
-/** Thin client over the mnemos auth endpoints (login/verify/logout/me). */
+/** Thin client over the vesma auth endpoints (login/verify/logout/me). */
 export class AuthClient {
   private readonly baseUrl: string;
   private readonly fetchImpl?: typeof fetch;
@@ -231,7 +231,7 @@ export class AuthClient {
 
 /**
  * Pull the session token out of an anonymous auth response object.
- * Field names observed across mnemos deployments: `session` (live 4.1.0:
+ * Field names observed across vesma deployments: `session` (live 4.1.0:
  * `{ session, expires_at }`), plus the generic `token` / `access_token` /
  * `session_token` spellings.
  */

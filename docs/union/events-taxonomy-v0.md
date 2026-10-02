@@ -198,7 +198,7 @@ l ≥ 60 с. Границы — v0, меняются только ревизие
 Дословно из протокола: «дни самостоятельного входа; время до первого
 действия; доля завершённых намерений; входы без пинка; частота ошибок;
 использование палитры/activity». Источники: events-таблица (существующие
-серверные события + новые П3-события). `/api/v1/stats` (mnemos) — не
+серверные события + новые П3-события). `/api/v1/stats` (vesma) — не
 источник (§2).
 
 | # | Число | Источник | Формула (окно 7 дней) | Частота среза |
@@ -301,5 +301,5 @@ Star). Всё перечисленное ниже — осознанно НЕ ц
 - Вердикт: `design/docs/11-CONVERGENCE.md` (ветка-эталон) / 12-UNION-ROADMAP §2 П3–П4, §4
 - ADR 0019 (Кора, North Star, guardrails): `docs/decisions/0019-kora-workspace-phase1.md`
 - Карта i18n-пространств: `design/docs/07n-MERGE-PREP.md` Артефакт 4
-- Контракты: `viewer/board-openapi-snapshot.json` (борд), `viewer/openapi-snapshot.json` (mnemos)
+- Контракты: `viewer/board-openapi-snapshot.json` (борд), `viewer/openapi-snapshot.json` (vesma)
 - Механика в коде: `server/store.py` (events-таблица, `sweep_events_retention`), `server/app.py` (`/api/events` SSE, `ACTIVITY_FAMILIES`, auth ADR 0014), `viewer/src/gateway/events.ts` (клиент SSE)

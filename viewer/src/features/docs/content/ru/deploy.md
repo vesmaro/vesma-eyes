@@ -15,23 +15,23 @@ last_verified: "1.19.0"
 
 Борд — это один контейнер: сервер API, база SQLite на томе (PVC) и
 интерфейс. Внешняя зависимость — один или несколько серверов памяти
-mnemos, к которым борд ходит по HTTP со своим токеном `mnk_…`. Токен
+vesma, к которым борд ходит по HTTP со своим токеном `mnk_…`. Токен
 никогда не покидает сервер борда.
 
 ## Что нужно до установки
 
 - Кластер Kubernetes/K3s с Helm 3 и работающим ingress-контроллером
   (в K3s это traefik). Примеры используют namespace `kube-agents`.
-- Токен сервера памяти mnemos с `totp_required=0` (значение вида
+- Токен сервера памяти vesma с `totp_required=0` (значение вида
   `mnk_…`). Его выдаёт mnemos.
-- Сам mnemos к этому моменту уже работает. Если это ещё не так —
+- Сам vesma к этому моменту уже работает. Если это ещё не так —
   установка описана в импортированном ранбуке апстрима:
-  [установка mnemos](/docs/mnemos/admin/runbooks/install).
+  [установка vesma](/docs/mnemos/admin/runbooks/install).
 - Адрес, по которому борд будет отвечать: далее в примерах —
   `board.example.com` (замените на свой).
 - Склонированный репозиторий: чарт и скрипты лежат в нём.
 
-## Шаг 1. Namespace и секрет с токеном mnemos
+## Шаг 1. Namespace и секрет с токеном vesma
 
 Секрет создаётся вне Helm и не удаляется вместе с релизом:
 
@@ -47,7 +47,7 @@ kubectl -n kube-agents create secret generic vesmaro-eyes-mnemos \
 Готовый скрипт создаёт самоподписанный сертификат сроком на 825 дней:
 
 ```bash
-./scripts/gen-tls-secret.sh          # секрет vesmaro-eyes-tls
+./scripts/gen-tls-secret.sh          # секрет vesma-eyes-tls
 ./scripts/gen-tls-secret.sh --check  # контроль срока — в любой момент
 ```
 
@@ -67,7 +67,7 @@ rootApp: app                    # значение по умолчанию в ч
 
 mnemos:
   cluster:
-    url: http://mnemos.memory.svc:8787   # сервисный адрес mnemos внутри кластера
+    url: http://mnemos.memory.svc:8787   # сервисный адрес vesma внутри кластера
   laptop:
     enabled: false              # второе (LAN) хранилище: включить + секрет
 
@@ -77,7 +77,7 @@ ingress:
   host: board.example.com
   tls:
     enabled: true
-    secretName: vesmaro-eyes-tls
+    secretName: vesma-eyes-tls
 
 persistence:
   storageClass: local-path      # класс хранилища кластера
@@ -110,14 +110,14 @@ uiToken:
 
 ## Шаг 4. Установка
 
-Имя релиза `vesmaro-eyes` менять не стоит: от него зависят имена ресурсов,
+Имя релиза `vesma-eyes` менять не стоит: от него зависят имена ресурсов,
 а чарт переиспользует свои секреты между обновлениями.
 
 ```bash
-helm install vesmaro-eyes deploy/chart/vesmaro-eyes \
+helm install vesma-eyes deploy/chart/vesma-eyes \
   -n kube-agents -f my-values.yaml
 
-kubectl -n kube-agents rollout status deployment/vesmaro-eyes --timeout=300s
+kubectl -n kube-agents rollout status deployment/vesma-eyes --timeout=300s
 ```
 
 ## Шаг 5. Достаньте токены
@@ -128,11 +128,11 @@ kubectl -n kube-agents rollout status deployment/vesmaro-eyes --timeout=300s
 
 ```bash
 # токен интерфейса (мутации из UI) — его вводят в окне входа
-kubectl -n kube-agents get secret vesmaro-eyes-ui-token \
+kubectl -n kube-agents get secret vesma-eyes-ui-token \
   -o jsonpath='{.data.VESMARO_UI_TOKEN}' | base64 -d
 
 # машинный токен (поллер, агенты) — см. страницу «Агенты и поручения»
-kubectl -n kube-agents get secret vesmaro-eyes-board-token \
+kubectl -n kube-agents get secret vesma-eyes-board-token \
   -o jsonpath='{.data.VESMARO_BOARD_TOKEN}' | base64 -d
 ```
 
@@ -141,9 +141,9 @@ kubectl -n kube-agents get secret vesmaro-eyes-board-token \
 | Секрет | Кто создаёт | Что внутри |
 | --- | --- | --- |
 | `vesmaro-eyes-mnemos` | оператор, вручную | токен хранилища памяти `mnk_…` |
-| `vesmaro-eyes-board-token` | чарт, автоматически | машинный токен: поллер, отчёты агентов |
-| `vesmaro-eyes-ui-token` | чарт при `uiToken.enabled=true` | токен мутаций интерфейса |
-| `vesmaro-eyes-tls` | `scripts/gen-tls-secret.sh` | самоподписанный сертификат ingress |
+| `vesma-eyes-board-token` | чарт, автоматически | машинный токен: поллер, отчёты агентов |
+| `vesma-eyes-ui-token` | чарт при `uiToken.enabled=true` | токен мутаций интерфейса |
+| `vesma-eyes-tls` | `scripts/gen-tls-secret.sh` | самоподписанный сертификат ingress |
 
 Механика классов токенов и правила гигиены — на странице
 [Токены и доступ](tokens.md).
@@ -181,7 +181,7 @@ curl -sS -o /dev/null -w '%{http_code}\n' \
 Для пробы на одной машине достаточно Docker:
 
 ```bash
-git clone https://github.com/Korrnals/mnemos-eyes.git && cd mnemos-eyes
+git clone https://github.com/Korrnals/vesma-eyes.git && cd vesma-eyes
 export MNEMOS_URL=http://your-mnemos-host:8787
 export MNEMOS_TOKEN=mnk_…
 docker compose up -d

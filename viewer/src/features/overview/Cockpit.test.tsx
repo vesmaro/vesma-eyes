@@ -255,7 +255,7 @@ describe("CockpitBusy (§9.1 matrix)", () => {
     expect(document.body.textContent).not.toContain("No agents yet");
   });
 
-  it("capability absence (mnemos adapter): nothing renders at all", async () => {
+  it("capability absence (vesma adapter): nothing renders at all", async () => {
     const html = await renderCockpit(new HttpAdapter("/api"));
     expect(html).not.toContain("Who is busy");
     expect(html).not.toContain("No agents yet");
@@ -304,7 +304,7 @@ describe("CockpitWaiting (§3.1 + persona round 1)", () => {
     expect(document.body.textContent).toContain("Retry");
   });
 
-  it("capability absence (mnemos adapter): nothing renders at all", async () => {
+  it("capability absence (vesma adapter): nothing renders at all", async () => {
     const html = await renderCockpit(new HttpAdapter("/api"));
     expect(html).not.toContain("Waiting for you");
   });

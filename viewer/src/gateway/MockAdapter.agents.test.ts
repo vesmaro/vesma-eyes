@@ -216,7 +216,7 @@ describe("MockAdapter agents — executor registry + settings", () => {
       project: "vesmaro",
     });
     const mnemosTask = await mock.createTask({
-      title: "Mnemos probe",
+      title: "Vesma probe",
       summary: "",
       spec: "",
       col: "open",
@@ -226,7 +226,7 @@ describe("MockAdapter agents — executor registry + settings", () => {
       specialists: [],
       memory_ids: [],
       mnemos_tags: [],
-      project: "mnemos",
+      project: "vesma",
     });
 
     // The vesmaro task resolves through the PROJECT default first.

@@ -30,7 +30,7 @@ export interface paths {
         };
         /**
          * Dashboard Stats
-         * @description Structured JSON dashboard data for mnemos-eyes.
+         * @description Structured JSON dashboard data for vesma-eyes.
          */
         readonly get: operations["dashboard_stats_api_v1_stats_get"];
         readonly put?: never;
@@ -480,7 +480,7 @@ export interface paths {
          * Rename Tags
          * @description Bulk rename tags matching ``from_prefix:<subtype>`` → ``to_prefix:<subtype>``.
          *
-         *     Mirrors the ``mnemos_tags_rename`` MCP tool and the ``mnemos tags rename``
+         *     Mirrors the ``mnemos_tags_rename`` MCP tool and the ``vesma tags rename``
          *     CLI command. Safe: uses ``update_fields`` (plain UPDATE) so the FTS5
          *     external-content index stays consistent. ``dry_run=true`` by default —
          *     nothing is written unless the caller explicitly sets ``dry_run=false``.
@@ -594,7 +594,7 @@ export interface paths {
         readonly put?: never;
         /**
          * Assemble Context
-         * @description Assemble the model-facing context block (ADR-0017 D1, mnemos #125).
+         * @description Assemble the model-facing context block (ADR-0017 D1, vesma #125).
          *
          *     Mirrors the ``mnemos_assemble_context`` MCP tool over the same manager
          *     path: fixed pipeline (recall → optional CCR expansion → filter →
@@ -1373,7 +1373,7 @@ export interface components {
          * @description Single unified memory entry — status-driven pipeline model.
          *
          *     Field groups:
-         *       - Mnemos tag contract denormalisations (project, agent)
+         *       - Vesma tag contract denormalisations (project, agent)
          *       - Knowledge pipeline fields (quality_score, confidence, cluster_id, derived_from …)
          *       - Context Filter fields (raw_content, clean_content, filter_profile …) — M10
          *       - Embedding tracking (embedding_id)
@@ -1685,7 +1685,7 @@ export interface components {
          *     ``type: array, items: {type: string}`` and the MCP tool which accepts
          *     free-form strings (bullet lists).
          *
-         *     mnemos #251 D0 — optional ``agent``/``session`` are the validated
+         *     vesma #251 D0 — optional ``agent``/``session`` are the validated
          *     identity channel (agent defaults to ``"user"``, today's behaviour);
          *     validation, session→agent binding and dedup live in
          *     ``MemoryManager.save_checkpoint`` (single authority).

@@ -683,7 +683,7 @@ function SidebarStatusLine({ expanded }: { expanded: boolean }) {
   // Gates v6 words (07k §1.2, dressing map §1.3): the owner session says
   // «вы: владелец» — the token model carries no user name, and the owner
   // IS the signed-in role; a session-less board visitor is «аноним». The
-  // device modes keep their scope-v1 lines, and the mnemos L1 adapter
+  // device modes keep their scope-v1 lines, and the vesma L1 adapter
   // keeps its honest «read-only» (its reads are open and its auth model is
   // different — the v6 session words would lie there).
   let mode: string;

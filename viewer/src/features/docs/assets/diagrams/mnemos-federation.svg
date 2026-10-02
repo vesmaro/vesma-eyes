@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 420" role="img" aria-label="Федерация хранилищ mnemos: cluster и laptop синхронизируют записи и теги, поиск в каждом выполняется локально, борд vesmaro-eyes читает данные через API" font-family="system-ui, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 420" role="img" aria-label="Федерация хранилищ Vesma: cluster и laptop синхронизируют записи и теги, поиск в каждом выполняется локально, борд vesma-eyes читает данные через API" font-family="system-ui, sans-serif">
   <title>Федерация хранилищ</title>
   <style>
     text { font-family: system-ui, sans-serif; }
@@ -60,7 +60,7 @@
   <!-- борд -->
   <rect x="540" y="170" width="180" height="80" rx="8" class="box"/>
   <text x="630" y="200" font-size="15" font-weight="600" text-anchor="middle" class="ink">Борд</text>
-  <text x="630" y="222" font-size="13" text-anchor="middle" class="ink2">vesmaro-eyes</text>
+  <text x="630" y="222" font-size="13" text-anchor="middle" class="ink2">vesma-eyes</text>
 
   <line x1="540" y1="192" x2="426" y2="124" class="ln" marker-end="url(#arwF)"/>
   <line x1="540" y1="228" x2="426" y2="296" class="ln" marker-end="url(#arwF)"/>

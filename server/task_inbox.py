@@ -8,7 +8,7 @@ the mirror — the board never executes or treats a queue record as an
 instruction.
 
 Query primitive: ``GET /memories?tags=task:queue`` — a TRUE tag listing
-per the mnemos 4.1.0 OpenAPI (POST /search is a hybrid ranker where "*"
+per the vesma 4.1.0 OpenAPI (POST /search is a hybrid ranker where "*"
 matches nothing reliably; not a listing), via ``mnemos_client.fetch_json``
 (fully async; the event loop is never blocked). One failing server only
 degrades its own slice: its error is recorded in the scan result and the
@@ -30,7 +30,7 @@ from .store import INBOX_EDITABLE_FIELDS, Store
 log = logging.getLogger("vesmaro.inbox")
 
 INBOX_TAG = "task:queue"
-# Listing primitive (prod 1.3.1 root cause, mnemos 4.1.0 OpenAPI): POST
+# Listing primitive (prod 1.3.1 root cause, vesma 4.1.0 OpenAPI): POST
 # /search is a HYBRID RANKER — "*" does not match everything and ``tags``
 # only filters the ranked results, so a tag sweep via /search loses records
 # (prod: exactly 1 arbitrary hit per store instead of the 38 backlog
@@ -86,7 +86,7 @@ def _tag_value(tags: list[str], prefix: str) -> str:
 
 
 def record_from_memory(server_name: str, item: dict[str, Any]) -> dict[str, Any] | None:
-    """Mirror record from one mnemos /memories listing hit — data fields
+    """Mirror record from one vesma /memories listing hit — data fields
     only (SEC-4).
 
     Parsing is defensive about the hit shape: ``created_at`` may be absent
@@ -202,7 +202,7 @@ def revision_memory_body(rec: dict[str, Any], edits: dict[str, Any]) -> dict[str
     """POST /memories body for the EDITED revision of a task:queue record
     (UI-25 sync-back).
 
-    mnemos exposes NO content-update over HTTP (checked against the 4.1.0
+    vesma exposes NO content-update over HTTP (checked against the 4.1.0
     prod surface and the 4.3.0 source: no PATCH/PUT /memories route —
     ``manager.update`` is internal-only), so the honest minimal mechanism is
     a NEW revision record on the same server:
@@ -218,7 +218,7 @@ def revision_memory_body(rec: dict[str, Any], edits: dict[str, Any]) -> dict[str
     - ``metadata.supersedes`` names the original memory id.
 
     The original record is intentionally left untouched: mutability is not
-    an mnemos API concept — the revision is the supersession record."""
+    a vesma API concept — the revision is the supersession record."""
     raw_tags = rec.get("tags") or []
     if isinstance(raw_tags, str):  # raw mirror rows carry tags as JSON text
         try:

@@ -43,7 +43,7 @@ export function LivingBridge(): null {
     feedLivingHealth(health.isError ? ["error"] : (states ?? null));
   }, [health.isError, states]);
 
-  // Event feed: one stream while enabled (capability-gated — mnemos mode
+  // Event feed: one stream while enabled (capability-gated — vesma mode
   // simply never subscribes, pages keep their refetch-on-mount behaviour).
   useEffect(() => {
     if (layer === "off" || !eventsCapable) return;

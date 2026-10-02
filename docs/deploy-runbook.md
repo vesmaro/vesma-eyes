@@ -5,7 +5,7 @@
 инцидент деплоя (2026-09-21 формальный апгрейд без смены образа,
 фолбэки rootApp 1.11.x–2026-09-22) был именно «руками, в обход».
 
-Чарт-RUNBOOK (`deploy/chart/vesmaro-eyes/RUNBOOK.md` §11) остаётся
+Чарт-RUNBOOK (`deploy/chart/vesma-eyes/RUNBOOK.md` §11) остаётся
 справочником по СЕМАНТИКЕ (почему `-f values.yaml --set image.tag
 --set rootApp=app --atomic` в каждом апгрейде) — обёртка реализует её
 механически и добавляет гейты.

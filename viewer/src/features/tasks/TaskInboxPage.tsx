@@ -42,7 +42,7 @@ import { useInboxMemory, useTaskInbox } from "./useTasks";
  * keeps an excerpt only, SEC-4), and an editable overlay (title / summary /
  * priority / project) is stored via PATCH before adoption — «Принять в
  * борд» then adopts the edited version and the server syncs the edit back
- * to mnemos as a superseding revision record.
+ * to vesma as a superseding revision record.
  */
 export function TaskInboxPage() {
   const t = useT();

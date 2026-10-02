@@ -12,7 +12,7 @@ import { useAuth } from "./AuthContext";
  * the read-only app stays mounted — on a permissive (loopback) deployment the
  * overlay can be dismissed and browsing continues without a session.
  *
- * Flow: paste the `mnk_` token → submit. If mnemos answers phase 1 with a
+ * Flow: paste the `mnk_` token → submit. If vesma answers phase 1 with a
  * TOTP challenge, the one-time-code field appears (wire: `challenge_id` from
  * `POST /auth/login`, verified via `POST /auth/verify {challenge_id, code}`).
  *

@@ -3,7 +3,7 @@ import type { Memory } from "./types";
 /**
  * Deterministic mock dataset for the MockAdapter (task T2).
  *
- * Hand-written, realistic "scrolls" covering the mnemos tag-contract subtypes
+ * Hand-written, realistic "scrolls" covering the vesma tag-contract subtypes
  * (`mnemos:decision`, `mnemos:bug-pattern`, `mnemos:learning`, checkpoints /
  * session context), all five pipeline statuses, several projects and agents.
  * Everything — ids, dates, scores — is hardcoded: two MockAdapter instances
@@ -31,7 +31,7 @@ export const MOCK_INBOX_MEMORY: Memory = {
          "owner:gcw-senior-system-engineer"],
   source: "mcp",
   memory_type: "note",
-  project: "mnemos",
+  project: "vesma",
   agent: "zed",
   status: "raw",
   quality_score: null,
@@ -83,7 +83,7 @@ export const MOCK_MEMORIES: Memory[] = [
   {
     id: "mem-0001",
     content:
-      "Decision: the viewer talks to mnemos only through the same-origin /api prefix. " +
+      "Decision: the viewer talks to vesma only through the same-origin /api prefix. " +
       "The Vite dev proxy strips the prefix and forwards to 127.0.0.1:8787; production " +
       "relies on the reverse proxy to do the same. No CORS, no absolute URLs in components.",
     title: "ADR: gateway via same-origin /api proxy",
@@ -98,7 +98,7 @@ export const MOCK_MEMORIES: Memory[] = [
     raw_content:
       "# ADR: gateway\n\nViewer -> /api -> proxy -> mnemos. No CORS. Keep components fetch-free.",
     clean_content:
-      "Viewer talks to mnemos through the same-origin /api prefix; proxies strip it.",
+      "Viewer talks to vesma through the same-origin /api prefix; proxies strip it.",
     created_at: "2026-09-14T09:12:00Z",
     updated_at: "2026-09-14T09:12:00Z",
     marker_version: 1,
@@ -114,7 +114,7 @@ export const MOCK_MEMORIES: Memory[] = [
     tags: ["project:mnemos", "agent:zed", "mnemos:bug-pattern", "topic:fts"],
     source: "mcp",
     memory_type: "fact",
-    project: "mnemos",
+    project: "vesma",
     agent: "zed",
     status: "published",
     quality_score: 0.91,
@@ -137,7 +137,7 @@ export const MOCK_MEMORIES: Memory[] = [
     tags: ["project:mnemos", "agent:claude", "mnemos:learning", "topic:sqlite"],
     source: "mcp",
     memory_type: "fact",
-    project: "mnemos",
+    project: "vesma",
     agent: "claude",
     status: "published",
     quality_score: 0.87,
@@ -149,14 +149,14 @@ export const MOCK_MEMORIES: Memory[] = [
   {
     id: "mem-0004",
     content:
-      "Decision: all mnemos tags use namespaced prefixes — project:<slug>, agent:<slug>, " +
+      "Decision: all vesma tags use namespaced prefixes — project:<slug>, agent:<slug>, " +
       "mnemos:<subtype>, topic:<slug>. Subtypes in use: decision, bug-pattern, learning, " +
       "checkpoint. Free-form tags are rejected by the tag contract.",
     title: "Tag contract: namespaced prefixes",
     tags: ["project:mnemos", "agent:user", "mnemos:decision", "topic:tags"],
     source: "manual",
     memory_type: "note",
-    project: "mnemos",
+    project: "vesma",
     agent: "user",
     status: "published",
     quality_score: 0.96,
@@ -168,7 +168,7 @@ export const MOCK_MEMORIES: Memory[] = [
   {
     id: "mem-0005",
     content:
-      "Session checkpoint 2026-09-10: scaffolded mnemos-eyes viewer (T1), agreed on " +
+      "Session checkpoint 2026-09-10: scaffolded vesma-eyes viewer (T1), agreed on " +
       "TanStack Query conventions, deferred cluster graph to L2. Open: adapter wiring (T2).",
     title: "Checkpoint: L1 wave kickoff",
     tags: ["project:gcw", "agent:zed", "mnemos:checkpoint", "topic:planning"],
@@ -206,7 +206,7 @@ export const MOCK_MEMORIES: Memory[] = [
   {
     id: "mem-0007",
     content:
-      "Learning: semantic search on mnemos measures 4-7 s at p95. UI timeouts for search " +
+      "Learning: semantic search on vesma measures 4-7 s at p95. UI timeouts for search " +
       "must be generous (30 s) and requests cancellable — the default 10 s budget would " +
       "abort healthy semantic queries.",
     title: "Semantic search latency budget",
@@ -244,10 +244,10 @@ export const MOCK_MEMORIES: Memory[] = [
   {
     id: "mem-0009",
     content:
-      "Fact: the mnemos HTTP API serves routes from root (/search, /memories, /health); " +
+      "Fact: the vesma HTTP API serves routes from root (/search, /memories, /health); " +
       "there is no /api prefix on the server. The prefix belongs to the viewer's proxy " +
       "and is stripped before forwarding.",
-    title: "mnemos routes live at root, not /api",
+    title: "vesma routes live at root, not /api",
     tags: ["project:vesma-eyes", "agent:user", "topic:gateway", "topic:proxy"],
     source: "manual",
     memory_type: "fact",
@@ -270,7 +270,7 @@ export const MOCK_MEMORIES: Memory[] = [
     tags: ["project:mnemos", "agent:gemini", "topic:fts", "mnemos:learning"],
     source: "cli",
     memory_type: "snippet",
-    project: "mnemos",
+    project: "vesma",
     agent: "gemini",
     status: "published",
     quality_score: 0.83,
@@ -290,7 +290,7 @@ export const MOCK_MEMORIES: Memory[] = [
     tags: ["project:mnemos", "agent:user", "topic:watcher"],
     source: "obsidian",
     memory_type: "note",
-    project: "mnemos",
+    project: "vesma",
     agent: "user",
     status: "processed",
     quality_score: 0.71,
@@ -309,7 +309,7 @@ export const MOCK_MEMORIES: Memory[] = [
     tags: ["project:mnemos", "agent:claude", "mnemos:learning", "topic:pipeline"],
     source: "mcp",
     memory_type: "fact",
-    project: "mnemos",
+    project: "vesma",
     agent: "claude",
     status: "published",
     quality_score: 0.88,
@@ -346,7 +346,7 @@ export const MOCK_MEMORIES: Memory[] = [
     tags: ["project:mnemos", "agent:user", "topic:a2a"],
     source: "manual",
     memory_type: "fact",
-    project: "mnemos",
+    project: "vesma",
     agent: "user",
     status: "published",
     quality_score: 0.93,
@@ -381,7 +381,7 @@ export const MOCK_MEMORIES: Memory[] = [
     tags: ["project:mnemos", "agent:claude", "topic:federation"],
     source: "mcp",
     memory_type: "note",
-    project: "mnemos",
+    project: "vesma",
     agent: "claude",
     status: "processing",
     created_at: "2026-09-14T20:05:00Z",
@@ -398,7 +398,7 @@ export const MOCK_MEMORIES: Memory[] = [
     tags: ["project:mnemos", "agent:gemini", "topic:observability"],
     source: "file",
     memory_type: "fact",
-    project: "mnemos",
+    project: "vesma",
     agent: "gemini",
     status: "published",
     quality_score: 0.85,
@@ -445,7 +445,7 @@ export const MOCK_SESSIONS = [
     created_at: "2026-09-12T08:40:00Z",
     updated_at: "2026-09-12T12:15:00Z",
     turns_count: 6,
-    metadata: { project: "mnemos", lane: "fts-investigation" },
+    metadata: { project: "vesma", lane: "fts-investigation" },
     ttl_expires_at: "2026-09-19T12:15:00Z",
   },
   {
@@ -454,7 +454,7 @@ export const MOCK_SESSIONS = [
     created_at: "2026-09-08T10:00:00Z",
     updated_at: "2026-09-10T19:45:00Z",
     turns_count: 41,
-    metadata: { project: "mnemos", lane: "federation-sync" },
+    metadata: { project: "vesma", lane: "federation-sync" },
     ttl_expires_at: null,
   },
 ] as const;

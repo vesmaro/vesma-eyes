@@ -36,7 +36,7 @@ down to changing the secret.
 1. Mint a new value and put it into the same secret:
 
    ```bash
-   kubectl -n kube-agents create secret generic vesmaro-eyes-ui-token \
+   kubectl -n kube-agents create secret generic vesma-eyes-ui-token \
      --from-literal=VESMARO_UI_TOKEN='ui-token-new-value' \
      --dry-run=client -o yaml | kubectl apply -f -
    ```
@@ -45,9 +45,9 @@ down to changing the secret.
    recreation):
 
    ```bash
-   helm upgrade vesmaro-eyes deploy/chart/vesmaro-eyes -n kube-agents \
+   helm upgrade vesma-eyes deploy/chart/vesma-eyes -n kube-agents \
      -f my-values.yaml --set image.tag=<current version>
-   kubectl -n kube-agents rollout status deployment/vesmaro-eyes
+   kubectl -n kube-agents rollout status deployment/vesma-eyes
    ```
 
    The explicit `image.tag` is mandatory — see [Upgrading the
@@ -66,7 +66,7 @@ mid-task.
 
 The machine token lives in the poller on the machine with agents.
 
-1. Change the `vesmaro-eyes-board-token` secret to the new value — the
+1. Change the `vesma-eyes-board-token` secret to the new value — the
    same way as steps 1–2 above (same secret name, the
    `VESMARO_BOARD_TOKEN` key).
 2. Update the poller's environment file (`/etc/vesmaro/poller.env` or
@@ -94,7 +94,7 @@ nothing is lost.
 2. Update the `vesmaro-eyes-mnemos` secret (the `MNEMOS_TOKEN` key) and
    roll the board, as above.
 3. If the laptop LAN store is connected, update its secret too
-   (`vesmaro-eyes-laptop`).
+   (`vesma-eyes-laptop`).
 4. Check: `/api/health` answers `ok:true` and sees every store.
 
 ## Device tokens

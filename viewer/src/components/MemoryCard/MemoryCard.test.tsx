@@ -29,7 +29,7 @@ describe("MemoryCard", () => {
   it("truncates the snippet to ~120 chars of effective content", () => {
     const html = render(MOCK_MEMORIES[0]);
     expect(html).toContain(
-      "Viewer talks to mnemos through the same-origin /api prefix",
+      "Viewer talks to vesma through the same-origin /api prefix",
     );
   });
 

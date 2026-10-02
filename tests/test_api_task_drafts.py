@@ -2,7 +2,7 @@
 step further than board-reflect — user-supplied project/tags from the form
 must land in CONTENT metadata, NEVER in memory tags), title prefix, rate
 limit (429, 10/60s per client), error codes (422 empty text, 503 no
-servers) and BE-4 (async write survives mnemos failure).
+servers) and BE-4 (async write survives vesma failure).
 
 Each test gets a fresh rate limiter and its own FakeMnemos; the per-test
 ``qa-mnemos`` registry row wires the app to it (same pattern as
@@ -71,7 +71,7 @@ class TestDraftContract:
         assert body["server"] == "qa-mnemos"
 
     def test_tags_pinned_exactly(self, client, auth, wired):
-        """SEC-4 + mnemos strict contract: records carry EXACTLY the
+        """SEC-4 + vesma strict contract: records carry EXACTLY the
         sanitized project slug, the board's own agent stamp, and the
         mnemos:open-question + task-draft + source:board subtypes — a draft
         is an open question, not a decision."""
@@ -153,7 +153,7 @@ class TestDraftRateLimit:
         assert statuses[0] == 201
         assert 429 in statuses and statuses[-1] == 429
         writes = wired.memories_bodies()
-        assert len(writes) == 10, "only the first 10 writes may reach mnemos"
+        assert len(writes) == 10, "only the first 10 writes may reach vesma"
 
 
 class TestDraftFailures:

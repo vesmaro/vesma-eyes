@@ -3,7 +3,7 @@ import { useGateway } from "@/gateway/GatewayContext";
 import { keys } from "@/lib/queryKeys";
 import { GC_TIMES, STALE_TIMES } from "@/lib/queryClient";
 
-/** mnemos health — drives the status panel and shell status indicator. */
+/** vesma health — drives the status panel and shell status indicator. */
 export function useStatus() {
   const gateway = useGateway();
   return useQuery({
@@ -14,7 +14,7 @@ export function useStatus() {
   });
 }
 
-/** Aggregate mnemos metrics (counts, pipeline counters). */
+/** Aggregate vesma metrics (counts, pipeline counters). */
 export function useMetrics() {
   const gateway = useGateway();
   return useQuery({

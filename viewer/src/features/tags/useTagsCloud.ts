@@ -9,7 +9,7 @@ import type { TagSummary } from "@/gateway/types";
  * Tags cloud data hook (UI-17 spec §6): prefers the raw merged view when the
  * gateway speaks it (`mergedTags` — board/mock adapters; carries `errors[]` +
  * `servers_scanned` for the partial-data honesty line), falls back to the
- * plain `listTags` projection on single-store mnemos mode. One wire call
+ * plain `listTags` projection on single-store vesma mode. One wire call
  * feeds chips, bands, families, siblings and the drill header count — all
  * views derive from this snapshot, so a refetch can never reshuffle live
  * view state (freeze-рамка §4.4).
@@ -41,7 +41,7 @@ export interface UseTagsCloudResult {
 export function useTagsCloud(): UseTagsCloudResult {
   const gateway = useGateway();
   // Capability probe (structural, not configuration): adapters with the
-  // merged view light the partial-data line up; mnemos mode falls back.
+  // merged view light the partial-data line up; vesma mode falls back.
   const mergedGateway = isTagMergeSource(gateway) ? gateway : null;
 
   const mergedQuery = useQuery({

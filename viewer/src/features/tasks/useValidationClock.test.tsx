@@ -36,7 +36,7 @@ function validatingTask(validatingSince: string): BoardTask {
     agents: [],
     specialists: [],
     env: "local",
-    project: "mnemos",
+    project: "vesma",
     memory_ids: [],
     mnemos_tags: [],
     created_at: "2026-09-19T00:00:00+00:00",

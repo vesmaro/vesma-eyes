@@ -73,7 +73,7 @@ describe("MockAdapter.search", () => {
 
   it("applies the limit", async () => {
     const adapter = makeAdapter();
-    const hits = await adapter.search({ query: "mnemos", limit: 3 });
+    const hits = await adapter.search({ query: "vesma", limit: 3 });
     expect(hits).toHaveLength(3);
   });
 
@@ -84,7 +84,7 @@ describe("MockAdapter.search", () => {
   });
 
   it("is deterministic across instances", async () => {
-    const params = { query: "mnemos proxy", limit: 10 };
+    const params = { query: "vesma proxy", limit: 10 };
     const a = await makeAdapter().search(params);
     const b = await makeAdapter().search(params);
     expect(JSON.stringify(a)).toBe(JSON.stringify(b));
@@ -108,9 +108,9 @@ describe("MockAdapter.listMemories", () => {
     expect(published.length).toBeGreaterThan(0);
     expect(published.every((memory) => memory.status === "published")).toBe(true);
 
-    const mnemos = await adapter.listMemories({ project: "mnemos" });
-    expect(mnemos).toHaveLength(9);
-    expect(mnemos.every((memory) => memory.project === "mnemos")).toBe(true);
+    const vesma = await adapter.listMemories({ project: "vesma" });
+    expect(vesma).toHaveLength(9);
+    expect(vesma.every((memory) => memory.project === "vesma")).toBe(true);
   });
 
   it("paginates with offset/limit over the sorted list", async () => {

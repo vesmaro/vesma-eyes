@@ -114,7 +114,7 @@ rejected»). Уровни:
 │ семейство project · группа gcw (одно-сегментный тег)              │
 │                                                                    │
 │ Рядом в семействе project:                                        │
-│ [project:mnemos 419] [project:mnemos-eyes 210] [project:gcw-…     │
+│ [project:mnemos 419] [project:vesma-eyes 210] [project:gcw-…     │
 │                                                                    │
 │ ▌Задачи с этим тегом (3)                                          │
 │   T-128 memory-edges · in-progress · /tasks/:id                   │

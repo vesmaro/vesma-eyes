@@ -128,7 +128,7 @@ class TestPerAgentScoping:
     def test_slug_and_stem_aliases_resolve(self, scoped_builder):
         p1 = scoped_builder("GCW: Alpha")
         # specialist / meta.role / (meta.)slug echo the REQUESTED name by
-        # design (cache key + legacy mnemos tag); the payload itself and
+        # design (cache key + legacy vesma tag); the payload itself and
         # the resolved agent must be identical
         def payload(p):
             meta = {k: v for k, v in p["meta"].items() if k != "role"}

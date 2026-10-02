@@ -4,7 +4,7 @@
   created_at DESC with the id tiebreak, uniform cursor contract (limit +
   opaque cursor → next_cursor, truncated on the silent page cap), per-item
   ``server`` field without id mutation, error isolation per server;
-- GET /api/tags — aggregated tag listing (mnemos TagCount[] summed across
+- GET /api/tags — aggregated tag listing (vesma TagCount[] summed across
   stores, count DESC / name ASC, servers_scanned, error isolation).
 
 The FakeMnemos doubles serve limit/offset windows of ``memories_result``
@@ -166,12 +166,12 @@ class TestMemoriesMerged:
 
     def test_native_filters_pass_through(self, mem_env, client):
         client.get("/api/memories",
-                   params={"status": "raw", "project": "mnemos"})
+                   params={"status": "raw", "project": "vesma"})
         calls = _listing_calls(mem_env[1])
         assert calls, "listing primitive not called"
         last = calls[-1]
         assert last.get("status") == ["raw"]
-        assert last.get("project") == ["mnemos"]
+        assert last.get("project") == ["vesma"]
 
     def test_one_failing_server_is_isolated(self, mem_env, client):
         app_module, fake_a, _ = mem_env

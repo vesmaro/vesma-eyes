@@ -7,7 +7,7 @@
  * the generated file is the single source of truth. Only shapes the board
  * serves as anonymous `dict[str, Any]` (health, memory item envelope, the
  * mnemos-search proxy) stay hand-written here, mirroring the convention of
- * gateway/types.ts for the mnemos side.
+ * gateway/types.ts for the vesma side.
  */
 import type { components } from "@/types/board-openapi";
 
@@ -65,7 +65,7 @@ export interface TagDrillTask {
 /**
  * One memory matching the drilled tag — excerpt-only row (SEC-4 mirror of
  * the server drill projection; `server` is the contributing store, absent
- * on single-store mnemos gateways).
+ * on single-store vesma gateways).
  */
 export interface TagDrillMemory {
   readonly id: string;
@@ -808,7 +808,7 @@ export interface MemoryPulseServerNote {
   readonly ok: boolean;
   /** How many items this store contributed before the merge cut. */
   readonly items: number;
-  /** Failure detail (mnemos error body) — null on the happy path. */
+  /** Failure detail (vesma error body) — null on the happy path. */
   readonly detail: unknown;
 }
 
@@ -861,8 +861,8 @@ export type BoardMemoryEnvelope =
     };
 
 /**
- * `GET /api/mnemos/search` payload (proxied mnemos search). Each hit is an
- * anonymous mnemos search object plus the board-added `server` provenance
+ * `GET /api/mnemos/search` payload (proxied vesma search). Each hit is an
+ * anonymous vesma search object plus the board-added `server` provenance
  * field; `errors` lists stores whose slice failed.
  */
 export interface BoardSearchResponse {

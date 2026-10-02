@@ -16,7 +16,7 @@ import type { TagDrill, TagDrillParams } from "./boardTypes";
  *
  * Every component/hook reads memory through this interface; direct `fetch()`
  * or Tauri `invoke()` calls outside `gateway/` are forbidden. Implementations:
- * - `HttpAdapter` — Phase 1, fetch against the mnemos HTTP API (task T2);
+ * - `HttpAdapter` — Phase 1, fetch against the vesma HTTP API (task T2);
  * - `TauriAdapter` — Phase 2, in-process Rust core (stub).
  *
  * Every method takes an optional `AbortSignal` so callers (TanStack Query)
@@ -34,7 +34,7 @@ export interface MemoryGateway {
   listTags(signal?: AbortSignal): Promise<TagSummary[]>;
   /**
    * Cross-cutting drill for one tag: board tasks + merged memories
-   * (`GET /api/tags/{tag}/drill` on the board; the mnemos HttpAdapter
+   * (`GET /api/tags/{tag}/drill` on the board; the vesma HttpAdapter
    * composes the memories slice from search and reports no tasks — UI-17
    * spec §5/§10.2). Memories are a ranked SUBSET (BE-13) — the UI says so.
    */
@@ -56,7 +56,7 @@ export interface MemoryGateway {
   // Traces
   listTraces(taskLabel?: string, limit?: number, signal?: AbortSignal): Promise<Trace[]>;
 
-  // A2A sessions (mounted under /v1 on mnemos)
+  // A2A sessions (mounted under /v1 on vesma)
   listSessions(signal?: AbortSignal): Promise<A2ASession[]>;
   getSession(id: string, signal?: AbortSignal): Promise<A2ASession>;
 }

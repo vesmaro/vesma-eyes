@@ -5,7 +5,7 @@ import { GC_TIMES, STALE_TIMES } from "@/lib/queryClient";
 
 /**
  * Tag list with counts.
- * TODO(T2): prefer the mnemos `GET /tags` endpoint via the gateway; the
+ * TODO(T2): prefer the vesma `GET /tags` endpoint via the gateway; the
  * client-side aggregation fallback from ADR 0003 lives in the T5 page code.
  */
 export function useTags() {

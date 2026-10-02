@@ -77,8 +77,8 @@ describe("resolveReturnTarget (read + validate, spec §2.2 rule 2)", () => {
   });
 
   it("round-trips an encoded value built by encodeReturn directly", () => {
-    expect(read(encodeReturn("/memory/search", "?q=mnemos&type=fts"))).toBe(
-      "/memory/search?q=mnemos&type=fts",
+    expect(read(encodeReturn("/memory/search", "?q=vesma&type=fts"))).toBe(
+      "/memory/search?q=vesma&type=fts",
     );
   });
 

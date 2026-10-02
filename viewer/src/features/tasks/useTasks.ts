@@ -15,7 +15,7 @@ import { GC_TIMES, STALE_TIMES } from "@/lib/queryClient";
 
 /**
  * Ф2 task-domain data hooks. Every hook is capability-gated (`isTaskSource`)
- * exactly like the Ф1 pulse/health pair: on the mnemos adapter the queries
+ * exactly like the Ф1 pulse/health pair: on the vesma adapter the queries
  * stay idle and the pages render their honest unsupported states.
  *
  * Caching decision (instruction: "кешируй через TanStack query key

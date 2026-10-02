@@ -67,7 +67,7 @@ describe("TaskInboxPage (mock adapter)", () => {
     // Key:value format per owner feedback, one colored chip per field.
     expect(html).toContain("priority: high");
     expect(html).toContain("priority: critical");
-    expect(html).toContain("project: mnemos");
+    expect(html).toContain("project: vesma");
     expect(html).toContain("project: vesmaro");
     expect(html).toContain("server: laptop");
     // The edited fixture row carries the overlay badge…
@@ -172,7 +172,7 @@ describe("TaskInboxPage (mock adapter)", () => {
     expect(html).toContain("Retry");
   });
 
-  it("renders the honest unsupported state on a mnemos gateway", async () => {
+  it("renders the honest unsupported state on a vesma gateway", async () => {
     const html = await renderInbox(new HttpAdapter("/api"));
     expect(html).toContain("The Tasks domain is unavailable in vesma mode");
   });

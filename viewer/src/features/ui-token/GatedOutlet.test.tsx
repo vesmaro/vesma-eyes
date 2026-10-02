@@ -123,7 +123,7 @@ describe("anonymous board visitor (probe settled {live:false})", () => {
     initAuthSession(gateway);
     await authSessionProbe(gateway);
     expect(renderGate("/", gateway, false)).toContain("SECRET PAGE CONTENT");
-    expect(renderGate("/docs/vesmaro-eyes", gateway, false)).toContain(
+    expect(renderGate("/docs/vesma-eyes", gateway, false)).toContain(
       "SECRET PAGE CONTENT",
     );
   });

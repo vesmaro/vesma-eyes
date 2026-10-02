@@ -3,10 +3,10 @@
 The board is deliberately a thin projection over two sources of truth:
 
 1. Its own SQLite store (on a mounted volume) holding board tasks.
-2. The live mnemos memory engine, which the server reaches over HTTP
+2. The live vesma memory engine, which the server reaches over HTTP
    (in-cluster service DNS in the ai-agent cluster, loopback in dev).
 
-Task state mirrors the mnemos workflow state machine
+Task state mirrors the vesma workflow state machine
 (``open → in-progress → blocked / resolved / done / withdrawn``) so a task
 and a memory speak the same lifecycle language.
 """
@@ -30,21 +30,21 @@ from .security import mask_secrets
 # WF-1: board columns in display order — two pre-validation lanes
 # (backlog, validating) join the kanban left of `open`
 # (workflow-lifecycle-proposal §3). They are BOARD stages, not workflow
-# statuses: both map onto the mnemos status `open` (see COLUMN_STATUS_MAP).
+# statuses: both map onto the vesma status `open` (see COLUMN_STATUS_MAP).
 TASK_COLUMNS: tuple[str, ...] = (
     "backlog", "validating", "open", "in-progress", "blocked", "resolved", "done",
 )
 # Values valid for the ``col`` field (the kanban projection).
 VALID_STATUSES = frozenset(TASK_COLUMNS)
-# BE-10: per-task status dictionary = the mnemos workflow state machine.
-# `withdrawn` is a terminal mnemos status with no board column (cancelled
+# BE-10: per-task status dictionary = the vesma workflow state machine.
+# `withdrawn` is a terminal vesma status with no board column (cancelled
 # tasks are archived instead — WF-1 proposal §7). Validated on create and
 # PATCH; `col` remains the kanban projection (see move_task).
 TASK_STATUSES = frozenset({"open", "in-progress", "blocked", "resolved",
                            "done", "withdrawn"})
 # WF-1 (proposal §5): board column → workflow status. The pre-validation
 # lanes read as `open` (work has not started); the stage distinction lives
-# in the column itself and the task:stage:* mnemos tags, never in the
+# in the column itself and the task:stage:* vesma tags, never in the
 # status dictionary.
 COLUMN_STATUS_MAP: dict[str, str] = {
     "backlog": "open", "validating": "open", "open": "open",
@@ -5965,7 +5965,7 @@ class Store:
     # AGG-1: mirror of task:queue memories from every active memory server.
     # Rows are keyed by memory_id and upserted on every scan; last_seen is
     # refreshed ONLY for records their server actually returned, so a record
-    # that vanished from mnemos simply ages out into "stale" instead of
+    # that vanished from vesma simply ages out into "stale" instead of
     # being deleted — the mirror never destroys data. adopted_task_id is
     # write-once from the adopt flow and survives re-scans. The ``edits``
     # JSON (UI-25, owner corrections before adoption) survives re-scans the

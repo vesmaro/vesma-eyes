@@ -15,7 +15,7 @@ import { keys } from "@/lib/queryKeys";
  * Board-mode honesty (owner feedback 1.4.0): /sessions is declared
  * unsupported (501) by the BoardAdapter — the page must show a calm
  * "not available in board mode" empty state (role="status"), never a
- * role="alert" error. On the mnemos adapter the same 501 keeps the mnemos
+ * role="alert" error. On the vesma adapter the same 501 keeps the vesma
  * 4.1 explanation (no list endpoint there).
  *
  * DOM-free per the project pattern: the 501 is seeded straight into the
@@ -59,7 +59,7 @@ describe("board mode honest 501 states (sessions)", () => {
       keys.sessions.list(),
       new ApiError(
         501,
-        "BoardAdapter.listSessions: the board merge-API does not expose the mnemos /v1/sessions view (ADR 0011 §6).",
+        "BoardAdapter.listSessions: the board merge-API does not expose the vesma /v1/sessions view (ADR 0011 §6).",
       ),
     );
     // UX-overhaul §6 (Ф1, П1): the 501 is ONE HonestLine matching the nav
@@ -76,10 +76,10 @@ describe("board mode honest 501 states (sessions)", () => {
     expect(html).not.toContain("501");
   });
 
-  it("keeps the mnemos 4.1 explanation on the mnemos adapter", () => {
+  it("keeps the vesma 4.1 explanation on the vesma adapter", () => {
     const html = renderSeeded(
       <SessionsPage />,
-      "mnemos",
+      "vesma",
       keys.sessions.list(),
       new ApiError(501, "HttpAdapter: GET /v1/sessions → 501"),
     );

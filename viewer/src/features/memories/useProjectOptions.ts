@@ -5,7 +5,7 @@ import { GC_TIMES, STALE_TIMES } from "@/lib/queryClient";
 
 /**
  * Distinct project names for the list filter dropdown. There is no dedicated
- * `/projects` endpoint on mnemos, so this aggregates a wide list client-side
+ * `/projects` endpoint on vesma, so this aggregates a wide list client-side
  * (honest fallback, same pattern as the tag inspector per ADR 0003).
  */
 export function useProjectOptions(): string[] {

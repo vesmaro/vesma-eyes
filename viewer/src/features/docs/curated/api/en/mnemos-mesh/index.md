@@ -1,10 +1,10 @@
 ---
-title: mnemos-mesh — no public HTTP API
+title: vesma-mesh — no public HTTP API
 ---
 
-# mnemos-mesh: no public HTTP API
+# vesma-mesh: no public HTTP API
 
-mnemos-mesh has no public HTTP API — inventing a reference here would be
+vesma-mesh has no public HTTP API — inventing a reference here would be
 dishonest. The mesh is designed as a “dumb transport”: nodes exchange
 already-processed records over internal contracts; moderation and storage
 stay in mnemos.
@@ -28,6 +28,6 @@ A node operator works with configuration and documentation, not an API:
 - operations and security: [the runbook](mnemos-mesh/admin/runbook),
   [the trust model](mnemos-mesh/admin/security).
 
-The note is verified against the mnemos-mesh repository at the pin (the
+The note is verified against the vesma-mesh repository at the pin (the
 page badge); contract changes surface in the `gen_api_ref.py check-drift`
 report.

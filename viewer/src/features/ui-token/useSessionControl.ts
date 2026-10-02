@@ -28,7 +28,7 @@ import type { TranslationKey } from "@/i18n";
  * - "device": same, but the device scope is `read` (the v0 shape —
  *   explicit least-privilege pairings) — «устройство подключено»,
  *   read-only by device scope, not by absence of identity.
- * - "readOnly": everyone else — the mnemos HttpAdapter (not a
+ * - "readOnly": everyone else — the vesma HttpAdapter (not a
  *   TaskMutationSource → honest for L1 even behind an mnk_ session), the board
  *   with neither token, fail-soft fallbacks.
  *

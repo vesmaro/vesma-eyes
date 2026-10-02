@@ -35,7 +35,7 @@ ui-токен вводят люди в окне «Вход», поэтому р�
 1. Создайте новое значение и положите его в тот же секрет:
 
    ```bash
-   kubectl -n kube-agents create secret generic vesmaro-eyes-ui-token \
+   kubectl -n kube-agents create secret generic vesma-eyes-ui-token \
      --from-literal=VESMARO_UI_TOKEN='ui-token-новое-значение' \
      --dry-run=client -o yaml | kubectl apply -f -
    ```
@@ -44,9 +44,9 @@ ui-токен вводят люди в окне «Вход», поэтому р�
    только при пересоздании пода):
 
    ```bash
-   helm upgrade vesmaro-eyes deploy/chart/vesmaro-eyes -n kube-agents \
+   helm upgrade vesma-eyes deploy/chart/vesma-eyes -n kube-agents \
      -f my-values.yaml --set image.tag=<текущая версия>
-   kubectl -n kube-agents rollout status deployment/vesmaro-eyes
+   kubectl -n kube-agents rollout status deployment/vesma-eyes
    ```
 
    Явный `image.tag` обязателен — почему, см.
@@ -65,7 +65,7 @@ ui-токен вводят люди в окне «Вход», поэтому р�
 
 machine-токен живёт в поллере на машине с агентами.
 
-1. Смените секрет `vesmaro-eyes-board-token` новым значением — так же,
+1. Смените секрет `vesma-eyes-board-token` новым значением — так же,
    как в шагах 1–2 выше (имя секрета то же, ключ `VESMARO_BOARD_TOKEN`).
 2. Обновите файл окружения поллера
    (`/etc/vesmaro/poller.env` или переменную user-юнита). Помните права:
@@ -91,7 +91,7 @@ machine-токен живёт в поллере на машине с агент�
 2. Обновите секрет `vesmaro-eyes-mnemos` (ключ `MNEMOS_TOKEN`) и
    перекатите борд, как выше.
 3. Если подключено LAN-хранилище ноутбука — обновите и его секрет
-   (`vesmaro-eyes-laptop`).
+   (`vesma-eyes-laptop`).
 4. Проверка: `/api/health` отвечает `ok:true` и видит все хранилища.
 
 ## Device-токены

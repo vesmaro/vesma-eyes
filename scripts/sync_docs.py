@@ -213,7 +213,7 @@ def normalize_rules(config: dict[str, Any]) -> dict[str, Any]:
 # handles: rendering-util splits on /\\n|\n|<br\s*\/?>/ — verified against
 # the pinned mermaid@11.17.2) is `<br/>`. Unquoted labels keep their text
 # form: quoting a label to carry `<br/>` would silently change shape
-# syntax (`DB[(mnemos store)]` is a cylinder only unquoted) — so the
+# syntax (`DB[(vesma store)]` is a cylinder only unquoted) — so the
 # transform replaces the escape in place and never rewrites label delimiters
 # (ME-010, АРХКОМ ADR-0020 L1 mandate). Deterministic and idempotent:
 # `<br/>` survives a second pass unchanged.
@@ -408,7 +408,7 @@ class Rewriter:
             return match.group(0)  # pure in-page anchor
         resolved = self._resolve(path)
         if resolved is None:
-            return match.group(0)  # cross-clone hop (e.g. mesh -> mnemos): keep
+            return match.group(0)  # cross-clone hop (e.g. mesh -> vesma): keep
         slug = page_slug_for(self.project, self.locale_dirs, resolved)
         if slug is not None:
             if slug not in self.stats["included_slugs"]:

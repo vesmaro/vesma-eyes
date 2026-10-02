@@ -15,23 +15,23 @@ the procedure takes 15–20 minutes.
 
 The board is a single container: the API server, a SQLite database on a
 volume (PVC), and the interface. The external dependency is one or
-several mnemos memory servers the board talks to over HTTP with its own
+several vesma memory servers the board talks to over HTTP with its own
 `mnk_…` token. That token never leaves the board server.
 
 ## What you need before installing
 
 - A Kubernetes/K3s cluster with Helm 3 and a working ingress controller
   (in K3s that is traefik). The examples use the `kube-agents` namespace.
-- A memory server (mnemos) token with `totp_required=0` (a value shaped
-  like `mnk_…`). mnemos issues it.
+- A memory server (vesma) token with `totp_required=0` (a value shaped
+  like `mnk_…`). vesma issues it.
 - The board itself is not yet running? The upstream runbook for
-  installing mnemos is imported into the docs:
-  [installing mnemos](/docs/mnemos/admin/runbooks/install).
+  installing vesma is imported into the docs:
+  [installing vesma](/docs/mnemos/admin/runbooks/install).
 - The address the board will answer on: the examples use
   `board.example.com` (replace with yours).
 - A cloned repository: the chart and the scripts live in it.
 
-## Step 1. Namespace and the mnemos token secret
+## Step 1. Namespace and the vesma token secret
 
 The secret is created outside Helm and survives uninstalling the release:
 
@@ -48,7 +48,7 @@ The ready-made script creates a self-signed certificate valid for 825
 days:
 
 ```bash
-./scripts/gen-tls-secret.sh          # creates the vesmaro-eyes-tls secret
+./scripts/gen-tls-secret.sh          # creates the vesma-eyes-tls secret
 ./scripts/gen-tls-secret.sh --check  # check the remaining lifetime any time
 ```
 
@@ -68,7 +68,7 @@ rootApp: app                    # the chart default is board (the legacy board)
 
 mnemos:
   cluster:
-    url: http://mnemos.memory.svc:8787   # the in-cluster mnemos service address
+    url: http://mnemos.memory.svc:8787   # the in-cluster vesma service address
   laptop:
     enabled: false              # the second (LAN) store: enable + secret
 
@@ -78,7 +78,7 @@ ingress:
   host: board.example.com
   tls:
     enabled: true
-    secretName: vesmaro-eyes-tls
+    secretName: vesma-eyes-tls
 
 persistence:
   storageClass: local-path      # your cluster's storage class
@@ -111,14 +111,14 @@ in-cluster service one).
 
 ## Step 4. Install
 
-Do not rename the `vesmaro-eyes` release: resource names depend on it,
+Do not rename the `vesma-eyes` release: resource names depend on it,
 and the chart reuses its secrets between upgrades.
 
 ```bash
-helm install vesmaro-eyes deploy/chart/vesmaro-eyes \
+helm install vesma-eyes deploy/chart/vesma-eyes \
   -n kube-agents -f my-values.yaml
 
-kubectl -n kube-agents rollout status deployment/vesmaro-eyes --timeout=300s
+kubectl -n kube-agents rollout status deployment/vesma-eyes --timeout=300s
 ```
 
 ## Step 5. Collect the tokens
@@ -129,11 +129,11 @@ put them into a password manager:
 
 ```bash
 # the interface token (UI mutations) — pasted into the sign-in window
-kubectl -n kube-agents get secret vesmaro-eyes-ui-token \
+kubectl -n kube-agents get secret vesma-eyes-ui-token \
   -o jsonpath='{.data.VESMARO_UI_TOKEN}' | base64 -d
 
 # the machine token (poller, agents) — see the "Agents and assignments" page
-kubectl -n kube-agents get secret vesmaro-eyes-board-token \
+kubectl -n kube-agents get secret vesma-eyes-board-token \
   -o jsonpath='{.data.VESMARO_BOARD_TOKEN}' | base64 -d
 ```
 
@@ -142,9 +142,9 @@ The secret inventory at a glance:
 | Secret | Created by | Contents |
 | --- | --- | --- |
 | `vesmaro-eyes-mnemos` | the operator, manually | the `mnk_…` memory store token |
-| `vesmaro-eyes-board-token` | the chart, automatically | the machine token: poller, agent reports |
-| `vesmaro-eyes-ui-token` | the chart when `uiToken.enabled=true` | the interface mutation token |
-| `vesmaro-eyes-tls` | `scripts/gen-tls-secret.sh` | the self-signed ingress certificate |
+| `vesma-eyes-board-token` | the chart, automatically | the machine token: poller, agent reports |
+| `vesma-eyes-ui-token` | the chart when `uiToken.enabled=true` | the interface mutation token |
+| `vesma-eyes-tls` | `scripts/gen-tls-secret.sh` | the self-signed ingress certificate |
 
 Token class mechanics and hygiene rules — on the [Tokens and
 access](tokens.md) page.
@@ -184,7 +184,7 @@ family member](first-login.md).
 For a try-out on one machine Docker is enough:
 
 ```bash
-git clone https://github.com/Korrnals/mnemos-eyes.git && cd mnemos-eyes
+git clone https://github.com/Korrnals/vesma-eyes.git && cd vesma-eyes
 export MNEMOS_URL=http://your-mnemos-host:8787
 export MNEMOS_TOKEN=mnk_…
 docker compose up -d

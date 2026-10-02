@@ -14,7 +14,7 @@ import { I18nProvider } from "@/i18n";
  * Ф1 Pulse page (QA verdict §3 — "pulse-страница (мок BoardAdapter)"): with
  * the mock gateway's prefetched feed the page renders the recency list, the
  * provenance badge and the URL-driven scope switcher; a gateway without the
- * pulse capability (mnemos HttpAdapter) gets the honest "unsupported" state,
+ * pulse capability (vesma HttpAdapter) gets the honest "unsupported" state,
  * never a spinner or a fake feed.
  */
 async function renderPulse(gateway: MockAdapter | HttpAdapter, path = "/memory/pulse") {
@@ -52,7 +52,7 @@ describe("PulsePage (mock adapter — capable)", () => {
     expect(html).toMatch(/href="\/memory\/[^"]+"/);
   });
 
-  it("renders the honest unavailable state on a mnemos gateway", async () => {
+  it("renders the honest unavailable state on a vesma gateway", async () => {
     const html = await renderPulse(new HttpAdapter("/api"));
     expect(html).toContain("Pulse is unavailable in vesma mode");
     expect(html).not.toContain("Pulse scope");

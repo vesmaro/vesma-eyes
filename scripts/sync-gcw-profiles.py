@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""sync-gcw-profiles — index GCW specialist composition into mnemos memory.
+"""sync-gcw-profiles — index GCW specialist composition into vesma memory.
 
 Cross-system design: specialist composition (instructions / skills / rules /
-triggers) is indexed from GCW plugin files into mnemos with stable tags
+triggers) is indexed from GCW plugin files into vesma with stable tags
 (specialist:<slug>, gcw:component:<kind>). Any memory server holding the
 index serves the profile — the board needs no GCW checkout.
 
@@ -169,10 +169,10 @@ def main() -> int:
     try:
         with urllib.request.urlopen(f"{server}/health", timeout=10) as r:
             if r.status != 200:
-                print(f"mnemos unhealthy at {server}", file=sys.stderr)
+                print(f"vesma unhealthy at {server}", file=sys.stderr)
                 return 1
     except Exception as e:
-        print(f"mnemos unreachable at {server}: {e}", file=sys.stderr)
+        print(f"vesma unreachable at {server}: {e}", file=sys.stderr)
         return 1
 
     total = 0

@@ -33,7 +33,7 @@ describe("resolveAdapterKind", () => {
   it("accepts every documented VITE_ADAPTER value", async () => {
     const { resolveAdapterKind } = await import("./adapterConfig");
     expect(resolveAdapterKind("mock")).toBe("mock");
-    expect(resolveAdapterKind("mnemos")).toBe("mnemos");
+    expect(resolveAdapterKind("vesma")).toBe("vesma");
     expect(resolveAdapterKind("board")).toBe("board");
   });
 
@@ -48,7 +48,7 @@ describe("resolveAdapterKind", () => {
   it("VITE_ADAPTER wins over the legacy knob; unknown values fail safe to the fallback", async () => {
     const { resolveAdapterKind } = await import("./adapterConfig");
     expect(resolveAdapterKind("board", "mock")).toBe("board");
-    expect(resolveAdapterKind("mnemos", "mock")).toBe("mnemos");
+    expect(resolveAdapterKind("vesma", "mock")).toBe("vesma");
     expect(resolveAdapterKind("garbage", "mock", "board")).toBe("board");
     expect(resolveAdapterKind("garbage", undefined, "mock")).toBe("mock");
   });
@@ -91,15 +91,15 @@ describe("adapter default (owner feedback 1.4.0)", () => {
     expect(await createGateway()).toBeInstanceOf(FreshMockAdapter);
   });
 
-  it("VITE_ADAPTER=mnemos still opts a production build into the mnemos mode", async () => {
+  it("VITE_ADAPTER=vesma still opts a production build into the vesma mode", async () => {
     vi.resetModules();
     vi.stubEnv("PROD", true);
-    vi.stubEnv("VITE_ADAPTER", "mnemos");
+    vi.stubEnv("VITE_ADAPTER", "vesma");
     const {
       config: { ADAPTER, createGateway },
       http: { HttpAdapter: FreshHttpAdapter },
     } = await importFresh();
-    expect(ADAPTER).toBe("mnemos");
+    expect(ADAPTER).toBe("vesma");
     expect(await createGateway()).toBeInstanceOf(FreshHttpAdapter);
   });
 });
@@ -116,10 +116,10 @@ describe("createGateway", () => {
     return { config, board, http, mock };
   }
 
-  it("builds the HttpAdapter when VITE_ADAPTER=mnemos is set explicitly", async () => {
+  it("builds the HttpAdapter when VITE_ADAPTER=vesma is set explicitly", async () => {
     vi.resetModules();
     vi.stubEnv("PROD", true); // explicit knob beats the prod board default
-    vi.stubEnv("VITE_ADAPTER", "mnemos");
+    vi.stubEnv("VITE_ADAPTER", "vesma");
     const {
       config: { createGateway },
       http: { HttpAdapter: FreshHttpAdapter },
@@ -150,7 +150,7 @@ describe("createGateway", () => {
     expect(await createGateway()).toBeInstanceOf(FreshBoardAdapter);
   });
 
-  it("board mode purges a legacy stored mnemos token at bootstrap", async () => {
+  it("board mode purges a legacy stored vesma token at bootstrap", async () => {
     // Simulate a leftover mnemos-mode session carrying an mnk_ token.
     localStorage.setItem(
       AUTH_STORAGE_KEY,
@@ -201,7 +201,7 @@ describe("adapter pin: prod + mock is forbidden (ME-043 P3-4)", () => {
     expect(isForbiddenAdapterCombo(true, "mock", false)).toBe(true);
     expect(isForbiddenAdapterCombo(false, "mock", false)).toBe(false);
     expect(isForbiddenAdapterCombo(true, "board", false)).toBe(false);
-    expect(isForbiddenAdapterCombo(true, "mnemos", false)).toBe(false);
+    expect(isForbiddenAdapterCombo(true, "vesma", false)).toBe(false);
     expect(isForbiddenAdapterCombo(true, "mock", true)).toBe(false); // smoke opt-in
   });
 

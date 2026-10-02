@@ -116,7 +116,7 @@ describe("synchronous verdict (pre-paint, no probe round-trip needed)", () => {
     expect(authSessionProbe(gateway)).toBeNull();
   });
 
-  it("mnemos L1 adapter: anonymous with no probe (no owner-session wire there)", () => {
+  it("vesma L1 adapter: anonymous with no probe (no owner-session wire there)", () => {
     const gateway = new HttpAdapter("/api");
     expect(readAuthSessionStatus(gateway)).toBe("anonymous");
     expect(authSessionProbe(gateway)).toBeNull();

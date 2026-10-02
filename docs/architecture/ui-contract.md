@@ -316,8 +316,8 @@ agent-refine-commit}`; ответ: `{ok, memory_id, server}`.
 
 | Ветка | Теги в vesma | source | Код |
 | --- | --- | --- | --- |
-| `agent-refine-request` | `project:mnemos-eyes`, `agent:zcode`, `mnemos:open-question`, `source:board` | `mcp` | `app.py` `BOARD_REFLECT_TAGS` |
-| `agent-refine-commit` | `project:mnemos-eyes`, `agent:zcode`, `mnemos:open-question`, `source:board` | `mcp` | `app.py` `BOARD_REFLECT_TAGS` |
+| `agent-refine-request` | `project:vesma-eyes`, `agent:zcode`, `mnemos:open-question`, `source:board` | `mcp` | `app.py` `BOARD_REFLECT_TAGS` |
+| `agent-refine-commit` | `project:vesma-eyes`, `agent:zcode`, `mnemos:open-question`, `source:board` | `mcp` | `app.py` `BOARD_REFLECT_TAGS` |
 | task-draft (UI-6) | `project:<slug из формы, санитизирован>`, `agent:zcode`, `mnemos:open-question`, `task-draft`, `source:board` | `mcp` | `app.py` `_draft_tags()` |
 
 - строгий тег-контракт vesma требует ровно один `project:<slug>` и один

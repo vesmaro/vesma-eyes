@@ -14,7 +14,7 @@ import { I18nProvider } from "@/i18n";
  * Ф2 Overview gates (UX-overhaul §3): with the mock gateway the cockpit
  * blocks read the live cache — «Кто занят» aggregate, «Что ждёт меня»
  * summary, «Что в памяти» stores+pulse — and every figure LEADS somewhere.
- * With a gateway that lacks the board-native capabilities (mnemos
+ * With a gateway that lacks the board-native capabilities (vesma
  * HttpAdapter) the live blocks do not render at all — no fake widgets. The
  * Ф2 removals hold: no quick-links trio, no solo agents line.
  */
@@ -125,7 +125,7 @@ describe("OverviewPage (mock gateway — capable)", () => {
   });
 });
 
-describe("OverviewPage (mnemos gateway — capabilities absent)", () => {
+describe("OverviewPage (vesma gateway — capabilities absent)", () => {
   it("hides the live cockpit blocks instead of faking them", async () => {
     const html = await renderOverview(new HttpAdapter("/api"));
     // The STORE half and the pulse strip are hidden on incapable gateways;
@@ -140,7 +140,7 @@ describe("OverviewPage (mnemos gateway — capabilities absent)", () => {
     expect(html).toContain(
       "Stores and metrics are in the works; sessions and traces are coming later",
     );
-    // The mnemos adapter has no mutation surface — the read-only mode line
+    // The vesma adapter has no mutation surface — the read-only mode line
     // is the honest contract there, even with an mnk_ session (L1 reads).
     expect(html).toContain("read-only");
   });

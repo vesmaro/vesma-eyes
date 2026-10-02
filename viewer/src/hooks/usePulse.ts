@@ -8,7 +8,7 @@ import { GC_TIMES, STALE_TIMES } from "@/lib/queryClient";
 /**
  * Merged recency feed (Ф1 Pulse page). The query is ENABLED only when the
  * injected gateway actually speaks the pulse wire (board / mock adapters);
- * in mnemos mode the hook stays idle and the page renders its honest
+ * in vesma mode the hook stays idle and the page renders its honest
  * "unsupported" state — a capability, not a configuration flag.
  */
 export function usePulse(params: PulseParams = {}) {

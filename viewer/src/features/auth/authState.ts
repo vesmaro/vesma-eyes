@@ -7,7 +7,7 @@
  * Phases:
  * - `anonymous`      no session (or a stale one was rejected)
  * - `authenticating` a login/verify round-trip is in flight
- * - `challenge`      mnemos answered phase 1 with a TOTP `challenge_id`
+ * - `challenge`      vesma answered phase 1 with a TOTP `challenge_id`
  * - `authenticated`  a session token is stored
  */
 

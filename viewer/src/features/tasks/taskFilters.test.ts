@@ -18,13 +18,13 @@ describe("parseTaskListParams", () => {
   it("reads all five filters from the URL", () => {
     const state = parseTaskListParams(
       new URLSearchParams(
-        "status=blocked&priority=critical&project=mnemos&agent=zcode&q=fts",
+        "status=blocked&priority=critical&project=vesma&agent=zcode&q=fts",
       ),
     );
     expect(state).toEqual({
       status: "blocked",
       priority: "critical",
-      project: "mnemos",
+      project: "vesma",
       agent: "zcode",
       q: "fts",
     });
@@ -110,7 +110,7 @@ describe("hasActiveTaskFilters / option derivation", () => {
   });
 
   it("derives sorted, distinct project and agent options from the rows", () => {
-    expect(projectOptions(MOCK_TASKS)).toEqual(["mnemos", "vesma-eyes", "vesmaro"]);
+    expect(projectOptions(MOCK_TASKS)).toEqual(["vesma", "vesma-eyes", "vesmaro"]);
     expect(agentOptions(MOCK_TASKS)).toEqual(["claude", "zcode"]);
   });
 });

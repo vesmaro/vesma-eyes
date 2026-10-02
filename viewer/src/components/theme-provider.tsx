@@ -19,13 +19,13 @@ export type ThemePreference = "system" | "light" | "dark";
 
 /**
  * localStorage keys (spec §4.2 migration): the registry key is `vesmaro.theme`;
- * the legacy `mnemos-eyes:theme` (namespace violation, design-system.md §9)
+ * the legacy `vesma-eyes:theme` (namespace violation, design-system.md §9)
  * is still READ as a fallback so an updated browser keeps its old choice —
  * but never written (an old-version tab in another window must not lose its
  * pick; the legacy key dies out naturally).
  */
 export const THEME_STORAGE_KEY = "vesmaro.theme";
-export const LEGACY_THEME_STORAGE_KEY = "mnemos-eyes:theme";
+export const LEGACY_THEME_STORAGE_KEY = "vesma-eyes:theme";
 
 export const DEFAULT_THEME_PREFERENCE: ThemePreference = "system";
 /** Segmented-control options, in display order (hub wireframe §3.1). */

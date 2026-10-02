@@ -1,6 +1,6 @@
-"""HTTP client(s) to live mnemos memory engines.
+"""HTTP client(s) to live vesma memory engines.
 
-Multi-server: the board watches several mnemos instances (see
+Multi-server: the board watches several vesma instances (see
 ``memory_registry``) — individually or merged into a group ("memory
 cluster"). Every function takes a *server dict* ``{name,url,token,...}``
 so callers address a specific engine; the browser never sees tokens.
@@ -13,7 +13,7 @@ from typing import Any
 
 import httpx
 
-# mnemos hybrid search vectorizes on CPU and can take ~5 s per query.
+# vesma hybrid search vectorizes on CPU and can take ~5 s per query.
 _TIMEOUT = httpx.Timeout(15.0, connect=2.0)
 
 
@@ -27,7 +27,7 @@ def _headers(server: dict[str, Any]) -> dict[str, str]:
 
 async def fetch_json(server: dict[str, Any], path: str,
                      params: dict[str, Any] | None = None) -> tuple[int, Any]:
-    """GET a path from one mnemos server. Returns (status_code, body)."""
+    """GET a path from one vesma server. Returns (status_code, body)."""
     url = f"{server['url']}{path}"
     try:
         async with httpx.AsyncClient(timeout=_TIMEOUT, headers=_headers(server)) as client:
@@ -43,12 +43,12 @@ async def fetch_json(server: dict[str, Any], path: str,
     try:
         return resp.status_code, resp.json()
     except ValueError:
-        return resp.status_code, {"detail": "mnemos returned non-JSON"}
+        return resp.status_code, {"detail": "vesma returned non-JSON"}
 
 
 async def post_json_async(server: dict[str, Any], path: str, body: dict[str, Any],
                           timeout: float = 8.0) -> tuple[int, Any]:
-    """POST JSON to one mnemos server (async — usable inside async routes)."""
+    """POST JSON to one vesma server (async — usable inside async routes)."""
     url = f"{server['url']}{path}"
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(timeout), headers=_headers(server)) as client:
@@ -64,7 +64,7 @@ async def post_json_async(server: dict[str, Any], path: str, body: dict[str, Any
     try:
         return resp.status_code, resp.json()
     except ValueError:
-        return resp.status_code, {"detail": "mnemos returned non-JSON"}
+        return resp.status_code, {"detail": "vesma returned non-JSON"}
 
 
 # ------------------------------------------------------------------ probes
@@ -143,7 +143,7 @@ async def health(server: dict[str, Any]) -> dict[str, Any]:
         "url": server["url"],
         "auth": bool(server.get("token")),
     }
-    # mnemos POST /search returns a bare list of results.
+    # vesma POST /search returns a bare list of results.
     results = body if isinstance(body, list) else (body or {}).get("results", [])
     if ok:
         summary["probe_hits"] = len(results)
@@ -207,7 +207,7 @@ async def memory_pulse(server: dict[str, Any], project: str = "",
         params["project"] = project
     code, body = await fetch_json(server, "/memories", params)
     if code != 200 or not isinstance(body, list):
-        # mnemos is POST-only for /search (see search() below) — a GET here
+        # vesma is POST-only for /search (see search() below) — a GET here
         # never yields items against a real engine.
         code2, body2 = await post_json_async(
             server, "/search",
@@ -239,7 +239,7 @@ async def memory_pulse(server: dict[str, Any], project: str = "",
 
 async def search(server: dict[str, Any], query: str, limit: int = 10,
                  project: str = "") -> tuple[int, Any]:
-    """Hybrid search on ONE server (POST /search; mnemos is POST-only here)."""
+    """Hybrid search on ONE server (POST /search; vesma is POST-only here)."""
     body: dict[str, Any] = {"query": query, "limit": min(limit, 25)}
     if project:
         body["project"] = project

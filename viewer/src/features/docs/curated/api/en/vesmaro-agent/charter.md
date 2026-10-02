@@ -12,13 +12,13 @@ approve-with-conditions with all ten findings amended into the text; the
 
 ## Mission
 
-vesmaro-agent is the **resident representative of the vesmaro-eyes board on
+vesmaro-agent is the **resident representative of the vesma-eyes board on
 a host**: it inventories the agent harnesses living there, executes board
 assignments through them, carries reports back with attribution, and makes
 sessions/state visible to the owner — all **without reconfiguring the
 host** (the node-exporter model: one binary, only its own loopback port).
 The agent is **NOT the transport**: moving bytes between hosts is
-mnemos-mesh (MM-033, phase C; the mesh leg rides the pinned mesh-core
+vesma-mesh (MM-033, phase C; the mesh leg rides the pinned mesh-core
 library, credentials through their invite/enroll flow).
 
 ## Duties and phasing
@@ -36,7 +36,7 @@ library, credentials through their invite/enroll flow).
 
 ## Never-list
 
-1. **Not a transport** — transport is mnemos-mesh; the agent invents no
+1. **Not a transport** — transport is vesma-mesh; the agent invents no
    protocols or credential flows of its own.
 2. **Not a second node-exporter** — no metrics exporter, no scrape surface.
 3. **Not a mini-OS** — no supervision of unrelated services, no package
@@ -65,7 +65,7 @@ library, credentials through their invite/enroll flow).
   mask-before-truncate everywhere.
 - **Fail-closed start and stay**: no CA → no connection; unparsable
   config → refuse everything; honest degradation over silent workarounds.
-- **Ready-made solutions**: systemd, journald, node-exporter, mnemos-mesh —
+- **Ready-made solutions**: systemd, journald, node-exporter, vesma-mesh —
   used, not rebuilt.
 
 ## Success metrics

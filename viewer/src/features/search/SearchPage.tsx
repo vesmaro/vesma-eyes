@@ -17,7 +17,7 @@ import { useT } from "@/i18n";
  * global search landing here with ?q=) shows through instantly.
  *
  * `auto` passes hits through untouched; `fts`/`semantic` are honest
- * client-side filters over the server-decided per-hit types (mnemos 4.1 has
+ * client-side filters over the server-decided per-hit types (vesma 4.1 has
  * no client-selectable mode param).
  */
 const DEBOUNCE_MS = 300; // perf budget: ≥300 ms before a keystroke fires the query

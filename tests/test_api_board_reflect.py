@@ -1,5 +1,5 @@
 """board-reflect contract: pinned tags (SEC-4), kind allowlist (422),
-rate limit (429, 10/60s per client) and BE-4 (async reflect: a mnemos
+rate limit (429, 10/60s per client) and BE-4 (async reflect: a vesma
 failure must not crash the route or take the board down).
 
 Each test gets a fresh rate limiter and its own FakeMnemos; a per-test
@@ -49,14 +49,14 @@ class TestReflectContract:
         assert body["server"] == "qa-mnemos"
 
     def test_tags_pinned_exactly(self, client, auth, wired):
-        """SEC-4 + mnemos strict contract: records carry EXACTLY the board
+        """SEC-4 + vesma strict contract: records carry EXACTLY the board
         project/agent stamps + mnemos:open-question + source:board — board
         reflections are data, never decisions or instructions."""
         assert _reflect(client, auth).status_code == 200
         writes = wired.memories_bodies()
         assert writes
         assert writes[-1]["tags"] == [
-            "project:mnemos-eyes", "agent:zcode",
+            "project:vesma-eyes", "agent:zcode",
             "mnemos:open-question", "source:board",
         ]
 
@@ -87,11 +87,11 @@ class TestRateLimit:
         assert statuses[0] == 200
         assert 429 in statuses and statuses[-1] == 429
         writes = wired.memories_bodies()
-        assert len(writes) == 10, "only the first 10 writes may reach mnemos"
+        assert len(writes) == 10, "only the first 10 writes may reach vesma"
 
 
 class TestBE4ReflectDoesNotCrashRoute:
-    """BE-4: reflect stays async and survives mnemos failures — the route
+    """BE-4: reflect stays async and survives vesma failures — the route
     answers with a handled error, and the board keeps serving."""
 
     def test_mnemos_500_is_handled_board_still_up(self, client, auth, wired):

@@ -26,7 +26,7 @@ import { useMemo } from "react";
 
 /**
  * SCHED-1-UI data hooks (ADR 0013 §8): reads capability-gated
- * (`isAutomationSource` — mnemos mode stays idle), mutations through the
+ * (`isAutomationSource` — vesma mode stays idle), mutations through the
  * SAME ui-token gate pattern as the agents domain (useTaskMutations /
  * useAssignmentMutations posture): runAuthorized, 401 rethrow, server error
  * text in toasts, targeted invalidation. `runScheduleNow` does NOT build a

@@ -9,7 +9,7 @@ import { useT } from "@/i18n";
 
 /**
  * `/sessions/:id` — full session inspection (component-inventory §9). The
- * mnemos 4.1 `SessionRead` shape carries counters + metadata only: turn
+ * vesma 4.1 `SessionRead` shape carries counters + metadata only: turn
  * transcripts and linked memories are not exposed, and the page says so
  * instead of leaving empty sections.
  *

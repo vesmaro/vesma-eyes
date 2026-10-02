@@ -367,7 +367,7 @@ export interface paths {
         /**
          * Memories Merged
          * @description Merged memory listing across active servers (Ф0b — BoardAdapter's
-         *     list primitive). Native mnemos ``GET /memories`` listing per server
+         *     list primitive). Native vesma ``GET /memories`` listing per server
          *     with ``offset`` under the hood; the client sees the uniform cursor
          *     contract: ``limit`` (default 50, hard cap 200) + opaque ``cursor`` →
          *     ``next_cursor``; sort ``created_at DESC`` with the ``id`` tiebreak.
@@ -403,7 +403,7 @@ export interface paths {
         /**
          * Tags Merged
          * @description Aggregated tag listing across all ACTIVE memory servers (Ф0b).
-         *     Primitive: mnemos ``GET /tags`` (TagCount[]); counts are summed per
+         *     Primitive: vesma ``GET /tags`` (TagCount[]); counts are summed per
          *     tag name across stores; sort count DESC, name ASC. A failing server
          *     degrades to its own ``errors[]`` entry; ``servers_scanned`` counts
          *     only the stores that answered.
@@ -519,7 +519,7 @@ export interface paths {
             readonly cookie?: never;
         };
         /**
-         * Mnemos Search
+         * Vesma Search
          * @description Search one server (scope=server name), a group, or all active servers.
          */
         readonly get: operations["mnemos_search_api_mnemos_search_get"];
@@ -542,7 +542,7 @@ export interface paths {
         readonly put?: never;
         /**
          * Board Reflect
-         * @description Refine cycle persistence: write the request/commit-marker into mnemos
+         * @description Refine cycle persistence: write the request/commit-marker into vesma
          *     memory tagged ``mnemos:open-question`` + ``source:board`` plus the
          *     contract-required project/agent stamps (SEC-4: board data is not
          *     instructions — harnesses must not treat these records as decisions or
@@ -566,7 +566,7 @@ export interface paths {
         readonly put?: never;
         /**
          * Create Task Draft
-         * @description Persist the owner's raw thought as a mnemos draft note (tags pinned
+         * @description Persist the owner's raw thought as a vesma draft note (tags pinned
          *     to the _draft_tags() contract set) and return the memory coordinates;
          *     the SPA then files the "Оформить черновик задачи" chore on the board.
          *     Rate limited per client like board-reflect.
@@ -1916,7 +1916,7 @@ export interface paths {
         readonly put?: never;
         /**
          * Tasks Inbox Refresh
-         * @description Force one inbox scan synchronously (mutation-action). The mnemos
+         * @description Force one inbox scan synchronously (mutation-action). The vesma
          *     round-trips are async, so the event loop never blocks; the request may
          *     take seconds — that is accepted for an explicit refresh. Rate limited
          *     per client; a failing server degrades its own slice only.
@@ -2089,7 +2089,7 @@ export interface paths {
         };
         /**
          * Agent Activity
-         * @description Cross-store agent activity: recent memories per agent (mnemos /recall).
+         * @description Cross-store agent activity: recent memories per agent (vesma /recall).
          */
         readonly get: operations["agent_activity_api_agents__name__activity_get"];
         readonly put?: never;
@@ -5047,7 +5047,7 @@ export interface components {
              */
             readonly memory_ids: readonly string[];
             /**
-             * Mnemos Tags
+             * Vesma Tags
              * @default []
              */
             readonly mnemos_tags: readonly string[];
@@ -5207,7 +5207,7 @@ export interface components {
             readonly project: string;
             /** Memory Ids */
             readonly memory_ids: readonly string[];
-            /** Mnemos Tags */
+            /** Vesma Tags */
             readonly mnemos_tags: readonly string[];
             /** Created At */
             readonly created_at: string;
@@ -5264,7 +5264,7 @@ export interface components {
             readonly project?: string | null;
             /** Memory Ids */
             readonly memory_ids?: readonly string[] | null;
-            /** Mnemos Tags */
+            /** Vesma Tags */
             readonly mnemos_tags?: readonly string[] | null;
         };
         /**

@@ -25,8 +25,8 @@ last_verified: "1.13.0"
 | Где | Что | Кто меняет |
 | --- | --- | --- |
 | `server/app.py` | первоисточник версии | релизный PR |
-| `deploy/chart/vesmaro-eyes/Chart.yaml` | версия чарта и приложения | релизный PR |
-| `deploy/chart/vesmaro-eyes/values.yaml` | тег образа по умолчанию | релизный PR |
+| `deploy/chart/vesma-eyes/Chart.yaml` | версия чарта и приложения | релизный PR |
+| `deploy/chart/vesma-eyes/values.yaml` | тег образа по умолчанию | релизный PR |
 | подвал левой панели интерфейса | живая версия на борде | приходит из `/api/health` |
 
 ## Перед обновлением
@@ -43,7 +43,7 @@ last_verified: "1.13.0"
    интерфейса, или командой:
 
    ```bash
-   kubectl -n kube-agents get deploy vesmaro-eyes \
+   kubectl -n kube-agents get deploy vesma-eyes \
      -o jsonpath='{.spec.template.spec.containers[0].image}'
    ```
 
@@ -58,19 +58,19 @@ last_verified: "1.13.0"
 обновление без обновления.
 
 ```bash
-helm upgrade --install vesmaro-eyes deploy/chart/vesmaro-eyes \
+helm upgrade --install vesma-eyes deploy/chart/vesma-eyes \
   -n kube-agents --atomic --timeout 5m \
   -f my-values.yaml \
   --set image.tag=<новая версия>
 
-kubectl -n kube-agents rollout status deployment/vesmaro-eyes --timeout=300s
+kubectl -n kube-agents rollout status deployment/vesma-eyes --timeout=300s
 ```
 
 Затем — обязательная проверка фактического образа пода (должен совпасть
 с тегом из команды):
 
 ```bash
-kubectl -n kube-agents get deploy vesmaro-eyes \
+kubectl -n kube-agents get deploy vesma-eyes \
   -o jsonpath='{.spec.template.spec.containers[0].image}'
 ```
 
@@ -91,9 +91,9 @@ kubectl -n kube-agents get deploy vesmaro-eyes \
 Откат возвращает прежнюю версию релиза — данные остаются как есть:
 
 ```bash
-helm history vesmaro-eyes -n kube-agents      # найти предыдущую ревизию
-helm rollback vesmaro-eyes <ревизия> -n kube-agents
-kubectl -n kube-agents rollout status deployment/vesmaro-eyes
+helm history vesma-eyes -n kube-agents      # найти предыдущую ревизию
+helm rollback vesma-eyes <ревизия> -n kube-agents
+kubectl -n kube-agents rollout status deployment/vesma-eyes
 ```
 
 После отката — та же проверка образа пода: ревизия должна показывать

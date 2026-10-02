@@ -104,8 +104,8 @@ import type {
 
 /**
  * Phase-0 convergence adapter (ADR 0011 §6): speaks the BOARD server's
- * merge-API, not the mnemos wire contract. Lives alongside HttpAdapter /
- * MockAdapter — the mnemos path stays untouched until the Ф1 auth rewrite.
+ * merge-API, not the vesma wire contract. Lives alongside HttpAdapter /
+ * MockAdapter — the vesma path stays untouched until the Ф1 auth rewrite.
  *
  * Base URL is same-origin "/api" (`VITE_BOARD_API_URL` overrides). Auth is
  * capability-scoped (see `identityTokenSource`): reads stay open through
@@ -196,7 +196,7 @@ export interface BoardListParams {
   cursor?: string;
   /** `'all'` (default) or one ACTIVE server name; unknown names → 404. */
   scope?: string;
-  /** Native mnemos listing filters — pass through verbatim. */
+  /** Native vesma listing filters — pass through verbatim. */
   status?: string;
   project?: string;
   agent?: string;
@@ -588,7 +588,7 @@ export class BoardAdapter implements BoardGateway {
   /**
    * Merged list, first page flattened for the `MemoryGateway` contract.
    * `status`/`project` filters pass through to the merged endpoint; the
-   * mnemos `offset` has no wire counterpart (the cursor contract replaces
+   * vesma `offset` has no wire counterpart (the cursor contract replaces
    * it, ADR 0011 §11) and is ignored — continuation goes through
    * `listMemoriesPage`. List rows carry an excerpt only (SEC-4), which
    * lands in `Memory.content`; the full card comes from `getMemory`.
@@ -603,7 +603,7 @@ export class BoardAdapter implements BoardGateway {
         status: params.status,
         project: params.project,
         // UI-17 §5.6: the «Открыть в Записях» path narrows the merged list
-        // by tag — a native mnemos listing filter, pass-through verbatim.
+        // by tag — a native vesma listing filter, pass-through verbatim.
         tags: params.tags,
       },
       signal,
@@ -1425,14 +1425,14 @@ export class BoardAdapter implements BoardGateway {
 function unsupported(method: string, mnemosPath: string): ApiError {
   return new ApiError(
     501,
-    `BoardAdapter.${method}: the board merge-API does not expose the mnemos ` +
+    `BoardAdapter.${method}: the board merge-API does not expose the vesma ` +
       `${mnemosPath} view (ADR 0011 §6 — v0 declares it unsupported until the ` +
       `convergence phases replace the page with a board-native read).`,
   );
 }
 
 /**
- * Normalise an anonymous proxied mnemos search hit into the pinned UI shape
+ * Normalise an anonymous proxied vesma search hit into the pinned UI shape
  * (same honest-defaults policy as the HttpAdapter mapping; the board-added
  * `server` provenance field IS part of the viewer SearchResult now — UX-overhaul
  * §7.3 Ф2 the palette answers «где лежит» — and passes through when named).
@@ -1510,7 +1510,7 @@ function oneOf<T extends string>(value: unknown, allowed: readonly T[]): T {
     : allowed[0];
 }
 
-/** mnemos `Memory` enum mirrors (gateway/types.ts is the single source). */
+/** vesma `Memory` enum mirrors (gateway/types.ts is the single source). */
 const MEMORY_STATUSES = [
   "raw",
   "processing",
@@ -1537,7 +1537,7 @@ const MEMORY_SOURCES = [
   "synthesized",
 ] as const;
 
-/** mnemos `Memory.marker_version` schema default (not carried by the board wire). */
+/** vesma `Memory.marker_version` schema default (not carried by the board wire). */
 const DEFAULT_MARKER_VERSION = 1;
 
 // --- Ф1 normalizers (anonymous dicts → honest view models) ---------------------

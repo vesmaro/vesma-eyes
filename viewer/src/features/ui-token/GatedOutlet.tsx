@@ -22,7 +22,7 @@ import { useAuthSession } from "./useAuthSession";
  *               (07k §5.1 p.3, the no-flash rule);
  *   anonymous → the gate screen (§3).
  *
-   * Inactive deployments (mock playground, mnemos L1) render the outlet
+   * Inactive deployments (mock playground, vesma L1) render the outlet
    * untouched — `gatesActive` is false there, see useAuthSession.
  */
 export function GatedOutlet({

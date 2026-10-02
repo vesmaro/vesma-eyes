@@ -130,7 +130,7 @@ describe("livingBridge — real sources only, one stream, honest off", () => {
     expect(events).not.toHaveBeenCalled();
   });
 
-  it("a gateway without events (mnemos mode) simply never subscribes", async () => {
+  it("a gateway without events (vesma mode) simply never subscribes", async () => {
     const seen: LivingSignal[] = [];
     const off = subscribeLiving((s) => seen.push(s));
     const { unmount } = await mountBridge(

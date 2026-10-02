@@ -4,7 +4,7 @@ healthz contract, honest-offline health, SEC-1 egress reuse for
 on mutations, and the ``/api/health`` mesh block.
 
 The node double is conftest's FakeMeshNode (a separate healthz double —
-the mnemos FakeMnemos speaks the memory-server contract, not the mesh
+the vesma FakeMnemos speaks the memory-server contract, not the mesh
 one). No token exists anywhere in the node path: probes must carry no
 Authorization header, and the API surface must stay token-free.
 """

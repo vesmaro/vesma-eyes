@@ -17,11 +17,11 @@ import type {
 } from "./types";
 
 /**
- * Phase-1 adapter: fetch against the mnemos HTTP API (architecture.md §4).
+ * Phase-1 adapter: fetch against the vesma HTTP API (architecture.md §4).
  *
  * Base URL is same-origin "/api" so the Vite dev-proxy forwards to the live
- * mnemos (127.0.0.1:8787) without CORS involvement; in production a reverse
- * proxy performs the same routing (mnemos serves its routes from root, the
+ * vesma (127.0.0.1:8787) without CORS involvement; in production a reverse
+ * proxy performs the same routing (vesma serves its routes from root, the
  * proxies strip the "/api" prefix).
  *
  * Wire contract (openapi-snapshot.json):
@@ -34,13 +34,13 @@ import type {
  * - metrics        GET  /metrics                    (stats JSON, not Prometheus)
  * - listTraces     GET  /traces                     ?task_label&limit
  * - getSession     GET  /v1/sessions/{session_id}
- * - listSessions   — no list endpoint exists on the mnemos snapshot (only
+ * - listSessions   — no list endpoint exists on the vesma snapshot (only
  *                    POST /v1/sessions create + GET by id), so it fails loud
  *                    with 501; use `getSession(id)` or the MockAdapter.
  */
 
 export interface HttpAdapterOptions {
-  /** Base URL of the mnemos gateway. Default "/api". */
+  /** Base URL of the vesma gateway. Default "/api". */
   baseUrl?: string;
   /** Test seam — defaults to global `fetch`. */
   fetchImpl?: typeof fetch;
@@ -90,7 +90,7 @@ export class HttpAdapter implements MemoryGateway {
         query: {
           status: params.status,
           project: params.project,
-          // Native mnemos listing filter (UI-17 §5.6 «Открыть в Записях»).
+          // Native vesma listing filter (UI-17 §5.6 «Открыть в Записях»).
           tags: params.tags,
           limit: params.limit,
           offset: params.offset,
@@ -115,7 +115,7 @@ export class HttpAdapter implements MemoryGateway {
   }
 
   /**
-   * Tag drill on mnemos mode (UI-17 §5/§10.2). mnemos has no drill endpoint
+   * Tag drill on vesma mode (UI-17 §5/§10.2). vesma has no drill endpoint
    * and no board: the memories slice is composed from a wildcard search with
    * the tag filter (the same ranker BE-13 documents) and `tasks` stays empty —
    * honest absence, never a fake board.
@@ -194,13 +194,13 @@ export class HttpAdapter implements MemoryGateway {
   }
 
   /**
-   * The mnemos snapshot has no session-list endpoint — fail loud instead of
+   * The vesma snapshot has no session-list endpoint — fail loud instead of
    * pretending. The MockAdapter serves a fixture list for UI development.
    */
   async listSessions(_signal?: AbortSignal): Promise<A2ASession[]> {
     throw new ApiError(
       501,
-      "HttpAdapter.listSessions: mnemos exposes no GET /v1/sessions list endpoint " +
+      "HttpAdapter.listSessions: vesma exposes no GET /v1/sessions list endpoint " +
         "(only POST /v1/sessions and GET /v1/sessions/{id}); use getSession(id).",
       { url: `${this.baseUrl}/v1/sessions` },
     );
@@ -229,7 +229,7 @@ export class HttpAdapter implements MemoryGateway {
 }
 
 /**
- * Normalise an anonymous mnemos search hit into the pinned UI shape.
+ * Normalise an anonymous vesma search hit into the pinned UI shape.
  * Missing fields get honest defaults rather than undefined leaks.
  */
 function normalizeSearchHit(hit: unknown, index: number): SearchResult {

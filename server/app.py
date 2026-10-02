@@ -2,7 +2,7 @@
 
 Serves the vanilla-JS SPA from ``../web`` and a small JSON API over the
 board store, plus a narrow authenticated proxy to **one or more live
-mnemos engines** (multi-server, groups = "memory clusters"), with full
+vesma engines** (multi-server, groups = "memory clusters"), with full
 UI management: add/edit/enable/disable/pause/remove servers and groups.
 
 Run:    uvicorn server.app:app --host 0.0.0.0 --port 8080
@@ -131,7 +131,7 @@ if _raw_root_app and _raw_root_app.lower() not in ("board", "app"):
         "'board' (the frozen board stays at /)", _raw_root_app)
 
 # Board read/write is open on the LAN by design (the cluster ingress is the
-# boundary); mnemos credentials stay server-side. Since SEC-3 the write
+# boundary); vesma credentials stay server-side. Since SEC-3 the write
 # guard is FAIL-CLOSED: mutations require a bearer token, and when none of
 # the requested classes is configured every mutation answers 503. The Helm
 # chart generates the tokens; compose.yaml ships a dev default for local
@@ -261,10 +261,10 @@ def get_scope_servers(scope: str, active_only: bool = False) -> tuple[str, list[
 async def _profile_cache_refresher() -> None:
     """Refresh specialist profile caches in the background (every 5 min).
 
-    BE-9: the deterministic filesystem build runs first; the mnemos probe
+    BE-9: the deterministic filesystem build runs first; the vesma probe
     below only serves names the builder cannot resolve. This keeps the
     scoped (deduplicated) profiles from being clobbered by the flat
-    mnemos index, which duplicates plugin files across specialists.
+    vesma index, which duplicates plugin files across specialists.
     """
     while True:
         await asyncio.sleep(300)
@@ -1535,7 +1535,7 @@ class AssignmentOut(_ApiModel):
     heartbeat_at: str | None = None
     finished_at: str | None = None
     # ARCH-9 (Amd 2 §9): denormalized project/domain tags (metadata tier —
-    # what mesh subscription filters read without joining through mnemos).
+    # what mesh subscription filters read without joining through vesma).
     topics: list[str] = []
     # ARCH-9 (Amd 2 §5): GET-only routing annotation {resolved, reason};
     # absent from SSE payloads (computed per read, never stored).
@@ -2132,14 +2132,14 @@ class ArchiveOut(_ApiModel):
 # every agent of the plugin lives in ``shared`` (shared=true, scope=
 # "plugin") so it is never repeated per card. Entry shape keeps the
 # legacy keys (title/source_url/excerpt); id/server come from the legacy
-# mnemos path, path/kind/scope/source from the filesystem builder.
+# vesma path, path/kind/scope/source from the filesystem builder.
 class ProfileEntry(_ApiModel):
     title: str = ""
     source_url: str = ""
     excerpt: str = ""
     path: str = ""
     kind: str = ""
-    shared: bool | None = None   # None = legacy mnemos entry (unknown)
+    shared: bool | None = None   # None = legacy vesma entry (unknown)
     scope: str = ""
     source: str = ""
     also_in: list[str] = []      # other plugins shipping the same name
@@ -2828,7 +2828,7 @@ def _decode_cursor(cursor: str) -> dict[str, int]:
 
 
 def _merged_memory_item(server_name: str, m: dict[str, Any]) -> dict[str, Any]:
-    """Public card of one mnemos listing hit. Ids are NOT prefixed or
+    """Public card of one vesma listing hit. Ids are NOT prefixed or
     mutated — per-store ids may collide by design; the ``server`` field
     disambiguates. SEC-4: only an excerpt travels, never full content."""
     tags = [t for t in (m.get("tags") or []) if isinstance(t, str)]
@@ -2869,7 +2869,7 @@ async def memories_merged(
     until: str = "",
 ) -> MemoryListOut:
     """Merged memory listing across active servers (Ф0b — BoardAdapter's
-    list primitive). Native mnemos ``GET /memories`` listing per server
+    list primitive). Native vesma ``GET /memories`` listing per server
     with ``offset`` under the hood; the client sees the uniform cursor
     contract: ``limit`` (default 50, hard cap 200) + opaque ``cursor`` →
     ``next_cursor``; sort ``created_at DESC`` with the ``id`` tiebreak.
@@ -2928,7 +2928,7 @@ async def memories_merged(
         consumed[m["server"]] += 1
     next_offsets = {name: offsets.get(name, 0) + consumed[name]
                     for name in slices}
-    # Full slices may continue (mnemos answers in limit-sized pages);
+    # Full slices may continue (vesma answers in limit-sized pages);
     # unconsumed items mean the merge dropped some — both must offer a
     # continuation. Short fully-consumed slices are exhausted.
     has_more = (len(merged) > len(page)
@@ -2944,7 +2944,7 @@ async def memories_merged(
 @app.get("/api/tags")
 async def tags_merged() -> TagListOut:
     """Aggregated tag listing across all ACTIVE memory servers (Ф0b).
-    Primitive: mnemos ``GET /tags`` (TagCount[]); counts are summed per
+    Primitive: vesma ``GET /tags`` (TagCount[]); counts are summed per
     tag name across stores; sort count DESC, name ASC. A failing server
     degrades to its own ``errors[]`` entry; ``servers_scanned`` counts
     only the stores that answered."""
@@ -3104,11 +3104,11 @@ class ReflectBody(BaseModel):
 # Board reflections are DATA, never instructions (SEC-4 poisoning hardening):
 # mnemos:decision and any other subtype are forbidden here, so agent
 # harnesses treat these records as open questions from the board, not as
-# directives. The mnemos strict tag contract additionally requires exactly
+# directives. The vesma strict tag contract additionally requires exactly
 # one project:<slug> and one agent:<slug> per memory — the board stamps its
 # own identity (never a specialist slug) to stay attributable without
 # impersonating an agent.
-BOARD_PROJECT_TAG = "project:mnemos-eyes"
+BOARD_PROJECT_TAG = "project:vesma-eyes"
 BOARD_AGENT_TAG = "agent:zcode"
 BOARD_REFLECT_TAGS = [
     BOARD_PROJECT_TAG,
@@ -3123,7 +3123,7 @@ _reflect_limiter = RateLimiter(limit=_REFLECT_RATE_LIMIT, window=_REFLECT_RATE_W
 
 @app.post("/api/board-reflect")
 async def board_reflect(body: ReflectBody, request: Request) -> ReflectOut:
-    """Refine cycle persistence: write the request/commit-marker into mnemos
+    """Refine cycle persistence: write the request/commit-marker into vesma
     memory tagged ``mnemos:open-question`` + ``source:board`` plus the
     contract-required project/agent stamps (SEC-4: board data is not
     instructions — harnesses must not treat these records as decisions or
@@ -3160,7 +3160,7 @@ async def board_reflect(body: ReflectBody, request: Request) -> ReflectOut:
 
     # BE-4: must stay async — a sync httpx call here would freeze the event
     # loop and stall every concurrent request (e.g. GET /api/board) for the
-    # full mnemos round-trip.
+    # full vesma round-trip.
     code, body_resp = await mnemos_client.post_json_async(server, "/memories", {
         "content": content[:4000],
         "title": title[:120],
@@ -3180,7 +3180,7 @@ async def board_reflect(body: ReflectBody, request: Request) -> ReflectOut:
 # Poisoning invariant (ui-contract §12, same SEC-4 rule as board-reflect):
 # records written here carry EXACTLY the three tags below — user-supplied
 # project/tags from the form are metadata inside CONTENT, never raw tags.
-# The memory still needs the mnemos strict-contract stamps (exactly one
+# The memory still needs the vesma strict-contract stamps (exactly one
 # project:<slug> + one agent:<slug>): the slug is sanitized server-side and
 # the agent stamp is the board's own identity, so no specialist slug can be
 # injected through this endpoint. Subtype tags keep the record data, not
@@ -3206,7 +3206,7 @@ def _draft_tags(project: str) -> list[str]:
 
 @app.post("/api/task-drafts", status_code=201)
 async def create_task_draft(body: TaskDraftBody, request: Request) -> TaskDraftOut:
-    """Persist the owner's raw thought as a mnemos draft note (tags pinned
+    """Persist the owner's raw thought as a vesma draft note (tags pinned
     to the _draft_tags() contract set) and return the memory coordinates;
     the SPA then files the "Оформить черновик задачи" chore on the board.
     Rate limited per client like board-reflect."""
@@ -3233,7 +3233,7 @@ async def create_task_draft(body: TaskDraftBody, request: Request) -> TaskDraftO
     content = text + "\n\n— метаданные формы —\n" + "\n".join(meta_lines)
     title = f"task-draft: {text[:60]}"
 
-    # BE-4: async mnemos round-trip — never block the event loop.
+    # BE-4: async vesma round-trip — never block the event loop.
     code, body_resp = await mnemos_client.post_json_async(server, "/memories", {
         "content": content[:4000],
         "title": title[:120],
@@ -5552,7 +5552,7 @@ async def provision_repin(host: str, body: HostRepinBody, request: Request,
 #   ca.crt         — the lab CA (the self-signed leaf cert IS its own
 #                    anchor). It is PUBLIC material, but it does not live in
 #                    the image: TLS terminates on the ingress (traefik) and
-#                    the cert lives in the k8s secret `vesmaro-eyes-tls`.
+#                    the cert lives in the k8s secret `vesma-eyes-tls`.
 #                    The chart mounts the PUBLIC tls.crt into the container
 #                    (see values `pollerBootstrap.caFile`) and points
 #                    VESMARO_TLS_CA_FILE at it. Without the mount the route
@@ -6154,7 +6154,7 @@ async def get_task(task_id: str) -> TaskOut:
 
 @app.post("/api/tasks/inbox/refresh")
 async def tasks_inbox_refresh(request: Request) -> TaskInboxRefreshOut:
-    """Force one inbox scan synchronously (mutation-action). The mnemos
+    """Force one inbox scan synchronously (mutation-action). The vesma
     round-trips are async, so the event loop never blocks; the request may
     take seconds — that is accepted for an explicit refresh. Rate limited
     per client; a failing server degrades its own slice only."""
@@ -6204,11 +6204,11 @@ async def tasks_inbox_edit(memory_id: str, body: TaskInboxEditSpec,
 
 async def _sync_inbox_edits_revision(
         rec: dict[str, Any], edits: dict[str, str]) -> tuple[str | None, str | None]:
-    """Write the EDITED revision of a task:queue record back to mnemos
+    """Write the EDITED revision of a task:queue record back to vesma
     (UI-25 adopt-with-edits sync). Best-effort by design: the adopt contract
     must not depend on a memory engine round-trip.
 
-    mnemos has no content-update over HTTP (no PATCH/PUT /memories route;
+    vesma has no content-update over HTTP (no PATCH/PUT /memories route;
     verified against prod 4.1.0 and the 4.3.0 source), so the honest
     minimal mechanism is a NEW revision record via POST /memories on the
     source server (``metadata.supersedes`` names the original; tags carry
@@ -6239,7 +6239,7 @@ async def _sync_inbox_edits_revision(
         return revision_id, None
     detail = str(resp.get("detail") if isinstance(resp, dict) else resp)[:300]
     logging.getLogger("vesmaro.inbox").warning(
-        "adopt sync: mnemos rejected the revision write (http=%s) for "
+        "adopt sync: vesma rejected the revision write (http=%s) for "
         "memory=%s: %s", code, rec.get("memory_id"), detail)
     return None, detail
 
@@ -6518,7 +6518,7 @@ async def tag_drill(tag: str, limit: int = 12) -> dict[str, Any]:
 
 @app.get("/api/agents/{name}/activity")
 async def agent_activity(name: str, project: str = "", limit: int = 10) -> dict[str, Any]:
-    """Cross-store agent activity: recent memories per agent (mnemos /recall)."""
+    """Cross-store agent activity: recent memories per agent (vesma /recall)."""
     servers = registry.active_servers()
     results = await asyncio.gather(*(
         mnemos_client.fetch_json(

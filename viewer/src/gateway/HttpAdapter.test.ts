@@ -56,7 +56,7 @@ describe("HttpAdapter wire contract", () => {
     const hits = await adapter.search({
       query: "gateway",
       tags: ["project:x"],
-      project: "mnemos",
+      project: "vesma",
       limit: 5,
       include_raw: true,
     });
@@ -68,7 +68,7 @@ describe("HttpAdapter wire contract", () => {
     expect(JSON.parse(init.body as string)).toEqual({
       query: "gateway",
       tags: ["project:x"],
-      project: "mnemos",
+      project: "vesma",
       limit: 5,
       include_raw: true,
     });
@@ -102,9 +102,9 @@ describe("HttpAdapter wire contract", () => {
     const fetchMock = respondingFetch([]);
     const adapter = new HttpAdapter({ fetchImpl: fetchMock as unknown as typeof fetch });
 
-    await adapter.listMemories({ status: "published", project: "mnemos", limit: 10, offset: 20 });
+    await adapter.listMemories({ status: "published", project: "vesma", limit: 10, offset: 20 });
     let [url] = fetchMock.mock.calls[0] as [string];
-    expect(url).toBe("/api/memories?status=published&project=mnemos&limit=10&offset=20");
+    expect(url).toBe("/api/memories?status=published&project=vesma&limit=10&offset=20");
 
     await adapter.listMemories();
     [url] = fetchMock.mock.calls[1] as [string];
@@ -151,9 +151,9 @@ describe("HttpAdapter wire contract", () => {
     const fetchMock = respondingFetch([]);
     const adapter = new HttpAdapter({ fetchImpl: fetchMock as unknown as typeof fetch });
 
-    await adapter.agentRecall("zed", "mnemos", "fts", 3);
+    await adapter.agentRecall("zed", "vesma", "fts", 3);
     expect((fetchMock.mock.calls[0] as [string])[0]).toBe(
-      "/api/recall/agent/zed?project=mnemos&q=fts&limit=3",
+      "/api/recall/agent/zed?project=vesma&q=fts&limit=3",
     );
   });
 
@@ -165,7 +165,7 @@ describe("HttpAdapter wire contract", () => {
     expect((fetchMock.mock.calls[0] as [string])[0]).toBe("/api/v1/sessions/conv-1");
     expect(session.session_id).toBe("conv-1");
 
-    // The mnemos snapshot has no session-list endpoint — honest failure.
+    // The vesma snapshot has no session-list endpoint — honest failure.
     const error = await adapter.listSessions().catch((e) => e);
     expect(error).toBeInstanceOf(ApiError);
     expect(error.status).toBe(501);

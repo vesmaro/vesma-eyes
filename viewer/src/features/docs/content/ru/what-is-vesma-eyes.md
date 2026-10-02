@@ -1,6 +1,6 @@
 ---
 title: Что такое vesma-eyes
-slug: what-is-vesmaro-eyes
+slug: what-is-vesma-eyes
 category: product
 order: 2
 last_verified: "1.16.0"

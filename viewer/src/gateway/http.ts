@@ -41,7 +41,7 @@ export interface HttpEndpointOptions {
 /** Default per-request timeout. p95-conscious: FTS and reads are fast. */
 export const DEFAULT_TIMEOUT_MS = 10_000;
 /**
- * Search timeout. Semantic search on mnemos runs 4–7 s at p95 — the budget
+ * Search timeout. Semantic search on vesma runs 4–7 s at p95 — the budget
  * gets generous headroom instead of cutting off slow (but healthy) queries.
  */
 export const SEARCH_TIMEOUT_MS = 30_000;

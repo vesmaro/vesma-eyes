@@ -260,7 +260,7 @@ class TestEnvelope:
     def test_all_blocks_present(self):
         env = self.render()
         assert env.splitlines()[0] == \
-            "[GCW ASSIGNMENT 7 | task t-42 | mnemos -]"
+            "[GCW ASSIGNMENT 7 | task t-42 | vesma -]"
         for marker in ("MODE: assignment-run", "GOAL:", "ACCEPTANCE",
                        "DEPENDS:", "SCOPE:", "REPORTS", "RIGHTS",
                        "ESCALATE", "SPEC SNAPSHOT"):
@@ -282,7 +282,7 @@ class TestEnvelope:
 
     def test_memory_id_in_header_when_present(self):
         env = self.render(memory_id="bd945a48-0888")
-        assert env.splitlines()[0].endswith("| mnemos bd945a48-0888]")
+        assert env.splitlines()[0].endswith("| vesma bd945a48-0888]")
 
     def test_machine_token_absent_by_construction(self):
         token = "sekrit-machine-token-123"

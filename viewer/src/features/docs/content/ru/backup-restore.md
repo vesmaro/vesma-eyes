@@ -78,7 +78,7 @@ scripts/backup-all.sh 2026-09-22       # копия с явной датой
 
    ```bash
    POD=$(kubectl -n kube-agents get pod \
-     -l app.kubernetes.io/name=vesmaro-eyes \
+     -l app.kubernetes.io/name=vesma-eyes \
      -o jsonpath='{.items[0].metadata.name}')
    kubectl -n kube-agents cp board-cluster.db "$POD":/tmp/board.db
    ```
@@ -101,8 +101,8 @@ scripts/backup-all.sh 2026-09-22       # копия с явной датой
    базе, и проверьте:
 
    ```bash
-   kubectl -n kube-agents rollout restart deployment/vesmaro-eyes
-   kubectl -n kube-agents rollout status deployment/vesmaro-eyes
+   kubectl -n kube-agents rollout restart deployment/vesma-eyes
+   kubectl -n kube-agents rollout status deployment/vesma-eyes
    curl -ksS https://board.example.com/api/health | head -c 400
    ```
 

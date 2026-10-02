@@ -2,7 +2,7 @@
 """Sprint-1 security verification (SEC-1 / SEC-2 / SEC-3 / board-reflect).
 
 Runs the agreed acceptance cases end-to-end against a local uvicorn
-instance with throwaway data dirs and a fake mnemos engine. Never prints
+instance with throwaway data dirs and a fake vesma engine. Never prints
 secret values (only booleans/status codes).
 
 Run (from the repo root):
@@ -86,7 +86,7 @@ class Decoy:
         self._srv.close()
 
 
-# ------------------------------------------------------------- fake mnemos
+# ------------------------------------------------------------- fake vesma
 class _FakeHandler(http.server.BaseHTTPRequestHandler):
     records: list[dict] = []
     lock = threading.Lock()
@@ -274,7 +274,7 @@ def phase_b() -> None:
                              "token_ref": "env:NO_SUCH_VAR"}, timeout=15)
         check("B7: valid add -> 201", r.status_code == 201, str(r.status_code))
         probes = [x for x in fake.requests() if x["path"] == "/search" and x["method"] == "POST"]
-        check("B7a: add-probe reached fake mnemos", bool(probes))
+        check("B7a: add-probe reached fake vesma", bool(probes))
         check("B7b: add-probe had NO Authorization header",
               bool(probes) and not any(p["auth_present"] for p in probes))
 
@@ -333,7 +333,7 @@ def phase_b() -> None:
         mems = [x for x in fake.requests() if x["path"] == "/memories"]
         payload = json.loads(mems[-1]["body"]) if mems else {}
         check("B12a: tags are exactly contract stamps + open-question + source:board",
-              payload.get("tags") == ["project:mnemos-eyes", "agent:zcode",
+              payload.get("tags") == ["project:vesma-eyes", "agent:zcode",
                                       "mnemos:open-question", "source:board"],
               json.dumps(payload.get("tags")))
         check("B12b: no mnemos:decision anywhere in payload",

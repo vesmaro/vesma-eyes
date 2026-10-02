@@ -15,7 +15,7 @@ import { I18nProvider } from "@/i18n";
  * SSR gate for the tags cloud (UI-17 spec §11): band sections on the
  * 611-tag corpus, the ~110-node DOM budget (§11.1), drop-empty, the partial
  * honesty line (§6), the flat filter list (§4.3), deep-linked taxonomy and
- * drill views (§5), and the honest fallback on a mnemos gateway. English
+ * drill views (§5), and the honest fallback on a vesma gateway. English
  * copy pinned via initialLang (project test pattern).
  */
 
@@ -239,7 +239,7 @@ describe("TagsPage — матрёшка-дрилл deep-links (§5)", () => {
     expect(html).toContain("Collapse");
   });
 
-  it("falls back to listTags on a mnemos gateway (no merged view)", async () => {
+  it("falls back to listTags on a vesma gateway (no merged view)", async () => {
     const gateway = new HttpAdapter({
       baseUrl: "/api",
       fetchImpl: (() =>
@@ -256,7 +256,7 @@ describe("TagsPage — матрёшка-дрилл deep-links (§5)", () => {
     });
     const html = await renderTags(gateway, { prefetchMerged: false });
     expect(html).toContain("Middle · 10–99");
-    // No store-failure concept on mnemos mode → no partial line at all.
+    // No store-failure concept on vesma mode → no partial line at all.
     expect(html).not.toContain("Data from");
     expect(html).not.toContain("◐");
   });

@@ -75,5 +75,5 @@ calls things its own way; this table translates into board language.
 ## See also
 
 - [What vesma is](what-is-mnemos.md)
-- [What vesma-eyes is](what-is-vesmaro-eyes.md)
+- [What vesma-eyes is](what-is-vesma-eyes.md)
 - [Tokens and access](tokens.md)

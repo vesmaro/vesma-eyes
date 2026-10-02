@@ -44,12 +44,12 @@ export function AuthProvider({
   // mock and board modes: board reads are token-free through Ф0–Ф2 (ADR
   // 0011 §7) — no session to confirm, no overlay to open.
   useEffect(() => {
-    if (adapterMode !== "mnemos" || !getToken()) return;
+    if (adapterMode !== "vesma" || !getToken()) return;
     let cancelled = false;
     dispatch({ type: "SESSION_RESTORED" });
     authClient.me().catch((error: unknown) => {
       if (cancelled) return;
-      // Non-auth failures (offline mnemos, timeout) keep the optimistic
+      // Non-auth failures (offline vesma, timeout) keep the optimistic
       // session — the pages themselves surface the offline state.
       if (isApiError(error) && error.status === 401) return; // flag already dispatched
       if (!getToken()) dispatch({ type: "LOGOUT" });

@@ -96,7 +96,7 @@ describe("TaskBoardPage (mock adapter — 7 WF-1 columns)", () => {
       "/tasks",
       seedBoard,
     );
-    // The in-progress column holds two project groups (vesma-eyes, mnemos).
+    // The in-progress column holds two project groups (vesma-eyes, vesma).
     expect(html).toContain('aria-expanded="true"');
     // Card titles link to the task page (keyboard/SR path) carrying the
     // board URL as ?return= (UI-18 pair 1).
@@ -162,7 +162,7 @@ describe("TaskBoardPage (mock adapter — 7 WF-1 columns)", () => {
     expect(html).toContain("Nothing matches these filters");
   });
 
-  it("renders the honest unsupported state on a mnemos gateway", async () => {
+  it("renders the honest unsupported state on a vesma gateway", async () => {
     const html = await renderBoard(new HttpAdapter("/api"));
     expect(html).toContain("The Tasks domain is unavailable in vesma mode");
     expect(html).not.toContain("Task kanban board");

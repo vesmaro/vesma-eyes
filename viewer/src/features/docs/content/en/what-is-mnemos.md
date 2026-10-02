@@ -13,7 +13,7 @@ search them, and serves them to people and agents. This page is the plain
 concept of the memory: what an entry is made of, how it lives, and how
 several stores relate. The vesma-eyes board is a separate layer on top
 of vesma — it has its own page, [What vesma-eyes
-is](what-is-vesmaro-eyes.md).
+is](what-is-vesma-eyes.md).
 
 ## A well, not a folder of files
 
@@ -79,7 +79,7 @@ see [Groups and the kanban board](groups-kanban.md).
 
 A task can also live in the store itself: entries tagged `task:queue` are
 put there by agents and scripts, and the board picks them up in the Inbox
-— see [What vesma-eyes is](what-is-vesmaro-eyes.md).
+— see [What vesma-eyes is](what-is-vesma-eyes.md).
 
 ## Tags
 
@@ -138,11 +138,11 @@ server.*
 vesma knows nothing of kanban, assignments or interface tokens — it is
 pure memory: entries, search, federation. The desktop layer on top of it,
 where entries become tasks and agents take them on, is the board:
-[What vesma-eyes is](what-is-vesmaro-eyes.md).
+[What vesma-eyes is](what-is-vesma-eyes.md).
 
 ## See also
 
-- [What vesma-eyes is](what-is-vesmaro-eyes.md)
+- [What vesma-eyes is](what-is-vesma-eyes.md)
 - [Glossary](glossary.md)
 - [Groups and the kanban board](groups-kanban.md)
 - [Tokens and access](tokens.md)

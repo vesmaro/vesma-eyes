@@ -238,7 +238,7 @@ function RenderFallback({
 }
 
 /**
- * Provenance badge (design spec §6.2): «из mnemos@abc1234 · синхр. 23.09» —
+ * Provenance badge (design spec §6.2): «из vesma@abc1234 · синхр. 23.09» —
  * a passport, not an alarm: outline variant, muted GitCommitHorizontal,
  * static (local clones — no upstream URL is guaranteed). The title and
  * aria-label carry the FULL form (whole SHA + dd.mm.yyyy date).

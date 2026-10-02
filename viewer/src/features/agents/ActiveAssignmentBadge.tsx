@@ -11,7 +11,7 @@ import { useActiveAssignment } from "./useAgents";
  * task's «Исполнение» tab. Iris CONTOUR for claimed/running (someone is on
  * it), neutral contour for queued (waiting) — colour + text + the shape dot
  * carried over from the state badge. Renders NOTHING without an active
- * attempt (unknown is not zero, and mnemos mode has no agents data).
+ * attempt (unknown is not zero, and vesma mode has no agents data).
  */
 
 /** Contour treatment per active state (iris ring vs neutral ring). */

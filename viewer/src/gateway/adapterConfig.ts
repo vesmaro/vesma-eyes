@@ -9,16 +9,16 @@ import { clearToken } from "./auth";
  * and the auth UI (endpoint label in the TopBar connection indicator) so both
  * always describe the same backend.
  *
- * Adapter selection (ADR 0011 Ф0): `VITE_ADAPTER=mock|mnemos|board`. The
+ * Adapter selection (ADR 0011 Ф0): `VITE_ADAPTER=mock|vesma|board`. The
  * default is environment-aware (owner feedback 1.4.0): production builds boot
  * into `board` (read-only merge-API, no auth wall — an `mnk_` sign-in screen
  * is meaningless in the deployed /app), dev boots into `mock` (fixtures, no
- * backend needed). `VITE_ADAPTER=mnemos` opts back into the direct mnemos
+ * backend needed). `VITE_ADAPTER=vesma` opts back into the direct vesma
  * mode for development against a live mnemos. The legacy `VITE_MNEMOS_ADAPTER`
  * knob keeps working (mock boxes stay mock) but is superseded by
  * `VITE_ADAPTER` when both are set.
  */
-export type AdapterKind = "mock" | "mnemos" | "board";
+export type AdapterKind = "mock" | "vesma" | "board";
 
 export const MNEMOS_BASE_URL = import.meta.env.VITE_MNEMOS_API_URL ?? "/api";
 
@@ -36,7 +36,7 @@ export function resolveAdapterKind(
   legacy?: string | undefined,
   fallback: AdapterKind = DEFAULT_ADAPTER_KIND,
 ): AdapterKind {
-  if (adapter === "mock" || adapter === "mnemos" || adapter === "board") return adapter;
+  if (adapter === "mock" || adapter === "vesma" || adapter === "board") return adapter;
   if (adapter === undefined || adapter === "") {
     // Legacy knob honoured only in its mock flavour; legacy "http" (and any
     // unknown value) falls through to the environment-aware default.
@@ -84,7 +84,7 @@ export async function createGateway(): Promise<MemoryGateway> {
     }
     case "board":
       // Security audit point Ф0 (ADR 0011 §7, security verdict §5.3): the
-      // board mode must not carry mnemos credentials — purge any legacy
+      // board mode must not carry vesma credentials — purge any legacy
       // stored token once at bootstrap. BoardAdapter itself is token-free.
       clearToken();
       return new BoardAdapter(BOARD_BASE_URL);

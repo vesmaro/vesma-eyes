@@ -142,7 +142,7 @@ describe("task mutations on the mock adapter", () => {
           env: "unknown",
           agents: [],
           specialists: [],
-          project: "mnemos-eyes",
+          project: "vesma-eyes",
           memory_ids: [],
           mnemos_tags: [],
         },

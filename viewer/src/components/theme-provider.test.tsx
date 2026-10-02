@@ -14,7 +14,7 @@ import { actUnmount } from "@/test/actTools";
 /**
  * UI-23 theme contract (spec §2.1/§4.2, acceptance §8.2/8.3): three-state
  * preference (system is the DEFAULT and follows the OS live), migration
- * read `vesmaro.theme` → legacy `mnemos-eyes:theme` → system, writes go to
+ * read `vesmaro.theme` → legacy `vesma-eyes:theme` → system, writes go to
  * the new key only, and «Системная» removes BOTH records (otherwise the
  * legacy fallback would resurrect the pre-migration choice).
  */

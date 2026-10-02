@@ -152,10 +152,10 @@ describe("markdown rendering", () => {
   });
 
   it("wraps fenced code with a copy affordance and language label", () => {
-    const html = render("```bash\nhelm upgrade mnemos\n```\n");
+    const html = render("```bash\nhelm upgrade vesma\n```\n");
     expect(html).toContain("<pre");
     expect(html).toContain("bash");
-    expect(html).toContain("helm upgrade mnemos");
+    expect(html).toContain("helm upgrade vesma");
     expect(html).toContain('aria-live="polite"');
   });
 });

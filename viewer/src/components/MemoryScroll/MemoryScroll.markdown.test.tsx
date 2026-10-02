@@ -54,7 +54,7 @@ function memoryFixture(overrides: Partial<Memory>): Memory {
     tags: [],
     source: "manual",
     memory_type: "note",
-    project: "mnemos",
+    project: "vesma",
     agent: "zed",
     status: "published",
     quality_score: null,

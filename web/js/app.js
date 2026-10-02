@@ -15,7 +15,7 @@ const state = {
 // ------------------------------------------------------------------ helpers
 // SEC-3 fail-closed write guard: mutating requests must carry the board
 // token. It lives in localStorage per browser; a 401 on a mutation asks
-// once and retries (token value ships in k8s secret vesmaro-eyes-board-token).
+// once and retries (token value ships in k8s secret vesma-eyes-board-token).
 const BOARD_TOKEN_KEY = "vesmaro.boardToken";
 
 function boardToken() {
@@ -25,9 +25,9 @@ function boardToken() {
 function askBoardToken() {
   const t = prompt(
     "Мутации борда защищены токеном (fail-closed).\n" +
-    "Возьмите значение секрета vesmaro-eyes-board-token и вставьте сюда —\n" +
+    "Возьмите значение секрета vesma-eyes-board-token и вставьте сюда —\n" +
     "браузер запомнит его:\n" +
-    "kubectl -n kube-agents get secret vesmaro-eyes-board-token \\\n" +
+    "kubectl -n kube-agents get secret vesma-eyes-board-token \\\n" +
     "  -o jsonpath='{.data.VESMARO_BOARD_TOKEN}' | base64 -d",
   );
   if (t && t.trim()) localStorage.setItem(BOARD_TOKEN_KEY, t.trim());
@@ -86,7 +86,7 @@ const COLUMN_TITLES = {
   done: "готово",
 };
 
-// UI-7: canonical status dictionary = mnemos workflow statuses.
+// UI-7: canonical status dictionary = vesma workflow statuses.
 // v1 derives the status from the board column; the archived flag overrides.
 const STATUS_LABELS = {
   "open": "открыта",
@@ -142,7 +142,7 @@ function createdShort(t) {
   return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-// Project of a task: explicit field wins, else the project:* mnemos tag.
+// Project of a task: explicit field wins, else the project:* vesma tag.
 function taskProject(t) {
   return t.project || (t.mnemos_tags || []).find((x) => x.startsWith("project:"))?.slice(8) || "";
 }
@@ -274,7 +274,7 @@ function taskCard(t) {
     ${group("Теги", `<div class="task-tagrow">${cardTags.map((tag) => tagChip(tag)).join("")}
       ${more > 0 ? `<span class="chip tagchip tag-other">+${more}</span>` : ""}
       ${cardTags.length ? "" : empty}</div>`)}
-    ${memCount ? group("Сервер", `<span class="chip chip-mem" title="связанные памяти mnemos">◉ ${memCount}</span>`) : ""}
+    ${memCount ? group("Сервер", `<span class="chip chip-mem" title="связанные памяти vesma">◉ ${memCount}</span>`) : ""}
     ${group("Агент", `${(t.agents || []).length ? `<span class="chip chip-agent" title="агент-исполнитель" data-agent="${esc(t.agents[0] || "")}">⚒ ${esc(t.agents.join(", "))}</span>${miniAvatars(t.agents)}` : empty}`)}
     ${specialists.length ? group("Специалисты", specialists.map((s) => `<span class="chip tagchip chip-spec" data-tag="${esc(s)}" title="специалист — связанные задачи и знания">${esc(s)}</span>`).join("")) : ""}`;
 
@@ -467,7 +467,7 @@ function renderBoard() {
 }
 
 // ------------------------------------------------- memory servers & scope
-const SCOPE_KEY = "mnemos-eyes:memscope";
+const SCOPE_KEY = "vesma-eyes:memscope";
 
 function scopeParam() {
   return state.memScope && state.memScope !== "all" ? state.memScope : "";
@@ -612,7 +612,7 @@ function renderPulse(data) {
     const stats = data.store_stats || [];
     const parts = stats.filter((s) => s.stats)
       .map((s) => `${esc(s.server)}: ${s.stats.memories_total} памятей (${Object.keys(s.stats.by_project || {}).join(", ") || "пусто"})`);
-    el.innerHTML = `<div class="column-empty">${parts.length ? "нет свежих памятей проекта mnemos-eyes.<br/><br/>" + parts.join("<br/>") : "память молчит"}</div>`;
+    el.innerHTML = `<div class="column-empty">${parts.length ? "нет свежих памятей проекта vesma-eyes.<br/><br/>" + parts.join("<br/>") : "память молчит"}</div>`;
     return;
   }
 
@@ -663,10 +663,10 @@ function renderPulse(data) {
 // ── session/memory card modal (pulse items) ─────────────────────
 async function openMemoryCard(item) {
   const d = $("#dd-modal"), b = $("#dd-backdrop");
-  ddRemember("знание", item.title || item.id, "память mnemos · " + (item.server || ""), () => openMemoryCard(item));
+  ddRemember("знание", item.title || item.id, "память vesma · " + (item.server || ""), () => openMemoryCard(item));
   $("#dd-kind").textContent = "знание";
   $("#dd-title").textContent = item.title || item.id;
-  $("#dd-sub").textContent = "память mnemos · " + (item.server || "");
+  $("#dd-sub").textContent = "память vesma · " + (item.server || "");
   $("#dd-body").innerHTML = `<div class="column-empty">загрузка…</div>`;
   b.hidden = false; d.hidden = false;
   modalOpened("dd-modal", closeDdModal);
@@ -802,7 +802,7 @@ async function openTask(taskId) {
       `${(proj ? `<span class="chip tagchip tag-project" data-tag="project:${esc(proj)}" title="проект">◈ ${esc(proj)}</span>` : "")
       + (t.mnemos_tags || []).map((tag) => tagChip(tag)).join("")}`)}
     ${sec("tsec-srv", "Сервер",
-      `<span class="chip chip-mem" title="связанные памяти mnemos">◉ ${(t.memory_ids || []).length}</span>`)}
+      `<span class="chip chip-mem" title="связанные памяти vesma">◉ ${(t.memory_ids || []).length}</span>`)}
     ${sec("tsec-agent", "Агент",
       (t.agents || []).map((a) => `<span class="chip chip-agent" data-agent="${esc(a)}" title="активность агента">⚒ ${esc(a)}</span>`).join(""))}
     ${sec("tsec-spec", "Специалисты",
@@ -830,7 +830,7 @@ async function openTask(taskId) {
     if (srvEl) {
       const scopeLabel = state.memScope === "all" ? "все серверы" : state.memScope;
       srvEl.innerHTML = `
-        <span class="chip chip-mem" title="связанные памяти mnemos">◉ ${(t.memory_ids || []).length}</span>
+        <span class="chip chip-mem" title="связанные памяти vesma">◉ ${(t.memory_ids || []).length}</span>
         <span class="chip" title="активный скоуп памяти">скоуп: ${esc(scopeLabel)}</span>
         ${srcServers.map((s) => `<span class="pulse-server" title="сервер-источник памяти">${esc(s)}</span>`).join("")}
         ${(t.memory_ids || []).length ? "" : `<span class="task-sec-empty">памятей нет</span>`}`;
@@ -868,7 +868,7 @@ async function openTask(taskId) {
     const srvEl = $("#tsec-srv");
     if (srvEl) {
       srvEl.innerHTML = `
-        <span class="chip chip-mem" title="связанные памяти mnemos">◉ ${(t.memory_ids || []).length}</span>
+        <span class="chip chip-mem" title="связанные памяти vesma">◉ ${(t.memory_ids || []).length}</span>
         <span class="task-sec-empty">провенанс недоступен: ${esc(err.message)}</span>`;
     }
   }
@@ -1316,7 +1316,7 @@ async function openServerModal(name) {
     } catch { /* ignore */ }
   } else {
     $("#srv-title").textContent = "Подключить хранилище";
-    $("#srv-desc").textContent = "Новый сервер памяти mnemos (в борде; сам стор не создаётся).";
+    $("#srv-desc").textContent = "Новый сервер памяти vesma (в борде; сам стор не создаётся).";
     $("#srv-state").textContent = "new";
     $("#srv-stats").innerHTML = "";
   }
@@ -1468,7 +1468,7 @@ function renderGroups() {
 }
 
 // ------------------------------------------------- new task draft (UI-6)
-// Owner's raw thought → /api/task-drafts (draft note in mnemos, tags pinned
+// Owner's raw thought → /api/task-drafts (draft note in vesma, tags pinned
 // server-side) → "Оформить черновик задачи" chore on the board for
 // @GCW: Task Manager. Freeze exception per ADR 0006. The modal rides the
 // shared modalOpened/modalClosed stack, so Escape pops only the topmost
@@ -2318,7 +2318,7 @@ $("#inbox-scan").addEventListener("click", scanInbox);
 wireMax("#inbox-max", "#inbox-modal");
 
 // ---------------------------------------------------- specialist card
-// v1: профиль из памяти mnemos (role contract + skills) + refine-форма.
+// v1: профиль из памяти vesma (role contract + skills) + refine-форма.
 // refine → создаёт запись в памяти (agent:gcw-agent-architect) и таску
 // «Refine: <специалист>» в колонке open — Архитектор Агентов подхватит.
 // Кнопка «Коммит в GCW» активируется после генерации правок (v1: каркас
@@ -2912,7 +2912,7 @@ async function openTagDrill(tag) {
       body.appendChild(list);
     }
     if (data.memories.length) {
-      body.insertAdjacentHTML("beforeend", sec("Знания mnemos", data.memories.length));
+      body.insertAdjacentHTML("beforeend", sec("Знания vesma", data.memories.length));
       const list = document.createElement("div");
       list.className = "dd-list";
       for (const m of data.memories) {
@@ -3044,7 +3044,7 @@ function connectSSE() {
 }
 
 // ------------------------------------------------------------------ theme
-const THEME_KEY = "mnemos-eyes:theme";
+const THEME_KEY = "vesma-eyes:theme";
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
   localStorage.setItem(THEME_KEY, theme);

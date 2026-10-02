@@ -99,7 +99,7 @@ export function buildBootstrapSteps(ctx: BootstrapContext): readonly string[] {
       "echo 'VESMARO_BOARD_TOKEN=<executor_secret>' | " +
       "sudo tee /etc/vesmaro/poller.env >/dev/null",
     // 4в п.2 — the yaml keys; executor_id is the presence piggyback gate.
-    "# 3. ~/.config/mnemos-eyes/poller.yaml (chmod 0600): board_url — адрес, " +
+    "# 3. ~/.config/vesma-eyes/poller.yaml (chmod 0600): board_url — адрес, " +
       "резолвящийся с VPS; executor_id — id из ответа шага 1 (пустое = вечно " +
       "offline); executor_name = " +
       ctx.name +

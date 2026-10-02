@@ -42,7 +42,7 @@ const MARKDOWN_MEMORY: Memory = {
   tags: ["project:mnemos", "task:queue"],
   source: "mcp",
   memory_type: "note",
-  project: "mnemos",
+  project: "vesma",
   agent: "zed",
   status: "raw",
   quality_score: null,

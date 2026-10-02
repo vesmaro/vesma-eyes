@@ -1,6 +1,6 @@
 """BE-10: per-task workflow status field.
 
-Dictionary = mnemos workflow state machine (open/in-progress/blocked/
+Dictionary = vesma workflow state machine (open/in-progress/blocked/
 resolved/done/withdrawn). Covered here:
 
 - migration: pre-BE-10 databases gain the status + archived_from columns
