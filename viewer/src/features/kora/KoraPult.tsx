@@ -117,11 +117,12 @@ export function KoraPult({ hasSession }: { hasSession: boolean }) {
             {t("kora.pult.ether")}
           </button>
         </div>
-        {/* The strip names what will appear (07j §4.2 invitation) — the
-         * non-clickable part never pretends to be an action. */}
-        <span className="hidden min-w-0 flex-1 truncate text-xs text-foreground-muted sm:block">
-          {t("kora.pult.hint")}
-        </span>
+        {/* ME-072 №6: the strip is a pure control row (caps + tabs + badge
+         * + Развернуть). The session hint lives ONLY in the expanded
+         * Дайджест body — in the strip, same-size and between the tabs and
+         * the badge, it read as a broken third tab. The empty flex spacer
+         * keeps the badge and Развернуть pinned to the right. */}
+        <span aria-hidden className="min-w-0 flex-1" />
         {/* The real inbox badge: hidden when the source is unknown, muted at
          * 0, always a link to the real /tasks/inbox route. */}
         {waiting !== null ? (

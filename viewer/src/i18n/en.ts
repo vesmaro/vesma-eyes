@@ -1836,8 +1836,7 @@ export const en: Record<TranslationKey, string> = {
   "kora.tree.explain":
     "Agents are the programs work runs through on a machine: for example, zcode",
   "kora.tree.noAgents": "no agents yet",
-  "kora.tree.emptyNoExecutors":
-    "No hosts yet — connect an agent and it will appear here:",
+  "kora.tree.emptyNoExecutors": "No hosts yet",
   "kora.tree.expand": "expand",
   "kora.tree.collapse": "collapse",
   "kora.block2.section": "Sessions",
@@ -1880,7 +1879,9 @@ export const en: Record<TranslationKey, string> = {
   "kora.list.inactiveTitle": "Session not active",
   "kora.list.inactiveHint": "Sign in — host sessions will appear here",
   // UX-overhaul §5/§9.3 (Ф1): honest empty, branched by the executor count.
-  "kora.list.emptyNoExecutors": "Connect an agent — its sessions will appear here",
+  // ME-072 №7: the connect CTA lives ONCE per screen — in the center; the
+  // panel lines state the fact, action-free.
+  "kora.list.emptyNoExecutors": "Sessions will appear once you connect an agent",
   "kora.list.emptyNoSessions": "Sessions will appear once the host scanner starts",
   "kora.list.emptyAction": "Connect an agent",
   "kora.list.emptyStatusLink": "Open system status",

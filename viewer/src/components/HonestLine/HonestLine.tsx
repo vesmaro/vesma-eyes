@@ -15,6 +15,11 @@ import { cn } from "@/lib/utils";
  * `text-foreground-secondary`, `rounded-md` (--radius-md),
  * `border-border-subtle`; the action slot carries the caller's own
  * focus-ring discipline.
+ *
+ * ME-072 №3: the row aligns by FIRST BASELINE (`items-baseline`) — when the
+ * line wraps in a narrow panel, the info icon stays on the first text line
+ * instead of floating mid-block. The action slot always takes its OWN
+ * right-aligned row: inline after a wrapped text it landed mid-phrase.
  */
 export interface HonestLineProps {
   tone?: "status" | "warning";
@@ -35,7 +40,7 @@ export function HonestLine({
     <div
       role="status"
       className={cn(
-        "flex flex-wrap items-center gap-2 rounded-md border bg-well px-3 py-2 text-sm shadow-well",
+        "flex flex-wrap items-baseline gap-2 rounded-md border bg-well px-3 py-2 text-sm shadow-well",
         tone === "warning" ? "border-warning/40" : "border-border-subtle",
         className,
       )}
@@ -51,7 +56,13 @@ export function HonestLine({
       />
       <span className="min-w-0 flex-1 text-foreground-secondary">{children}</span>
       {action ? (
-        <span className="flex shrink-0 items-center gap-2">{action}</span>
+        // ME-072 №3: the action takes its OWN row (right-aligned) — on a
+        // wrapped line it used to land mid-phrase, reading as part of the
+        // sentence. `w-full` forces the wrap deterministically at every
+        // width; `justify-end` keeps the row-end grammar of the slot.
+        <span className="flex w-full shrink-0 justify-end items-center gap-2">
+          {action}
+        </span>
       ) : null}
     </div>
   );

@@ -295,15 +295,9 @@ export function KoraSessionList({
       <div className="mt-2">
         {sessionsEmpty && context.kind === "all" ? (
           noExecutors ? (
-            <HonestLine
-              action={
-                <Button asChild variant="outline" size="sm">
-                  <Link to="/agents/harnesses">{t("kora.list.emptyAction")}</Link>
-                </Button>
-              }
-            >
-              {t("kora.list.emptyNoExecutors")}
-            </HonestLine>
+            // ME-072 №7: the honest line without an action — the connect
+            // CTA lives ONCE, in the center; the panel states the fact.
+            <HonestLine>{t("kora.list.emptyNoExecutors")}</HonestLine>
           ) : (
             <HonestLine
               action={

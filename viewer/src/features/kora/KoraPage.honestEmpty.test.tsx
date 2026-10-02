@@ -120,9 +120,12 @@ describe("kora honest empty (UX-overhaul §9.3)", () => {
   it("variant A — zero executors: the connect CTA, never a scanner promise", async () => {
     const { root, container } = await mountEmptyKora(executorsPage(0));
     const html = container.textContent ?? "";
-    expect(html).toContain("Подключите агента — его сессии появятся здесь");
-    expect(html).toContain("Подключить агента");
-    expect(container.querySelector('a[href="/agents/harnesses"]')).not.toBeNull();
+    // ME-072 №7: the panel lines state the fact action-free; the CTA lives
+    // ONCE on the screen — in the center.
+    expect(html).toContain("Сессии появятся, когда подключите агента");
+    expect(html).toContain("Хостов пока нет");
+    expect(html.split("Подключить агента").length - 1).toBe(1);
+    expect(container.querySelectorAll('a[href="/agents/harnesses"]').length).toBe(1);
     // The OLD lying copy is gone — no «появятся сами» anywhere.
     expect(html).not.toContain("появятся сами");
     await actUnmount(root);
@@ -133,8 +136,8 @@ describe("kora honest empty (UX-overhaul §9.3)", () => {
     const html = container.textContent ?? "";
     expect(html).toContain("Сессии появятся, когда сканер хостов начнёт работу");
     expect(container.querySelector('a[href="/system/status"]')).not.toBeNull();
-    // No false «connect an executor» call — the registry is NOT empty.
-    expect(html).not.toContain("Подключите агента — его сессии появятся здесь");
+    // No false «connect an agent» call — the registry is NOT empty.
+    expect(html).not.toContain("Сессии появятся, когда подключите агента");
     expect(html).not.toContain("появятся сами");
     await actUnmount(root);
   });

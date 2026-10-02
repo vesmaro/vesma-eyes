@@ -133,11 +133,13 @@ describe("Kora workspace snapshots (union И1)", () => {
     expect(html).toContain("Что мы видим с ваших машин");
     // The work zone invitation (no Эфир — no source in И1).
     expect(html).toContain("Выберите сессию — здесь откроется её ход");
-    // The Пульт strip: collapsed by default, honest tab labels, the hint.
+    // The Пульт strip: collapsed by default, honest tab labels — a pure
+    // control row. ME-072 №6: the session hint lives only in the expanded
+    // Дайджест body; in the strip it read as a broken third tab.
     expect(html).toContain("Пульт");
     expect(html).toContain("Дайджест");
     expect(html).toContain("Эфир");
-    expect(html).toContain("Выберите сессию — её разбор появится здесь");
+    expect(html).not.toContain("Выберите сессию — её разбор появится здесь");
     expect(html).toContain("Развернуть");
     // Collapsed ⇒ no tab content leaked into the strip.
     expect(html).not.toContain("Разбор сессии собирается автоматически");
