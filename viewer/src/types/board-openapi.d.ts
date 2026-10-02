@@ -31,8 +31,12 @@ export interface paths {
         /**
          * Board
          * @description Board projection; BE-10 optional ``?status=`` filter over the
-         *     workflow dictionary (422 on unknown values). ``counts`` always describe
-         *     the whole board, not the filtered view.
+         *     workflow dictionary (422 on unknown values). ME-075 date bounds
+         *     (additive, inclusive): ``created_from/created_to`` bound поступление
+         *     (``created_at``), ``completed_from/completed_to`` bound завершение —
+         *     the first completion stamp (``resolved_at`` falling back to
+         *     ``done_at``). ``counts`` always describe the whole board, not the
+         *     filtered view.
          */
         readonly get: operations["board_api_board_get"];
         readonly put?: never;
@@ -519,7 +523,7 @@ export interface paths {
             readonly cookie?: never;
         };
         /**
-         * Vesma Search
+         * Mnemos Search
          * @description Search one server (scope=server name), a group, or all active servers.
          */
         readonly get: operations["mnemos_search_api_mnemos_search_get"];
@@ -1981,6 +1985,31 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/api/tasks/inbox/adopt-batch": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Tasks Inbox Adopt Batch
+         * @description Adopt a batch of inbox records in one call (ME-073 «Принять все»).
+         *
+         *     Order follows the request list; a duplicate inside one batch naturally
+         *     conflicts on its second occurrence (409 row, the first wins). HTTP 200
+         *     even with failures — the response body IS the per-record report
+         *     (``adopted`` / ``failed`` counters + rows).
+         */
+        readonly post: operations["tasks_inbox_adopt_batch_api_tasks_inbox_adopt_batch_post"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/api/specialists/profile": {
         readonly parameters: {
             readonly query?: never;
@@ -2476,6 +2505,43 @@ export interface components {
              * @default false
              */
             readonly has_more: boolean;
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /** AdoptBatchBody */
+        readonly AdoptBatchBody: {
+            /** Memory Ids */
+            readonly memory_ids: readonly string[];
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /** AdoptBatchItem */
+        readonly AdoptBatchItem: {
+            /** Memory Id */
+            readonly memory_id: string;
+            /** Ok */
+            readonly ok: boolean;
+            /**
+             * Task Id
+             * @default
+             */
+            readonly task_id: string;
+            /**
+             * Detail
+             * @default
+             */
+            readonly detail: string;
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /** AdoptBatchOut */
+        readonly AdoptBatchOut: {
+            /** Results */
+            readonly results: readonly components["schemas"]["AdoptBatchItem"][];
+            /** Adopted */
+            readonly adopted: number;
+            /** Failed */
+            readonly failed: number;
         } & {
             readonly [key: string]: unknown;
         };
@@ -5047,7 +5113,7 @@ export interface components {
              */
             readonly memory_ids: readonly string[];
             /**
-             * Vesma Tags
+             * Mnemos Tags
              * @default []
              */
             readonly mnemos_tags: readonly string[];
@@ -5207,7 +5273,7 @@ export interface components {
             readonly project: string;
             /** Memory Ids */
             readonly memory_ids: readonly string[];
-            /** Vesma Tags */
+            /** Mnemos Tags */
             readonly mnemos_tags: readonly string[];
             /** Created At */
             readonly created_at: string;
@@ -5232,6 +5298,16 @@ export interface components {
              * @default
              */
             readonly validating_since: string;
+            /**
+             * Resolved At
+             * @default
+             */
+            readonly resolved_at: string;
+            /**
+             * Done At
+             * @default
+             */
+            readonly done_at: string;
         } & {
             readonly [key: string]: unknown;
         };
@@ -5264,7 +5340,7 @@ export interface components {
             readonly project?: string | null;
             /** Memory Ids */
             readonly memory_ids?: readonly string[] | null;
-            /** Vesma Tags */
+            /** Mnemos Tags */
             readonly mnemos_tags?: readonly string[] | null;
         };
         /**
@@ -5524,6 +5600,10 @@ export interface operations {
         readonly parameters: {
             readonly query?: {
                 readonly status?: string;
+                readonly created_from?: string;
+                readonly created_to?: string;
+                readonly completed_from?: string;
+                readonly completed_to?: string;
             };
             readonly header?: never;
             readonly path?: never;
@@ -8442,6 +8522,39 @@ export interface operations {
                 };
                 content: {
                     readonly "application/json": components["schemas"]["TaskOut"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly tasks_inbox_adopt_batch_api_tasks_inbox_adopt_batch_post: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["AdoptBatchBody"];
+            };
+        };
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["AdoptBatchOut"];
                 };
             };
             /** @description Validation Error */
