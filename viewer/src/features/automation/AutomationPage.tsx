@@ -25,6 +25,7 @@ import {
   useLaunches,
   useSchedules,
 } from "./useAutomation";
+import { pageGridClass } from "@/layout/pageGrid";
 
 /**
  * `/system/automation` (SCHED-1-UI, ADR 0013 §8): the status banner (engine
@@ -97,7 +98,7 @@ export function AutomationPage() {
 
   if (!capable) {
     return (
-      <section aria-labelledby="automation-title" className="mx-auto max-w-4xl space-y-4">
+      <section aria-labelledby="automation-title" className={pageGridClass("operational", "space-y-4")}>
         <h1 id="automation-title" className="text-xl font-semibold">
           {t("automation.title")}
         </h1>
@@ -111,7 +112,7 @@ export function AutomationPage() {
   }
 
   return (
-    <section aria-labelledby="automation-title" className="mx-auto max-w-4xl space-y-4">
+    <section aria-labelledby="automation-title" className={pageGridClass("operational", "space-y-4")}>
       <h1 id="automation-title" className="text-xl font-semibold">
         {t("automation.title")}
       </h1>

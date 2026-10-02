@@ -29,6 +29,7 @@ import {
 } from "./executionPrefs";
 import { useAssignments, useExecutors } from "./useAgents";
 import { useAssignmentMutations } from "./useAssignmentMutations";
+import { pageGridClass } from "@/layout/pageGrid";
 
 /**
  * `/agents/execution` (AGW-3, spec §1.1): the THREE layers — presence strip,
@@ -240,7 +241,7 @@ export function ExecutionPage() {
   const cursorId = displayed[cursor]?.id;
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-3">
+    <div className={pageGridClass("operational", "flex flex-col gap-3")}>
       <header className="flex flex-wrap items-center justify-end gap-2">
         {/* AGW-4: the sticky breadcrumb current item + the TopBar label
          * already carry «Исполнение» — the visible h1 was the third copy.

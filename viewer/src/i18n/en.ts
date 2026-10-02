@@ -19,6 +19,9 @@ export const en: Record<TranslationKey, string> = {
   "nav.stores": "Stores",
   "nav.system": "System",
   "nav.soon": "soon",
+  // ME-072 A: honest badge for a blocked-but-EXISTING section (its route
+  // answers) — «later», not «soon».
+  "nav.later": "later",
   "nav.soonAgents": "the Agents domain arrives in Phase 4",
   "nav.soonStores": "the Stores domain arrives in Phase 4",
   // UX-overhaul §6/§8 (Ф1): Sessions/Traces leave the nav as disabled slots.
@@ -1686,7 +1689,11 @@ export const en: Record<TranslationKey, string> = {
   "empty.offlineNote":
     "If you are running against a live vesma, check that the API is up and that the dev proxy (/api → vesma) is reachable. Browser requests stay CORS-gated during development.",
   "app.loadingView": "Loading view",
-  "app.notFoundMessage": "This path does not exist in the well.",
+  // ME-072 A: the ONE 404 pattern (the tasks 404 is the reference: explain
+  // + an action).
+  "app.notFoundTitle": "Page not found",
+  "app.notFoundMessage": "This path does not exist in the well — the address is stale or mistyped.",
+  "app.notFoundAction": "Back to overview",
 
   // --- CV-7: QR pairing + devices (ADR 0012) ---------------------------------------
   "nav.devices": "Devices",

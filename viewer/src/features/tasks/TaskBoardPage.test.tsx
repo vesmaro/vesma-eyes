@@ -125,7 +125,7 @@ describe("TaskBoardPage (mock adapter — 7 WF-1 columns)", () => {
     expect(html).toContain('href="/tasks/list"');
   });
 
-  it("carries the «Groups | Classic» board style toggle next to it (default: groups)", async () => {
+  it("carries the «Groups | Classic» board style toggle on the ACTIONS side, apart from the projection toggle (ME-072 A, default: groups)", async () => {
     const html = await renderBoard(
       new MockAdapter({ latency: false }),
       "/tasks",
@@ -138,6 +138,34 @@ describe("TaskBoardPage (mock adapter — 7 WF-1 columns)", () => {
     expect(html).toContain(">Groups</button>");
     expect(html).toContain('aria-pressed="false"');
     expect(html).toContain(">Classic</button>");
+    // ME-072 A: the two segmented controls sit at OPPOSITE header ends —
+    // the projection toggle by the H1, the style toggle inside the actions
+    // cluster (with «New task»), never adjacent (they read as one control).
+    const view = html.indexOf('aria-label="Task view"');
+    const actions = html.indexOf('data-testid="board-header-actions"');
+    const style = html.indexOf('aria-label="Board layout"');
+    expect(view).toBeGreaterThan(-1);
+    expect(actions).toBeGreaterThan(view);
+    expect(style).toBeGreaterThan(actions);
+  });
+
+  it("renders ONE column-header pattern — every counter is the framed outline badge (ME-072 A)", async () => {
+    const html = await renderBoard(
+      new MockAdapter({ latency: false }),
+      "/tasks",
+      seedBoard,
+    );
+    // The per-column colour chips (iris/error/success) made two header
+    // looks (framed vs floating); the framed outline counter is the ONE
+    // pattern now. Card-level workflow colours are untouched.
+    const headers = html.match(/<header[^>]*>[\s\S]*?<\/header>/g) ?? [];
+    expect(headers.length).toBeGreaterThanOrEqual(7);
+    for (const header of headers) {
+      // The exact outline-badge class pair («border-border-subtle» must not
+      // satisfy this — it is the header hairline, not the badge frame).
+      expect(header).toContain("border-border text-foreground-secondary");
+      expect(header).not.toMatch(/bg-(iris|success|error|warning)-tint/);
+    }
   });
 
   it("keeps the filters in the URL: ?q= filters cards and highlights titles", async () => {

@@ -6,6 +6,7 @@ import { formatTimestamp } from "@/components/memory/memoryDisplay";
 import { isApiError } from "@/lib/errors";
 import { useSession } from "@/hooks/useSessions";
 import { useT } from "@/i18n";
+import { pageGridClass } from "@/layout/pageGrid";
 
 /**
  * `/sessions/:id` — full session inspection (component-inventory §9). The
@@ -32,7 +33,7 @@ export function SessionDetailPage() {
       <div
         role="status"
         aria-label={t("sessions.loadingOne")}
-        className="mx-auto max-w-3xl space-y-4"
+        className={pageGridClass("operational", "space-y-4")}
       >
         <p
           className="text-sm text-foreground-secondary"
@@ -48,7 +49,7 @@ export function SessionDetailPage() {
   if (session.isError) {
     const notFound = isApiError(session.error) && session.error.status === 404;
     return (
-      <div className="mx-auto max-w-3xl space-y-4">
+      <div className={pageGridClass("operational", "space-y-4")}>
         {notFound ? (
           <EmptyState
             variant="not-found"
@@ -75,7 +76,7 @@ export function SessionDetailPage() {
   const metadata = data.metadata ?? {};
 
   return (
-    <article className="mx-auto max-w-3xl space-y-6">
+    <article className={pageGridClass("operational", "space-y-6")}>
       <header className="space-y-1">
         <h1
           className="text-xl font-semibold text-iris-bright"

@@ -26,6 +26,7 @@ import {
 } from "./taskStatus";
 import { useTaskMutations } from "./useTaskMutations";
 import { useInboxMemory, useTaskInbox } from "./useTasks";
+import { pageGridClass } from "@/layout/pageGrid";
 
 /**
  * `/tasks/inbox` — the AGG-1 mirror of `task:queue` records (ADR 0010):
@@ -196,7 +197,7 @@ export function TaskInboxPage() {
 function InboxShell({ children }: { children: React.ReactNode }) {
   const t = useT();
   return (
-    <section aria-labelledby="inbox-title" className="mx-auto max-w-3xl space-y-4">
+    <section aria-labelledby="inbox-title" className={pageGridClass("operational", "space-y-4")}>
       <h1 id="inbox-title" className="flex items-center gap-2 text-xl font-semibold">
         <Inbox className="size-5" aria-hidden="true" />
         {t("tasks.inboxTitle")}

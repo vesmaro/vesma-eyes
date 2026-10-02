@@ -41,6 +41,7 @@ import { TaskRowMenu } from "./TaskRowMenu";
 import { TasksUnsupported } from "./TasksUnsupported";
 import { TasksViewToggle } from "./TasksViewToggle";
 import { useBoardTasks, useReportCounts } from "./useTasks";
+import { pageGridClass } from "@/layout/pageGrid";
 
 /**
  * `/tasks/list` — the task LIST view of the domain (ARCHCOM-3 verdict §3:
@@ -130,7 +131,7 @@ export function TaskListPage() {
 
   if (board.isPending) {
     return (
-      <section aria-labelledby="tasks-title" className="mx-auto max-w-5xl space-y-4">
+      <section aria-labelledby="tasks-title" className={pageGridClass("operational", "space-y-4")}>
         {header}
         <div role="status" aria-label={t("tasks.loading")}>
           <TableRowSkeleton rows={6} columns={6} />
@@ -141,7 +142,7 @@ export function TaskListPage() {
 
   if (board.isError) {
     return (
-      <section aria-labelledby="tasks-title" className="mx-auto max-w-5xl space-y-4">
+      <section aria-labelledby="tasks-title" className={pageGridClass("operational", "space-y-4")}>
         {header}
         <EmptyState
           variant="error"
@@ -167,7 +168,7 @@ export function TaskListPage() {
   const agentChoices = agentOptions(tasks);
 
   return (
-    <section aria-labelledby="tasks-title" className="mx-auto max-w-5xl space-y-4">
+    <section aria-labelledby="tasks-title" className={pageGridClass("operational", "space-y-4")}>
       {header}
 
       {/* Mini-stats: per-status counts of the WHOLE board (see the memo above). */}

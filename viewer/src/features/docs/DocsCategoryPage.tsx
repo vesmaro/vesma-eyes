@@ -16,6 +16,7 @@ import { loadMarkdown } from "./markdownModules";
 import { DEFAULT_PROJECT, docProject, docUrl } from "./projects";
 import { DocsNotFound } from "./DocsRedirects";
 import { DocsSearch } from "./DocsSearch";
+import { pageGridClass } from "@/layout/pageGrid";
 
 /**
  * `/docs/:project/c/:category` (design spec §4): the category header, then a
@@ -130,13 +131,13 @@ export function DocsCategoryPage() {
     docCategoriesForProject(projectMeta.slug).some((entry) => entry.slug === category.slug);
   if (!owned || !category) {
     return (
-      <div className="mx-auto max-w-5xl">
+      <div className={pageGridClass("operational")}>
         <DocsNotFound />
       </div>
     );
   }
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className={pageGridClass("operational")}>
       <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="flex min-w-0 items-start gap-3">
           <category.icon

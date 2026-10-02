@@ -7,6 +7,7 @@ import { useMetrics, useStatus } from "@/hooks/useStatus";
 import { isApiError } from "@/lib/errors";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useT } from "@/i18n";
+import { pageGridClass } from "@/layout/pageGrid";
 
 /**
  * `/status` — system health at a glance (component-inventory §7). Health and
@@ -35,7 +36,7 @@ export function StatusPage() {
     metrics.error.status === 501;
 
   return (
-    <section aria-labelledby="status-title" className="mx-auto max-w-4xl space-y-4">
+    <section aria-labelledby="status-title" className={pageGridClass("operational", "space-y-4")}>
       <h1 id="status-title" className="text-xl font-semibold">
         {t("status.title")}
       </h1>

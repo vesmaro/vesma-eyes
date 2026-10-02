@@ -16,6 +16,7 @@ import { NOOP_KORA_INTENT_EVENTS } from "./koraIntentEvents";
 import type { KoraCoverage } from "./koraTypes";
 import { buildKoraTree, koraSummary, type KoraQuickFilter } from "./koraWorkspaceModel";
 import { useKoraSessionPages, useKoraTranscriptPages } from "./useKora";
+import { pageGridClass } from "@/layout/pageGrid";
 import { useKoraEntered } from "@/telemetry/useKoraEntered"; // ME-041: kora.entered
 
 /**
@@ -146,7 +147,7 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
   // hotfix contract, kept verbatim through the rework). ──
   if (unauthorized) {
     return (
-      <section aria-labelledby="kora-title" className="mx-auto max-w-3xl space-y-4">
+      <section aria-labelledby="kora-title" className={pageGridClass("operational", "space-y-4")}>
         <Header
           summary={null}
           hostOptions={[]}
@@ -191,7 +192,7 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
   // ── The honest retry state: 5xx/transport keeps the error + retry. ──
   if (sessions.error !== null) {
     return (
-      <section aria-labelledby="kora-title" className="mx-auto max-w-3xl space-y-4">
+      <section aria-labelledby="kora-title" className={pageGridClass("operational", "space-y-4")}>
         <Header
           summary={null}
           hostOptions={[]}
@@ -222,7 +223,7 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
     !sessions.isPending
   ) {
     return (
-      <section aria-labelledby="kora-title" className="mx-auto max-w-3xl space-y-4">
+      <section aria-labelledby="kora-title" className={pageGridClass("operational", "space-y-4")}>
         <Header
           summary={items.length > 0 ? summary : null}
           hostOptions={hostOptions}
@@ -246,7 +247,7 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
   }
 
   return (
-    <section aria-labelledby="kora-title" className="mx-auto max-w-6xl">
+    <section aria-labelledby="kora-title" className={pageGridClass("operational")}>
       <Header
         summary={items.length > 0 ? summary : null}
         hostOptions={hostOptions}

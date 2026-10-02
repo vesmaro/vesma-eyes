@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 // @dnd-kit (ARCHCOM-3 verdict §3, ratified): the kanban is the PRIMARY
 // surface of the Задачи domain; core+sortable land ~14–18 KB gz together,
@@ -38,6 +38,7 @@ import { useBoardTasks, useReportCounts } from "./useTasks";
 import { useTaskMutations } from "./useTaskMutations";
 import { BoardStyleToggle } from "./BoardStyleToggle";
 import { useBoardStyle } from "@/lib/boardStyleStore";
+import { pageGridClass } from "@/layout/pageGrid";
 
 /**
  * `/tasks` — the KANBAN view of the domain, view №1 per the redesign concept
@@ -55,6 +56,30 @@ export function TaskBoardPage() {
   const gateway = useGateway();
   const capable = isTaskSource(gateway);
   return capable ? <TaskBoardView /> : <TasksUnsupported />;
+}
+
+/**
+ * ME-072 A: does the board row overflow horizontally? Overlay-scroll
+ * platforms (most Linux/GTK desktops, macOS, headless) render NO scrollbar
+ * for overflow-x-auto, so a clipped 4th column read as broken layout. The
+ * hook drives the right-edge fade affordance: measured, resize-aware
+ * (ResizeObserver covers viewport changes and the sidebar collapse), never
+ * guessed from column counts. Callback-ref shape: the board div does not
+ * exist while the board is pending, so a plain ref + mount-time effect
+ * would never (re)attach — the element identity IS the dependency.
+ */
+function useBoardOverflows() {
+  const [el, setEl] = useState<HTMLDivElement | null>(null);
+  const [overflows, setOverflows] = useState(false);
+  useEffect(() => {
+    if (!el) return;
+    const update = () => setOverflows(el.scrollWidth > el.clientWidth + 1);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [el]);
+  return { boardRef: setEl, overflows };
 }
 
 /** The board view — mounted only on task-capable gateways. */
@@ -88,6 +113,9 @@ function TaskBoardView() {
   const taskIds = useMemo(() => tasks.map((task) => task.id), [tasks]);
   const reportCounts = useReportCounts(taskIds);
   const reducedMotion = useReducedMotion();
+  // ME-072 A: the measured overflow behind the right-edge fade affordance
+  // (hook-order stable: runs before the pending/error early returns).
+  const { boardRef, overflows: boardOverflows } = useBoardOverflows();
 
   // Hook-order discipline: every hook below runs on EVERY render (the
   // pending/error early-returns come after), so the DnD wiring stays mounted
@@ -120,26 +148,33 @@ function TaskBoardView() {
     });
   };
 
+  // ME-072 A: the two segmented controls live at OPPOSITE ends of the
+  // header — projection («Канбан | Список») next to the H1, board style
+  // («Группы | Классика») on the actions side with «+ Задача». Adjacent
+  // they read as one six-option control (audit v№10).
   const header = (
     <>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
           <h1 id="tasks-title" className="text-xl font-semibold">
             {t("tasks.title")}
           </h1>
-          <div className="flex flex-wrap items-center gap-2">
-            <TasksViewToggle />
-            {/* CV-5: board style lives ONLY on the kanban — the list has no
-             * accordion/classic distinction. The toggle owns the store write. */}
-            <BoardStyleToggle />
-          </div>
+          <TasksViewToggle />
         </div>
-        {canMutate ? (
-          <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus className="size-4" aria-hidden="true" />
-            {t("tasks.create.label")}
-          </Button>
-        ) : null}
+        <div
+          data-testid="board-header-actions"
+          className="flex flex-wrap items-center gap-2"
+        >
+          {/* CV-5: board style lives ONLY on the kanban — the list has no
+           * accordion/classic distinction. The toggle owns the store write. */}
+          <BoardStyleToggle />
+          {canMutate ? (
+            <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
+              <Plus className="size-4" aria-hidden="true" />
+              {t("tasks.create.label")}
+            </Button>
+          ) : null}
+        </div>
       </div>
       {canMutate ? (
         <CreateTaskDialog open={createOpen} onOpenChange={setCreateOpen} />
@@ -149,7 +184,7 @@ function TaskBoardView() {
 
   if (board.isPending) {
     return (
-      <section aria-labelledby="tasks-title" className="space-y-4">
+      <section aria-labelledby="tasks-title" className={pageGridClass("operational", "space-y-4")}>
         {header}
         <div role="status" aria-label={t("tasks.loading")}>
           <TableRowSkeleton rows={6} columns={6} />
@@ -160,7 +195,7 @@ function TaskBoardView() {
 
   if (board.isError) {
     return (
-      <section aria-labelledby="tasks-title" className="space-y-4">
+      <section aria-labelledby="tasks-title" className={pageGridClass("operational", "space-y-4")}>
         {header}
         <EmptyState
           variant="error"
@@ -182,7 +217,7 @@ function TaskBoardView() {
   const filtered = hasActiveTaskFilters(state);
 
   return (
-    <section aria-labelledby="tasks-title" className="space-y-4">
+    <section aria-labelledby="tasks-title" className={pageGridClass("operational", "space-y-4")}>
       {header}
 
       {/* Filters — URL state (?project=&agent=&q=), shared dialect with the
@@ -251,26 +286,48 @@ function TaskBoardView() {
         />
       ) : (
         <DndContext {...dnd.dndContextProps}>
-          <div
-            aria-label={t("tasks.board.label")}
-            className="flex items-start gap-3 overflow-x-auto pb-2"
-          >
-            {[...(board.data?.columns ?? [])].map((column) => (
-              <TaskBoardColumn
-                key={column}
-                column={column}
-                tasks={columns.get(column) ?? []}
-                totalCount={wholeBoardCounts[column] ?? 0}
-                canDrag={canDrag}
-                showMenu={canMutate}
-                reportCounts={reportCounts}
-                query={state.q}
-                collapsed={collapsed}
-                onToggleGroup={toggleGroup}
-                compact={density === "compact"}
-                style={boardStyle}
+          {/* ME-072 A: the board row stretches its columns to ONE height
+           * (items-stretch — empty columns no longer collapse) and the
+           * horizontal scroll is an explicit AFFORDANCE: .board-scroll-x
+           * keeps the scrollbar visible where the platform draws classic
+           * ones, tabIndex keeps it keyboard-able (WCAG 2.1.1), and the
+           * measured right-edge fade (below) signals the offscreen columns
+           * on overlay-scroll platforms — at 1440 the 4th column peeks cut
+           * and the cut reads as scrollable, not broken. */}
+          <div className="relative">
+            <div
+              ref={boardRef}
+              aria-label={t("tasks.board.label")}
+              tabIndex={0}
+              className="board-scroll-x flex items-stretch gap-3 overflow-x-auto pb-2"
+            >
+              {[...(board.data?.columns ?? [])].map((column) => (
+                <TaskBoardColumn
+                  key={column}
+                  column={column}
+                  tasks={columns.get(column) ?? []}
+                  totalCount={wholeBoardCounts[column] ?? 0}
+                  canDrag={canDrag}
+                  showMenu={canMutate}
+                  reportCounts={reportCounts}
+                  query={state.q}
+                  collapsed={collapsed}
+                  onToggleGroup={toggleGroup}
+                  compact={density === "compact"}
+                  style={boardStyle}
+                />
+              ))}
+            </div>
+            {/* The scroll affordance (ME-072 A): only when the board really
+             * overflows — a page-background fade over the clipped last
+             * column. Decorative: aria-hidden + pointer-events-none, the
+             * scroll stays on the row (wheel/keyboard/drag). */}
+            {boardOverflows ? (
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-background to-transparent"
               />
-            ))}
+            ) : null}
           </div>
           <DragOverlay dropAnimation={reducedMotion ? null : undefined}>
             {dnd.activeTask ? (

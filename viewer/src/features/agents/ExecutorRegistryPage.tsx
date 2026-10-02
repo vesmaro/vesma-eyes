@@ -42,6 +42,7 @@ import { useActiveProvisionJob } from "./useProvision";
 import { useExecutors } from "./useAgents";
 import { useEnrollments } from "./useEnrollment";
 import { useExecutorMutations } from "./useExecutorMutations";
+import { pageGridClass } from "@/layout/pageGrid";
 
 /**
  * P3: %-garbage in a hash must never take the page down —
@@ -146,7 +147,7 @@ export function ExecutorRegistryPage() {
       : orderRegistry(items);
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-3">
+    <div className={pageGridClass("operational", "flex flex-col gap-3")}>
       {/* The breadcrumb current item + TopBar already carry «Подключение» —
        * the h1 stays for the a11y outline only (no visible duplication). */}
       <header className="flex items-center justify-end gap-2">

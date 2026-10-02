@@ -4,7 +4,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { BoardTask } from "@/gateway/boardTypes";
 import { useT } from "@/i18n";
-import { columnBadgeVariant, columnLabelKey } from "./taskStatus";
+import { columnLabelKey } from "./taskStatus";
 import { groupTasksByProject, sortGroupTasks } from "./taskGrouping";
 import { columnDropId, groupDropId } from "./boardDnd";
 import { TaskBoardCard } from "./TaskBoardCard";
@@ -91,7 +91,11 @@ export function TaskBoardColumn({
         <h2 className="text-sm font-semibold text-foreground-secondary">
           {t(columnLabelKey(column))}
         </h2>
-        <Badge variant={columnBadgeVariant(column)} className="font-mono">
+        {/* ME-072 A: ONE header pattern — the framed outline counter for
+         * EVERY column. Per-column colour chips (iris/error/success) made
+         * two header looks (framed vs floating) and read as different
+         * entities; card-level workflow colours are untouched. */}
+        <Badge variant="outline" className="font-mono">
           {totalCount}
         </Badge>
       </header>

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { isApiError } from "@/lib/errors";
 import { useMemory } from "@/hooks/useMemory";
 import { useT } from "@/i18n";
+import { pageGridClass } from "@/layout/pageGrid";
 
 /**
  * `/memory/:id` — the "scroll" detail view (component-inventory §5).
@@ -33,7 +34,7 @@ export function MemoryDetailPage() {
       <div
         role="status"
         aria-label={t("memories.loadingOne")}
-        className="mx-auto max-w-3xl"
+        className={pageGridClass("showcase")}
       >
         <MemoryScrollSkeleton />
       </div>
@@ -43,7 +44,7 @@ export function MemoryDetailPage() {
   if (memory.isError) {
     const notFound = isApiError(memory.error) && memory.error.status === 404;
     return (
-      <div className="mx-auto max-w-3xl space-y-4">
+      <div className={pageGridClass("showcase", "space-y-4")}>
         {notFound ? (
           <EmptyState
             variant="not-found"
@@ -67,7 +68,7 @@ export function MemoryDetailPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className={pageGridClass("showcase", "space-y-6")}>
       <MemoryScroll
         memory={memory.data}
         showRaw={showRaw}

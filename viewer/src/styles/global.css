@@ -223,3 +223,28 @@
 .gate-enter {
   animation: gate-enter var(--duration-normal) var(--ease-enter);
 }
+
+/* ── Kanban board scroll affordance (ME-072 A) ───────────────────────────
+ * At 1440 the 4th kanban column peeks past the viewport edge; overlay
+ * scrollbars hide that fact, so the cut read as broken (dates clipped
+ * with no way to discover the rest). The board always shows its horizontal
+ * scrollbar track, drawn from the EXISTING border tokens — no new token
+ * values. Standard-properties first (Firefox + Chromium 121+); the
+ * ::-webkit block covers the engines without scrollbar-color. */
+.board-scroll-x {
+  scrollbar-width: auto;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.board-scroll-x::-webkit-scrollbar {
+  height: 10px;
+}
+
+.board-scroll-x::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.board-scroll-x::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 5px;
+}

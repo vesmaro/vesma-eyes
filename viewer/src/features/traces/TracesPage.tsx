@@ -10,6 +10,7 @@ import { isApiError } from "@/lib/errors";
 import { useTraces } from "@/hooks/useTraces";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useT } from "@/i18n";
+import { pageGridClass } from "@/layout/pageGrid";
 
 /**
  * `/traces` — pipeline trace list (component-inventory §10). `?task_label=`
@@ -65,7 +66,7 @@ export function TracesPage() {
     traces.error.status === 501;
 
   return (
-    <section aria-labelledby="traces-title" className="mx-auto max-w-5xl space-y-4">
+    <section aria-labelledby="traces-title" className={pageGridClass("operational", "space-y-4")}>
       <h1 id="traces-title" className="text-xl font-semibold">
         {t("traces.title")}
       </h1>
