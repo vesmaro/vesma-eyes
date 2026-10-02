@@ -220,6 +220,172 @@
   display: none;
 }
 
+/* ── Весма, the nest keeper (ME-071 W2, lazy chunk `vesma`) ──────────────
+ * The creature is aria-hidden decoration inside the VesmaLayer slot; every
+ * colour is a token, every duration a canon duration (reduced mirrors zero
+ * the flight/breath on their own). Slot geometry lives HERE, not in
+ * tokens.css — it is a viewer-only layout value, and tokens.css is the
+ * viewer↔board canon inventory (§14.3.1: slot = creature 64 + myelin
+ * horseshoe perch + clearance; mobile 64×64). The var is defined on BOTH
+ * scopes that consume it: the slot element (size) and <html> when the nest
+ * pad is on (the #main padding rule). */
+[data-vesma-slot],
+html[data-vesma-pad] {
+  --vesma-slot: 96px;
+  --vesma-breath: 0.18;
+}
+
+@media (max-width: 767px) {
+  [data-vesma-slot],
+  html[data-vesma-pad] {
+    --vesma-slot: 64px;
+  }
+}
+
+/* The slot itself: canon geometry instead of a fixed utility, so the
+ * mobile shrink rides the same var. */
+div[data-vesma-slot] {
+  width: var(--vesma-slot);
+  height: var(--vesma-slot);
+}
+
+/* The nest padding on #main rides the html[data-vesma-pad] state
+ * attribute — no Shell re-render; content never hides behind the nest.
+ * The pad attribute lives on <html> only; the slot keeps data-vesma-slot. */
+html[data-vesma-pad] #main {
+  padding-bottom: calc(var(--vesma-slot) + 16px);
+}
+
+[data-vesma-slot] .vesma-nest,
+[data-vesma-slot] .vesma-fly {
+  position: absolute;
+  inset: 0;
+}
+
+[data-vesma-slot] svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.vesma-perch {
+  fill: none;
+  stroke: var(--myelin-hairline);
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+.vesma-tail {
+  fill: var(--myelin-strong);
+}
+
+.vesma-cloak {
+  fill: var(--color-iris);
+  opacity: 0.55;
+}
+
+.vesma-arm {
+  fill: var(--myelin-strong);
+}
+
+.vesma-body {
+  fill: var(--myelin-strong);
+  transform-box: view-box;
+  transform-origin: 60px 62px;
+  animation: vesma-breath var(--duration-iris) var(--ease-in-out) infinite;
+}
+
+.vesma-core {
+  fill: var(--color-confidence);
+}
+
+.vesma-lantern {
+  fill: var(--vesma-lantern, var(--color-confidence));
+  transition: fill var(--duration-tone-fade) var(--ease-in-out);
+}
+
+/* Flight: translate3d only (W2 brief), the canon duration + easing. */
+.vesma-fly {
+  transition: transform var(--duration-flight) var(--ease-enter);
+  will-change: transform;
+}
+
+@keyframes vesma-breath {
+  0%,
+  100% {
+    transform: scale(calc(1 - var(--vesma-breath) / 2));
+  }
+  50% {
+    transform: scale(calc(1 + var(--vesma-breath) / 2));
+  }
+}
+
+/* Sleep (5 min of silence): the breath amplitude 0.18 → 0.08. */
+[data-vesma-sleep] {
+  --vesma-breath: 0.08;
+}
+
+/* The speech bubble: one polite live region, auto-hidden by the chunk.
+ * pointer-events back ON (the slot wrapper is none for click-through):
+ * the bubble is text to read and, on the intro, a button to press.
+ * width:max-content lets it outgrow the 96px slot up to the 15rem cap. */
+.vesma-cloud {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 4px);
+  z-index: 1;
+  width: max-content;
+  max-width: 15rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem 0.75rem 0.125rem 0.75rem;
+  background: var(--color-bg-elevated);
+  color: var(--color-foreground);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  box-shadow: var(--shadow-float);
+  pointer-events: auto;
+}
+
+.vesma-cloud[hidden] {
+  display: none;
+}
+
+.vesma-ok {
+  display: block;
+  margin-top: 0.25rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-iris-bright);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.vesma-ok:hover {
+  text-decoration: underline;
+}
+
+/* Reduced: a static dot — animated parts and the perch go, the nucleus
+ * keeps the static tone tint (the canon reduced mirror). */
+[data-vesma-reduced] .vesma-nest,
+[data-vesma-reduced] .vesma-tail,
+[data-vesma-reduced] .vesma-cloak,
+[data-vesma-reduced] .vesma-arm,
+[data-vesma-reduced] .vesma-body {
+  display: none;
+}
+
+[data-vesma-reduced] .vesma-lantern {
+  display: none;
+}
+
+[data-vesma-reduced] .vesma-core {
+  fill: var(--vesma-lantern, var(--color-confidence));
+  transition: none;
+}
+
 .gate-enter {
   animation: gate-enter var(--duration-normal) var(--ease-enter);
 }

@@ -83,6 +83,8 @@ export default defineConfig(({ mode }) => ({
         // first paint via the dynamic import in layout/LivingLayer.
         chunkFileNames: (chunkInfo) => {
           if (chunkInfo.name === "engine") return "living-extra-[hash].js";
+          // W2 (ME-071): the Весма keeper chunk (≤3 KiB gz, budget gate).
+          if (chunkInfo.name === "vesma") return "vesma-[hash].js";
           // W1b: the well organ joins tones in the web-tones mask (rollup may
           // keep them as separate chunks sharing the name — the budget gate
           // measures each file). The ENGINE chunk must stay free of well code.

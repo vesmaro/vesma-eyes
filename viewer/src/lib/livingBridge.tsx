@@ -48,7 +48,9 @@ export function LivingBridge(): null {
   useEffect(() => {
     if (layer === "off" || !eventsCapable) return;
     const stream = gateway.events();
-    const unsubscribe = stream.onAny((event) => feedLivingEvent(event.kind));
+    // W2: the parsed event rides along — the Весма keeper reads the
+    // notification title from it for the named phrases (zero eager cost).
+    const unsubscribe = stream.onAny((event) => feedLivingEvent(event.kind, event));
     return () => {
       unsubscribe();
       stream.close();

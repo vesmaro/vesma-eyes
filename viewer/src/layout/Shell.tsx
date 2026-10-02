@@ -15,6 +15,7 @@ import {
 import { setSidebarOverlayOpen } from "@/lib/sidebarOverlayState";
 import { LivingBridge } from "@/lib/livingBridge";
 import { LivingLayer } from "./LivingLayer";
+import { VesmaLayer } from "./VesmaLayer";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { CommandPalette } from "./CommandPalette";
 import { MobileSidebar, Sidebar } from "./Sidebar";
@@ -121,6 +122,10 @@ export function Shell() {
          * bridge is a LEAF: its poll re-renders itself, not the shell. */}
         <LivingLayer />
         <LivingBridge />
+        {/* ME-071 W2 «Весма»: the nest keeper's slot (bottom-right) — its
+         * bottom padding on #main rides html[data-vesma-slot] in CSS, so a
+         * level change never re-renders the shell subtree. */}
+        <VesmaLayer />
         {/* Bypass the repeated nav (WCAG 2.4.1): visible only on keyboard
          * focus. Inert while the mobile sidebar dialog is open (ME-002). */}
         <a
