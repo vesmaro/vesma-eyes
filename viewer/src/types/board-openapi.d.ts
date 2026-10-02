@@ -4676,6 +4676,11 @@ export interface components {
             readonly agent: string;
             /** Body */
             readonly body: string;
+            /**
+             * Human Body
+             * @default
+             */
+            readonly human_body: string;
             /** Superseded */
             readonly superseded: boolean;
             /** Created At */
@@ -5308,6 +5313,11 @@ export interface components {
              * @default
              */
             readonly done_at: string;
+            /**
+             * Human View
+             * @default
+             */
+            readonly human_view: string;
         } & {
             readonly [key: string]: unknown;
         };
