@@ -44,6 +44,7 @@ const TASK: BoardTask = {
   validating_since: "",
   resolved_at: "",
   done_at: "",
+  human_view: "",
 };
 
 const ROW: AssignmentItem = {

@@ -807,6 +807,14 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         created = await asyncio.to_thread(store.backfill_reports)
         logging.getLogger("vesmaro.backfill").info(
             "reports backfill finished: created=%d", created)
+    # ME-078 (two-channel render): one-shot human-view backfill. Pure
+    # derived-cache recompute (raw columns are never touched), idempotent
+    # inside the store (board_meta flag = TEXTNORM_VERSION; matching rows
+    # are not rewritten). Runs AFTER the reports backfill so history
+    # reports it inserted get their human_body in the same boot.
+    hv_updated = await asyncio.to_thread(store.backfill_human_views)
+    logging.getLogger("vesmaro.textnorm").info(
+        "human view backfill finished: updated=%d", hv_updated)
     task = asyncio.create_task(_profile_cache_refresher())
     # AGG-1: inbox scan starts right after boot (non-blocking) and repeats
     # every 5 min inside the task; errors are absorbed in the loop.
@@ -1263,6 +1271,7 @@ class TaskOut(_ApiModel):
     validating_since: str = ""      # WF-1: 24h clock start (ISO) while col=validating; '' off-lane
     resolved_at: str = ""           # ME-074: entered resolved (executor finished); '' = unknown (pre-ME-074 row)
     done_at: str = ""               # ME-074: entered done (owner accepted); '' = unknown (pre-ME-074 row)
+    human_view: str = ""            # ME-078: derived human markdown view (raw spec/summary stay verbatim)
 
 
 class BoardOut(_ApiModel):
@@ -1528,6 +1537,7 @@ class ReportOut(_ApiModel):
     kind: str
     agent: str
     body: str
+    human_body: str = ""    # ME-078: derived human markdown view of body
     superseded: bool
     created_at: str
 

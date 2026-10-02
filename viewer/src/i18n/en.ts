@@ -547,6 +547,11 @@ export const en: Record<TranslationKey, string> = {
   "tasks.descriptionLabel": "Description",
   "tasks.descriptionEmpty": "No description yet.",
   "tasks.descriptionEmptyHint": "Add one via «Edit».",
+  // ME-078: the «human view / raw source» toggle on the task card description.
+  "tasks.sourceToggle.raw": "Raw source",
+  "tasks.sourceToggle.human": "Human view",
+  "tasks.sourceToggleAria.raw": "Raw source: show the spec as the agent sees it",
+  "tasks.sourceToggleAria.human": "Human view: back to the normalized view",
   "tasks.relatedLabel": "Related",
   "tasks.relatedActivity": "Task activity",
   "tasks.relatedKora": "Work sessions (Kora)",

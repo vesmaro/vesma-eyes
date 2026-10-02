@@ -83,6 +83,7 @@ export const MOCK_TASKS: BoardTask[] = [
     validating_since: "",
     resolved_at: "",
     done_at: "",
+    human_view: "",
   },
   {
     id: "T6",
@@ -110,6 +111,7 @@ export const MOCK_TASKS: BoardTask[] = [
     validating_since: "",
     resolved_at: "",
     done_at: "",
+    human_view: "",
   },
   {
     id: "TB-3",
@@ -133,6 +135,7 @@ export const MOCK_TASKS: BoardTask[] = [
     validating_since: "",
     resolved_at: "",
     done_at: "",
+    human_view: "",
   },
   {
     id: "TB-4",
@@ -156,6 +159,7 @@ export const MOCK_TASKS: BoardTask[] = [
     validating_since: "",
     resolved_at: "",
     done_at: "",
+    human_view: "",
   },
   {
     id: "RB-2",
@@ -180,6 +184,7 @@ export const MOCK_TASKS: BoardTask[] = [
     validating_since: "",
     resolved_at: "",
     done_at: "",
+    human_view: "",
   },
   {
     id: "TB-5",
@@ -203,6 +208,7 @@ export const MOCK_TASKS: BoardTask[] = [
     validating_since: "",
     resolved_at: "",
     done_at: "",
+    human_view: "",
   },
   {
     id: "TB-6",
@@ -227,6 +233,7 @@ export const MOCK_TASKS: BoardTask[] = [
     validating_since: "",
     resolved_at: "",
     done_at: "",
+    human_view: "",
   },
   {
     id: "TB-7",
@@ -251,6 +258,7 @@ export const MOCK_TASKS: BoardTask[] = [
     validating_since: "",
     resolved_at: "",
     done_at: "",
+    human_view: "",
   },
   {
     id: "TB-8",
@@ -274,6 +282,7 @@ export const MOCK_TASKS: BoardTask[] = [
     validating_since: "",
     resolved_at: "",
     done_at: "",
+    human_view: "",
   },
   {
     id: "TB-9",
@@ -297,6 +306,7 @@ export const MOCK_TASKS: BoardTask[] = [
     validating_since: "",
     resolved_at: "",
     done_at: "",
+    human_view: "",
   },
   {
     id: "TB-10",
@@ -320,6 +330,7 @@ export const MOCK_TASKS: BoardTask[] = [
     validating_since: "",
     resolved_at: "",
     done_at: "",
+    human_view: "",
   },
   {
     id: "TB-11",
@@ -343,6 +354,7 @@ export const MOCK_TASKS: BoardTask[] = [
     validating_since: "",
     resolved_at: "",
     done_at: "",
+    human_view: "",
   },
   {
     id: "TB-12",
@@ -366,6 +378,7 @@ export const MOCK_TASKS: BoardTask[] = [
     validating_since: "",
     resolved_at: "",
     done_at: "",
+    human_view: "",
   },
   {
     id: "TB-13",
@@ -390,6 +403,7 @@ export const MOCK_TASKS: BoardTask[] = [
     validating_since: "2026-09-19T04:00:00+00:00",
     resolved_at: "",
     done_at: "",
+    human_view: "",
   },
   {
     id: "TB-14",
@@ -414,6 +428,7 @@ export const MOCK_TASKS: BoardTask[] = [
     validating_since: "2026-09-17T09:30:00+00:00",
     resolved_at: "",
     done_at: "",
+    human_view: "",
   },
   // ME-013 (ADR 0020 Amendment 1): the UNTRUSTED-surface mermaid fixture,
   // restored for the render-smoke FLIP (Ф0 shipped it with an honest skip;
@@ -448,6 +463,7 @@ export const MOCK_TASKS: BoardTask[] = [
     validating_since: "",
     resolved_at: "",
     done_at: "",
+    human_view: "",
   },
 ];
 
@@ -474,6 +490,7 @@ export const MOCK_ARCHIVED_TASK: BoardTask = {
   validating_since: "",
   resolved_at: "",
   done_at: "",
+  human_view: "",
 };
 
 function countByColumn(tasks: readonly BoardTask[]): Record<string, number> {
@@ -503,6 +520,7 @@ export const MOCK_REPORTS: TaskReports = {
       kind: "intermediate",
       agent: "zcode",
       body: "Промежуточный отчёт: разведка завершена, роуты Tasks подтверждены.",
+      human_body: "",
       superseded: false,
       created_at: "2026-09-18T14:20:00+00:00",
     },
@@ -512,6 +530,7 @@ export const MOCK_REPORTS: TaskReports = {
       kind: "final",
       agent: "zcode",
       body: "Финальный отчёт v1: список страниц свёрстан.",
+      human_body: "",
       superseded: true,
       created_at: "2026-09-18T14:25:00+00:00",
     },
@@ -521,6 +540,7 @@ export const MOCK_REPORTS: TaskReports = {
       kind: "final",
       agent: "zcode",
       body: "Финальный отчёт v2: список + страница задачи готовы, правки внесены.",
+      human_body: "",
       superseded: false,
       created_at: "2026-09-18T14:30:00+00:00",
     },

@@ -32,6 +32,7 @@ const TASK: BoardTask = {
   validating_since: "",
   resolved_at: "",
   done_at: "",
+  human_view: "",
 };
 
 /** Recording fetch stub — resolves JSON, captures method/url/headers/body. */

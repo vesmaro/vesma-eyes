@@ -314,34 +314,51 @@ function ArchiveRow({
       </summary>
       <div className="mt-2 space-y-2 border-t border-border-subtle pt-2">
         {/* UI-27 + owner clamp directive: the expanded archive row is a
-         * disclosure — summary and spec are author text and render through
-         * the TextEngine primitive with the measured clamp (long documents
-         * cut at max-h-48 behind «показать полностью», not an unbounded
-         * wall). Plain text keeps the legacy look; the spec keeps its well
-         * box. */}
-        {task.summary ? (
-          <TextEngine
-            text={task.summary}
-            variant="compact"
-            clamp
-            className="text-xs text-foreground-secondary"
-          />
-        ) : (
-          <p className="text-xs text-foreground-secondary">—</p>
-        )}
-        {task.spec ? (
+         * disclosure and renders through the TextEngine primitive with the
+         * measured clamp. ME-078: when the HUMAN channel is present it
+         * replaces the summary+spec pair — human_view IS the composite
+         * document (normalized summary + spec), rendering the pair beside
+         * it would duplicate the summary. Rows with an empty human_view
+         * (pre-backfill history, mock fixtures) keep the raw pair verbatim
+         * («пустой не ломается»). */}
+        {task.human_view ? (
           <div className="rounded-md bg-elevated p-2">
             <TextEngine
-              text={task.spec}
+              text={task.human_view}
               variant="full"
               clamp
-              className="font-mono text-xs text-foreground-secondary"
+              className="text-xs text-foreground-secondary"
             />
           </div>
         ) : (
-          <pre className="overflow-x-auto whitespace-pre-wrap rounded-md bg-elevated p-2 font-mono text-xs text-foreground-secondary">
-            —
-          </pre>
+          <>
+            {/* Raw pair (summary + spec are author text): plain text keeps
+             * the legacy look; the spec keeps its well box. */}
+            {task.summary ? (
+              <TextEngine
+                text={task.summary}
+                variant="compact"
+                clamp
+                className="text-xs text-foreground-secondary"
+              />
+            ) : (
+              <p className="text-xs text-foreground-secondary">—</p>
+            )}
+            {task.spec ? (
+              <div className="rounded-md bg-elevated p-2">
+                <TextEngine
+                  text={task.spec}
+                  variant="full"
+                  clamp
+                  className="font-mono text-xs text-foreground-secondary"
+                />
+              </div>
+            ) : (
+              <pre className="overflow-x-auto whitespace-pre-wrap rounded-md bg-elevated p-2 font-mono text-xs text-foreground-secondary">
+                —
+              </pre>
+            )}
+          </>
         )}
         <p className="flex flex-wrap gap-x-4 text-xs text-foreground-muted">
           <span>

@@ -36,13 +36,24 @@ const MARKDOWN_SPEC = [
   "- [ ] diff is empty",
 ].join("\n");
 
-async function mountArchive(): Promise<HTMLDivElement> {
+// ME-078: the HUMAN channel (server-normalized summary+spec composite),
+// distinct from the raw pair above so the tests pin WHICH channel renders.
+const HUMAN_VIEW = [
+  "### Итог по vesmaro",
+  "",
+  "- [x] имя подтверждено",
+  "- [ ] runbook подписан",
+].join("\n");
+
+async function mountArchive(humanView = ""): Promise<HTMLDivElement> {
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =
     true;
   sessionStorage.setItem(UI_TOKEN_STORAGE_KEY, "dev-token");
   const gateway = new MockAdapter({ latency: false });
   // Patch the page fixture: RB-1 carries markdown author text (the real
-  // shape the engine must render instead of printing raw).
+  // shape the engine must render instead of printing raw). ME-078: the
+  // human channel defaults to "" (pre-backfill wire shape) — the fallback
+  // tests ride the raw pair.
   const baseArchive = gateway.archive.bind(gateway);
   gateway.archive = (async (params: ArchiveParams = {}): Promise<
     Awaited<ReturnType<typeof baseArchive>>
@@ -52,7 +63,12 @@ async function mountArchive(): Promise<HTMLDivElement> {
       ...page,
       items: page.items.map((task) =>
         task.id === "RB-1"
-          ? { ...task, summary: MARKDOWN_SUMMARY, spec: MARKDOWN_SPEC }
+          ? {
+              ...task,
+              summary: MARKDOWN_SUMMARY,
+              spec: MARKDOWN_SPEC,
+              human_view: humanView,
+            }
           : task,
       ),
     };
@@ -186,5 +202,40 @@ describe("TaskArchivePage expanded row × TextEngine clamp", () => {
       if (savedOffset) Object.defineProperty(HTMLElement.prototype, "offsetHeight", savedOffset);
       if (savedClient) Object.defineProperty(HTMLElement.prototype, "clientHeight", savedClient);
     }
+  });
+});
+
+/**
+ * ME-078 two-channel render on the archive surface: a non-empty human_view
+ * REPLACES the raw summary+spec pair (human_view is the composite document —
+ * the pair would duplicate the summary); an empty one keeps the raw pair.
+ */
+describe("TaskArchivePage × ME-078 human channel", () => {
+  it("human view replaces the summary+spec pair without duplicating the summary", async () => {
+    const el = await mountArchive(HUMAN_VIEW);
+    const details = el.querySelector("details");
+    expect(details, "archive row disclosure renders").not.toBeNull();
+    await waitFor("human view heading", () =>
+      Boolean([...details!.querySelectorAll("h3")].find(
+        (heading) => heading.textContent === "Итог по vesmaro",
+      )),
+    );
+    // Exactly ONE rendering of the summary content (the human view carries
+    // it; the raw pair must stay out).
+    expect(details!.textContent).toContain("имя подтверждено");
+    expect(details!.textContent).not.toContain("Acceptance");
+    expect(details!.textContent).not.toContain("свободен");
+  });
+
+  it("empty human view keeps the raw summary+spec pair verbatim", async () => {
+    const el = await mountArchive("");
+    const details = el.querySelector("details");
+    await waitFor("raw spec heading", () =>
+      Boolean([...details!.querySelectorAll("h2")].find(
+        (heading) => heading.textContent === "Acceptance",
+      )),
+    );
+    expect(details!.querySelector("strong")?.textContent).toBe("vesmaro");
+    expect(details!.textContent).not.toContain("Итог по vesmaro");
   });
 });

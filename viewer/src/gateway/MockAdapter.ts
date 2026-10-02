@@ -774,6 +774,7 @@ export class MockAdapter implements MemoryGateway {
       // stamps stay empty (honest unknown) — the real server fills them.
       resolved_at: "",
       done_at: "",
+      human_view: "",
     };
     this.tasks.push(task);
     this.logActivity("task.created", task);

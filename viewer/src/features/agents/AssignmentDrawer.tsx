@@ -13,6 +13,7 @@ import { withReturn } from "@/lib/returnParams";
 import { useI18n, useT } from "@/i18n";
 import type { TranslationKey } from "@/i18n";
 import { formatTaskDate } from "@/features/tasks/taskStatus";
+import { humanOrRaw } from "@/features/tasks/humanChannel";
 import { useTaskReports } from "@/features/tasks/useTasks";
 import {
   ACTIVE_ASSIGNMENT_STATES,
@@ -181,9 +182,17 @@ export function AssignmentDrawer({
                * text — through the TextEngine primitive with the measured
                * clamp. Replaces the hard 4-line CSS cut: long finals get the
                * inline «показать полностью» expand instead of an unreadable
-               * truncation. */
+               * truncation. ME-078: the HUMAN channel (human_body) renders;
+               * empty falls back to the raw body. Context check: this drawer
+               * is the OWNER's peek (spec §1.1 — «подглядывание», UI mutations
+               * only) — the model channel reads the server-side raw
+               * spec_snapshot, not this surface. */
               <div className="mt-1 rounded-md border border-border-subtle bg-well p-2 text-xs text-foreground-secondary">
-                <TextEngine text={lastFinal.body} variant="compact" clamp />
+                <TextEngine
+                  text={humanOrRaw(lastFinal.human_body, lastFinal.body)}
+                  variant="compact"
+                  clamp
+                />
               </div>
             ) : (
               <p className="mt-1 text-xs text-foreground-muted">
