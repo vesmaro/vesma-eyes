@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Any
 
 from .security import mask_secrets
+from .textnorm import normalize as _normalize_text
 
 # WF-1: board columns in display order — two pre-validation lanes
 # (backlog, validating) join the kanban left of `open`
@@ -1310,6 +1311,18 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+def _human_view(summary: str, spec: str) -> str:
+    """ME-078 human-channel projection of a task: normalized summary+spec.
+
+    Pure derived cache over the RAW channel (``summary``/``spec`` stay the
+    single source of truth the model channel reads verbatim — the A2
+    assignment-snapshot invariant is untouched). Empty parts drop out; the
+    deterministic text normalizer (server/textnorm.py) does the rest.
+    """
+    parts = [p for p in ((summary or "").strip(), (spec or "").strip()) if p]
+    return _normalize_text("\n\n".join(parts)) if parts else ""
+
+
 def _loads(raw: str) -> list[Any]:
     try:
         return json.loads(raw)
@@ -1503,6 +1516,26 @@ class Store:
             db.execute(
                 "ALTER TABLE tasks "
                 "ADD COLUMN done_at TEXT NOT NULL DEFAULT ''")
+        # ME-078 (two-channel render): derived human views. The RAW channel
+        # (spec / report body) stays the single source of truth; these
+        # columns are pure recomputable caches written ONLY at the raw
+        # write paths (create_task / update_task / add_report) and by the
+        # one-shot boot backfill (backfill_human_views). Additive ALTER
+        # with '' DEFAULT — pre-ME-078 rows stay blank until the backfill
+        # fills them; NO SEED_VERSION bump (priority/resolved_at precedent:
+        # the seed-version check wipes all tasks).
+        cols = {r["name"] for r in db.execute(
+            "PRAGMA table_info(tasks)").fetchall()}
+        if "human_view" not in cols:
+            db.execute(
+                "ALTER TABLE tasks "
+                "ADD COLUMN human_view TEXT NOT NULL DEFAULT ''")
+        rcols = {r["name"] for r in db.execute(
+            "PRAGMA table_info(task_reports)").fetchall()}
+        if "human_body" not in rcols:
+            db.execute(
+                "ALTER TABLE task_reports "
+                "ADD COLUMN human_body TEXT NOT NULL DEFAULT ''")
         # ARCH-9: denormalized topics on assignments (Amd 2 §9). Additive
         # ALTER for pre-ARCH-9 databases — the '[]' DEFAULT covers existing
         # rows; new rows are filled at creation. executors and the partial
@@ -1763,6 +1796,10 @@ class Store:
         # WF-1: a task born directly in the validation lane starts its 24h
         # clock immediately (the sweep must not skip it for an empty stamp).
         validating_since = now if col == "validating" else ""
+        # ME-078: human view is computed HERE, at the raw write path — the
+        # spec/summary columns keep the verbatim raw text (model channel).
+        human_view = _human_view(payload.get("summary", ""),
+                                 payload.get("spec", ""))
         with self._lock, self._conn() as db:
             pos = db.execute(
                 "SELECT COALESCE(MAX(position)+1, 0) AS p FROM tasks WHERE col=?",
@@ -1773,8 +1810,8 @@ class Store:
                        (id, col, status, position, title, summary, spec,
                         agents, specialists, env, project, memory_ids,
                         mnemos_tags, priority, validating_since,
-                        created_at, updated_at)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                        human_view, created_at, updated_at)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
                     task_id, col, status, pos, payload["title"],
                     payload.get("summary", ""), payload.get("spec", ""),
@@ -1784,6 +1821,7 @@ class Store:
                     json.dumps(payload.get("memory_ids", [])),
                     json.dumps(payload.get("mnemos_tags", [])),
                     priority, validating_since,
+                    human_view,
                     now, now,
                 ),
             )
@@ -1912,7 +1950,8 @@ class Store:
         fields["updated_at"] = _now()
         with self._lock, self._conn() as db:
             row = db.execute(
-                "SELECT created_at FROM tasks WHERE id=?", (task_id,)
+                "SELECT created_at, summary, spec FROM tasks WHERE id=?",
+                (task_id,),
             ).fetchone()
             if row is None:
                 return None
@@ -1924,12 +1963,23 @@ class Store:
                     and _age_seconds(row["created_at"]) > EDIT_WINDOW_SECONDS):
                 raise TaskLockedError(
                     f"task {task_id} is older than {EDIT_WINDOW_SECONDS}s")
+            # ME-078: a patch touching either raw channel field recomputes
+            # the derived human view from the RESULTING summary+spec (the
+            # patch may carry only one of the pair). The derived column is
+            # NOT owner-authored content — the audit trail below records
+            # only the fields the caller actually patched.
+            patched = sorted(fields)
+            if "summary" in fields or "spec" in fields:
+                fields["human_view"] = _human_view(
+                    fields.get("summary", row["summary"]),
+                    fields.get("spec", row["spec"]),
+                )
             sets = ", ".join(f"{k}=?" for k in fields)
             db.execute(
                 f"UPDATE tasks SET {sets} WHERE id=?",  # noqa: S608 — keys from a fixed allow-list
                 (*fields.values(), task_id),
             )
-            payload: dict[str, Any] = {"fields": sorted(fields)}
+            payload: dict[str, Any] = {"fields": patched}
             if force:
                 # forced edits must stay auditable: the override lands in
                 # the same task.updated event as the field list
@@ -2605,9 +2655,10 @@ class Store:
                         superseded_ids,
                     )
             cur = db.execute(
-                "INSERT INTO task_reports (task_id, kind, agent, body, superseded, created_at) "
-                "VALUES (?,?,?,?,0,?)",
-                (task_id, kind, agent, text, now),
+                "INSERT INTO task_reports (task_id, kind, agent, body, human_body, superseded, created_at) "
+                "VALUES (?,?,?,?,?,0,?)",
+                (task_id, kind, agent, text,
+                 _normalize_text(text), now),
             )
             rid = int(cur.lastrowid)
             payload: dict[str, Any] = {
@@ -2617,7 +2668,8 @@ class Store:
                 payload["identity_mismatch"] = True
             self._log(db, "task.report", task_id, payload)
         report = {"id": rid, "task_id": task_id, "kind": kind, "agent": agent,
-                  "body": text, "superseded": False, "created_at": now}
+                  "body": text, "human_body": _normalize_text(text),
+                  "superseded": False, "created_at": now}
         return report, superseded_ids
 
     def list_reports(self, task_id: str) -> list[dict[str, Any]] | None:
@@ -2628,7 +2680,8 @@ class Store:
                           (task_id,)).fetchone() is None:
                 return None
             rows = [dict(r) for r in db.execute(
-                "SELECT id, task_id, kind, agent, body, superseded, created_at "
+                "SELECT id, task_id, kind, agent, body, human_body, "
+                "superseded, created_at "
                 "FROM task_reports WHERE task_id=? ORDER BY id ASC",
                 (task_id,),
             ).fetchall()]
@@ -2673,7 +2726,8 @@ class Store:
         cond = f" WHERE {' AND '.join(where)}" if where else ""
         with self._lock, self._conn() as db:
             rows = [dict(r) for r in db.execute(
-                "SELECT id, task_id, kind, agent, body, superseded, created_at "
+                "SELECT id, task_id, kind, agent, body, human_body, "
+                "superseded, created_at "
                 f"FROM task_reports{cond} ORDER BY id DESC LIMIT ?",  # noqa: S608 — fragments from a fixed allow-list, values bound
                 (*params, limit),
             ).fetchall()]
@@ -5931,6 +5985,9 @@ class Store:
     # ------------------------------------------------- reports backfill
     BACKFILL_META_KEY = "reports_backfill"
     BACKFILL_AGENT = "history-backfill"
+    # ME-078: one-shot human-view backfill flag; the value is the
+    # textnorm version the rows were computed with.
+    HUMAN_VIEW_META_KEY = "human_view_backfill"
 
     def _backfill_body(self, task: dict[str, Any], evs: list[dict[str, Any]],
                        run_date: str) -> str:
@@ -6025,6 +6082,64 @@ class Store:
                 (self.BACKFILL_META_KEY,),
             )
         return created
+
+    def backfill_human_views(self) -> int:
+        """One-shot ME-078 backfill of the derived human-channel columns.
+
+        Recomputes ``tasks.human_view`` and ``task_reports.human_body``
+        with the CURRENT server/textnorm version for every row — raw
+        write paths did not exist (or a different normalizer version ran)
+        when some rows were written. A row whose stored value already
+        matches the recomputed one is NOT rewritten ("строка с текущей
+        версией не трогается").
+
+        Idempotency: the ``human_view_backfill`` board_meta flag stores
+        the TEXTNORM_VERSION a completed run used; a flag carrying the
+        current version makes the run a no-op, a stale/missing flag (a
+        normalizer bump, an operator reset) reruns the recompute.
+        Everything happens in a single write transaction, so concurrent
+        boots cannot double-run.
+
+        Returns the number of rows actually rewritten. Pure derived-cache
+        recompute: raw columns are never touched.
+        """
+        from .textnorm import TEXTNORM_VERSION
+
+        updated = 0
+        with self._lock, self._conn() as db:
+            armed = db.execute(
+                "SELECT value FROM board_meta WHERE key=?",
+                (self.HUMAN_VIEW_META_KEY,),
+            ).fetchone()
+            if armed is not None and armed["value"] == str(TEXTNORM_VERSION):
+                return 0
+            for row in db.execute(
+                "SELECT id, summary, spec, human_view FROM tasks"
+            ).fetchall():
+                hv = _human_view(row["summary"], row["spec"])
+                if hv != (row["human_view"] or ""):
+                    db.execute(
+                        "UPDATE tasks SET human_view=? WHERE id=?",
+                        (hv, row["id"]),
+                    )
+                    updated += 1
+            for row in db.execute(
+                "SELECT id, body, human_body FROM task_reports"
+            ).fetchall():
+                hb = _normalize_text(row["body"])
+                if hb != (row["human_body"] or ""):
+                    db.execute(
+                        "UPDATE task_reports SET human_body=? WHERE id=?",
+                        (hb, row["id"]),
+                    )
+                    updated += 1
+            # arm the marker only after a completed run; the value pins
+            # the normalizer version so a future bump reruns the sweep
+            db.execute(
+                "INSERT OR REPLACE INTO board_meta (key, value) VALUES (?,?)",
+                (self.HUMAN_VIEW_META_KEY, str(TEXTNORM_VERSION)),
+            )
+        return updated
 
     # -------------------------------------------------------- profile cache
     def get_profile_cache(self, specialist: str) -> dict[str, Any] | None:
