@@ -26,3 +26,4 @@
 2026-10-01T18:39:54+0300 | abyss@core-51 | deploy | rev 93>94 | image 1.53.0 | chart 1.53.0 | HEAD 2f3b4ed | allow-drift: image.repository realignment per af98d91 (residue audit P1): korrnals -> vesmaro, ratified in main; ghcr pull canary 2/2 token 200 on new repo, manifest 404 = 1.53.0 tag not pushed yet (pre-deploy state)
 2026-10-01T20:44:20+0300 | abyss@core-51 | deploy | rev 94>95 | image 1.54.0 | chart 1.54.0 | HEAD 9ede2e8 | auto-waived: image.tag drift = previous release (deployed-revision appVersion)
 2026-10-02T01:58:08+0300 | abyss@core-51 | deploy | rev 95>96 | image 1.55.0 | chart 1.55.0 | HEAD 4cc78d2 | auto-waived: image.tag drift = previous release (deployed-revision appVersion)
+2026-10-02T20:29:30+0300 | abyss@core-51 | deploy | rev 96>97 | image 1.56.0 | chart 1.56.0 | HEAD deffa85 | auto-waived: image.tag drift = previous release (deployed-revision appVersion)
