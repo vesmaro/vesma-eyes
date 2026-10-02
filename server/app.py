@@ -525,12 +525,108 @@ def _events_retention_once() -> None:
             swept["aged"], swept["capped"])
 
 
+# ------------------------------------- ME-076 archive TTL pass (auto-archive)
+# Owner directive 2026-10-02: «завершённые через 3 дня уплывали в Архив…
+# чтобы канбан не засорялся; при необходимости восстановить и в работу
+# обратно». The pass rides the SAME housekeeping tick as the WF-1 sweep
+# and the UI-28 retention (one tick owns all board housekeeping) with TWO
+# deliberately asymmetric rules:
+# - ``done`` (owner-validated) older than the TTL → archived AUTOMATICALLY
+#   via store.archive_task (reports/tags/history survive; the task.archived
+#   event rides the SSE bus; «Вернуть из архива» restores the card);
+# - ``resolved`` (executor finished, owner has NOT validated) is NEVER
+#   moved silently — the pass only sends a reminder notification (deduped
+#   per task by the exact message, so one reminder per TTL episode).
+# Config: VESMARO_AUTO_ARCHIVE=1/0 (default 1) and
+# VESMARO_ARCHIVE_TTL_DAYS (default 3; fractional days allowed). Bad
+# values fail safe to the defaults with a warning — a config typo must
+# neither disable the pass silently nor race the archive.
+AUTO_ARCHIVE_ENABLED_DEFAULT = True
+AUTO_ARCHIVE_TTL_DAYS_DEFAULT = 3.0
+_auto_archive_log = logging.getLogger("vesmaro.auto-archive")
+
+
+def _auto_archive_settings() -> tuple[bool, float]:
+    """(enabled, ttl_days) read PER PASS — monkeypatch-friendly for tests
+    and config changes apply on the next tick without a restart."""
+    enabled_raw = (os.environ.get("VESMARO_AUTO_ARCHIVE", "") or "").strip()
+    enabled = (enabled_raw != "0") if enabled_raw else AUTO_ARCHIVE_ENABLED_DEFAULT
+    ttl_raw = (os.environ.get("VESMARO_ARCHIVE_TTL_DAYS", "") or "").strip()
+    if not ttl_raw:
+        return enabled, AUTO_ARCHIVE_TTL_DAYS_DEFAULT
+    try:
+        ttl_days = float(ttl_raw)
+    except ValueError:
+        _auto_archive_log.warning(
+            "VESMARO_ARCHIVE_TTL_DAYS=%r is not a number — using default %g d",
+            ttl_raw, AUTO_ARCHIVE_TTL_DAYS_DEFAULT)
+        return enabled, AUTO_ARCHIVE_TTL_DAYS_DEFAULT
+    if ttl_days <= 0:
+        _auto_archive_log.warning(
+            "VESMARO_ARCHIVE_TTL_DAYS=%r must be positive — using default %g d",
+            ttl_raw, AUTO_ARCHIVE_TTL_DAYS_DEFAULT)
+        return enabled, AUTO_ARCHIVE_TTL_DAYS_DEFAULT
+    return enabled, ttl_days
+
+
+def _auto_archive_once(now: datetime | None = None) -> dict[str, int]:
+    """One archive-TTL pass — no sleeps, directly testable (the
+    reaper-tick pattern). Returns {archived, reminded, disabled}; exceptions
+    propagate to the tick's housekeeping try/except."""
+    enabled, ttl_days = _auto_archive_settings()
+    if not enabled:
+        return {"archived": 0, "reminded": 0, "disabled": 1}
+    cutoff = ((now or datetime.now(timezone.utc))
+              - timedelta(seconds=ttl_days * 86400.0)).isoformat(timespec="seconds")
+    ttl_label = f"{ttl_days:g} д"
+    archived = 0
+    for row in store.stale_done_tasks(cutoff):
+        if not store.archive_task(row["id"], actor="machine:auto-archive"):
+            continue  # raced out (moved/archived) between scan and write
+        archived += 1
+        _notify_and_broadcast(
+            "work", f"{row['id']}: в архиве (авто)",
+            f"в «Готово» дольше {ttl_label} — канбан чистится автоматически; "
+            "вернуть: «Вернуть из архива» в архиве",
+            row["id"],
+            {"kind": "task.archived", "task_id": row["id"],
+             "actor": "machine:auto-archive"})
+        _auto_archive_log.info(
+            "auto-archived task=%s done_at=%s", row["id"], row.get("done_at", ""))
+    reminded = 0
+    for row in store.stale_resolved_tasks(cutoff):
+        message = (f"задача завершена исполнителем дольше {ttl_label} назад и "
+                   "ждёт вашей проверки — подтвердите (→ Готово) или верните "
+                   "исполнителю; без вашей валидации в архив такие задачи "
+                   "автоматически не убираются")
+        if store.notification_exists(row["id"], message):
+            continue
+        _notify_and_broadcast(
+            "work", f"{row['id']}: ждёт проверки дольше {ttl_label}",
+            message, row["id"])
+        reminded += 1
+        _auto_archive_log.info(
+            "resolved reminder task=%s resolved_at=%s",
+            row["id"], row.get("resolved_at", ""))
+    if archived or reminded:
+        _auto_archive_log.info(
+            "auto-archive pass: archived=%d reminded=%d", archived, reminded)
+    return {"archived": archived, "reminded": reminded, "disabled": 0}
+
+
 def _validation_sweep_once() -> int:
     """One synchronous sweep pass — no sleeps, directly testable (the
     reaper-tick pattern). Returns the number of newly flagged tasks
-    (the UI-28 events-retention pass runs alongside but does NOT count
-    toward the return value — its contract is the WF-1 flag count)."""
+    (the UI-28 events-retention pass and the ME-076 archive-TTL pass run
+    alongside but do NOT count toward the return value — its contract is
+    the WF-1 flag count)."""
     _events_retention_once()
+    # ME-076: archive-TTL housekeeping on the same tick; its failure is
+    # logged and never delays the WF-1 flagging pass below.
+    try:
+        _auto_archive_once()
+    except Exception:  # noqa: BLE001 — housekeeping must never break the tick
+        _auto_archive_log.exception("auto-archive pass failed")
     flagged = 0
     for row in store.stale_validating_tasks():
         task = store.mark_validation_timeout(row["id"])
@@ -741,9 +837,11 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
 
 COLUMN_RU = {
+    # ME-077: owner-facing display names — kept in sync with the kanban
+    # («В очереди» / «Ждёт проверки»); the WIRE column ids never change.
     "backlog": "бэклог", "validating": "на валидации",
-    "open": "открыто", "in-progress": "в работе", "blocked": "блокировано",
-    "resolved": "решено", "done": "готово",
+    "open": "в очереди", "in-progress": "в работе", "blocked": "блокировано",
+    "resolved": "ждёт проверки", "done": "готово",
 }
 
 # /docs belongs to the SPA documentation section when the viewer owns the
@@ -904,6 +1002,7 @@ _DEVICE_GRANT_ROUTES: dict[str, tuple[tuple[str, str], ...]] = {
     "inbox": (
         ("POST", "/api/tasks/inbox/refresh"),
         ("POST", "/api/tasks/inbox/*/adopt"),
+        ("POST", "/api/tasks/inbox/adopt-batch"),  # ME-073 (same granule; the device budget still caps it)
     ),
     # notification state (mark-read)
     "notifications": (
@@ -1162,6 +1261,8 @@ class TaskOut(_ApiModel):
     priority: str                   # BE-12: priority dictionary value — store always returns it post-migration
     archived_from: str = ""         # BE-11b: pre-archive column
     validating_since: str = ""      # WF-1: 24h clock start (ISO) while col=validating; '' off-lane
+    resolved_at: str = ""           # ME-074: entered resolved (executor finished); '' = unknown (pre-ME-074 row)
+    done_at: str = ""               # ME-074: entered done (owner accepted); '' = unknown (pre-ME-074 row)
 
 
 class BoardOut(_ApiModel):
@@ -2206,16 +2307,52 @@ async def health() -> dict[str, Any]:
     }
 
 
+_DAY_BOUND_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _parse_day_bound(value: str, *, end: bool = False) -> str:
+    """ME-075: one listing date bound. ``YYYY-MM-DD`` is a UTC calendar day
+    (``end`` widens it to 23:59:59 so the upper bound is inclusive); a full
+    ISO datetime is used verbatim (naive → UTC); '' stays '' (no bound).
+    Garbage raises 422 — a silently ignored filter would lie about what it
+    shows."""
+    v = (value or "").strip()
+    if not v:
+        return ""
+    if _DAY_BOUND_RE.fullmatch(v):
+        return f"{v}T23:59:59+00:00" if end else f"{v}T00:00:00+00:00"
+    try:
+        dt = datetime.fromisoformat(v.replace("Z", "+00:00"))
+    except ValueError:
+        raise HTTPException(
+            422,
+            f"invalid date: {value!r} (expected YYYY-MM-DD or ISO datetime)",
+        ) from None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc).isoformat(timespec="seconds")
+
+
 @app.get("/api/board")
-async def board(status: str = "") -> BoardOut:
+async def board(status: str = "", created_from: str = "", created_to: str = "",
+                completed_from: str = "", completed_to: str = "") -> BoardOut:
     """Board projection; BE-10 optional ``?status=`` filter over the
-    workflow dictionary (422 on unknown values). ``counts`` always describe
-    the whole board, not the filtered view."""
+    workflow dictionary (422 on unknown values). ME-075 date bounds
+    (additive, inclusive): ``created_from/created_to`` bound поступление
+    (``created_at``), ``completed_from/completed_to`` bound завершение —
+    the first completion stamp (``resolved_at`` falling back to
+    ``done_at``). ``counts`` always describe the whole board, not the
+    filtered view."""
     if status:
         if status not in TASK_STATUSES:
             raise HTTPException(422, f"invalid status: {status}")
-        return store.board(status=status)
-    return store.board()
+    return store.board(
+        status=status or None,
+        created_from=_parse_day_bound(created_from),
+        created_to=_parse_day_bound(created_to, end=True),
+        completed_from=_parse_day_bound(completed_from),
+        completed_to=_parse_day_bound(completed_to, end=True),
+    )
 
 
 @app.post("/api/tasks", status_code=201)
@@ -6244,28 +6381,25 @@ async def _sync_inbox_edits_revision(
     return None, detail
 
 
-@app.post("/api/tasks/inbox/{memory_id}/adopt", status_code=201)
-async def tasks_inbox_adopt(memory_id: str, request: Request) -> TaskOut:
-    """Adopt a mirrored task:queue record as a NATIVE board task.
+class _AdoptConflict(Exception):
+    """409 carrier for the adopt core (ME-073): the single-adopt route
+    keeps its exact historical wire shape ({"task_id", "detail"} at the
+    top level); the batch route folds it into its per-record report."""
 
-    The memory content is never copied — the task links it via memory_ids
-    (SEC-4). Owner edits (UI-25 overlay) win over the mirror fields, and a
-    task created from edited fields links an EDITED revision memory written
-    back to the source store (best-effort; a failed sync is logged and
-    notified, never a failed adopt). 409 with the existing ``task_id`` on
-    double adoption; 404 when the mirror row is unknown."""
-    _guard_write(request, classes=("ui",))
+    def __init__(self, task_id: str) -> None:
+        super().__init__(task_id)
+        self.task_id = task_id
+
+
+async def _adopt_inbox_core(memory_id: str, actor: str) -> dict[str, Any]:
+    """The single adopt flow shared by POST /adopt and the ME-073 batch:
+    404 unknown mirror row, ``_AdoptConflict`` on double adoption, 422 on a
+    garbage mirror row. Returns the created native task."""
     rec = store.get_inbox_item(memory_id)
     if rec is None:
         raise HTTPException(404, "memory not found in task inbox")
     if rec.get("adopted_task_id"):
-        return JSONResponse(
-            status_code=409,
-            content={
-                "task_id": rec["adopted_task_id"],
-                "detail": "inbox record already adopted",
-            },
-        )
+        raise _AdoptConflict(rec["adopted_task_id"])
     edits = field_edits(parse_edits(rec.get("edits")))
     # Overlay semantics: a CLEARED summary ('') falls back to the standard
     # provenance line — the adopt text is never empty on a board task.
@@ -6293,7 +6427,7 @@ async def tasks_inbox_adopt(memory_id: str, request: Request) -> TaskOut:
             "specialists": [specialist] if specialist else [],
             "memory_ids": [memory_id] + ([revision_id] if revision_id else []),
             "mnemos_tags": ["task-queue-import"],
-        }, actor=_sse_actor(request))
+        }, actor=actor)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
     if not store.mark_inbox_adopted(memory_id, task["id"]):
@@ -6301,7 +6435,7 @@ async def tasks_inbox_adopt(memory_id: str, request: Request) -> TaskOut:
             "adopt: mirror row %s vanished mid-adopt (native task %s kept)",
             memory_id, task["id"])
     _notify_task_created(
-        task, _sse_actor(request),
+        task, actor,
         provenance=(f"принята из task:queue ({rec['server']}, "
                     f"память {memory_id[:8]})"),
     )
@@ -6310,9 +6444,95 @@ async def tasks_inbox_adopt(memory_id: str, request: Request) -> TaskOut:
             "work", f"{task['id']}: правка НЕ синхронизирована в память",
             sync_error[:200], task["id"],
             {"kind": "task.updated", "task": task,
-             "actor": _sse_actor(request)},
+             "actor": actor},
         )
     return task
+
+
+@app.post("/api/tasks/inbox/{memory_id}/adopt", status_code=201)
+async def tasks_inbox_adopt(memory_id: str, request: Request) -> TaskOut:
+    """Adopt a mirrored task:queue record as a NATIVE board task.
+
+    The memory content is never copied — the task links it via memory_ids
+    (SEC-4). Owner edits (UI-25 overlay) win over the mirror fields, and a
+    task created from edited fields links an EDITED revision memory written
+    back to the source store (best-effort; a failed sync is logged and
+    notified, never a failed adopt). 409 with the existing ``task_id`` on
+    double adoption; 404 when the mirror row is unknown."""
+    _guard_write(request, classes=("ui",))
+    try:
+        task = await _adopt_inbox_core(memory_id, _sse_actor(request))
+    except _AdoptConflict as exc:
+        return JSONResponse(
+            status_code=409,
+            content={
+                "task_id": exc.task_id,
+                "detail": "inbox record already adopted",
+            },
+        )
+    return task
+
+
+# ME-073 «Принять все»: one call for the accumulated inbox. Per-record
+# isolation is the CONTRACT — a failure on one record never aborts the
+# rest; every record gets its own result row and the owner sees the
+# per-record report in the toast. Cap: the inbox is a human-scale mirror;
+# 100 records per call is far above any real backlog.
+_ADOPT_BATCH_MAX = 100
+
+
+class AdoptBatchBody(_ApiModel):
+    memory_ids: list[str]
+
+
+class AdoptBatchItem(_ApiModel):
+    memory_id: str
+    ok: bool
+    task_id: str = ""
+    detail: str = ""
+
+
+class AdoptBatchOut(_ApiModel):
+    results: list[AdoptBatchItem]
+    adopted: int
+    failed: int
+
+
+@app.post("/api/tasks/inbox/adopt-batch")
+async def tasks_inbox_adopt_batch(body: AdoptBatchBody,
+                                  request: Request) -> AdoptBatchOut:
+    """Adopt a batch of inbox records in one call (ME-073 «Принять все»).
+
+    Order follows the request list; a duplicate inside one batch naturally
+    conflicts on its second occurrence (409 row, the first wins). HTTP 200
+    even with failures — the response body IS the per-record report
+    (``adopted`` / ``failed`` counters + rows)."""
+    _guard_write(request, classes=("ui",))
+    ids = [mid for mid in body.memory_ids
+           if isinstance(mid, str) and mid.strip()]
+    if not ids or len(ids) > _ADOPT_BATCH_MAX:
+        raise HTTPException(
+            422, f"memory_ids must contain 1..{_ADOPT_BATCH_MAX} ids")
+    actor = _sse_actor(request)
+    results: list[AdoptBatchItem] = []
+    for memory_id in ids:
+        try:
+            task = await _adopt_inbox_core(memory_id, actor)
+        except _AdoptConflict as exc:
+            results.append(AdoptBatchItem(
+                memory_id=memory_id, ok=False, task_id=exc.task_id,
+                detail="inbox record already adopted"))
+            continue
+        except HTTPException as exc:
+            detail = exc.detail if isinstance(exc.detail, str) else "adopt failed"
+            results.append(AdoptBatchItem(
+                memory_id=memory_id, ok=False, detail=str(detail)[:300]))
+            continue
+        results.append(AdoptBatchItem(
+            memory_id=memory_id, ok=True, task_id=task["id"]))
+    adopted = sum(1 for r in results if r.ok)
+    return AdoptBatchOut(results=results, adopted=adopted,
+                         failed=len(results) - adopted)
 
 
 # -------------------------------------------------------- specialist profile
