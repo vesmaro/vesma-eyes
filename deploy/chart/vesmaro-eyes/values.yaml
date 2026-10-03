@@ -13,7 +13,7 @@ image:
   repository: ghcr.io/vesmaro/vesma-eyes
   # Explicit tag synced from server/app.py by scripts/sync-version.sh.
   # If left empty, .Chart.AppVersion is used.
-  tag: "1.60.0"
+  tag: "1.60.1"
   pullPolicy: Always
 
 # Both registry pull secrets are listed on purpose (ghcr-403 incident,
