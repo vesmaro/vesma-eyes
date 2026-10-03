@@ -12,6 +12,7 @@ import { ToastProvider } from "@/components/Toast/ToastProvider";
 import { ToastViewport } from "@/components/Toast/ToastViewport";
 import { UiTokenProvider } from "@/features/ui-token/UiTokenProvider";
 import { UiTokenSlot } from "@/features/ui-token/UiTokenSlot";
+import { useUiToken } from "@/features/ui-token/UiTokenContext";
 import { LoginDialog } from "@/features/ui-token/LoginDialog";
 import { Sidebar } from "@/layout/Sidebar";
 import { HotkeysProvider } from "@/layout/Hotkeys";
@@ -115,6 +116,26 @@ function buttonByText(scope: ParentNode, text: string): HTMLButtonElement | unde
     Array.from(scope.querySelectorAll<HTMLButtonElement>("button")).find((button) =>
       button.textContent?.includes(text),
     ) ?? undefined
+  );
+}
+
+/**
+ * ME-080: the TopBar accent «Sign in» no longer opens the token window —
+ * it LINKS to /auth (login+password is the human front door). The manual
+ * token window lives on behind the gate's openLogin (the Kora section's
+ * CTA calls it) — this probe drives exactly that path so the manual
+ * window walks below stay walks of the REAL machine.
+ */
+function OpenLoginProbe(): React.ReactElement {
+  const { openLogin } = useUiToken();
+  return (
+    <button
+      type="button"
+      data-testid="probe-open-login"
+      onClick={() => openLogin()}
+    >
+      probe: open the manual window
+    </button>
   );
 }
 
@@ -285,7 +306,7 @@ describe("login flow regression (owner repro)", () => {
     expect(container.textContent).toContain("Existing task");
   });
 
-  it("manual «Sign in» opens the same window with NO contextual line; login stores the token, no mutation fires", { timeout: 20000 }, async () => {
+  it("manual «Sign in» is a LINK to /auth (ME-080 front door); the manual token window rides openLogin with NO contextual line; login stores the token, no mutation fires", { timeout: 20000 }, async () => {
     (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
     const fetchImpl = vi.fn(
@@ -327,6 +348,9 @@ describe("login flow regression (owner repro)", () => {
                     </HotkeysProvider>
                     {/* The TopBar sign-in entry (board mode). */}
                     <UiTokenSlot />
+                    {/* The manual-window driver (ME-080: openLogin is no
+                     * longer the TopBar button's business). */}
+                    <OpenLoginProbe />
                     {/* The visible toast region (same placement as Shell). */}
                     <ToastViewport />
                   </MemoryRouter>
@@ -338,18 +362,20 @@ describe("login flow regression (owner repro)", () => {
       );
     });
 
-    // No token yet: no window, the accent «Sign in» is in the bar, and the
-    // footer states the v6 anonymous word (07k §1.2, union И1).
+    // No token yet: no window; the accent «Sign in» is a LINK to /auth
+    // carrying the current location as return (login+password is the human
+    // front door; ME-080) — NOT a button that opens the token window.
     expect(document.querySelector('[data-testid="login-token-value"]')).toBeNull();
-    const signIn = Array.from(container.querySelectorAll("button")).find((button) =>
-      button.textContent?.trim() === "Sign in",
-    );
+    const signIn = container.querySelector<HTMLAnchorElement>('a[data-testid="topbar-sign-in"]');
     expect(signIn).toBeDefined();
+    expect(signIn?.getAttribute("href")).toBe("/auth?return=%2Ftasks");
     expect(container.textContent).toContain("anonymous");
 
-    // Click «Sign in»: the window opens WITHOUT the queued-action line.
+    // The manual token window opens through openLogin (the Kora CTA's path):
+    // WITHOUT the queued-action line.
+    const probe = document.querySelector('[data-testid="probe-open-login"]') as HTMLButtonElement;
     await act(async () => {
-      signIn?.click();
+      probe.click();
     });
     const tokenInput = document.querySelector('[data-testid="login-token-value"]') as HTMLInputElement | null;
     expect(tokenInput).toBeDefined();
@@ -936,11 +962,11 @@ describe("owner session (ADR 0014): boot hydration + server-side logout", () => 
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
     });
-    expect(
-      Array.from(container.querySelectorAll("button")).some(
-        (button) => button.textContent?.trim() === "Sign in",
-      ),
-    ).toBe(true);
+    // ME-080: the anonymous slot renders the accent «Sign in» as the /auth
+    // LINK (login+password is the human front door), not a window button.
+    const signInLink = container.querySelector<HTMLAnchorElement>('a[data-testid="topbar-sign-in"]');
+    expect(signInLink?.textContent?.trim()).toBe("Sign in");
+    expect(signInLink?.getAttribute("href")).toBe("/auth?return=%2Ftasks");
   });
 
   it("logout fires DELETE /api/auth/ui-token and flips to signed-out only after it", { timeout: 20000 }, async () => {
@@ -967,6 +993,7 @@ describe("owner session (ADR 0014): boot hydration + server-side logout", () => 
                 <UiTokenProvider>
                   <MemoryRouter initialEntries={["/tasks"]}>
                     <UiTokenSlot />
+                    <OpenLoginProbe />
                     <ToastViewport />
                   </MemoryRouter>
                 </UiTokenProvider>
@@ -977,12 +1004,11 @@ describe("owner session (ADR 0014): boot hydration + server-side logout", () => 
       );
     });
 
-    // Sign in through the real verify flow.
-    const signIn = Array.from(container.querySelectorAll("button")).find(
-      (button) => button.textContent?.trim() === "Sign in",
-    );
+    // Sign in through the real verify flow — the manual window behind
+    // openLogin (ME-080: the TopBar accent is the /auth link now).
+    const probe = document.querySelector('[data-testid="probe-open-login"]') as HTMLButtonElement;
     await act(async () => {
-      signIn?.click();
+      probe.click();
     });
     const tokenInput = document.querySelector('[data-testid="login-token-value"]') as HTMLInputElement;
     await act(async () => {
@@ -1012,10 +1038,9 @@ describe("owner session (ADR 0014): boot hydration + server-side logout", () => 
     );
     expect(deleteCall).toBeDefined();
     expect(hasUiToken()).toBe(false);
-    expect(
-      Array.from(container.querySelectorAll("button")).some(
-        (button) => button.textContent?.trim() === "Sign in",
-      ),
-    ).toBe(true);
+    // The scrub flips the slot back to the anonymous pair — the accent
+    // «Sign in» link to /auth (ME-080).
+    const signInAgain = container.querySelector<HTMLAnchorElement>('a[data-testid="topbar-sign-in"]');
+    expect(signInAgain?.textContent?.trim()).toBe("Sign in");
   });
 });

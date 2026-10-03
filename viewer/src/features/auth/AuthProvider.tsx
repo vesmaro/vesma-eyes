@@ -1,7 +1,15 @@
-import { useEffect, useMemo, useReducer } from "react";
+import { useEffect, useMemo, useReducer, useSyncExternalStore } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AuthClient, clearToken, getToken, onUnauthorized } from "@/gateway/auth";
 import type { AdapterKind } from "@/gateway/adapterConfig";
+import { PasswordAuthClient } from "@/gateway/passwordAuth";
+import type { PasswordUser } from "./passwordSession";
+import {
+  clearPasswordUser,
+  readPasswordSession,
+  setPasswordUser,
+  subscribePasswordSession,
+} from "./passwordSession";
 import { isApiError, toError } from "@/lib/errors";
 import { AuthContext } from "./AuthContext";
 import type { AuthContextValue } from "./AuthContext";
@@ -35,9 +43,20 @@ export function AuthProvider({
   client,
 }: AuthProviderProps) {
   const authClient = useMemo(() => client ?? new AuthClient(), [client]);
+  // ME-080: the password-session wire client (board endpoints; deliberately
+  // NOT the shared `client` prop — that seam carries the vesma mnk_ flow and
+  // raises the gateway-wide 401 flag a wrong password must never trip).
+  const passwordClient = useMemo(() => new PasswordAuthClient(), []);
   const queryClient = useQueryClient();
   const [state, dispatch] = useReducer(authReducer, initialAuthState);
   const sessionExpired = state.sessionExpired;
+  // Mirror of the password-session store (the same module the boot whoami
+  // hydrates and `useAuthSession` reads — one source of truth).
+  const passwordUser = useSyncExternalStore(
+    subscribePasswordSession,
+    () => readPasswordSession().user,
+    () => readPasswordSession().user,
+  );
 
   // Confirm a restored token against /auth/me. On 401 the shared flag fires
   // and the reducer moves to anonymous + re-opens the overlay. Skipped for
@@ -108,10 +127,47 @@ export function AuthProvider({
           dispatch({ type: "LOGOUT" });
         }
       },
+      async loginWithPassword(username, password) {
+        // No SUBMIT dispatch on purpose: the mnk_ machine stays out of the
+        // password round-trip (its UNAUTHORIZED suppression is keyed on the
+        // authenticating phase, and the password 401 must not touch the
+        // overlay). The form owns the pending flag and the verdict.
+        const result = await passwordClient.login(username, password);
+        const user: PasswordUser = {
+          username: result.username,
+          role: result.role,
+        };
+        setPasswordUser(user);
+        // Session established — retry the queries that 401'd earlier.
+        void refetchAfterLogin(queryClient);
+        return user;
+      },
+      async registerAccount(username, password) {
+        const result = await passwordClient.register(username, password);
+        const user: PasswordUser = {
+          username: result.username,
+          role: result.role,
+        };
+        setPasswordUser(user);
+        // The registration response opened the session — same refetch.
+        void refetchAfterLogin(queryClient);
+        return user;
+      },
+      async logoutPassword() {
+        try {
+          await passwordClient.logout();
+        } finally {
+          // The server row is the authority; a failed POST still resets the
+          // mirror (an HttpOnly cookie cannot be cleared from JS — the next
+          // boot whoami re-states the truth if the wire lied).
+          clearPasswordUser();
+        }
+      },
+      passwordUser,
       openOverlay: () => dispatch({ type: "OPEN_OVERLAY" }),
       closeOverlay: () => dispatch({ type: "CLOSE_OVERLAY" }),
     }),
-    [state, adapterMode, endpoint, authClient, queryClient],
+    [state, adapterMode, endpoint, authClient, passwordClient, passwordUser, queryClient],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

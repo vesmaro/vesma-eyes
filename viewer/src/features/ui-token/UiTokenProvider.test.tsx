@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -6,6 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { UiTokenProvider } from "./UiTokenProvider";
 import { UiTokenSlot } from "./UiTokenSlot";
 import { UiTokenContext } from "./UiTokenContext";
+import { AuthContext } from "@/features/auth/AuthContext";
+import type { AuthContextValue } from "@/features/auth/AuthContext";
 import { GatewayContext } from "@/gateway/GatewayContext";
 import { HttpAdapter } from "@/gateway/HttpAdapter";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
@@ -89,5 +91,93 @@ describe("UiTokenSlot (TopBar board-mode sign-in pair)", () => {
     // No user chip in И1 (no name in the token model) — no register stub
     // for the signed-in state either.
     expect(html).not.toContain("Create an account");
+  });
+});
+
+describe("UiTokenSlot: the password-session person (ME-080)", () => {
+  const uiTokenBase = {
+    openLogin: () => undefined,
+    runAuthorized: () => undefined,
+    logout: () => undefined,
+    submitToken: () => undefined,
+    verifyPending: false,
+  };
+  /** A minimal AuthContextValue — the slot reads only passwordUser +
+   * logoutPassword; bare harnesses (above) prove the fail-soft null path. */
+  const authBase: AuthContextValue = {
+    state: {
+      phase: "anonymous",
+      challengeId: null,
+      error: null,
+      overlayOpen: false,
+      sessionExpired: false,
+    },
+    adapterMode: "board",
+    endpoint: "/api",
+    login: vi.fn(async () => undefined),
+    verify: vi.fn(async () => undefined),
+    logout: vi.fn(async () => undefined),
+    loginWithPassword: vi.fn(async () => ({ username: "abyss", role: "owner" as const })),
+    registerAccount: vi.fn(async () => ({ username: "abyss", role: "owner" as const })),
+    logoutPassword: vi.fn(async () => undefined),
+    passwordUser: null,
+    openOverlay: vi.fn(),
+    closeOverlay: vi.fn(),
+  };
+
+  it("renders the user chip (username + role badge) with «Sign out» instead of the sign-in pair", () => {
+    const html = renderToString(
+      <I18nProvider initialLang="en">
+        <AuthContext.Provider
+          value={{ ...authBase, passwordUser: { username: "abyss", role: "owner" } }}
+        >
+          <UiTokenContext.Provider value={{ ...uiTokenBase, tokenPresent: false }}>
+            <MemoryRouter initialEntries={["/"]}>
+              <UiTokenSlot />
+            </MemoryRouter>
+          </UiTokenContext.Provider>
+        </AuthContext.Provider>,
+      </I18nProvider>,
+    );
+    expect(html).toContain("abyss");
+    expect(html).toContain("owner"); // the role badge (member → «member»)
+    expect(html).toContain("Sign out");
+    // The anonymous pair is gone: no accent sign-in, no register stub.
+    expect(html).not.toContain("bg-iris-strong");
+    expect(html).not.toContain("Create an account");
+  });
+
+  it("a member role renders the plain badge (not the iris owner accent)", () => {
+    const html = renderToString(
+      <I18nProvider initialLang="en">
+        <AuthContext.Provider
+          value={{ ...authBase, passwordUser: { username: "vv", role: "member" } }}
+        >
+          <UiTokenContext.Provider value={{ ...uiTokenBase, tokenPresent: false }}>
+            <MemoryRouter initialEntries={["/"]}>
+              <UiTokenSlot />
+            </MemoryRouter>
+          </UiTokenContext.Provider>
+        </AuthContext.Provider>,
+      </I18nProvider>,
+    );
+    expect(html).toContain("member");
+    expect(html).not.toContain(">owner<");
+  });
+
+  it("the anonymous pair leads to the /auth route (login+password is the front door)", () => {
+    const html = renderToString(
+      <I18nProvider initialLang="en">
+        <AuthContext.Provider value={authBase}>
+          <UiTokenContext.Provider value={{ ...uiTokenBase, tokenPresent: false }}>
+            <MemoryRouter initialEntries={["/memory"]}>
+              <UiTokenSlot />
+            </MemoryRouter>
+          </UiTokenContext.Provider>
+        </AuthContext.Provider>,
+      </I18nProvider>,
+    );
+    // The accent «Sign in» now LINKS to /auth carrying the current location.
+    expect(html).toMatch(/href="\/auth\?return=%2Fmemory"/);
   });
 });
