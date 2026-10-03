@@ -17,6 +17,7 @@ import { isApiError } from "@/lib/errors";
 import { useToast } from "@/components/Toast/toastContext";
 import { useT } from "@/i18n";
 import { authSessionProbe } from "./authSession";
+import { readPasswordSession } from "@/features/auth/passwordSession";
 import { UiTokenContext } from "./UiTokenContext";
 import { LoginDialog } from "./LoginDialog";
 import { UiTokenGate } from "./uiTokenGate";
@@ -83,6 +84,13 @@ export function UiTokenProvider({ children }: { children: React.ReactNode }) {
               deviceScope: () => getDeviceScope(),
             }
           : {}),
+        // ME-081: the confirmed password person (the `vesmaro_auth` cookie)
+        // admits mutations without the token prompt — the same ui-class
+        // verdict the gate screens derive (useAuthSession). The store is
+        // settled-anonymous outside board deployments (initPasswordSession's
+        // capability guard), so the injection is a no-op for the mock and
+        // the vesma adapter.
+        hasPasswordSession: () => readPasswordSession().user !== null,
         ...(isUiTokenSessionSource(gateway)
           ? {
               verifyToken: (value: string) => gateway.verifyUiToken(value),

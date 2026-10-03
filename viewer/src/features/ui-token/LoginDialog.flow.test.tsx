@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act } from "react";
+import { act, StrictMode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -18,7 +18,12 @@ import { Sidebar } from "@/layout/Sidebar";
 import { HotkeysProvider } from "@/layout/Hotkeys";
 import { I18nProvider } from "@/i18n";
 import { keys } from "@/lib/queryKeys";
+import { AuthProvider } from "@/features/auth/AuthProvider";
 import { clearUiToken, hasUiToken } from "@/gateway/uiToken";
+import {
+  resetPasswordSessionForTests,
+  setPasswordUser,
+} from "@/features/auth/passwordSession";
 import {
   DEVICE_SCOPE_STORAGE_KEY,
   DEVICE_TOKEN_STORAGE_KEY,
@@ -1042,5 +1047,195 @@ describe("owner session (ADR 0014): boot hydration + server-side logout", () => 
     // «Sign in» link to /auth (ME-080).
     const signInAgain = container.querySelector<HTMLAnchorElement>('a[data-testid="topbar-sign-in"]');
     expect(signInAgain?.textContent?.trim()).toBe("Sign in");
+  });
+});
+
+/**
+ * ME-081 hotfix: the confirmed login+password person (the `vesmaro_auth`
+ * cookie, mirrored by the passwordSession store) must mutate WITHOUT the
+ * ui-token prompt — every mutation used to pop the «введите ui-токен»
+ * window although the gate screens admitted the same person. Same shape
+ * as the boot-204 owner test above, except the session verdict rides the
+ * PASSWORD store: the `vesmaro_ui` probe answers 401 (no ui cookie at
+ * all) — the person's cookie is the ONLY leg.
+ */
+describe("password session (ME-081): mutations run without the token prompt", () => {
+  beforeEach(() => {
+    (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+    // The store is module-global — a leaked person would flip every other
+    // test in this file (openLogin would no-op there).
+    resetPasswordSessionForTests();
+  });
+
+  afterEach(() => {
+    resetPasswordSessionForTests();
+  });
+
+  it("create with a confirmed person: POST flies headerless (the cookie leg), NO window, the chip replaces «Sign in», openLogin no-ops", { timeout: 20000 }, async () => {
+    setPasswordUser({ username: "abyss", role: "owner" });
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/api/auth/ui-token")) {
+        // No ui-token session anywhere: the boot probe refuses; the verify
+        // POST must NEVER be called (no login is happening).
+        if (method === "GET") return new Response(null, { status: 401 });
+        return jsonResponse({ ok: true, token_class: "ui" });
+      }
+      if (url.endsWith("/api/tasks") && method === "POST") {
+        return jsonResponse(createdTask, 201); // the server reads the vesmaro_auth cookie
+      }
+      return jsonResponse(boardPayload);
+    });
+    const gateway = new BoardAdapter({ baseUrl: "/api", fetchImpl: fetchImpl as never });
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    await queryClient.prefetchQuery({
+      queryKey: keys.tasks.board(),
+      queryFn: () => gateway.board(),
+    });
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root: Root = createRoot(container);
+    mountedRoots.push(root);
+    await act(async () => {
+      root.render(
+        <I18nProvider initialLang="en">
+          <GatewayContext.Provider value={gateway}>
+            <QueryClientProvider client={queryClient}>
+              {/* App.tsx order: AuthProvider wraps everything (the slot's
+               * user chip reads its passwordUser mirror). */}
+              <AuthProvider adapterMode="board" endpoint="/api">
+              <ToastProvider>
+                <UiTokenProvider>
+                  <MemoryRouter initialEntries={["/tasks"]}>
+                    <TaskListPage />
+                    <UiTokenSlot />
+                    {/* The Kora-CTA path: openLogin must NOT pop the
+                     * machine window over a signed-in person. */}
+                    <OpenLoginProbe />
+                    <ToastViewport />
+                  </MemoryRouter>
+                </UiTokenProvider>
+              </ToastProvider>
+              </AuthProvider>
+            </QueryClientProvider>
+          </GatewayContext.Provider>
+        </I18nProvider>,
+      );
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+
+    // The slot renders the USER CHIP (no «Sign in» pair) while NOTHING is
+    // stored — the password person is the session.
+    expect(hasUiToken()).toBe(false);
+    expect(container.querySelector('[data-testid="topbar-user-chip"]')?.textContent).toContain("abyss");
+    expect(container.querySelector('a[data-testid="topbar-sign-in"]')).toBeNull();
+
+    // openLogin (the Kora CTA's path) is a no-op now.
+    const probe = document.querySelector('[data-testid="probe-open-login"]') as HTMLButtonElement;
+    await act(async () => {
+      probe.click();
+    });
+    expect(document.querySelector('[data-testid="login-dialog"]')).toBeNull();
+    expect(document.querySelector('[data-testid="login-token-value"]')).toBeNull();
+
+    // The create just RUNS — no window, no verify-at-the-door, headerless
+    // (the HttpOnly cookie rides the same-origin POST).
+    const createButton = Array.from(container.querySelectorAll<HTMLButtonElement>("button")).find(
+      (button) => button.textContent?.trim() === "Task",
+    );
+    await act(async () => {
+      createButton?.click();
+    });
+    const textarea = document.querySelector("textarea");
+    await act(async () => {
+      setInputValue(textarea as HTMLTextAreaElement, "Cookie person task");
+    });
+    await act(async () => {
+      buttonByText(document.body, "Create task")?.click();
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    });
+    expect(document.querySelector('[data-testid="login-token-value"]')).toBeNull();
+    expect(container.textContent).toContain("Task TB-42 created");
+    const createCall = fetchImpl.mock.calls.find(
+      ([input, init]) =>
+        String(input).endsWith("/api/tasks") && (init?.method ?? "GET") === "POST",
+    );
+    const headers = (createCall?.[1]?.headers ?? {}) as Record<string, string>;
+    expect(headers.Authorization ?? null).toBeNull(); // cookie leg
+    const verifyPosts = fetchImpl.mock.calls.filter(
+      ([input, init]) =>
+        String(input).endsWith("/api/auth/ui-token") && (init?.method ?? "GET") === "POST",
+    );
+    expect(verifyPosts).toHaveLength(0); // no login happened — none needed
+  });
+
+  it("StrictMode: a password-session mutation through the real provider runs exactly once, no window", { timeout: 20000 }, async () => {
+    resetPasswordSessionForTests();
+    setPasswordUser({ username: "abyss", role: "owner" });
+    const run = vi.fn(async () => undefined);
+    const fetchImpl = vi.fn(async () => jsonResponse(boardPayload));
+    const gateway = new BoardAdapter({ baseUrl: "/api", fetchImpl: fetchImpl as never });
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    function RunAuthorizedProbe(): React.ReactElement {
+      const { runAuthorized } = useUiToken();
+      return (
+        <button
+          type="button"
+          data-testid="probe-run-authorized"
+          onClick={() => runAuthorized(run)}
+        >
+          probe: run authorized
+        </button>
+      );
+    }
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root: Root = createRoot(container);
+    mountedRoots.push(root);
+    await act(async () => {
+      root.render(
+        <StrictMode>
+          <I18nProvider initialLang="en">
+            <GatewayContext.Provider value={gateway}>
+              <QueryClientProvider client={queryClient}>
+                <ToastProvider>
+                  <UiTokenProvider>
+                    <MemoryRouter initialEntries={["/tasks"]}>
+                      <RunAuthorizedProbe />
+                      <ToastViewport />
+                    </MemoryRouter>
+                  </UiTokenProvider>
+                </ToastProvider>
+              </QueryClientProvider>
+            </GatewayContext.Provider>
+          </I18nProvider>
+        </StrictMode>,
+      );
+    });
+
+    const probe = document.querySelector('[data-testid="probe-run-authorized"]') as HTMLButtonElement;
+    await act(async () => {
+      probe.click();
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    });
+    // One click → ONE guarded run (StrictMode's double effects must not
+    // duplicate the execution) and NO prompt.
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(document.querySelector('[data-testid="login-token-value"]')).toBeNull();
+    expect(document.querySelector('[data-testid="login-dialog"]')).toBeNull();
   });
 });

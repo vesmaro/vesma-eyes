@@ -129,6 +129,14 @@ export interface UiTokenGateOptions {
    * read-scope pre-flight beat; with legacy wiring (hasToken ui-only),
    * the historical token-less beat. */
   hasDeviceIdentity?: () => boolean;
+  /** ME-081: "is a login+password person confirmed right now?" — the
+   * passwordSession store's `user !== null`. The live `vesmaro_auth`
+   * cookie rides EVERY same-origin fetch automatically (no header), and
+   * the server accepts the session on ui-mutations — so a confirmed
+   * person must mutate WITHOUT the token prompt, exactly like the gate
+   * screens (useAuthSession) already admit them. Absent → the
+   * historical token-only behavior (mock/legacy wiring). */
+  hasPasswordSession?: () => boolean;
 }
 
 export class UiTokenGate {
@@ -138,6 +146,7 @@ export class UiTokenGate {
   private readonly verifyToken?: (value: string) => Promise<UiTokenVerifyResult>;
   private readonly probe?: () => Promise<boolean>;
   private readonly hasDeviceIdentity?: () => boolean;
+  private readonly hasPasswordSession?: () => boolean;
   private readonly listeners = new Set<Listener>();
   private readonly eventListeners = new Set<EventListener>();
   private state: UiTokenGateState;
@@ -156,6 +165,7 @@ export class UiTokenGate {
     this.verifyToken = options.verifyToken;
     this.probe = options.probe;
     this.hasDeviceIdentity = options.hasDeviceIdentity;
+    this.hasPasswordSession = options.hasPasswordSession;
     this.state = {
       open: false,
       reason: "manual",
@@ -171,6 +181,16 @@ export class UiTokenGate {
    */
   private uiPresent(): boolean {
     return this.hasUiToken ? this.hasUiToken() : this.hasToken();
+  }
+
+  /**
+   * ME-081: the live password session — the same ui-class admission the
+   * server grants the `vesmaro_auth` cookie (useAuthSession's derivation:
+   * "tokenPresent or password person → user"). A confirmed person mutates
+   * on the cookie leg without any prompt.
+   */
+  private passwordSessionLive(): boolean {
+    return this.hasPasswordSession?.() ?? false;
   }
 
   /** Subscribe to session-feedback events; returns the unsubscribe. */
@@ -198,8 +218,12 @@ export class UiTokenGate {
     void this.guard(run, onDeferred);
   }
 
-  /** TopBar «Войти»: open the window WITHOUT queueing anything. */
+  /** TopBar «Войти»: open the window WITHOUT queueing anything. ME-081:
+   * a live password session IS a signed-in session — the machine-token
+   * window must not pop over it (the TopBar already renders the user chip
+   * instead of the sign-in pair). */
   openLogin(): void {
+    if (this.passwordSessionLive()) return;
     this.pending = null; // a manual sign-in never resurrects a dropped run
     this.setState({ open: true, reason: "manual" });
   }
@@ -346,7 +370,11 @@ export class UiTokenGate {
     onDeferred?: () => void,
     isReplay = false,
   ): Promise<void> {
-    if (!this.hasToken()) {
+    // ME-081: a confirmed password person mutates WITHOUT the prompt — the
+    // `vesmaro_auth` cookie rides every same-origin fetch automatically,
+    // the server rules from the session (a live-cookie 401 here is the
+    // session-expiry beat below, the honest prompt).
+    if (!this.hasToken() && !this.passwordSessionLive()) {
       // UI-22 device beat (legacy wiring — hasToken without the device): a
       // paired device has IDENTITY but the wiring grants it nothing — the
       // server would answer 403 to its mutations (ADR 0012 §5). Opening
@@ -370,12 +398,16 @@ export class UiTokenGate {
     // verdict. The honest refusal fires WITHOUT the round-trip; a
     // `control` device falls through and lets the server's scope table
     // rule (open routes run, closed ones answer 403 on the per-action
-    // toast). Fires only when deviceScope is injected (the scope-v1
-    // wiring) — legacy unit tests keep their byte-for-byte behavior.
+    // toast). A live password person is an owner-class session too
+    // (ME-081) — their mutations ride the cookie, the device's read scope
+    // does not speak for a signed-in human. Fires only when deviceScope is
+    // injected (the scope-v1 wiring) — legacy unit tests keep their
+    // byte-for-byte behavior.
     if (
       this.deviceScope &&
       this.hasDeviceIdentity?.() &&
       !this.uiPresent() &&
+      !this.passwordSessionLive() &&
       this.deviceScope() !== "control"
     ) {
       this.emit({ type: "deviceForbidden" });
