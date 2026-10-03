@@ -21,7 +21,10 @@ Egress policy for memory-server hosts (SEC-1):
 
 from __future__ import annotations
 
+import binascii
 import fnmatch
+import hashlib
+import hmac
 import ipaddress
 import math
 import os
@@ -38,6 +41,76 @@ SECRET_DIRS_ENV = "VESMARO_SECRET_DIRS"
 _DEFAULT_SECRET_DIRS = ("/data/secrets",)
 
 _ENV_VAR_RE = re.compile(r"^[A-Z_][A-Z0-9_]{0,127}$")
+
+
+# ------------------------------------------------------------- passwords
+# ME-080 (login+password accounts): password hashing envelope. scrypt is
+# the stdlib memory-hard KDF from the same OWASP family as argon2id —
+# chosen over adding argon2-cffi/bcrypt because a native dependency for
+# one hash is a supply-chain delta with no protection-class gain for a
+# single-owner LAN board. The envelope carries the ALGO ID and parameters
+# ('scrypt$N$r$p$salthex$hashhex') so a future argon2id migration is a new
+# verify branch: old hashes keep verifying, new hashes mint under the new
+# prefix. Parameters per stored hash (NOT module constants) — raising the
+# cost later cannot orphan existing accounts.
+_SCRYPT_N = 2 ** 15          # 32768 — OWASP-listed cost profile
+_SCRYPT_R = 8
+_SCRYPT_P = 1
+_SCRYPT_SALT_BYTES = 16
+_SCRYPT_KEY_LEN = 32
+# OpenSSL caps scrypt memory at 32 MiB unless maxmem is raised — and
+# 128·N·r·p for the profile above lands EXACTLY on that boundary (the
+# allocation fails with "memory limit exceeded"). 128 MiB covers the
+# profile plus headroom for a future N=2^17 upgrade.
+_SCRYPT_MAXMEM = 128 * 1024 * 1024
+# Sanity gate for parameters parsed OUT of a stored envelope: the DB row
+# is server-side data, but a corrupted/crafted row must fail the VERIFY,
+# never mint a multi-GB scrypt allocation at login time.
+_SCRYPT_PARAM_BOUNDS = (2 ** 10, 2 ** 22, 1, 32, 1, 8)
+
+
+def hash_password(password: str, *, n: int = _SCRYPT_N, r: int = _SCRYPT_R,
+                  p: int = _SCRYPT_P) -> str:
+    """Hash a password into the algo-prefixed envelope (§3.1 of the
+    ME-080 design): ``scrypt$N$r$p$<salthex>$<hashhex>``. A fresh random
+    salt per call — two accounts with the same password store different
+    rows. Never log the arguments or the result."""
+    salt = os.urandom(_SCRYPT_SALT_BYTES)
+    key = hashlib.scrypt(password.encode("utf-8"), salt=salt,
+                         n=n, r=r, p=p, dklen=_SCRYPT_KEY_LEN,
+                         maxmem=_SCRYPT_MAXMEM)
+    return f"scrypt${n}${r}${p}${salt.hex()}${key.hex()}"
+
+
+def verify_password(password: str, encoded: str) -> bool:
+    """Verify a password against a stored envelope. Returns False — never
+    raises — on ANY malformed input: unknown algo prefix, out-of-bounds
+    parameters, hex garbage. The parameters come FROM the envelope, so
+    hashes minted under older costs keep verifying after a cost bump."""
+    try:
+        algo, n_s, r_s, p_s, salt_hex, key_hex = encoded.split("$")
+    except (ValueError, AttributeError):
+        return False
+    if algo != "scrypt":
+        return False
+    try:
+        n, r, p = int(n_s), int(r_s), int(p_s)
+        salt = bytes.fromhex(salt_hex)
+        expected = bytes.fromhex(key_hex)
+    except (ValueError, binascii.Error):
+        return False
+    n_lo, n_hi, r_lo, r_hi, p_lo, p_hi = _SCRYPT_PARAM_BOUNDS
+    if not (n_lo <= n <= n_hi and r_lo <= r <= r_hi and p_lo <= p <= p_hi):
+        return False
+    if not salt or not expected:
+        return False
+    try:
+        candidate = hashlib.scrypt(password.encode("utf-8"), salt=salt,
+                                   n=n, r=r, p=p, dklen=len(expected),
+                                   maxmem=_SCRYPT_MAXMEM)
+    except (ValueError, OverflowError):
+        return False
+    return hmac.compare_digest(candidate, expected)
 
 
 class ValidationError(ValueError):

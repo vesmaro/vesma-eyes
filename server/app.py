@@ -20,6 +20,8 @@ import json
 import logging
 import os
 import re
+import secrets
+import sqlite3
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
@@ -43,11 +45,14 @@ from .profiles import build_profile
 from .security import (
     RateLimiter,
     ValidationError,
+    hash_password,
     validate_memory_url,
     validate_token_ref,
+    verify_password,
 )
 from .store import (
     ASSIGNMENT_STATES,
+    AccountExistsError,
     AssignmentConflictError,
     AssignmentError,
     AssignmentNotFoundError,
@@ -885,6 +890,17 @@ class _UiCookieReissueRoute(APIRoute):
                     samesite="strict", path="/",
                     secure=request.url.scheme == "https",
                 )
+            # ME-080: the password-session sliding TTL rides the same
+            # response-side commit shape — the marker (and the raw token,
+            # carried in state for exactly this response) are set only by
+            # a guard that VALIDATED the session, and the commit happens
+            # only after the handler succeeded.
+            if getattr(request.state, "vesmaro_auth_reissue", False):
+                request.state.vesmaro_auth_reissue = False
+                token = getattr(request.state, "vesmaro_auth_token", "")
+                request.state.vesmaro_auth_token = ""
+                if token:
+                    _commit_auth_session_reissue(request, token, response)
             return response
 
         return reissue_handler
@@ -3523,7 +3539,8 @@ async def create_task_report(task_id: str, body: ReportCreate,
     executor = None
     device = getattr(request.state, "device", None)
     header_present = bool(request.headers.get("Authorization", ""))
-    cookie_ui = not header_present and _cookie_ui_ok(request)
+    cookie_ui = not header_present and (
+        _cookie_ui_ok(request) or _cookie_auth_session(request) is not None)
     if device is not None:
         # Device leg (scope v1): the middleware's verdict IS the auth —
         # checked FIRST so a device bearer never falls into the machine
@@ -3617,7 +3634,7 @@ def _guard_ui_read(request: Request, mnd_wall: str) -> None:
             return
         raise HTTPException(
             401, _token_mismatch_detail(auth, _token_classes(), ("ui",)))
-    if _cookie_ui_ok(request):
+    if _cookie_ui_ok(request) or _cookie_auth_session(request) is not None:
         return
     raise HTTPException(
         401, "owner session required — task session facts are ui-only "
@@ -4938,7 +4955,7 @@ def _guard_kora_read(request: Request) -> None:
             return
         raise HTTPException(
             401, _token_mismatch_detail(auth, _token_classes(), ("ui",)))
-    if _cookie_ui_ok(request):
+    if _cookie_ui_ok(request) or _cookie_auth_session(request) is not None:
         return
     raise HTTPException(
         401, "owner session or device token required — the Kora session "
@@ -5252,7 +5269,7 @@ def _kora_transcript_denied(request: Request) -> JSONResponse | None:
         return _kora_error(
             401, "unauthorized",
             _token_mismatch_detail(auth, _token_classes(), ("ui",)))
-    if _cookie_ui_ok(request):
+    if _cookie_ui_ok(request) or _cookie_auth_session(request) is not None:
         return None
     return _kora_error(
         401, "unauthorized",
@@ -6860,11 +6877,14 @@ def _guard_write(request: Request, *, classes: tuple[str, ...] = ("machine",)) -
         raise HTTPException(401, _token_mismatch_detail(auth, effective, classes))
     # Header absent → the cookie leg (owner session, ADR 0014 Ф2). Only
     # guards that include the ui class consult the cookie — a machine route
-    # can never be opened by it (its 401 detail is unchanged).
+    # can never be opened by it (its 401 detail is unchanged). ME-080: the
+    # password session (vesmaro_auth) rides the SAME ui-class admission.
     if "ui" in classes:
         if _cookie_ui_ok(request):
             _schedule_ui_cookie_reissue(request)
             return
+        if _cookie_auth_session(request) is not None:
+            return  # its own reissue is already scheduled in-state
         raise HTTPException(401, _ui_session_expired_detail(classes))
     raise HTTPException(401, _token_mismatch_detail(auth, effective, classes))
 
@@ -6974,7 +6994,9 @@ def _leg_is_authenticated(request: Request) -> bool:
         return True
     if request.headers.get("Authorization", ""):
         return _bearer_is_class(request, "ui")
-    return _cookie_ui_ok(request)
+    # ME-080: the password session is an authenticated person too — the
+    # ui-token session OR the vesmaro_auth session both count.
+    return _cookie_ui_ok(request) or _cookie_auth_session(request) is not None
 
 
 def _strip_task_actor(event: dict[str, Any]) -> dict[str, Any]:
@@ -7027,10 +7049,13 @@ def _guard_ui_write(request: Request) -> None:
         # extends the sliding session exactly like a cookie-leg one.
         _schedule_ui_cookie_reissue(request)
         return
-    # Header absent → the cookie leg (owner session, ADR 0014 Ф2).
+    # Header absent → the cookie leg (owner session, ADR 0014 Ф2); the
+    # ME-080 password session is the same ui-class admission.
     if _cookie_ui_ok(request):
         _schedule_ui_cookie_reissue(request)
         return
+    if _cookie_auth_session(request) is not None:
+        return  # its own reissue is already scheduled in-state
     raise HTTPException(401, _ui_session_expired_detail(("ui",)))
 
 
@@ -7339,6 +7364,298 @@ def _set_ui_cookie(response: Response, request: Request) -> None:
         max_age=_UI_COOKIE_MAX_AGE_S, httponly=True, samesite="strict",
         path="/", secure=request.url.scheme == "https",
     )
+
+
+# ------------------------------------------- accounts + password sessions (ME-080)
+# Owner directive 2026-10-01: the HUMAN signs in with login+password; the
+# ui token becomes plumbing (still fully valid for MACHINES — CI, poller,
+# provisioning header legs are untouched, and the ADR 0014 vesmaro_ui
+# cookie leg keeps working). A password session is the SAME admission
+# class as the ui token: it opens ui mutations and ui-gated reads, NEVER
+# machine routes, and lends an mnd_ device nothing (the scope middleware
+# never consults cookies). ADR 0014's ratified owner amendment carries
+# over verbatim: a SLIDING 6h idle TTL — activity extends, silence logs
+# out. Unlike the stateless vesmaro_ui cookie the session is a SERVER
+# row: logout/revocation is immediate and authoritative.
+#
+# Design: docs/design/2026-10-01-accounts-password-auth.md. OWASP A07
+# checklist lives there (§6): scrypt envelope hashes (never plaintext),
+# flat rate limiters, neutral 401 (no username enumeration), timing-
+# equalized unknown-user logins, hash-only session storage, 192-bit
+# session tokens, session-fixation-free minting per login. Secrets policy:
+# no password/token/hash VALUE ever reaches a log or response body.
+_AUTH_COOKIE_NAME = "vesmaro_auth"
+_AUTH_COOKIE_MAX_AGE_S = 6 * 3600   # 21600 — sliding idle TTL (ADR 0014 amendment)
+
+# Login limiter mirrors the ui-token verify budget exactly (both are THE
+# unauthenticated credential surfaces): per-IP 10/60s + global 60/60s.
+_AUTH_LOGIN_RATE_LIMIT = 10
+_AUTH_LOGIN_RATE_WINDOW = 60.0
+_auth_login_ip_limiter = RateLimiter(
+    limit=_AUTH_LOGIN_RATE_LIMIT, window=_AUTH_LOGIN_RATE_WINDOW)
+_AUTH_LOGIN_GLOBAL_RATE_LIMIT = 60
+_AUTH_LOGIN_GLOBAL_WINDOW = 60.0
+_auth_login_global_limiter = RateLimiter(
+    limit=_AUTH_LOGIN_GLOBAL_RATE_LIMIT, window=_AUTH_LOGIN_GLOBAL_WINDOW)
+# Register is rarer and closes itself after the first account (§3.3):
+# pairing-create budgets (3/600s per IP) fit better than the login ones.
+_AUTH_REGISTER_RATE_LIMIT = 3
+_AUTH_REGISTER_RATE_WINDOW = 600.0
+_auth_register_ip_limiter = RateLimiter(
+    limit=_AUTH_REGISTER_RATE_LIMIT, window=_AUTH_REGISTER_RATE_WINDOW)
+_AUTH_REGISTER_GLOBAL_RATE_LIMIT = 30
+_AUTH_REGISTER_GLOBAL_WINDOW = 600.0
+_auth_register_global_limiter = RateLimiter(
+    limit=_AUTH_REGISTER_GLOBAL_RATE_LIMIT, window=_AUTH_REGISTER_GLOBAL_WINDOW)
+
+# Sliding-reissue throttle for password sessions (the _ui_reissue_last
+# pattern), keyed by the session token HASH — bounded LRU, the session
+# itself stays a DB row. One Set-Cookie+DB touch per session per 5 min.
+_AUTH_REISSUE_THROTTLE_S = 300.0
+_AUTH_REISSUE_MAX_SESSIONS = 256
+_auth_reissue_last: dict[str, float] = {}
+
+# Registration policy (design §3.3, owner verdict 07k §10-аддендум): the
+# FIRST account becomes the board owner; afterwards registration is
+# CLOSED unless the deploy flag is set (the password-provisioner pattern:
+# env read at request time, fail-closed default). Flag-opened accounts
+# are members.
+_REGISTRATION_FLAG_ENV = "VESMARO_ALLOW_REGISTRATION"
+
+
+def _registration_open() -> bool:
+    if os.environ.get(_REGISTRATION_FLAG_ENV, "").strip() == "1":
+        return True
+    return store.count_accounts() == 0
+
+
+# Timing equalizer (design §3.1): a login for an UNKNOWN username burns
+# the same scrypt work as a real verify, so response time never reveals
+# whether the name exists. Generated once at import; the value is a
+# synthetic password, never a credential.
+_DUMMY_PASSWORD_HASH = hash_password("vesmaro-timing-equalizer-dummy")
+
+_USERNAME_PATTERN = r"^[a-z0-9][a-z0-9_-]{2,31}$"
+
+
+class AccountRegisterIn(BaseModel):
+    """Registration body (BE-15: unknown keys are an honest 422). Username
+    3..32, ``[a-z0-9_-]``, stored lowercase; password 8..512 per NIST
+    SP 800-63B — length only, no composition rules, never truncated."""
+    model_config = ConfigDict(extra="forbid")
+
+    username: str = Field(min_length=3, max_length=32,
+                          pattern=_USERNAME_PATTERN)
+    password: str = Field(min_length=8, max_length=512)
+
+
+class AccountLoginIn(BaseModel):
+    """Login body: bounds only (no pattern on username — an unknown name
+    must reach the SAME neutral 401 as a wrong password, not a 422)."""
+    model_config = ConfigDict(extra="forbid")
+
+    username: str = Field(min_length=1, max_length=32)
+    password: str = Field(min_length=1, max_length=512)
+
+
+class AccountSessionOut(_ApiModel):
+    username: str
+    role: Literal["owner", "member"]
+
+
+class AccountLoginOut(_ApiModel):
+    ok: bool
+    username: str
+    role: Literal["owner", "member"]
+
+
+class SessionMeOut(_ApiModel):
+    """GET /api/auth/me: always a 200 JSON (the FE calls it once at boot;
+    a 401 would paint the console red — the ME-028 probe lesson)."""
+    authenticated: bool
+    username: str | None = None
+    role: Literal["owner", "member"] | None = None
+
+
+def _set_auth_cookie(response: Response, request: Request,
+                     token: str) -> None:
+    """Set the ``vesmaro_auth`` session cookie — the ADR 0014 Ф2 flag set
+    (HttpOnly, SameSite=Strict, Path=/, Secure by request scheme,
+    Max-Age = sliding 6h)."""
+    response.set_cookie(
+        _AUTH_COOKIE_NAME, token,
+        max_age=_AUTH_COOKIE_MAX_AGE_S, httponly=True, samesite="strict",
+        path="/", secure=request.url.scheme == "https",
+    )
+
+
+def _cookie_auth_session(request: Request, *,
+                         schedule: bool = True) -> dict[str, Any] | None:
+    """Validate the ``vesmaro_auth`` cookie against the server-side
+    session table. Returns the joined (session, account) row or None —
+    logout/revocation/expiry all read as None (fail-closed). When the
+    session is live and the per-session throttle allows, the request is
+    MARKED for the sliding reissue; the route wrapper commits it AFTER a
+    successful response (the same P3 shape as the vesmaro_ui reissue: a
+    handler that 401s/500s must not extend the session). ``schedule=False``
+    is the read-only-oracle mode (GET /api/auth/me must not slide)."""
+    supplied = request.cookies.get(_AUTH_COOKIE_NAME, "")
+    if not supplied:
+        return None
+    session = store.get_auth_session(supplied)
+    if session is None:
+        return None
+    if schedule:
+        last = _auth_reissue_last.get(session["token_hash"])
+        if (last is None
+                or time.monotonic() - last >= _AUTH_REISSUE_THROTTLE_S):
+            request.state.vesmaro_auth_reissue = True
+            request.state.vesmaro_auth_token = supplied
+    return session
+
+
+def _commit_auth_session_reissue(request: Request, token: str,
+                                 response: Response) -> None:
+    """Wrapper-side half of the sliding TTL: the request proved the reissue
+    right and the response is on its way — spend the per-session throttle
+    budget, slide the DB expiry by the SAME Max-Age the fresh cookie gets
+    (cookie and server clock stay consistent by construction), reissue the
+    cookie. A failed DB touch degrades to 'this activity did not extend
+    the session' — the safe direction — and is logged, never swallowed."""
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    now = time.monotonic()
+    if (len(_auth_reissue_last) >= _AUTH_REISSUE_MAX_SESSIONS
+            and token_hash not in _auth_reissue_last):
+        _auth_reissue_last.pop(next(iter(_auth_reissue_last)))  # oldest
+    _auth_reissue_last.pop(token_hash, None)  # re-insert → LRU touch
+    _auth_reissue_last[token_hash] = now
+    try:
+        store.touch_auth_session(token, ttl_s=_AUTH_COOKIE_MAX_AGE_S)
+    except sqlite3.Error:
+        logging.getLogger("vesmaro.auth").warning(
+            "auth session touch failed token_id=%s", token_hash[-8:])
+    _set_auth_cookie(response, request, token)
+
+
+@app.post("/api/auth/register", status_code=201)
+async def register_account(body: AccountRegisterIn, request: Request,
+                           response: Response) -> AccountSessionOut:
+    """Create an account (ME-080 §3.3). OPEN only while the accounts table
+    is empty — that first account becomes the board owner (owner verdict
+    07k §10-аддендум); afterwards registration is CLOSED (403) unless the
+    deploy flag ``VESMARO_ALLOW_REGISTRATION=1`` opens it (member
+    accounts). Success signs the new account in (session cookie set right
+    here). Errors: 403 closed, 409 taken (case-insensitive), 429 flat
+    limiters, 422 bounds/charset."""
+    client_ip = request.client.host if request.client else "unknown"
+    if not _auth_register_ip_limiter.acquire(client_ip):
+        raise HTTPException(
+            429,
+            f"registration rate limit exceeded "
+            f"({_AUTH_REGISTER_RATE_LIMIT} per "
+            f"{_AUTH_REGISTER_RATE_WINDOW:.0f}s per client)",
+        )
+    if not _auth_register_global_limiter.acquire("global"):
+        raise HTTPException(
+            429,
+            f"registration rate limit exceeded "
+            f"({_AUTH_REGISTER_GLOBAL_RATE_LIMIT} per "
+            f"{_AUTH_REGISTER_GLOBAL_WINDOW:.0f}s board-wide)",
+        )
+    if not _registration_open():
+        raise HTTPException(
+            403,
+            "registration is closed: the board already has its owner "
+            "account (set VESMARO_ALLOW_REGISTRATION=1 to open member "
+            "registration)",
+        )
+    try:
+        account = store.create_account(
+            body.username, hash_password(body.password))
+    except AccountExistsError:
+        raise HTTPException(
+            409, f"username '{body.username}' is already registered")
+    token = secrets.token_urlsafe(32)
+    store.create_auth_session(
+        token, account["id"],
+        ua=request.headers.get("User-Agent", ""), ip=client_ip,
+        ttl_s=_AUTH_COOKIE_MAX_AGE_S)
+    _set_auth_cookie(response, request, token)
+    logging.getLogger("vesmaro.auth").info(
+        "account registered username=%s role=%s",
+        account["username"], account["role"])
+    return AccountSessionOut(username=account["username"],
+                             role=account["role"])
+
+
+@app.post("/api/auth/login")
+async def login_account(body: AccountLoginIn, request: Request,
+                        response: Response) -> AccountLoginOut:
+    """Password login (ME-080 §4): verifies at the door and opens the
+    ``vesmaro_auth`` session. The 401 is NEUTRAL by contract — unknown
+    username and wrong password are indistinguishable in status, detail
+    AND timing (the dummy-scrypt equalizer). Errors: 401 neutral, 429 on
+    the flat limiters. The password never appears in any log or
+    response."""
+    client_ip = request.client.host if request.client else "unknown"
+    if not _auth_login_ip_limiter.acquire(client_ip):
+        raise HTTPException(
+            429,
+            f"login rate limit exceeded "
+            f"({_AUTH_LOGIN_RATE_LIMIT} per "
+            f"{_AUTH_LOGIN_RATE_WINDOW:.0f}s per client)",
+        )
+    if not _auth_login_global_limiter.acquire("global"):
+        raise HTTPException(
+            429,
+            f"login rate limit exceeded "
+            f"({_AUTH_LOGIN_GLOBAL_RATE_LIMIT} per "
+            f"{_AUTH_LOGIN_GLOBAL_WINDOW:.0f}s board-wide)",
+        )
+    username = body.username.strip().lower()
+    account = store.get_account_by_username(username)
+    if account is None:
+        verify_password(body.password, _DUMMY_PASSWORD_HASH)
+        raise HTTPException(401, "invalid username or password")
+    if not verify_password(body.password, account["password_hash"]):
+        raise HTTPException(401, "invalid username or password")
+    token = secrets.token_urlsafe(32)
+    store.create_auth_session(
+        token, account["id"],
+        ua=request.headers.get("User-Agent", ""), ip=client_ip,
+        ttl_s=_AUTH_COOKIE_MAX_AGE_S)
+    store.note_account_login(account["id"])
+    _set_auth_cookie(response, request, token)
+    logging.getLogger("vesmaro.auth").info(
+        "account login username=%s", account["username"])
+    return AccountLoginOut(ok=True, username=account["username"],
+                           role=account["role"])
+
+
+@app.post("/api/auth/logout", status_code=204)
+async def logout_account(request: Request, response: Response) -> None:
+    """Server-side logout (ME-080 §4): the session ROW is deleted — a
+    stolen cookie dies with it (the revocation the stateless vesmaro_ui
+    cookie cannot do). NO guard by design, same rationale as
+    DELETE /api/auth/ui-token: a logout that 401s on an already-expired
+    session is a trap. Idempotent."""
+    token = request.cookies.get(_AUTH_COOKIE_NAME, "")
+    if token:
+        store.delete_auth_session(token)
+    response.set_cookie(_AUTH_COOKIE_NAME, "", max_age=0, httponly=True,
+                        samesite="strict", path="/")
+
+
+@app.get("/api/auth/me")
+async def me_account(request: Request) -> SessionMeOut:
+    """Who am I (ME-080 §5): the FE boot read for the password-session
+    state. Always 200 JSON (ME-028 console-hygiene lesson); a live session
+    slides NOTHING (``schedule=False`` — a whoami is not activity)."""
+    session = _cookie_auth_session(request, schedule=False)
+    if session is None:
+        return SessionMeOut(authenticated=False)
+    return SessionMeOut(authenticated=True, username=session["username"],
+                        role=session["role"])
 
 
 # ------------------------------------------- QR pairing + devices (CV-7, ADR 0012)
@@ -8009,6 +8326,8 @@ def _guard_telemetry_ui(request: Request) -> None:
     if _cookie_ui_ok(request):
         _schedule_ui_cookie_reissue(request)
         return
+    if _cookie_auth_session(request) is not None:
+        return  # telemetry counts as activity for the password session too
     raise HTTPException(
         403, "telemetry ingest is ui-class only (owner session)")
 
