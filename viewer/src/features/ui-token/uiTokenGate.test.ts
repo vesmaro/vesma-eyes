@@ -685,3 +685,108 @@ describe("UiTokenGate.rebuildAfterReadUnauthorized (cascade P2, ME-043)", () => 
     expect(gate.getState().rejectKind).toBe("session");
   });
 });
+
+/**
+ * ME-081 hotfix: a confirmed login+password person (the `vesmaro_auth`
+ * cookie + the passwordSession store) must mutate WITHOUT the token
+ * prompt — the gate screens already admit them (useAuthSession derives
+ * "user" from `password.user`); the mutation window was the one consult
+ * that lagged. The verdict is INJECTED (`hasPasswordSession`), the same
+ * pattern as `hasDeviceIdentity`; absent → the historical token-only
+ * behavior byte-for-byte.
+ */
+describe("UiTokenGate password session (ME-081)", () => {
+  it("password-only session: runAuthorized executes the run WITHOUT the window", async () => {
+    const gate = new UiTokenGate({
+      hasToken: () => false, // no stored token, no live vesmaro_ui cookie
+      hasPasswordSession: () => true, // the vesmaro_auth person is confirmed
+    });
+    const run = vi.fn(async () => undefined);
+    const onDeferred = vi.fn();
+    gate.runAuthorized(run, onDeferred);
+    await vi.waitFor(() => expect(run).toHaveBeenCalledTimes(1));
+    expect(gate.getState().open).toBe(false);
+    // The run was never deferred — no spinner owner was reset.
+    expect(onDeferred).not.toHaveBeenCalled();
+  });
+
+  it("predicate injected but anonymous: the window still opens (the historical prompt)", async () => {
+    const gate = new UiTokenGate({
+      hasToken: () => false,
+      hasPasswordSession: () => false,
+    });
+    const run = vi.fn(async () => undefined);
+    gate.runAuthorized(run);
+    await vi.waitFor(() =>
+      expect(gate.getState()).toMatchObject({ open: true, reason: "required" }),
+    );
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it("the predicate is optional — without it the token-only behavior stands", async () => {
+    const { gate } = gateWithToken(null);
+    const run = vi.fn(async () => undefined);
+    gate.runAuthorized(run);
+    await vi.waitFor(() =>
+      expect(gate.getState()).toMatchObject({ open: true, reason: "required" }),
+    );
+  });
+
+  it("openLogin with a live password session is a NO-OP — the machine window never pops over a signed-in person", () => {
+    const gate = new UiTokenGate({
+      hasToken: () => false,
+      hasPasswordSession: () => true,
+    });
+    gate.openLogin();
+    expect(gate.getState()).toMatchObject({ open: false, reason: "manual" });
+  });
+
+  it("the device refusal stands when NO password session is live (beats untouched)", async () => {
+    const events: string[] = [];
+    const gate = new UiTokenGate({
+      hasToken: () => false,
+      hasDeviceIdentity: () => true,
+      hasPasswordSession: () => false,
+    });
+    gate.listen((event) => events.push(event.type));
+    const run = vi.fn(async () => undefined);
+    gate.runAuthorized(run);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(events).toEqual(["deviceForbidden"]);
+    expect(run).not.toHaveBeenCalled();
+    expect(gate.getState().open).toBe(false);
+  });
+
+  it("a live password person overrides the device beat — the human's mutation rides the cookie", async () => {
+    const events: string[] = [];
+    const gate = new UiTokenGate({
+      hasToken: () => false,
+      hasDeviceIdentity: () => true, // a paired device ALSO lives in this browser
+      hasPasswordSession: () => true,
+    });
+    gate.listen((event) => events.push(event.type));
+    const run = vi.fn(async () => undefined);
+    gate.runAuthorized(run);
+    await vi.waitFor(() => expect(run).toHaveBeenCalledTimes(1));
+    // The refusal is for the anonymous device, not for a signed-in human.
+    expect(events).toEqual([]);
+    expect(gate.getState().open).toBe(false);
+  });
+
+  it("read-scope device + password person: the run flies (a confirmed person is ui-class)", async () => {
+    const events: string[] = [];
+    const gate = new UiTokenGate({
+      hasToken: () => true, // the device identity counts in hasToken
+      hasUiToken: () => false, // …but the owner-session mirror stays token-only
+      hasDeviceIdentity: () => true,
+      deviceScope: () => "read",
+      hasPasswordSession: () => true,
+    });
+    gate.listen((event) => events.push(event.type));
+    const run = vi.fn(async () => undefined);
+    gate.runAuthorized(run);
+    await vi.waitFor(() => expect(run).toHaveBeenCalledTimes(1));
+    expect(events).toEqual([]); // the pre-flight 403 refusal does NOT fire
+    expect(gate.getState().open).toBe(false);
+  });
+});

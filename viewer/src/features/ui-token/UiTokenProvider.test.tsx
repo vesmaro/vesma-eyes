@@ -6,6 +6,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { UiTokenProvider } from "./UiTokenProvider";
 import { UiTokenSlot } from "./UiTokenSlot";
 import { UiTokenContext } from "./UiTokenContext";
+import {
+  resetPasswordSessionForTests,
+  setPasswordUser,
+} from "@/features/auth/passwordSession";
 import { AuthContext } from "@/features/auth/AuthContext";
 import type { AuthContextValue } from "@/features/auth/AuthContext";
 import { GatewayContext } from "@/gateway/GatewayContext";
@@ -41,6 +45,32 @@ describe("UiTokenProvider (SSR smoke)", () => {
     );
     expect(html).toContain("read-only content stays browsable");
     expect(html).not.toContain("Sign in with a ui token");
+  });
+
+  it("renders children with the window closed while a password person is confirmed (ME-081 wiring)", () => {
+    // The provider injects hasPasswordSession from the module store; the
+    // SSR smoke proves the wiring mounts cleanly with a confirmed person
+    // (the interactive beats live in LoginDialog.flow.test.tsx).
+    setPasswordUser({ username: "abyss", role: "owner" });
+    try {
+      const html = renderToString(
+        <GatewayContext.Provider value={new HttpAdapter("/api")}>
+          <QueryClientProvider client={new QueryClient()}>
+            <I18nProvider initialLang="en">
+              <ToastProvider>
+                <UiTokenProvider>
+                  <p>read-only content stays browsable</p>
+                </UiTokenProvider>
+              </ToastProvider>
+            </I18nProvider>
+          </QueryClientProvider>
+        </GatewayContext.Provider>,
+      );
+      expect(html).toContain("read-only content stays browsable");
+      expect(html).not.toContain("Sign in with a ui token");
+    } finally {
+      resetPasswordSessionForTests(); // the store is module-global
+    }
   });
 });
 
