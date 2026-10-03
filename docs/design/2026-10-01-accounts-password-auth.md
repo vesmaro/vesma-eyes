@@ -208,6 +208,20 @@ LAN за одним NAT-IP — экспонента = DoS владельца о�
 | 14 | Username normalization/enumeration | DONE — lowercase boundary-нормализация; UNIQUE; нейтральный 401 |
 | 15 | Регистрация fail-closed | DONE — открыта только пока accounts пуст; дальше флаг деплоя |
 | 16 | Не ослабить существующее | DONE — ui-token/`vesmaro_ui`/machine-ноги байт-в-байт; probe не тронут; 503 fail-closed сохранён |
+| 17 | 422-тело не эхоит материал (CWE-209) | DONE — каскад F1 (2026-10-01, approve-after-fix): глобальный handler `RequestValidationError` вырезает `errors[].input`; type/loc/msg остаются; store-422 (HTTPException) не задеты |
+| 18 | Brute-force виден владельцу | DONE — каскад F2: каждый отказ кредов пишется в `server_log` (`auth.login.failed`, username + IP, БЕЗ пароля; unknown-user и wrong-password — одинаковая форма события). Форма (не events!): `/api/events` — открытая SSE-шина, трансляция попыток входа анонимам недопустима; register/login-успехи тоже переведены в server_log той же логикой |
+| 19 | Clear-cookie симметричен set-cookie | DONE — каскад F5: logout clear-cookie несёт `Secure` по схеме запроса |
+
+## 6.1 Каскад-ревью (security-аудитор, 2026-10-01)
+
+Вердикт: **approve-after-fix**, P0/P1 нет. Закрыто в этом срезе: F1
+(422-эхо пароля, CWE-209 — глобальный handler + тест маркера), F2
+(незримость brute-force — аудит `auth.login.failed` в server_log + тест),
+F5 (Secure на clear-cookie + тест). F3/F4 — не код: раздел Runbook (§11)
+этого документа. Дополнительная находка применения F2, найденная при
+реализации: черновой аудит через `_log()` писал бы в `events` — ОТКРЫТУЮ
+SSE-шину; auth-аудит заведён в `server_log` напрямую (и успехи
+register/login переведены туда же).
 
 ## 7. Тесты (tests/test_auth_accounts.py)
 
@@ -246,3 +260,25 @@ pytest ≥ 1520 passed + новые кейсы (базлайн 1520/4); vitest �
 перекрыт); OpenAPI аддитивно, снапшот-регенерация отдельным коммитом;
 push `feat/me080-accounts` от origin/main 474617c (≥ 9225a1c —
 выполнено); мерж запрещён до каскад-ревью security-аудитора.
+
+## 11. Runbook (каскад F3/F4 — не код, операционные строки)
+
+1. **Зарегистрировать владельца сразу после первого старта.** Регистрация
+   открыта ровно до первого аккаунта: первый зарегистрировавшийся
+   становится владельцем борта (§3.3). Окно «борд поднялся, аккаунта ещё
+   нет» — единственное, когда POST /api/auth/register создаёт owner;
+   протянуть его = отдать борт тому, кто успел. Порядок ввода в строй:
+   деплой → сразу открыть `/auth?tab=register` → создать владельческий
+   аккаунт → (опционально) выставить `VESMARO_ALLOW_REGISTRATION=1`,
+   если нужны member-аккаунты. Аудит регистрации — `server_log`
+   (`account.registered`).
+2. **Single-worker инвариант.** Сервер живёт в одном процессе uvicorn
+   (Containerfile CMD: uvicorn без `--workers`; масштабирование —
+   репликами за прокси, не воркерами). Лимитеры авторизации
+   (`_auth_login_*`, `_auth_register_*`), троттл reissue и таблицы
+   `vesmaro_ui`-слайдинга — in-memory per-process: N воркеров означало бы
+   N умноженных бюджетов brute-force (10/60s на воркер) и расщеплённый
+   троттл слайдинга. Инвариант ДО этого среза держал ADR 0014
+   (`_auth_verify_*`, `_ui_reissue_last`) — ME-080 расширяет его на
+   новые поверхности. При изменении CMD — синхронно пересматривать
+   лимитеры (перенос в SQLite или согласование через прокси).

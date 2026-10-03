@@ -31,6 +31,7 @@ Pinned contract (docs/design/2026-10-01-accounts-password-auth.md):
 
 from __future__ import annotations
 
+import json
 import re
 
 import pytest
@@ -71,6 +72,7 @@ def fresh_accounts_state(app_module, monkeypatch, client):
         with app_module.store._lock, app_module.store._conn() as db:
             db.execute("DELETE FROM auth_sessions")
             db.execute("DELETE FROM accounts")
+            db.execute("DELETE FROM server_log WHERE server='auth'")
 
     _wipe()
     client.cookies.clear()
@@ -594,3 +596,113 @@ class TestAccountStore:
                        (past,))
         assert store.get_auth_session(token) is None
         _time.sleep(0)
+
+
+# ------------------------------------------------- cascade fixes (2026-10-01)
+class TestValidationBodyHygiene:
+    """Cascade F1 (CWE-209): the default 422 echoed each rejected field's
+    VALUE (pydantic errors[].input) — the password rode the response body
+    on exactly the validation path. The GLOBAL handler strips `input`;
+    type/loc/msg survive (the error stays fixable)."""
+
+    def test_register_422_never_echoes_password(self, client):
+        marker = "p" * 513  # max_length violation → input was echoed
+        r = client.post("/api/auth/register",
+                        json={"username": "okname", "password": marker})
+        assert r.status_code == 422
+        assert marker not in r.text
+        detail = r.json()["detail"]
+        assert isinstance(detail, list) and detail
+        assert all("input" not in entry for entry in detail)
+        password_entry = next(e for e in detail if e["loc"][-1] == "password")
+        assert password_entry["type"]        # string_too_long etc.
+        assert password_entry["msg"]
+
+    def test_login_422_never_echoes_password(self, client):
+        marker = "q" * 513
+        r = client.post("/api/auth/login",
+                        json={"username": "owner", "password": marker})
+        assert r.status_code == 422
+        assert marker not in r.text
+        assert all("input" not in entry
+                   for entry in r.json()["detail"])
+
+    def test_422_still_reports_the_field(self, client):
+        """Hygiene must not blind the client: loc/type survive."""
+        r = client.post("/api/auth/register",
+                        json={"username": "ab", "password": PASSWORD})
+        assert r.status_code == 422
+        detail = r.json()["detail"]
+        assert any(e["loc"][-1] == "username" for e in detail)
+
+
+class TestFailedLoginAudit:
+    """Cascade F2: the flat limiter is the only brute-force barrier, so
+    every credential rejection leaves a PERSISTENT server_log trail —
+    username + IP, never the password, same event for unknown-user and
+    wrong-password. Deliberately NOT on the open SSE bus."""
+
+    def _auth_log(self, app_module):
+        with app_module.store._lock, app_module.store._conn() as db:
+            rows = db.execute(
+                "SELECT ts, server, action, detail FROM server_log "
+                "WHERE server='auth' ORDER BY id DESC").fetchall()
+        return [dict(r) for r in rows]
+
+    def test_wrong_password_audited(self, client, app_module):
+        assert _register(client).status_code == 201
+        assert _login(client, password="wrong-pass-123").status_code == 401
+        failed = [r for r in self._auth_log(app_module)
+                  if r["action"] == "login.failed"]
+        assert len(failed) == 1
+        assert "wrong-pass-123" not in failed[0]["detail"]
+        assert PASSWORD not in failed[0]["detail"]
+
+    def test_unknown_user_audited_same_shape(self, client, app_module):
+        assert _register(client).status_code == 201
+        assert _login(client, "ghost").status_code == 401
+        failed = [r for r in self._auth_log(app_module)
+                  if r["action"] == "login.failed"]
+        assert len(failed) == 1
+        payload = json.loads(failed[0]["detail"])
+        assert payload == {"username": "ghost", "ip": "testclient"}
+
+    def test_successful_login_writes_no_failure(self, client, app_module):
+        assert _register(client).status_code == 201
+        assert _login(client).status_code == 200
+        assert [r for r in self._auth_log(app_module)
+                if r["action"] == "login.failed"] == []
+
+    def test_auth_events_never_reach_the_sse_bus(self, client, app_module):
+        """register/login audits live in server_log ONLY: /api/events is an
+        open anonymous feed and must never broadcast account activity."""
+        assert _register(client).status_code == 201
+        client.cookies.clear()
+        assert _login(client).status_code == 200
+        kinds = {e["kind"] for e in app_module.store.events(0, 10000)}
+        assert "account.registered" not in kinds
+        assert "auth.session.created" not in kinds
+        # the persistent audit still carries them
+        actions = {r["action"] for r in self._auth_log(app_module)}
+        assert {"account.registered", "auth.session.created"} <= actions
+
+
+class TestLogoutClearCookieSymmetry:
+    """Cascade F5: the clear-cookie mirrors the set-cookie flags including
+    Secure-by-scheme (an https deploy must not get an insecure clear)."""
+
+    def test_https_logout_clears_with_secure(self, app_module):
+        https = TestClient(app_module.app, base_url="https://testserver")
+        assert _register(https).status_code == 201
+        r = https.post("/api/auth/logout")
+        assert r.status_code == 204
+        header = r.headers.get("set-cookie", "").lower()
+        assert "max-age=0" in header
+        assert "secure" in header
+
+    def test_http_logout_stays_insecure(self, client):
+        assert _register(client).status_code == 201
+        header = client.post("/api/auth/logout").headers.get(
+            "set-cookie", "").lower()
+        assert "max-age=0" in header
+        assert "secure" not in header

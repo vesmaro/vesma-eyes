@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Annotated, Any, AsyncIterator, Literal
 
 from fastapi import FastAPI, HTTPException, Query, Request, Response
+from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
 from fastapi.responses import (
     FileResponse,
@@ -907,6 +908,23 @@ class _UiCookieReissueRoute(APIRoute):
 
 
 app.router.route_class = _UiCookieReissueRoute
+
+
+# --------------------------------- 422 body hygiene (cascade F1, CWE-209)
+# The DEFAULT RequestValidationError body echoes each rejected field's
+# VALUE back (pydantic errors[].input) — on /api/auth/* that is the
+# PASSWORD riding a 422 response body, breaking the "no password ever in
+# a response" invariant on exactly the validation path. GLOBAL handler by
+# design (not auth-scoped): any surface's input is potential secret
+# material, and the stripped shape stays honest — type/loc/msg survive,
+# only the echo dies. Store-raised 422s (HTTPException) are untouched.
+@app.exception_handler(RequestValidationError)
+async def _validation_error_without_input(request: Request,
+                                          exc: RequestValidationError
+                                          ) -> JSONResponse:
+    errors = [{k: v for k, v in error.items() if k != "input"}
+              for error in exc.errors()]
+    return JSONResponse(status_code=422, content={"detail": errors})
 
 # ------------------------------------- device-token scope guard (ADR 0012 §5)
 # The single scope middleware for PREFIX-CLASSIFIED tokens, standing
@@ -7594,9 +7612,11 @@ async def login_account(body: AccountLoginIn, request: Request,
     """Password login (ME-080 §4): verifies at the door and opens the
     ``vesmaro_auth`` session. The 401 is NEUTRAL by contract — unknown
     username and wrong password are indistinguishable in status, detail
-    AND timing (the dummy-scrypt equalizer). Errors: 401 neutral, 429 on
-    the flat limiters. The password never appears in any log or
-    response."""
+    AND timing (the dummy-scrypt equalizer) — while the AUDIT trail
+    (server_log auth.login.failed, cascade F2) records every credential
+    rejection with the submitted username and IP, never the password.
+    Errors: 401 neutral, 429 on the flat limiters. The password never
+    appears in any log or response."""
     client_ip = request.client.host if request.client else "unknown"
     if not _auth_login_ip_limiter.acquire(client_ip):
         raise HTTPException(
@@ -7616,8 +7636,10 @@ async def login_account(body: AccountLoginIn, request: Request,
     account = store.get_account_by_username(username)
     if account is None:
         verify_password(body.password, _DUMMY_PASSWORD_HASH)
+        store.note_auth_login_failed(username, client_ip)
         raise HTTPException(401, "invalid username or password")
     if not verify_password(body.password, account["password_hash"]):
+        store.note_auth_login_failed(username, client_ip)
         raise HTTPException(401, "invalid username or password")
     token = secrets.token_urlsafe(32)
     store.create_auth_session(
@@ -7638,12 +7660,15 @@ async def logout_account(request: Request, response: Response) -> None:
     stolen cookie dies with it (the revocation the stateless vesmaro_ui
     cookie cannot do). NO guard by design, same rationale as
     DELETE /api/auth/ui-token: a logout that 401s on an already-expired
-    session is a trap. Idempotent."""
+    session is a trap. Idempotent. The clear-cookie mirrors the set-cookie
+    flags INCLUDING Secure-by-scheme (cascade F5: an https deploy must
+    not receive an insecure clear)."""
     token = request.cookies.get(_AUTH_COOKIE_NAME, "")
     if token:
         store.delete_auth_session(token)
     response.set_cookie(_AUTH_COOKIE_NAME, "", max_age=0, httponly=True,
-                        samesite="strict", path="/")
+                        samesite="strict", path="/",
+                        secure=request.url.scheme == "https")
 
 
 @app.get("/api/auth/me")

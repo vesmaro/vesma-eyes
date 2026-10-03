@@ -3651,9 +3651,10 @@ class Store:
             except sqlite3.IntegrityError as exc:
                 raise AccountExistsError(
                     f"username '{username}' is already registered") from exc
-            self._log(db, "account.registered", None, {
-                "username": username, "role": role,
-            })
+            # server_log, not the events table (open SSE feed — see
+            # note_auth_login_failed).
+            self._auth_audit(db, "account.registered",
+                             {"username": username, "role": role})
             row = db.execute("SELECT * FROM accounts WHERE username=?",
                              (username,)).fetchone()
             return dict(row)
@@ -3664,6 +3665,39 @@ class Store:
         with self._lock, self._conn() as db:
             db.execute("UPDATE accounts SET last_login_at=? WHERE id=?",
                        (_now(), account_id))
+
+    def note_auth_login_failed(self, username: str, ip: str) -> None:
+        """FAILED login audit (cascade F2, 2026-10-01): the flat limiter is
+        the only brute-force barrier (the ADR 0014 exponential-lockout
+        rejection stands), so every credential rejection must leave a
+        PERSISTENT trail the owner can read. Deliberately server_log, NOT
+        the events table: /api/events is an OPEN anonymous SSE feed and
+        must never broadcast login attempts (an attempt stream is
+        activity/attack metadata, not board facts). Logs the SUBMITTED
+        username and IP; never the password or its shape; unknown-user and
+        wrong-password land as the SAME event (no enumeration even in the
+        audit). mask_secrets keeps a Bearer-shaped username from poisoning
+        the journal (SEC-2 rule ships with the writer)."""
+        detail = json.dumps({"username": username[:64], "ip": ip[:64]})
+        with self._lock, self._conn() as db:
+            db.execute(
+                "INSERT INTO server_log (ts, server, action, detail) "
+                "VALUES (?,?,?,?)",
+                (_now(), "auth", "login.failed",
+                 mask_secrets(detail)[:500]))
+
+    def _auth_audit(self, db: sqlite3.Connection, action: str,
+                    payload: dict[str, Any]) -> None:
+        """Auth success audit (same cascade hygiene as note_auth_login_
+        failed): server_log ONLY — a register/login landing on the open
+        events feed would broadcast account activity anonymously. Runs on
+        the CALLER's connection (same lock, same transaction — opening a
+        second self._lock here would deadlock on the non-reentrant Lock)."""
+        db.execute(
+            "INSERT INTO server_log (ts, server, action, detail) "
+            "VALUES (?,?,?,?)",
+            (_now(), "auth", action,
+             mask_secrets(json.dumps(payload))[:500]))
 
     def get_account_by_username(self, username: str) -> dict[str, Any] | None:
         """Login lookup. Username is a non-secret (uniqueness is public
@@ -3703,7 +3737,10 @@ class Store:
                        VALUES (?,?,?,?,?,?)""",
                 (token_hash, account_id, now.isoformat(timespec="seconds"),
                  expires, ua[:256], ip[:64]))
-            self._log(db, "auth.session.created", None, {
+            # server_log, not the events table (open SSE feed — see
+            # note_auth_login_failed); token_id is the sha256 TAIL, no
+            # material.
+            self._auth_audit(db, "auth.session.created", {
                 "account_id": account_id, "token_id": token_hash[-8:],
                 "expires_at": expires,
             })
