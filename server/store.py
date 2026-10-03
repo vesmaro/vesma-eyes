@@ -520,6 +520,15 @@ class DeviceQuotaError(DeviceError):
     choose explicitly; auto-eviction is FORBIDDEN by ADR §5)."""
 
 
+class AccountError(Exception):
+    """Base class for login+password account violations (ME-080)."""
+
+
+class AccountExistsError(AccountError):
+    """Username already registered (HTTP 409 upstream — case-insensitive:
+    usernames are normalized to lowercase at the boundary)."""
+
+
 # ---------------------------------------------------- enrollment (ADR 0009 Amd 2 §4 supplement)
 # One-time registration tokens for REMOTE executors (rented VPS): the owner
 # mints an ``mne_``-prefixed secret from the UI; the executor presents it on
@@ -1262,6 +1271,42 @@ CREATE TABLE IF NOT EXISTS task_session_facts (
 );
 CREATE INDEX IF NOT EXISTS idx_task_session_facts_task
 ON task_session_facts (task_id, reported_at);
+-- ME-080 (owner directive 2026-10-01, login+password entry; ADR 0014 stays
+-- authoritative for the ui-token session): local ACCOUNTS. The FIRST
+-- account becomes the board owner (owner verdict 07k §10-аддендум);
+-- later registration stays closed unless the deploy flag
+-- VESMARO_ALLOW_REGISTRATION=1 opens it (member accounts). password_hash
+-- is an ALGO-PREFIXED scrypt envelope ('scrypt$N$r$p$salthex$hashhex',
+-- server/security.py) — never plaintext, never a bare digest; the algo
+-- field is the argon2id upgrade seam. Additive IF NOT EXISTS riding the
+-- _SCHEMA executescript — NO SEED_VERSION bump (task_session_facts
+-- precedent).
+CREATE TABLE IF NOT EXISTS accounts (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    username      TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    password_hash TEXT NOT NULL,
+    role          TEXT NOT NULL DEFAULT 'owner'
+                  CHECK (role IN ('owner','member')),
+    created_at    TEXT NOT NULL,
+    last_login_at TEXT NOT NULL DEFAULT ''
+);
+-- ME-080 password SESSIONS: server-side rows (revocable, unlike the
+-- stateless vesmaro_ui token-cookie). token_hash = sha256 of the
+-- token_urlsafe(32) cookie value — plaintext exists exactly once, in the
+-- Set-Cookie at login/register (device_sessions precedent). expires_at
+-- is the SLIDING idle clock (6h, the owner's ratified ADR-0014
+-- amendment; refreshed by the same throttled reissue the vesmaro_ui
+-- cookie rides). Additive — NO SEED_VERSION bump.
+CREATE TABLE IF NOT EXISTS auth_sessions (
+    token_hash  TEXT PRIMARY KEY,
+    account_id  INTEGER NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+    created_at  TEXT NOT NULL,
+    expires_at  TEXT NOT NULL,
+    ua          TEXT NOT NULL DEFAULT '',
+    ip          TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_auth_sessions_account
+ON auth_sessions (account_id);
 """
 
 # WF-1 table-rebuild target (Store._rebuild_tasks_for_wf1): the full
@@ -3564,6 +3609,192 @@ class Store:
             if hmac.compare_digest(row["secret_hash"], digest):
                 return dict(row)
         return None
+
+    # ------------------------------------------------- accounts (ME-080)
+    # Login+password accounts and their SERVER-SIDE sessions. Hash-only
+    # discipline end to end: password_hash is the algo-prefixed scrypt
+    # envelope minted by server/security.py (never plaintext, never a bare
+    # digest); auth_sessions stores sha256(token) — the plaintext session
+    # token exists exactly once, in the Set-Cookie at login/register.
+    # Expiry compares isoformat-second strings (device_sessions precedent);
+    # the 6h sliding clock lives in app.py (the ratified ADR-0014 TTL).
+
+    def count_accounts(self) -> int:
+        """Registration-policy oracle: the FIRST account becomes the board
+        owner, so 'open' means exactly COUNT(*)==0 (plus the deploy flag,
+        evaluated in app.py)."""
+        with self._lock, self._conn() as db:
+            return db.execute("SELECT COUNT(*) AS n FROM accounts").fetchone()["n"]
+
+    def create_account(self, username: str, password_hash: str,
+                       role: str | None = None) -> dict[str, Any]:
+        """Insert an account; AccountExistsError on a taken username (the
+        UNIQUE index is the race-safe gate — a check-then-act pre-SELECT
+        would have a window). Username arrives normalized to lowercase
+        from the API boundary. ``role=None`` derives INSIDE the insert
+        transaction: the first-ever account is the board 'owner' (07k
+        §10-аддендум), every later one is 'member' — two concurrent
+        first-registrations can never mint two owners."""
+        now = _now()
+        with self._lock, self._conn() as db:
+            if role is None:
+                role = ("member" if db.execute(
+                    "SELECT 1 FROM accounts LIMIT 1").fetchone() else "owner")
+            try:
+                db.execute(
+                    """INSERT INTO accounts
+                           (username, password_hash, role, created_at,
+                            last_login_at)
+                           VALUES (?,?,?,?,?)""",
+                    (username, password_hash, role, now, ""),
+                )
+            except sqlite3.IntegrityError as exc:
+                raise AccountExistsError(
+                    f"username '{username}' is already registered") from exc
+            # server_log, not the events table (open SSE feed — see
+            # note_auth_login_failed).
+            self._auth_audit(db, "account.registered",
+                             {"username": username, "role": role})
+            row = db.execute("SELECT * FROM accounts WHERE username=?",
+                             (username,)).fetchone()
+            return dict(row)
+
+    def note_account_login(self, account_id: int) -> None:
+        """last_login_at stamp (owner-facing metadata only — no policy
+        reads it yet)."""
+        with self._lock, self._conn() as db:
+            db.execute("UPDATE accounts SET last_login_at=? WHERE id=?",
+                       (_now(), account_id))
+
+    def note_auth_login_failed(self, username: str, ip: str) -> None:
+        """FAILED login audit (cascade F2, 2026-10-01): the flat limiter is
+        the only brute-force barrier (the ADR 0014 exponential-lockout
+        rejection stands), so every credential rejection must leave a
+        PERSISTENT trail the owner can read. Deliberately server_log, NOT
+        the events table: /api/events is an OPEN anonymous SSE feed and
+        must never broadcast login attempts (an attempt stream is
+        activity/attack metadata, not board facts). Logs the SUBMITTED
+        username and IP; never the password or its shape; unknown-user and
+        wrong-password land as the SAME event (no enumeration even in the
+        audit). mask_secrets keeps a Bearer-shaped username from poisoning
+        the journal (SEC-2 rule ships with the writer)."""
+        detail = json.dumps({"username": username[:64], "ip": ip[:64]})
+        with self._lock, self._conn() as db:
+            db.execute(
+                "INSERT INTO server_log (ts, server, action, detail) "
+                "VALUES (?,?,?,?)",
+                (_now(), "auth", "login.failed",
+                 mask_secrets(detail)[:500]))
+
+    def _auth_audit(self, db: sqlite3.Connection, action: str,
+                    payload: dict[str, Any]) -> None:
+        """Auth success audit (same cascade hygiene as note_auth_login_
+        failed): server_log ONLY — a register/login landing on the open
+        events feed would broadcast account activity anonymously. Runs on
+        the CALLER's connection (same lock, same transaction — opening a
+        second self._lock here would deadlock on the non-reentrant Lock)."""
+        db.execute(
+            "INSERT INTO server_log (ts, server, action, detail) "
+            "VALUES (?,?,?,?)",
+            (_now(), "auth", action,
+             mask_secrets(json.dumps(payload))[:500]))
+
+    def get_account_by_username(self, username: str) -> dict[str, Any] | None:
+        """Login lookup. Username is a non-secret (uniqueness is public
+        knowledge on a board); the TIMING equalization for the unknown-user
+        case lives in app.py (dummy scrypt verify), not here."""
+        with self._lock, self._conn() as db:
+            row = db.execute("SELECT * FROM accounts WHERE username=?",
+                             (username,)).fetchone()
+        return dict(row) if row else None
+
+    def get_account(self, account_id: int) -> dict[str, Any] | None:
+        with self._lock, self._conn() as db:
+            row = db.execute("SELECT * FROM accounts WHERE id=?",
+                             (account_id,)).fetchone()
+        return dict(row) if row else None
+
+    def create_auth_session(self, token: str, account_id: int, *,
+                            ua: str = "", ip: str = "",
+                            ttl_s: float) -> dict[str, Any]:
+        """Mint a session row for an ALREADY-VERIFIED login: sha256 of the
+        raw token is the PK (device_sessions precedent), expiry = now+ttl
+        (the sliding 6h clock; the first refresh comes from the same
+        throttled reissue path the vesmaro_ui cookie rides). Lazily sweeps
+        expired rows — expired sessions are dead weight, never audit
+        history (the account log carries the trail)."""
+        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+        now = datetime.now(timezone.utc)
+        expires = (now + timedelta(seconds=ttl_s)).isoformat(timespec="seconds")
+        with self._lock, self._conn() as db:
+            db.execute(
+                "DELETE FROM auth_sessions WHERE expires_at < ?",
+                (now.isoformat(timespec="seconds"),))
+            db.execute(
+                """INSERT INTO auth_sessions
+                       (token_hash, account_id, created_at, expires_at,
+                        ua, ip)
+                       VALUES (?,?,?,?,?,?)""",
+                (token_hash, account_id, now.isoformat(timespec="seconds"),
+                 expires, ua[:256], ip[:64]))
+            # server_log, not the events table (open SSE feed — see
+            # note_auth_login_failed); token_id is the sha256 TAIL, no
+            # material.
+            self._auth_audit(db, "auth.session.created", {
+                "account_id": account_id, "token_id": token_hash[-8:],
+                "expires_at": expires,
+            })
+        row = self.get_auth_session(token)
+        assert row is not None  # INSERT-then-read on the same PK: paranoid
+        return row
+
+    def get_auth_session(self, token: str) -> dict[str, Any] | None:
+        """Validate a session token: joined (session, account) row, or None
+        when the token is unknown/removed (logout = instant revocation) or
+        past its sliding expiry. Never raises."""
+        if not token:
+            return None
+        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+        with self._lock, self._conn() as db:
+            row = db.execute(
+                """SELECT s.token_hash, s.account_id, s.created_at,
+                          s.expires_at, s.ua, s.ip,
+                          a.username, a.role
+                   FROM auth_sessions s JOIN accounts a
+                        ON a.id = s.account_id
+                   WHERE s.token_hash=?""",
+                (token_hash,)).fetchone()
+        if row is None:
+            return None
+        session = dict(row)
+        if session["expires_at"] <= datetime.now(timezone.utc).isoformat(
+                timespec="seconds"):
+            return None
+        return session
+
+    def touch_auth_session(self, token: str, *, ttl_s: float) -> bool:
+        """Sliding-expiry tick: expires_at = now+ttl. Returns False when the
+        row is already gone (logout raced a reissue — the cookie must NOT
+        resurrect it, hence the WHERE)."""
+        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+        expires = (datetime.now(timezone.utc)
+                   + timedelta(seconds=ttl_s)).isoformat(timespec="seconds")
+        with self._lock, self._conn() as db:
+            cur = db.execute(
+                "UPDATE auth_sessions SET expires_at=? WHERE token_hash=?",
+                (expires, token_hash))
+        return cur.rowcount == 1
+
+    def delete_auth_session(self, token: str) -> bool:
+        """Server-side logout (ME-080): the row dies, so a stolen cookie
+        dies with it (revocation the stateless vesmaro_ui cookie cannot
+        do). False = there was nothing to delete (idempotent logout)."""
+        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+        with self._lock, self._conn() as db:
+            cur = db.execute(
+                "DELETE FROM auth_sessions WHERE token_hash=?",
+                (token_hash,))
+        return cur.rowcount == 1
 
     def touch_executor_last_seen(self, executor_id: str) -> bool:
         """Presence tick: last_seen = now. Revoked executors never tick —

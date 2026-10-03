@@ -243,8 +243,6 @@ export const en: Record<TranslationKey, string> = {
   "auth.gate.elsewhere": "The statistics are open to everyone — they live on the Overview.",
   "auth.gate.goOverview": "Open the Overview",
   "auth.gate.signUp": "Create an account",
-  "auth.gate.signUpNote":
-    "Accounts are created by the board owner. The first account created becomes the owner.",
   "auth.gate.seeMore": "What will I see after signing in",
   "auth.gate.seeMore.memoryRecords": "Memory records: the list, filters, tags",
   "auth.gate.seeMore.memorySearch": "Search by meaning across every record",
@@ -264,6 +262,50 @@ export const en: Record<TranslationKey, string> = {
   "auth.gate.checkingSession": "Checking your session…",
   "auth.route.back": "← Back to the board",
   "auth.route.alreadySignedIn": "You are already signed in",
+
+  // --- ME-080: /auth route, the «Sign in | Register» pair (07k §4.1–§4.4;
+  // ME-078 copy standard: zero jargon, human outcomes) -------------------------
+  "auth.route.registerTitle": "Create an account",
+  "auth.route.passwordDescription": "Sign in with a username and password.",
+  "auth.route.tokenDescription":
+    "Token sign-in — for machines and service deployments. People sign in with a username and password.",
+  "auth.route.registerDescription":
+    "Create an account — it becomes your way onto the board right away.",
+  "auth.route.tabsLabel": "Sign in or create an account",
+  "auth.route.tabSignIn": "Sign in",
+  "auth.route.tabRegister": "Register",
+  "auth.route.registerSubmit": "Create an account",
+  "auth.route.signingIn": "Signing in…",
+  "auth.route.creating": "Creating…",
+  "auth.route.registerNote": "The first account created becomes the owner of the board.",
+  "auth.route.usernameLabel": "Username",
+  "auth.route.passwordLabel": "Password",
+  "auth.route.confirmLabel": "Repeat the password",
+  "auth.route.showPassword": "Show the password",
+  "auth.route.hidePassword": "Hide the password",
+  "auth.route.usernameHint": "The name: lowercase latin letters, 3 to 32 characters; digits, hyphens and underscores allowed.",
+  "auth.route.passwordHint": "The password: at least 8 characters.",
+  "auth.route.errRequiredUsername": "Enter the name.",
+  "auth.route.errRequiredPassword": "Enter the password.",
+  "auth.route.errRequiredConfirm": "Repeat the password.",
+  "auth.route.errUsername": "The name does not fit: lowercase latin letters, 3 to 32 characters; digits, hyphens and underscores allowed inside.",
+  "auth.route.errPassword": "The password is too short — at least 8 characters.",
+  "auth.route.errConfirm": "The passwords do not match — check the second field.",
+  "auth.route.verdictPrefix": "Error:",
+  "auth.route.loginFailed": "Wrong name or password.",
+  "auth.route.loginFailedHelp": "What to check: the RU/EN layout, letter case, Caps Lock.",
+  "auth.route.tooManyAttempts": "Too many attempts — wait a minute and try again.",
+  "auth.route.nameTaken": "That name is taken. Pick another one.",
+  "auth.route.registrationClosed": "Registration is closed: the board already has its owner.",
+  "auth.route.registerFailed": "The account could not be created.",
+  "auth.route.networkFailed": "The server did not answer — check the connection and try again.",
+  "auth.route.signedInToast": "You are signed in: {{username}}",
+  "auth.route.accountCreatedToast": "The account is created. You are signed in: {{username}}",
+  "auth.route.alreadySignedInNamed": "You are already signed in: {{username}}",
+  "auth.route.tokenModeLink": "Token sign-in (admin)",
+  "auth.route.backToPassword": "← Back to the username and password sign-in",
+  "auth.route.roleOwner": "owner",
+  "auth.route.roleMember": "member",
 
   // --- search -------------------------------------------------------------------
   "search.title": "Search",
@@ -467,7 +509,7 @@ export const en: Record<TranslationKey, string> = {
   "login.hint": "Where to get one: ask your cluster administrator.",
   "login.hintCommandSummary": "Command for the administrator (kubectl)",
   "login.hintCommand":
-    "kubectl -n kube-agents get secret vesma-eyes-ui-token -o jsonpath='{.data.VESMARO_UI_TOKEN}' | base64 -d",
+    "kubectl -n kube-agents get secret vesmaro-eyes-ui-token -o jsonpath='{.data.VESMARO_UI_TOKEN}' | base64 -d",
   "login.continueReadOnly": "Continue read-only",
   "login.submit": "Sign in",
   "login.verifying": "Verifying…",
@@ -477,7 +519,7 @@ export const en: Record<TranslationKey, string> = {
   // Login feedback toasts (fix/login-feedback) — see ru.ts.
   "login.toastSignedIn": "Signed in — control available",
   "login.toastLegacy":
-    "Board token accepted: no dedicated ui token (vesma-eyes-ui-token) is configured — legacy mode is active.",
+    "Board token accepted: no dedicated ui token (vesmaro-eyes-ui-token) is configured — legacy mode is active.",
   "login.toastRejected": "Token rejected",
   "login.toastRejectedDetail":
     "The server answered 401 — the login window is open for a current value.",

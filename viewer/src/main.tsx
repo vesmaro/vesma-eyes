@@ -6,6 +6,7 @@ import { queryClient } from "@/lib/queryClient";
 import { GatewayContext } from "@/gateway/GatewayContext";
 import { createGateway } from "@/gateway/adapterConfig";
 import { initAuthSession } from "@/features/ui-token/authSession";
+import { initPasswordSession } from "@/features/auth/passwordSession";
 import { ThemeProvider } from "@/components/theme-provider";
 import { DensityProvider } from "@/components/density-provider";
 import { HotkeysProvider } from "@/layout/Hotkeys";
@@ -50,6 +51,10 @@ void createGateway()
     // and closed content can never flash. Idempotent per gateway: the
     // UiTokenProvider joins this same promise (no second request).
     initAuthSession(gateway);
+    // ME-080: the password-session boot whoami (GET /api/auth/me, always 200
+    // JSON) rides the same pre-paint slot — board deployments only (the
+    // capability guard inside skips mock/vesma), one request per app boot.
+    initPasswordSession(gateway);
     createRoot(rootElement).render(
       <StrictMode>
         <GatewayContext.Provider value={gateway}>

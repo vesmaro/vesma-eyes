@@ -1,11 +1,18 @@
 import { createContext, useContext } from "react";
 import type { AuthState } from "./authState";
+import type { PasswordUser } from "./passwordSession";
 import type { AdapterKind } from "@/gateway/adapterConfig";
 
 /**
  * DI context for the auth flow. `AuthProvider` owns the state machine and the
  * AuthClient; the overlay (AuthScreen) and the TopBar widget (AuthStatus)
  * consume it via `useAuth`.
+ *
+ * ME-080: alongside the vesma `mnk_` token flow the context carries the
+ * password-session surface (board deployments) — login/register/logout for
+ * the human `vesmaro_auth` cookie session. The person is mirrored from the
+ * passwordSession store; the forms own their inline verdicts (these methods
+ * REJECT with the wire error instead of painting machine state).
  */
 export interface AuthContextValue {
   state: AuthState;
@@ -15,6 +22,26 @@ export interface AuthContextValue {
   verify: (code: string) => Promise<void>;
   /** Invalidate the session server-side and reset to anonymous. */
   logout: () => Promise<void>;
+  /**
+   * ME-080: password sign-in (`POST /api/auth/login`) — the server sets the
+   * HttpOnly session cookie; resolves with the confirmed person, rejects
+   * with the wire error (401 neutral / 429 / …) for the form's verdict.
+   */
+  loginWithPassword: (username: string, password: string) => Promise<PasswordUser>;
+  /**
+   * ME-080: account creation (`POST /api/auth/register`) — success IS a
+   * sign-in (the cookie rides the same response); resolves with the new
+   * account, rejects with the wire error (409 taken / 403 closed / …).
+   */
+  registerAccount: (username: string, password: string) => Promise<PasswordUser>;
+  /**
+   * ME-080: password-session logout — the server row is deleted first; the
+   * local mirror resets even when the wire failed (an HttpOnly cookie cannot
+   * be cleared from JS anyway; the whoami on the next boot tells the truth).
+   */
+  logoutPassword: () => Promise<void>;
+  /** The confirmed password-session person, or null when anonymous. */
+  passwordUser: PasswordUser | null;
   openOverlay: () => void;
   closeOverlay: () => void;
   /**
@@ -37,4 +64,14 @@ export function useAuth(): AuthContextValue {
     );
   }
   return value;
+}
+
+/**
+ * Fail-soft read for surfaces that make sense in BOTH wirings — the
+ * password-session chip (ME-080) degrades to the plain token slot when a
+ * bare harness (SSR render tests, legacy mounts) provides no AuthProvider.
+ * The real app always mounts the provider above the tree.
+ */
+export function useAuthOptional(): AuthContextValue | null {
+  return useContext(AuthContext);
 }

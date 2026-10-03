@@ -261,8 +261,6 @@ export const ru = {
   "auth.gate.elsewhere": "Статистика открыта всем — она на Обзоре.",
   "auth.gate.goOverview": "Открыть Обзор",
   "auth.gate.signUp": "Создать аккаунт",
-  "auth.gate.signUpNote":
-    "Аккаунты создаёт владелец борта. Первый созданный аккаунт становится владельцем.",
   "auth.gate.seeMore": "Что я увижу после входа",
   "auth.gate.seeMore.memoryRecords": "Записи памяти: список, фильтры, теги",
   "auth.gate.seeMore.memorySearch": "Поиск по смыслу по всем записям",
@@ -280,6 +278,50 @@ export const ru = {
   "auth.gate.seeMore.systemSettings": "Настройки и автоматизация",
   "auth.gate.seeMore.systemDevices": "Подключённые устройства",
   "auth.gate.checkingSession": "Проверяем сессию…",
+
+  // --- ME-080: /auth route, «Вход | Регистрация» (07k §4.1–§4.4; копирайт —
+  // ME-078-стандарт: ноль жаргона, человеческие исходы) ------------------------
+  "auth.route.registerTitle": "Регистрация",
+  "auth.route.passwordDescription": "Вход по логину и паролю.",
+  "auth.route.tokenDescription":
+    "Вход по токену — для машин и служебных развёртываний. Люди входят по логину и паролю.",
+  "auth.route.registerDescription":
+    "Создайте аккаунт — он сразу станет вашим входом на борт.",
+  "auth.route.tabsLabel": "Вход или регистрация",
+  "auth.route.tabSignIn": "Вход",
+  "auth.route.tabRegister": "Регистрация",
+  "auth.route.registerSubmit": "Создать аккаунт",
+  "auth.route.signingIn": "Входим…",
+  "auth.route.creating": "Создаём…",
+  "auth.route.registerNote": "Первый созданный аккаунт становится владельцем борта.",
+  "auth.route.usernameLabel": "Имя пользователя",
+  "auth.route.passwordLabel": "Пароль",
+  "auth.route.confirmLabel": "Пароль ещё раз",
+  "auth.route.showPassword": "Показать пароль",
+  "auth.route.hidePassword": "Скрыть пароль",
+  "auth.route.usernameHint": "Имя — строчной латиницей, от 3 до 32 знаков; можно цифры, дефис и подчёркивание.",
+  "auth.route.passwordHint": "Пароль — не короче 8 знаков.",
+  "auth.route.errRequiredUsername": "Введите имя.",
+  "auth.route.errRequiredPassword": "Введите пароль.",
+  "auth.route.errRequiredConfirm": "Повторите пароль.",
+  "auth.route.errUsername": "Имя не подходит: нужна строчная латиница, от 3 до 32 знаков; внутри можно цифры, дефис и подчёркивание.",
+  "auth.route.errPassword": "Пароль коротковат — нужно не меньше 8 знаков.",
+  "auth.route.errConfirm": "Пароли не совпадают — проверьте второе поле.",
+  "auth.route.verdictPrefix": "Ошибка:",
+  "auth.route.loginFailed": "Неверное имя или пароль.",
+  "auth.route.loginFailedHelp": "Что проверить: раскладка RU/EN, регистр букв, Caps Lock.",
+  "auth.route.tooManyAttempts": "Слишком много попыток — подождите минуту и попробуйте снова.",
+  "auth.route.nameTaken": "Такое имя уже есть. Возьмите другое.",
+  "auth.route.registrationClosed": "Регистрация закрыта: у борта уже есть владелец.",
+  "auth.route.registerFailed": "Аккаунт создать не удалось.",
+  "auth.route.networkFailed": "Сервер не ответил — проверьте связь и попробуйте ещё раз.",
+  "auth.route.signedInToast": "Вы вошли: {{username}}",
+  "auth.route.accountCreatedToast": "Аккаунт создан. Вы вошли: {{username}}",
+  "auth.route.alreadySignedInNamed": "Вы уже вошли: {{username}}",
+  "auth.route.tokenModeLink": "Вход по токену (админ)",
+  "auth.route.backToPassword": "← Вернуться к входу по логину и паролю",
+  "auth.route.roleOwner": "владелец",
+  "auth.route.roleMember": "участник",
   "auth.route.back": "← На борт",
   "auth.route.alreadySignedIn": "Вы уже вошли",
 
@@ -487,7 +529,7 @@ export const ru = {
   "login.hint": "Где взять токен: спросите у администратора кластера.",
   "login.hintCommandSummary": "Команда для администратора (kubectl)",
   "login.hintCommand":
-    "kubectl -n kube-agents get secret vesma-eyes-ui-token -o jsonpath='{.data.VESMARO_UI_TOKEN}' | base64 -d",
+    "kubectl -n kube-agents get secret vesmaro-eyes-ui-token -o jsonpath='{.data.VESMARO_UI_TOKEN}' | base64 -d",
   "login.continueReadOnly": "Продолжить только чтение",
   "login.submit": "Войти",
   "login.verifying": "Проверка…",
@@ -498,7 +540,7 @@ export const ru = {
   // shout about the server-side 401 (alongside the inline window line).
   "login.toastSignedIn": "Вход выполнен — доступно управление",
   "login.toastLegacy":
-    "Принят board-токен: отдельный ui-токен (vesma-eyes-ui-token) не настроен — работает legacy-режим.",
+    "Принят board-токен: отдельный ui-токен (vesmaro-eyes-ui-token) не настроен — работает legacy-режим.",
   "login.toastRejected": "Токен отклонён",
   "login.toastRejectedDetail":
     "Сервер вернул 401 — окно входа открыто, вставьте актуальное значение.",
