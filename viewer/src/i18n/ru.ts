@@ -487,7 +487,7 @@ export const ru = {
   "login.hint": "Где взять токен: спросите у администратора кластера.",
   "login.hintCommandSummary": "Команда для администратора (kubectl)",
   "login.hintCommand":
-    "kubectl -n kube-agents get secret vesma-eyes-ui-token -o jsonpath='{.data.VESMARO_UI_TOKEN}' | base64 -d",
+    "kubectl -n kube-agents get secret vesmaro-eyes-ui-token -o jsonpath='{.data.VESMARO_UI_TOKEN}' | base64 -d",
   "login.continueReadOnly": "Продолжить только чтение",
   "login.submit": "Войти",
   "login.verifying": "Проверка…",
@@ -498,7 +498,7 @@ export const ru = {
   // shout about the server-side 401 (alongside the inline window line).
   "login.toastSignedIn": "Вход выполнен — доступно управление",
   "login.toastLegacy":
-    "Принят board-токен: отдельный ui-токен (vesma-eyes-ui-token) не настроен — работает legacy-режим.",
+    "Принят board-токен: отдельный ui-токен (vesmaro-eyes-ui-token) не настроен — работает legacy-режим.",
   "login.toastRejected": "Токен отклонён",
   "login.toastRejectedDetail":
     "Сервер вернул 401 — окно входа открыто, вставьте актуальное значение.",

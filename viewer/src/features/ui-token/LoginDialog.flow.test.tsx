@@ -530,7 +530,7 @@ describe("login flow regression (owner repro)", () => {
       "Command for the administrator",
     );
     expect(disclosure?.textContent).toContain(
-      "kubectl -n kube-agents get secret vesma-eyes-ui-token",
+      "kubectl -n kube-agents get secret vesmaro-eyes-ui-token",
     );
     // Regression (prod hotfix login-hint): the hint must teach the WORKING
     // value-extraction command (jsonpath + decode), never the `-o yaml`
@@ -573,7 +573,7 @@ describe("login flow regression (owner repro)", () => {
       "Команда для администратора (kubectl)",
     );
     expect(disclosure?.textContent).toContain(
-      "kubectl -n kube-agents get secret vesma-eyes-ui-token",
+      "kubectl -n kube-agents get secret vesmaro-eyes-ui-token",
     );
     // The WORKING extraction command, never the base64-blob `-o yaml` form.
     expect(disclosure?.textContent).toContain("-o jsonpath='{.data.VESMARO_UI_TOKEN}'");

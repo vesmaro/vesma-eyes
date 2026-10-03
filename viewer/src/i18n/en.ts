@@ -467,7 +467,7 @@ export const en: Record<TranslationKey, string> = {
   "login.hint": "Where to get one: ask your cluster administrator.",
   "login.hintCommandSummary": "Command for the administrator (kubectl)",
   "login.hintCommand":
-    "kubectl -n kube-agents get secret vesma-eyes-ui-token -o jsonpath='{.data.VESMARO_UI_TOKEN}' | base64 -d",
+    "kubectl -n kube-agents get secret vesmaro-eyes-ui-token -o jsonpath='{.data.VESMARO_UI_TOKEN}' | base64 -d",
   "login.continueReadOnly": "Continue read-only",
   "login.submit": "Sign in",
   "login.verifying": "Verifying…",
@@ -477,7 +477,7 @@ export const en: Record<TranslationKey, string> = {
   // Login feedback toasts (fix/login-feedback) — see ru.ts.
   "login.toastSignedIn": "Signed in — control available",
   "login.toastLegacy":
-    "Board token accepted: no dedicated ui token (vesma-eyes-ui-token) is configured — legacy mode is active.",
+    "Board token accepted: no dedicated ui token (vesmaro-eyes-ui-token) is configured — legacy mode is active.",
   "login.toastRejected": "Token rejected",
   "login.toastRejectedDetail":
     "The server answered 401 — the login window is open for a current value.",
