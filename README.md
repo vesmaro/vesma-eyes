@@ -273,6 +273,34 @@ builds, pushes and drafts GitHub Release notes on `v*` tags; the single
 source of truth for the version is `FastAPI(version=…)` in
 `server/app.py`, propagated by `scripts/sync-version.sh`.
 
+## Connecting to vesma service
+
+The board declares itself as a VESMA component:
+[`contrib/vesma-component.yaml`](contrib/vesma-component.yaml) (component-manifest
+v1, `vesma-specs @ d30e668`). The declaration is materialized by the CLI —
+`vesma service install` writes `~/.config/vesma/components.d/eyes.yaml`; the
+component never writes its own manifest. Conformance:
+[`contrib/vesma-component.checklist.md`](contrib/vesma-component.checklist.md)
+(CM-01…17), kept green in CI (`.github/workflows/manifest.yml`).
+
+- **Env file** — all tokens (board / UI / memory core) live only in
+  `~/.config/vesma/env/eyes.env`, mode `0600`, loaded fail-closed by the
+  supervisor. Migration from the legacy `~/.config/vesma-board/board.env`
+  happens in the engine wave (phase B).
+- **Engine expectation** — the component runs under
+  `vesma service start --component=eyes` once the engine wave lands (specs
+  roadmap phase 3). Until then the legacy board units keep working; the
+  system/user scope duplicate they leave behind is consumed by the engine
+  session.
+- **Runtime shape** — health probes `GET /api/health` (answers 200 without
+  auth) every 10s; stop is `SIGTERM` + 10s grace (uvicorn drains open
+  connections natively); the Python child lives in a dedicated venv
+  (`{venv_bin}`, layout v1 §3.8) and `depends_on: server` — the memory core
+  it talks to via `server/mnemos_client.py`.
+
+Hardening candidate (non-blocking): the manifest binds `0.0.0.0:8140` —
+switch to `127.0.0.1` if no access from other devices is needed.
+
 ## Docs
 
 - 📜 [Charter](docs/CHARTER.md) · 🗂 [ADR log](docs/decisions/) ·

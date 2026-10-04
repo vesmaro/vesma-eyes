@@ -1,0 +1,29 @@
+name: manifest
+
+# Component-manifest conformance gate: validates contrib/vesma-component.yaml
+# against the component-manifest v1 contract. The validator fetches the JSON
+# Schema directly from raw.githubusercontent.com (vesma-specs is public), so
+# only the ref pin below couples CI to a contract version.
+
+on:
+  push:
+    branches: ['main']
+  pull_request:
+  workflow_dispatch:
+
+env:
+  # component-manifest 1.0.0-draft.2
+  VESMA_SPECS_REF: d30e668
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install validator deps
+        run: pip3 install --user jsonschema==4.26.0 PyYAML==6.0.2
+      - name: Validate manifest (schema + normative §3 rules)
+        run: python3 scripts/validate_manifest.py

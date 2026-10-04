@@ -1,0 +1,44 @@
+# VESMA component manifest (component-manifest v1, 1.0.0-draft.2).
+# Contract source: vesmaro/vesma-specs @ d30e668 (specs/component-manifest/v1).
+# `vesma service install` materializes this declaration as
+# ~/.config/vesma/components.d/eyes.yaml — the component never writes its own
+# manifest (spec §3.1). artifact_sha256 is stamped by the install flow
+# (spec §3.3); absence for tier:optional = doctor WARN.
+apiVersion: vesma.component/v1
+kind: child-process
+metadata:
+  name: eyes
+  version: 1.60.1
+  tier: optional
+  description: "Observability board: FastAPI service with task inbox, profiles and memory registry views (Python child-process, dedicated venv)."
+  provenance:
+    repo: https://github.com/vesmaro/vesma-eyes
+    license: Apache-2.0
+launch:
+  # Python child → dedicated venv (layout v1 §3.8: venvs/<name>/); the
+  # install flow installs server/requirements.txt into it. The server package
+  # is imported from the deployed code location (cwd).
+  argv: ["{venv_bin}/python", "-m", "uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "8140"]
+  cwd: "~/.local/share/vesma/eyes"
+  env:
+    # Secrets (board/UI/mnemos tokens) — env_file only, 0600, fail-closed
+    # loader (spec §3.5). Legacy source: ~/.config/vesma-board/board.env.
+    env_file: "~/.config/vesma/env/eyes.env"
+health:
+  checker: http
+  http:
+    url: "http://127.0.0.1:8140/api/health"
+    interval: 10s
+    timeout: 2s
+    unhealthy_threshold: 3
+  startup:
+    grace: 30s
+    interval: 5s
+    timeout: 2s
+stop:
+  # uvicorn drains open connections on SIGTERM natively (no custom handlers
+  # in server/*.py); 10s covers the drain window.
+  signal: SIGTERM
+  grace_period: 10s
+depends_on:
+  - server
