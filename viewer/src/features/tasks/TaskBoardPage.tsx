@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 // @dnd-kit (ARCHCOM-3 verdict §3, ratified): the kanban is the PRIMARY
 // surface of the Задачи domain; core+sortable land ~14–18 KB gz together,
@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { TableRowSkeleton } from "@/components/skeletons/Skeletons";
 import { useDensity } from "@/components/density-provider";
 import { useReducedMotion } from "@/lib/useReducedMotion";
+import { useToast } from "@/components/Toast/toastContext";
 import { isTaskMutationSource, isTaskSource } from "@/gateway/capabilities";
 import { useGateway } from "@/gateway/GatewayContext";
 import { useUiToken } from "@/features/ui-token/UiTokenContext";
@@ -45,6 +46,7 @@ import {
 import { useKanbanDnd } from "./useKanbanDnd";
 import { useBoardTasks, useReportCounts } from "./useTasks";
 import { useTaskMutations } from "./useTaskMutations";
+import { useDoneTempo, useLatestDoneTransit } from "./doneTransitStore";
 import { BoardStyleToggle } from "./BoardStyleToggle";
 import { useBoardStyle } from "@/lib/boardStyleStore";
 import { pageGridClass } from "@/layout/pageGrid";
@@ -88,7 +90,9 @@ function useBoardOverflows() {
     observer.observe(el);
     return () => observer.disconnect();
   }, [el]);
-  return { boardRef: setEl, overflows };
+  // ME-071 W3: the element itself rides along — the waiting facade's
+  // bring-the-lane-into-view effect scrolls this container.
+  return { boardRef: setEl, boardEl: el, overflows };
 }
 
 /** The board view — mounted only on task-capable gateways. */
@@ -101,6 +105,10 @@ function TaskBoardView() {
   const board = useBoardTasks();
   const [searchParams, setSearchParams] = useSearchParams();
   const state = parseTaskListParams(searchParams);
+  // ME-071 W3: the waiting facade state — declared ahead of the hooks that
+  // read it (the bring-the-lane-into-view effect's dep array evaluates
+  // inline, before the visibleColumns memo below).
+  const waitingActive = state.waiting === true;
   const [collapsed, setCollapsed] = useState(() => loadCollapsedGroups());
   // CV-5 / UI-23: the board render style («Группы | Классика») lives in the
   // shared store (lib/boardStyleStore.ts, persisted "vesmaro.boardStyle") —
@@ -132,6 +140,31 @@ function TaskBoardView() {
   const [createOpen, setCreateOpen] = useState(false);
   const mutations = useTaskMutations();
 
+  // ME-071 W3 (15-WOW §3.4/§8.5): the done-tempo derivation (решений/час,
+  // trailing 60 min of the live bus) and the task.done toast — beat 3 of
+  // the спектакль lands with slice 2; the toast IS the shared polite live
+  // region (WCAG 4.1.3). Both hooks run on EVERY render (hook-order
+  // discipline above) and stay inert until the first terminal event.
+  const doneTempo = useDoneTempo();
+  const latestTransit = useLatestDoneTransit();
+  const toast = useToast();
+  const announcedTransitRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!latestTransit) return;
+    const key = `${latestTransit.taskId}:${latestTransit.col}:${latestTransit.at}`;
+    if (announcedTransitRef.current === key) return;
+    announcedTransitRef.current = key;
+    toast.push({
+      kind: "ok",
+      title: t(
+        latestTransit.col === "done"
+          ? "tasks.board.doneToast"
+          : "tasks.board.resolvedToast",
+        { title: latestTransit.title },
+      ),
+    });
+  }, [latestTransit, toast, t]);
+
   // Owner decision (CV-4 §3, the simpler honest variant) + scope v1
   // (ADR 0012 Amendment): cards drag on an owner session OR a paired
   // control device (the server's scope table rules the move itself);
@@ -146,7 +179,25 @@ function TaskBoardView() {
   const reducedMotion = useReducedMotion();
   // ME-072 A: the measured overflow behind the right-edge fade affordance
   // (hook-order stable: runs before the pending/error early returns).
-  const { boardRef, overflows: boardOverflows } = useBoardOverflows();
+  const { boardRef, boardEl, overflows: boardOverflows } = useBoardOverflows();
+
+  // ME-071 W3: the facade's «one gesture» promise (15-WOW §3.4) — when the
+  // waiting filter is active the board BRINGS THE DECISION LANE INTO VIEW.
+  // On a narrow viewport the wire-ordered board starts at the backlog lane;
+  // a solutions mode that opens pointing at an empty lane reads as broken.
+  // Viewport-rect math (never offsetParent), smooth unless reduced.
+  useEffect(() => {
+    if (!waitingActive || !boardEl) return;
+    const lane = boardEl.querySelector<HTMLElement>('[data-column="validating"]');
+    if (!lane) return;
+    const delta =
+      lane.getBoundingClientRect().left - boardEl.getBoundingClientRect().left;
+    if (Math.abs(delta) < 4) return;
+    boardEl.scrollTo({
+      left: boardEl.scrollLeft + delta,
+      behavior: reducedMotion ? "auto" : "smooth",
+    });
+  }, [waitingActive, boardEl, reducedMotion]);
 
   // Hook-order discipline: every hook below runs on EVERY render (the
   // pending/error early-returns come after), so the DnD wiring stays mounted
@@ -160,10 +211,14 @@ function TaskBoardView() {
   // ME-077 projection: compact shows the 5 workflow lanes; "all" shows the
   // full wire order. Hidden lanes with live cards surface in the honest
   // note row below — nothing disappears silently.
-  const visibleColumns = useMemo(
-    () => visibleColumnsFor(board.data?.columns ?? [], columnsMode),
-    [board.data, columnsMode],
-  );
+  // ME-071 W3: the waiting facade SURFACES the decision lane even in compact
+  // mode — a filter that hides its own results would be a lie.
+  const visibleColumns = useMemo(() => {
+    const wire = board.data?.columns ?? [];
+    const base = visibleColumnsFor(wire, columnsMode);
+    if (!waitingActive || base.includes("validating")) return base;
+    return wire.filter((c) => base.includes(c) || c === "validating");
+  }, [board.data, columnsMode, waitingActive]);
   const preValidationLanes = new Set(["backlog", "validating"]);
   const dnd = useKanbanDnd({
     columns,
@@ -191,6 +246,13 @@ function TaskBoardView() {
   // header — projection («Канбан | Список») next to the H1, board style
   // («Группы | Классика») on the actions side with «+ Задача». Adjacent
   // they read as one six-option control (audit v№10).
+  // ME-071 W3: the whole-board validating count for the waiting facade —
+  // derived from the UNFILTERED rows (wire semantics, the same rule as the
+  // column counters), never from the filtered projection.
+  const validatingCount = useMemo(
+    () => tasks.filter((task) => task.col === "validating").length,
+    [tasks],
+  );
   const header = (
     <>
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -199,6 +261,32 @@ function TaskBoardView() {
             {t("tasks.title")}
           </h1>
           <TasksViewToggle />
+          {/* ME-071 W3 (15-WOW §3.4): the «Ждут владельца» facade — the
+           * golden chip-filter above the board; one gesture into decision
+           * mode. WCAG 1.4.1: the gold edge on cards is duplicated by the
+           * pressed chip + the count text; 4.1.2: aria-pressed carries the
+           * toggle state. */}
+          <Button
+            variant="outline"
+            size="sm"
+            aria-pressed={waitingActive}
+            onClick={() => patch({ waiting: waitingActive ? undefined : true })}
+            title={t("tasks.board.waitingChipTitle")}
+            className={
+              "font-mono tabular-nums " +
+              // The accepted Badge-confidence pair (T7-audited); the border
+              // goes full-strength — an alpha modifier on a var-based token
+              // is not composable in Tailwind 3 and would silently no-op.
+              (waitingActive
+                ? "border-confidence bg-confidence-tint text-confidence"
+                : "")
+            }
+          >
+            <span aria-hidden="true" className={waitingActive ? "" : "text-confidence"}>
+              ◆
+            </span>
+            {t("tasks.board.waitingChip", { count: validatingCount })}
+          </Button>
         </div>
         <div
           data-testid="board-header-actions"
@@ -321,6 +409,7 @@ function TaskBoardView() {
                 created_to: undefined,
                 completed_from: undefined,
                 completed_to: undefined,
+                waiting: undefined,
               })
             }
           >
@@ -393,6 +482,8 @@ function TaskBoardView() {
                       !unfoldedEmpty.has(column)
                     }
                     onToggleEmptyCollapse={() => toggleEmptyCollapse(column)}
+                    tempo={column === "resolved" ? doneTempo : undefined}
+                    waitingFocus={waitingActive}
                   />
                 ))}
               </div>
@@ -416,6 +507,7 @@ function TaskBoardView() {
                   query={state.q}
                   skin={boardStyle === "classic" ? "classic" : "dense"}
                   reducedMotion={reducedMotion}
+                  column={dnd.activeTask.col}
                 />
               ) : null}
             </DragOverlay>

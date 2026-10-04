@@ -869,6 +869,17 @@ export const ru = {
   "tasks.board.expandColumn": "Развернуть пустую колонку «{{col}}»",
   "tasks.board.collapseColumn": "Свернуть пустую колонку «{{col}}»",
 
+  // ME-071 W3: живой пульт (15-WOW §3.4/§8.5) — фасад «Ждут владельца»,
+  // темп решений в шапке колонки, вспышка task.done, кромка блокировки.
+  "tasks.board.waitingChip": "Ждут владельца: {{count}}",
+  "tasks.board.waitingChipTitle":
+    "Показать задачи, ждущие решения владельца (на проверке)",
+  "tasks.board.doneTempoUnit": "/ч",
+  "tasks.board.doneTempoAria": "решений за последний час: {{count}}",
+  "tasks.board.resolvedToast": "Задача «{{title}}» решена",
+  "tasks.board.doneToast": "Задача «{{title}}» завершена",
+  "tasks.board.blockedReason": "агент не может взять задачу",
+
   // --- ME-074: lifecycle time labels on cards ---------------------------------------
   "tasks.card.arrived": "поступила {{date}}",
   "tasks.card.hanging": "висит {{duration}}",

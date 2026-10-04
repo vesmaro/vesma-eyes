@@ -840,6 +840,17 @@ export const en: Record<TranslationKey, string> = {
   "tasks.board.expandColumn": "Expand the empty “{{col}}” column",
   "tasks.board.collapseColumn": "Collapse the empty “{{col}}” column",
 
+  // ME-071 W3: the living console (15-WOW §3.4/§8.5) — the waiting facade,
+  // the resolution tempo, the task.done flash, the blocked edge.
+  "tasks.board.waitingChip": "Waiting for you: {{count}}",
+  "tasks.board.waitingChipTitle":
+    "Show tasks waiting for the owner's decision (on review)",
+  "tasks.board.doneTempoUnit": "/h",
+  "tasks.board.doneTempoAria": "resolutions in the last hour: {{count}}",
+  "tasks.board.resolvedToast": "Task “{{title}}” resolved",
+  "tasks.board.doneToast": "Task “{{title}}” done",
+  "tasks.board.blockedReason": "the agent can't take the task",
+
   // --- ME-074: lifecycle time labels on cards ---------------------------------------
   "tasks.card.arrived": "arrived {{date}}",
   "tasks.card.hanging": "open for {{duration}}",

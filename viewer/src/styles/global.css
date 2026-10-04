@@ -414,3 +414,35 @@ html[data-vesma-pad] #main {
   background: var(--color-border);
   border-radius: 5px;
 }
+
+/* ── task.done gold flash (ME-071 W3 — 15-WOW §3.4 «спектакль», beat 1) ──
+ * The card's beat on a LIVE terminal transition: gold flash 240ms
+ * (--duration-impulse) + hold 600ms (--duration-flash-hold — the W0
+ * tokens' first consumer), then the tint settles back to the well
+ * background. THE TOKENS CARRY THE REDUCED MIRROR: both durations
+ * collapse in reduced contexts (--duration-impulse → 0ms,
+ * --duration-flash-hold → 1500ms) so the same rule plays an instant
+ * reposition + a STATIC gold tint 1.5s (13.8 §2) — no extra media block.
+ * The class is applied only while the transit is fresh (2s) and only
+ * feeds tint/shadow — never layout, never transform (the card's place is
+ * ruled by the cache patch; the перелёт beat is slice 2). */
+@keyframes task-done-flash {
+  0% {
+    background-color: color-mix(in srgb, var(--color-confidence) 26%, transparent);
+    box-shadow: var(--glow-gold);
+  }
+  45% {
+    background-color: color-mix(in srgb, var(--color-confidence) 26%, transparent);
+    box-shadow: var(--glow-gold);
+  }
+  100% {
+    background-color: var(--color-bg-well);
+    box-shadow: var(--shadow-well);
+  }
+}
+
+.task-done-flash {
+  animation: task-done-flash
+    calc(var(--duration-impulse) + var(--duration-flash-hold)) var(--ease-enter)
+    both;
+}

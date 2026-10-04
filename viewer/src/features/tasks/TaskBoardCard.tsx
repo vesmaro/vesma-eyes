@@ -18,6 +18,7 @@ import {
 } from "./taskStatus";
 import { HighlightedTitle, ValidatingClock } from "./taskCardParts";
 import { useValidationNow } from "./useValidationClock";
+import { useFreshDoneTransit } from "./doneTransitStore";
 import { TaskRowMenu } from "./TaskRowMenu";
 
 /**
@@ -83,6 +84,12 @@ const TaskCardBody = forwardRef<
     overlay?: boolean;
     dragging?: boolean;
     style?: React.CSSProperties;
+    /** The kanban lane the card sits in (ME-071 W3: drives the blocked
+     * edge; the ghost passes the dragged task's own column). */
+    column?: string;
+    /** ME-071 W3: the golden waiting edge («Ждут владельца» facade active
+     * and the card sits in the decision lane). */
+    attention?: boolean;
     /** dnd-kit pointer listeners, spread onto the card root. */
     dragHandlers?: React.DOMAttributes<HTMLLIElement>;
   } & React.HTMLAttributes<HTMLLIElement>
@@ -97,6 +104,8 @@ const TaskCardBody = forwardRef<
     overlay = false,
     dragging = false,
     style,
+    column,
+    attention = false,
     dragHandlers,
     ...rest
   },
@@ -104,6 +113,19 @@ const TaskCardBody = forwardRef<
 ) {
   const t = useT();
   const { lang } = useI18n();
+  // ME-071 W3 (15-WOW §3.4, спектакль beat 1): the gold flash on a LIVE
+  // terminal transition — fresh for 2s after the SSE receipt; the W0 token
+  // pair plays the beat (flash 240ms = --duration-impulse, hold 600ms =
+  // --duration-flash-hold; reduced → the mirrors give a static tint 1.5s).
+  // A reloaded page replays nothing: no records → no flash (the store is
+  // fed only by the live bridge).
+  const freshTransit = useFreshDoneTransit(task.id);
+  const doneFlash =
+    freshTransit !== null && (task.col === "resolved" || task.col === "done");
+  // ME-071 W3 (§3.4 «блокировка честная»): the blocked lane carries the
+  // reason edge — the colour edge is duplicated by the sr-only reason
+  // text (WCAG 1.4.1).
+  const blocked = column === "blocked";
   // ME-074: the card's lifecycle line — «поступила 28.09 · висит 2 дня» on
   // live lanes, «… · завершена 01.10 в 14:05» on resolved/done. The shared
   // 1 Hz domain clock (useValidationClock) supplies "now": one interval for
@@ -155,7 +177,18 @@ const TaskCardBody = forwardRef<
         (canDrag && !overlay
           ? "cursor-grab active:cursor-grabbing "
           : "cursor-default ") +
-        (dragging && !overlay ? "opacity-30 " : "")
+        (dragging && !overlay ? "opacity-30 " : "") +
+        // ME-071 W3: blocked reason edge (left accent, error family).
+        (blocked && !overlay
+          ? "before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:rounded-l-md before:bg-error/80 before:content-[''] "
+          : "") +
+        // ME-071 W3: the waiting facade's golden attention edge — colour
+        // duplicated by the pressed chip and the count (1.4.1). No alpha
+        // modifier on the var-based token (Tailwind 3 cannot compose it —
+        // the ring would silently fall back to the default blue).
+        (attention && !overlay ? "ring-2 ring-confidence " : "") +
+        // ME-071 W3: the task.done gold flash (see the comment above).
+        (doneFlash && !overlay ? "task-done-flash " : "")
       }
       {...dragHandlers}
       {...rest}
@@ -248,6 +281,9 @@ const TaskCardBody = forwardRef<
       {!canDrag ? (
         <span className="sr-only">{t("tasks.board.dragDisabled")}</span>
       ) : null}
+      {blocked ? (
+        <span className="sr-only">{t("tasks.board.blockedReason")}</span>
+      ) : null}
     </li>
   );
 });
@@ -261,6 +297,10 @@ export function TaskBoardCard(props: {
   query?: string;
   /** Card skin (CV-5): "dense" for the grouped board, "classic" for flat. */
   skin?: TaskCardSkin;
+  /** The lane the card sits in (ME-071 W3: blocked edge). */
+  column?: string;
+  /** The golden waiting edge (ME-071 W3 facade). */
+  attention?: boolean;
 }) {
   const { task, canDrag } = props;
   // NOTE: dnd-kit's useSortable returns plain render values (transform,
@@ -303,6 +343,7 @@ export function TaskBoardCardGhost({
   query,
   skin = "dense",
   reducedMotion = false,
+  column,
 }: {
   task: BoardTask;
   reportCount?: number;
@@ -311,6 +352,8 @@ export function TaskBoardCardGhost({
   /** Card skin (CV-5) — the ghost mirrors the board the drag started on. */
   skin?: TaskCardSkin;
   reducedMotion?: boolean;
+  /** The dragged task's own lane (ME-071 W3; edges stay off the ghost). */
+  column?: string;
 }) {
   return (
     <TaskCardBody
@@ -321,6 +364,7 @@ export function TaskBoardCardGhost({
       query={query}
       skin={skin}
       overlay={!reducedMotion}
+      column={column}
     />
   );
 }

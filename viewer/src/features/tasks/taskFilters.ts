@@ -30,6 +30,14 @@ export interface TaskListUrlState {
   /** ME-075: completion bounds (завершена), YYYY-MM-DD inclusive. */
   completed_from?: string;
   completed_to?: string;
+  /**
+   * ME-071 W3 (15-WOW §3.4): the «Ждут владельца» facade — `?waiting=1`
+   * narrows every view of the dialect to the owner's decision lane
+   * (`col === "validating"` — the SAME lane useWaitingSummary counts as
+   * reviewCount). A shared-dialect param on purpose: the list honouring
+   * it too keeps a deep link honest on both views.
+   */
+  waiting?: boolean;
 }
 
 type TaskListStatus = string;
@@ -47,6 +55,7 @@ export function parseTaskListParams(params: URLSearchParams): TaskListUrlState {
     created_to: dayParam(params.get("created_to")),
     completed_from: dayParam(params.get("completed_from")),
     completed_to: dayParam(params.get("completed_to")),
+    waiting: params.get("waiting") === "1" || undefined,
   };
 }
 
@@ -62,6 +71,7 @@ export function serializeTaskListParams(state: TaskListUrlState): URLSearchParam
   if (state.created_to) params.set("created_to", state.created_to);
   if (state.completed_from) params.set("completed_from", state.completed_from);
   if (state.completed_to) params.set("completed_to", state.completed_to);
+  if (state.waiting) params.set("waiting", "1");
   return params;
 }
 
@@ -70,7 +80,7 @@ export function hasActiveTaskFilters(state: TaskListUrlState): boolean {
   return Boolean(
     state.status || state.priority || state.project || state.agent || state.q ||
       state.created_from || state.created_to ||
-      state.completed_from || state.completed_to,
+      state.completed_from || state.completed_to || state.waiting,
   );
 }
 
@@ -93,6 +103,8 @@ export function filterTasks(
     if (state.priority && task.priority !== state.priority) return false;
     if (state.project && task.project !== state.project) return false;
     if (state.agent && !(task.agents ?? []).includes(state.agent)) return false;
+    // ME-071 W3: the waiting facade — only the owner's decision lane.
+    if (state.waiting && task.col !== "validating") return false;
     if (q) {
       const haystack = `${task.id} ${task.title} ${task.summary}`.toLowerCase();
       if (!haystack.includes(q)) return false;

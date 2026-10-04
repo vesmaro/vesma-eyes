@@ -54,6 +54,8 @@ export function TaskBoardColumn({
   style,
   emptyCollapsed = false,
   onToggleEmptyCollapse,
+  tempo,
+  waitingFocus = false,
 }: {
   column: string;
   /** Position-ordered tasks of THIS column (already filtered). */
@@ -73,6 +75,14 @@ export function TaskBoardColumn({
   /** ME-077: fold the column to a narrow strip while it is empty. */
   emptyCollapsed?: boolean;
   onToggleEmptyCollapse?: () => void;
+  /** ME-071 W3 (15-WOW §3.4): the done-tempo (решений/час, trailing 60 min
+   * of the live bus) — passed for the resolved column only; rendered INSIDE
+   * the framed counter (one header look per ME-072 A), only when the bus
+   * has actually delivered a transition this hour (no fake zeros). */
+  tempo?: number;
+  /** ME-071 W3: the waiting facade is active — validating cards carry the
+   * golden attention edge (the chip + text duplicate the colour, 1.4.1). */
+  waitingFocus?: boolean;
 }) {
   const t = useT();
   const groups = groupTasksByProject(tasks);
@@ -97,6 +107,7 @@ export function TaskBoardColumn({
     return (
       <section
         ref={setNodeRef}
+        data-column={column}
         aria-label={t("tasks.board.columnLabel", { col: label })}
         className={
           "flex w-11 shrink-0 flex-col items-center gap-1 rounded-lg border border-border-subtle bg-base/40 py-2 " +
@@ -127,6 +138,7 @@ export function TaskBoardColumn({
 
   return (
     <section
+      data-column={column}
       aria-label={t("tasks.board.columnLabel", { col: label })}
       className={
         "flex shrink-0 flex-col rounded-lg border border-border-subtle bg-base/40 " +
@@ -156,8 +168,23 @@ export function TaskBoardColumn({
          * EVERY column. Per-column colour chips (iris/error/success) made
          * two header looks (framed vs floating) and read as different
          * entities; card-level workflow colours are untouched. */}
-        <Badge variant="outline" className="font-mono">
+        {/* ME-071 W3: the tempo rides INSIDE the same frame («ОТКРЫТО 3 ·
+         * N/ч» — §3.4 tabular); tabular-nums keeps it from reflowing the
+         * counter, the sr-only text names the unit (4.1.2). */}
+        <Badge variant="outline" className="font-mono tabular-nums">
           {totalCount}
+          {tempo !== undefined && tempo > 0 ? (
+            <>
+              <span aria-hidden="true" className="text-confidence">
+                {" "}
+                ·{tempo}
+                {t("tasks.board.doneTempoUnit")}
+              </span>
+              <span className="sr-only">
+                {t("tasks.board.doneTempoAria", { count: tempo })}
+              </span>
+            </>
+          ) : null}
         </Badge>
       </header>
 
@@ -192,6 +219,8 @@ export function TaskBoardColumn({
                   showMenu={showMenu}
                   query={query}
                   skin="classic"
+                  column={column}
+                  attention={waitingFocus && column === "validating"}
                 />
               ))}
             </ul>
@@ -209,6 +238,7 @@ export function TaskBoardColumn({
                   query={query}
                   collapsed={collapsed.has(group.project)}
                   onToggle={() => onToggleGroup(group.project)}
+                  attention={waitingFocus && column === "validating"}
                 />
               ))}
             </div>
@@ -241,6 +271,7 @@ function BoardGroup({
   query,
   collapsed,
   onToggle,
+  attention = false,
 }: {
   column: string;
   project: string;
@@ -251,6 +282,8 @@ function BoardGroup({
   query?: string;
   collapsed: boolean;
   onToggle: () => void;
+  /** ME-071 W3: the golden waiting edge for validating cards. */
+  attention?: boolean;
 }) {
   const t = useT();
   const { setNodeRef, isOver } = useDroppable({
@@ -290,6 +323,8 @@ function BoardGroup({
               canDrag={canDrag}
               showMenu={showMenu}
               query={query}
+              column={column}
+              attention={attention}
             />
           ))}
         </ul>
