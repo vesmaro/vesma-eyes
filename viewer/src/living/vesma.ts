@@ -383,6 +383,31 @@ export function mountVesma(slot: HTMLElement): () => void {
     attributes: true,
     attributeFilter: ["data-theme", "data-motion"],
   });
+  // W3 slice 2 (15-WOW §14.3.3/§14.3.4, the W2 tail «В1-вспышка диалогов»):
+  // a dialog defers flights — the degradation beat is the В1 status pill
+  // flash (`vesma:b1`, the TopBar pill listens) + ONE nest pill per dialog
+  // opening («дела подождут») through the canonical bubble channel —
+  // speak()'s ≤1/90s gate and identical-text silence carry the dosage
+  // (§14.3.2 unchanged). Rests when no dialog is open.
+  let dialogOpen = false;
+  const dlg =
+    typeof MutationObserver === "function"
+      ? new MutationObserver(() => {
+          const open = !!document.querySelector(DIALOG);
+          if (open === dialogOpen) return; // the episode is already handled
+          dialogOpen = open;
+          if (!open) return;
+          document.dispatchEvent(new CustomEvent("vesma:b1"));
+          if (getLiveLayer() === "live" && !isReducedMotion() && !isLivingMuted())
+            speak(tr("living.vesma.dialog"), HOLD);
+        })
+      : null;
+  dlg?.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["open", "class", "hidden", "style"],
+  });
   const onVis = (): void => {
     if (document.hidden) {
       clearTimeout(retry);
@@ -413,6 +438,7 @@ export function mountVesma(slot: HTMLElement): () => void {
     offLayer();
     mm?.removeEventListener("change", rewire);
     mo?.disconnect();
+    dlg?.disconnect();
     document.removeEventListener("visibilitychange", onVis);
     slot.querySelector(".vesma-nest")?.remove();
     flyEl.remove();

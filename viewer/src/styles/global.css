@@ -446,3 +446,22 @@ html[data-vesma-pad] #main {
     calc(var(--duration-impulse) + var(--duration-flash-hold)) var(--ease-enter)
     both;
 }
+
+/* ── В1 flash (ME-071 W3 slice 2 — 15-WOW «повод деградирует до вспышки
+ * В1»): the gold pulse the status-zone pill plays when Весма dispatches
+ * `vesma:b1` (a dialog opened — flights defer). --duration-impulse gates
+ * it: reduced collapses to 0ms → no motion, honest static. */
+@keyframes b1-flash {
+  0% {
+    box-shadow: var(--glow-gold);
+    transform: scale(1.4);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+    transform: scale(1);
+  }
+}
+
+.b1-flash {
+  animation: b1-flash var(--duration-impulse) var(--ease-enter);
+}

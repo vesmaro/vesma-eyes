@@ -298,9 +298,30 @@ export function mountLivingLayer(canvas: HTMLCanvasElement): () => void {
     start();
   }
 
+  /** ME-071 W3 slice 2 (15-WOW §3.4.2): the task.done courier — the GOLD
+   * bead UP the Ж2 sidebar vein toward the В1 status zone. The same dosage
+   * gates as a regular bead (Полный only, MAX_IMPULSES coalesce); the vein
+   * is the ONE vertical polyline (Ж2 — the sidebar contour), direction
+   * f=1 = toward its start (the topbar corner). */
+  function onCourier(): void {
+    if (getLiveLayer() !== "live" || reducedMotion() || isLivingMuted() || statik) return;
+    if (impulses.length >= MAX_IMPULSES || !veins.length) return;
+    const vein = veins.findIndex((v) => v.pts[0][0] === v.pts[1][0]);
+    if (vein < 0) return; // no sidebar seam on this viewport (mobile drawer)
+    impulses.push({
+      v: vein,
+      f: 1,
+      t: performance.now(),
+      d: Math.max(400, Math.min(1600, veins[vein].len / SPEED)),
+      c: css("--color-confidence", "#c9933a"),
+    });
+    start();
+  }
+
   function onSignal(s: LivingSignal): void {
     if (destroyed) return;
     if (s.type === "event") onEvent(s.kind);
+    else if (s.type === "courier") onCourier();
     else if (s.type === "health") tones.health(s.states);
     else if (s.type === "update") tones.setUpdate(s.on);
     else if (s.type === "mute") {

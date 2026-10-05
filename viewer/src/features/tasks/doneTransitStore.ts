@@ -52,15 +52,31 @@ export interface DoneTransit {
   /** Receipt time, epoch ms (client clock — the tempo is a client-side
    * derivation of the live stream, not a server aggregation). */
   readonly at: number;
+  /**
+   * ME-071 W3 slice 2 (15-WOW §3.4.2, the перелёт beat): the card's
+   * viewport position measured by the SSE bridge BEFORE the cache patch
+   * moves the row — the FLIP start point. Null when the card was not on
+   * screen (another page, filtered out, folded group) — no flight then,
+   * the static tint plays directly (the honest degradation).
+   */
+  readonly from?: { readonly x: number; readonly y: number };
 }
 
 interface DoneTransitState {
   /** Oldest first. */
   items: DoneTransit[];
   version: number;
+  /**
+   * ME-071 W3 slice 2: the honest cumulative session counter behind the
+   * В1-pill ▸N (topbar). DEVIATION (TL-approved): the v12 stand increments
+   * ▸N at the COURIER'S ARRIVAL; our living engine does not export an
+   * impulse timeline, so the increment is SYNCHRONOUS with the event.
+   * Revisit if the engine ever exposes arrival hooks.
+   */
+  total: number;
 }
 
-const state: DoneTransitState = { items: [], version: 0 };
+const state: DoneTransitState = { items: [], version: 0, total: 0 };
 const listeners = new Set<() => void>();
 
 function emit(): void {
@@ -88,7 +104,12 @@ function prune(now: number): void {
  * duplicate frame must not double the tempo).
  */
 export function recordDoneTransit(
-  transit: { taskId: string; title: string; col: string },
+  transit: {
+    taskId: string;
+    title: string;
+    col: string;
+    from?: { x: number; y: number };
+  },
   now: number = Date.now(),
 ): void {
   if (!TERMINAL_COLUMNS.has(transit.col)) return;
@@ -104,10 +125,22 @@ export function recordDoneTransit(
   prune(now);
   state.items = [
     ...state.items,
-    { taskId: transit.taskId, title: transit.title, col: transit.col, at: now },
+    {
+      taskId: transit.taskId,
+      title: transit.title,
+      col: transit.col,
+      at: now,
+      ...(transit.from ? { from: transit.from } : {}),
+    },
   ].slice(-CAP);
+  state.total += 1;
   emit();
   noteClockRearm();
+}
+
+/** The cumulative session total (the В1-pill ▸N). */
+export function countDoneTotal(): number {
+  return state.total;
 }
 
 /** The pure window count (no store mutation — safe to call at render). */
@@ -146,6 +179,7 @@ export function latestDoneTransit(): DoneTransit | null {
 export function resetDoneTransits(): void {
   state.items = [];
   state.version = 0;
+  state.total = 0;
 }
 
 /* ── The shared derived-reads clock (the useValidationClock pattern) ─────
@@ -258,4 +292,12 @@ export function useFreshDoneTransit(taskId: string): DoneTransit | null {
 export function useLatestDoneTransit(): DoneTransit | null {
   useSyncExternalStore(subscribeDoneTransits, getVersion, getServerVersion);
   return latestDoneTransit();
+}
+
+/** The В1-pill ▸N: the cumulative session total. DEVIATION (TL-approved,
+ * see DoneTransitState.total): incremented synchronously with the event —
+ * the living engine does not export a courier-arrival timeline. */
+export function useDoneTotal(): number {
+  useSyncExternalStore(subscribeDoneTransits, getVersion, getServerVersion);
+  return countDoneTotal();
 }

@@ -135,6 +135,9 @@
   /* task.done gold flash HOLD (13.8 §2: flash 240ms = --duration-impulse,
    * hold 600ms — separate beat, NOT the 2400ms attention-hold). */
   --duration-flash-hold: 600ms;
+  /* task.done FLIGHT to «Решено» (ME-071 W3 slice 2, §3.4.2) — parity with
+   * the viewer track (ADR 0006). */
+  --duration-fly: 400ms;
 
   /* Тоновый слой паутины (§14.6.1 §4) */
   --web-tone-update: #a88fc7;    /* «пришло обновление»; ≈6.8:1 on dark base */
@@ -354,6 +357,7 @@
     --duration-tone-hold: 1500ms;
     --duration-tone-fade: 0ms;
     --duration-flash-hold: 1500ms;
+    --duration-fly: 0ms; /* no flight — instant reposition (§3.4.2) */
   }
 }
 [data-motion="reduced"] {
@@ -372,6 +376,7 @@
   --duration-tone-hold: 1500ms;
   --duration-tone-fade: 0ms;
   --duration-flash-hold: 1500ms;
+  --duration-fly: 0ms; /* forced-reduced mirror: no flight (§3.4.2) */
 }
 
 /* ── Board-only appendix (FE-5 / UI-13; NOT part of the canon v2 set) ──

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  countDoneTotal,
   countDoneTransits,
   DONE_FRESH_MS,
   DONE_WINDOW_MS,
@@ -74,5 +75,24 @@ describe("doneTransitStore — freshness (the flash trigger)", () => {
 
   it("a reloaded page (empty store) has nothing fresh", () => {
     expect(peekFreshTransit("T-1", Date.now())).toBeNull();
+  });
+});
+
+describe("doneTransitStore — session total (the В1-pill ▸N, slice 2)", () => {
+  it("increments synchronously with each recorded transit (TL deviation)", () => {
+    const t0 = 1_000;
+    recordDoneTransit({ taskId: "T-1", title: "A", col: "resolved" }, t0);
+    expect(countDoneTotal()).toBe(1);
+    recordDoneTransit({ taskId: "T-2", title: "B", col: "done" }, t0 + 5_000);
+    expect(countDoneTotal()).toBe(2);
+    // A non-terminal column never touches the total either.
+    recordDoneTransit({ taskId: "T-3", title: "C", col: "open" }, t0 + 6_000);
+    expect(countDoneTotal()).toBe(2);
+  });
+
+  it("the SSE-replay fold does not double-count the total", () => {
+    recordDoneTransit({ taskId: "T-1", title: "A", col: "done" }, 1_000);
+    recordDoneTransit({ taskId: "T-1", title: "A", col: "done" }, 1_400);
+    expect(countDoneTotal()).toBe(1);
   });
 });

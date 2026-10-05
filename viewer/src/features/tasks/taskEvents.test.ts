@@ -9,6 +9,7 @@ import {
   peekFreshTransit,
   resetDoneTransits,
 } from "./doneTransitStore";
+import { subscribeLiving, type LivingSignal } from "@/lib/livingFeed";
 import { MOCK_ARCHIVED_TASK, MOCK_BOARD, MOCK_REPORTS } from "@/gateway/boardFixtures";
 import type { BoardSummary, BoardTask, TaskReports } from "@/gateway/boardTypes";
 
@@ -426,6 +427,26 @@ describe("ME-071 W3: live terminal transitions feed the done-transit store", () 
       mustEvent({ kind: "task.updated", task: taskIn("done") }),
     );
     expect(latestDoneTransit()).toBeNull();
+  });
+
+  it("a terminal transition also drives the courier signal (slice 2)", () => {
+    const seen: LivingSignal[] = [];
+    const off = subscribeLiving((s) => seen.push(s));
+    try {
+      const client = seededClient();
+      client.setQueryData<BoardSummary>(keys.tasks.board(), {
+        ...MOCK_BOARD,
+        tasks: [taskIn("open")],
+        counts: { ...MOCK_BOARD.counts },
+      });
+      applyTaskEventToCache(
+        client,
+        mustEvent({ kind: "task.updated", task: taskIn("done") }),
+      );
+      expect(seen.some((s) => s.type === "courier")).toBe(true);
+    } finally {
+      off();
+    }
   });
 
   it("a non-terminal column never records, even with a real previous column", () => {
