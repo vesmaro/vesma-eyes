@@ -32,7 +32,14 @@ export type LivingSignal =
   | { type: "event"; kind: string; data?: BoardEvent }
   | { type: "health"; states: readonly string[] | null }
   | { type: "update"; on: boolean }
-  | { type: "mute" };
+  | { type: "mute" }
+  /**
+   * ME-071 W3 slice 2 (15-WOW §3.4.2): the task.done courier — a real
+   * terminal transition observed by the tasks SSE bridge; the engine runs
+   * the GOLD bead UP the Ж2 sidebar vein (to the В1 status zone). Pushed
+   * by the SAME honest source that records the transit — never synthesized.
+   */
+  | { type: "courier" };
 
 type LivingListener = (signal: LivingSignal) => void;
 
@@ -72,6 +79,14 @@ export function feedLivingHealth(states: readonly string[] | null): void {
 export function feedLivingUpdate(on: boolean): void {
   if (muted) return;
   emit({ type: "update", on });
+}
+
+/** The task.done courier (15-WOW §3.4.2): the gold bead up Ж2. Fed ONLY by
+ * the tasks SSE bridge on a real terminal transition (anti-fake: the mute
+ * gate drops it like every other signal). */
+export function feedLivingCourier(): void {
+  if (muted) return;
+  emit({ type: "courier" });
 }
 
 export function subscribeLiving(listener: LivingListener): () => void {

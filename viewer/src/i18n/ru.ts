@@ -106,6 +106,13 @@ export const ru = {
   "topbar.densityToComfortable": "Переключить плотность на комфортную",
   "topbar.densityCompact": "Компактная плотность",
   "topbar.densityComfortable": "Комфортная плотность",
+  // ME-071 W3 slice 2: В1-пилюля статус-зоны (без кода яруса в копии).
+  "topbar.b1.title": "Живой слой: {{state}}",
+  "topbar.b1.stateOk": "норма",
+  "topbar.b1.stateWarn": "с оговорками",
+  "topbar.b1.stateError": "проблема",
+  "topbar.b1.stateNone": "данных нет",
+  "topbar.b1.done": "решений за сессию: {{count}}",
 
   // --- hotkeys (Ф1 `/`+`?`; Ф2 adds the palette's ⌘K/Ctrl+K) ---------------------
   "hotkeys.title": "Горячие клавиши",
@@ -151,7 +158,7 @@ export const ru = {
   "cockpit.waitingTitle": "Что ждёт меня",
   // ME-072 C: the chip renders the number and this LABEL side by side —
   // the count lives only in the numeral (no «3 … ждут вас: 3» double).
-  "cockpit.waitingSummaryLabel": "ждут вас",
+  "cockpit.waitingSummaryLabel": "Ждут владельца",
   "cockpit.waitingSummaryTitle": "Открыть самое срочное",
   "cockpit.waitingInbox": "Входящие: {{count}}",
   "cockpit.waitingReview": "На проверке: {{count}}",
@@ -868,6 +875,17 @@ export const ru = {
   "tasks.board.hiddenColumns": "Скрыто: {{cols}}",
   "tasks.board.expandColumn": "Развернуть пустую колонку «{{col}}»",
   "tasks.board.collapseColumn": "Свернуть пустую колонку «{{col}}»",
+
+  // ME-071 W3: живой пульт (15-WOW §3.4/§8.5) — фасад «Ждут владельца»,
+  // темп решений в шапке колонки, вспышка task.done, кромка блокировки.
+  "tasks.board.waitingChip": "Ждут владельца: {{count}}",
+  "tasks.board.waitingChipTitle":
+    "Показать задачи, ждущие решения владельца (на проверке)",
+  "tasks.board.doneTempoUnit": "/ч",
+  "tasks.board.doneTempoAria": "решений за последний час: {{count}}",
+  "tasks.board.resolvedToast": "Задача «{{title}}» решена",
+  "tasks.board.doneToast": "Задача «{{title}}» завершена",
+  "tasks.board.blockedReason": "агент не может взять задачу",
 
   // --- ME-074: lifecycle time labels on cards ---------------------------------------
   "tasks.card.arrived": "поступила {{date}}",
@@ -1607,6 +1625,7 @@ export const ru = {
   "living.vesma.health": "Память отвечает хуже обычного — посмотрите здоровье.",
   "living.vesma.healthOk": "Связь с памятью восстановлена.",
   "living.vesma.provision": "Устройство подключить не вышло — смотрите в подключениях.",
+  "living.vesma.dialog": "Открыт диалог — дела подождут.",
   "living.vesma.gotIt": "Понятно",
   "settings.hub.sidebarLabel": "Сайдбар",
   "settings.hub.sidebarExpanded": "Развёрнут",

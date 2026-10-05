@@ -103,8 +103,8 @@ describe("OverviewPage (mock gateway — capable)", () => {
     expect(html).toContain("Waiting for you");
     // ME-072 C: the cockpit chip = numeral + label (no repeated count);
     // the hero chip carries the «waiting in total» wording.
-    expect(html).toContain("waiting for you");
-    expect(html).not.toContain("waiting for you:");
+    expect(html).toContain("Waiting for the owner");
+    expect(html).not.toContain("Waiting for the owner:");
     expect(html).toContain("Waiting in total:");
     expect(html).toContain('href="/tasks/inbox"');
     expect(html).toContain("In review:"); // «на проверке», never "validating"

@@ -89,6 +89,13 @@ export const en: Record<TranslationKey, string> = {
   "topbar.densityToComfortable": "Switch density to comfortable",
   "topbar.densityCompact": "Compact density",
   "topbar.densityComfortable": "Comfortable density",
+  // ME-071 W3 slice 2: the status-zone pill (no tier codes in UI copy).
+  "topbar.b1.title": "Living layer: {{state}}",
+  "topbar.b1.stateOk": "nominal",
+  "topbar.b1.stateWarn": "with caveats",
+  "topbar.b1.stateError": "problem",
+  "topbar.b1.stateNone": "no data yet",
+  "topbar.b1.done": "resolutions this session: {{count}}",
 
   // --- hotkeys (Ф1 `/`+`?`; Ф2 adds the palette's ⌘K/Ctrl+K) ---------------------
   "hotkeys.title": "Keyboard shortcuts",
@@ -133,7 +140,7 @@ export const en: Record<TranslationKey, string> = {
   "cockpit.waitingTitle": "Waiting for you",
   // ME-072 C: the chip renders the number and this LABEL side by side —
   // the count lives only in the numeral (no «3 … waiting for you: 3» double).
-  "cockpit.waitingSummaryLabel": "waiting for you",
+  "cockpit.waitingSummaryLabel": "Waiting for the owner",
   "cockpit.waitingSummaryTitle": "Open the most urgent",
   "cockpit.waitingInbox": "Inbox: {{count}}",
   "cockpit.waitingReview": "In review: {{count}}",
@@ -839,6 +846,17 @@ export const en: Record<TranslationKey, string> = {
   "tasks.board.hiddenColumns": "Hidden: {{cols}}",
   "tasks.board.expandColumn": "Expand the empty “{{col}}” column",
   "tasks.board.collapseColumn": "Collapse the empty “{{col}}” column",
+
+  // ME-071 W3: the living console (15-WOW §3.4/§8.5) — the waiting facade,
+  // the resolution tempo, the task.done flash, the blocked edge.
+  "tasks.board.waitingChip": "Waiting for the owner: {{count}}",
+  "tasks.board.waitingChipTitle":
+    "Show tasks waiting for the owner's decision (on review)",
+  "tasks.board.doneTempoUnit": "/h",
+  "tasks.board.doneTempoAria": "resolutions in the last hour: {{count}}",
+  "tasks.board.resolvedToast": "Task “{{title}}” resolved",
+  "tasks.board.doneToast": "Task “{{title}}” done",
+  "tasks.board.blockedReason": "the agent can't take the task",
 
   // --- ME-074: lifecycle time labels on cards ---------------------------------------
   "tasks.card.arrived": "arrived {{date}}",
@@ -1570,6 +1588,7 @@ export const en: Record<TranslationKey, string> = {
   "living.vesma.health": "Memory is responding worse than usual — check its health.",
   "living.vesma.healthOk": "The memory connection is restored.",
   "living.vesma.provision": "The device couldn't be connected — see Connections.",
+  "living.vesma.dialog": "A dialog is open — errands on hold.",
   "living.vesma.gotIt": "Got it",
   "settings.hub.sidebarLabel": "Sidebar",
   "settings.hub.sidebarExpanded": "Expanded",

@@ -7,6 +7,11 @@ import { isTaskEventSource } from "@/gateway/capabilities";
 import { useGateway } from "@/gateway/GatewayContext";
 import { keys } from "@/lib/queryKeys";
 import { pushActivityEvent, setActivityStreamState } from "./activityStore";
+import {
+  recordDoneTransit,
+  TERMINAL_COLUMNS,
+} from "./doneTransitStore";
+import { feedLivingCourier } from "@/lib/livingFeed";
 
 /**
  * SSE → cache mapping for the task domain (Ф2, ARCHCOM-3 verdict §3:
@@ -81,6 +86,54 @@ function patchDetailRow(queryClient: QueryClient, task: BoardTask): void {
 }
 
 /**
+ * ME-071 W3 (15-WOW §3.4/§8.5): a LIVE transition into a terminal column
+ * feeds the done-transit store (tempo chip, card gold flash, board toast,
+ * В1-pill ▸N) and drives the courier (slice 2: the gold bead up Ж2).
+ * The previous column comes from the CACHE BEFORE the patch — a fresh page
+ * whose first observed event already sits in a terminal column records
+ * nothing (no replayed history, no phantom flash); a row the cache never
+ * had is equally silent.
+ *
+ * Slice 2 (the перелёт beat): the card's viewport position is measured
+ * HERE, before the cache patch re-renders the board — the one moment the
+ * old position still exists in the DOM. No card on screen (another page,
+ * filtered out) → no `from` → the card plays the static tint, no flight.
+ */
+function noteDoneTransit(
+  queryClient: QueryClient,
+  task: BoardTask,
+): void {
+  if (!TERMINAL_COLUMNS.has(task.col)) return;
+  // Hardening (review fix): a malformed frame (the wire dictionary is
+  // trusted upstream, but this is the recording boundary) must never reach
+  // the store — «Задача «undefined» решена» in the live region is worse
+  // than silence.
+  if (typeof task.id !== "string" || task.id === "") return;
+  if (typeof task.title !== "string" || task.title.trim() === "") return;
+  const prev = queryClient
+    .getQueryData<BoardSummary>(keys.tasks.board())
+    ?.tasks.find((row) => row.id === task.id);
+  if (!prev || prev.col === task.col) return;
+  // DOM measurement only where a DOM exists (the unit suite drives the
+  // mirror in a node env; SSR never runs the bridge) — without a document
+  // the transit simply carries no `from`, the card plays the static tint.
+  const el =
+    typeof document === "undefined"
+      ? null
+      : document.querySelector<HTMLElement>(
+          `[data-task-id="${CSS.escape(task.id)}"]`,
+        );
+  const from = el ? el.getBoundingClientRect() : null;
+  recordDoneTransit({
+    taskId: task.id,
+    title: task.title,
+    col: task.col,
+    ...(from ? { from: { x: from.left, y: from.top } } : {}),
+  });
+  feedLivingCourier();
+}
+
+/**
  * Apply one board event to the task-domain caches. Pure with respect to the
  * injected client — unit-tested directly (see taskEvents.test.ts).
  */
@@ -89,6 +142,9 @@ export function applyTaskEventToCache(queryClient: QueryClient, event: BoardEven
     case "task.created":
     case "task.updated":
     case "task.moved":
+      // ME-071 W3: the transit check reads the PRE-patch cache — keep it
+      // ahead of patchBoardRow.
+      noteDoneTransit(queryClient, event.task);
       // All three carry the full task row — one surgical replace, board and
       // (when cached) detail alike.
       patchBoardRow(queryClient, event.task);

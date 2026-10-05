@@ -114,3 +114,29 @@ describe("hasActiveTaskFilters / option derivation", () => {
     expect(agentOptions(MOCK_TASKS)).toEqual(["claude", "zcode"]);
   });
 });
+
+describe("ME-071 W3: ?waiting=1 facade (15-WOW §3.4)", () => {
+  it("parses waiting=1 and round-trips through the clean-URL serializer", () => {
+    const state = parseTaskListParams(new URLSearchParams("waiting=1"));
+    expect(state.waiting).toBe(true);
+    const again = parseTaskListParams(serializeTaskListParams(state));
+    expect(again.waiting).toBe(true);
+    // Absent/clean URLs stay clean.
+    expect(serializeTaskListParams({}).toString()).toBe("");
+    expect(parseTaskListParams(new URLSearchParams("waiting=0")).waiting).toBeUndefined();
+  });
+
+  it("narrows to the owner's decision lane (col=validating) only", () => {
+    const rows = filterTasks(MOCK_TASKS, { waiting: true });
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) expect(row.col).toBe("validating");
+    // And composes with the other filters (AND semantics).
+    expect(
+      filterTasks(MOCK_TASKS, { waiting: true, q: "несуществующий" }),
+    ).toEqual([]);
+  });
+
+  it("counts as an active filter", () => {
+    expect(hasActiveTaskFilters({ waiting: true })).toBe(true);
+  });
+});

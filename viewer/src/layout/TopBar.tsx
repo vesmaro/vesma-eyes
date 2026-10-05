@@ -10,6 +10,7 @@ import { useT } from "@/i18n";
 import { openPalette } from "@/lib/paletteState";
 import { GLOBAL_SEARCH_INPUT_ID } from "./Hotkeys";
 import { LanguageToggle } from "./LanguageToggle";
+import { LivingPill } from "./LivingPill";
 
 /**
  * Top bar (union И1, stand 03 §4 — one shell for all screens): the bar now
@@ -85,6 +86,10 @@ export function TopBar({ sidebarTrigger }: TopBarProps) {
       <div className="flex-1" />
 
       <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+        {/* ME-071 W3 slice 2: the В1 pill — its engines (courier, session
+         * counter, dialog flash) are wired now; until this slice the stand's
+         * honest-absence rule kept it out. */}
+        <LivingPill />
         <AuthStatus />
         <Button
           variant="ghost"

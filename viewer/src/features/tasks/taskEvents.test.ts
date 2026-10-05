@@ -1,9 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { QueryClient } from "@tanstack/react-query";
 import { parseBoardEvent } from "@/gateway/events";
 import type { BoardEvent } from "@/gateway/events";
 import { keys } from "@/lib/queryKeys";
 import { applyTaskEventToCache } from "./taskEvents";
+import {
+  latestDoneTransit,
+  peekFreshTransit,
+  resetDoneTransits,
+} from "./doneTransitStore";
+import { subscribeLiving, type LivingSignal } from "@/lib/livingFeed";
 import { MOCK_ARCHIVED_TASK, MOCK_BOARD, MOCK_REPORTS } from "@/gateway/boardFixtures";
 import type { BoardSummary, BoardTask, TaskReports } from "@/gateway/boardTypes";
 
@@ -364,5 +370,132 @@ describe("dictionary discipline (additive-only, ui-contract §11)", () => {
     expect(JSON.stringify(boardOf(client))).toBe(
       JSON.stringify(boardOf(seededClient())),
     );
+  });
+});
+
+describe("ME-071 W3: live terminal transitions feed the done-transit store", () => {
+  // The store is module-level — each case starts empty.
+  beforeEach(() => resetDoneTransits());
+
+  /** A full wire TaskOut seeded on top of the CREATED_TASK fixture. */
+  function taskIn(col: string): BoardTask {
+    return {
+      ...CREATED_TASK,
+      id: "T-DONE",
+      col,
+      title: "Финальная",
+      status: col,
+      archived: 0,
+      archived_from: "",
+      validating_since: "",
+      resolved_at: "",
+      done_at: "",
+      human_view: "",
+    };
+  }
+
+  it("a live move open → resolved records the transit", () => {
+    const client = seededClient();
+    const task = { ...taskIn("resolved"), resolved_at: "" };
+    client.setQueryData<BoardSummary>(keys.tasks.board(), {
+      ...MOCK_BOARD,
+      tasks: [taskIn("open")],
+      counts: { ...MOCK_BOARD.counts },
+    });
+    applyTaskEventToCache(client, mustEvent({ kind: "task.updated", task }));
+    expect(latestDoneTransit()?.taskId).toBe("T-DONE");
+    expect(latestDoneTransit()?.col).toBe("resolved");
+    expect(peekFreshTransit("T-DONE")).not.toBeNull();
+  });
+
+  it("an event whose previous column equals the new one records nothing", () => {
+    const client = seededClient();
+    const task = taskIn("resolved");
+    client.setQueryData<BoardSummary>(keys.tasks.board(), {
+      ...MOCK_BOARD,
+      tasks: [task],
+      counts: { ...MOCK_BOARD.counts },
+    });
+    applyTaskEventToCache(client, mustEvent({ kind: "task.updated", task }));
+    expect(latestDoneTransit()).toBeNull();
+  });
+
+  it("an unknown row (fresh page, first sight terminal) records nothing", () => {
+    const client = seededClient();
+    applyTaskEventToCache(
+      client,
+      mustEvent({ kind: "task.updated", task: taskIn("done") }),
+    );
+    expect(latestDoneTransit()).toBeNull();
+  });
+
+  it("a terminal transition also drives the courier signal (slice 2)", () => {
+    const seen: LivingSignal[] = [];
+    const off = subscribeLiving((s) => seen.push(s));
+    try {
+      const client = seededClient();
+      client.setQueryData<BoardSummary>(keys.tasks.board(), {
+        ...MOCK_BOARD,
+        tasks: [taskIn("open")],
+        counts: { ...MOCK_BOARD.counts },
+      });
+      applyTaskEventToCache(
+        client,
+        mustEvent({ kind: "task.updated", task: taskIn("done") }),
+      );
+      expect(seen.some((s) => s.type === "courier")).toBe(true);
+    } finally {
+      off();
+    }
+  });
+
+  it("a non-terminal column never records, even with a real previous column", () => {
+    const client = seededClient();
+    client.setQueryData<BoardSummary>(keys.tasks.board(), {
+      ...MOCK_BOARD,
+      tasks: [taskIn("open")],
+      counts: { ...MOCK_BOARD.counts },
+    });
+    applyTaskEventToCache(
+      client,
+      mustEvent({ kind: "task.moved", task: taskIn("in-progress") }),
+    );
+    expect(latestDoneTransit()).toBeNull();
+  });
+
+  // Review fix — recording-boundary hardening: the wire parser is trusted
+  // upstream, but a malformed frame must never produce a
+  // «Задача «undefined» решена» toast. The frames below are cast by hand
+  // past the parser on purpose; the store must stay silent.
+  it("a frame with a non-string id records nothing", () => {
+    const client = seededClient();
+    client.setQueryData<BoardSummary>(keys.tasks.board(), {
+      ...MOCK_BOARD,
+      tasks: [taskIn("open")],
+      counts: { ...MOCK_BOARD.counts },
+    });
+    applyTaskEventToCache(client, {
+      kind: "task.updated",
+      task: { ...taskIn("done"), id: 42 as unknown as string },
+    } as unknown as BoardEvent);
+    expect(latestDoneTransit()).toBeNull();
+  });
+
+  it("a frame with an empty (or blank) title records nothing", () => {
+    const client = seededClient();
+    client.setQueryData<BoardSummary>(keys.tasks.board(), {
+      ...MOCK_BOARD,
+      tasks: [taskIn("open")],
+      counts: { ...MOCK_BOARD.counts },
+    });
+    applyTaskEventToCache(client, {
+      kind: "task.moved",
+      task: { ...taskIn("done"), title: "" },
+    } as unknown as BoardEvent);
+    applyTaskEventToCache(client, {
+      kind: "task.moved",
+      task: { ...taskIn("done"), title: "   " },
+    } as unknown as BoardEvent);
+    expect(latestDoneTransit()).toBeNull();
   });
 });

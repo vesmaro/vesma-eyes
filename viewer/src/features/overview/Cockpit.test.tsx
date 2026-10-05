@@ -189,7 +189,7 @@ describe("CockpitBusy (§9.1 matrix)", () => {
     // Static skeletons (blueprint §6.3 slop-pass): no pulse on mounts.
     expect(html).toContain("bg-elevated");
     expect(html).not.toContain("executors connected");
-    expect(html).not.toContain("waiting for you:");
+    expect(html).not.toContain("Waiting for the owner:");
   });
 
   it("error: the HonestLine with a retry — the block never disappears silently", async () => {
@@ -269,8 +269,8 @@ describe("CockpitWaiting (§3.1 + persona round 1)", () => {
     // 3 inbox + 2 in-review + 4 queued = 9 waiting (fixtures). ME-072 C:
     // the numeral IS the count — the label no longer repeats the number.
     expect(html).toContain(">9</span>");
-    expect(html).toContain("waiting for you</span>");
-    expect(html).not.toContain("waiting for you: 9");
+    expect(html).toContain("Waiting for the owner</span>");
+    expect(html).not.toContain("Waiting for the owner: 9");
     // The summary's click target is the MOST URGENT list — the inbox first.
     expect(html).toContain('href="/tasks/inbox"');
     // The source rows are quiet links with the owner's wording.
