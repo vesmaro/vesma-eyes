@@ -462,4 +462,40 @@ describe("ME-071 W3: live terminal transitions feed the done-transit store", () 
     );
     expect(latestDoneTransit()).toBeNull();
   });
+
+  // Review fix — recording-boundary hardening: the wire parser is trusted
+  // upstream, but a malformed frame must never produce a
+  // «Задача «undefined» решена» toast. The frames below are cast by hand
+  // past the parser on purpose; the store must stay silent.
+  it("a frame with a non-string id records nothing", () => {
+    const client = seededClient();
+    client.setQueryData<BoardSummary>(keys.tasks.board(), {
+      ...MOCK_BOARD,
+      tasks: [taskIn("open")],
+      counts: { ...MOCK_BOARD.counts },
+    });
+    applyTaskEventToCache(client, {
+      kind: "task.updated",
+      task: { ...taskIn("done"), id: 42 as unknown as string },
+    } as unknown as BoardEvent);
+    expect(latestDoneTransit()).toBeNull();
+  });
+
+  it("a frame with an empty (or blank) title records nothing", () => {
+    const client = seededClient();
+    client.setQueryData<BoardSummary>(keys.tasks.board(), {
+      ...MOCK_BOARD,
+      tasks: [taskIn("open")],
+      counts: { ...MOCK_BOARD.counts },
+    });
+    applyTaskEventToCache(client, {
+      kind: "task.moved",
+      task: { ...taskIn("done"), title: "" },
+    } as unknown as BoardEvent);
+    applyTaskEventToCache(client, {
+      kind: "task.moved",
+      task: { ...taskIn("done"), title: "   " },
+    } as unknown as BoardEvent);
+    expect(latestDoneTransit()).toBeNull();
+  });
 });

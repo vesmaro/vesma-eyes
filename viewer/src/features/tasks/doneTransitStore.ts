@@ -98,6 +98,13 @@ function prune(now: number): void {
   else if (first === -1) state.items = [];
 }
 
+/** Replay-fold scan bounds (review fix P2: the fold used to compare only the
+ * LAST item — a replayed `done` for task A arriving after task B passed).
+ * The scan walks backwards over a bounded tail: at most 10 entries AND at
+ * most 5 seconds of history — O(small) on every frame. */
+const FOLD_SCAN_ITEMS = 10;
+const FOLD_SCAN_MS = 5_000;
+
 /**
  * Record one live terminal transition. A repeat of the SAME (task, col)
  * within 1s is folded (SSE reconnect replays are at-most-once, but a
@@ -113,14 +120,19 @@ export function recordDoneTransit(
   now: number = Date.now(),
 ): void {
   if (!TERMINAL_COLUMNS.has(transit.col)) return;
-  const last = state.items[state.items.length - 1];
-  if (
-    last &&
-    last.taskId === transit.taskId &&
-    last.col === transit.col &&
-    now - last.at < 1_000
+  for (
+    let i = state.items.length - 1, seen = 0;
+    i >= 0 && seen < FOLD_SCAN_ITEMS && now - state.items[i].at < FOLD_SCAN_MS;
+    i -= 1, seen += 1
   ) {
-    return;
+    const item = state.items[i];
+    if (
+      item.taskId === transit.taskId &&
+      item.col === transit.col &&
+      now - item.at < 1_000
+    ) {
+      return;
+    }
   }
   prune(now);
   state.items = [
@@ -245,6 +257,11 @@ function subscribeClock(fn: () => void): () => void {
     }
   };
 }
+
+/** Test seam: the shared duty-cycled clock itself (the hooks above wrap it).
+ * Production reads go through the hooks; the unit tests assert the fast→slow
+ * duty cycle and the last-subscriber teardown through here. */
+export const subscribeClockForTests = subscribeClock;
 
 function getClockSnapshot(): number {
   return clockSnapshot;

@@ -104,6 +104,12 @@ function noteDoneTransit(
   task: BoardTask,
 ): void {
   if (!TERMINAL_COLUMNS.has(task.col)) return;
+  // Hardening (review fix): a malformed frame (the wire dictionary is
+  // trusted upstream, but this is the recording boundary) must never reach
+  // the store — «Задача «undefined» решена» in the live region is worse
+  // than silence.
+  if (typeof task.id !== "string" || task.id === "") return;
+  if (typeof task.title !== "string" || task.title.trim() === "") return;
   const prev = queryClient
     .getQueryData<BoardSummary>(keys.tasks.board())
     ?.tasks.find((row) => row.id === task.id);

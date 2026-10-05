@@ -179,10 +179,10 @@ describe("ME-071 W3: «Ждут владельца» facade chip", () => {
     await renderAt("/tasks");
     await waitFor(() => container!.querySelector('a[href^="/tasks/TB-1?"]') !== null);
     const chip = Array.from(container!.querySelectorAll("button")).find(
-      (b) => b.textContent?.includes("Waiting for you:"),
+      (b) => b.textContent?.includes("Waiting for the owner:"),
     );
     expect(chip).toBeDefined();
-    expect(chip!.textContent).toContain(`Waiting for you: ${expected}`);
+    expect(chip!.textContent).toContain(`Waiting for the owner: ${expected}`);
     expect(chip!.getAttribute("aria-pressed")).toBe("false");
   });
 
@@ -190,7 +190,7 @@ describe("ME-071 W3: «Ждут владельца» facade chip", () => {
     await renderAt("/tasks");
     await waitFor(() => container!.querySelector('a[href^="/tasks/TB-1?"]') !== null);
     const chip = Array.from(container!.querySelectorAll("button")).find(
-      (b) => b.textContent?.includes("Waiting for you:"),
+      (b) => b.textContent?.includes("Waiting for the owner:"),
     )!;
     await act(async () => {
       chip.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
@@ -270,5 +270,52 @@ describe("ME-071 W3: done-tempo + flash + blocked edge", () => {
     );
     const card = cardOf(VALIDATING_TITLE);
     expect(card.className).toContain("ring-confidence");
+  });
+});
+
+describe("ME-071 W3 review fix: the done toast announces a transit once per session", () => {
+  // The live-proven repro: a done transit → click into /tasks/:id → back —
+  // the board remounts and the OLD toast replayed (the announce bookkeeping
+  // lived in a useRef, which resets on remount; the store keeps items for
+  // 60 minutes and useLatestDoneTransit is age-blind). The fix announces
+  // each transit at most once per page session (module-level key set).
+  const REPLAY_TASK: BoardTask = {
+    ...RESOLVED_TASK,
+    id: "TB-REPLAY",
+    title: "W3: тост не переигрывается",
+  };
+  const RESOLVED_TOAST = `Task “${REPLAY_TASK.title}” resolved`;
+  const DONE_TOAST = `Task “${REPLAY_TASK.title}” done`;
+
+  it("transit → toast; remount with the SAME latest transit → no toast; a NEW transit → toast again", async () => {
+    recordDoneTransit(
+      { taskId: REPLAY_TASK.id, title: REPLAY_TASK.title, col: "resolved" },
+      Date.now(),
+    );
+    await renderAt("/tasks", [REPLAY_TASK]);
+    await waitFor(() => container!.textContent?.includes(RESOLVED_TOAST) === true);
+
+    // Navigate away: the board unmounts, the store keeps the transit.
+    await act(async () => {
+      root?.unmount();
+    });
+    container?.remove();
+
+    // Back on /tasks: the SAME latest transit is already announced — the
+    // remount must NOT replay it (the ghost-toast repro, now impossible).
+    await renderAt("/tasks", [REPLAY_TASK]);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    expect(container!.textContent).not.toContain(RESOLVED_TOAST);
+
+    // A NEW transit (fresh key) announces again.
+    await act(async () => {
+      recordDoneTransit(
+        { taskId: REPLAY_TASK.id, title: REPLAY_TASK.title, col: "done" },
+        Date.now() + 10,
+      );
+    });
+    await waitFor(() => container!.textContent?.includes(DONE_TOAST) === true);
   });
 });

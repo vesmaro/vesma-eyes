@@ -406,7 +406,13 @@ export function mountVesma(slot: HTMLElement): () => void {
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ["open", "class", "hidden", "style"],
+    // Review fix: "class" made the callback run a full-document querySelector
+    // on EVERY Tailwind class toggle in the app. Detection is NOT class-
+    // driven — Radix dialogs portal-mount/unmount (childList) and toggle
+    // data-state, a native <dialog> toggles open; hidden/style cover any
+    // always-mounted reveal. The dialog test (childList append/remove) and
+    // the В1 flash stay intact.
+    attributeFilter: ["open", "data-state", "hidden", "style"],
   });
   const onVis = (): void => {
     if (document.hidden) {

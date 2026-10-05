@@ -849,7 +849,7 @@ export const en: Record<TranslationKey, string> = {
 
   // ME-071 W3: the living console (15-WOW §3.4/§8.5) — the waiting facade,
   // the resolution tempo, the task.done flash, the blocked edge.
-  "tasks.board.waitingChip": "Waiting for you: {{count}}",
+  "tasks.board.waitingChip": "Waiting for the owner: {{count}}",
   "tasks.board.waitingChipTitle":
     "Show tasks waiting for the owner's decision (on review)",
   "tasks.board.doneTempoUnit": "/h",

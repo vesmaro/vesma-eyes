@@ -52,6 +52,10 @@ export function LivingPill() {
     const onFlash = (): void => {
       if (!mounted) return;
       setFlash((n) => n + 1);
+      // Review fix: two flashes <700ms apart must not leak the first timer —
+      // clear the previous handle before reassigning, or an early stale
+      // reset kills the second flash mid-animation.
+      clearTimeout(timer);
       timer = setTimeout(() => setFlash(0), 700);
     };
     document.addEventListener("vesma:b1", onFlash);

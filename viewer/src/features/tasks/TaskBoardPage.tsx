@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 // @dnd-kit (ARCHCOM-3 verdict §3, ratified): the kanban is the PRIMARY
 // surface of the Задачи domain; core+sortable land ~14–18 KB gz together,
@@ -50,6 +50,20 @@ import { useDoneTempo, useLatestDoneTransit } from "./doneTransitStore";
 import { BoardStyleToggle } from "./BoardStyleToggle";
 import { useBoardStyle } from "@/lib/boardStyleStore";
 import { pageGridClass } from "@/layout/pageGrid";
+
+/**
+ * ME-071 W3 review fix (P1): a given transit announces AT MOST ONCE per page
+ * session. The announce bookkeeping used to live in a useRef, which resets on
+ * every remount — /tasks → /tasks/:id → back re-ran the effect with the SAME
+ * store item (useLatestDoneTransit is age-blind; the store buffers up to 60
+ * minutes) and replayed the old toast. Module scope survives the remount;
+ * a reload replays nothing because the store itself is empty (fed only by
+ * the live bridge). Bounded like the store buffer: past the cap the set
+ * clears — the dropped keys belong to long-stale transits no remount will
+ * reasonably resurrect.
+ */
+const announcedDoneTransits = new Set<string>();
+const ANNOUNCED_CAP = 200;
 
 /**
  * `/tasks` — the KANBAN view of the domain, view №1 per the redesign concept
@@ -148,12 +162,12 @@ function TaskBoardView() {
   const doneTempo = useDoneTempo();
   const latestTransit = useLatestDoneTransit();
   const toast = useToast();
-  const announcedTransitRef = useRef<string | null>(null);
   useEffect(() => {
     if (!latestTransit) return;
     const key = `${latestTransit.taskId}:${latestTransit.col}:${latestTransit.at}`;
-    if (announcedTransitRef.current === key) return;
-    announcedTransitRef.current = key;
+    if (announcedDoneTransits.has(key)) return; // once per session, never on remount
+    if (announcedDoneTransits.size >= ANNOUNCED_CAP) announcedDoneTransits.clear();
+    announcedDoneTransits.add(key);
     toast.push({
       kind: "ok",
       title: t(
@@ -186,8 +200,13 @@ function TaskBoardView() {
   // On a narrow viewport the wire-ordered board starts at the backlog lane;
   // a solutions mode that opens pointing at an empty lane reads as broken.
   // Viewport-rect math (never offsetParent), smooth unless reduced.
+  // Review fix (P2): the lane DOM exists only once board.data has arrived
+  // (columns render from data) — a cold ?waiting=1 deep link ran this effect
+  // before the data landed and never re-ran. The readiness flag re-arms the
+  // scroll exactly at data arrival (null → object), not on every patch.
+  const boardReady = board.data != null;
   useEffect(() => {
-    if (!waitingActive || !boardEl) return;
+    if (!waitingActive || !boardEl || !boardReady) return;
     const lane = boardEl.querySelector<HTMLElement>('[data-column="validating"]');
     if (!lane) return;
     const delta =
@@ -197,7 +216,7 @@ function TaskBoardView() {
       left: boardEl.scrollLeft + delta,
       behavior: reducedMotion ? "auto" : "smooth",
     });
-  }, [waitingActive, boardEl, reducedMotion]);
+  }, [waitingActive, boardEl, reducedMotion, boardReady]);
 
   // Hook-order discipline: every hook below runs on EVERY render (the
   // pending/error early-returns come after), so the DnD wiring stays mounted

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   countDoneTotal,
   countDoneTransits,
@@ -8,6 +8,7 @@ import {
   peekFreshTransit,
   recordDoneTransit,
   resetDoneTransits,
+  subscribeClockForTests,
 } from "./doneTransitStore";
 
 /**
@@ -47,6 +48,16 @@ describe("doneTransitStore — window and tempo", () => {
     // resolved → done is TWO honest milestones of one task.
     recordDoneTransit({ taskId: "T-1", title: "A", col: "resolved" }, 2_000);
     expect(countDoneTransits(2_500)).toBe(2);
+  });
+
+  it("folds a replayed NON-adjacent duplicate (A → B → A within 1s)", () => {
+    // Review fix P2: the fold compared only the LAST item, so a replayed A
+    // arriving behind B passed and doubled the tempo.
+    recordDoneTransit({ taskId: "T-1", title: "A", col: "done" }, 1_000);
+    recordDoneTransit({ taskId: "T-2", title: "B", col: "done" }, 1_100);
+    recordDoneTransit({ taskId: "T-1", title: "A", col: "done" }, 1_400);
+    expect(countDoneTransits(2_000)).toBe(2);
+    expect(countDoneTotal()).toBe(2);
   });
 
   it("latestDoneTransit returns the newest receipt", () => {
@@ -94,5 +105,51 @@ describe("doneTransitStore — session total (the В1-pill ▸N, slice 2)", () =
     recordDoneTransit({ taskId: "T-1", title: "A", col: "done" }, 1_000);
     recordDoneTransit({ taskId: "T-1", title: "A", col: "done" }, 1_400);
     expect(countDoneTotal()).toBe(1);
+  });
+});
+
+describe("doneTransitStore — the shared duty-cycled clock", () => {
+  // Frozen system clock + fake timers (the useValidationClock.test idiom):
+  // the tick schedule — fast 250ms while a transit is fresh, slow 30s once
+  // the freshness expires, silent after the last subscriber leaves — is the
+  // subject, and every interval decision is observable through the ticks.
+  it("ticks fast(250ms) while fresh, re-arms slow(30s) on expiry, tears down on the last unsubscribe", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-06T10:00:00+00:00"));
+    try {
+      recordDoneTransit(
+        { taskId: "C-1", title: "A", col: "done" },
+        Date.now(),
+      );
+      const ticks: number[] = [];
+      const unsub = subscribeClockForTests(() => ticks.push(Date.now()));
+      // startClock ticks synchronously and arms the fast interval.
+      expect(ticks).toHaveLength(1);
+
+      // Fast phase: a tick every 250ms while the transit stays fresh.
+      // Freshness covers now - at < 2000, so the ticks at 250…2000 keep the
+      // fast interval; the 2250 tick is the first to see the transit stale
+      // and re-arms the clock to the slow 30s cadence.
+      vi.advanceTimersByTime(2_000);
+      expect(ticks).toHaveLength(9); // 250,500,…,2000
+      vi.advanceTimersByTime(250);
+      expect(ticks).toHaveLength(10); // 2250 — expiry noticed here
+
+      // No more fast ticks: the clock re-armed at 2250 to the slow 30s
+      // cadence — the next tick lands at 2250 + 30_000 = 32_250, exactly
+      // one slow tick (a fast interval would have produced ~120).
+      vi.advanceTimersByTime(250);
+      expect(ticks).toHaveLength(10); // 2500 — a fast tick would land here
+      vi.advanceTimersByTime(30_000);
+      expect(ticks).toHaveLength(11); // 32_250 — the single slow tick
+
+      // The last subscriber leaving tears the interval down — silence after.
+      unsub();
+      vi.advanceTimersByTime(120_000);
+      expect(ticks).toHaveLength(11);
+    } finally {
+      vi.useRealTimers();
+      resetDoneTransits();
+    }
   });
 });

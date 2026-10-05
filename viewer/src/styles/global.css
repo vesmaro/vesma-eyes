@@ -447,6 +447,16 @@ html[data-vesma-pad] #main {
     both;
 }
 
+/* ── The перелёт z-lift (ME-071 W3 review fix): mid-flight the card passes
+ * OVER later-DOM columns, not under them — position+z only, for the flight
+ * duration (the choreography adds the class before el.animate and drops it
+ * at onfinish, exactly like the flash class). No motion, no paint beyond
+ * stacking. */
+.task-done-fly {
+  position: relative;
+  z-index: 1;
+}
+
 /* ── В1 flash (ME-071 W3 slice 2 — 15-WOW «повод деградирует до вспышки
  * В1»): the gold pulse the status-zone pill plays when Весма dispatches
  * `vesma:b1` (a dialog opened — flights defer). --duration-impulse gates
