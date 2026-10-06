@@ -7309,31 +7309,47 @@ async def verify_ui_token(body: UiTokenVerifyIn, request: Request,
     is honest about legacy mode: with no dedicated VESMARO_UI_TOKEN the ui
     class is served by the board token and the login says ``legacy``.
     Errors: 401 class-aware (never a generic "not accepted"), 429 on the
-    flat limiters, 503 fail-closed while no token class is configured."""
-    client_ip = request.client.host if request.client else "unknown"
-    if not _auth_verify_ip_limiter.acquire(client_ip):
-        raise HTTPException(
-            429,
-            f"login rate limit exceeded "
-            f"({_AUTH_VERIFY_RATE_LIMIT} per "
-            f"{_AUTH_VERIFY_RATE_WINDOW:.0f}s per client)",
-        )
-    if not _auth_verify_global_limiter.acquire("global"):
-        raise HTTPException(
-            429,
-            f"login rate limit exceeded "
-            f"({_AUTH_VERIFY_GLOBAL_RATE_LIMIT} per "
-            f"{_AUTH_VERIFY_GLOBAL_WINDOW:.0f}s board-wide)",
-        )
-    effective = _token_classes()
-    ui = effective.get("ui", "")
-    if not ui:
+    flat limiters each counting down and carrying its ``Retry-After``
+    hint (F4, ME-090 — the device-mutation/telemetry limiter pattern),
+    503 fail-closed while no token class is configured."""
+    # F3 (ME-090): the fail-closed class check comes FIRST — with no token
+    # class configured the answer is a constant 503 (zero oracle
+    # information), so counting the attempt spends limiter budget
+    # protecting nothing and degrades anonymous diagnostics 503 → 429.
+    if not _token_classes().get("ui"):
         raise HTTPException(
             503,
             "owner login is not configured: set VESMARO_UI_TOKEN "
             "(or VESMARO_BOARD_TOKEN for single-token legacy mode) to "
             "enable it (fail-closed)",
         )
+    client_ip = request.client.host if request.client else "unknown"
+    if not _auth_verify_ip_limiter.acquire(client_ip):
+        retry_after = max(_auth_verify_ip_limiter.retry_after(client_ip), 1)
+        logging.getLogger("vesmaro.ui_token").warning(
+            "verify rate limit exceeded client=%s retry_after=%ss",
+            client_ip, retry_after)
+        raise HTTPException(
+            429,
+            f"login rate limit exceeded "
+            f"({_AUTH_VERIFY_RATE_LIMIT} per "
+            f"{_AUTH_VERIFY_RATE_WINDOW:.0f}s per client)",
+            headers={"Retry-After": str(retry_after)},
+        )
+    if not _auth_verify_global_limiter.acquire("global"):
+        retry_after = max(
+            _auth_verify_global_limiter.retry_after("global"), 1)
+        logging.getLogger("vesmaro.ui_token").warning(
+            "verify global rate limit exceeded retry_after=%ss", retry_after)
+        raise HTTPException(
+            429,
+            f"login rate limit exceeded "
+            f"({_AUTH_VERIFY_GLOBAL_RATE_LIMIT} per "
+            f"{_AUTH_VERIFY_GLOBAL_WINDOW:.0f}s board-wide)",
+            headers={"Retry-After": str(retry_after)},
+        )
+    effective = _token_classes()
+    ui = effective.get("ui", "")
     supplied = body.token
     if not hmac.compare_digest(supplied.encode("utf-8"), ui.encode("utf-8")):
         raise HTTPException(401, _ui_verify_mismatch_detail(supplied, effective))
@@ -7375,27 +7391,42 @@ async def probe_ui_session(request: Request) -> Response:
     per-IP + global, wider — it rides every page load; see the limiter
     block above). The viewer degrades a 429 to the honest "no session"
     (any non-204 does — BoardAdapter.probeUiSession)."""
-    client_ip = request.client.host if request.client else "unknown"
-    if not _auth_probe_ip_limiter.acquire(client_ip):
-        raise HTTPException(
-            429,
-            f"probe rate limit exceeded "
-            f"({_AUTH_PROBE_RATE_LIMIT} per "
-            f"{_AUTH_PROBE_RATE_WINDOW:.0f}s per client)",
-        )
-    if not _auth_probe_global_limiter.acquire("global"):
-        raise HTTPException(
-            429,
-            f"probe rate limit exceeded "
-            f"({_AUTH_PROBE_GLOBAL_RATE_LIMIT} per "
-            f"{_AUTH_PROBE_GLOBAL_WINDOW:.0f}s board-wide)",
-        )
+    # F3 (ME-090): the fail-closed class check comes FIRST — with no token
+    # class configured the answer is a constant 503 (zero oracle
+    # information: 204 is unreachable, the none-branch is the only 200),
+    # so counting the attempt spends limiter budget protecting nothing and
+    # degrades anonymous diagnostics 503 → 429.
     if not _token_classes().get("ui"):
         raise HTTPException(
             503,
             "owner login is not configured: set VESMARO_UI_TOKEN "
             "(or VESMARO_BOARD_TOKEN for single-token legacy mode) to "
             "enable it (fail-closed)",
+        )
+    client_ip = request.client.host if request.client else "unknown"
+    if not _auth_probe_ip_limiter.acquire(client_ip):
+        retry_after = max(_auth_probe_ip_limiter.retry_after(client_ip), 1)
+        logging.getLogger("vesmaro.ui_token").warning(
+            "probe rate limit exceeded client=%s retry_after=%ss",
+            client_ip, retry_after)
+        raise HTTPException(
+            429,
+            f"probe rate limit exceeded "
+            f"({_AUTH_PROBE_RATE_LIMIT} per "
+            f"{_AUTH_PROBE_RATE_WINDOW:.0f}s per client)",
+            headers={"Retry-After": str(retry_after)},
+        )
+    if not _auth_probe_global_limiter.acquire("global"):
+        retry_after = max(
+            _auth_probe_global_limiter.retry_after("global"), 1)
+        logging.getLogger("vesmaro.ui_token").warning(
+            "probe global rate limit exceeded retry_after=%ss", retry_after)
+        raise HTTPException(
+            429,
+            f"probe rate limit exceeded "
+            f"({_AUTH_PROBE_GLOBAL_RATE_LIMIT} per "
+            f"{_AUTH_PROBE_GLOBAL_WINDOW:.0f}s board-wide)",
+            headers={"Retry-After": str(retry_after)},
         )
     if _cookie_ui_ok(request):
         return Response(status_code=204)

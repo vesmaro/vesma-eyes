@@ -22,6 +22,13 @@ Pinned contract:
   (SEC-2, ME-030: the probe is a token oracle too — 30/60s per IP +
   180/60s global, wider than the verify leg because it rides EVERY page
   load) / 503 fail-closed;
+- F3 (ME-090): the fail-closed class check precedes the limiter
+  acquisitions on BOTH legs — with no token class configured the answer
+  is a constant 503 (zero oracle information, so counting protects
+  nothing), and an unconfigured instance keeps a FULL limiter budget
+  (anonymous diagnostics never degrade 503 → 429);
+- F4 (ME-090): every 429 on both legs carries a Retry-After header ≥ 1
+  (the device-mutation/telemetry limiter parity).
 - the cookie leg lives INSIDE the guards: a ui mutation with a valid
   cookie and NO Authorization header passes (including the
   _guard_ui_write pattern and the both-classes reports route); a machine
@@ -140,6 +147,10 @@ class TestVerify:
         r = _verify(client, "wrong")
         assert r.status_code == 429
         assert "per client" in r.json()["detail"]
+        # F4 (ME-090): Retry-After parity with the device-mutation and
+        # telemetry limiters — the hint is present and sane (>= 1).
+        retry_after = int(r.headers["Retry-After"])
+        assert retry_after >= 1
 
     def test_429_global_budget(self, client, split_tokens, app_module,
                                monkeypatch):
@@ -150,6 +161,22 @@ class TestVerify:
         r = _verify(client, "wrong")
         assert r.status_code == 429
         assert "board-wide" in r.json()["detail"]
+        assert int(r.headers["Retry-After"]) >= 1  # F4 (ME-090) parity
+
+    def test_503_first_call_spends_no_limiter_budget(self, client,
+                                                     no_board_token,
+                                                     app_module):
+        """F3 (ME-090): the fail-closed 503 answers BEFORE the limiter
+        acquisitions — the probe carries zero oracle information when the
+        constant answer is "no", so an unconfigured instance must keep a
+        FULL verify budget after N calls (anonymous diagnostics never
+        degrade 503 → 429). Asserted on the limiter objects directly, per
+        the fresh_auth_limiters idioms."""
+        for _ in range(5):
+            r = _verify(client, "wrong")
+            assert r.status_code == 503
+        assert app_module._auth_verify_ip_limiter._events == {}
+        assert app_module._auth_verify_global_limiter._events == {}
 
     def test_token_never_echoed_or_logged(self, client, split_tokens, caplog):
         junk = "qa-reject-value-0f31c7"
@@ -240,6 +267,37 @@ class TestBootProbe:
         r = client.get("/api/auth/ui-token")
         assert r.status_code == 429
         assert "board-wide" in r.json()["detail"]
+        assert int(r.headers["Retry-After"]) >= 1  # F4 (ME-090) parity
+
+    def test_503_first_call_spends_no_limiter_budget(self, client,
+                                                     no_board_token,
+                                                     app_module):
+        """F3 (ME-090): the fail-closed 503 answers BEFORE the limiter
+        acquisitions (hoisted above them) — otherwise anonymous page loads
+        on an unconfigured instance burn probe budget and the diagnostics
+        degrade 503 → 429. The constant "no" answer carries zero oracle
+        information, so counting protects nothing. Asserted on the limiter
+        objects directly: N calls later both still hold a full budget."""
+        for _ in range(5):
+            r = client.get("/api/auth/ui-token")
+            assert r.status_code == 503
+        assert app_module._auth_probe_ip_limiter._events == {}
+        assert app_module._auth_probe_global_limiter._events == {}
+
+    def test_503_then_configured_full_budget(self, client, no_board_token,
+                                             app_module, monkeypatch):
+        """F3 ordering edge: a call in fail-closed mode spends NOTHING even
+        when tokens arrive a moment later — budget counting starts only
+        after the class check passes (the two 503 calls left the freshly
+        armed limiter untouched, so the FULL 30-per-IP budget fits)."""
+        assert client.get("/api/auth/ui-token").status_code == 503
+        # Re-arm tokens mid-test (the fixture emptied the globals).
+        monkeypatch.setattr(app_module, "UI_WRITE_TOKEN", UI_TOKEN)
+        monkeypatch.setattr(app_module, "BOARD_WRITE_TOKEN", BOARD_TOKEN)
+        assert client.get("/api/auth/ui-token").status_code == 200
+        for _ in range(29):
+            assert client.get("/api/auth/ui-token").status_code == 200
+        assert client.get("/api/auth/ui-token").status_code == 429
 
 
 # ------------------------------------------- Ф2: the cookie leg in guards
