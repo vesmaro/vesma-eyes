@@ -12,12 +12,23 @@ import hashlib
 import re
 from pathlib import Path
 
+import pytest
+
 # ME-028: the two inline pre-paint bootstraps of viewer/index.html (theme +
 # density) are hash-allowed in script-src — no server-side templating to
 # nonce with, and external/module scripts lose the before-first-paint
 # guarantee. test_inline_bootstrap_hashes_are_allowed pins the hashes to the
 # ACTUAL viewer/index.html bytes, so editing a bootstrap without rotating
 # the CSP fails here instead of silently re-breaking the page console.
+# SEC-3 (ME-030 cascade): style-src keeps 'unsafe-inline' as an ACCEPTED
+# RESIDUAL (ADR 0014 amendment): the React viewer renders runtime
+# style={{...}} attributes across the SPA (measured: 15+ components —
+# TraceRow, WellHero, TaskActivityPage, ...) with dynamic values (positions,
+# widths); per-style hashes would need 'unsafe-hashes' plus an enumeration
+# of every dynamic value — unmaintainable for zero real hardening (CSS does
+# not execute script in modern browsers; script-src stays hash-locked).
+# Scope of the residual: CSS injection within the page origin, boxed by
+# connect-src 'self' / img-src 'self' data: / font-src 'self' data:.
 CSP = ("default-src 'self'; "
        "script-src 'self' 'sha256-gLnW2OEJF23VKQL4ot9PcYmiFHXeZWiMg0A52v/5MDM=' "
        "'sha256-k85nuNkWNWz2VjD38EcDAkNliknfzuSNN6HBSJQjvkc='; "
@@ -26,6 +37,47 @@ CSP = ("default-src 'self'; "
        "img-src 'self' data:; font-src 'self' data:")
 
 _VIEWER_INDEX = Path(__file__).resolve().parents[1] / "viewer" / "index.html"
+
+_SCRIPT_TAG_RE = re.compile(r"<script\b([^>]*)>(.*?)</script>", re.S)
+_EVENT_HANDLER_ATTR_RE = re.compile(r"\bon\w+\s*=", re.I)
+
+
+def _script_tags(html: str) -> list[tuple[str, str]]:
+    """(attrs, body) of EVERY <script> tag — attribute-bearing tags
+    included: the browser hashes their content the same way (arch-audit
+    A2/A3, ME-030). Tags carrying ``src=`` ride along; callers separate
+    them (external files are governed by script-src 'self', not a hash)."""
+    return re.findall(_SCRIPT_TAG_RE, html)
+
+
+def _script_hash(body: str) -> str:
+    return ("sha256-"
+            + base64.b64encode(
+                hashlib.sha256(body.encode("utf-8")).digest()).decode("ascii"))
+
+
+def _assert_inline_scripts_hash_allowed(html: str, served_csp: str) -> None:
+    """Every inline <script> in ``html`` — INCLUDING attribute-bearing
+    tags — must be hash-allowed by the served CSP, and NO script tag may
+    carry an inline event-handler attribute (script-src has no
+    'unsafe-inline', so the browser blocks those at runtime — their
+    presence in served HTML is dead console noise at best, injection at
+    worst; the `<script src=x onerror=…>` shape the plain-`<script>` scans
+    miss). External src scripts are skipped ('self'-governed)."""
+    for attrs, body in _script_tags(html):
+        handler = _EVENT_HANDLER_ATTR_RE.search(attrs)
+        assert handler is None, (
+            f"served HTML carries an inline event-handler attribute "
+            f"({(handler.group(0) if handler else '?')!r} in "
+            f"<script{attrs}>) — the CSP blocks it at runtime; "
+            "inline handlers must not ship")
+        if "src=" in attrs or not body.strip():
+            continue
+        digest = _script_hash(body)
+        assert digest in served_csp, (
+            f"{digest} (inline script{attrs}) is not allowed by the "
+            "served CSP — rotate the script-src hash in server/app.py "
+            "or make the script external")
 
 
 def _inline_script_hashes() -> list[str]:
@@ -38,15 +90,8 @@ def _inline_script_hashes() -> list[str]:
     visibly. Script tags carrying a `src=` are skipped (external files are
     governed by `script-src 'self'`, not a hash), as are empty bodies."""
     html = _VIEWER_INDEX.read_text(encoding="utf-8")
-    hashes: list[str] = []
-    for attrs, body in re.findall(r"<script\b([^>]*)>(.*?)</script>", html, re.S):
-        if "src=" in attrs or not body.strip():
-            continue
-        hashes.append(
-            "sha256-"
-            + base64.b64encode(hashlib.sha256(body.encode("utf-8")).digest()).decode("ascii")
-        )
-    return hashes
+    return [_script_hash(body) for attrs, body in _script_tags(html)
+            if "src=" not in attrs and body.strip()]
 
 
 class TestSecurityHeaders:
@@ -159,3 +204,79 @@ class TestInlineBootstrapHashes:
             )
         # And the served CSP names every hash the viewer ships.
         assert served == CSP
+
+
+class TestServedHtmlInlineScripts:
+    """arch-audit A2/A3 (ME-030 cascade): the hash pin above reads the
+    SOURCE viewer/index.html only — it never sees the HTML the server
+    actually SERVES. These tests audit the served entries: the board root
+    (GET / → web/index.html bytes) and the viewer entry (GET /app →
+    VESMARO_APP_DIR/index.html), catching inline script tags WITH
+    attributes (`<script data-x>`) and the `<script src=x onerror=…>`
+    handler-bearing shape that a plain `<script>` scan misses.
+
+    Известная граница: хэши считаются от source index.html, не от dist —
+    в pytest собранного dist нет, поэтому для /app аудит гоняется по
+    заглушке APP_DIR (паттерн test_app_spa), а для реального вьюера — по
+    исходнику viewer/index.html. Инвариант, который сторожат тесты:
+    сборка (vite без плагинов инлайна) не должна добавлять новые
+    инлайн-скрипты в index.html; любой инлайн-скрипт в отданном HTML
+    обязан быть разрешён хэшем в script-src, иначе prod получает
+    блокировку скрипта и сломанный первый рендер."""
+
+    @pytest.fixture()
+    def app_dist(self, app_module, tmp_path, monkeypatch):
+        """A fake viewer dist monkeypatched into APP_DIR (the handlers
+        read the module global at request time — test_app_spa pattern)."""
+        dist = tmp_path / "dist"
+        dist.mkdir()
+        (dist / "index.html").write_text(
+            "<!doctype html><title>viewer</title>", encoding="utf-8")
+        monkeypatch.setattr(app_module, "APP_DIR", dist)
+        return dist
+
+    def test_board_entry_serves_no_inline_scripts(self, client):
+        """The board entry ships ZERO inline scripts (its only script is
+        the external /js/app.js module). An inline script appearing in the
+        SERVED bytes would be CSP-blocked at runtime — the script-src
+        hashes belong to the viewer bootstraps — so the audit must fail
+        here first, with the tag in the message."""
+        r = client.get("/")
+        assert r.status_code == 200
+        inline = [attrs for attrs, body in _script_tags(r.text)
+                  if "src=" not in attrs and body.strip()]
+        assert inline == [], (
+            f"the served board HTML gained inline script(s) {inline} — "
+            "rotate the script-src hash in server/app.py or make the "
+            "script external")
+        _assert_inline_scripts_hash_allowed(
+            r.text, r.headers["Content-Security-Policy"])
+
+    def test_viewer_entry_served_html_passes_the_audit(self, client,
+                                                       app_dist):
+        """GET /app serves APP_DIR/index.html — the fake dist in tests,
+        the vite build in prod; the audit rides the SERVED bytes either
+        way (see the dist boundary on the class)."""
+        r = client.get("/app")
+        assert r.status_code == 200
+        _assert_inline_scripts_hash_allowed(
+            r.text, r.headers["Content-Security-Policy"])
+
+    def test_viewer_source_inline_scripts_pass_the_audit(self):
+        """The source-side twin: viewer/index.html — the exact bytes the
+        vite build copies into dist. Attributed inline tags included."""
+        html = _VIEWER_INDEX.read_text(encoding="utf-8")
+        _assert_inline_scripts_hash_allowed(html, CSP)
+
+    def test_audit_catches_attributed_inline_and_handler_shapes(self):
+        """Negative controls: the audit must FAIL on the two shapes the
+        plain-`<script>` scans miss — an inline script written WITH
+        attributes, and the `<script src=x onerror=…>` handler-bearing
+        tag (an external src is 'self'-governed, but the inline handler
+        attribute is CSP-blocked dead weight that must not ship)."""
+        with pytest.raises(AssertionError, match="event-handler attribute"):
+            _assert_inline_scripts_hash_allowed(
+                "<script src='/x.js' onerror='pwn()'></script>", CSP)
+        with pytest.raises(AssertionError, match="not allowed by the"):
+            _assert_inline_scripts_hash_allowed(
+                '<script data-x="1">console.log(1)</script>', CSP)
