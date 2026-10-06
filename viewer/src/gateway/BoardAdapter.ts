@@ -147,10 +147,12 @@ import type {
  * ADR 0014 owner session (one login per browser; cookie `vesmaro_ui` is
  * HttpOnly — set/reissued/cleared by the SERVER, never by this app):
  * - verifyUiToken  POST   /api/auth/ui-token → 200 {ok, token_class} | 401/429/503
- * - probeUiSession GET    /api/auth/ui-token → 204 live cookie | 200 {live:false} none | 503
+ * - probeUiSession GET    /api/auth/ui-token → 204 live cookie | 200 {live:false} none | 429 | 503
  *   (ME-028: the anonymous answer is an explicit 200-JSON, not a 401 — the
  *   probe runs on every page load and a 401 painted the console red; only
- *   204 ever reads as live, so the anti-spoof rule is untouched)
+ *   204 ever reads as live, so the anti-spoof rule is untouched. ME-030
+ *   added the 429 limiter verdict — the probe budget, ME-090 F2: a 429
+ *   PRESERVES the previous cookie verdict, it fabricates no signed-out)
  * - logoutUiToken  DELETE /api/auth/ui-token → 204 (Set-Cookie Max-Age=0)
  *
  * AGW-1 agents domain (ARCH-9, ADR 0009 Amd 2 — reads open, writes ui-token):
@@ -867,7 +869,21 @@ export class BoardAdapter implements BoardGateway {
         method: "GET",
         signal: AbortSignal.timeout(10_000),
       });
-      this.cookieLive = response.status === 204;
+      // ME-090 (F2): a 429 is an EXHAUSTED PROBE BUDGET, not a session
+      // verdict — the server refused to answer, so it proved nothing about
+      // the cookie. Overwriting cookieLive here flipped an active
+      // cookie-live tab to "signed out" until the next successful probe
+      // (hasUiToken() gates auth surfaces). PRESERVE the previous verdict on
+      // 429; every other non-204 keeps today's semantics (200/401/anything
+      // else → not live — a real server answer that the cookie is not live).
+      // 503 (fail-closed, and 502/504 gateway noise) is a SERVER-down class
+      // answer, but it equally carries no oracle information about this
+      // browser's cookie; preserving there too is defensible, yet today's
+      // "non-204 = not live" contract is pinned by tests and consumers, so
+      // the narrow 429-only carve-out is the honest minimal fix.
+      if (response.status !== 429) {
+        this.cookieLive = response.status === 204;
+      }
     } catch {
       this.cookieLive = false; // network down / aborted — fail to "no session"
     }

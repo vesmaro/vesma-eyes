@@ -25,7 +25,12 @@ import { startVisit } from "@/telemetry/telemetry";
  *      200 {"live": false}  → anonymous — the server's honest none-answer,
  *                             NOT a 401 (ME-028: anonymous is a normal
  *                             state, not an error);
- *      503 / transport fail → fail-soft to "anonymous": no server
+ *      other non-204        → anonymous (today's semantics; ME-030 adds
+ *                             429 + 503 to the server verdict set);
+ *      429                  → the probe BUDGET is exhausted, no verdict —
+ *                             the adapter PRESERVES its previous cookie
+ *                             read (ME-090 F2: no fabricated signed-out);
+ *      transport fail       → fail-soft to "anonymous": no server
  *                             confirmation means no session is claimed.
  * 3. Gateways without the session wire resolve from their own capability,
  *    synchronously, with no probe: the mock playground answers "user" (no

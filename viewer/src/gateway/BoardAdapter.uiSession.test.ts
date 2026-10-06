@@ -116,6 +116,34 @@ describe("BoardAdapter owner session (ADR 0014)", () => {
     expect(await down.adapter.probeUiSession()).toBe(false);
   });
 
+  it("probeUiSession: a 429 (exhausted probe budget, ME-030) PRESERVES the previous verdict instead of fabricating signed-out (ME-090 F2)", async () => {
+    // A live tab the budget exhausts on: the cookie verdict must SURVIVE the
+    // 429 — the refused probe proved nothing about the cookie.
+    const cookieLive = adapterWith((_path, method) => {
+      if (method === "GET") return new Response(null, { status: 429 });
+      return new Response(null, { status: 204 });
+    });
+    await cookieLive.adapter.probeUiSession(); // 429 on a NOT-yet-live flag stays false...
+    expect(cookieLive.adapter.hasUiToken()).toBe(false);
+    // ...then a real 204 confirms live (the flag was untouched, not falsified).
+    const confirmed = adapterWith((_path, method) => {
+      if (method === "GET") return new Response(null, { status: 204 });
+      return new Response(null, { status: 429 });
+    });
+    await confirmed.adapter.probeUiSession();
+    expect(confirmed.adapter.hasUiToken()).toBe(true);
+    // Second probe hits the 429 branch: the live verdict is PRESERVED
+    // (hasUiToken() still gates auth surfaces as signed-in).
+    await confirmed.adapter.probeUiSession();
+    expect(confirmed.adapter.hasUiToken()).toBe(true);
+
+    // The anonymous case is unchanged: the first probe on a fresh adapter
+    // answers 429 → still not live (nothing fabricated in EITHER direction).
+    const anonymousThrottled = adapterWith(() => new Response(null, { status: 429 }));
+    expect(await anonymousThrottled.adapter.probeUiSession()).toBe(false);
+    expect(anonymousThrottled.adapter.hasUiToken()).toBe(false);
+  });
+
   it("hasUiToken answers true on a live cookie with NOTHING stored (one login per browser)", async () => {
     const { adapter } = adapterWith(() => new Response(null, { status: 204 }));
     expect(adapter.hasUiToken()).toBe(false);
