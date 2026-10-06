@@ -10,6 +10,14 @@ workflow — this file is the repo-side trail).
 
 ## [Unreleased]
 
+## [1.62.0] — 2026-10-06
+
+### Security
+
+- Security hardening каскада ME-028 (ME-030): rate limit на GET-зонд ui-token (30/60s на IP + 180/60s глобально), 429 в контракте зонда.
+- style-src unsafe-inline задокументирован как принятый residual (ADR 0014).
+- CSP-тесты инлайн-скриптов с атрибутами (негативные контроли).
+
 ## [1.61.0] — 2026-10-06
 
 ### Added
