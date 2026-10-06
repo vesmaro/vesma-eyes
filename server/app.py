@@ -7208,6 +7208,26 @@ _AUTH_VERIFY_GLOBAL_WINDOW = 60.0      # ... per sliding minute
 _auth_verify_global_limiter = RateLimiter(
     limit=_AUTH_VERIFY_GLOBAL_RATE_LIMIT, window=_AUTH_VERIFY_GLOBAL_WINDOW)
 
+# SEC-2 (ME-030 cascade): the GET boot probe is a token ORACLE too — its 204
+# asserts "this cookie value is a live ui token", the same boolean the POST
+# verify sells behind 10/60s. Same flat philosophy, WIDER budget: unlike the
+# verify leg the probe runs on EVERY page load (anonymous included — the
+# main.tsx pre-paint boot hydration, once per gateway per load; the gate
+# bounds the re-probes: one per mid-flight 401, one read recovery per gate
+# lifetime), so the verify constants would lock out a refresh-happy
+# household behind one NAT IP. 30/60s per IP ≈ a page reload every 2s
+# sustained — an order above any human page-load cadence — while still
+# capping a cookie-guessing script at 30 answers/min against a 128-bit
+# token (entropy stays the defence, the ADR 0014 argument).
+_AUTH_PROBE_RATE_LIMIT = 30            # boot probes per client ...
+_AUTH_PROBE_RATE_WINDOW = 60.0         # ... per sliding minute
+_auth_probe_ip_limiter = RateLimiter(
+    limit=_AUTH_PROBE_RATE_LIMIT, window=_AUTH_PROBE_RATE_WINDOW)
+_AUTH_PROBE_GLOBAL_RATE_LIMIT = 180    # boot probes board-wide ...
+_AUTH_PROBE_GLOBAL_WINDOW = 60.0       # ... per sliding minute
+_auth_probe_global_limiter = RateLimiter(
+    limit=_AUTH_PROBE_GLOBAL_RATE_LIMIT, window=_AUTH_PROBE_GLOBAL_WINDOW)
+
 # Sliding-reissue throttle (ADR 0014 Ф2): at most one Set-Cookie per
 # client IP per 5 minutes, so an active owner doesn't get Set-Cookie on
 # literally every response. In-memory per-IP NOTE only — the session
@@ -7326,12 +7346,15 @@ async def verify_ui_token(body: UiTokenVerifyIn, request: Request,
     "/api/auth/ui-token",
     # SEC-1 (ME-028 cascade): the machine-readable contract carries the full
     # probe verdict set — 200 {"live": false} anonymous / 204 live cookie /
-    # 503 fail-closed — and tests/test_openapi_contract.py pins it, so a
-    # silent drift back to a 401 answer cannot regenerate cleanly.
+    # 429 probe limiter (SEC-2, ME-030) / 503 fail-closed — and
+    # tests/test_openapi_contract.py pins it, so a silent drift back to a
+    # 401 answer cannot regenerate cleanly.
     responses={
         200: {"model": UiTokenProbeOut,
               "description": "no live vesmaro_ui cookie (anonymous probe verdict)"},
         204: {"description": "a live vesmaro_ui cookie (hasUiToken() -> true)"},
+        429: {"description": "probe rate limit exceeded (SEC-2, ME-030: "
+                             "30/60s per client + 180/60s board-wide)"},
         503: {"description": "owner login is not configured (fail-closed)"},
     },
 )
@@ -7348,8 +7371,25 @@ async def probe_ui_session(request: Request) -> Response:
     is unchanged (constant-time boolean; token entropy is the defence) and
     so is the anti-spoof rule: the viewer's raw fetch pins 204 as the ONLY
     live answer, so a proxied 200-JSON still reads as "no session".
-    No limiter: it is a constant-time boolean oracle with the same profile
-    as the guards themselves."""
+    SEC-2 (ME-030): the oracle is budgeted like the verify leg (flat
+    per-IP + global, wider — it rides every page load; see the limiter
+    block above). The viewer degrades a 429 to the honest "no session"
+    (any non-204 does — BoardAdapter.probeUiSession)."""
+    client_ip = request.client.host if request.client else "unknown"
+    if not _auth_probe_ip_limiter.acquire(client_ip):
+        raise HTTPException(
+            429,
+            f"probe rate limit exceeded "
+            f"({_AUTH_PROBE_RATE_LIMIT} per "
+            f"{_AUTH_PROBE_RATE_WINDOW:.0f}s per client)",
+        )
+    if not _auth_probe_global_limiter.acquire("global"):
+        raise HTTPException(
+            429,
+            f"probe rate limit exceeded "
+            f"({_AUTH_PROBE_GLOBAL_RATE_LIMIT} per "
+            f"{_AUTH_PROBE_GLOBAL_WINDOW:.0f}s board-wide)",
+        )
     if not _token_classes().get("ui"):
         raise HTTPException(
             503,

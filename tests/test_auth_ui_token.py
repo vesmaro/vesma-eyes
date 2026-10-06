@@ -18,7 +18,10 @@ Pinned contract:
   "none" again;
 - GET /api/auth/ui-token is the boot probe: 204 live / 200 {"live": false}
   none (ME-028: a 401 here painted the console red on every anonymous page
-  load — same verdict, zero console noise) / 503 fail-closed;
+  load — same verdict, zero console noise) / 429 on the probe limiter
+  (SEC-2, ME-030: the probe is a token oracle too — 30/60s per IP +
+  180/60s global, wider than the verify leg because it rides EVERY page
+  load) / 503 fail-closed;
 - the cookie leg lives INSIDE the guards: a ui mutation with a valid
   cookie and NO Authorization header passes (including the
   _guard_ui_write pattern and the both-classes reports route); a machine
@@ -54,6 +57,16 @@ def fresh_auth_limiters(app_module, monkeypatch, client):
         app_module, "_auth_verify_global_limiter",
         RateLimiter(limit=app_module._AUTH_VERIFY_GLOBAL_RATE_LIMIT,
                     window=app_module._AUTH_VERIFY_GLOBAL_WINDOW))
+    # SEC-2 (ME-030): the probe oracle carries its own budgets — same
+    # isolation discipline (TestClient shares one IP across the suite).
+    monkeypatch.setattr(
+        app_module, "_auth_probe_ip_limiter",
+        RateLimiter(limit=app_module._AUTH_PROBE_RATE_LIMIT,
+                    window=app_module._AUTH_PROBE_RATE_WINDOW))
+    monkeypatch.setattr(
+        app_module, "_auth_probe_global_limiter",
+        RateLimiter(limit=app_module._AUTH_PROBE_GLOBAL_RATE_LIMIT,
+                    window=app_module._AUTH_PROBE_GLOBAL_WINDOW))
     app_module._ui_reissue_last.clear()
     client.cookies.clear()
     yield
@@ -205,6 +218,28 @@ class TestBootProbe:
 
     def test_503_fail_closed(self, client, no_board_token):
         assert client.get("/api/auth/ui-token").status_code == 503
+
+    def test_429_after_per_ip_exhaustion(self, client, split_tokens):
+        """SEC-2 (ME-030): the probe is a token oracle (204 answers "this
+        cookie value is a live ui token") and must carry a budget. 30/60s
+        per IP sits an order above the legitimate cadence — one boot probe
+        per page load + gate-bounded re-probes — while capping a
+        cookie-guessing script."""
+        for _ in range(30):
+            assert client.get("/api/auth/ui-token").status_code == 200
+        r = client.get("/api/auth/ui-token")
+        assert r.status_code == 429
+        assert "per client" in r.json()["detail"]
+
+    def test_429_global_budget(self, client, split_tokens, app_module,
+                               monkeypatch):
+        monkeypatch.setattr(
+            app_module, "_auth_probe_global_limiter", RateLimiter(2, 60.0))
+        assert client.get("/api/auth/ui-token").status_code == 200
+        assert client.get("/api/auth/ui-token").status_code == 200
+        r = client.get("/api/auth/ui-token")
+        assert r.status_code == 429
+        assert "board-wide" in r.json()["detail"]
 
 
 # ------------------------------------------- Ф2: the cookie leg in guards

@@ -413,17 +413,19 @@ class TestKeyRoutesReferenceSchemas:
     def test_auth_ui_token_probe_status_set(self, spec):
         """ME-028 / cascade SEC-1: the boot probe's machine-readable
         contract carries the FULL verdict set — 200 {"live": false}
-        anonymous / 204 live cookie / 503 fail-closed — and NO 401 (a 401
-        here painted the browser console red on every anonymous page
-        load). The 200 body must reference UiTokenProbeOut and that
-        schema must be exactly the one-field ``live`` boolean; a live
-        cookie (204) must never document a body."""
+        anonymous / 204 live cookie / 429 probe limiter (SEC-2, ME-030) /
+        503 fail-closed — and NO 401 (a 401 here painted the browser
+        console red on every anonymous page load). The 200 body must
+        reference UiTokenProbeOut and that schema must be exactly the
+        one-field ``live`` boolean; a live cookie (204) must never
+        document a body."""
         get = spec["paths"]["/api/auth/ui-token"]["get"]
-        assert set(get["responses"]) == {"200", "204", "503"}
+        assert set(get["responses"]) == {"200", "204", "429", "503"}
         assert _ref_name(_response_schema(spec, "/api/auth/ui-token", "get")) \
             == "UiTokenProbeOut"
         probe = _components(spec)["UiTokenProbeOut"]
         assert set(probe.get("properties", {})) == {"live"}
         assert probe["properties"]["live"].get("type") == "boolean"
         assert "content" not in get["responses"]["204"]
+        assert "content" not in get["responses"]["429"]
         assert "content" not in get["responses"]["503"]
