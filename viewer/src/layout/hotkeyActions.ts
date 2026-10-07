@@ -5,7 +5,9 @@
  * Hotkeys.tsx.
  *
  * Union И1 (stand 03 §7): the bare `/` focuses the TopBar GLOBAL SEARCH
- * (a real field now — Enter carries the query to /memory/search), `[` flips
+ * (a real field now — Enter carries the query to /memory/search; when the
+ * field is absent — anonymous gate deployments — the provider falls back to
+ * the palette), `[` flips
  * the sidebar rail, and ⌘K/Ctrl+K stays the palette's canonical key from
  * anywhere, INCLUDING editable surfaces (the palette's own input is the
  * point).

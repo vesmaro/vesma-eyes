@@ -273,6 +273,18 @@ describe("CommandPalette (Ф2, UX-overhaul §7.3)", () => {
     expect(dialog()).toBeNull();
   });
 
+  it("review round: the bare `/` with NO search field (anonymous gate topbar) opens the palette instead of a silent no-op", async () => {
+    await mount();
+    // Gate deployments ship the anonymous TopBar without the global search
+    // field (its absence is pinned by TopBar.anonymous.test.tsx) — simulate
+    // exactly that DOM here; the provider-level fallback is under test.
+    document.getElementById("global-search-input")?.remove();
+    expect(document.getElementById("global-search-input")).toBeNull();
+
+    await pressKey({ key: "/" });
+    await waitFor("palette dialog", () => dialog() !== null);
+  });
+
   it("typing raises the honest sections: memory with PROVENANCE, tasks by id", async () => {
     const gateway = await mount(async (client, mock) => {
       await seedPaletteData(client, mock);

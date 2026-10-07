@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useTheme, THEME_PREFERENCES } from "@/components/theme-provider";
 import { useDensity, DENSITIES } from "@/components/density-provider";
 import { LANGUAGES, useI18n, useT } from "@/i18n";
-import { setSidebarCollapsed, useSidebarCollapsed } from "@/lib/sidebarState";
+import { setSidebarCollapsed, useSidebarCollapsedEffective } from "@/lib/sidebarState";
 import { setBoardStyle, useBoardStyle } from "@/lib/boardStyleStore";
 import { setMotion, useMotion, MOTIONS, type Motion } from "@/lib/motionStore";
 import { setLiveLayer, useLiveLayer, type LiveLayer } from "@/lib/liveLayerStore";
@@ -304,10 +304,15 @@ function BoardSection() {
   );
 }
 
-/** «Навигация»: the sidebar rail state (one state with the sidebar button). */
+/** «Навигация»: the sidebar rail state (one state with the sidebar button).
+ * Reads the EFFECTIVE value — the same `useSidebarCollapsedEffective` the
+ * Shell panel consumes — so with no stored choice on a 768–1279 desktop the
+ * control already shows «Свёрнут» while the Shell rides the 56px rail (the
+ * flat `?? false` fallback here contradicted the panel, review round). The
+ * write path is the plain explicit set. */
 function NavigationSection() {
   const t = useT();
-  const collapsed = useSidebarCollapsed();
+  const collapsed = useSidebarCollapsedEffective();
 
   return (
     <HubSection id="navigation" title={t("settings.hub.navigationTitle")}>

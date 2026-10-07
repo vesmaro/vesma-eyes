@@ -23,7 +23,9 @@ import { resolveGlobalHotkey, resolveHotkey } from "./hotkeyActions";
  * Global hotkeys (redesign concept §2.2-6, ARCHCOM-3 verdict §2 — the proven
  * ai-brain canon with the `inInput` guard). Union И1 (stand 03 §7): `/`
  * focuses the TopBar global search field (a REAL input now — Enter carries
- * the query to /memory/search), `[` flips the sidebar rail, `?` opens this
+ * the query to /memory/search); when the field is absent — anonymous visitors
+ * on gate deployments — `/` opens the palette instead of dying silently
+ * (review round). `[` flips the sidebar rail, `?` opens this
  * cheatsheet (Esc closes — Radix), and ⌘K / Ctrl+K opens the palette from
  * anywhere INCLUDING editable surfaces (resolveGlobalHotkey). The list below
  * never advertises keys that do not exist yet (`g`-prefix, j/k arrive with
@@ -69,7 +71,15 @@ export function HotkeysProvider({ children }: { children: ReactNode }) {
         return;
       }
       if (action === "focus-search") {
-        document.getElementById(GLOBAL_SEARCH_INPUT_ID)?.focus();
+        // The gate deployments hide the global search from anonymous
+        // visitors — a missing field must not turn `/` into a silent no-op:
+        // the palette (the same surface ⌘K reaches) is the fallback.
+        const field = document.getElementById(GLOBAL_SEARCH_INPUT_ID);
+        if (field) {
+          field.focus();
+        } else {
+          openPalette();
+        }
         return;
       }
       if (action === "toggle-sidebar") {

@@ -103,7 +103,12 @@ export function getSidebarIntent(): boolean | null {
   return snapshot();
 }
 
-/** The stored intent, resolved: null falls back to expanded (the ≥1280 rule). */
+/**
+ * The stored intent with the FLAT expanded fallback (null → false). This is
+ * deliberately NOT the responsive ≥1280 rule — the Shell panel and the hub
+ * control resolve absence through `useSidebarCollapsedEffective` instead;
+ * no live consumers remain (tests and non-reactive reads only).
+ */
 export function getSidebarCollapsed(): boolean {
   return snapshot() ?? false;
 }
@@ -113,7 +118,11 @@ export function useSidebarIntent(): boolean | null {
   return useSyncExternalStore(subscribeSidebarCollapsed, snapshot, snapshot);
 }
 
-/** Reactive collapse flag with the plain expanded fallback (settings hub). */
+/**
+ * Reactive collapse flag with the plain expanded fallback. NOT the Shell/hub
+ * read — they take `useSidebarCollapsedEffective` (the responsive default);
+ * kept for tests and non-reactive consumers.
+ */
 export function useSidebarCollapsed(): boolean {
   return useSidebarIntent() ?? false;
 }

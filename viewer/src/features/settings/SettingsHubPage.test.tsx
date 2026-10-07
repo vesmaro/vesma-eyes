@@ -123,6 +123,18 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
+/** U1 review round: answer TRUE only for the named queries — the same
+ * 768–1279 narrow-desktop stub the Shell persistence tests use, so the hub
+ * and the Shell side of the story are pinned against ONE viewport shape. */
+function stubMatchMediaOnly(matching: readonly string[]): void {
+  vi.stubGlobal("matchMedia", vi.fn().mockImplementation((query: string) => ({
+    matches: matching.includes(query),
+    media: query,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  })));
+}
+
 describe("SettingsHubPage v2 — structure (spec §3.1, acceptance §8.1)", () => {
   it("renders ONE h1, the sticky anchor menu and all seven anchored sections", async () => {
     const { root, container } = await mountHub();
@@ -268,6 +280,32 @@ describe("Board + Navigation + Behavior — one state, two controls (§4.3)", ()
 
     // The sidebar button's write path — the hub control follows instantly.
     act(() => toggleSidebarCollapsed());
+    expect(localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY)).toBe("0");
+    expect(
+      sectionButton(container, "navigation", "Expanded").getAttribute("aria-pressed"),
+    ).toBe("true");
+    await actUnmount(root);
+  });
+
+  it("U1 review: with NO stored choice on a 768–1279 desktop the hub control shows Collapsed in sync with the Shell rail", async () => {
+    // The exact Shell.sidebarPersist viewport: md matches, the wide query
+    // does not → the Shell panel rides the 56px rail. Empty storage — the
+    // owner has not chosen yet.
+    stubMatchMediaOnly(["(min-width: 768px)"]);
+    const { root, container } = await mountHub();
+    // The control reads the EFFECTIVE value (the same hook the Shell panel
+    // consumes): the responsive default is the rail, so «Collapsed» is
+    // pressed — the flat expanded fallback used to contradict the panel.
+    expect(
+      sectionButton(container, "navigation", "Collapsed").getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      sectionButton(container, "navigation", "Expanded").getAttribute("aria-pressed"),
+    ).toBe("false");
+    // Mounting resolves the default, it does not WRITE it (U1: absence is a
+    // state); an explicit choice still wins through the untouched write path.
+    expect(localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY)).toBeNull();
+    press(container, "navigation", "Expanded");
     expect(localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY)).toBe("0");
     expect(
       sectionButton(container, "navigation", "Expanded").getAttribute("aria-pressed"),

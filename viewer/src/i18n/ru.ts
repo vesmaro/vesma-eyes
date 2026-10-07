@@ -90,10 +90,14 @@ export const ru = {
   "topbar.themeToDark": "Переключить на тёмную тему",
   "topbar.themeLight": "Светлая тема",
   "topbar.themeDark": "Тёмная тема",
-  // В1 live-layer indicator (blueprint §6.6, canon v11 §4).
+  // В1 live-layer indicator (blueprint §6.6, canon v11 §4). The state words
+  // are lowercased — they interpolate mid-sentence into liveLayerAria and
+  // follow the dictionary block's convention («пауза», «выкл»); «полный»
+  // mirrors the hub's livingFull label (review round: the raw "live" was an
+  // EN leak on every RU first screen).
   "topbar.liveLayerAria": "Живой слой: {{state}}. Нажмите, чтобы сменить режим.",
   "topbar.liveLayerTitle": "Живой слой: live → пауза → выкл",
-  "topbar.liveLive": "live",
+  "topbar.liveLive": "полный",
   "topbar.liveCalm": "пауза",
   "topbar.liveOff": "выкл",
   "topbar.langLabel": "Язык интерфейса",
