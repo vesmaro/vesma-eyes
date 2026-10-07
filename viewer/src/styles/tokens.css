@@ -317,10 +317,10 @@
  * the swatches match the well pixel-for-pixel in both themes. */
 [data-well-window],
 [data-well-legend] {
-  --color-well-canvas: #090b0f;
-  --color-bg-elevated: #161b23; /* fix round W1b: the legend panel surface */
-  --hud-veil: rgb(9 11 15 / 0.78);
-  --palette-scrim: rgb(9 11 15 / 0.55);
+  --color-well-canvas: #051015;
+  --color-bg-elevated: #0f1f25; /* fix round W1b: the legend panel surface */
+  --hud-veil: rgb(5 16 21 / 0.78);
+  --palette-scrim: rgb(5 16 21 / 0.55);
 
   --color-iris-dim: #0e4a52;
   --color-iris: #1a8a96;
@@ -342,7 +342,7 @@
   --color-text-muted: #7c8894;          /* pinned for safety — forbidden on HUD (§7.1) */
   --color-text-inverse: #0d0f14;
 
-  --color-border-subtle: #1c232e;
+  --color-border-subtle: #182b31;
   --color-border: #5e687e;
   --color-border-iris: #4fc2ce40;
 

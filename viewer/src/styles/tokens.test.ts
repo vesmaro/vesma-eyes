@@ -410,9 +410,9 @@ describe("tokens.css inventory (canon v2 — docs/design/02-TOKENS.md §1–§3)
 
 describe("И0 value evolution locks (02-TOKENS.md §5 — intentional deltas)", () => {
   it("dark: charcoal strata + WCAG-recomputed accents", () => {
-    expect(darkDecls.get("--color-bg-well")).toBe("#12161d");
-    expect(darkDecls.get("--color-bg-elevated")).toBe("#161b23");
-    expect(darkDecls.get("--color-bg-overlay")).toBe("#1c222c");
+    expect(darkDecls.get("--color-bg-well")).toBe("#0d1a20");
+    expect(darkDecls.get("--color-bg-elevated")).toBe("#0f1f25");
+    expect(darkDecls.get("--color-bg-overlay")).toBe("#16282e");
     expect(darkDecls.get("--color-iris-bright")).toBe("#4fc2ce");
     expect(darkDecls.get("--color-iris-glow")).toBe("#4fc2ce40");
     expect(darkDecls.get("--color-iris-solid-hover")).toBe("#4fc2ce");
@@ -425,10 +425,10 @@ describe("И0 value evolution locks (02-TOKENS.md §5 — intentional deltas)", 
     expect(darkDecls.get("--color-text-secondary")).toBe("#9aa7b4");
     expect(darkDecls.get("--color-text-muted")).toBe("#7c8894");
     expect(darkDecls.get("--color-border")).toBe("#5e687e");
-    expect(darkDecls.get("--color-scroll-bg")).toBe("#151a22");
-    expect(darkDecls.get("--color-scroll-border")).toBe("#242931");
+    expect(darkDecls.get("--color-scroll-bg")).toBe("#0b181d");
+    expect(darkDecls.get("--color-scroll-border")).toBe("#1e3138");
     // Neuro anchors.
-    expect(darkDecls.get("--color-well-canvas")).toBe("#090b0f");
+    expect(darkDecls.get("--color-well-canvas")).toBe("#051015");
     expect(darkDecls.get("--color-focus")).toBe("#4fc2ce");
   });
 
@@ -459,9 +459,9 @@ describe("Phase 1 value locks (design blueprint v1.1 §5.2 — Кора-орга
     expect(darkDecls.get("--well-hero-h")).toBe(
       "clamp(520px, calc(100vh - 48px), 860px)",
     );
-    expect(darkDecls.get("--hud-veil")).toBe("rgb(9 11 15 / 0.78)");
+    expect(darkDecls.get("--hud-veil")).toBe("rgb(5 16 21 / 0.78)");
     expect(lightDecls.get("--hud-veil")).toBe("rgb(245 246 248 / 0.85)");
-    expect(darkDecls.get("--palette-scrim")).toBe("rgb(9 11 15 / 0.55)");
+    expect(darkDecls.get("--palette-scrim")).toBe("rgb(5 16 21 / 0.55)");
     expect(lightDecls.get("--palette-scrim")).toBe("rgb(245 246 248 / 0.6)");
     expect(darkDecls.get("--duration-awaken")).toBe("1200ms");
     expect(darkDecls.get("--duration-attention")).toBe("320ms");
@@ -478,8 +478,8 @@ describe("Phase 1 value locks (design blueprint v1.1 §5.2 — Кора-орга
       const block =
         css.match(/\[data-well-window\](?:,\s*\[data-well-legend\])?\s*\{([^}]*)\}/)?.[1] ?? "";
       expect(block, "well-window scope present").not.toBe("");
-      expect(block).toContain("--color-well-canvas: #090b0f");
-      expect(block).toContain("--hud-veil: rgb(9 11 15 / 0.78)");
+      expect(block).toContain("--color-well-canvas: #051015");
+      expect(block).toContain("--hud-veil: rgb(5 16 21 / 0.78)");
       expect(block).toContain("--color-text-primary: #e6edf3");
       expect(block).toContain("--color-focus: #4fc2ce");
     }

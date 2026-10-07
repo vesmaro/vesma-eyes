@@ -306,9 +306,9 @@
  * the hero). Values are the :root (dark) column — kept in lockstep with it
  * and asserted by tokens.test.ts. No frozen name is renamed or revalued. */
 [data-well-window] {
-  --color-well-canvas: #090b0f;
-  --hud-veil: rgb(9 11 15 / 0.78);
-  --palette-scrim: rgb(9 11 15 / 0.55);
+  --color-well-canvas: #051015;
+  --hud-veil: rgb(5 16 21 / 0.78);
+  --palette-scrim: rgb(5 16 21 / 0.55);
 
   --color-iris-dim: #0e4a52;
   --color-iris: #1a8a96;
@@ -330,7 +330,7 @@
   --color-text-muted: #7c8894;          /* pinned for safety — forbidden on HUD (§7.1) */
   --color-text-inverse: #0d0f14;
 
-  --color-border-subtle: #1c232e;
+  --color-border-subtle: #182b31;
   --color-border: #5e687e;
   --color-border-iris: #4fc2ce40;
 
