@@ -217,6 +217,20 @@ const V12_GOLDEN_STATIC_TOKENS = [
 ];
 const V12_GOLDEN_THEMED_TOKENS = ["--web-tone-update"];
 
+/**
+ * v10 golden (ME-93 U0 — docs/design/15-WOW-DIRECTION §14: «Вздох Нейры /
+ * жила», курьеры): additive canon records, NO component consumes them yet
+ * (U1+ wires the living layer). The breath alphas are the only themed
+ * names of the four (light column «дыхание ×~1.1, вздох ×0.7», stand-v12);
+ * the durations are theme-independent. Reduced mirrors: durations → 0ms,
+ * alphas keep their values (the static-drawing rule, §14.1).
+ */
+const V10_GOLDEN_STATIC_TOKENS = ["--duration-neura", "--duration-courier"];
+const V10_GOLDEN_THEMED_TOKENS = [
+  "--neura-breath-alpha",
+  "--vein-breath-alpha",
+];
+
 // --- CSS parsing helpers --------------------------------------------------
 //
 // The files are flat (no nested rules outside @media wrappers), so a simple
@@ -336,6 +350,23 @@ describe("tokens.css inventory (canon v2 — docs/design/02-TOKENS.md §1–§3)
       expect(props, `${token} missing`).toContain(token);
     }
     for (const token of V12_GOLDEN_THEMED_TOKENS) {
+      expect(
+        blockProps(darkDecls),
+        `${token} missing from dark theme`,
+      ).toContain(token);
+      expect(
+        blockProps(lightDecls),
+        `${token} missing from light theme`,
+      ).toContain(token);
+    }
+  });
+
+  it("defines the v10 golden tokens (additive canon — ME-93 U0)", () => {
+    const props = allProps(tokensCss);
+    for (const token of V10_GOLDEN_STATIC_TOKENS) {
+      expect(props, `${token} missing`).toContain(token);
+    }
+    for (const token of V10_GOLDEN_THEMED_TOKENS) {
       expect(
         blockProps(darkDecls),
         `${token} missing from dark theme`,
@@ -535,6 +566,35 @@ describe("v12 golden value locks (ME-071 W0 — 15-WOW §14.1/§14.3.7/§14.6.1 
     expect(media).toContain("--duration-tone-hold: 1500ms");
     expect(media).toContain("--duration-tone-fade: 0ms");
     expect(media).toContain("--duration-flash-hold: 1500ms");
+  });
+});
+
+describe("v10 golden value locks (ME-93 U0 — 15-WOW §14: «Вздох Нейры / жила», курьеры)", () => {
+  it("pins the breath and courier constants (dark canon + light alphas)", () => {
+    expect(darkDecls.get("--duration-neura")).toBe("8000ms");
+    expect(darkDecls.get("--duration-courier")).toBe("1000ms");
+    expect(darkDecls.get("--neura-breath-alpha")).toBe("0.18");
+    expect(darkDecls.get("--vein-breath-alpha")).toBe("0.10");
+    // Light column: alphas only («дыхание ×~1.1, вздох ×0.7», stand-v12);
+    // the durations stay theme-independent.
+    expect(lightDecls.get("--neura-breath-alpha")).toBe("0.12");
+    expect(lightDecls.get("--vein-breath-alpha")).toBe("0.11");
+  });
+
+  it("zeroes the breath and courier durations in BOTH reduced blocks", () => {
+    const mediaIndex = tokensCss.indexOf(
+      "@media (prefers-reduced-motion: reduce)",
+    );
+    const media = tokensCss.slice(
+      mediaIndex,
+      tokensCss.indexOf("[data-motion=\"reduced\"]", mediaIndex),
+    );
+    expect(media).toContain("--duration-neura: 0ms");
+    expect(media).toContain("--duration-courier: 0ms");
+    const forced =
+      tokensCss.match(/\[data-motion="reduced"\]\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(forced).toContain("--duration-neura: 0ms");
+    expect(forced).toContain("--duration-courier: 0ms");
   });
 });
 
@@ -833,8 +893,8 @@ describe("well substrate + tone consumers (W1b «Колодец — орган �
   });
 
   it("breathing settles in calm/off and dies completely under reduced motion", () => {
-    expect(globalCss).toMatch(/\[data-live="calm"\] \.well-substrate[^\{]*\{[^}]*animation: none/s);
-    expect(globalCss).toMatch(/\[data-live="off"\] \.well-substrate[^\{]*\{[^}]*animation: none/s);
+    expect(globalCss).toMatch(/\[data-live="calm"\] \.well-substrate[^{]*\{[^}]*animation: none/s);
+    expect(globalCss).toMatch(/\[data-live="off"\] \.well-substrate[^{]*\{[^}]*animation: none/s);
     const media = globalCss.match(
       /@media \(prefers-reduced-motion: reduce\)\s*\{(?:(?!\n\})[\s\S])*\}/g,
     )?.find((block) => block.includes(".well-substrate"));
