@@ -335,9 +335,9 @@ describe("Verdict blocks (spec §3.4, acceptance §8.10)", () => {
     expect(fonts).toBeDefined(); // present in the DOM while collapsed
     await actUnmount(root);
   });
-  it("W1a: the «Живой слой» control is live — it drives vesmaro.live (АРХКОМ §1.6 default: Calm)", async () => {
+  it("U1: the «Живой слой» control is live — it drives vesmaro.live (owner resolution 2026-10-07 default: Full, first row of the hub)", async () => {
     const { container } = await mountHub();
-    // The three options render with «Спокойный» as the default…
+    // The three options render with «Полный» as the default…
     const group = container.querySelector(
       '#settings-living-label',
     )?.parentElement?.querySelector('[role="group"]');
@@ -350,16 +350,17 @@ describe("Verdict blocks (spec §3.4, acceptance §8.10)", () => {
     ]);
     expect(
       buttons.find((b) => b.getAttribute("aria-pressed") === "true")?.textContent,
-    ).toBe("Calm");
+    ).toBe("Full");
     // …and the control is LIVE (W1a): it drives the SAME store the engine
-    // reads (vesmaro.live), persisted for the next visit.
-    press(container, "behavior", "Full");
-    expect(getLiveLayer()).toBe("live");
-    expect(localStorage.getItem("vesmaro.live")).toBe("live");
+    // reads (vesmaro.live), persisted for the next visit. U1 moved the row
+    // to the FIRST position of «Внешний вид» (the hub's first section).
+    press(container, "appearance", "Calm");
+    expect(getLiveLayer()).toBe("calm");
+    expect(localStorage.getItem("vesmaro.live")).toBe("calm");
     expect(
       buttons.find((b) => b.getAttribute("aria-pressed") === "true")?.textContent,
-    ).toBe("Full");
-    press(container, "behavior", "Off");
+    ).toBe("Calm");
+    press(container, "appearance", "Off");
     expect(getLiveLayer()).toBe("off");
     // The honest caption: light follows real data only.
     expect(container.textContent).toContain("real data only");

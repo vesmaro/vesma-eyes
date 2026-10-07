@@ -108,7 +108,7 @@ export function UpdateBanner() {
           "rounded-md border border-border-subtle px-2 py-1 text-xs font-medium",
           "text-foreground hover:bg-elevated focus-visible:outline",
           "focus-visible:outline-2 focus-visible:outline-offset-2",
-          "focus-visible:outline-iris-bright",
+          "focus-visible:outline-focus",
         )}
       >
         {t("shell.updateReload")}

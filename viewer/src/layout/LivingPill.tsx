@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useBoardHealth } from "@/hooks/usePulse";
 import { useT } from "@/i18n";
 import { useDoneTotal } from "@/features/tasks/doneTransitStore";
+import { useLiveLayer } from "@/lib/liveLayerStore";
 
 /**
  * The В1 status-zone pill (15-WOW: «В1 в статус-зоне остаётся всегда-видимым
@@ -22,6 +23,12 @@ import { useDoneTotal } from "@/features/tasks/doneTransitStore";
  *   Reduced-motion collapses the pulse duration to 0 (the token mirror) —
  *   no motion, the pill just stays.
  *
+ * U1 (08-LIVING-NEURON §4/§5.1): «Выключен» replaces the character layer
+ * with the static stub — the dot turns the spec'd Ø8 `--color-iris`
+ * (bg-iris, the size-2 it already is), the flash never starts, and the
+ * zone does not collapse (the slot stays; the counters stay — data, not
+ * decor). The morphological character itself is U2+.
+ *
  * Deliberately NOT a button: the pause gesture lives on the Спутник/nest
  * slot (§14.3.5); wiring it here is a separate decision. No live region —
  * the toast already announces terminal transitions (4.1.3), a second live
@@ -41,11 +48,14 @@ export function LivingPill() {
   const t = useT();
   const health = useBoardHealth();
   const total = useDoneTotal();
+  const layer = useLiveLayer();
+  const livingOff = layer === "off";
   const [flash, setFlash] = useState(0);
 
   // Весма dispatches `vesma:b1` when a dialog opens (the deferred-flight
   // degradation beat). Module-level counter as the key: every flash is a
-  // new animation run.
+  // new animation run. «Выключен» swallows the events — a stub dot has no
+  // behaviour (08 §4), and a suppressed flash must not leak its timer.
   useEffect(() => {
     let mounted = true;
     let timer: ReturnType<typeof setTimeout> | 0 = 0;
@@ -86,19 +96,24 @@ export function LivingPill() {
   return (
     <span
       data-testid="b1-pill"
-      data-b1-state={state}
-      title={t("topbar.b1.title", { state: t(stateKey) })}
+      data-b1-state={livingOff ? "off" : state}
+      title={
+        livingOff
+          ? t("topbar.b1.title", { state: t("topbar.liveOff") })
+          : t("topbar.b1.title", { state: t(stateKey) })
+      }
       className="flex items-center gap-1.5 rounded-sm px-1 py-0.5"
     >
       <span
         aria-hidden="true"
         className={
           "block size-2 rounded-full " +
-          DOT[state] +
-          (flash ? " b1-flash" : "")
+          (livingOff ? "bg-iris" : DOT[state]) +
+          (flash && !livingOff ? " b1-flash" : "")
         }
       />
-      {/* The golden courier counter (▸N): honest absence at zero. */}
+      {/* The golden courier counter (▸N): honest absence at zero; a DATA
+       * counter, it survives «Выключен» (08 §4 — counters stay). */}
       {total > 0 ? (
         <span className="font-mono text-xs tabular-nums text-confidence">
           <span aria-hidden="true">▸</span>

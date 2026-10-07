@@ -108,7 +108,7 @@ export function UiTokenLoginForm({
               autoFocus
               disabled={verifyPending}
               aria-describedby={hintId}
-              className="h-9 min-w-0 flex-1 rounded-md border border-border bg-well px-2 font-mono text-sm text-foreground focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright disabled:opacity-60"
+              className="h-9 min-w-0 flex-1 rounded-md border border-border bg-well px-2 font-mono text-sm text-foreground focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-60"
             />
             <Button
               type="button"
@@ -140,7 +140,7 @@ export function UiTokenLoginForm({
           {t("login.hint")}
         </p>
         <details className="rounded-md bg-elevated px-2 py-1.5 text-xs text-foreground-muted">
-          <summary className="cursor-pointer select-none rounded-sm py-0.5 text-foreground-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright">
+          <summary className="cursor-pointer select-none rounded-sm py-0.5 text-foreground-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
             {t("login.hintCommandSummary")}
           </summary>
           <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-foreground-muted">

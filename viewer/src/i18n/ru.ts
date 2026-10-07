@@ -1614,14 +1614,15 @@ export const ru = {
   "settings.hub.motionHint":
     "«Минимум» отключает движение и мерцания независимо от настроек ОС.",
   // «Живой слой» (ME-071 W1a): the control is live — it drives the veins
-  // background through lib/liveLayerStore. «Спокойный» is the default
-  // (АРХКОМ union rule §1.6); honesty: light follows real data only.
+  // background through lib/liveLayerStore. «Полный» is the default (owner
+  // resolution 2026-10-07 — supersedes the АРХКОМ §1.6 calm default);
+  // honesty: light follows real data only.
   "settings.hub.livingLabel": "Живой слой",
   "settings.hub.livingFull": "Полный",
   "settings.hub.livingCalm": "Спокойный",
   "settings.hub.livingOff": "Выключен",
   "settings.hub.livingHint":
-    "Фон-жилы дышат и красятся только реальными данными. Спокойный (по умолчанию): дыхание, тона и Весма в гнезде. Полный: ещё и импульсы и полёты Весмы.",
+    "Фон-жилы дышат и красятся только реальными данными. Полный (по умолчанию): дыхание, тона, импульсы и полёты Весмы. Спокойный: дыхание и тона без импульсов.",
   // Весма, смотритель гнезда (ME-071 W2): her lines. Жаргон-норма ME-078:
   // zero ids in the phrases — {task} is the human notification title only.
   "living.vesma.intro": "Я Весма, смотрю за памятью.",

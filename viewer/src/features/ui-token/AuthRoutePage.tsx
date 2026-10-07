@@ -259,7 +259,7 @@ export function AuthRoutePage() {
       <header className="flex h-topbar shrink-0 items-center justify-between border-myelin-hairline border-b-hairline bg-well px-4">
         <Link
           to="/"
-          className="flex min-w-0 items-center gap-2 rounded-md py-1 font-semibold text-foreground transition-colors duration-instant hover:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+          className="flex min-w-0 items-center gap-2 rounded-md py-1 font-semibold text-foreground transition-colors duration-instant hover:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
         >
           <IrisLogo size={20} decorative />
           <span className="whitespace-nowrap text-sm tracking-wide">
@@ -405,7 +405,7 @@ export function AuthRoutePage() {
                 switchTab(tab === "token" ? "signin" : "token");
               }}
               data-testid="auth-token-mode-link"
-              className="rounded-sm underline-offset-2 hover:text-foreground-secondary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+              className="rounded-sm underline-offset-2 hover:text-foreground-secondary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
             >
               {tab === "token"
                 ? t("auth.route.backToPassword")
@@ -456,7 +456,7 @@ function TabButton({
       tabIndex={selected ? 0 : -1}
       onClick={onSelect}
       className={
-        "min-h-9 rounded-sm px-3 py-1.5 text-sm transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright " +
+        "min-h-9 rounded-sm px-3 py-1.5 text-sm transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus " +
         (selected
           ? // The 07k §4.1 selected beats TOGETHER: the raised well, the
             // iris-bright label (≥3:1) and the 2px iris underline.

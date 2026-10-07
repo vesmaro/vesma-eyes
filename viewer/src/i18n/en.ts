@@ -1584,7 +1584,7 @@ export const en: Record<TranslationKey, string> = {
   "settings.hub.livingCalm": "Calm",
   "settings.hub.livingOff": "Off",
   "settings.hub.livingHint":
-    "The vein background breathes and tints from real data only. Calm (default): breathing, tones, and Vesma in her nest. Full: adds web impulses and Vesma's flights.",
+    "The vein background breathes and tints from real data only. Full (default): breathing, tones, impulses, and Vesma's flights. Calm: breathing and tones, no impulses.",
   // Vesma, the nest keeper (ME-071 W2): her lines. No ids in phrases (ME-078).
   "living.vesma.intro": "I'm Vesma — I look after your memory.",
   "living.vesma.done": "“{{task}}” has a decision waiting for you.",

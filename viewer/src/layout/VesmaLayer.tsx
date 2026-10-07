@@ -63,7 +63,7 @@ export function VesmaLayer(): React.ReactElement | null {
         onClick={cycleLiveLayer}
         aria-label={t("topbar.liveLayerAria", { state: t(STATE_KEY[layer]) })}
         title={t("topbar.liveLayerTitle")}
-        className="pointer-events-auto absolute inset-0 cursor-pointer border-0 bg-transparent p-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+        className="pointer-events-auto absolute inset-0 cursor-pointer border-0 bg-transparent p-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       />
     </div>
   );

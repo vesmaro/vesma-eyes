@@ -255,7 +255,8 @@ describe("vesma — dosage (§14.3.2)", () => {
 
 describe("vesma — the levels and gates", () => {
   it("calm: static in the nest — lantern keeps the last tone, ZERO gestures", () => {
-    const { slot, destroy } = mountQuiet(); // calm is the default
+    setLiveLayer("calm"); // pinned: U1 flipped the DEFAULT to «Полный»
+    const { slot, destroy } = mountQuiet();
     feedLivingEvent("assignment.done", ev("assignment.done", "А"));
     expect(slot.dataset.vesmaFlights).toBeUndefined();
     expect(cloud(slot).hidden).toBe(true);

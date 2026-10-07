@@ -61,7 +61,7 @@ export function TopBar({ sidebarTrigger }: TopBarProps) {
       {sidebarTrigger}
       <Link
         to="/"
-        className="flex min-w-0 items-center gap-2 rounded-md py-1 font-semibold text-foreground transition-colors duration-instant hover:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+        className="flex min-w-0 items-center gap-2 rounded-md py-1 font-semibold text-foreground transition-colors duration-instant hover:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       >
         <IrisLogo size={20} decorative />
         <span className="hidden whitespace-nowrap text-sm tracking-wide sm:inline">
