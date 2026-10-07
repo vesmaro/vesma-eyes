@@ -5,6 +5,7 @@ import { useTheme } from "@/components/theme-provider";
 import { useToast } from "@/components/Toast/toastContext";
 import { Button } from "@/components/ui/button";
 import { IrisLogo } from "@/components/IrisLogo/IrisLogo";
+import { PublicStatusLine } from "@/components/PublicStatusLine/PublicStatusLine";
 import { useT } from "@/i18n";
 import { resolveReturnTarget } from "@/lib/returnParams";
 import { isApiError } from "@/lib/errors";
@@ -404,6 +405,12 @@ export function AuthRoutePage() {
                 : t("auth.route.tokenModeLink")}
             </Link>
           </p>
+
+          {/* The public-contour footer (07k §1.3): «vesma-eyes <v> · аноним»
+           * — the same single version source as the sidebar footer. */}
+          <div className="mt-6 flex justify-center">
+            <PublicStatusLine />
+          </div>
         </div>
       </main>
     </div>

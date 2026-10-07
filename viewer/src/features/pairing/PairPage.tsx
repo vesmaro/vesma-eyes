@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { IrisLogo } from "@/components/IrisLogo/IrisLogo";
+import { PublicStatusLine } from "@/components/PublicStatusLine/PublicStatusLine";
 import { isApiError } from "@/lib/errors";
 import { useT } from "@/i18n";
 import type { TranslationKey } from "@/i18n";
@@ -220,12 +221,17 @@ export function PairPage() {
   );
 }
 
-/** Minimal chrome: centered column, the iris mark, no Shell furniture. */
+/** Minimal chrome: centered column, the iris mark, no Shell furniture. The
+ * public-contour status line (07k §1.3) rides under the phase card — the
+ * pairing page is anonymous by definition, and the version line (one source
+ * of truth with the sidebar footer) stays visible in EVERY phase (07h §12:
+ * the slot never migrates). */
 function PairShell({ children }: { children: React.ReactNode }) {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col items-center justify-center gap-4 px-4 py-8">
       <IrisLogo size={48} decorative />
       {children}
+      <PublicStatusLine />
     </main>
   );
 }

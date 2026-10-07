@@ -7,10 +7,9 @@ import { MemoryCardSkeleton } from "@/components/skeletons/Skeletons";
 import { ToastViewport } from "@/components/Toast/ToastViewport";
 import { Button } from "@/components/ui/button";
 import {
-  saveSidebarCollapsed,
   SIDEBAR_COLLAPSED_STORAGE_KEY,
   toggleSidebarCollapsed,
-  useSidebarCollapsed,
+  useSidebarCollapsedEffective,
 } from "@/lib/sidebarState";
 import { setSidebarOverlayOpen } from "@/lib/sidebarOverlayState";
 import { LivingBridge } from "@/lib/livingBridge";
@@ -56,7 +55,10 @@ import { useT } from "@/i18n";
 export { SIDEBAR_COLLAPSED_STORAGE_KEY };
 
 export function Shell() {
-  const collapsed = useSidebarCollapsed();
+  // U1 responsive default (unification spec «Глубокая проработка» п.4):
+  // the stored intent when the owner made one, otherwise «768–1279 → the
+  // 56px rail, ≥1280 → the full panel». Toggles persist the explicit choice.
+  const collapsed = useSidebarCollapsedEffective();
   const toggle = toggleSidebarCollapsed;
   // Mobile drawer (< md): session-only state — it starts closed on every
   // mount and NEVER reaches the persisted desktop intent (UI-22).
@@ -75,9 +77,11 @@ export function Shell() {
       document.body.style.overflow = previousOverflow;
     };
   }, [mobileOpen]);
-  // Persist the desktop intent on every change (SSR-safe; the initial render
-  // also re-affirms the stored value — a no-op write).
-  useEffect(() => saveSidebarCollapsed(collapsed), [collapsed]);
+  // NOTE (U1): no re-affirming persist effect here any more — an explicit
+  // choice is written by toggleSidebarCollapsed / setSidebarCollapsed at the
+  // moment it happens; writing the RESOLVED value back would materialize the
+  // responsive rail default into storage and defeat the «no choice yet»
+  // state (the read-through snapshot re-reads storage every mount anyway).
   const location = useLocation();
   const t = useT();
   // A route change IS a navigation from the drawer — close it (footer rows
