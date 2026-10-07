@@ -8,6 +8,7 @@ import { PairPage } from "./PairPage";
 import { GatewayContext } from "@/gateway/GatewayContext";
 import type { MemoryGateway } from "@/gateway/MemoryGateway";
 import { ApiError } from "@/lib/errors";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { I18nProvider } from "@/i18n";
 import type {
   PairingExchangeAwaiting,
@@ -75,15 +76,25 @@ function mountExchange(script: ExchangeScript, initialEntry = "/pair") {
   act(() => {
     root.render(
       <GatewayContext.Provider value={gateway}>
-        <I18nProvider initialLang="en">
-          <MemoryRouter initialEntries={[initialEntry]}>
-            <Routes>
-              <Route path="/pair" element={<PairPage />} />
-              <Route path="/" element={<div>BOARD-HOME</div>} />
-            </Routes>
-            <HashProbe />
-          </MemoryRouter>
-        </I18nProvider>
+        {/* U1: the public-contour footer reads board health (07k §1.3) — the
+         * same QueryClientProvider the app shell provides. */}
+        <QueryClientProvider
+          client={
+            new QueryClient({
+              defaultOptions: { queries: { retry: false } },
+            })
+          }
+        >
+          <I18nProvider initialLang="en">
+            <MemoryRouter initialEntries={[initialEntry]}>
+              <Routes>
+                <Route path="/pair" element={<PairPage />} />
+                <Route path="/" element={<div>BOARD-HOME</div>} />
+              </Routes>
+              <HashProbe />
+            </MemoryRouter>
+          </I18nProvider>
+        </QueryClientProvider>
       </GatewayContext.Provider>,
     );
   });
@@ -286,13 +297,21 @@ describe("PairPage — honest verdicts", () => {
     act(() => {
       root.render(
         <GatewayContext.Provider value={{} as unknown as MemoryGateway}>
-          <I18nProvider initialLang="en">
-            <MemoryRouter initialEntries={["/pair"]}>
-              <Routes>
-                <Route path="/pair" element={<PairPage />} />
-              </Routes>
-            </MemoryRouter>
-          </I18nProvider>
+          <QueryClientProvider
+            client={
+              new QueryClient({
+                defaultOptions: { queries: { retry: false } },
+              })
+            }
+          >
+            <I18nProvider initialLang="en">
+              <MemoryRouter initialEntries={["/pair"]}>
+                <Routes>
+                  <Route path="/pair" element={<PairPage />} />
+                </Routes>
+              </MemoryRouter>
+            </I18nProvider>
+          </QueryClientProvider>
         </GatewayContext.Provider>,
       );
     });

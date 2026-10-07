@@ -22,6 +22,13 @@ import type { TranslationKey } from "@/i18n";
 export interface GateDomain {
   /** The domain's route prefix (its canonical root path). */
   prefix: string;
+  /**
+   * The mini-preview wireframe kind (U1, unification spec «Gate-слой v12 —
+   * взять целиком… Доработка: мини-превью раздела»): a STATIC structural
+   * sketch rendered by GatePreview — the SHAPE of the domain, never its
+   * content (07k §0: preview blur / paywall tease stays forbidden).
+   */
+  previewKind: "list" | "board" | "roster" | "journal" | "hub";
   /** The domain's display-name key (the H1 template interpolates it). */
   nameKey: TranslationKey;
   /** The «что внутри» line (07k §3 table). */
@@ -34,6 +41,7 @@ export interface GateDomain {
 export const GATED_DOMAINS: readonly GateDomain[] = [
   {
     prefix: "/memory",
+    previewKind: "list",
     nameKey: "nav.memory",
     insideKey: "auth.gate.inside.memory",
     seeMoreKeys: [
@@ -44,6 +52,7 @@ export const GATED_DOMAINS: readonly GateDomain[] = [
   },
   {
     prefix: "/tasks",
+    previewKind: "board",
     nameKey: "nav.tasks",
     insideKey: "auth.gate.inside.tasks",
     seeMoreKeys: [
@@ -54,6 +63,7 @@ export const GATED_DOMAINS: readonly GateDomain[] = [
   },
   {
     prefix: "/agents",
+    previewKind: "roster",
     nameKey: "nav.agents",
     insideKey: "auth.gate.inside.agents",
     seeMoreKeys: [
@@ -64,6 +74,7 @@ export const GATED_DOMAINS: readonly GateDomain[] = [
   },
   {
     prefix: "/kora",
+    previewKind: "journal",
     nameKey: "nav.kora",
     insideKey: "auth.gate.inside.kora",
     seeMoreKeys: [
@@ -74,6 +85,7 @@ export const GATED_DOMAINS: readonly GateDomain[] = [
   },
   {
     prefix: "/system",
+    previewKind: "hub",
     nameKey: "nav.system",
     insideKey: "auth.gate.inside.system",
     seeMoreKeys: [

@@ -266,8 +266,14 @@ export const en: Record<TranslationKey, string> = {
   "auth.gate.seeMore.systemStatus": "Board status and memory stores",
   "auth.gate.seeMore.systemSettings": "Settings and automation",
   "auth.gate.seeMore.systemDevices": "Connected devices",
+  // U1: the gate mini-preview caption — the sketch is honest about being a sketch.
+  "auth.gate.previewCaption": "A sketch of the section — its contents open after you sign in",
   "auth.gate.checkingSession": "Checking your session…",
   "auth.route.back": "← Back to the board",
+  // U1 (07h §12): the noticeable return button by the central card on /auth
+  // and /pair — icon arrow + clean label (the «←» glyph above stays put).
+  "auth.route.backLabel": "Back to the board",
+  "auth.route.backAria": "Back to the board — return to the Overview",
   "auth.route.alreadySignedIn": "You are already signed in",
 
   // --- ME-080: /auth route, the «Sign in | Register» pair (07k §4.1–§4.4;

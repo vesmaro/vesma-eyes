@@ -4,6 +4,7 @@ import { Moon, Sun } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { useToast } from "@/components/Toast/toastContext";
 import { Button } from "@/components/ui/button";
+import { BackToBoardLink } from "@/components/BackToBoardLink/BackToBoardLink";
 import { IrisLogo } from "@/components/IrisLogo/IrisLogo";
 import { PublicStatusLine } from "@/components/PublicStatusLine/PublicStatusLine";
 import { useT } from "@/i18n";
@@ -286,8 +287,14 @@ export function AuthRoutePage() {
         </Button>
       </header>
 
-      <main className="flex flex-1 items-center justify-center p-6">
+      <main className="flex flex-1 flex-col items-center justify-center p-6">
         <div className="w-full max-w-md" data-testid="auth-route">
+          {/* The «На борт» slot (07k §4.3 → 07h §12): ABOVE the card, the
+           * same slot in every tab state — the page has no Shell chrome,
+           * the way back must not hide in the corner. */}
+          <div className="mb-3 flex">
+            <BackToBoardLink />
+          </div>
           {/* The card on well (07k §4): the sign-in surface itself. */}
           <div className="rounded-lg border border-border bg-well p-6 shadow-raised">
             <h1 className="text-lg font-semibold text-foreground">
