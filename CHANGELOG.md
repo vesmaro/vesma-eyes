@@ -10,6 +10,10 @@ workflow — this file is the repo-side trail).
 
 ## [Unreleased]
 
+### Security
+
+- ME-080 follow-up: закрыт пробел восстановления пароля — POST /api/auth/password с двумя ногами по правилу детерминизма ADR 0014 Ф2 (заголовок присутствует → только он): vesmaro_auth-сессия меняет СВОЙ пароль (current_password обязателен, проверяется первым, ровно один scrypt-verify — константное время как в login); vesmaro_ui-кука/Bearer владельца ставит новый пароль аккаунту role=owner БЕЗ current — путь разблокировки заблокированного владельца, на себя тоже. Гигиена: new_password 8..512 (NIST, как в register), плоские лимитеры per-IP 10/60s + global 60/60s с Retry-After (единый бюджет на эндпоинт), нейтральный 403 без оракула существования username (несуществующий и не-owner неотличимы), аудит только в server_log — auth.password.changed / auth.password.recovery / auth.password.failed (username+IP, никогда пароли), 204 без тела; контракт запинен в tests/test_openapi_contract.py для параллельного FE-диалога.
+
 ## [1.63.0] — 2026-10-07
 
 ### Added

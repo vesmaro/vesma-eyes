@@ -7496,6 +7496,21 @@ _AUTH_REGISTER_GLOBAL_RATE_LIMIT = 30
 _AUTH_REGISTER_GLOBAL_WINDOW = 600.0
 _auth_register_global_limiter = RateLimiter(
     limit=_AUTH_REGISTER_GLOBAL_RATE_LIMIT, window=_AUTH_REGISTER_GLOBAL_WINDOW)
+# Password change/recovery (ME-080 follow-up): the own-password leg is a
+# credential surface exactly like login — it verifies the current password
+# at the door — so it rides the SAME flat budget (per-IP 10/60s + global
+# 60/60s) with the ui-token verify leg's Retry-After hint (F4, ME-090).
+# ONE budget per ENDPOINT, no per-leg split: the recovery leg is gated by
+# the ui token, but a split budget would double the guessing rate on the
+# leg that actually verifies secrets.
+_AUTH_PASSWORD_RATE_LIMIT = 10
+_AUTH_PASSWORD_RATE_WINDOW = 60.0
+_auth_password_ip_limiter = RateLimiter(
+    limit=_AUTH_PASSWORD_RATE_LIMIT, window=_AUTH_PASSWORD_RATE_WINDOW)
+_AUTH_PASSWORD_GLOBAL_RATE_LIMIT = 60
+_AUTH_PASSWORD_GLOBAL_WINDOW = 60.0
+_auth_password_global_limiter = RateLimiter(
+    limit=_AUTH_PASSWORD_GLOBAL_RATE_LIMIT, window=_AUTH_PASSWORD_GLOBAL_WINDOW)
 
 # Sliding-reissue throttle for password sessions (the _ui_reissue_last
 # pattern), keyed by the session token HASH — bounded LRU, the session
@@ -7556,6 +7571,24 @@ class AccountLoginOut(_ApiModel):
     ok: bool
     username: str
     role: Literal["owner", "member"]
+
+
+class AccountPasswordIn(BaseModel):
+    """POST /api/auth/password body (ME-080 follow-up). ``username`` is
+    OPTIONAL and only ever NAMES the target: on the own-password leg it
+    must resolve to the session's own account (omitted = self); the
+    recovery leg REQUIRES it — the ui token carries no account identity
+    to default to. Bounds only, NO charset pattern (the AccountLoginIn
+    rule): a foreign or unknown name must reach the SAME neutral
+    401/403 verdicts, not a 422. new_password 8..512 per NIST SP
+    800-63B — length only, no composition rules, identical to register.
+    BE-15: unknown keys are an honest 422."""
+    model_config = ConfigDict(extra="forbid")
+
+    username: str | None = Field(default=None, min_length=1, max_length=32)
+    new_password: str = Field(min_length=8, max_length=512)
+    current_password: str | None = Field(default=None, min_length=1,
+                                         max_length=512)
 
 
 class SessionMeOut(_ApiModel):
@@ -7752,6 +7785,153 @@ async def me_account(request: Request) -> SessionMeOut:
         return SessionMeOut(authenticated=False)
     return SessionMeOut(authenticated=True, username=session["username"],
                         role=session["role"])
+
+
+# The ONE 403 detail for every refused target (ME-080 follow-up): a
+# password session may only change its own account and the recovery leg
+# resets role=owner accounts only — a NONEXISTENT name must be
+# indistinguishable from a refused one (existence-neutral 403, no
+# username oracle).
+_PASSWORD_REFUSED_DETAIL = "password change refused for this username"
+
+
+@app.post(
+    "/api/auth/password",
+    status_code=204,
+    responses={
+        204: {"description": "password set (changed or recovered); no body"},
+        401: {"description": "no live admission (neither a password session "
+                             "nor the owner ui token), a non-ui bearer on "
+                             "the header leg, or a wrong current password "
+                             "on the own-password leg"},
+        403: {"description": "target refused — existence-neutral: a missing "
+                             "name and a non-qualifying name carry the SAME "
+                             "detail (no username oracle)"},
+        422: {"description": "body outside the contract (new_password "
+                             "8..512, missing current_password on the "
+                             "own-password leg, missing username on the "
+                             "recovery leg, unknown keys)"},
+        429: {"description": "rate limit exceeded (10/60s per client + "
+                             "60/60s board-wide; Retry-After set)"},
+    },
+)
+async def change_account_password(body: AccountPasswordIn,
+                                  request: Request) -> None:
+    """Change a password (ME-080 follow-up — the recovery gap: an account
+    whose password is lost had NO reset path). Two admission legs, picked
+    by the ADR 0014 Ф2 determinism rule — NO fallbacks: a header present
+    → the header leg ONLY (a non-ui bearer is a 401 even beside a live
+    cookie); header absent → cookie legs, the owner ``vesmaro_ui`` cookie
+    FIRST (recovery dominates — one browser may hold both).
+
+    Leg (1) — ``vesmaro_auth`` session (the normal signed-in change):
+    changes the session's OWN account, ``current_password`` is REQUIRED
+    and is verified FIRST, ALWAYS with exactly one scrypt verify (the
+    login's dummy-equalizer discipline — credential-bearing outcomes are
+    time-indistinguishable); a foreign ``username`` is a 403 AFTER the
+    credential check (wrong-current + foreign name answers 401, not 403 —
+    deterministic order: request shape 422 → credential 401 →
+    authorization 403).
+
+    Leg (2) — ``vesmaro_ui`` cookie/Bearer, the owner plumbing (ADR 0009
+    A1): recovery — sets a NEW password on a role=owner account WITHOUT
+    the current password (on the owner's own account too — the locked-out
+    owner path). The role gate is EXISTENCE-NEUTRAL: a missing name and a
+    member name land on the SAME 403 detail (no username oracle); a
+    supplied ``current_password`` is ignored here — the owner token IS
+    the proof. On a deployment with no ui token class configured this leg
+    is unreachable by construction (nothing verifies against '') — no
+    fail-closed 503 exists for the pair, the own-password leg needs no
+    token config.
+
+    Hygiene: flat limiters per-IP + global (429 carries Retry-After, F4);
+    the persistent auth audit rides server_log ONLY (never the open SSE
+    feed) — 'auth.password.changed' / 'auth.password.recovery' with
+    username+IP, and 'auth.password.failed' for a wrong current password
+    (cascade F2); no password VALUE ever reaches a log or a response
+    (the global 422 handler strips field echoes). Success is a bare 204 —
+    the parallel FE password dialog keys on it. Existing sessions are NOT
+    revoked by a change (no server-side session sweep in this slice)."""
+    client_ip = request.client.host if request.client else "unknown"
+    log = logging.getLogger("vesmaro.auth")
+    if not _auth_password_ip_limiter.acquire(client_ip):
+        retry_after = max(_auth_password_ip_limiter.retry_after(client_ip), 1)
+        log.warning("password change rate limit exceeded client=%s "
+                    "retry_after=%ss", client_ip, retry_after)
+        raise HTTPException(
+            429,
+            f"password change rate limit exceeded "
+            f"({_AUTH_PASSWORD_RATE_LIMIT} per "
+            f"{_AUTH_PASSWORD_RATE_WINDOW:.0f}s per client)",
+            headers={"Retry-After": str(retry_after)},
+        )
+    if not _auth_password_global_limiter.acquire("global"):
+        retry_after = max(
+            _auth_password_global_limiter.retry_after("global"), 1)
+        log.warning("password change global rate limit exceeded "
+                    "retry_after=%ss", retry_after)
+        raise HTTPException(
+            429,
+            f"password change rate limit exceeded "
+            f"({_AUTH_PASSWORD_GLOBAL_RATE_LIMIT} per "
+            f"{_AUTH_PASSWORD_GLOBAL_WINDOW:.0f}s board-wide)",
+            headers={"Retry-After": str(retry_after)},
+        )
+    target = (body.username or "").strip().lower()
+    if request.headers.get("Authorization", ""):
+        if not _bearer_is_class(request, "ui"):
+            raise HTTPException(
+                401,
+                _token_mismatch_detail(request.headers["Authorization"],
+                                       _token_classes(), ("ui",)))
+        recovery = True
+        _schedule_ui_cookie_reissue(request)
+    elif _cookie_ui_ok(request):
+        recovery = True
+        _schedule_ui_cookie_reissue(request)
+    else:
+        session = _cookie_auth_session(request)
+        if session is None:
+            raise HTTPException(
+                401, "authentication required — sign in again "
+                     "(password login or owner ui-token)")
+        recovery = False
+    if recovery:
+        if not target:
+            raise HTTPException(
+                422, "username is required: the recovery leg must name "
+                     "the account to reset")
+        account = store.get_account_by_username(target)
+        if account is None or account["role"] != "owner":
+            log.info("password recovery refused username=%s", target)
+            raise HTTPException(403, _PASSWORD_REFUSED_DETAIL)
+        store.update_account_password(
+            account["id"], hash_password(body.new_password),
+            "auth.password.recovery", account["username"], client_ip)
+        log.info("password recovery applied username=%s",
+                 account["username"])
+        return
+    # Own-password leg: credential first, ALWAYS exactly one verify.
+    account = store.get_account(session["account_id"])
+    if account is None:  # live session whose account row vanished: fail closed
+        raise HTTPException(
+            401, "authentication required — sign in again "
+                 "(password login or owner ui-token)")
+    if not body.current_password:
+        raise HTTPException(
+            422, "current_password is required to change your own password")
+    if not verify_password(body.current_password,
+                           account["password_hash"]):
+        store.note_auth_password_failed(target or account["username"],
+                                        client_ip)
+        raise HTTPException(401, "current password is incorrect")
+    if target and target != account["username"]:
+        log.info("password change refused username=%s", target)
+        raise HTTPException(403, _PASSWORD_REFUSED_DETAIL)
+    store.update_account_password(
+        account["id"], hash_password(body.new_password),
+        "auth.password.changed", account["username"], client_ip)
+    log.info("password changed username=%s", account["username"])
 
 
 # ------------------------------------------- QR pairing + devices (CV-7, ADR 0012)
