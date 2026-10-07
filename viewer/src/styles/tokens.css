@@ -13,13 +13,13 @@
 /* ── Dark theme (default) ───────────────────────────────────────────── */
 :root {
   /* Strata ladder — depth of the well (never #000) */
-  --color-well-canvas: #090b0f;         /* NEW — graph/hero canvas floor */
-  --color-bg-base: #0d0f14;             /* page background */
-  --color-bg-well: #12161d;             /* cards, panels, sidebar */
-  --color-bg-elevated: #161b23;         /* popovers, drawers, inputs */
-  --color-bg-overlay: #1c222c;          /* modal sheets + backdrop tint */
-  --color-scroll-bg: #151a22;           /* memory scroll "parchment" */
-  --color-scroll-border: #242931;
+  --color-well-canvas: #051015;         /* NEW — graph/hero canvas floor */
+  --color-bg-base: #081217;             /* page background */
+  --color-bg-well: #0d1a20;             /* cards, panels, sidebar */
+  --color-bg-elevated: #0f1f25;         /* popovers, drawers, inputs */
+  --color-bg-overlay: #16282e;          /* modal sheets + backdrop tint */
+  --color-scroll-bg: #0b181d;           /* memory scroll "parchment" */
+  --color-scroll-border: #1e3138;
 
   /* Iris accent (teal — depth; brand, not small text on well+) */
   --color-iris-dim: #0e4a52;
@@ -46,7 +46,7 @@
   --color-text-inverse: #0d0f14;
 
   /* Borders — dual system: myelin (decor) vs functional edge (≥3:1) */
-  --color-border-subtle: #1c232e;       /* decorative only */
+  --color-border-subtle: #182b31;       /* decorative only */
   --color-border: #5e687e;              /* interactive boundaries, ≥3:1 */
   --color-border-iris: #4fc2ce40;       /* iris hover edge tint */
 
@@ -93,8 +93,8 @@
    *    seven new names on the frozen canon — ADR 0006 names untouched) ── */
   --text-display: clamp(2.25rem, 3.5vw, 2.75rem); /* the ONE display step — Overview hero only; Inter 600 */
   --well-hero-h: clamp(520px, calc(100vh - 48px), 860px); /* Overview hero height; no fold scroll ≥1024w */
-  --hud-veil: rgb(9 11 15 / 0.78);      /* functional HUD-text backdrop on canvas ONLY; pairs §7.1 */
-  --palette-scrim: rgb(9 11 15 / 0.55); /* palette backdrop tint; + blur(4px) = the system's only blur */
+  --hud-veil: rgb(5 16 21 / 0.78);      /* functional HUD-text backdrop on canvas ONLY; pairs §7.1 */
+  --palette-scrim: rgb(5 16 21 / 0.55); /* palette backdrop tint; + blur(4px) = the system's only blur */
   --duration-awaken: 1200ms;            /* Overview awakening wave — once per session */
   --duration-attention: 320ms;          /* attention double-beat pause (name fixed in Ф1, consumed in Ф2) */
   --duration-attention-hold: 2400ms;    /* ▸N glow hold after the double beat; ≤1 at a time */
