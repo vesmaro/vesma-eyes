@@ -2,14 +2,19 @@
 
 The REAL script runs against a fake world: stub ``curl`` (serves a real
 openssl-generated CA), stub ``id`` (fake root — CI is not root), stub
-``systemctl``, a ``python3`` shim that fakes ONLY the version probe and
-execs the real interpreter otherwise (normalize_fp rides real python).
-openssl stays REAL: the fingerprint pipeline and the CA:TRUE check must
-be the production ones.
+``systemctl``, a ``python3`` shim that fakes the version probe, REFUSES
+``-m venv`` (the pinned death point), and execs the real interpreter
+otherwise (normalize_fp rides real python). openssl stays REAL: the
+fingerprint pipeline and the CA:TRUE check must be the production ones.
 
-Happy-path runs stop at the venv step: ``python3 -m venv /opt/vesma-eyes``
-fails for a non-root CI user — a deterministic, assertable proof the run
-got PAST the anchor gate (die message names the venv, exit 3).
+Happy-path runs stop at the venv step: the shim's refusal of
+``-m venv`` is host-independent, so the death point is identical (exit
+3) on a non-root laptop, a root CI container, or a host whose venv
+toolchain actually works. ME-091: the previous death pin — "a non-root
+user cannot write /opt" — held only on some hosts (writable /opt, root
+containers), letting the run drift to registration (exit 4). Death
+asserts pin the TYPE and POSITION (exit 3; venv step reached,
+registration step never started), never the die() error prose.
 
 QA matrix:
 - anchor flag: mismatch → abort, downloaded CA discarded; match → gate
@@ -43,7 +48,21 @@ import pytest
 REPO = Path(__file__).resolve().parents[1]
 BOOTSTRAP_SH = REPO / "deploy" / "poller" / "bootstrap.sh"
 
-VENV_DIE = "could not create the venv"
+# Death-point markers: step() headers are the script's stdout progress
+# protocol — the typed way to pin WHERE the run died without binding to
+# the die() error prose (ME-091: stderr-string asserts are brittle).
+VENV_STEP = "python venv + dependencies"
+REGISTER_STEP = "registering the executor"
+
+
+def assert_died_at_venv(r) -> None:
+    """The run died on the venv step: exit class 3 (environment
+    failure), the venv step started, the registration step never did."""
+    ctx = (f"rc={r.returncode}\n--- stdout tail ---\n{r.stdout[-600:]}"
+           f"\n--- stderr tail ---\n{r.stderr[-300:]}")
+    assert (r.returncode == 3
+            and VENV_STEP in r.stdout
+            and REGISTER_STEP not in r.stdout + r.stderr), ctx
 
 
 def _canon(der: bytes) -> str:
@@ -93,12 +112,19 @@ def stubs(tmp_path, lab_ca):
     (d / "id").chmod(0o755)
     (d / "systemctl").write_text("#!/usr/bin/env bash\nexit 0\n")
     (d / "systemctl").chmod(0o755)
-    # The python3 shim: fake ONLY the preflight version probe; everything
-    # else (normalize_fp heredoc, venv attempt) goes to the real one.
+    # The python3 shim: fake the preflight version probe; REFUSE -m venv
+    # outright (ME-091: the death point must not depend on the host's uid,
+    # /opt writability, or venv toolchain — and the stub world must never
+    # create a real /opt/vesma-eyes or pip-install into it); everything
+    # else (normalize_fp heredoc) goes to the real interpreter.
     real_python = shutil.which("python3")
     (d / "python3").write_text(
         "#!/usr/bin/env bash\n"
         'if [[ "$1" == "-c" && "$2" == *version_info* ]]; then echo 310; exit 0; fi\n'
+        'if [[ "$1" == "-m" && "$2" == "venv" ]]; then\n'
+        '  echo "python3: No module named venv" >&2\n'
+        "  exit 1\n"
+        "fi\n"
         f'exec "{real_python}" "$@"\n')
     (d / "python3").chmod(0o755)
     return {"dir": d, "log": log, "ca_target": ca_target}
@@ -176,13 +202,13 @@ class TestAnchorFlag:
         # … which equals the python canon (openssl pipeline cross-check)
         assert stubs["ca_target"].exists()
         # … and the run continued past TLS into the venv step
-        assert r.returncode == 3 and VENV_DIE in r.stdout + r.stderr
+        assert_died_at_venv(r)
 
     def test_env_synonym_vesmaro_expect_fp(self, stubs, lab_ca):
         r = _run(stubs, env_extra={"VESMARO_EXPECT_FP": lab_ca["canon"]},
                  detach_tty=True)
         assert f"verified against the anchor: {lab_ca['canon']}" in r.stdout
-        assert VENV_DIE in r.stdout + r.stderr
+        assert_died_at_venv(r)
 
     def test_hex_form_accepted_via_normalize(self, stubs, lab_ca):
         r = _run(stubs, "--expect-fp", lab_ca["hex"], detach_tty=True)
@@ -203,7 +229,7 @@ class TestPrePlacedCa:
         assert "pre-placed" in r.stdout
         assert not stubs["log"].exists() or stubs["log"].read_text() == ""
         assert f"verified against the anchor: {lab_ca['canon']}" in r.stdout
-        assert VENV_DIE in r.stdout + r.stderr
+        assert_died_at_venv(r)
 
     def test_mismatch_aborts_but_preserves_owner_file(self, stubs, lab_ca):
         shutil.copyfile(lab_ca["pem"], stubs["ca_target"])
@@ -219,7 +245,7 @@ class TestPrePlacedCa:
         shutil.copyfile(lab_ca["pem"], stubs["ca_target"])
         r = _run(stubs, detach_tty=True)
         assert "no prompt" in r.stdout
-        assert VENV_DIE in r.stdout + r.stderr
+        assert_died_at_venv(r)
 
 
 # --------------------------------------------------------- interactive TOFU
@@ -230,7 +256,7 @@ class TestInteractiveTofu:
         r = _run(stubs, use_pty=True, feed=lab_ca["canon"] + "\n")
         assert lab_ca["canon"] in r.stdout                # printed for TOFU
         assert "confirmed by the operator" in r.stdout
-        assert VENV_DIE in r.stdout + r.stderr
+        assert_died_at_venv(r)
 
     @pytest.mark.skipif(shutil.which("script") is None,
                         reason="util-linux script(1) not available")
