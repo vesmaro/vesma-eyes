@@ -17,8 +17,8 @@
 | # | Маршрут | Страница | HonestLine | honest-слоты | loading | empty | error | Примечания |
 |---|---|---|---|---|---|---|---|---|
 | 1 | `/` | OverviewPage | ✓ (CockpitBusy/CockpitWaiting + `overview.honestyLater`) | ✓ | ✓ Cockpit-скелетоны | ✓ честные слоты «позже» | ✓ HonestLine + retry (cockpit) | Герой WellHero; U2 одевает, HonestLine main приоритетна |
-| 2 | `/auth` | AuthRoutePage | ✗ | ◐ вердикты форм словарём | ✓ pending отправки | — (форма) | ✓ вердикт-строки с текстом сервера (`role=alert` в диалоге) | Боевые error-состояния — доработка U1 (спека: «заново — боевые error-состояния») |
-| 3 | `/pair` | PairPage | ✗ | ◐ фазы словарём | ✓ фаза awaiting | — | ✓ фаза error + detail сервера | Вне Shell; QR-поток U1 |
+| 2 | `/auth` | AuthRoutePage | ✗ | ◐ вердикты форм словарём | ✓ pending отправки | — (форма) | ✓ вердикт-строки с текстом сервера (`role=alert` в диалоге) | U1 одел: табы-сегмент, кнопка «На борт» (07h §12), футер «версия · аноним»; ринг → `--color-focus` |
+| 3 | `/pair` | PairPage | ✗ | ◐ фазы словарём | ✓ фаза awaiting | — | ✓ фаза error + detail сервера | Вне Shell; U1 одел: «На борт» во всех фазах (07h §12), футер «версия · аноним»; QR+TTL-дуга уже в main (PairingDialog) |
 | 4 | `/memory` | MemoriesPage | ✗ | ◐ EmptyState-тексты | ✓ MemoryCardSkeleton | ✓ EmptyState | ✓ EmptyState error + «Повторить» | Список/деталь master-detail |
 | 5 | `/memory/search` | SearchPage | ✗ | ◐ EmptyState-тексты | ✓ SearchResultList `isLoading` | ✓ EmptyState (пустой запрос/результат) | ✓ EmptyState error + retry | |
 | 6 | `/memory/pulse` | PulsePage | ✗ | ✓ (PulseFeed честные причины) | ✓ скелетоны ленты | ✓ EmptyState | ✓ retry-ветка | |
@@ -61,7 +61,7 @@
 
 ## 3. Находки для волн U1–U7 (не блокеры U0)
 
-1. **Gate-слой не подключён.** `GateScreen`/`GatedOutlet` (features/ui-token) существуют, но не используются ни одной доменной страницей — замки разделов v12 (U1) подключаются поверх этой карты.
+1. **Gate-слой не подключён.** ~~Устарело к U1: ME-043 (gates v6) уже подключил `GatedOutlet`/`GateScreen`/замки сайдбара поверх этой карты.~~ U1 добавил недостающее: мини-превью раздела в gate-странице (GatePreview — статичный набросок, без контента/блюра) и скрытие глобального поиска у анонима (07k §2.3).
 2. **Docs-хаб и категория без error/empty-веток** (строки 20–21) — явная честная ошибка манифеста нужна в U6.
 3. **Карточка памяти: состояния строки из 05 §2.3** (hover строки, selected-край, stale, live-update) живут не на MemoryCard, а на уровне списков/детали — закрываются в U4 при свиток-одевании.
 4. **Архив задач** — единственная страница без honest-словаря; решение за U3 (допустимо: терминальное хранилище).

@@ -266,8 +266,14 @@ export const en: Record<TranslationKey, string> = {
   "auth.gate.seeMore.systemStatus": "Board status and memory stores",
   "auth.gate.seeMore.systemSettings": "Settings and automation",
   "auth.gate.seeMore.systemDevices": "Connected devices",
+  // U1: the gate mini-preview caption — the sketch is honest about being a sketch.
+  "auth.gate.previewCaption": "A sketch of the section — its contents open after you sign in",
   "auth.gate.checkingSession": "Checking your session…",
   "auth.route.back": "← Back to the board",
+  // U1 (07h §12): the noticeable return button by the central card on /auth
+  // and /pair — icon arrow + clean label (the «←» glyph above stays put).
+  "auth.route.backLabel": "Back to the board",
+  "auth.route.backAria": "Back to the board — return to the Overview",
   "auth.route.alreadySignedIn": "You are already signed in",
 
   // --- ME-080: /auth route, the «Sign in | Register» pair (07k §4.1–§4.4;
@@ -1578,7 +1584,7 @@ export const en: Record<TranslationKey, string> = {
   "settings.hub.livingCalm": "Calm",
   "settings.hub.livingOff": "Off",
   "settings.hub.livingHint":
-    "The vein background breathes and tints from real data only. Calm (default): breathing, tones, and Vesma in her nest. Full: adds web impulses and Vesma's flights.",
+    "The vein background breathes and tints from real data only. Full (default): breathing, tones, impulses, and Vesma's flights. Calm: breathing and tones, no impulses.",
   // Vesma, the nest keeper (ME-071 W2): her lines. No ids in phrases (ME-078).
   "living.vesma.intro": "I'm Vesma — I look after your memory.",
   "living.vesma.done": "“{{task}}” has a decision waiting for you.",

@@ -4,9 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Copy, Smartphone } from "lucide-react";
 import { useLocation, useNavigate } from "react-router";
 import { Badge } from "@/components/ui/badge";
+import { BackToBoardLink } from "@/components/BackToBoardLink/BackToBoardLink";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { IrisLogo } from "@/components/IrisLogo/IrisLogo";
+import { PublicStatusLine } from "@/components/PublicStatusLine/PublicStatusLine";
 import { isApiError } from "@/lib/errors";
 import { useT } from "@/i18n";
 import type { TranslationKey } from "@/i18n";
@@ -220,12 +222,20 @@ export function PairPage() {
   );
 }
 
-/** Minimal chrome: centered column, the iris mark, no Shell furniture. */
+/** Minimal chrome: centered column, the iris mark, no Shell furniture. The
+ * «На борт» return slot (07h §12) sits right under the mark in EVERY phase —
+ * the same slot never migrates (muscle memory), 44px outline, never the
+ * phase's primary. The public-contour status line (07k §1.3) rides under
+ * the phase card — the pairing page is anonymous by definition. */
 function PairShell({ children }: { children: React.ReactNode }) {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col items-center justify-center gap-4 px-4 py-8">
       <IrisLogo size={48} decorative />
+      <div className="flex w-full">
+        <BackToBoardLink />
+      </div>
       {children}
+      <PublicStatusLine />
     </main>
   );
 }

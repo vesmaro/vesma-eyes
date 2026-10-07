@@ -237,7 +237,8 @@ describe("wellOrgan — beads: live events over real edges only", () => {
     noEdges.destroy();
 
     document.body.innerHTML = "";
-    const calm = mount(); // DEFAULT_LIVE_LAYER = calm
+    setLiveLayer("calm"); // pinned: U1 flipped the DEFAULT to «Полный»
+    const calm = mount();
     feedLivingEvent("task.created");
     expect(raf.count).toBe(0);
     calm.destroy();

@@ -110,3 +110,31 @@ describe("GateScreen a11y (WCAG 2.2, named in 07k §8)", () => {
     expect(html).not.toContain('role="img"');
   });
 });
+
+describe("GateScreen mini-preview (U1, unification spec gate-layer доработка)", () => {
+  it("the sketch is aria-hidden, static (no shimmer/living markup) and captioned honestly", () => {
+    const html = renderGate("/memory");
+    expect(html).toContain('data-testid="gate-preview"');
+    // Scope to the figure: the domain copy may legitimately say «pulse».
+    const figure = html.slice(
+      html.indexOf('data-testid="gate-preview"'),
+      html.indexOf("</figure>"),
+    );
+    expect(figure).toMatch(/aria-hidden="true"/);
+    // Honest-motion red line: nothing loads, nothing breathes on a gate.
+    expect(figure).not.toMatch(/animate|shimmer|breath|pulse/i);
+    expect(html).toContain("A sketch of the section");
+  });
+
+  it("each domain renders ITS OWN sketch kind (one implementation per concept)", () => {
+    for (const domain of GATED_DOMAINS) {
+      const html = renderGate(domain.prefix);
+      expect(html).toContain('data-testid="gate-preview"');
+    }
+    // The strata wash follows the domain (the 2026-10-07 canon: ambient
+    // section wash on a text-free sketch).
+    expect(renderGate("/tasks")).toMatch(/bg-strata-tasks/);
+    expect(renderGate("/agents")).toMatch(/bg-strata-agents/);
+    expect(renderGate("/memory")).toMatch(/bg-strata-memory/);
+  });
+});

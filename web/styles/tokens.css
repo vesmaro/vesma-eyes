@@ -63,11 +63,11 @@
   --line-hairline: 0.5px;
   --line-myelin: 1px;
 
-  --strata-memory: rgb(79 194 206 / 0.05);     /* canvas washes ONLY — never on */
-  --strata-tasks: rgb(122 138 158 / 0.05);     /* text-bearing cards */
-  --strata-agents: rgb(201 147 58 / 0.05);
-  --strata-docs: rgb(186 176 158 / 0.05);
-  --strata-system: rgb(122 138 158 / 0.035);
+  --strata-memory: rgb(79 194 206 / 0.05);     /* ambient surface washes; NEVER a  */
+  --strata-tasks: rgb(122 138 158 / 0.05);     /* passive text-card bg — CANON as  */
+  --strata-agents: rgb(201 147 58 / 0.05);     /* the selected/active signal of    */
+  --strata-docs: rgb(186 176 158 / 0.05);      /* chips/nav rows/list rows (state  */
+  --strata-system: rgb(122 138 158 / 0.035);   /* domain, never colour alone)      */
 
   --synapse-idle: rgb(122 138 158 / 0.35);     /* resting edge */
   --synapse-recall: #4fc2ce;                   /* recall hit pulse */

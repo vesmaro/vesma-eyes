@@ -90,10 +90,14 @@ export const ru = {
   "topbar.themeToDark": "Переключить на тёмную тему",
   "topbar.themeLight": "Светлая тема",
   "topbar.themeDark": "Тёмная тема",
-  // В1 live-layer indicator (blueprint §6.6, canon v11 §4).
+  // В1 live-layer indicator (blueprint §6.6, canon v11 §4). The state words
+  // are lowercased — they interpolate mid-sentence into liveLayerAria and
+  // follow the dictionary block's convention («пауза», «выкл»); «полный»
+  // mirrors the hub's livingFull label (review round: the raw "live" was an
+  // EN leak on every RU first screen).
   "topbar.liveLayerAria": "Живой слой: {{state}}. Нажмите, чтобы сменить режим.",
   "topbar.liveLayerTitle": "Живой слой: live → пауза → выкл",
-  "topbar.liveLive": "live",
+  "topbar.liveLive": "полный",
   "topbar.liveCalm": "пауза",
   "topbar.liveOff": "выкл",
   "topbar.langLabel": "Язык интерфейса",
@@ -284,6 +288,9 @@ export const ru = {
   "auth.gate.seeMore.systemStatus": "Статус борта и хранилищ памяти",
   "auth.gate.seeMore.systemSettings": "Настройки и автоматизация",
   "auth.gate.seeMore.systemDevices": "Подключённые устройства",
+  // U1 (спека унификации, доработка гейта): подпись мини-превью — честно
+  // называет эскиз эскизом: содержимое не рисуется и не обещается.
+  "auth.gate.previewCaption": "Набросок раздела — содержимое откроется после входа",
   "auth.gate.checkingSession": "Проверяем сессию…",
 
   // --- ME-080: /auth route, «Вход | Регистрация» (07k §4.1–§4.4; копирайт —
@@ -330,6 +337,10 @@ export const ru = {
   "auth.route.roleOwner": "владелец",
   "auth.route.roleMember": "участник",
   "auth.route.back": "← На борт",
+  // U1 (07h §12): заметная кнопка возврата у центрального блока /auth и /pair —
+  // иконка-стрелка + чистый лейбл (глиф «←» из строки выше в кнопку не тащим).
+  "auth.route.backLabel": "На борт",
+  "auth.route.backAria": "На борт — вернуться на главную",
   "auth.route.alreadySignedIn": "Вы уже вошли",
 
   // --- search -------------------------------------------------------------------
@@ -1607,14 +1618,15 @@ export const ru = {
   "settings.hub.motionHint":
     "«Минимум» отключает движение и мерцания независимо от настроек ОС.",
   // «Живой слой» (ME-071 W1a): the control is live — it drives the veins
-  // background through lib/liveLayerStore. «Спокойный» is the default
-  // (АРХКОМ union rule §1.6); honesty: light follows real data only.
+  // background through lib/liveLayerStore. «Полный» is the default (owner
+  // resolution 2026-10-07 — supersedes the АРХКОМ §1.6 calm default);
+  // honesty: light follows real data only.
   "settings.hub.livingLabel": "Живой слой",
   "settings.hub.livingFull": "Полный",
   "settings.hub.livingCalm": "Спокойный",
   "settings.hub.livingOff": "Выключен",
   "settings.hub.livingHint":
-    "Фон-жилы дышат и красятся только реальными данными. Спокойный (по умолчанию): дыхание, тона и Весма в гнезде. Полный: ещё и импульсы и полёты Весмы.",
+    "Фон-жилы дышат и красятся только реальными данными. Полный (по умолчанию): дыхание, тона, импульсы и полёты Весмы. Спокойный: дыхание и тона без импульсов.",
   // Весма, смотритель гнезда (ME-071 W2): her lines. Жаргон-норма ME-078:
   // zero ids in the phrases — {task} is the human notification title only.
   "living.vesma.intro": "Я Весма, смотрю за памятью.",

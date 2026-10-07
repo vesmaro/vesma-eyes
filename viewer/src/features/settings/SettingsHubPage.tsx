@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useTheme, THEME_PREFERENCES } from "@/components/theme-provider";
 import { useDensity, DENSITIES } from "@/components/density-provider";
 import { LANGUAGES, useI18n, useT } from "@/i18n";
-import { setSidebarCollapsed, useSidebarCollapsed } from "@/lib/sidebarState";
+import { setSidebarCollapsed, useSidebarCollapsedEffective } from "@/lib/sidebarState";
 import { setBoardStyle, useBoardStyle } from "@/lib/boardStyleStore";
 import { setMotion, useMotion, MOTIONS, type Motion } from "@/lib/motionStore";
 import { setLiveLayer, useLiveLayer, type LiveLayer } from "@/lib/liveLayerStore";
@@ -131,15 +131,38 @@ function HubSection({
   );
 }
 
-/** «Внешний вид»: theme (3-state), language, density — all live-preview. */
+/** «Внешний вид»: the living layer FIRST (unification spec U1/S3: «Живой
+ * слой» первой строкой; the v12 spec 08 §4 keeps it adjacent to motion —
+ * the wave decision puts the owner-facing switch on top), then theme
+ * (3-state), language, density — all live-preview. */
 function AppearanceSection() {
   const t = useT();
+  const live = useLiveLayer();
   const { themePreference, setTheme } = useTheme();
   const { lang, setLang } = useI18n();
   const { density, setDensity } = useDensity();
 
   return (
     <HubSection id="appearance" title={t("settings.hub.appearanceTitle")}>
+      {/* «Живой слой» first row (spec U1; 07m §1: Полный / Спокойный /
+       * Выключен; the DEFAULT is «Полный» — owner resolution 2026-10-07,
+       * supersedes the АРХКОМ union rule §1.6 calm default). W1a wired it to
+       * the veins background: this control drives the SAME store the engine
+       * reads (lib/liveLayerStore, persisted `vesmaro.live`) — «одно
+       * состояние, два управления» (§0/§4.3). */}
+      <SegmentedControl<LiveLayer>
+        label={t("settings.hub.livingLabel")}
+        labelId="settings-living-label"
+        hint={t("settings.hub.livingHint")}
+        hintId="settings-living-hint"
+        value={live}
+        onChange={setLiveLayer}
+        options={[
+          { value: "live", label: t("settings.hub.livingFull") },
+          { value: "calm", label: t("settings.hub.livingCalm") },
+          { value: "off", label: t("settings.hub.livingOff") },
+        ]}
+      />
       <SegmentedControl
         label={t("settings.hub.themeLabel")}
         labelId="settings-theme-label"
@@ -194,13 +217,12 @@ function AppearanceSection() {
   );
 }
 
-/** «Поведение»: the `vesmaro.motion` regime, the living-layer placeholder
- *  (union И1 шаг 3) and the onboarding replay. */
+/** «Поведение»: the `vesmaro.motion` regime and the onboarding replay. The
+ * living-layer switch moved to the FIRST row of «Внешний вид» (U1/S3). */
 function BehaviorSection() {
   const t = useT();
   const motion = useMotion();
   const [replayed, setReplayed] = useState(false);
-  const live = useLiveLayer();
 
   return (
     <HubSection id="behavior" title={t("settings.hub.behaviorTitle")}>
@@ -219,24 +241,6 @@ function BehaviorSection() {
               : "settings.hub.motionReduced",
           ),
         }))}
-      />
-      {/* «Живой слой» (07m §1: Полный / Спокойный / Выключен; «Спокойный» is
-       * the default — АРХКОМ union rule §1.6). W1a wired it to the veins
-       * background: this control drives the SAME store the engine reads
-       * (lib/liveLayerStore, persisted `vesmaro.live`) — «одно состояние,
-       * два управления» (§0/§4.3). */}
-      <SegmentedControl<LiveLayer>
-        label={t("settings.hub.livingLabel")}
-        labelId="settings-living-label"
-        hint={t("settings.hub.livingHint")}
-        hintId="settings-living-hint"
-        value={live}
-        onChange={setLiveLayer}
-        options={[
-          { value: "live", label: t("settings.hub.livingFull") },
-          { value: "calm", label: t("settings.hub.livingCalm") },
-          { value: "off", label: t("settings.hub.livingOff") },
-        ]}
       />
       <div className="space-y-1">
         <Button
@@ -300,10 +304,15 @@ function BoardSection() {
   );
 }
 
-/** «Навигация»: the sidebar rail state (one state with the sidebar button). */
+/** «Навигация»: the sidebar rail state (one state with the sidebar button).
+ * Reads the EFFECTIVE value — the same `useSidebarCollapsedEffective` the
+ * Shell panel consumes — so with no stored choice on a 768–1279 desktop the
+ * control already shows «Свёрнут» while the Shell rides the 56px rail (the
+ * flat `?? false` fallback here contradicted the panel, review round). The
+ * write path is the plain explicit set. */
 function NavigationSection() {
   const t = useT();
-  const collapsed = useSidebarCollapsed();
+  const collapsed = useSidebarCollapsedEffective();
 
   return (
     <HubSection id="navigation" title={t("settings.hub.navigationTitle")}>

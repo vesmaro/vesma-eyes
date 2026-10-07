@@ -6,6 +6,7 @@ import { useTheme } from "@/components/theme-provider";
 import { useDensity } from "@/components/density-provider";
 import { Button } from "@/components/ui/button";
 import { AuthStatus } from "@/features/auth/AuthStatus";
+import { useAuthSession } from "@/features/ui-token/useAuthSession";
 import { useT } from "@/i18n";
 import { openPalette } from "@/lib/paletteState";
 import { GLOBAL_SEARCH_INPUT_ID } from "./Hotkeys";
@@ -52,6 +53,15 @@ export function TopBar({ sidebarTrigger }: TopBarProps) {
   const t = useT();
   const nextTheme = theme === "dark" ? "light" : "dark";
   const compact = density === "compact";
+  // Gates v6, 07k §2.3/§0: the global search is a GATE-ACTION for an
+  // anonymous visitor (it reads memory contents) — the field's slot goes to
+  // the «Войти»/«Создать аккаунт» pair instead. A live session keeps it;
+  // deployments without the session wire (mock playground, vesma L1) keep
+  // it unconditionally — a hidden search would lie about a genuinely open
+  // surface. The settled "anonymous" verdict only: a pending boot keeps the
+  // field (a signed-in visitor never sees it flash away).
+  const { status, gatesActive } = useAuthSession();
+  const searchHidden = gatesActive && status === "anonymous";
 
   return (
     <header
@@ -61,7 +71,7 @@ export function TopBar({ sidebarTrigger }: TopBarProps) {
       {sidebarTrigger}
       <Link
         to="/"
-        className="flex min-w-0 items-center gap-2 rounded-md py-1 font-semibold text-foreground transition-colors duration-instant hover:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+        className="flex min-w-0 items-center gap-2 rounded-md py-1 font-semibold text-foreground transition-colors duration-instant hover:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       >
         <IrisLogo size={20} decorative />
         <span className="hidden whitespace-nowrap text-sm tracking-wide sm:inline">
@@ -69,9 +79,10 @@ export function TopBar({ sidebarTrigger }: TopBarProps) {
         </span>
       </Link>
 
-      <GlobalSearchField />
+      {searchHidden ? null : <GlobalSearchField />}
       {/* Mobile: the palette stays the search affordance — the field would
-       * own the whole 48px bar (03 §4 collapses it into an icon too). */}
+       * own the whole 48px bar (03 §4 collapses it into an icon too). The
+       * palette is NAVIGATION (07k §2.2) — it stays for an anonymous too. */}
       <Button
         variant="ghost"
         size="icon"

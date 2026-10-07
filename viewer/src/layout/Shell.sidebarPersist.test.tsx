@@ -42,6 +42,19 @@ function stubMatchMedia(matches: boolean): void {
   (window as { matchMedia: unknown }).matchMedia = stub;
 }
 
+/** U1 responsive default: answer TRUE only for the named queries — the
+ * narrow-desktop viewport (768–1279) stub answers md=yes, wide=no. */
+function stubMatchMediaOnly(matching: readonly string[]): void {
+  const stub = (query: string) => ({
+    matches: matching.includes(query),
+    media: query,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  });
+  (globalThis as { matchMedia: unknown }).matchMedia = stub;
+  (window as { matchMedia: unknown }).matchMedia = stub;
+}
+
 /** ME-006: roots kept alive across tests re-render (VersionLabel settles,
  * toast timers fire) OUTSIDE any act scope — unmount them in afterEach. */
 const mountedRoots: ReturnType<typeof createRoot>[] = [];
@@ -115,12 +128,29 @@ afterEach(async () => {
 });
 
 describe("Shell sidebar collapse persistence (UI-19)", () => {
-  it("defaults to expanded and writes the explicit «0» on first render", async () => {
+  it("defaults to expanded and does NOT write until the owner chooses (U1: absence is a state)", async () => {
     const { container } = await mountShell();
     await actWaitUntil(() => {
       expect(container.querySelector("aside")).not.toBeNull();
     });
     expect(toggleButton(container).getAttribute("aria-expanded")).toBe("true");
+    // U1: the stored value is the EXPLICIT intent — writing the default
+    // «0» on mount would materialize the responsive rail default (below)
+    // and defeat the «no choice yet» state. Toggles write, mounts don't.
+    expect(localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY)).toBeNull();
+  });
+
+  it("U1 responsive default: a 768–1279 desktop rides the 56px rail until an explicit choice", async () => {
+    stubMatchMediaOnly(["(min-width: 768px)"]); // narrow desktop: no wide match
+    const { container } = await mountShell();
+    await actWaitUntil(() => {
+      expect(container.querySelector("aside")).not.toBeNull();
+    });
+    expect(container.querySelector("aside")?.className).toContain("w-sidebar-rail");
+    expect(localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY)).toBeNull();
+    // The explicit choice wins everywhere and persists as before.
+    click(toggleButton(container)); // expand
+    expect(container.querySelector("aside")?.className).toContain("w-sidebar");
     expect(localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY)).toBe("0");
   });
 

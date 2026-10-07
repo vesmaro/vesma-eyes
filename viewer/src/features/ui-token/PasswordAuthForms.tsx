@@ -29,7 +29,7 @@ import type { FieldIssue } from "./passwordValidation";
 /** Shared input look — the UiTokenLoginForm field, minus the mono face
  * (names and passwords are human words, not pasted machine values). */
 const inputClass =
-  "h-9 w-full rounded-md border border-border bg-well px-2 pr-9 text-sm text-foreground placeholder:text-foreground-muted focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright disabled:opacity-60";
+  "h-9 w-full rounded-md border border-border bg-well px-2 pr-9 text-sm text-foreground placeholder:text-foreground-muted focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-60";
 
 /** Inline verdict the route hands back after a failed submit. */
 export interface FormVerdict {

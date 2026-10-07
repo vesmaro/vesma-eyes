@@ -123,6 +123,18 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
+/** U1 review round: answer TRUE only for the named queries — the same
+ * 768–1279 narrow-desktop stub the Shell persistence tests use, so the hub
+ * and the Shell side of the story are pinned against ONE viewport shape. */
+function stubMatchMediaOnly(matching: readonly string[]): void {
+  vi.stubGlobal("matchMedia", vi.fn().mockImplementation((query: string) => ({
+    matches: matching.includes(query),
+    media: query,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  })));
+}
+
 describe("SettingsHubPage v2 — structure (spec §3.1, acceptance §8.1)", () => {
   it("renders ONE h1, the sticky anchor menu and all seven anchored sections", async () => {
     const { root, container } = await mountHub();
@@ -275,6 +287,32 @@ describe("Board + Navigation + Behavior — one state, two controls (§4.3)", ()
     await actUnmount(root);
   });
 
+  it("U1 review: with NO stored choice on a 768–1279 desktop the hub control shows Collapsed in sync with the Shell rail", async () => {
+    // The exact Shell.sidebarPersist viewport: md matches, the wide query
+    // does not → the Shell panel rides the 56px rail. Empty storage — the
+    // owner has not chosen yet.
+    stubMatchMediaOnly(["(min-width: 768px)"]);
+    const { root, container } = await mountHub();
+    // The control reads the EFFECTIVE value (the same hook the Shell panel
+    // consumes): the responsive default is the rail, so «Collapsed» is
+    // pressed — the flat expanded fallback used to contradict the panel.
+    expect(
+      sectionButton(container, "navigation", "Collapsed").getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      sectionButton(container, "navigation", "Expanded").getAttribute("aria-pressed"),
+    ).toBe("false");
+    // Mounting resolves the default, it does not WRITE it (U1: absence is a
+    // state); an explicit choice still wins through the untouched write path.
+    expect(localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY)).toBeNull();
+    press(container, "navigation", "Expanded");
+    expect(localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY)).toBe("0");
+    expect(
+      sectionButton(container, "navigation", "Expanded").getAttribute("aria-pressed"),
+    ).toBe("true");
+    await actUnmount(root);
+  });
+
   it("motion: «Minimal» persists and forces [data-motion=reduced]; «System» clears", async () => {
     const { root, container } = await mountHub();
     press(container, "behavior", "Minimal");
@@ -335,9 +373,9 @@ describe("Verdict blocks (spec §3.4, acceptance §8.10)", () => {
     expect(fonts).toBeDefined(); // present in the DOM while collapsed
     await actUnmount(root);
   });
-  it("W1a: the «Живой слой» control is live — it drives vesmaro.live (АРХКОМ §1.6 default: Calm)", async () => {
+  it("U1: the «Живой слой» control is live — it drives vesmaro.live (owner resolution 2026-10-07 default: Full, first row of the hub)", async () => {
     const { container } = await mountHub();
-    // The three options render with «Спокойный» as the default…
+    // The three options render with «Полный» as the default…
     const group = container.querySelector(
       '#settings-living-label',
     )?.parentElement?.querySelector('[role="group"]');
@@ -350,16 +388,17 @@ describe("Verdict blocks (spec §3.4, acceptance §8.10)", () => {
     ]);
     expect(
       buttons.find((b) => b.getAttribute("aria-pressed") === "true")?.textContent,
-    ).toBe("Calm");
+    ).toBe("Full");
     // …and the control is LIVE (W1a): it drives the SAME store the engine
-    // reads (vesmaro.live), persisted for the next visit.
-    press(container, "behavior", "Full");
-    expect(getLiveLayer()).toBe("live");
-    expect(localStorage.getItem("vesmaro.live")).toBe("live");
+    // reads (vesmaro.live), persisted for the next visit. U1 moved the row
+    // to the FIRST position of «Внешний вид» (the hub's first section).
+    press(container, "appearance", "Calm");
+    expect(getLiveLayer()).toBe("calm");
+    expect(localStorage.getItem("vesmaro.live")).toBe("calm");
     expect(
       buttons.find((b) => b.getAttribute("aria-pressed") === "true")?.textContent,
-    ).toBe("Full");
-    press(container, "behavior", "Off");
+    ).toBe("Calm");
+    press(container, "appearance", "Off");
     expect(getLiveLayer()).toBe("off");
     // The honest caption: light follows real data only.
     expect(container.textContent).toContain("real data only");

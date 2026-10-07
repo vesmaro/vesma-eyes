@@ -6,6 +6,7 @@ import { IrisLogo } from "@/components/IrisLogo/IrisLogo";
 import { useT } from "@/i18n";
 import { withReturn } from "@/lib/returnParams";
 import type { GateDomain } from "./gateDomains";
+import { GatePreview } from "./GatePreview";
 
 /**
  * The v6 gate screen (union И1, 07k §3) — rendered in the Shell content slot
@@ -90,7 +91,7 @@ export function GateScreen({
         id={headingId}
         ref={headingRef}
         tabIndex={-1}
-        className="text-xl font-semibold text-foreground"
+        className="rounded-sm text-xl font-semibold text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus"
       >
         {t("auth.gate.heading", { domain: domainName })}
       </h1>
@@ -101,11 +102,16 @@ export function GateScreen({
         {t("auth.gate.elsewhere")}{" "}
         <Link
           to="/"
-          className="rounded-sm text-iris-bright underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+          className="rounded-sm text-iris-bright underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
         >
           {t("auth.gate.goOverview")}
         </Link>
       </p>
+
+      {/* The U1 mini-preview (unification spec, gate-layer доработка): a
+       * static structural sketch of the domain — shape, never content;
+       * no blur, no shimmer (a paywall tease stays forbidden, 07k §0). */}
+      <GatePreview domain={domain} />
 
       <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
         <Button asChild variant="default" data-testid="gate-sign-in">
@@ -127,7 +133,7 @@ export function GateScreen({
               return !open;
             });
           }}
-          className="inline-flex min-h-6 items-center gap-1 rounded-sm text-xs text-foreground-muted underline-offset-2 transition-colors duration-instant hover:text-foreground-secondary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+          className="inline-flex min-h-6 items-center gap-1 rounded-sm text-xs text-foreground-muted underline-offset-2 transition-colors duration-instant hover:text-foreground-secondary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
         >
           <ChevronRight
             className={

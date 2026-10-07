@@ -4,7 +4,9 @@ import { Moon, Sun } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { useToast } from "@/components/Toast/toastContext";
 import { Button } from "@/components/ui/button";
+import { BackToBoardLink } from "@/components/BackToBoardLink/BackToBoardLink";
 import { IrisLogo } from "@/components/IrisLogo/IrisLogo";
+import { PublicStatusLine } from "@/components/PublicStatusLine/PublicStatusLine";
 import { useT } from "@/i18n";
 import { resolveReturnTarget } from "@/lib/returnParams";
 import { isApiError } from "@/lib/errors";
@@ -257,7 +259,7 @@ export function AuthRoutePage() {
       <header className="flex h-topbar shrink-0 items-center justify-between border-myelin-hairline border-b-hairline bg-well px-4">
         <Link
           to="/"
-          className="flex min-w-0 items-center gap-2 rounded-md py-1 font-semibold text-foreground transition-colors duration-instant hover:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+          className="flex min-w-0 items-center gap-2 rounded-md py-1 font-semibold text-foreground transition-colors duration-instant hover:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
         >
           <IrisLogo size={20} decorative />
           <span className="whitespace-nowrap text-sm tracking-wide">
@@ -285,8 +287,14 @@ export function AuthRoutePage() {
         </Button>
       </header>
 
-      <main className="flex flex-1 items-center justify-center p-6">
+      <main className="flex flex-1 flex-col items-center justify-center p-6">
         <div className="w-full max-w-md" data-testid="auth-route">
+          {/* The «На борт» slot (07k §4.3 → 07h §12): ABOVE the card, the
+           * same slot in every tab state — the page has no Shell chrome,
+           * the way back must not hide in the corner. */}
+          <div className="mb-3 flex">
+            <BackToBoardLink />
+          </div>
           {/* The card on well (07k §4): the sign-in surface itself. */}
           <div className="rounded-lg border border-border bg-well p-6 shadow-raised">
             <h1 className="text-lg font-semibold text-foreground">
@@ -397,13 +405,19 @@ export function AuthRoutePage() {
                 switchTab(tab === "token" ? "signin" : "token");
               }}
               data-testid="auth-token-mode-link"
-              className="rounded-sm underline-offset-2 hover:text-foreground-secondary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+              className="rounded-sm underline-offset-2 hover:text-foreground-secondary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
             >
               {tab === "token"
                 ? t("auth.route.backToPassword")
                 : t("auth.route.tokenModeLink")}
             </Link>
           </p>
+
+          {/* The public-contour footer (07k §1.3): «vesma-eyes <v> · аноним»
+           * — the same single version source as the sidebar footer. */}
+          <div className="mt-6 flex justify-center">
+            <PublicStatusLine />
+          </div>
         </div>
       </main>
     </div>
@@ -442,7 +456,7 @@ function TabButton({
       tabIndex={selected ? 0 : -1}
       onClick={onSelect}
       className={
-        "min-h-9 rounded-sm px-3 py-1.5 text-sm transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright " +
+        "min-h-9 rounded-sm px-3 py-1.5 text-sm transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus " +
         (selected
           ? // The 07k §4.1 selected beats TOGETHER: the raised well, the
             // iris-bright label (≥3:1) and the 2px iris underline.

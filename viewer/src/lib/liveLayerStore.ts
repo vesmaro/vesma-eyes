@@ -10,9 +10,11 @@ import { useSyncExternalStore } from "react";
  * stores stay orthogonal).
  *
  * Levels (settings hub labels):
- * - `live`  — «Полный»: everything — breathing, tones AND event impulses.
- * - `calm`  — «Спокойный» (the DEFAULT): breathing + state tones, no event
- *             impulses (no festivals).
+ * - `live`  — «Полный» (the DEFAULT, owner resolution 2026-10-07: supersedes
+ *             the «Спокойный» default of АРХКОМ §1.6): everything —
+ *             breathing, tones AND event impulses.
+ * - `calm`  — «Спокойный»: breathing + state tones, no event impulses
+ *             (no festivals).
  * - `off`   — «Выключен»: the whole living layer settled; the data stays.
  *
  * Light/data honesty is untouched: every impulse must still name a bus event
@@ -21,7 +23,7 @@ import { useSyncExternalStore } from "react";
 export type LiveLayer = "live" | "calm" | "off";
 
 export const LIVE_LAYER_STORAGE_KEY = "vesmaro.live";
-export const DEFAULT_LIVE_LAYER: LiveLayer = "calm";
+export const DEFAULT_LIVE_LAYER: LiveLayer = "live";
 
 /** Cycle order for the В1 indicator: live → calm → off → live. */
 export const LIVE_LAYERS = ["live", "calm", "off"] as const satisfies readonly LiveLayer[];
