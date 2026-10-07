@@ -2121,6 +2121,12 @@ export const ru = {
   "kora.composer.finishedNote":
     "Сессия завершена — писать некому; начните новую на хосте",
   "kora.composer.interruptedNote": "Сессия прервана — агент здесь уже не слушает",
+
+  // --- base kit state matrices (spec 05 §2.2/§2.5, волна U0) -----------------
+  // Поле ввода: ошибка называется текстом, не только цветом (§2.5 error-ряд).
+  "field.errorPrefix": "Ошибка:",
+  // Чип-тег: отключённый фильтр объясняет причину (§2.2 disabled-ряд).
+  "tag.filterUnavailable": "Фильтр недоступен здесь",
 } as const;
 
 export type TranslationKey = keyof typeof ru;
