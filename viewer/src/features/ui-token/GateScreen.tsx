@@ -91,7 +91,7 @@ export function GateScreen({
         id={headingId}
         ref={headingRef}
         tabIndex={-1}
-        className="text-xl font-semibold text-foreground"
+        className="rounded-sm text-xl font-semibold text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus"
       >
         {t("auth.gate.heading", { domain: domainName })}
       </h1>
