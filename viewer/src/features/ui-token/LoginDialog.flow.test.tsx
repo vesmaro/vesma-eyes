@@ -512,9 +512,12 @@ describe("login flow regression (owner repro)", () => {
     // beside the inline message — not instead of it.
     expect(container.textContent).toContain("Token rejected");
     expect(container.textContent).toContain("The server answered 401");
-    // The stored toast fired too (the value did land in the tab); the error
-    // toast + reopened window carry the server verdict.
-    expect(container.textContent).toContain("Signed in — control available");
+    // The stale success toast is GONE (fix/kora-auth-honesty): both verdicts
+    // share the auth-session displaces group, so the later refusal REPLACES
+    // the earlier «Signed in» — the two opposite stories must never stack on
+    // one screen (owner complaint on prod 1.63.0). The dialog's inline
+    // session-expired line above is the surviving sign-in guidance.
+    expect(container.textContent).not.toContain("Signed in — control available");
   });
 
   it("the rejected (401) window shows the inline error and the queued line, and the token field is masked", { timeout: 20000 }, async () => {

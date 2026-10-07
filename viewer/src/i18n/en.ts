@@ -309,7 +309,11 @@ export const en: Record<TranslationKey, string> = {
   "auth.route.loginFailedHelp": "What to check: the RU/EN layout, letter case, Caps Lock.",
   "auth.route.tooManyAttempts": "Too many attempts — wait a minute and try again.",
   "auth.route.nameTaken": "That name is taken. Pick another one.",
-  "auth.route.registrationClosed": "Registration is closed: the board already has its owner.",
+  // fix/kora-auth-honesty (owner complaint, prod 1.63.0): the verdict names
+  // the cause AND the way out — who opens registration, with which flag.
+  "auth.route.registrationClosed":
+    "Registration is closed — the board already has its owner. The owner opens access for new members in the server settings (the VESMARO_ALLOW_REGISTRATION flag).",
+  "auth.route.techDetail": "Server technical details",
   "auth.route.registerFailed": "The account could not be created.",
   "auth.route.networkFailed": "The server did not answer — check the connection and try again.",
   "auth.route.signedInToast": "You are signed in: {{username}}",
@@ -2011,7 +2015,7 @@ export const en: Record<TranslationKey, string> = {
   "kora.list.loading": "Loading sessions",
   "kora.list.loadMore": "Load more",
   "kora.list.loadFailed": "Failed to load the session list",
-  "kora.list.inactiveTitle": "Session not active",
+  "kora.list.inactiveTitle": "Kora is waiting for you to sign in to the board",
   "kora.list.inactiveHint": "Sign in — host sessions will appear here",
   // UX-overhaul §5/§9.3 (Ф1): honest empty, branched by the executor count.
   // ME-072 №7: the connect CTA lives ONCE per screen — in the center; the
@@ -2033,7 +2037,7 @@ export const en: Record<TranslationKey, string> = {
   "kora.session.notFoundCoverage":
     "The host is not available for viewing: the board reads transcripts only from hosts with a scanner. Head back to the session list or the task card — the link will work once the host becomes readable.",
   "kora.session.backToList": "Back to the session list",
-  "kora.session.inactiveTitle": "Session not active",
+  "kora.session.inactiveTitle": "Kora is waiting for you to sign in to the board",
   "kora.transcript.region": "Session run",
   "kora.transcript.loading": "Loading the transcript",
   "kora.transcript.loadFailed": "Failed to load the transcript",

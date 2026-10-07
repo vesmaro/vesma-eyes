@@ -607,7 +607,8 @@ describe("UiTokenGate server verify (ADR 0014)", () => {
  * session verdict: re-probe first (the cookie leg may still be live — the
  * rotation case), at most ONE recovery per gate lifetime, otherwise flip
  * to anonymous WITHOUT forcing the login window open (the gate screen
- * takes over; the tokenRejected event still fires for the toast).
+ * takes over; the sessionEnded event fires — not tokenRejected: nothing
+ * was entered and no window opened, fix/kora-auth-honesty).
  */
 describe("UiTokenGate.rebuildAfterReadUnauthorized (cascade P2, ME-043)", () => {
   /**
@@ -645,7 +646,7 @@ describe("UiTokenGate.rebuildAfterReadUnauthorized (cascade P2, ME-043)", () => 
     expect(gate.getState().open).toBe(false); // no modal from a background read
   });
 
-  it("no cookie either: the verdict flips to anonymous, the window is NOT forced open, tokenRejected fires", async () => {
+  it("no cookie either: the verdict flips to anonymous, the window is NOT forced open, sessionEnded fires", async () => {
     const { gate } = storageBackedGate(async () => false); // 200 {live:false}
     const events: string[] = [];
     gate.listen((event) => events.push(event.type));
@@ -655,7 +656,9 @@ describe("UiTokenGate.rebuildAfterReadUnauthorized (cascade P2, ME-043)", () => 
     expect(gate.getState().tokenPresent).toBe(false);
     expect(gate.getState().open).toBe(false); // never a modal interruption
     expect(gate.getState().rejectKind).toBe("session");
-    expect(events).toEqual(["tokenRejected"]); // the provider toasts the beat
+    // sessionEnded, NOT tokenRejected (fix/kora-auth-honesty): no token was
+    // entered and no window opened — the surface verdicts own the beat.
+    expect(events).toEqual(["sessionEnded"]);
   });
 
   it("ONE recovery per gate lifetime: a second read-401 after a 204 recovery goes straight anonymous (no loop)", async () => {

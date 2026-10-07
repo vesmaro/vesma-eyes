@@ -32,7 +32,29 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const push = useCallback(
     (input: ToastInput) => {
       const key = nextKey.current++;
-      setEntries((current) => [...current, { ...input, key }]);
+      setEntries((current) => {
+        // Displacement group (fix/kora-auth-honesty): a later verdict in
+        // the same group removes the earlier one — opposite verdicts (the
+        // auth pair «Токен отклонён» / «Вход выполнен») must never stack.
+        // One atomic updater; the timer sweep is idempotent, so the
+        // StrictMode double-invoke stays safe.
+        const doomed =
+          input.displaces !== undefined
+            ? current.filter((entry) => entry.displaces === input.displaces)
+            : [];
+        for (const entry of doomed) {
+          const timer = timers.current.get(entry.key);
+          if (timer) {
+            clearTimeout(timer);
+            timers.current.delete(entry.key);
+          }
+        }
+        const base =
+          doomed.length > 0
+            ? current.filter((entry) => entry.displaces !== input.displaces)
+            : current;
+        return [...base, { ...input, key }];
+      });
       const ms = input.kind === "error" ? ERROR_MS : SUCCESS_MS;
       timers.current.set(
         key,

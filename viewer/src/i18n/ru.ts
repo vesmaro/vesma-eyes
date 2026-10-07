@@ -326,7 +326,11 @@ export const ru = {
   "auth.route.loginFailedHelp": "Что проверить: раскладка RU/EN, регистр букв, Caps Lock.",
   "auth.route.tooManyAttempts": "Слишком много попыток — подождите минуту и попробуйте снова.",
   "auth.route.nameTaken": "Такое имя уже есть. Возьмите другое.",
-  "auth.route.registrationClosed": "Регистрация закрыта: у борта уже есть владелец.",
+  // fix/kora-auth-honesty (жалоба владельца, прод 1.63.0): вердикт называет
+  // причину И путь решения — кто и каким флагом открывает регистрацию.
+  "auth.route.registrationClosed":
+    "Регистрация закрыта — у борда уже есть владелец. Доступ новых членов открывает владелец в настройках сервера (флаг VESMARO_ALLOW_REGISTRATION).",
+  "auth.route.techDetail": "Техническая информация сервера",
   "auth.route.registerFailed": "Аккаунт создать не удалось.",
   "auth.route.networkFailed": "Сервер не ответил — проверьте связь и попробуйте ещё раз.",
   "auth.route.signedInToast": "Вы вошли: {{username}}",
@@ -2060,7 +2064,7 @@ export const ru = {
   "kora.list.loading": "Загружаем сессии",
   "kora.list.loadMore": "Показать ещё",
   "kora.list.loadFailed": "Не удалось загрузить список сессий",
-  "kora.list.inactiveTitle": "Сессия не активна",
+  "kora.list.inactiveTitle": "Кора ждёт входа на борт",
   "kora.list.inactiveHint": "Войдите — и сессии хостов появятся здесь",
   // UX-overhaul §5/§9.3 (Ф1): честное пустое — ветвление по числу исполнителей.
   // Вариант A (исполнителей 0) — призыв подключить; вариант B (исполнители
@@ -2084,7 +2088,7 @@ export const ru = {
   "kora.session.notFoundCoverage":
     "Хост недоступен для просмотра: борд читает транскрипты только хостов со сканером. Вернитесь к списку сессий или в карточку задачи — ссылка останется рабочей, когда хост станет читаемым.",
   "kora.session.backToList": "К списку сессий",
-  "kora.session.inactiveTitle": "Сессия не активна",
+  "kora.session.inactiveTitle": "Кора ждёт входа на борт",
   "kora.transcript.region": "Ход сессии",
   "kora.transcript.loading": "Загружаем транскрипт",
   "kora.transcript.loadFailed": "Не удалось загрузить транскрипт",

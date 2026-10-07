@@ -133,7 +133,10 @@ function TextField({
 
 /** The always-present polite live region for the submit verdict (07k §4.2:
  * the line is announced without stealing focus; «Ошибка:» prefix — the
- * verdict is never colour alone). */
+ * verdict is never colour alone). The server's own detail rides as an
+ * EXPANDABLE tech line (fix/kora-auth-honesty): collapsed by default —
+ * humans read the localized verdict; the raw server words stay one click
+ * away for diagnostics, with the full text on the summary's title tooltip. */
 function VerdictLine({ verdict }: { verdict: FormVerdict | null }) {
   const t = useT();
   return (
@@ -145,7 +148,18 @@ function VerdictLine({ verdict }: { verdict: FormVerdict | null }) {
             {verdict.text}
           </p>
           {verdict.detail ? (
-            <p className="mt-0.5 text-xs text-foreground-secondary">{verdict.detail}</p>
+            <details
+              data-testid="auth-verdict-detail"
+              className="mt-0.5 text-xs text-foreground-secondary"
+            >
+              <summary
+                title={verdict.detail}
+                className="cursor-pointer select-none rounded-sm underline-offset-2 hover:text-foreground hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+              >
+                {t("auth.route.techDetail")}
+              </summary>
+              <p className="mt-1 break-words font-mono">{verdict.detail}</p>
+            </details>
           ) : null}
         </>
       ) : null}

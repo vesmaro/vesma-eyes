@@ -33,6 +33,14 @@ export interface ToastInput {
   detail?: string;
   /** Optional follow-up action link. */
   action?: ToastAction;
+  /**
+   * Displacement group: when set, pushing this toast REMOVES every live
+   * toast in the same group (the later verdict replaces the earlier —
+   * opposite stories must not stack). Canon: the `auth-session` pair
+   * (fix/kora-auth-honesty — the green «Вход выполнен» displaces a stale
+   * «Токен отклонён» and vice versa; owner complaint on prod 1.63.0).
+   */
+  displaces?: string;
 }
 
 /** One live toast (input + the stable key the viewport dismisses by). */

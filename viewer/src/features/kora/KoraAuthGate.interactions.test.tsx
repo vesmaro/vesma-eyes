@@ -19,7 +19,7 @@ import { actUnmount, actWaitUntil } from "@/test/actTools";
 /**
  * The kora 401 gate (owner-feedback hotfix): when the session reads answer
  * 401 — the https-born cookie withheld on http, or the 6h idle TTL rotted —
- * the screens show the sign-in CTA («Сессия не активна» + «Войти» opening
+ * the screens show the sign-in CTA («Кора ждёт входа на борт» + «Войти» opening
  * the ONE app login window via the ui-token gate's openLogin) instead of
  * the raw error block, and refetch once a login lands. A 500 keeps the
  * honest retry error state — the CTA is strictly the 401 branch.
@@ -130,7 +130,7 @@ describe("kora 401 gate — session list", () => {
   it("renders the sign-in CTA instead of the raw error block on 401", async () => {
     mountAuthGate(<KoraPage />, "/kora", 401);
     await actWaitUntil(() => {
-      expect(document.body.textContent).toContain("Сессия не активна");
+      expect(document.body.textContent).toContain("Кора ждёт входа на борт");
     });
     expect(document.body.textContent).toContain(
       "Войдите — и сессии хостов появятся здесь",
@@ -173,7 +173,7 @@ describe("kora 401 gate — session list", () => {
       );
     });
     expect(document.body.textContent).toContain("Повторить");
-    expect(document.body.textContent).not.toContain("Сессия не активна");
+    expect(document.body.textContent).not.toContain("Кора ждёт входа на борт");
   });
 });
 
@@ -181,7 +181,7 @@ describe("kora 401 gate — transcript page", () => {
   it("renders the sign-in CTA instead of the transcript error on 401", async () => {
     mountAuthGate(<KoraSessionPage />, "/kora/sess-1", 401);
     await actWaitUntil(() => {
-      expect(document.body.textContent).toContain("Сессия не активна");
+      expect(document.body.textContent).toContain("Кора ждёт входа на борт");
     });
     expect(document.body.textContent).toContain(
       "Войдите — и транскрипт этой сессии появится здесь",

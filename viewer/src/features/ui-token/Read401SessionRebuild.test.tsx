@@ -162,8 +162,11 @@ describe("read-401 → session verdict rebuild (cascade P2)", () => {
     expect(container.textContent).toContain(
       "The “Memory” section opens after you sign in",
     );
-    // The beat is announced (the provider's tokenRejected toast).
-    expect(container.textContent).toContain("Token rejected");
+    // The beat is NOT toasted (fix/kora-auth-honesty): no token was entered
+    // and no window opened — «Token rejected» would lie twice; the gate
+    // screen on the page IS the verdict. Owner complaint on prod 1.63.0:
+    // this toast stacked beside the green «Signed in» on one screen.
+    expect(container.textContent).not.toContain("Token rejected");
   });
 
   it("the cookie leg still live (rotation case): the header token is dropped, the reads RE-FLY and recover", { timeout: 20000 }, async () => {
