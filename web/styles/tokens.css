@@ -144,6 +144,18 @@
   --duration-tone-temp: 12000ms; /* ordinary-importance window (10–15s class) */
   --duration-tone-hold: 60000ms; /* elevated-importance ceiling (≤60s) */
   --duration-tone-fade: 1200ms;  /* tone crossfade in/out — never instant */
+
+  /* v10 golden (ME-93 U0) — 15-WOW §14: «Вздох Нейры / жила» + курьеры.
+   * Parity copy of the viewer section (ADR 0006): recorded values only —
+   * the board renders no living layer; U1+ wires the viewer. Нейра-вздох
+   * and жила-дыхание never run together (§14.6: «никогда вместе»); the
+   * alphas are the glow amplitude ceilings. Light column: alphas only —
+   * durations are theme-independent. Reduced: durations → 0ms, alphas
+   * keep their values (static-drawing rule, §14.1). */
+  --duration-neura: 8000ms;      /* Нейра breath period; duty 3–5s / 10–30s */
+  --duration-courier: 1000ms;    /* courier leg; ≤3 at a time, coalesce 600ms */
+  --neura-breath-alpha: 0.18;    /* Нейра glow amplitude ceiling (dark) */
+  --vein-breath-alpha: 0.10;     /* web vein breath amplitude ceiling (dark) */
 }
 
 /* ── Frozen core (names & values stable) ────────────────────────────── */
@@ -276,6 +288,12 @@
   /* v12 golden (ME-071 W0) — light column of the ONLY themed v12 token
    * (15-WOW §14.6.1 §4): lilac «пришло обновление», ≈5.5:1 on light base. */
   --web-tone-update: #6e5a94;
+
+  /* v10 golden (ME-93 U0) — light column of the breath alphas (stand-v12:
+   * «v10-нейро, light: дыхание ×~1.1, вздох ×0.7»); the durations stay
+   * theme-independent in :root. */
+  --neura-breath-alpha: 0.12;
+  --vein-breath-alpha: 0.11;
 }
 
 /* ── Well window (тёмное окно колодца, owner-approved 2026-10-01) ────────
@@ -358,6 +376,10 @@
     --duration-tone-fade: 0ms;
     --duration-flash-hold: 1500ms;
     --duration-fly: 0ms; /* no flight — instant reposition (§3.4.2) */
+    /* v10 golden (ME-93 U0 — 15-WOW §14): breath and couriers off →
+     * static tints; the glow alphas keep their values (§14.1 mirror). */
+    --duration-neura: 0ms;
+    --duration-courier: 0ms;
   }
 }
 [data-motion="reduced"] {
@@ -377,6 +399,9 @@
   --duration-tone-fade: 0ms;
   --duration-flash-hold: 1500ms;
   --duration-fly: 0ms; /* forced-reduced mirror: no flight (§3.4.2) */
+  /* v10 golden (ME-93 U0) — forced-reduced mirror of the OS block. */
+  --duration-neura: 0ms;
+  --duration-courier: 0ms;
 }
 
 /* ── Board-only appendix (FE-5 / UI-13; NOT part of the canon v2 set) ──

@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { tagVariant } from "@/components/memory/memoryBadges";
+import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 
 /**
@@ -16,6 +17,11 @@ export interface TagBadgeProps {
   onClick?: () => void;
   /** Force a variant; otherwise derived from the prefix map in memoryBadges. */
   variant?: "default" | "iris" | "confidence" | "error";
+  /**
+   * Spec 05 §2.2 disabled row: muted text, no hover, and a tooltip that
+   * says why filtering is unavailable here (the text, not colour alone).
+   */
+  disabled?: boolean;
   className?: string;
 }
 
@@ -25,8 +31,10 @@ export function TagBadge({
   count,
   onClick,
   variant,
+  disabled = false,
   className,
 }: TagBadgeProps) {
+  const t = useT();
   const resolved = variant ?? tagVariant(tag);
   const sizeClass = size === "md" ? "px-3 py-1 text-sm" : undefined;
   const content = (
@@ -37,6 +45,18 @@ export function TagBadge({
       ) : null}
     </>
   );
+
+  if (disabled) {
+    return (
+      <Badge
+        variant={resolved}
+        className={cn(sizeClass, "text-foreground-muted", className)}
+        title={t("tag.filterUnavailable")}
+      >
+        {content}
+      </Badge>
+    );
+  }
 
   if (onClick) {
     return (

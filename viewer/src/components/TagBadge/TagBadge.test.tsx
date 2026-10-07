@@ -28,4 +28,13 @@ describe("TagBadge prefix → variant mapping (component-inventory §6)", () => 
     expect(interactive).toContain("<button");
     expect(interactive).toContain('aria-label="Filter by tag topic:fts"');
   });
+
+  it("disabled chip (spec 05 §2.2): muted, no hover/button, tooltip explains why", () => {
+    const html = renderToString(<TagBadge tag="project:gcw" disabled />);
+    expect(html).not.toContain("<button");
+    expect(html).not.toContain("cursor-pointer");
+    expect(html).toContain("text-foreground-muted");
+    // The state is named in text (tooltip), not colour alone.
+    expect(html).toContain('title="Фильтр недоступен здесь"');
+  });
 });

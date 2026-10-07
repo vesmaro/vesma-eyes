@@ -2072,4 +2072,8 @@ export const en: Record<TranslationKey, string> = {
     "The session is finished — there is no one to write to; start a new one on the host",
   "kora.composer.interruptedNote":
     "The session was interrupted — the agent is no longer listening here",
+
+  // --- base kit state matrices (spec 05 §2.2/§2.5, wave U0) ------------------
+  "field.errorPrefix": "Error:",
+  "tag.filterUnavailable": "Filtering is unavailable here",
 };
