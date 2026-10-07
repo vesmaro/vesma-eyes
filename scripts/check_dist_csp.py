@@ -59,7 +59,7 @@ try:  # pragma: no cover - import path depends on invocation cwd
     from server.app import _CSP as _CSP  # type: ignore[attr-defined]
 except Exception:  # pragma: no cover - literal fallback
     _CSP = ("default-src 'self'; "
-            "script-src 'self' 'sha256-gLnW2OEJF23VKQL4ot9PcYmiFHXeZWiMg0A52v/5MDM=' "
+            "script-src 'self' 'sha256-d3y7ZpF47i1J+tapUN8K5ZWPk3189s7BDjMbXPNOJp4=' "
             "'sha256-k85nuNkWNWz2VjD38EcDAkNliknfzuSNN6HBSJQjvkc='; "
             "style-src 'self' 'unsafe-inline'; object-src 'none'; "
             "base-uri 'self'; frame-ancestors 'none'; connect-src 'self'; "

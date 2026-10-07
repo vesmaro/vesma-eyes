@@ -30,7 +30,7 @@ import pytest
 # Scope of the residual: CSS injection within the page origin, boxed by
 # connect-src 'self' / img-src 'self' data: / font-src 'self' data:.
 CSP = ("default-src 'self'; "
-       "script-src 'self' 'sha256-gLnW2OEJF23VKQL4ot9PcYmiFHXeZWiMg0A52v/5MDM=' "
+       "script-src 'self' 'sha256-d3y7ZpF47i1J+tapUN8K5ZWPk3189s7BDjMbXPNOJp4=' "
        "'sha256-k85nuNkWNWz2VjD38EcDAkNliknfzuSNN6HBSJQjvkc='; "
        "style-src 'self' 'unsafe-inline'; object-src 'none'; "
        "base-uri 'self'; frame-ancestors 'none'; connect-src 'self'; "
