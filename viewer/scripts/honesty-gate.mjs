@@ -37,6 +37,14 @@
  *                     wire frame the server sends) must move the page:
  *                     the card flies, the gold flash plays, the toast and
  *                     the tempo chip land (the U3 спектакль answers to it).
+ *   6. memory-silent (U4) — /memory on the silent bus: two shots ≥5s apart
+ *                     MUST be identical — the scroll domain stands when the
+ *                     bus is quiet (the memory dose = recall + tones, and
+ *                     silence carries neither).
+ *   7. memory-recall (U4) — positive control: a REAL recall-class event
+ *                     (notification — the bus's recall-family carrier)
+ *                     through the VesmaMockBus handle must move the page:
+ *                     the vein bead + the tone shift on the Shell canvas.
  *
  * Local gate, same discipline as smoke-render.mjs (build dist-smoke with
  * the mock adapter, serve via vite preview, drive real chromium). Browser
@@ -350,6 +358,69 @@ async function main() {
         differs,
         "tasks: a real task.done transition moves the console (positive control)",
         differs ? "" : "frames identical — the terminal transition reached nothing",
+      );
+      await context.close();
+    }
+
+    // 6. MEMORY SILENT (U4) — the scroll domain stands on a quiet bus.
+    {
+      const context = await browser.newContext({
+        viewport: { width: 1440, height: 900 },
+        deviceScaleFactor: 1,
+      });
+      const a = await settledShot(context, `${BASE}memory`, "u4-honesty-memory-silent-t0.png");
+      console.log("[honesty] memory-silent: waiting 5.6s of real time…");
+      await sleep(QUIET_GAP_MS);
+      const b = await settledShot(
+        context,
+        `${BASE}memory`,
+        "u4-honesty-memory-silent-t5.png",
+      );
+      const identical = a.equals(b);
+      check(
+        identical,
+        "memory: silent bus — two frames ≥5s apart are pixel-identical",
+        identical ? "" : `bytes ${a.length} vs ${b.length}`,
+      );
+      await context.close();
+    }
+
+    // 7. MEMORY RECALL POSITIVE CONTROL (U4) — a REAL recall-class event
+    // moves the domain: the notification frame (the bus's recall-family
+    // carrier) runs a bead along a Shell vein and shifts the living tone.
+    {
+      const context = await browser.newContext({
+        viewport: { width: 1440, height: 900 },
+        deviceScaleFactor: 1,
+      });
+      const page = await context.newPage();
+      await page.goto(`${BASE}memory`, { waitUntil: "load" });
+      await page.evaluate(() => document.fonts.ready);
+      await sleep(SETTLE_MS);
+      const a = await page.screenshot({ fullPage: true });
+      writeFileSync(join(OUT_DIR, "u4-honesty-memory-recall-t0.png"), a);
+      // The same wire frame the server sends on a real notification.
+      await page.evaluate(() => {
+        window.VesmaMockBus?.emit("notification", {
+          notification: {
+            id: 9401,
+            category: "work",
+            title: "Проверка честности памяти",
+            message: "Позитивный контроль: реальный recall-класс события.",
+            ts: new Date().toISOString(),
+            read: false,
+          },
+        });
+      });
+      await sleep(400); // the bead is mid-travel well inside its trail window
+      const b = await page.screenshot({ fullPage: true });
+      writeFileSync(join(OUT_DIR, "u4-honesty-memory-recall-t1.png"), b);
+      await page.close();
+      const differs = !a.equals(b);
+      check(
+        differs,
+        "memory: a real recall-class event moves the domain (positive control)",
+        differs ? "" : "frames identical — the recall event reached nothing",
       );
       await context.close();
     }
