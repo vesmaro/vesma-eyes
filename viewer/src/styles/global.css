@@ -519,7 +519,27 @@ html[data-motion="reduced"] .vesma-body {
 }
 
 /* ── Kora v7 frame (U5 — SPEC-2026-10-07, 07l via the v12 stand) ───────────
- * The frame hardware: internal scrollbars are token-dressed and VISIBLE at
+ * The frame is the ONLY no-page-scroll surface (07l §1.2): its height is the
+ * viewport minus the shell chrome (topbar + crumbs) minus MAIN's own p-6,
+ * AND minus the Vesma nest pad when it is on — otherwise the #main padding
+ * (global.css «Весма» block) pushes the frame below the fold and the page
+ * scrolls, breaking the contract. The pad is an html[data-vesma-pad]
+ * attribute reading the same --vesma-slot var, so the frame reacts live.
+ * Viewer-only layout arithmetic (same standing as --vesma-slot above — not
+ * a design token; tokens.css stays the frozen canon inventory). */
+:root {
+  --kora-frame-h: calc(
+    100dvh - var(--shell-topbar-h) - var(--shell-crumbs-h) - 3rem
+  );
+}
+html[data-vesma-pad] {
+  --kora-frame-h: calc(
+    100dvh - var(--shell-topbar-h) - var(--shell-crumbs-h) - 3rem -
+      var(--vesma-slot) - 16px
+  );
+}
+
+/* The frame hardware: internal scrollbars are token-dressed and VISIBLE at
  * rest (07l §4, the owner's direct ask): 8px, radius full, thumb
  * --color-border (≥3:1 on the well stratum), hover --color-text-secondary.
  * One class for every kora scroll surface — one implementation. */

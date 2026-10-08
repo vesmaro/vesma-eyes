@@ -283,13 +283,15 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
 
   return (
     /* The v7 frame (07l §1.2): from lg the section IS the viewport minus
-     * the shell chrome (topbar 48 + crumbs 40 + main's p-6 ×2) — no page
-     * scroll; below lg it degrades to the stacked document flow. */
+     * the shell chrome (topbar 48 + crumbs 40 + main's p-6 ×2 — and the
+     * Vesma nest pad when on; the arithmetic lives in --kora-frame-h,
+     * global.css) — no page scroll; below lg it degrades to the stacked
+     * document flow. */
     <section
       aria-labelledby="kora-title"
       className={cn(
         pageGridClass("operational"),
-        "flex flex-col gap-4 lg:h-[calc(100dvh_-_var(--shell-topbar-h)_-_var(--shell-crumbs-h)_-_3rem)] lg:gap-3 lg:overflow-hidden",
+        "flex flex-col gap-4 lg:h-[var(--kora-frame-h)] lg:gap-3 lg:overflow-hidden",
       )}
     >
       <div className="shrink-0">
