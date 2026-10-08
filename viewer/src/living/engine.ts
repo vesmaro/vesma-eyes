@@ -13,17 +13,22 @@
  *   seam (h). Seam elements carry `data-living-seam`; geometry is measured,
  *   never copied from the stand.
  * HOW (canon):
- *   - Breathing = a slow sheen travelling along each vein, ALWAYS on
- *     (SUPERSEDE 14.1), period --duration-web-idle (10s), wavelength 420px,
- *     amplitude ≤0.06 (Полный) / 0.02 minimal (Спокойный) over the
- *     --web-edge-alpha rest; phases staggered per vein.
+ *   - Breathing = a slow sheen travelling along each vein — U2 honesty of
+ *     light (SPEC-2026-10-07: «первое дыхание из шины; шина молчит — экран
+ *     стоит»): a REAL bus event opens ONE breath window (--duration-breath),
+ *     and ONLY inside it does the sheen travel (supersedes the W1a
+ *     always-on reading of SUPERSEDE 14.1; the 5-second honesty gate is the
+ *     wave's acceptance). After the window the veins rest ≥
+ *     --duration-breath-rest (duty ≤25%); events keep toning the static
+ *     drawing. Any input freezes instantly (the ≤80ms law).
  *   - Base tone from real health; event tones per §14.6.1 (chunk web-tones);
  *     the tone colours the vein glow, the structure stays myelin.
  *   - Impulses (Полный only): a real bus event spawns a bead running along
  *     a deterministic vein at 600px/s, trail decays 1.5s (08 §2.2);
  *     ≤2 alive, extra events only feed tones (coalesce).
  *   - Anti-fake: muted → strictly neutral hairlines, zero impulses.
- * HYGIENE: one RAF; paused on document.hidden; DPR ≤2 (degrades to 1.5 on
+ * HYGIENE: one RAF — alive ONLY inside a breath window or while beads are
+ *   travelling; paused on document.hidden; DPR ≤2 (degrades to 1.5 on
  *   slow frames, <45fps → static); prefers-reduced-motion / vesmaro.motion
  *   → a static drawing with no animation; every subscription/observer is
  *   torn down by the returned destructor (StrictMode-safe).
@@ -31,7 +36,7 @@
 
 import { getLiveLayer, subscribeLiveLayer } from "@/lib/liveLayerStore";
 import { isLivingMuted, subscribeLiving, type LivingSignal } from "@/lib/livingFeed";
-import { createTones } from "./tones";
+import { createBreath, createTones, isBusServiceKind } from "./tones";
 
 const TAU = Math.PI * 2;
 const SPEED = 0.6; // px/ms — vein courier speed (08 §2.2: 600px/s)
@@ -66,17 +71,38 @@ export function buildVeins(seams: SeamRect[], vw: number, vh: number): Vein[] {
   const veins: Vein[] = [];
   const spineY = topbar ? topbar.b : 0;
   if (topbar && topbar.r - topbar.l > 1) {
-    veins.push({ pts: [[0, spineY], [vw, spineY]], len: vw, phase: 0 });
+    veins.push({
+      pts: [
+        [0, spineY],
+        [vw, spineY],
+      ],
+      len: vw,
+      phase: 0,
+    });
   }
   let sideX = -1;
   if (sidebar && sidebar.r - sidebar.l > 1 && vh - sidebar.t > 1) {
     sideX = sidebar.r;
-    veins.push({ pts: [[sideX, Math.max(sidebar.t, spineY)], [sideX, vh]], len: vh, phase: 1 / 3 });
+    veins.push({
+      pts: [
+        [sideX, Math.max(sidebar.t, spineY)],
+        [sideX, vh],
+      ],
+      len: vh,
+      phase: 1 / 3,
+    });
   }
   if (crumbs && crumbs.r - crumbs.l > 1 && crumbs.b <= vh) {
     const from = Math.max(crumbs.l, sideX);
     if (vw - from > 1) {
-      veins.push({ pts: [[from, crumbs.b], [vw, crumbs.b]], len: vw - from, phase: 2 / 3 });
+      veins.push({
+        pts: [
+          [from, crumbs.b],
+          [vw, crumbs.b],
+        ],
+        len: vw - from,
+        phase: 2 / 3,
+      });
     }
   }
   return veins;
@@ -120,6 +146,9 @@ export function mountLivingLayer(canvas: HTMLCanvasElement): () => void {
   if (!ctx) return () => undefined; // no 2d surface (tests / exotic webviews)
 
   const tones = createTones(css, isLivingMuted);
+  // The breath window: ambient motion lives ONLY inside a window opened by
+  // a real bus event (U2 honesty gate); calm keeps the minimal amplitude.
+  const breath = createBreath(css, () => !reducedMotion() && getLiveLayer() !== "off");
   const mn = Math.min;
   let veins: Vein[] = [];
   let hairCss = "rgb(122,138,158)";
@@ -147,13 +176,24 @@ export function mountLivingLayer(canvas: HTMLCanvasElement): () => void {
     hairCss = `rgb(${css("--myelin-hairline", "rgb(122 138 158)").match(/\d+/g)!.slice(0, 3)})`;
     rest = parseFloat(css("--web-edge-alpha", "0.07")) || 0.07;
     period = parseFloat(css("--duration-web-idle", "10000")) || 10000;
-    if (statik || reducedMotion() || getLiveLayer() === "off") drawStatic();
+    if (statik || reducedMotion() || getLiveLayer() === "off" || !active())
+      drawStatic();
   }
 
   const active = (): boolean =>
-    !destroyed && !statik && !reducedMotion() && getLiveLayer() !== "off";
+    !destroyed &&
+    !statik &&
+    !reducedMotion() &&
+    getLiveLayer() !== "off" &&
+    // U2 honesty: the RAF chain lives ONLY inside a breath window or while
+    // bead trails are still decaying — a silent bus means zero frames.
+    (breath.isOpen || impulses.length > 0);
 
-  function line(c: CanvasRenderingContext2D, a: [number, number], b: [number, number]): void {
+  function line(
+    c: CanvasRenderingContext2D,
+    a: [number, number],
+    b: [number, number],
+  ): void {
     c.beginPath();
     c.moveTo(a[0], a[1]);
     c.lineTo(b[0], b[1]);
@@ -282,10 +322,14 @@ export function mountLivingLayer(canvas: HTMLCanvasElement): () => void {
     if (!raf && active()) raf = requestAnimationFrame(loop);
   }
 
-  /** A real bus event: tone always; a bead only in Полный (and capacity). */
+  /** A real bus event: tone always; the breath window opens in every
+   * visible layer (its amplitude differs); a bead only in Полный. */
   function onEvent(kind: string): void {
+    if (isBusServiceKind(kind)) return; // service frames are not events
     tones.event(kind);
-    if (getLiveLayer() !== "live" || reducedMotion() || isLivingMuted() || statik) return;
+    breath.event();
+    if (getLiveLayer() !== "live" || reducedMotion() || isLivingMuted() || statik)
+      return;
     if (impulses.length >= MAX_IMPULSES || !veins.length) return;
     const vein = hash(kind) % veins.length;
     impulses.push({
@@ -304,7 +348,9 @@ export function mountLivingLayer(canvas: HTMLCanvasElement): () => void {
    * is the ONE vertical polyline (Ж2 — the sidebar contour), direction
    * f=1 = toward its start (the topbar corner). */
   function onCourier(): void {
-    if (getLiveLayer() !== "live" || reducedMotion() || isLivingMuted() || statik) return;
+    breath.event(); // the gold leg is a real event too — it may open a window
+    if (getLiveLayer() !== "live" || reducedMotion() || isLivingMuted() || statik)
+      return;
     if (impulses.length >= MAX_IMPULSES || !veins.length) return;
     const vein = veins.findIndex((v) => v.pts[0][0] === v.pts[1][0]);
     if (vein < 0) return; // no sidebar seam on this viewport (mobile drawer)
@@ -333,22 +379,49 @@ export function mountLivingLayer(canvas: HTMLCanvasElement): () => void {
   function sync(): void {
     if (destroyed) return;
     if (getLiveLayer() === "off") {
+      breath.freeze();
       stop();
       ctx!.clearRect(0, 0, window.innerWidth, window.innerHeight);
     } else if (reducedMotion() || statik) {
+      breath.freeze();
       stop();
       drawStatic();
-    } else start();
+    } else if (active()) {
+      start();
+    } else {
+      stop();
+      drawStatic();
+    }
   }
+
+  // --- the input freeze (замирание, ≤80ms law): ANY key/pointer press stops
+  // ambient motion instantly; the next real event may breathe again. --------
+  const onInput = (): void => {
+    if (destroyed) return;
+    impulses = []; // kill bead trails too — zero motion while interacting
+    breath.freeze(); // close → the subscription settles the static frame
+  };
 
   // --- subscriptions (ALL torn down by the destructor) ---------------------
   const offFeed = subscribeLiving(onSignal);
   const offLayer = subscribeLiveLayer(() => sync());
+  const offBreath = breath.subscribe((open) => {
+    // The window state rides <html> too — the SHELL ambient (Весма's breath)
+    // is gated by the SAME bus-opened window (U2: nothing moves without it).
+    document.documentElement.dataset.breath = open ? "true" : "false";
+    if (destroyed || statik) return;
+    if (open) start();
+    else if (impulses.length === 0) {
+      stop();
+      drawStatic();
+    }
+  });
+  window.addEventListener("keydown", onInput, true);
+  window.addEventListener("pointerdown", onInput, true);
   const ro =
-    typeof ResizeObserver === "function"
-      ? new ResizeObserver(() => resize())
-      : null;
-  if (ro) document.querySelectorAll("[data-living-seam]").forEach((el) => ro.observe(el));
+    typeof ResizeObserver === "function" ? new ResizeObserver(() => resize()) : null;
+  if (ro)
+    document.querySelectorAll("[data-living-seam]").forEach((el) => ro.observe(el));
   const themeMo = new MutationObserver(() => {
     resize(); // re-reads tokens, rebuilds geometry, redraws static
     sync();
@@ -368,7 +441,9 @@ export function mountLivingLayer(canvas: HTMLCanvasElement): () => void {
   const onResize = (): void => resize();
   window.addEventListener("resize", onResize);
   const mm =
-    typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : null;
+    typeof matchMedia === "function"
+      ? matchMedia("(prefers-reduced-motion: reduce)")
+      : null;
   const onMm = (): void => sync();
   mm?.addEventListener("change", onMm);
 
@@ -380,6 +455,10 @@ export function mountLivingLayer(canvas: HTMLCanvasElement): () => void {
     stop();
     offFeed();
     offLayer();
+    offBreath();
+    breath.destroy();
+    window.removeEventListener("keydown", onInput, true);
+    window.removeEventListener("pointerdown", onInput, true);
     mm?.removeEventListener("change", onMm);
     ro?.disconnect();
     themeMo.disconnect();

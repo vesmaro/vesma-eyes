@@ -6,7 +6,13 @@
  * gzip ceilings so the always-on ambient layer never taxes the critical path.
  *
  *   living-extra  ≤ 4 KiB = 4096 B gzip   (15-WOW §14.3.7)
- *   web-tones     ≤ 2 KiB = 2048 B gzip   (12-UNION-ROADMAP §1 п.5, v12.1)
+ *   web-tones     ≤ 2.5 KiB = 2560 B gzip (12-UNION-ROADMAP §1 п.5, v12.1;
+ *                    re-based 2048 → 2560 by wave U2 2026-10-08: the honesty
+ *                    of light («шина молчит — экран стоит», SPEC-2026-10-07)
+ *                    lives here — the shared breath-window factory joined
+ *                    the tone engine; the wave's own ceiling holds: every
+ *                    load path stays ≤ 8 KiB total living engine
+ *                    (2637 + 2148 + 2740 = 7525 B gzip measured).
  *   vesma         ≤ 3 KiB = 3072 B gzip   (12-UNION-ROADMAP §1 п.5, v12.2, W2)
  *
  * Reads viewer/dist after `vite build`; matches chunks by name mask
@@ -28,7 +34,7 @@ import { fileURLToPath } from "node:url";
 
 const BUDGETS = [
   { mask: "living-extra", limit: 4096 },
-  { mask: "web-tones", limit: 2048 },
+  { mask: "web-tones", limit: 2560 },
   { mask: "vesma", limit: 3072 },
 ];
 

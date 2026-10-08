@@ -7,7 +7,8 @@ import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-import { normalizeTickerTitle, WellHero } from "./WellHero";
+import { normalizeTickerTitle } from "./busTicker";
+import { WellHero } from "./WellHero";
 import { MockAdapter } from "@/gateway/MockAdapter";
 import { GatewayContext } from "@/gateway/GatewayContext";
 import { keys } from "@/lib/queryKeys";
@@ -74,7 +75,9 @@ const seedWaitingSources = (client: QueryClient, gateway: MockAdapter) =>
   ]);
 
 function wellSvg(html: string): string {
-  const start = html.indexOf("<svg");
+  // The U2 share button carries a lucide icon svg — anchor on the CANVAS
+  // svg (the only one with a viewBox).
+  const start = html.indexOf("<svg viewBox=");
   const end = html.indexOf("</svg>", start);
   return html.slice(start, end);
 }
@@ -192,13 +195,17 @@ describe("WellHero — the honesty counter (fix round: replaces the pair)", () =
 
 describe("WellHero — ticker normalization (fix round)", () => {
   it("unit: ISO stamps cut — Z, offset and space-separated wire shapes", () => {
-    expect(normalizeTickerTitle("Session checkpoint — 2026-10-01T21:23:58Z done", "x").display).toBe(
-      "Session checkpoint — done",
-    );
     expect(
-      normalizeTickerTitle("Report 2026-10-01T21:23:58.279460+00:00 shipped", "x").display,
+      normalizeTickerTitle("Session checkpoint — 2026-10-01T21:23:58Z done", "x")
+        .display,
+    ).toBe("Session checkpoint — done");
+    expect(
+      normalizeTickerTitle("Report 2026-10-01T21:23:58.279460+00:00 shipped", "x")
+        .display,
     ).toBe("Report shipped");
-    expect(normalizeTickerTitle("Note 2026-10-01 21:23:58 kept", "x").display).toBe("Note kept");
+    expect(normalizeTickerTitle("Note 2026-10-01 21:23:58 kept", "x").display).toBe(
+      "Note kept",
+    );
   });
 
   it("unit: a title that is only a stamp falls back to id.slice(0,8)", () => {
@@ -215,17 +222,136 @@ describe("WellHero — ticker normalization (fix round)", () => {
     expect(out.full).toBe(long);
   });
 
-  it("integration: the pulse title rides the ticker, normalized for display", async () => {
-    const html = await renderHero(async (client, gateway) => {
-      await seedMemories(client, gateway);
-      await client.prefetchQuery({
-        queryKey: keys.pulse.feed({ scope: "all", limit: 5 }),
-        queryFn: () => gateway.pulse({ scope: "all", limit: 5 }),
+  it("integration (U2): the BUS rides the ticker; a silent bus stays empty", async () => {
+    // Client render — the ticker lives in an effect-owned subscription; the
+    // mock bus is SILENT by default (the honesty gate's premise).
+    const gateway = new MockAdapter({ latency: false });
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false, retryOnMount: false, refetchOnMount: false },
+      },
+    });
+    await seedMemories(client, gateway);
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(
+        <GatewayContext.Provider value={gateway}>
+          <QueryClientProvider client={client}>
+            <I18nProvider initialLang="en">
+              <MemoryRouter>
+                <WellHero />
+              </MemoryRouter>
+            </I18nProvider>
+          </QueryClientProvider>
+        </GatewayContext.Provider>,
+      );
+    });
+    const log = (): string =>
+      container.querySelector<HTMLElement>('[role="log"]')?.textContent ?? "";
+    expect(log()).toBe(""); // silent bus = honest silence, never a placeholder
+
+    await act(async () => {
+      gateway.emitBusEvent("task.created", {
+        task: { id: "TB-901", title: "Проверка живого слоя" },
       });
     });
-    // The mock fixture title carries no ISO stamp — it must pass through
-    // untouched (normalization is idempotent on clean titles).
-    expect(html).toContain("memory: Checkpoint: L1 wave status");
+    // Local receipt time + the meaning-mapped line, no raw kind codes.
+    expect(log()).toMatch(/^\d{2}:\d{2} · New task: Проверка живого слоя$/);
+
+    // A service frame never reaches the line (and never awakens).
+    const before = log();
+    await act(async () => {
+      gateway.emitBusEvent("hello", { last_event_id: 0 });
+    });
+    expect(log()).toBe(before);
+    root.unmount();
+  });
+
+  it("U2: the awakening waits for the FIRST bus frame, once per session", async () => {
+    sessionStorage.removeItem("vesmaro.awakened");
+    const gateway = new MockAdapter({ latency: false });
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false, retryOnMount: false, refetchOnMount: false },
+      },
+    });
+    await seedMemories(client, gateway);
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(
+        <GatewayContext.Provider value={gateway}>
+          <QueryClientProvider client={client}>
+            <I18nProvider initialLang="en">
+              <MemoryRouter>
+                <WellHero />
+              </MemoryRouter>
+            </I18nProvider>
+          </QueryClientProvider>
+        </GatewayContext.Provider>,
+      );
+    });
+    const hero = container.querySelector("[data-well-window]")!;
+    expect(hero.getAttribute("data-awaken")).toBe("false"); // still, fully drawn
+
+    await act(async () => {
+      gateway.emitBusEvent("hello", { last_event_id: 0 });
+    });
+    expect(hero.getAttribute("data-awaken")).toBe("false"); // hello is not an event
+
+    await act(async () => {
+      gateway.emitBusEvent("task.created", {
+        task: { id: "TB-1", title: "Первое дыхание" },
+      });
+    });
+    expect(hero.getAttribute("data-awaken")).toBe("true"); // the wave rides the bus
+
+    // Any input cancels the wave…
+    await act(async () => {
+      document.body.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
+    });
+    expect(hero.getAttribute("data-awaken")).toBe("false");
+
+    // …and the session flag holds: a later frame never waves again.
+    await act(async () => {
+      gateway.emitBusEvent("report", { task_id: "TB-1", report: {} });
+    });
+    expect(hero.getAttribute("data-awaken")).toBe("false");
+    expect(sessionStorage.getItem("vesmaro.awakened")).toBe("1");
+    root.unmount();
+  });
+
+  it("U2 HUD: «Поделиться» copies the address; vitals come only from answered wires", async () => {
+    const gateway = new MockAdapter({ latency: false });
+    const executorsPage = await gateway.listExecutors();
+    const tags = await gateway.listTags();
+    const html = await renderHero(async (client, gw) => {
+      await seedMemories(client, gw);
+      await client.prefetchQuery({
+        queryKey: keys.agents.executors.list(),
+        queryFn: () => gw.listExecutors(),
+      });
+      await client.prefetchQuery({
+        queryKey: keys.tags.list(),
+        queryFn: () => gw.listTags(),
+      });
+      void executorsPage;
+      void tags;
+    });
+    // The share action (v12 HUD-top; the stand stubs it — here it acts).
+    expect(html).toContain("Share");
+    // The vital cluster (HUD-bottom right): both wires answered.
+    expect(html).toContain(`agents — ${executorsPage.count}`);
+    expect(html).toContain(`tags — ${tags.length}`);
+  });
+
+  it("U2 HUD: pending wires render no vital segment", async () => {
+    const html = await renderHero(seedMemories);
+    expect(html).not.toContain("agents — ");
+    expect(html).not.toContain("tags — ");
   });
 });
 
@@ -251,9 +377,9 @@ describe("WellHero — scene shape: substrate first, decorative, organ slots", (
     expect(dataAt).toBeGreaterThan(substrateAt);
     expect(svg.indexOf("<svg")).toBeGreaterThanOrEqual(0);
     // aria-hidden on the group (explicit) and on the whole svg
-    expect(svg.slice(svg.indexOf("<svg"), svg.indexOf(">", svg.indexOf("<svg")) + 1)).toContain(
-      'aria-hidden="true"',
-    );
+    expect(
+      svg.slice(svg.indexOf("<svg"), svg.indexOf(">", svg.indexOf("<svg")) + 1),
+    ).toContain('aria-hidden="true"');
   });
 
   it("the substrate is sized by the constant, independent of the data layer", async () => {
@@ -265,7 +391,9 @@ describe("WellHero — scene shape: substrate first, decorative, organ slots", (
     });
     // 96 substrate points even when the data wire brought memories too
     expect((html.match(/well-substrate-node/g) ?? []).length).toBe(96);
-    expect((html.match(/well-substrate-strand/g) ?? []).length).toBeLessThanOrEqual(110);
+    expect((html.match(/well-substrate-strand/g) ?? []).length).toBeLessThanOrEqual(
+      110,
+    );
   });
 
   it("nodes carry no interactive semantics; readout slot is empty, aria-hidden", async () => {

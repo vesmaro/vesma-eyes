@@ -1,11 +1,22 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { Link } from "react-router";
-import { useReducedMotion } from "@/lib/useReducedMotion";
-import { useLiveLayer } from "@/lib/liveLayerStore";
+import { Check, Link2 } from "lucide-react";
+import { getLiveLayer, useLiveLayer } from "@/lib/liveLayerStore";
 import { useMemories } from "@/hooks/useMemories";
-import { usePulse, useBoardHealth } from "@/hooks/usePulse";
+import { useBoardHealth } from "@/hooks/usePulse";
+import { useTags } from "@/hooks/useTags";
+import { useExecutors } from "@/features/agents/useAgents";
 import { useI18n, useT } from "@/i18n";
+import { isReducedMotion } from "@/living/tones";
 import { useWaitingSummary } from "./useWaitingSummary";
+import { useBusTicker } from "./busTicker";
 import {
   buildSubstrate,
   buildWellGraph,
@@ -15,25 +26,30 @@ import {
 } from "./wellGraph";
 
 /**
- * The Overview hero (blueprint §12.3, direction §5): the well — ONE full-
- * height canvas standing on the dark floor in BOTH themes (`data-well-window`
- * — the owner-approved exception-image, 2026-10-01: «кора светлая, колодец
- * глубокий»; the veil follows the well, not the page). Nodes are real
- * memories, edges are real derived_from links — data-as-decoration is the
- * only imagery route (§5.4); with no data there is no graph, only the honest
- * empty line — and a failed wire names itself (the honest error line).
+ * The Overview hero (SPEC-2026-10-07 «Обзор» + v12 §3.1): the well — ONE
+ * full-bleed canvas standing on the dark floor in BOTH themes
+ * (`data-well-window` — the owner-approved exception-image, 2026-10-01:
+ * «кора светлая, колодец глубокий»; the veil follows the well, not the
+ * page). Nodes are real memories, edges are real derived_from links —
+ * data-as-decoration is the only imagery route (§5.4); with no data there
+ * is no graph, only the honest empty line — and a failed wire names itself
+ * (the honest error line).
  *
  * HUD discipline (§7.1): every text pixel inside the canvas sits on the
  * --hud-veil strip and carries ONLY the text-primary/secondary pairs —
  * text-muted is forbidden on HUD (3.7:1, computed in the blueprint). The
- * display headline and the counters line live ABOVE the canvas (page chrome),
- * so the hero's four text elements hold: title, subtitle, waiting chip,
- * ticker.
+ * display headline and the counters line live ABOVE the canvas (page
+ * chrome), so the hero's text budget holds: title, subtitle, waiting chip,
+ * vitals, ticker.
  *
- * Motion gates (§10): the awakening runs ONCE per session (sessionStorage
- * flag) and only while the living layer is «live» and motion is allowed;
- * any input cancels it. The drift is the surface's single ambient (≤4px/s,
- * --duration-iris rhythm) and settles with the live layer or reduced motion.
+ * Motion gates (§10 + U2 honesty of light): NOTHING moves without a real
+ * bus event. The awakening (once per session, sessionStorage flag) waits
+ * for the FIRST /api/events frame — before it the well stands fully drawn
+ * and still («первое дыхание из шины; шина молчит — экран стоит»); any
+ * input cancels the wave. The drift/substrate breath mount only inside a
+ * breath window the well organ opens on a real event. The ticker line
+ * updates from bus frames alone (data — it moves in every regime, the
+ * fade-swap only in «Полный»).
  */
 
 const AWAKEN_SESSION_KEY = "vesmaro.awakened";
@@ -41,40 +57,8 @@ const AWAKEN_SESSION_KEY = "vesmaro.awakened";
 /** The awakening self-clears after the wave (≤1.2s) plus a small margin. */
 const AWAKEN_CLEAR_MS = 1600;
 
-/** Instrument time for the ticker: UTC HH:MM (mono/tabular at the callsite). */
-function tickerTime(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "—";
-  const hours = String(date.getUTCHours()).padStart(2, "0");
-  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
-  return `${hours}:${minutes}`;
-}
-
-/**
- * Raw memory titles carry ISO-8601-ish stamps («Session checkpoint —
- * 2026-10-01T21:23:58.279460+00:00 …») — noise in a one-line display
- * ticker (fix round, TL spec): stamps are cut (both the T and the
- * space-separated wire shapes), separator runs collapse, the display caps
- * at 64 chars, and the FULL text rides the native title attribute — a
- * truncation without recourse is a panel finding. A title that is only a
- * stamp falls back to the id prefix (honest silence, not a blank).
- */
-const ISO_LIKE = /\d{4}-\d{2}-\d{2}[T ][\d:.]+(?:Z|[+-]\d{2}:?\d{2})?/g;
-const TICKER_CAP = 64;
-
-export function normalizeTickerTitle(
-  raw: string,
-  fallbackId: string,
-): { display: string; full: string } {
-  const clean = raw
-    .replace(ISO_LIKE, " ")
-    .replace(/\s+/g, " ")
-    .replace(/^[\s·—–-]+|[\s·—–-]+$/g, "");
-  const base = clean || fallbackId.slice(0, 8);
-  return base.length <= TICKER_CAP
-    ? { display: base, full: base }
-    : { display: `${base.slice(0, TICKER_CAP).trimEnd()}…`, full: base };
-}
+/** The share confirmation clears after a beat (a UI state, not ambient). */
+const SHARE_CLEAR_MS = 2400;
 
 /** The tone legend — the well's own vocabulary (fix round, designer spec):
  * surface strip shows the three alarm words, the disclosure carries the
@@ -99,20 +83,52 @@ export function WellHero() {
   const t = useT();
   const { lang } = useI18n();
   const liveLayer = useLiveLayer();
-  const reducedMotion = useReducedMotion();
   const waiting = useWaitingSummary();
   const winRef = useRef<HTMLDivElement>(null);
 
   // The graph: real memories + their real links (one contemplative read).
   const memories = useMemories({ limit: WELL_NODE_CAP });
-  const pulse = usePulse({ scope: "all", limit: 5 });
   const health = useBoardHealth();
+  // The vital cluster (v12 §3.1 HUD-bottom right): tags/agents — segments
+  // render ONLY from wires that actually answered (pending → absent).
+  const tags = useTags();
+  const executors = useExecutors();
 
   // Locale-shaped numbers for the honesty counter (3 297 / 3,297).
   const fmt = useMemo(
     () => new Intl.NumberFormat(lang === "ru" ? "ru-RU" : "en-US"),
     [lang],
   );
+
+  // --- Awakening from the BUS (U2): the wave waits for the first real
+  // /api/events frame of the session; before it the well stands fully
+  // drawn and still. Any input cancels; reduced/calm/off never wave.
+  const [awaken, setAwaken] = useState(false);
+  const onBusEvent = useCallback(() => {
+    let seen = true;
+    try {
+      seen = sessionStorage.getItem(AWAKEN_SESSION_KEY) === "1";
+      sessionStorage.setItem(AWAKEN_SESSION_KEY, "1");
+    } catch {
+      seen = true; // storage unavailable — stay quiet
+    }
+    // Regime values read AT EVENT TIME (the canon: the wave dresses the
+    // layer that is actually live when the first frame lands).
+    if (seen || isReducedMotion() || getLiveLayer() !== "live") return;
+    setAwaken(true);
+    const cancel = (): void => {
+      setAwaken(false);
+      window.removeEventListener("keydown", cancel, true);
+      window.removeEventListener("pointerdown", cancel, true);
+    };
+    // Any input cancels the wave early; otherwise it self-clears (≤1.2s
+    // wave + margin) — the listeners ride exactly this one wave.
+    window.addEventListener("keydown", cancel, true);
+    window.addEventListener("pointerdown", cancel, true);
+    setTimeout(cancel, AWAKEN_CLEAR_MS);
+  }, []);
+  // The bus ticker: one line, the latest REAL frame (null while silent).
+  const busTicker = useBusTicker(onBusEvent);
 
   // The legend disclosure: Esc returns focus to the button, an outside
   // pointer closes it — both only while open (zero listeners at rest).
@@ -138,32 +154,32 @@ export function WellHero() {
     };
   }, [legendOpen]);
 
-  // Awakening: once per session, on the first hero mount, only when the
-  // living layer is on and motion is allowed. Any input cancels; reduced
-  // regimes get the static graph immediately (the reduced FINAL state).
-  const [awaken, setAwaken] = useState(false);
-  useEffect(() => {
-    let seen = true;
-    try {
-      seen = sessionStorage.getItem(AWAKEN_SESSION_KEY) === "1";
-      sessionStorage.setItem(AWAKEN_SESSION_KEY, "1");
-    } catch {
-      seen = true; // storage unavailable — stay quiet
-    }
-    if (seen || reducedMotion || liveLayer !== "live") return;
-    setAwaken(true);
-    const cancel = () => setAwaken(false);
-    window.addEventListener("keydown", cancel, true);
-    window.addEventListener("pointerdown", cancel, true);
-    const timer = setTimeout(cancel, AWAKEN_CLEAR_MS);
-    return () => {
-      window.removeEventListener("keydown", cancel, true);
-      window.removeEventListener("pointerdown", cancel, true);
-      clearTimeout(timer);
+  // --- «Поделиться» (v12 HUD-top; the stand stubs it — here it acts):
+  // copy this page's URL; the confirmation is a UI state, never motion. ---
+  const [share, setShare] = useState<"idle" | "done" | "manual">("idle");
+  const shareTimer = useRef<ReturnType<typeof setTimeout> | 0>(0);
+  useEffect(
+    () => () => {
+      if (shareTimer.current) clearTimeout(shareTimer.current);
+    },
+    [],
+  );
+  const onShare = (): void => {
+    const url = window.location.href;
+    const settle = (state: "done" | "manual"): void => {
+      setShare(state);
+      if (shareTimer.current) clearTimeout(shareTimer.current);
+      shareTimer.current = setTimeout(() => setShare("idle"), SHARE_CLEAR_MS);
     };
-    // Mount-only intent: the session flag is the gate, not reactive deps.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (typeof navigator?.clipboard?.writeText === "function") {
+      navigator.clipboard
+        .writeText(url)
+        .then(() => settle("done"))
+        .catch(() => settle("manual"));
+    } else {
+      settle("manual"); // no clipboard: show the URL for a manual copy
+    }
+  };
 
   const graph = useMemo(
     () =>
@@ -197,14 +213,7 @@ export function WellHero() {
     };
   }, []);
 
-  // The ticker: the latest pulse event ONLY — a role="log" event line, never
-  // a marquee (§2.2.2: zero auto-scroll); an empty feed renders nothing.
-  const latest = pulse.data?.items[0];
-  // Titles carry raw ISO stamps — normalized for display, the full text
-  // rides the native title attribute (no recourse-less truncation).
-  const ticker = latest
-    ? normalizeTickerTitle(latest.title ?? "", latest.id)
-    : null;
+  // The vitals + ticker live in the HUD rows below (see the strip markup).
 
   // The honesty counter (fix round) REPLACES the records/tags pair: it
   // describes exactly what is drawn — the shown sample of the well — and
@@ -231,26 +240,78 @@ export function WellHero() {
     counter = t("overview.heroMemories", { count: fmt.format(memoriesTotal) });
   }
 
+  // The vital cluster (HUD-bottom right): segments only from ANSWERED
+  // wires (pending → absent; a settled empty list is an honest 0). Numbers
+  // are locale-shaped; labels are data, not decor (v12 §3.1).
+  const tagCount = tags.isSuccess ? tags.data.length : null;
+  const agentCount = executors.isSuccess ? executors.data.count : null;
+  const vitals = [
+    tagCount !== null ? t("overview.heroTags", { count: fmt.format(tagCount) }) : null,
+    agentCount !== null
+      ? t("overview.heroAgents", { count: fmt.format(agentCount) })
+      : null,
+  ]
+    .filter((segment): segment is string => segment !== null)
+    .join(" · ");
+
   return (
-    <section aria-labelledby="well-hero-title" className="space-y-4">
-      {/* Hero text elements 1–2: the display headline + the honesty counter.
+    <section aria-labelledby="well-hero-title" className="w-full space-y-4">
+      {/* Hero text elements 1–2 + «Поделиться»: the display headline, the
+       * honesty counter and the share action on the page-measure column
+       * (the H1 x stays on the page grid while the canvas goes full-bleed).
        * No eyebrow (budget 0 on the Overview), no decoration on the words. */}
-      <div className="space-y-1">
-        <h1
-          id="well-hero-title"
-          className="font-ui text-display font-semibold leading-tight text-foreground"
-        >
-          {t("overview.heroTitle")}
-        </h1>
-        <p className="text-sm text-foreground-secondary">
-          {t("overview.heroSubtitle")}
-          {counter ? (
-            <span className="font-mono tabular-nums">
-              {" · "}
-              {counter}
-            </span>
-          ) : null}
-        </p>
+      <div className="mx-auto flex w-full max-w-4xl items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h1
+            id="well-hero-title"
+            className="font-ui text-display font-semibold leading-tight text-foreground"
+          >
+            {t("overview.heroTitle")}
+          </h1>
+          <p className="text-sm text-foreground-secondary">
+            {t("overview.heroSubtitle")}
+            {counter ? (
+              <span className="font-mono tabular-nums">
+                {" · "}
+                {counter}
+              </span>
+            ) : null}
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <button
+            type="button"
+            onClick={onShare}
+            className="inline-flex min-h-6 shrink-0 items-center gap-1.5 rounded-sm border border-border bg-canvas px-2 text-foreground transition-colors duration-instant hover:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            style={{
+              fontSize: "var(--text-caps)",
+              letterSpacing: "var(--tracking-caps)",
+            }}
+          >
+            {share === "done" ? (
+              <Check className="size-3.5" aria-hidden="true" />
+            ) : (
+              <Link2 className="size-3.5" aria-hidden="true" />
+            )}
+            {t("overview.share")}
+          </button>
+          <span
+            aria-live="polite"
+            className="max-w-56 truncate text-right text-foreground-secondary"
+            style={{
+              fontSize: "var(--text-caps)",
+              letterSpacing: "var(--tracking-caps)",
+            }}
+          >
+            {share === "done"
+              ? t("overview.shareDone")
+              : share === "manual"
+                ? t("overview.shareManual", {
+                    url: typeof window === "undefined" ? "" : window.location.href,
+                  })
+                : ""}
+          </span>
+        </div>
       </div>
 
       {/* The well: dark canvas in BOTH themes via the [data-well-window]
@@ -327,7 +388,9 @@ export function WellHero() {
                   cx={node.x}
                   cy={node.y}
                   r={node.hub ? 6 : 4}
-                  className={node.hub ? "well-node fill-iris-bright" : "well-node fill-iris"}
+                  className={
+                    node.hub ? "well-node fill-iris-bright" : "well-node fill-iris"
+                  }
                   data-id={node.id}
                   data-title={node.title ?? undefined}
                   data-date={node.date ?? undefined}
@@ -355,11 +418,12 @@ export function WellHero() {
           </p>
         ) : null}
 
-        {/* HUD strip: veil ONLY under the text it carries (§5.2) — the
-         * waiting chip + the hover readout (middle slot) + the event ticker.
-         * Chip hidden until the counter settles; absent when nothing waits
-         * (empty ≠ zero). The readout is filled by the organ on hover; empty
-         * renders as nothing (`.well-readout:empty { display: none }`). */}
+        {/* HUD strip (v12 §3.1): veil ONLY under the text it carries (§5.2).
+         * Row 1 — the waiting chip + the hover readout (middle slot) + the
+         * vital cluster. Row 2 — the bus ticker (role="log"): one line,
+         * updates ONLY on a real frame, in every live-layer regime (data,
+         * not decor — §13.3); the fade-swap motion is CSS-gated. Chip and
+         * vitals hide until their wires settle; absent when nothing waits. */}
         <div className="well-hud absolute inset-x-0 bottom-0 border-t border-myelin-hairline bg-hud-veil">
           <div className="flex min-h-10 items-center justify-between gap-3 px-4 py-2">
             {waiting.capable &&
@@ -383,19 +447,34 @@ export function WellHero() {
               aria-hidden="true"
               className="well-readout pointer-events-none min-w-0 truncate font-mono text-sm tabular-nums text-foreground-secondary"
             />
-            {latest && ticker ? (
-              <p
-                role="log"
-                title={ticker.full !== ticker.display ? ticker.full : undefined}
-                className="min-w-0 truncate font-mono text-sm tabular-nums text-foreground-secondary"
-              >
-                {t("overview.tickerItem", {
-                  time: tickerTime(latest.created_at),
-                  title: ticker.display,
-                  server: latest.server,
-                })}
+            {vitals !== "" ? (
+              <p className="hidden shrink-0 font-mono text-sm tabular-nums text-foreground-secondary sm:block">
+                {vitals}
               </p>
-            ) : null}
+            ) : (
+              <span />
+            )}
+          </div>
+          <div className="flex min-h-8 items-center gap-3 border-t border-myelin-hairline px-4 py-1.5">
+            <p
+              key={busTicker?.seq ?? 0}
+              role="log"
+              aria-label={t("overview.tickerLabel")}
+              title={
+                busTicker && busTicker.full !== busTicker.text
+                  ? `${busTicker.time} · ${busTicker.full}`
+                  : undefined
+              }
+              className={`well-ticker-line min-w-0 flex-1 truncate font-mono text-sm tabular-nums ${
+                busTicker === null
+                  ? "text-foreground-secondary"
+                  : busTicker.isError
+                    ? "text-error"
+                    : "text-foreground-secondary"
+              }`}
+            >
+              {busTicker ? `${busTicker.time} · ${busTicker.text}` : ""}
+            </p>
           </div>
         </div>
       </div>

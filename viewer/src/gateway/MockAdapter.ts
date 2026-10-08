@@ -8,6 +8,7 @@ import {
 } from "./activityQuery";
 import { resolveRoutingAnnotation } from "./routing";
 import { ApiError } from "@/lib/errors";
+import { EventStream } from "./events";
 import {
   MOCK_INBOX_MEMORY,
   MOCK_MEMORIES,
@@ -201,6 +202,64 @@ export interface MockAdapterOptions {
  * FTS+semantic behaviour, wire-compatible pagination and filters, and honest
  * 404s. Toggle via `VITE_MNEMOS_ADAPTER=mock`.
  */
+/** The window handle is dev/test steering only (U2 honesty gate); absent
+ * outside browsers, and never consulted by the app's own code paths. */
+declare global {
+  interface Window {
+    VesmaMockBus?: {
+      emit(kind: string, payload?: Record<string, unknown>): void;
+      quiet(): void;
+    };
+  }
+}
+
+/**
+ * The mock SSE twin (U2 «Обзор-колодец»). The real board streams
+ * `GET /api/events` (server/app.py); in mock mode the EventStream wrapper
+ * drives THIS source instead — same wire frames, zero network. The bus is
+ * SILENT by default (honest by construction: a silent mock is exactly the
+ * 5-second honesty gate's premise); events reach it only through
+ * `emitBusEvent` / the `window.VesmaMockBus` test handle, or the bounded
+ * `?bus=demo` dev sequence. Each `events()` call gets its own source (the
+ * wrapper's handler assignment is per-connection, like real EventSource).
+ */
+class MockBusSource {
+  onopen: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+  private messageHandler: ((ev: { data: string }) => void) | null = null;
+  private helloPending = true;
+  private dead = false;
+
+  constructor(private readonly onDead: (source: MockBusSource) => void) {}
+
+  close(): void {
+    if (this.dead) return;
+    this.dead = true;
+    this.onDead(this);
+  }
+
+  get onmessage(): ((ev: { data: string }) => void) | null {
+    return this.messageHandler;
+  }
+
+  set onmessage(fn: ((ev: { data: string }) => void) | null) {
+    this.messageHandler = fn;
+    // The connect contract (server/app.py): one `hello` frame on open,
+    // synchronous — the wrapper's handlers are already attached when the
+    // wrapper assigns `onmessage` (it does so last, inside ensureOpen).
+    if (fn && !this.dead && this.helloPending) {
+      this.helloPending = false;
+      fn({ data: JSON.stringify({ kind: "hello", last_event_id: 0 }) });
+    }
+  }
+
+  /** One wire frame (JSON object with the mandatory `kind`). */
+  emit(payload: Readonly<Record<string, unknown>>): void {
+    if (this.dead) return;
+    this.messageHandler?.({ data: JSON.stringify(payload) });
+  }
+}
+
 export class MockAdapter implements MemoryGateway {
   private readonly latency: false | { minMs: number; maxMs: number };
   private readonly rand: () => number;
@@ -260,6 +319,12 @@ export class MockAdapter implements MemoryGateway {
    * the corpus snapshot IS the honest state of the world). */
   private readonly taskSessions: TaskSessionFact[];
 
+  // --- U2 mock bus (SSE twin): silent by default ---------------------------
+  private readonly busSources = new Set<MockBusSource>();
+  private busQuiet = false;
+  private busDemoTimer: ReturnType<typeof setTimeout> | 0 = 0;
+  private busDemoStep = 0;
+
   constructor(options: MockAdapterOptions = {}) {
     this.latency = options.latency ?? { minMs: 80, maxMs: 200 };
     // Fixed seed → identical latency sequences across runs.
@@ -294,6 +359,113 @@ export class MockAdapter implements MemoryGateway {
     this.nextActivityId =
       Math.max(0, ...this.activityLog.map((row) => Number(row.id) || 0)) + 1;
     this.taskSessions = MOCK_TASK_SESSIONS.map((fact) => ({ ...fact }));
+    // U2 test handle (the honesty gate's steering wheel): dev/tests drive
+    // the bus from the console or from e2e scripts. Absent outside browsers.
+    if (typeof window !== "undefined") {
+      window.VesmaMockBus ??= {
+        emit: (kind, payload) => this.emitBusEvent(kind, payload),
+        quiet: () => this.quietBus(),
+      };
+    }
+  }
+
+  // --- U2 mock bus: the SSE twin (silent by default) -------------------------
+  //
+  // «Честный свет» construction: a silent mock IS the 5-second honesty
+  // gate's premise — no `?bus=demo`, no handle calls → zero frames after
+  // the `hello`, the screen stands. The demo sequence is bounded (6 events
+  // over ~6.6s, the ≤6-impulse budget) and only ever runs when someone
+  // actually subscribed (the bus opens lazily on the first `events()`).
+
+  /** SSE capability (TaskEventSource): one connection per subscription,
+   * like the board adapter — each gets its own EventStream + source. */
+  events(): EventStream {
+    const source = new MockBusSource((dead) => this.busSources.delete(dead));
+    this.busSources.add(source);
+    this.maybeStartBusDemo();
+    return new EventStream({
+      url: "mock://board/events",
+      eventSourceFactory: () => source as unknown as EventSource,
+    });
+  }
+
+  /** Push one wire frame to every live subscription (test handle). */
+  emitBusEvent(kind: string, payload: Readonly<Record<string, unknown>> = {}): void {
+    if (this.busQuiet || !kind) return;
+    for (const source of [...this.busSources]) source.emit({ kind, ...payload });
+  }
+
+  /** The silence switch (the honesty gate): stops the demo sequence and
+   * drops every further emission until reload. */
+  quietBus(): void {
+    this.busQuiet = true;
+    if (this.busDemoTimer) {
+      clearTimeout(this.busDemoTimer);
+      this.busDemoTimer = 0;
+    }
+  }
+
+  /** `?bus=demo`: SIX well-formed frames, 1.1s apart, then silence forever.
+   * Dev/screenshot affordance only — never wired by the app itself. */
+  private maybeStartBusDemo(): void {
+    if (this.busDemoTimer || this.busQuiet) return;
+    if (
+      typeof location === "undefined" ||
+      new URLSearchParams(location.search).get("bus") !== "demo"
+    ) {
+      return;
+    }
+    const iso = new Date(this.now()).toISOString();
+    const demo: ReadonlyArray<Record<string, unknown>> = [
+      {
+        kind: "executor.online",
+        executor: { id: "ex-demo", name: "agb", harness: "claude", presence: "online" },
+        prev_state: "offline",
+        state: "online",
+        last_seen_at: iso,
+      },
+      {
+        kind: "task.created",
+        actor: "ui",
+        task: { id: "TB-901", title: "Проверка живого слоя Обзора" },
+      },
+      {
+        kind: "report",
+        actor: "machine:demo",
+        task_id: "TB-901",
+        report: { body: "Демо-отчёт мок-шины: срез кадра для приёмки." },
+      },
+      {
+        kind: "task.updated",
+        actor: "ui",
+        task: { id: "TB-901", title: "Проверка живого слоя Обзора" },
+      },
+      {
+        kind: "notification",
+        notification: {
+          id: 1,
+          category: "work",
+          title: "Демо-уведомление шины",
+          message: "Мок-шина: ограниченная демо-последовательность.",
+          task_id: "TB-901",
+          ts: iso,
+          read: false,
+        },
+      },
+      {
+        kind: "assignment.started",
+        task_id: "TB-901",
+        assignment: { id: "901", task_id: "TB-901", state: "running" },
+      },
+    ];
+    const tick = (): void => {
+      if (this.busQuiet) return;
+      const frame = demo[this.busDemoStep];
+      this.busDemoStep += 1;
+      for (const source of [...this.busSources]) source.emit(frame);
+      this.busDemoTimer = this.busDemoStep < demo.length ? setTimeout(tick, 1100) : 0;
+    };
+    this.busDemoTimer = setTimeout(tick, 400);
   }
 
   // --- UI-28 activity (GET /api/activity, week-0 contract mock) ---------------
@@ -960,7 +1132,10 @@ export class MockAdapter implements MemoryGateway {
       try {
         const task = await this.adoptInboxItem(memoryId);
         results.push({
-          memory_id: memoryId, ok: true, task_id: task.id, detail: "",
+          memory_id: memoryId,
+          ok: true,
+          task_id: task.id,
+          detail: "",
         });
       } catch (error) {
         const existing = this.inboxItems.find((row) => row.memory_id === memoryId);

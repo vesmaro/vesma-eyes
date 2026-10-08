@@ -115,8 +115,11 @@
 }
 
 /* Drift: the well is not a photograph — ≤4px/s ambient, --duration-iris
- * breath rhythm, gated by the live-layer store (calm/off settle it) and by
- * reduced-motion (zeroed --duration-iris → static composition). */
+ * breath rhythm. U2 honesty of light (SPEC-2026-10-07: «шина молчит —
+ * экран стоит»): the animation mounts ONLY inside a breath window opened
+ * by a real bus event — [data-breath="true"] written by the well organ —
+ * and only in the «Полный» layer (calm/off settle the composition; the
+ * reduced mirrors never open a window at all). At rest: transform none. */
 @keyframes well-drift {
   from {
     transform: translateY(-4px);
@@ -127,22 +130,21 @@
 }
 
 .well-drift {
-  animation: well-drift var(--duration-iris) var(--ease-breath) infinite
-    alternate;
+  animation: none;
 }
 
-[data-live="calm"] .well-drift,
-[data-live="off"] .well-drift {
-  animation: none;
+[data-live="live"][data-breath="true"] .well-drift {
+  animation: well-drift var(--duration-iris) var(--ease-breath) infinite alternate;
 }
 
 /* ── Well substrate (W1b «Колодец — орган состояния») ────────────────────
  * The deterministic myelin fabric breathes between the golden alphas —
  * the FIRST consumers of --web-node-alpha ↔ --web-wave-alpha at the
- * --duration-web-idle period (15-WOW §14.1). Breathing is the surface's
- * idle ambience: settled in calm/off, zeroed in reduced (the token mirrors
- * 0ms — gated explicitly so the static rest opacity is pinned). The tone
- * NEVER touches the substrate: it is monochrome by construction. */
+ * --duration-web-idle period (15-WOW §14.1). U2 honesty of light: the
+ * breath mounts ONLY inside a bus-opened breath window in the «Полный»
+ * layer ([data-breath="true"] — see the drift note); at rest — and in
+ * calm/off/reduced — the fabric pins the resting alpha (static tint). The
+ * tone NEVER touches the substrate: it is monochrome by construction. */
 @keyframes well-substrate-breath {
   from {
     opacity: var(--web-node-alpha);
@@ -153,14 +155,13 @@
 }
 
 .well-substrate {
-  animation: well-substrate-breath var(--duration-web-idle) var(--ease-breath)
-    infinite alternate;
-}
-
-[data-live="calm"] .well-substrate,
-[data-live="off"] .well-substrate {
   animation: none;
   opacity: var(--web-node-alpha);
+}
+
+[data-live="live"][data-breath="true"] .well-substrate {
+  animation: well-substrate-breath var(--duration-web-idle) var(--ease-breath) infinite
+    alternate;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -218,6 +219,37 @@
 /* The hover readout lives in the HUD's middle slot; empty = invisible. */
 .well-readout:empty {
   display: none;
+}
+
+/* The bus ticker (v12 §3.1/§13.3): DATA, not decor — the line updates in
+ * every live-layer regime; only the MOTION is gated. The fade-swap rides
+ * --duration-normal (the 240ms canon window) in «Полный» alone; calm, off
+ * and both reduced regimes swap instantly. */
+@keyframes well-ticker-swap {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.well-ticker-line {
+  animation: none;
+}
+
+[data-live="live"] .well-ticker-line {
+  animation: well-ticker-swap var(--duration-normal) var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .well-ticker-line {
+    animation: none;
+  }
+}
+
+[data-motion="reduced"] .well-ticker-line {
+  animation: none;
 }
 
 /* ── Весма, the nest keeper (ME-071 W2, lazy chunk `vesma`) ──────────────
@@ -292,7 +324,18 @@ html[data-vesma-pad] #main {
   fill: var(--myelin-strong);
   transform-box: view-box;
   transform-origin: 60px 62px;
+  /* U2 honesty of light: the keeper breathes ONLY inside a bus-opened
+   * breath window (html[data-breath] — written by the living engine/organ);
+   * a silent bus means the keeper rests too. */
+  animation: none;
+}
+
+html[data-breath="true"] .vesma-body {
   animation: vesma-breath var(--duration-iris) var(--ease-in-out) infinite;
+}
+
+html[data-motion="reduced"] .vesma-body {
+  animation: none;
 }
 
 .vesma-core {
@@ -442,9 +485,8 @@ html[data-vesma-pad] #main {
 }
 
 .task-done-flash {
-  animation: task-done-flash
-    calc(var(--duration-impulse) + var(--duration-flash-hold)) var(--ease-enter)
-    both;
+  animation: task-done-flash calc(var(--duration-impulse) + var(--duration-flash-hold))
+    var(--ease-enter) both;
 }
 
 /* ── The перелёт z-lift (ME-071 W3 review fix): mid-flight the card passes

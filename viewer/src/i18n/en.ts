@@ -174,9 +174,58 @@ export const en: Record<TranslationKey, string> = {
   "overview.legendToneUpdate": "update (until accepted or dismissed)",
   "overview.legendNote":
     "The well shows {{shown}} most recent records and their links. Links appear only between displayed records.",
-  "overview.heroTags": "{{count}} tags",
+  "overview.heroTags": "tags — {{count}}",
   "overview.waitingChip": "Waiting in total: {{count}}",
-  "overview.tickerItem": "{{time}} written to memory: {{title}} · {{server}}",
+  // U2 «Overview well» (2026-10-08): HUD + the bus ticker. One parent
+  // action «Share»; the vital cluster renders only from answered wires;
+  // the ticker is ONE line of real /api/events frames (meaning-mapped —
+  // no raw kind codes in lines). A silent bus = an empty line (honest).
+  "overview.share": "Share",
+  "overview.shareDone": "Link copied",
+  "overview.shareManual": "Copy the address: {{url}}",
+  "overview.heroAgents": "agents — {{count}}",
+  "overview.tickerLabel": "Bus event ticker",
+  "overview.eventTaskCreated": "New task: {{ref}}",
+  "overview.eventTaskUpdated": "Task updated: {{ref}}",
+  "overview.eventTaskMoved": "Task moved: {{ref}}",
+  "overview.eventTaskDeleted": "Task deleted: {{ref}}",
+  "overview.eventTaskArchived": "Task archived: {{ref}}",
+  "overview.eventTaskUnarchived": "Task restored: {{ref}}",
+  "overview.eventReport": "Report for task: {{ref}}",
+  "overview.eventAssignmentCreated": "Assignment created: {{ref}}",
+  "overview.eventAssignmentClaimed": "Task claimed: {{ref}}",
+  "overview.eventAssignmentStarted": "In progress: {{ref}}",
+  "overview.eventAssignmentDone": "Done: {{ref}}",
+  "overview.eventAssignmentFailed": "Failed: {{ref}}",
+  "overview.eventAssignmentCancelled": "Assignment cancelled: {{ref}}",
+  "overview.eventAssignmentExpired": "Assignment expired: {{ref}}",
+  "overview.eventExecutorOnline": "Agent is online: {{ref}}",
+  "overview.eventExecutorOffline": "Agent went offline: {{ref}}",
+  "overview.eventExecutorRegistered": "New agent: {{ref}}",
+  "overview.eventExecutorUpdated": "Agent updated: {{ref}}",
+  "overview.eventExecutorDeleted": "Agent deleted: {{ref}}",
+  "overview.eventServerChanged": "A memory store changed",
+  "overview.eventNotification": "Notification: {{ref}}",
+  "overview.eventEnrollmentCreated": "Enrollment token minted",
+  "overview.eventEnrollmentUsed": "Enrollment token used: {{ref}}",
+  "overview.eventEnrollmentRevoked": "Enrollment token revoked",
+  "overview.eventEnrollmentExpired": "Enrollment token expired",
+  "overview.eventHarnessAdded": "New harness: {{ref}}",
+  "overview.eventHarnessRemoved": "Harness removed: {{ref}}",
+  "overview.eventProvisionCreated": "Connection started: {{ref}}",
+  "overview.eventProvisionProgress": "Connection in progress: {{ref}}",
+  "overview.eventProvisionOk": "Connected: {{ref}}",
+  "overview.eventProvisionFailed": "Connection failed: {{ref}}",
+  "overview.eventProvisionRepinned": "Host re-pinned: {{ref}}",
+  "overview.eventPairingRequested": "Pairing requested: {{ref}}",
+  "overview.eventPairingConfirmed": "Device confirmed: {{ref}}",
+  "overview.eventPairingRevoked": "Pairing revoked",
+  "overview.eventPairingExpired": "Pairing expired",
+  "overview.eventRuleCreated": "Automation rule created",
+  "overview.eventRuleUpdated": "Automation rule updated",
+  "overview.eventRuleToggled": "Automation rule toggled",
+  "overview.eventRuleDeleted": "Automation rule deleted",
+  "overview.eventOther": "Bus event",
   "overview.wellEmpty": "The well awaits its first record — agents write them.",
   "overview.wellError": "The well is unreachable — the bus did not answer",
   // UX-overhaul §3/§8 (Ф1): the overview leads into the working domains and
@@ -242,12 +291,16 @@ export const en: Record<TranslationKey, string> = {
   "auth.status.signedIn": "you: owner",
   "auth.lock.why": "opens after you sign in",
   "auth.gate.heading": "The “{{domain}}” section opens after you sign in",
-  "auth.gate.inside.memory": "Records, search by meaning, pulse and tags — the contents of memory",
-  "auth.gate.inside.tasks": "Kanban, list, inbox and archive — your work and assignments",
+  "auth.gate.inside.memory":
+    "Records, search by meaning, pulse and tags — the contents of memory",
+  "auth.gate.inside.tasks":
+    "Kanban, list, inbox and archive — your work and assignments",
   "auth.gate.inside.agents": "Execution, hosts and connecting new machines",
-  "auth.gate.inside.kora": "A journal of sessions from every host: what the agent did and said",
+  "auth.gate.inside.kora":
+    "A journal of sessions from every host: what the agent did and said",
   "auth.gate.inside.system": "Status, devices and traces — the service area",
-  "auth.gate.elsewhere": "The statistics are open to everyone — they live on the Overview.",
+  "auth.gate.elsewhere":
+    "The statistics are open to everyone — they live on the Overview.",
   "auth.gate.goOverview": "Open the Overview",
   "auth.gate.signUp": "Create an account",
   "auth.gate.seeMore": "What will I see after signing in",
@@ -267,7 +320,8 @@ export const en: Record<TranslationKey, string> = {
   "auth.gate.seeMore.systemSettings": "Settings and automation",
   "auth.gate.seeMore.systemDevices": "Connected devices",
   // U1: the gate mini-preview caption — the sketch is honest about being a sketch.
-  "auth.gate.previewCaption": "A sketch of the section — its contents open after you sign in",
+  "auth.gate.previewCaption":
+    "A sketch of the section — its contents open after you sign in",
   "auth.gate.checkingSession": "Checking your session…",
   "auth.route.back": "← Back to the board",
   // U1 (07h §12): the noticeable return button by the central card on /auth
@@ -290,23 +344,27 @@ export const en: Record<TranslationKey, string> = {
   "auth.route.registerSubmit": "Create an account",
   "auth.route.signingIn": "Signing in…",
   "auth.route.creating": "Creating…",
-  "auth.route.registerNote": "The first account created becomes the owner of the board.",
+  "auth.route.registerNote":
+    "The first account created becomes the owner of the board.",
   "auth.route.usernameLabel": "Username",
   "auth.route.passwordLabel": "Password",
   "auth.route.confirmLabel": "Repeat the password",
   "auth.route.showPassword": "Show the password",
   "auth.route.hidePassword": "Hide the password",
-  "auth.route.usernameHint": "The name: lowercase latin letters, 3 to 32 characters; digits, hyphens and underscores allowed.",
+  "auth.route.usernameHint":
+    "The name: lowercase latin letters, 3 to 32 characters; digits, hyphens and underscores allowed.",
   "auth.route.passwordHint": "The password: at least 8 characters.",
   "auth.route.errRequiredUsername": "Enter the name.",
   "auth.route.errRequiredPassword": "Enter the password.",
   "auth.route.errRequiredConfirm": "Repeat the password.",
-  "auth.route.errUsername": "The name does not fit: lowercase latin letters, 3 to 32 characters; digits, hyphens and underscores allowed inside.",
+  "auth.route.errUsername":
+    "The name does not fit: lowercase latin letters, 3 to 32 characters; digits, hyphens and underscores allowed inside.",
   "auth.route.errPassword": "The password is too short — at least 8 characters.",
   "auth.route.errConfirm": "The passwords do not match — check the second field.",
   "auth.route.verdictPrefix": "Error:",
   "auth.route.loginFailed": "Wrong name or password.",
-  "auth.route.loginFailedHelp": "What to check: the RU/EN layout, letter case, Caps Lock.",
+  "auth.route.loginFailedHelp":
+    "What to check: the RU/EN layout, letter case, Caps Lock.",
   "auth.route.tooManyAttempts": "Too many attempts — wait a minute and try again.",
   "auth.route.nameTaken": "That name is taken. Pick another one.",
   // fix/kora-auth-honesty (owner complaint, prod 1.63.0): the verdict names
@@ -315,9 +373,11 @@ export const en: Record<TranslationKey, string> = {
     "Registration is closed — the board already has its owner. The owner opens access for new members in the server settings (the VESMARO_ALLOW_REGISTRATION flag).",
   "auth.route.techDetail": "Server technical details",
   "auth.route.registerFailed": "The account could not be created.",
-  "auth.route.networkFailed": "The server did not answer — check the connection and try again.",
+  "auth.route.networkFailed":
+    "The server did not answer — check the connection and try again.",
   "auth.route.signedInToast": "You are signed in: {{username}}",
-  "auth.route.accountCreatedToast": "The account is created. You are signed in: {{username}}",
+  "auth.route.accountCreatedToast":
+    "The account is created. You are signed in: {{username}}",
   "auth.route.alreadySignedInNamed": "You are already signed in: {{username}}",
   "auth.route.tokenModeLink": "Token sign-in (admin)",
   "auth.route.backToPassword": "← Back to the username and password sign-in",
@@ -389,7 +449,8 @@ export const en: Record<TranslationKey, string> = {
     "Loosen the status or project filter to surface more of the well.",
   "memories.clearFilters": "Clear filters",
   "memories.wellEmpty": "Your memory records will live here",
-  "memories.wellEmptyHint": "Agents write the memory — records appear once they start working.",
+  "memories.wellEmptyHint":
+    "Agents write the memory — records appear once they start working.",
   "memories.prev": "Prev",
   "memories.next": "Next",
   "memories.showing": "Showing {{from}}–{{to}}",
@@ -440,8 +501,7 @@ export const en: Record<TranslationKey, string> = {
   "tags.memoriesCount": "memories: {{count}}",
   "tags.all": "All tags",
   "tags.drilldownTitle": "Memories tagged",
-  "tags.drilldownNote":
-    "Filtered client-side — vesma has no by-tag list filter.",
+  "tags.drilldownNote": "Filtered client-side — vesma has no by-tag list filter.",
   "tags.nothingCarries": "Nothing carries this tag",
   "tags.nothingCarriesMessage": "No memory is tagged {{tag}} right now.",
   // --- tags cloud (UI-17, spec 2026-09-21 §9; owner-approved copy) -----------
@@ -1599,7 +1659,8 @@ export const en: Record<TranslationKey, string> = {
   "settings.security.saving": "Saving…",
   "settings.security.toastOk": "Password updated",
   "settings.security.wrongCurrent": "The current password does not match.",
-  "settings.security.forbidden": "Not allowed: password recovery is available to the owner.",
+  "settings.security.forbidden":
+    "Not allowed: password recovery is available to the owner.",
   "settings.security.tooManyAttempts":
     "Too many attempts — wait {{n}} s and try again.",
   "settings.security.saveFailed": "Could not save the password.",
@@ -1814,8 +1875,7 @@ export const en: Record<TranslationKey, string> = {
   "docs.catDesc.apiMnemos":
     "A map over the memory server surfaces and the A2A sessions contract.",
   "docs.cat.apiAgent": "vesmaro-agent protocol",
-  "docs.catDesc.apiAgent":
-    "The agent wire protocol and the service charter v2 digest.",
+  "docs.catDesc.apiAgent": "The agent wire protocol and the service charter v2 digest.",
   "docs.cat.apiMesh": "vesma-mesh",
   "docs.catDesc.apiMesh":
     "No public HTTP API — the internal protocol and the operator surface.",
@@ -1881,7 +1941,8 @@ export const en: Record<TranslationKey, string> = {
   // ME-072 A: the ONE 404 pattern (the tasks 404 is the reference: explain
   // + an action).
   "app.notFoundTitle": "Page not found",
-  "app.notFoundMessage": "This path does not exist in the well — the address is stale or mistyped.",
+  "app.notFoundMessage":
+    "This path does not exist in the well — the address is stale or mistyped.",
   "app.notFoundAction": "Back to overview",
 
   // --- CV-7: QR pairing + devices (ADR 0012) ---------------------------------------

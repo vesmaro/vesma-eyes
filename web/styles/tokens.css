@@ -95,10 +95,18 @@
   /* ── Phase 1 «Кора-организм» additions (design blueprint v1.1 §5.2;
    *    seven new names on the frozen canon — ADR 0006 names untouched) ── */
   --text-display: clamp(2.25rem, 3.5vw, 2.75rem); /* the ONE display step — Overview hero only; Inter 600 */
-  --well-hero-h: clamp(520px, calc(100vh - 48px), 860px); /* Overview hero height; no fold scroll ≥1024w */
+  /* U2 (2026-10-08): the well is inscribed into the Shell — from the topbar
+   * to the bottom of the FIRST screen, crumbs row included (SPEC-2026-10-07
+   * «Обзор»; --shell-* geometry). Parity with viewer tokens.css. */
+  --well-hero-h: clamp(520px, calc(100vh - var(--shell-topbar-h) - var(--shell-crumbs-h) - var(--space-6)), 860px);
   --hud-veil: rgb(5 16 21 / 0.78);      /* functional HUD-text backdrop on canvas ONLY; pairs §7.1 */
   --palette-scrim: rgb(5 16 21 / 0.55); /* palette backdrop tint; + blur(4px) = the system's only blur */
   --duration-awaken: 1200ms;            /* Overview awakening wave — once per session */
+  /* U2 honesty of light (SPEC-2026-10-07): motion lives only inside a
+   * breath window opened by a real bus event; 25% duty ceiling. Parity
+   * with viewer tokens.css; reduced mirrors → 0ms. */
+  --duration-breath: 3500ms;            /* breath window opened by a real bus event */
+  --duration-breath-rest: 10500ms;      /* min quiet after a window (events still tone) */
   --duration-attention: 320ms;          /* attention double-beat pause (name fixed in Ф1, consumed in Ф2) */
   --duration-attention-hold: 2400ms;    /* ▸N glow hold after the double beat; ≤1 at a time */
 
@@ -366,6 +374,8 @@
     --duration-awaken: 0ms;    /* awakening → static graph immediately (§10) */
     --duration-attention: 0ms; /* double beat → single static highlight */
     --duration-attention-hold: 0ms; /* no glow hold */
+    --duration-breath: 0ms;    /* U2: no breath window at all → static */
+    --duration-breath-rest: 0ms;
     /* v12 golden (ME-071 W0 — 15-WOW §14.1/§14.3.7/§14.6.1 §4, 13.8 §2):
      * always-wave and flights off; tone windows and the flash hold clamp
      * to the static 1.5s tint; crossfade gone. */
@@ -391,6 +401,8 @@
   --duration-awaken: 0ms;
   --duration-attention: 0ms;
   --duration-attention-hold: 0ms;
+  --duration-breath: 0ms;    /* U2 mirror: no breath window → static */
+  --duration-breath-rest: 0ms;
   /* v12 golden (ME-071 W0) — forced-reduced mirror of the OS block. */
   --duration-web-idle: 0ms;
   --duration-flight: 0ms;

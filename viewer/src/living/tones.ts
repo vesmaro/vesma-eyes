@@ -32,6 +32,105 @@ export function hashString(s: string): number {
   return (h >>> 0) % 997;
 }
 
+// --- the breath window (U2 honesty of light) ---------------------------------
+//
+// SPEC-2026-10-07, motion law 2–3: «первое дыхание из шины реальных событий;
+// шина молчит — экран стоит». Ambient motion is no longer always-on: a REAL
+// bus event opens ONE breath window (--duration-breath); the vein sheen and
+// the well's drift/substrate breath animate only inside it. After the window
+// the layer rests ≥ --duration-breath-rest (events keep TONING — state, not
+// motion), so the duty stays ≤ 3500/(3500+10500) = 25%. Any user input
+// freezes immediately (the ≤80ms law). Zero timers while resting: the next
+// event re-checks the cooldown synchronously.
+
+export interface Breath {
+  /** A real bus event: open the window unless resting/reduced/muted. */
+  event(): void;
+  /** Any user input (or a regime flip): freeze motion NOW. */
+  freeze(): void;
+  /** True while ambient motion is allowed (a window is open). */
+  readonly isOpen: boolean;
+  /** Subscribe to open/close flips; fires the current state immediately. */
+  subscribe(fn: (open: boolean) => void): () => void;
+  /** Idempotent teardown (StrictMode). */
+  destroy(): void;
+}
+
+/** Service frames are not events: `hello` must never open a window. */
+export function isBusServiceKind(kind: string): boolean {
+  return kind === "hello";
+}
+
+export function createBreath(
+  read: (token: string, fallback: string) => string,
+  allowed: () => boolean,
+): Breath {
+  // Reduced mirrors are 0ms — a zero window can never open (0 is a LEGAL
+  // value here, unlike the engines' `parseFloat || fb` idiom). KEEP LEAN —
+  // scripts/budget-check.mjs measures this chunk.
+  const num = (name: string, fb: number): number => {
+    const v = Number.parseFloat(read(name, String(fb)));
+    return Number.isFinite(v) && v >= 0 ? v : fb;
+  };
+  const win = num("--duration-breath", 3500);
+  const rest = num("--duration-breath-rest", 10500);
+  let open = false; // the ANNOUNCED state — flips only via event()/close()
+  let restUntil = 0;
+  let timer: ReturnType<typeof setTimeout> | 0 = 0;
+  let dead = false;
+  const ls = new Set<(o: boolean) => void>();
+  const fire = (o: boolean): void => {
+    for (const fn of [...ls]) fn(o);
+  };
+  /** Close the window; only NATURAL expiry starts the quiet — an input
+   * freeze leaves no cooldown (the next event may breathe immediately). */
+  const close = (cool: boolean): void => {
+    if (timer) {
+      clearTimeout(timer);
+      timer = 0;
+    }
+    if (!open) return;
+    open = false;
+    restUntil = cool ? performance.now() + rest : 0;
+    fire(false);
+  };
+
+  return {
+    event(): void {
+      if (dead || open || !allowed() || win <= 0 || performance.now() < restUntil)
+        return;
+      open = true;
+      fire(true);
+      timer ||= setTimeout(() => {
+        timer = 0;
+        close(true);
+      }, win);
+    },
+    freeze(): void {
+      if (!dead) close(false);
+    },
+    get isOpen(): boolean {
+      return !dead && open;
+    },
+    subscribe(fn: (o: boolean) => void): () => void {
+      ls.add(fn);
+      fn(open);
+      return () => {
+        ls.delete(fn);
+      };
+    },
+    destroy(): void {
+      dead = true;
+      if (timer) clearTimeout(timer);
+      timer = 0;
+      const was = open;
+      open = false;
+      if (was) fire(false); // announce the close before detaching
+      ls.clear();
+    },
+  };
+}
+
 /** True when animation must not run at all (canon: a STATIC drawing). */
 export function isReducedMotion(): boolean {
   return (
@@ -143,8 +242,7 @@ export function createTones(
   const parseRgb = (v: string, fb: string): [number, number, number] => {
     const hex = /#([0-9a-f]{3,6})/i.exec(v);
     if (hex) {
-      const h =
-        hex[1].length === 3 ? hex[1].replace(/./g, (c) => c + c) : hex[1];
+      const h = hex[1].length === 3 ? hex[1].replace(/./g, (c) => c + c) : hex[1];
       return [
         parseInt(h.slice(0, 2), 16),
         parseInt(h.slice(2, 4), 16),
@@ -200,7 +298,8 @@ export function createTones(
   }
 
   const dropKey = (key: ToneKey): void => {
-    for (let i = tones.length - 1; i >= 0; i--) if (tones[i].key === key) tones.splice(i, 1);
+    for (let i = tones.length - 1; i >= 0; i--)
+      if (tones[i].key === key) tones.splice(i, 1);
   };
 
   return {
