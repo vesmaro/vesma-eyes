@@ -17,16 +17,16 @@ import {
   useSessionMode,
 } from "@/features/ui-token/useSessionControl";
 import { useT } from "@/i18n";
-import { pageGridClass } from "@/layout/pageGrid";
 
 /**
- * `/` — «Обзор» (blueprint §12.3, Phase 1 of «Кора-организм»): the page
- * opens with the WELL — one dark full-height hero canvas (`WellHero`), the
- * only bold element on the surface; the awakening plays once per session
- * and the rest is working quiet. Below the fold the cockpit blocks keep
- * their J1 order — «кто занят → что ждёт меня → что в памяти → строка
- * честности». Anti-dashification rules apply unchanged: a block with
- * nothing to say does not render, and every figure LEADS somewhere.
+ * `/` — «Обзор» (SPEC-2026-10-07 «Обзор», v12 §3.1): the page opens with
+ * the WELL — one dark FULL-BLEED hero canvas (`WellHero`, the whole
+ * working-zone width; the page's single bold element), the awakening
+ * rides the first real bus frame and the rest is working quiet. Below the
+ * fold the cockpit blocks keep their J1 order on the showcase measure —
+ * «кто занят → что ждёт меня → что в памяти → строка честности». Anti-
+ * dashification rules apply unchanged: a block with nothing to say does
+ * not render, and every figure LEADS somewhere.
  */
 export function OverviewPage() {
   const t = useT();
@@ -46,101 +46,104 @@ export function OverviewPage() {
   const showMemory = showStores || showPulse;
 
   return (
-    <section aria-labelledby="well-hero-title" className={pageGridClass("showcase", "space-y-8")}>
-      {/* The well hero: display headline + HUD on the dark canvas (§12.3).
-       * The page's single h1 lives inside (visible, --text-display). */}
+    // Full-bleed root (U2): the hero spans the whole working zone; the
+    // cockpit column re-applies the showcase measure itself, so every H1/H2
+    // keeps the page-grid x while the canvas breaks out of it.
+    <section aria-labelledby="well-hero-title" className="w-full space-y-8">
       <WellHero />
 
-      {/* КТО ЗАНЯТ (§3.1): executors' presence + the work counts, leading to
-       * the agents/tasks surfaces. Renders its own honest states (zero
-       * agents → the connect line; errors → HonestLine + retry). */}
-      <CockpitBusy />
+      <div className="mx-auto w-full max-w-4xl space-y-8">
+        {/* КТО ЗАНЯТ (§3.1): executors' presence + the work counts, leading to
+         * the agents/tasks surfaces. Renders its own honest states (zero
+         * agents → the connect line; errors → HonestLine + retry). */}
+        <CockpitBusy />
 
-      {/* ЧТО ЖДЁТ МЕНЯ (§3.1 + persona round 1): ONE summary number-action —
-       * the click leads to the most urgent list; quiet source rows under it.
-       * Renders nothing while nothing waits. */}
-      <CockpitWaiting />
+        {/* ЧТО ЖДЁТ МЕНЯ (§3.1 + persona round 1): ONE summary number-action —
+         * the click leads to the most urgent list; quiet source rows under it.
+         * Renders nothing while nothing waits. */}
+        <CockpitWaiting />
 
-      {/* ЧТО В ПАМЯТИ (§3.1): the store cards + the fresh-pulse strip — the
-       * same live data as before, now under one cockpit title. */}
-      {showMemory ? (
-        <section aria-labelledby="overview-memory" className="space-y-3">
-          <h2 id="overview-memory" className="text-lg font-semibold text-foreground">
-            {t("cockpit.memoryTitle")}
-          </h2>
+        {/* ЧТО В ПАМЯТИ (§3.1): the store cards + the fresh-pulse strip — the
+         * same live data as before, now under one cockpit title. */}
+        {showMemory ? (
+          <section aria-labelledby="overview-memory" className="space-y-3">
+            <h2 id="overview-memory" className="text-lg font-semibold text-foreground">
+              {t("cockpit.memoryTitle")}
+            </h2>
 
-          {showStores ? (
-            health.isPending ? (
-              <div role="status" aria-label={t("overview.storesLoading")}>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Skeleton className="h-24 w-full" />
-                  <Skeleton className="h-24 w-full" />
+            {showStores ? (
+              health.isPending ? (
+                <div role="status" aria-label={t("overview.storesLoading")}>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Skeleton className="h-24 w-full" />
+                    <Skeleton className="h-24 w-full" />
+                  </div>
                 </div>
-              </div>
-            ) : health.isError ? (
-              <p role="status" className="text-sm text-foreground-secondary">
-                {t("overview.storesError", { message: health.error.message })}
-              </p>
-            ) : (
-              <ul className="grid gap-list-gap sm:grid-cols-2">
-                {health.data.servers.map((server) => (
-                  <li key={server.name}>
-                    <StoreCard server={server} />
-                  </li>
-                ))}
-              </ul>
-            )
-          ) : null}
-
-          {showPulse ? (
-            <div className="space-y-3">
-              <div className="flex items-baseline justify-between gap-4">
-                <h3 className="text-sm font-medium text-foreground-secondary">
-                  {t("overview.pulseTitle")}
-                </h3>
-                <Link
-                  to="/memory/pulse"
-                  className="inline-flex min-h-6 items-center gap-1 text-sm text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-                >
-                  {t("overview.pulseAll")}{" "}
-                  <ArrowRight className="size-4" aria-hidden="true" />
-                </Link>
-              </div>
-              {pulse.isPending ? (
-                <div
-                  role="status"
-                  aria-label={t("pulse.loading")}
-                  className="text-sm text-foreground-secondary"
-                >
-                  {t("pulse.loading")}…
-                </div>
-              ) : pulse.isError ? (
+              ) : health.isError ? (
                 <p role="status" className="text-sm text-foreground-secondary">
-                  {t("overview.pulseError", { message: pulse.error.message })}
+                  {t("overview.storesError", { message: health.error.message })}
                 </p>
               ) : (
-                <PulseFeed
-                  items={pulse.data.items}
-                  perServer={pulse.data.per_server}
-                  compact
-                />
-              )}
-            </div>
-          ) : null}
-        </section>
-      ) : null}
+                <ul className="grid gap-list-gap sm:grid-cols-2">
+                  {health.data.servers.map((server) => (
+                    <li key={server.name}>
+                      <StoreCard server={server} />
+                    </li>
+                  ))}
+                </ul>
+              )
+            ) : null}
 
-      {/* UX-overhaul §3/§8 (Ф1): the honesty line — one sentence naming the
-       * not-yet-live surfaces (persona-review wording). Не рендерится, когда
-       * всё живое (сегодня — всегда: хранилища-реестр и метрики в работе). */}
-      <HonestLine>{t("overview.honestyLater")}</HonestLine>
+            {showPulse ? (
+              <div className="space-y-3">
+                <div className="flex items-baseline justify-between gap-4">
+                  <h3 className="text-sm font-medium text-foreground-secondary">
+                    {t("overview.pulseTitle")}
+                  </h3>
+                  <Link
+                    to="/memory/pulse"
+                    className="inline-flex min-h-6 items-center gap-1 text-sm text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                  >
+                    {t("overview.pulseAll")}{" "}
+                    <ArrowRight className="size-4" aria-hidden="true" />
+                  </Link>
+                </div>
+                {pulse.isPending ? (
+                  <div
+                    role="status"
+                    aria-label={t("pulse.loading")}
+                    className="text-sm text-foreground-secondary"
+                  >
+                    {t("pulse.loading")}…
+                  </div>
+                ) : pulse.isError ? (
+                  <p role="status" className="text-sm text-foreground-secondary">
+                    {t("overview.pulseError", { message: pulse.error.message })}
+                  </p>
+                ) : (
+                  <PulseFeed
+                    items={pulse.data.items}
+                    perServer={pulse.data.per_server}
+                    compact
+                  />
+                )}
+              </div>
+            ) : null}
+          </section>
+        ) : null}
 
-      {/* Session-aware mode line (fix/login-feedback) — same derivation as
-       * the sidebar footer: states the live contract instead of the static
-       * L1 read-only claim that kept lying after a login. */}
-      <p className="text-center text-xs text-foreground-muted">
-        {t(sessionModeI18nKey(sessionMode))}
-      </p>
+        {/* UX-overhaul §3/§8 (Ф1): the honesty line — one sentence naming the
+         * not-yet-live surfaces (persona-review wording). Не рендерится, когда
+         * всё живое (сегодня — всегда: хранилища-реестр и метрики в работе). */}
+        <HonestLine>{t("overview.honestyLater")}</HonestLine>
+
+        {/* Session-aware mode line (fix/login-feedback) — same derivation as
+         * the sidebar footer: states the live contract instead of the static
+         * L1 read-only claim that kept lying after a login. */}
+        <p className="text-center text-xs text-foreground-muted">
+          {t(sessionModeI18nKey(sessionMode))}
+        </p>
+      </div>
     </section>
   );
 }

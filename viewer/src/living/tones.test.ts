@@ -130,3 +130,108 @@ describe("tones — the anti-fake mute gate", () => {
     expect(t.frame(60_000, 1000)).toBeNull();
   });
 });
+
+// --- the breath window (U2 honesty of light) ---------------------------------
+//
+// SPEC-2026-10-07: «первое дыхание из шины; шина молчит — экран стоит».
+// The window is the ONE motion gate: a real event opens it, it closes
+// itself after --duration-breath, rests ≥ --duration-breath-rest (25% duty
+// ceiling), freezes instantly on input, and never opens when the reduced
+// mirror zeroes the durations. Driven by vitest fake timers (setTimeout +
+// performance.now are the window's whole clock).
+
+import { afterEach, beforeEach, vi } from "vitest";
+import { createBreath, isBusServiceKind } from "./tones";
+
+describe("breath — the motion window opened by a real bus event (U2)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers(); // fakes setTimeout AND performance.now (the window clock)
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function make(allowed = true) {
+    const events: boolean[] = [];
+    const breath = createBreath(
+      (_name, fb) => fb, // fallbacks: window 3500ms, rest 10500ms
+      () => allowed,
+    );
+    breath.subscribe((open) => events.push(open));
+    return { breath, events };
+  }
+
+  it("rests closed until the first event; the window then opens", () => {
+    const { breath, events } = make();
+    expect(breath.isOpen).toBe(false);
+    expect(events).toEqual([false]);
+    breath.event();
+    expect(breath.isOpen).toBe(true);
+    expect(events).toEqual([false, true]);
+  });
+
+  it("closes itself after the window; the close is announced once", () => {
+    const { breath, events } = make();
+    breath.event();
+    vi.advanceTimersByTime(3500);
+    expect(breath.isOpen).toBe(false);
+    expect(events).toEqual([false, true, false]);
+    vi.advanceTimersByTime(30_000);
+    expect(events).toEqual([false, true, false]); // silence stays silent
+  });
+
+  it("duty ceiling: events during the rest do NOT reopen the window", () => {
+    const { breath, events } = make();
+    breath.event();
+    vi.advanceTimersByTime(3500); // window over, rest begins
+    breath.event(); // inside the 10.5s rest — ignored
+    expect(breath.isOpen).toBe(false);
+    vi.advanceTimersByTime(5000);
+    breath.event(); // still resting (t=8.5s < 14s)
+    expect(breath.isOpen).toBe(false);
+    vi.advanceTimersByTime(5500); // rest over (t=14s)
+    breath.event();
+    expect(breath.isOpen).toBe(true);
+    expect(events).toEqual([false, true, false, true]);
+  });
+
+  it("input freeze: instant close, and NO cooldown — the next event breathes", () => {
+    const { breath, events } = make();
+    breath.event();
+    breath.freeze();
+    expect(breath.isOpen).toBe(false);
+    breath.event(); // right after the freeze — allowed
+    expect(breath.isOpen).toBe(true);
+    expect(events).toEqual([false, true, false, true]);
+  });
+
+  it("a disallowed regime never opens (reduced mirror 0ms works the same)", () => {
+    const { breath } = make(false);
+    breath.event();
+    expect(breath.isOpen).toBe(false);
+  });
+
+  it("zero durations (the reduced mirror) can never open a window", () => {
+    const breath = createBreath(
+      (name, fb) => (name === "--duration-breath" ? "0" : fb),
+      () => true,
+    );
+    breath.event();
+    expect(breath.isOpen).toBe(false);
+  });
+
+  it("destroy closes and detaches; post-destroy events are no-ops", () => {
+    const { breath, events } = make();
+    breath.event();
+    breath.destroy();
+    expect(breath.isOpen).toBe(false);
+    breath.event();
+    expect(breath.isOpen).toBe(false);
+    expect(events).toEqual([false, true, false]);
+  });
+
+  it("service frames are not events: hello never opens anything", () => {
+    expect(isBusServiceKind("hello")).toBe(true);
+    expect(isBusServiceKind("task.created")).toBe(false);
+  });
+});

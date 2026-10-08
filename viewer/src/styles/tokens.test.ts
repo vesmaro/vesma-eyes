@@ -226,10 +226,7 @@ const V12_GOLDEN_THEMED_TOKENS = ["--web-tone-update"];
  * alphas keep their values (the static-drawing rule, §14.1).
  */
 const V10_GOLDEN_STATIC_TOKENS = ["--duration-neura", "--duration-courier"];
-const V10_GOLDEN_THEMED_TOKENS = [
-  "--neura-breath-alpha",
-  "--vein-breath-alpha",
-];
+const V10_GOLDEN_THEMED_TOKENS = ["--neura-breath-alpha", "--vein-breath-alpha"];
 
 // --- CSS parsing helpers --------------------------------------------------
 //
@@ -333,14 +330,12 @@ describe("tokens.css inventory (canon v2 — docs/design/02-TOKENS.md §1–§3)
 
   it("defines the Phase 1 themed pairs in BOTH themes", () => {
     for (const token of PHASE1_THEMED_TOKENS) {
-      expect(
-        blockProps(darkDecls),
-        `${token} missing from dark theme`,
-      ).toContain(token);
-      expect(
-        blockProps(lightDecls),
-        `${token} missing from light theme`,
-      ).toContain(token);
+      expect(blockProps(darkDecls), `${token} missing from dark theme`).toContain(
+        token,
+      );
+      expect(blockProps(lightDecls), `${token} missing from light theme`).toContain(
+        token,
+      );
     }
   });
 
@@ -350,14 +345,12 @@ describe("tokens.css inventory (canon v2 — docs/design/02-TOKENS.md §1–§3)
       expect(props, `${token} missing`).toContain(token);
     }
     for (const token of V12_GOLDEN_THEMED_TOKENS) {
-      expect(
-        blockProps(darkDecls),
-        `${token} missing from dark theme`,
-      ).toContain(token);
-      expect(
-        blockProps(lightDecls),
-        `${token} missing from light theme`,
-      ).toContain(token);
+      expect(blockProps(darkDecls), `${token} missing from dark theme`).toContain(
+        token,
+      );
+      expect(blockProps(lightDecls), `${token} missing from light theme`).toContain(
+        token,
+      );
     }
   });
 
@@ -367,14 +360,12 @@ describe("tokens.css inventory (canon v2 — docs/design/02-TOKENS.md §1–§3)
       expect(props, `${token} missing`).toContain(token);
     }
     for (const token of V10_GOLDEN_THEMED_TOKENS) {
-      expect(
-        blockProps(darkDecls),
-        `${token} missing from dark theme`,
-      ).toContain(token);
-      expect(
-        blockProps(lightDecls),
-        `${token} missing from light theme`,
-      ).toContain(token);
+      expect(blockProps(darkDecls), `${token} missing from dark theme`).toContain(
+        token,
+      );
+      expect(blockProps(lightDecls), `${token} missing from light theme`).toContain(
+        token,
+      );
     }
   });
 
@@ -453,11 +444,12 @@ describe("И0 value evolution locks (02-TOKENS.md §5 — intentional deltas)", 
 
 describe("Phase 1 value locks (design blueprint v1.1 §5.2 — Кора-организм)", () => {
   it("pins the seven new names to their blueprint values", () => {
-    expect(darkDecls.get("--text-display")).toBe(
-      "clamp(2.25rem, 3.5vw, 2.75rem)",
-    );
+    expect(darkDecls.get("--text-display")).toBe("clamp(2.25rem, 3.5vw, 2.75rem)");
+    // U2 (2026-10-08): the hero is inscribed into the Shell — topbar +
+    // crumbs row + the page's top padding (SPEC-2026-10-07 «Обзор»,
+    // ADR 0006 §8 value evolution, docs/design/02-TOKENS.md §5).
     expect(darkDecls.get("--well-hero-h")).toBe(
-      "clamp(520px, calc(100vh - 48px), 860px)",
+      "clamp(520px, calc(100vh - var(--shell-topbar-h) - var(--shell-crumbs-h) - var(--space-6)), 860px)",
     );
     expect(darkDecls.get("--hud-veil")).toBe("rgb(5 16 21 / 0.78)");
     expect(lightDecls.get("--hud-veil")).toBe("rgb(245 246 248 / 0.85)");
@@ -476,7 +468,9 @@ describe("Phase 1 value locks (design blueprint v1.1 §5.2 — Кора-орга
     // board keeps the bare selector (parity is about VALUES, not viewers).
     for (const css of [tokensCss, boardTokensCss]) {
       const block =
-        css.match(/\[data-well-window\](?:,\s*\[data-well-legend\])?\s*\{([^}]*)\}/)?.[1] ?? "";
+        css.match(
+          /\[data-well-window\](?:,\s*\[data-well-legend\])?\s*\{([^}]*)\}/,
+        )?.[1] ?? "";
       expect(block, "well-window scope present").not.toBe("");
       expect(block).toContain("--color-well-canvas: #051015");
       expect(block).toContain("--hud-veil: rgb(5 16 21 / 0.78)");
@@ -512,7 +506,9 @@ describe("Phase 1 value locks (design blueprint v1.1 §5.2 — Кора-орга
     const legend = themeDecls(tokensCss, "[data-well-legend]");
     expect(legend.size).toBeGreaterThan(0);
     for (const [name, value] of legend) {
-      expect(darkDecls.get(name), `legend ${name} must equal the dark column`).toBe(value);
+      expect(darkDecls.get(name), `legend ${name} must equal the dark column`).toBe(
+        value,
+      );
     }
     // The dictionary swatches read the exact tokens the organ paints with.
     // --web-tone-update is deliberately ABSENT from the scope: the ONLY
@@ -556,16 +552,16 @@ describe("v12 golden value locks (ME-071 W0 — 15-WOW §14.1/§14.3.7/§14.6.1 
   it("clamps the v12 durations in the OS reduced-motion block", () => {
     const mediaIndex = tokensCss.indexOf("@media (prefers-reduced-motion: reduce)");
     const flashIndex = tokensCss.indexOf("--duration-flash-hold", mediaIndex);
-    const media = tokensCss.slice(
-      mediaIndex,
-      tokensCss.indexOf("}", flashIndex) + 1,
-    );
+    const media = tokensCss.slice(mediaIndex, tokensCss.indexOf("}", flashIndex) + 1);
     expect(media).toContain("--duration-web-idle: 0ms");
     expect(media).toContain("--duration-flight: 0ms");
     expect(media).toContain("--duration-tone-temp: 1500ms");
     expect(media).toContain("--duration-tone-hold: 1500ms");
     expect(media).toContain("--duration-tone-fade: 0ms");
     expect(media).toContain("--duration-flash-hold: 1500ms");
+    // U2: no breath window at all in reduced — the static tint is final.
+    expect(media).toContain("--duration-breath: 0ms");
+    expect(media).toContain("--duration-breath-rest: 0ms");
   });
 });
 
@@ -582,19 +578,22 @@ describe("v10 golden value locks (ME-93 U0 — 15-WOW §14: «Вздох Ней�
   });
 
   it("zeroes the breath and courier durations in BOTH reduced blocks", () => {
-    const mediaIndex = tokensCss.indexOf(
-      "@media (prefers-reduced-motion: reduce)",
-    );
+    const mediaIndex = tokensCss.indexOf("@media (prefers-reduced-motion: reduce)");
     const media = tokensCss.slice(
       mediaIndex,
-      tokensCss.indexOf("[data-motion=\"reduced\"]", mediaIndex),
+      tokensCss.indexOf('[data-motion="reduced"]', mediaIndex),
     );
     expect(media).toContain("--duration-neura: 0ms");
     expect(media).toContain("--duration-courier: 0ms");
+    // U2: breath-window pair joins both reduced ladders.
+    expect(media).toContain("--duration-breath: 0ms");
+    expect(media).toContain("--duration-breath-rest: 0ms");
     const forced =
       tokensCss.match(/\[data-motion="reduced"\]\s*\{([^}]*)\}/)?.[1] ?? "";
     expect(forced).toContain("--duration-neura: 0ms");
     expect(forced).toContain("--duration-courier: 0ms");
+    expect(forced).toContain("--duration-breath: 0ms");
+    expect(forced).toContain("--duration-breath-rest: 0ms");
   });
 });
 
@@ -892,17 +891,37 @@ describe("well substrate + tone consumers (W1b «Колодец — орган �
     expect(breath).toContain("var(--web-wave-alpha)");
   });
 
-  it("breathing settles in calm/off and dies completely under reduced motion", () => {
-    expect(globalCss).toMatch(/\[data-live="calm"\] \.well-substrate[^{]*\{[^}]*animation: none/s);
-    expect(globalCss).toMatch(/\[data-live="off"\] \.well-substrate[^{]*\{[^}]*animation: none/s);
-    const media = globalCss.match(
-      /@media \(prefers-reduced-motion: reduce\)\s*\{(?:(?!\n\})[\s\S])*\}/g,
-    )?.find((block) => block.includes(".well-substrate"));
+  it("U2: the breath mounts ONLY inside a bus-opened window; rest is static", () => {
+    // SPEC-2026-10-07: «шина молчит — экран стоит». The animation rule is
+    // conjunctive — «Полный» layer AND [data-breath="true"] (the organ's
+    // event-opened window); every other state pins the rest opacity.
+    expect(globalCss).toMatch(
+      /\[data-live="live"\]\[data-breath="true"\] \.well-substrate\s*\{[^}]*animation: well-substrate-breath/s,
+    );
+    const rest = globalCss.match(/\.well-substrate\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(rest).toContain("animation: none");
+    expect(rest).toContain("var(--web-node-alpha)"); // static rest opacity
+    const media = globalCss
+      .match(/@media \(prefers-reduced-motion: reduce\)\s*\{(?:(?!\n\})[\s\S])*\}/g)
+      ?.find((block) => block.includes(".well-substrate"));
     expect(media ?? "").toContain("animation: none");
     expect(media ?? "").toContain("var(--web-node-alpha)"); // static rest opacity
-    const forced = globalCss.match(/\[data-motion="reduced"\] \.well-substrate\s*\{([^}]*)\}/)?.[1] ?? "";
+    const forced =
+      globalCss.match(
+        /\[data-motion="reduced"\] \.well-substrate\s*\{([^}]*)\}/,
+      )?.[1] ?? "";
     expect(forced).toContain("animation: none");
     expect(forced).toContain("var(--web-node-alpha)");
+    // The drift is gated by the SAME window.
+    expect(globalCss).toMatch(
+      /\[data-live="live"\]\[data-breath="true"\] \.well-drift\s*\{[^}]*animation: well-drift/s,
+    );
+    const driftRest = globalCss.match(/\.well-drift\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(driftRest).toContain("animation: none");
+    // The bus ticker is data: the fade-swap runs in «Полный» alone.
+    expect(globalCss).toMatch(
+      /\[data-live="live"\] \.well-ticker-line\s*\{[^}]*animation: well-ticker-swap/s,
+    );
   });
 
   it("the node tint crossfades on --duration-tone-fade; only an active tone paints", () => {
@@ -919,7 +938,9 @@ describe("well substrate + tone consumers (W1b «Колодец — орган �
     // the [data-well-window] scope gains no W1b additions (lockstep is
     // asserted by the scope tests above — this pins the count of its decls)
     const scope =
-      tokensCss.match(/\[data-well-window\](?:,\s*\[data-well-legend\])?\s*\{([^}]*)\}/)?.[1] ?? "";
+      tokensCss.match(
+        /\[data-well-window\](?:,\s*\[data-well-legend\])?\s*\{([^}]*)\}/,
+      )?.[1] ?? "";
     expect(scope, "well-window scope present").not.toBe("");
     expect(scope).not.toContain("well-tone");
     expect(scope).not.toContain("--web-node-alpha");

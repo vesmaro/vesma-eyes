@@ -22,7 +22,13 @@
 
 import { getLiveLayer, subscribeLiveLayer } from "@/lib/liveLayerStore";
 import { isLivingMuted, subscribeLiving, type LivingSignal } from "@/lib/livingFeed";
-import { createTones, hashString, isReducedMotion } from "./tones";
+import {
+  createBreath,
+  createTones,
+  hashString,
+  isBusServiceKind,
+  isReducedMotion,
+} from "./tones";
 
 const NS = "http://www.w3.org/2000/svg";
 const SPEED = 0.6; // px/ms along the edge (08 §2.2: 600px/s)
@@ -35,13 +41,9 @@ const REDUCED = "(prefers-reduced-motion: reduce)";
 const css = (name: string, fb: string): string =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fb;
 
-const A = (
-  el: SVGElement,
-  k: string,
-  v: string | number,
-): void => el.setAttribute(k, String(v));
-const mk = (tag: string): SVGElement =>
-  document.createElementNS(NS, tag);
+const A = (el: SVGElement, k: string, v: string | number): void =>
+  el.setAttribute(k, String(v));
+const mk = (tag: string): SVGElement => document.createElementNS(NS, tag);
 
 interface Bead {
   dot: SVGCircleElement;
@@ -58,6 +60,17 @@ interface Bead {
 /** Mount the organ on the well window. Returns the idempotent destructor. */
 export function mountWellOrgan(win: HTMLElement): () => void {
   let tones = createTones(css, isLivingMuted);
+  // The breath window (U2): the well's drift/substrate animations run ONLY
+  // inside a window opened by a real bus event («шина молчит — экран
+  // стоит»); the attribute is read by global.css.
+  const breathAllowed = (): boolean => getLiveLayer() !== "off" && !isReducedMotion();
+  const breath = createBreath(css, breathAllowed);
+  const offBreath = breath.subscribe((open) => {
+    win.dataset.breath = open ? "true" : "false";
+    // Mirror onto <html> for the SHELL ambient (Весма's breath) — the same
+    // bus-opened window gates every living pixel on the page (U2).
+    document.documentElement.dataset.breath = open ? "true" : "false";
+  });
   let beads: Bead[] = [];
   let raf = 0;
   let toneTimer: ReturnType<typeof setTimeout> | 0 = 0;
@@ -66,9 +79,7 @@ export function mountWellOrgan(win: HTMLElement): () => void {
   let destroyed = false;
   const pnow = (): number => performance.now();
   const live =
-    win.querySelector<SVGGElement>(".well-live") ??
-    win.querySelector("svg") ??
-    win;
+    win.querySelector<SVGGElement>(".well-live") ?? win.querySelector("svg") ?? win;
   const readout = win.querySelector<HTMLElement>("[data-well-readout]");
 
   // --- tone: the step engine (zero timers while neutral) -------------------
@@ -234,6 +245,13 @@ export function mountWellOrgan(win: HTMLElement): () => void {
   const onKey = (e: KeyboardEvent): void => {
     if (e.key === "Escape") clearHover();
   };
+  // The input freeze (замирание, ≤80ms law): ANY press stops the window's
+  // ambient motion and kills live beads — the next event may breathe again.
+  const onFreeze = (): void => {
+    if (destroyed) return;
+    clearBeads();
+    breath.freeze();
+  };
 
   // --- signals: the SECOND livingFeed listener (the engine keeps its own) --
   function onSignal(sig: LivingSignal): void {
@@ -243,7 +261,9 @@ export function mountWellOrgan(win: HTMLElement): () => void {
     // hold caps read nowRef), keeping expiry checks engine-parity.
     tones.step(pnow());
     if (sig.type === "event") {
+      if (isBusServiceKind(sig.kind)) return; // service frames open nothing
       tones.event(sig.kind);
+      breath.event(); // the breath window rides the SAME real event
       spawnBead(sig.kind);
       applyTone();
     } else if (sig.type === "health") {
@@ -254,20 +274,26 @@ export function mountWellOrgan(win: HTMLElement): () => void {
       applyTone();
     } else {
       clearBeads(); // mute: strictly neutral
+      breath.freeze();
       applyTone();
     }
   }
   function onLayer(): void {
     if (destroyed) return;
-    if (getLiveLayer() === "off") clearBeads();
+    if (getLiveLayer() === "off") {
+      clearBeads();
+      breath.freeze();
+    }
     applyTone();
   }
   /** Theme/motion flip: tone colours and reduced mirrors are read at create
-   * time — rebuild the tone engine and reapply. */
+   * time — rebuild the tone engine and reapply; the breath window closes
+   * (reduced = static tints). */
   function rewire(): void {
     if (destroyed) return;
     tones = createTones(css, isLivingMuted);
     if (isReducedMotion()) clearBeads();
+    breath.freeze();
     applyTone();
   }
 
@@ -289,6 +315,8 @@ export function mountWellOrgan(win: HTMLElement): () => void {
   win.addEventListener("pointerdown", onDown);
   win.addEventListener("pointerleave", onLeave);
   window.addEventListener("keydown", onKey);
+  window.addEventListener("keydown", onFreeze, true);
+  window.addEventListener("pointerdown", onFreeze, true);
 
   applyTone();
 
@@ -300,6 +328,9 @@ export function mountWellOrgan(win: HTMLElement): () => void {
     clearBeads();
     offFeed();
     offLayer();
+    offBreath();
+    breath.destroy();
+    delete win.dataset.breath;
     mm?.removeEventListener("change", rewire);
     mo?.disconnect();
     document.removeEventListener("visibilitychange", onVis);
@@ -307,6 +338,8 @@ export function mountWellOrgan(win: HTMLElement): () => void {
     win.removeEventListener("pointerdown", onDown);
     win.removeEventListener("pointerleave", onLeave);
     window.removeEventListener("keydown", onKey);
+    window.removeEventListener("keydown", onFreeze, true);
+    window.removeEventListener("pointerdown", onFreeze, true);
     delete win.dataset.wellTone;
     win.style.removeProperty("--well-tone");
   };

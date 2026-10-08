@@ -56,11 +56,21 @@ interface FakeMqList {
 }
 const asMqList = (v: FakeMqList): MediaQueryList => v as unknown as MediaQueryList;
 const mmStub = vi.fn((): MediaQueryList =>
-  asMqList({ matches: false, addEventListener: () => undefined, removeEventListener: () => undefined }),
+  asMqList({
+    matches: false,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  }),
 );
 
 /** Real seam elements in the DOM (zero rects would be skipped as hidden). */
-function addSeam(kind: string, left: number, top: number, right: number, bottom: number): void {
+function addSeam(
+  kind: string,
+  left: number,
+  top: number,
+  right: number,
+  bottom: number,
+): void {
   const el = document.createElement("div");
   el.dataset.livingSeam = kind;
   el.getBoundingClientRect = () =>
@@ -132,11 +142,19 @@ describe("buildVeins — the seams of the real Shell become veins", () => {
 describe("engine lifecycle — one RAF, honest pauses, clean destructor", () => {
   let raf: ReturnType<typeof fakeRaf>;
   beforeEach(() => {
+    // Fake timers FIRST (the default vitest fake includes requestAnimation-
+    // Frame and would otherwise stomp the manual RAF stub); the manual clock
+    // below then wins and stays authoritative for frame assertions.
+    vi.useFakeTimers(); // fakes setTimeout AND performance.now (the window clock)
     raf = fakeRaf();
     vi.stubGlobal("matchMedia", mmStub);
     mmStub.mockReset();
     mmStub.mockImplementation(() =>
-      asMqList({ matches: false, addEventListener: () => undefined, removeEventListener: () => undefined }),
+      asMqList({
+        matches: false,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+      }),
     );
     document.body.innerHTML = "";
     addSeam("topbar", 0, 0, 1440, 48);
@@ -144,19 +162,31 @@ describe("engine lifecycle — one RAF, honest pauses, clean destructor", () => 
     setLiveLayer(DEFAULT_LIVE_LAYER);
   });
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
-  it("«Выключен»: no frames are ever scheduled", () => {
+  it("U2 honesty: a SILENT bus draws static once and schedules no RAF", () => {
+    const { destroy, calls } = mount();
+    expect(raf.count).toBe(0); // nothing moves without a real event
+    expect(calls.stroke).toBeGreaterThan(0); // the static rest frame
+    destroy();
+  });
+
+  it("«Выключен»: no frames are ever scheduled, even after an event", () => {
     setLiveLayer("off");
     const { destroy } = mount();
+    feedLivingEvent("task.created");
     expect(raf.count).toBe(0);
     destroy();
   });
 
-  it("«Спокойный»: runs; switching to off stops the RAF and clears", () => {
+  it("«Спокойный»: an event opens the breath window; off settles it", () => {
+    setLiveLayer("calm");
     const { destroy, calls } = mount();
-    expect(raf.count).toBe(1); // the single living RAF
+    expect(raf.count).toBe(0); // still until the bus speaks
+    feedLivingEvent("task.created");
+    expect(raf.count).toBe(1); // the single living RAF inside the window
     raf.tick(16);
     expect(calls.clear).toBeGreaterThan(0);
     setLiveLayer("off");
@@ -164,8 +194,64 @@ describe("engine lifecycle — one RAF, honest pauses, clean destructor", () => 
     destroy();
   });
 
-  it("document.hidden pauses the loop (the RAF chain ends)", () => {
+  it("an event opens the window; when it closes the engine rests static", () => {
+    setLiveLayer("live");
+    const { destroy, calls } = mount();
+    feedLivingEvent("task.created");
+    expect(raf.count).toBe(1);
+    raf.tick(16);
+    const duringCalls = calls.stroke;
+    expect(duringCalls).toBeGreaterThan(0);
+    // The window (3500ms) expires; the event's bead trail (life ≤1600ms +
+    // decay 1500ms) may OUTLIVE the window — the chain ends only when the
+    // trail has decayed and the next frame finds nothing alive.
+    vi.advanceTimersByTime(3500);
+    expect(raf.count).toBe(1); // trail still decaying, honestly
+    raf.tick(5200); // past life + trail: draw() retires the dead bead…
+    raf.tick(5216); // …the NEXT frame finds nothing alive and ends the chain
+    expect(raf.count).toBe(0);
+    const afterClose = calls.stroke;
+    expect(afterClose).toBeGreaterThanOrEqual(duringCalls);
+    destroy();
+  });
+
+  it("duty: an event inside the rest window refreshes tones, not motion", () => {
+    setLiveLayer("live");
     const { destroy } = mount();
+    feedLivingEvent("task.created");
+    expect(raf.count).toBe(1);
+    vi.advanceTimersByTime(3500); // window over — but the bead trail lives
+    raf.tick(5200); // the trail decays; the next frame ends the chain
+    raf.tick(5216);
+    expect(raf.count).toBe(0);
+    feedLivingEvent("task.updated"); // within the 10.5s rest
+    // The AMBIENT window stays shut (duty), but the event's own bead is
+    // event-caused motion — separately budgeted (≤2 alive, coalesced).
+    expect(raf.count).toBe(1);
+    raf.tick(6700); // the bead was born at t≈3500 — life past 1600+1500
+    raf.tick(6716); // the next frame finds nothing alive: the chain ends
+    expect(raf.count).toBe(0);
+    vi.advanceTimersByTime(10_500); // rest over
+    feedLivingEvent("report");
+    expect(raf.count).toBe(1); // the window opens again on a real event
+    destroy();
+  });
+
+  it("the input freeze kills the window and the beads instantly", () => {
+    setLiveLayer("live");
+    const { destroy } = mount();
+    feedLivingEvent("task.created");
+    expect(raf.count).toBe(1);
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "x", bubbles: true }));
+    vi.advanceTimersByTime(0); // flush the close timer
+    expect(raf.count).toBe(0);
+    destroy();
+  });
+
+  it("document.hidden pauses the loop (the RAF chain ends)", () => {
+    setLiveLayer("live");
+    const { destroy } = mount();
+    feedLivingEvent("task.created");
     Object.defineProperty(document, "hidden", { value: true, configurable: true });
     raf.tick(32);
     expect(raf.count).toBe(0);
@@ -175,9 +261,14 @@ describe("engine lifecycle — one RAF, honest pauses, clean destructor", () => 
 
   it("reduced motion: a static drawing, the RAF never starts", () => {
     mmStub.mockReturnValue(
-      asMqList({ matches: true, addEventListener: () => undefined, removeEventListener: () => undefined }),
+      asMqList({
+        matches: true,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+      }),
     );
     const { destroy, calls } = mount();
+    feedLivingEvent("task.created"); // even the bus may not move reduced
     expect(raf.count).toBe(0);
     expect(calls.stroke).toBeGreaterThan(0); // static frame drawn once
     destroy();

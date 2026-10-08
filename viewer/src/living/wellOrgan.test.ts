@@ -28,7 +28,11 @@ interface FakeMqList {
 }
 const asMqList = (v: FakeMqList): MediaQueryList => v as unknown as MediaQueryList;
 const mmStub = vi.fn((): MediaQueryList =>
-  asMqList({ matches: false, addEventListener: () => undefined, removeEventListener: () => undefined }),
+  asMqList({
+    matches: false,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  }),
 );
 
 /** Manual RAF clock: no frames run until tick() is called. */
@@ -106,7 +110,11 @@ beforeEach(() => {
   vi.stubGlobal("matchMedia", mmStub);
   mmStub.mockReset();
   mmStub.mockImplementation(() =>
-    asMqList({ matches: false, addEventListener: () => undefined, removeEventListener: () => undefined }),
+    asMqList({
+      matches: false,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }),
   );
   document.body.innerHTML = "";
   localStorage.removeItem("vesmaro.live");
@@ -133,8 +141,10 @@ describe("wellOrgan — the step tone (no RAF, timers only per window)", () => {
     feedLivingEvent("task.created");
     expect(win.dataset.wellTone).toBe("active");
     expect(win.style.getPropertyValue("--well-tone")).toBe(GOLD);
-    expect(vi.getTimerCount()).toBe(1); // exactly one window timer, nothing else
-    vi.advanceTimersByTime(9600); // 80% of the 12s window
+    // U2: TWO window timers — the tone window AND the breath window the
+    // same event opens (the drift/substrate gate); nothing else.
+    expect(vi.getTimerCount()).toBe(2);
+    vi.advanceTimersByTime(9600); // 80% of the 12s window (breath closed at 3500)
     expect(win.dataset.wellTone).toBe("none"); // neutral base → honest rest
     expect(win.style.getPropertyValue("--well-tone")).toBe("");
     expect(vi.getTimerCount()).toBe(0); // back to the zero-timer idle
@@ -161,7 +171,9 @@ describe("wellOrgan — the step tone (no RAF, timers only per window)", () => {
     feedLivingEvent("provisioning.failed");
     expect(win.dataset.wellTone).toBe("active");
     expect(win.style.getPropertyValue("--well-tone")).toBe(RED);
-    expect(vi.getTimerCount()).toBe(0); // holds are signal-driven, no timers
+    // U2: holds are signal-driven (no tone timer), but the same event's
+    // breath window owns exactly one timer until it expires.
+    expect(vi.getTimerCount()).toBe(1);
     vi.advanceTimersByTime(70000);
     expect(win.dataset.wellTone).toBe("active"); // no flicker, holds for its family
     expect(win.style.getPropertyValue("--well-tone")).toBe(RED);
@@ -245,7 +257,11 @@ describe("wellOrgan — beads: live events over real edges only", () => {
 
     document.body.innerHTML = "";
     mmStub.mockReturnValue(
-      asMqList({ matches: true, addEventListener: () => undefined, removeEventListener: () => undefined }),
+      asMqList({
+        matches: true,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+      }),
     );
     setLiveLayer("live");
     const reduced = mount();

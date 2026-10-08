@@ -197,7 +197,9 @@ describe("freeze gate: /tasks navigation cycle with live SSE", () => {
         await act(async () => {
           await router!.navigate("/tasks");
         });
-        await waitFor(() => container!.querySelector('a[href^="/tasks/TB-1?"]') !== null);
+        await waitFor(
+          () => container!.querySelector('a[href^="/tasks/TB-1?"]') !== null,
+        );
 
         // The TASKS stream is per-mount (no stacking); since ME-071 W1a the
         // living layer owns ONE app-wide stream on top of it (closed with the
@@ -231,11 +233,14 @@ describe("freeze gate: /tasks navigation cycle with live SSE", () => {
       // after the cycle is the leak contract: the seam really ran (≥1)
       // and nothing is left open (loop below).
       expect(gateway!.sseSources.length).toBeGreaterThanOrEqual(1);
-      // All TASKS streams are closed; the only stream allowed to stay open
-      // is the living layer's app-wide one (it outlives routes on purpose).
+      // All TASKS streams are closed; the streams allowed to stay open are
+      // the living layer's app-wide one (it outlives routes on purpose)
+      // and — since U2 — the Overview HUD's bus ticker: the cycle ends
+      // parked on «/», whose hero holds exactly ONE mount-scoped stream
+      // (it closes with the hero — asserted after the /memory hop below).
       const stillOpen = gateway!.sseSources.filter((source) => !source.closed);
-      expect(stillOpen).toHaveLength(1);
-      expect(gateway!.sseSources.indexOf(stillOpen[0])).toBe(0); // the first one ever opened
+      expect(stillOpen.length).toBeLessThanOrEqual(2);
+      expect(gateway!.sseSources.indexOf(stillOpen[0])).toBe(0); // the living bridge — the first ever opened
 
       // (c) The exact frozen-build symptom: after the cycle, navigation must
       // still SWAP page content. /memory renders the memories heading; the
@@ -245,6 +250,11 @@ describe("freeze gate: /tasks navigation cycle with live SSE", () => {
       });
       await waitFor(() => container!.querySelector("#memories-title") !== null);
       expect(container!.querySelector('a[href^="/tasks/TB-1?"]')).toBeNull();
+      // U2 seam: the hero unmounted with «/» — its ticker stream closed
+      // with it; only the app-wide living bridge may remain.
+      const openAfterLeaving = gateway!.sseSources.filter((source) => !source.closed);
+      expect(openAfterLeaving).toHaveLength(1);
+      expect(gateway!.sseSources.indexOf(openAfterLeaving[0])).toBe(0);
 
       // And back into the task domain — content swaps both ways, and the
       // badge still mirrors the SSE-fed count (6 frames over the seeded 3).

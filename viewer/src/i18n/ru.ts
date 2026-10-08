@@ -198,7 +198,56 @@ export const ru = {
     "На колодце — {{shown}} свежайших записей и их связи. Связи показаны только между отображёнными записями.",
   "overview.heroTags": "тегов — {{count}}",
   "overview.waitingChip": "Ждут всего: {{count}}",
-  "overview.tickerItem": "{{time}} записано в память: {{title}} · {{server}}",
+  // U2 «Обзор-колодец» (2026-10-08): HUD + шинный тикер. Один родительский
+  // слот «Поделиться»; витальный кластер — только из ответивших проводов;
+  // тикер — одна строка реальных событий /api/events (словарь по смыслу,
+  // без кодов видов в строках). Тихая шина = пустая строка (честная тишина).
+  "overview.share": "Поделиться",
+  "overview.shareDone": "Ссылка скопирована",
+  "overview.shareManual": "Скопируйте адрес: {{url}}",
+  "overview.heroAgents": "агентов — {{count}}",
+  "overview.tickerLabel": "Лента событий шины",
+  "overview.eventTaskCreated": "Новая задача: {{ref}}",
+  "overview.eventTaskUpdated": "Задача обновлена: {{ref}}",
+  "overview.eventTaskMoved": "Задача перемещена: {{ref}}",
+  "overview.eventTaskDeleted": "Задача удалена: {{ref}}",
+  "overview.eventTaskArchived": "Задача в архиве: {{ref}}",
+  "overview.eventTaskUnarchived": "Задача возвращена из архива: {{ref}}",
+  "overview.eventReport": "Отчёт по задаче: {{ref}}",
+  "overview.eventAssignmentCreated": "Создано назначение: {{ref}}",
+  "overview.eventAssignmentClaimed": "Задачу взяли: {{ref}}",
+  "overview.eventAssignmentStarted": "В работе: {{ref}}",
+  "overview.eventAssignmentDone": "Завершено: {{ref}}",
+  "overview.eventAssignmentFailed": "Не удалось: {{ref}}",
+  "overview.eventAssignmentCancelled": "Назначение отменено: {{ref}}",
+  "overview.eventAssignmentExpired": "Назначение истекло: {{ref}}",
+  "overview.eventExecutorOnline": "Агент на связи: {{ref}}",
+  "overview.eventExecutorOffline": "Агент отключился: {{ref}}",
+  "overview.eventExecutorRegistered": "Новый агент: {{ref}}",
+  "overview.eventExecutorUpdated": "Агент обновлён: {{ref}}",
+  "overview.eventExecutorDeleted": "Агент удалён: {{ref}}",
+  "overview.eventServerChanged": "Изменилось хранилище памяти",
+  "overview.eventNotification": "Уведомление: {{ref}}",
+  "overview.eventEnrollmentCreated": "Создан токен подключения",
+  "overview.eventEnrollmentUsed": "Подключение по токену: {{ref}}",
+  "overview.eventEnrollmentRevoked": "Токен подключения отозван",
+  "overview.eventEnrollmentExpired": "Токен подключения истёк",
+  "overview.eventHarnessAdded": "Новый харнес: {{ref}}",
+  "overview.eventHarnessRemoved": "Харнес удалён: {{ref}}",
+  "overview.eventProvisionCreated": "Подключение запущено: {{ref}}",
+  "overview.eventProvisionProgress": "Подключение продолжается: {{ref}}",
+  "overview.eventProvisionOk": "Подключён: {{ref}}",
+  "overview.eventProvisionFailed": "Подключение не удалось: {{ref}}",
+  "overview.eventProvisionRepinned": "Хост перепривязан: {{ref}}",
+  "overview.eventPairingRequested": "Запрос пары устройств: {{ref}}",
+  "overview.eventPairingConfirmed": "Устройство подтверждено: {{ref}}",
+  "overview.eventPairingRevoked": "Пара устройств отменена",
+  "overview.eventPairingExpired": "Пара устройств истекла",
+  "overview.eventRuleCreated": "Создано правило автоматизации",
+  "overview.eventRuleUpdated": "Правило автоматизации обновлено",
+  "overview.eventRuleToggled": "Правило автоматизации переключено",
+  "overview.eventRuleDeleted": "Правило автоматизации удалено",
+  "overview.eventOther": "Событие шины",
   "overview.wellEmpty": "Колодец ждёт первой записи — их пишут агенты.",
   "overview.wellError": "Колодец недоступен — шина не ответила",
   // UX-overhaul §3/§8 (Ф1): Обзор ведёт в рабочие домены (Задачи/Агенты)
@@ -264,7 +313,8 @@ export const ru = {
   "auth.status.signedIn": "вы: владелец",
   "auth.lock.why": "откроется после входа",
   "auth.gate.heading": "Раздел „{{domain}}“ откроется после входа",
-  "auth.gate.inside.memory": "Записи, поиск по смыслу, пульс и теги — содержимое памяти",
+  "auth.gate.inside.memory":
+    "Записи, поиск по смыслу, пульс и теги — содержимое памяти",
   "auth.gate.inside.tasks": "Канбан, список, входящие и архив — работа и поручения",
   "auth.gate.inside.agents": "Исполнение, хосты и подключение новых машин",
   "auth.gate.inside.kora": "Журнал сессий всех хостов: что агент делал и говорил",
@@ -313,18 +363,22 @@ export const ru = {
   "auth.route.confirmLabel": "Пароль ещё раз",
   "auth.route.showPassword": "Показать пароль",
   "auth.route.hidePassword": "Скрыть пароль",
-  "auth.route.usernameHint": "Имя — строчной латиницей, от 3 до 32 знаков; можно цифры, дефис и подчёркивание.",
+  "auth.route.usernameHint":
+    "Имя — строчной латиницей, от 3 до 32 знаков; можно цифры, дефис и подчёркивание.",
   "auth.route.passwordHint": "Пароль — не короче 8 знаков.",
   "auth.route.errRequiredUsername": "Введите имя.",
   "auth.route.errRequiredPassword": "Введите пароль.",
   "auth.route.errRequiredConfirm": "Повторите пароль.",
-  "auth.route.errUsername": "Имя не подходит: нужна строчная латиница, от 3 до 32 знаков; внутри можно цифры, дефис и подчёркивание.",
+  "auth.route.errUsername":
+    "Имя не подходит: нужна строчная латиница, от 3 до 32 знаков; внутри можно цифры, дефис и подчёркивание.",
   "auth.route.errPassword": "Пароль коротковат — нужно не меньше 8 знаков.",
   "auth.route.errConfirm": "Пароли не совпадают — проверьте второе поле.",
   "auth.route.verdictPrefix": "Ошибка:",
   "auth.route.loginFailed": "Неверное имя или пароль.",
-  "auth.route.loginFailedHelp": "Что проверить: раскладка RU/EN, регистр букв, Caps Lock.",
-  "auth.route.tooManyAttempts": "Слишком много попыток — подождите минуту и попробуйте снова.",
+  "auth.route.loginFailedHelp":
+    "Что проверить: раскладка RU/EN, регистр букв, Caps Lock.",
+  "auth.route.tooManyAttempts":
+    "Слишком много попыток — подождите минуту и попробуйте снова.",
   "auth.route.nameTaken": "Такое имя уже есть. Возьмите другое.",
   // fix/kora-auth-honesty (жалоба владельца, прод 1.63.0): вердикт называет
   // причину И путь решения — кто и каким флагом открывает регистрацию.
@@ -332,7 +386,8 @@ export const ru = {
     "Регистрация закрыта — у борда уже есть владелец. Доступ новых членов открывает владелец в настройках сервера (флаг VESMARO_ALLOW_REGISTRATION).",
   "auth.route.techDetail": "Техническая информация сервера",
   "auth.route.registerFailed": "Аккаунт создать не удалось.",
-  "auth.route.networkFailed": "Сервер не ответил — проверьте связь и попробуйте ещё раз.",
+  "auth.route.networkFailed":
+    "Сервер не ответил — проверьте связь и попробуйте ещё раз.",
   "auth.route.signedInToast": "Вы вошли: {{username}}",
   "auth.route.accountCreatedToast": "Аккаунт создан. Вы вошли: {{username}}",
   "auth.route.alreadySignedInNamed": "Вы уже вошли: {{username}}",
@@ -386,7 +441,8 @@ export const ru = {
   "search.typeFtsTitle": "Только полнотекстовые попадания (фильтр на клиенте)",
   "search.typeSemanticTitle": "Только смысловые попадания (фильтр на клиенте)",
   "search.resultsLabel": "Результаты поиска",
-  "search.failed": "Не удалось выполнить поиск. Проверьте соединение и попробуйте ещё раз.",
+  "search.failed":
+    "Не удалось выполнить поиск. Проверьте соединение и попробуйте ещё раз.",
   "search.nothing": "Ничего не нашлось",
   "search.noMatches": "По запросу «{{query}}» воспоминаний нет.",
   "search.noTypedMatches":
@@ -412,7 +468,8 @@ export const ru = {
     "Ослабьте фильтр по статусу или проекту, чтобы поднять больше из колодца.",
   "memories.clearFilters": "Сбросить фильтры",
   "memories.wellEmpty": "Здесь появятся записи вашей памяти",
-  "memories.wellEmptyHint": "Память пишут агенты — записи появятся, когда те начнут работать.",
+  "memories.wellEmptyHint":
+    "Память пишут агенты — записи появятся, когда те начнут работать.",
   "memories.prev": "Назад",
   "memories.next": "Вперёд",
   "memories.showing": "Показано {{from}}–{{to}}",
@@ -463,8 +520,7 @@ export const ru = {
   "tags.memoriesCount": "воспоминаний — {{count}}",
   "tags.all": "Все теги",
   "tags.drilldownTitle": "Воспоминания с тегом",
-  "tags.drilldownNote":
-    "Фильтрация на клиенте — у vesma нет выборки по тегу.",
+  "tags.drilldownNote": "Фильтрация на клиенте — у vesma нет выборки по тегу.",
   "tags.nothingCarries": "Под этим тегом ничего нет",
   "tags.nothingCarriesMessage": "Сейчас нет воспоминаний с тегом {{tag}}.",
   // --- tags cloud (UI-17, spec 2026-09-21 §9; owner-approved copy) -----------
@@ -532,8 +588,7 @@ export const ru = {
   "sessions.unavailableMnemosMessage":
     "У vesma нет эндпоинта списка сессий — только POST /v1/sessions (создать) и GET /v1/sessions/{id}. Открывайте сессию по id, когда он известен.",
   "sessions.empty": "Сессий A2A пока нет",
-  "sessions.emptyMessage":
-    "Сессии появятся, когда агенты начнут говорить через vesma.",
+  "sessions.emptyMessage": "Сессии появятся, когда агенты начнут говорить через vesma.",
   "sessions.noId": "В маршруте нет id сессии",
   "sessions.loadingOne": "Загружаем сессию",
   "sessions.notFound": "Нет такой сессии",
@@ -663,8 +718,7 @@ export const ru = {
   "tasks.sourceToggle.raw": "Исходник",
   "tasks.sourceToggle.human": "Для человека",
   "tasks.sourceToggleAria.raw": "Исходник: показать spec, как его видит агент",
-  "tasks.sourceToggleAria.human":
-    "Для человека: вернуться к нормализованному виду",
+  "tasks.sourceToggleAria.human": "Для человека: вернуться к нормализованному виду",
   "tasks.relatedLabel": "Связанное",
   "tasks.relatedActivity": "Активность по задаче",
   "tasks.relatedKora": "Рабочие сессии (Кора)",
@@ -1637,7 +1691,8 @@ export const ru = {
   "settings.security.saving": "Сохраняем…",
   "settings.security.toastOk": "Пароль обновлён",
   "settings.security.wrongCurrent": "Текущий пароль не подходит.",
-  "settings.security.forbidden": "Недостаточно прав: восстановление доступно владельцу.",
+  "settings.security.forbidden":
+    "Недостаточно прав: восстановление доступно владельцу.",
   "settings.security.tooManyAttempts":
     "Слишком много попыток — подождите {{n}} с и попробуйте снова.",
   "settings.security.saveFailed": "Сохранить не удалось.",
@@ -1854,11 +1909,9 @@ export const ru = {
   "docs.catDesc.apiBoard":
     "Референс HTTP API vesma-eyes, сгенерированный из OpenAPI-снапшота.",
   "docs.cat.apiMnemos": "HTTP API vesma",
-  "docs.catDesc.apiMnemos":
-    "Карта поверхностей сервера памяти и контракт A2A-сессий.",
+  "docs.catDesc.apiMnemos": "Карта поверхностей сервера памяти и контракт A2A-сессий.",
   "docs.cat.apiAgent": "Протокол vesmaro-agent",
-  "docs.catDesc.apiAgent":
-    "Проводной протокол агента и выжимка service charter v2.",
+  "docs.catDesc.apiAgent": "Проводной протокол агента и выжимка service charter v2.",
   "docs.cat.apiMesh": "vesma-mesh",
   "docs.catDesc.apiMesh":
     "Публичного HTTP API нет — внутренний протокол и поверхность оператора.",
