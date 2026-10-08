@@ -16,6 +16,13 @@ import type { Memory } from "@/gateway/types";
  * The scroll surface (component-inventory §5, design-system.md §8.3): full
  * content in --font-scroll (mono for rule/code memories per D11), provenance
  * bar, raw toggle, tags row, confidence indicator, metadata footer.
+ *
+ * U4 scroll canon (SPEC-2026-10-07 «Память»: «свиток-эстетика = типографика
+ * и вертикальный ритм», NOT parchment simulation): the record title takes
+ * the ONE display step (--text-display, 36–44px) in Lora against 11px caps
+ * provenance labels; the reading column holds the --measure-scroll measure;
+ * UI chrome (provenance values, footer) stays Inter/JBMono. No new colours —
+ * the scroll keeps --color-scroll-bg/--color-scroll-border tokens.
  */
 export interface MemoryScrollProps {
   memory: Memory;
@@ -50,28 +57,37 @@ export function MemoryScroll({
 
   return (
     <article className={className}>
-      {/* 1. Provenance bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-foreground-secondary">
-        <span>
-          {t("memory.agentLabel")}{" "}
-          <span className="text-foreground">
-            {memory.agent || t("memory.agentUnknownShort")}
-          </span>
+      {/* 1. Provenance bar — v12 contrast pair: 11px caps labels vs the
+       * display title below; values in JBMono data size (15-WOW §3 «the
+       * record's provenance lives in mono»). */}
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <span className="text-caps tracking-caps text-foreground-muted">
+          {t("memory.agentLabel")}
         </span>
-        <span>
-          {t("memory.projectLabel")}{" "}
-          <span className="text-foreground">{memory.project}</span>
+        <span className="font-mono text-data text-foreground-secondary">
+          {memory.agent || t("memory.agentUnknownShort")}
         </span>
-        <span>
-          {t("memory.createdLabel")}{" "}
-          <time dateTime={memory.created_at}>{formatTimestamp(memory.created_at)}</time>
+        <span className="text-caps tracking-caps text-foreground-muted">
+          {t("memory.projectLabel")}
         </span>
+        <span className="font-mono text-data text-foreground-secondary">
+          {memory.project}
+        </span>
+        <span className="text-caps tracking-caps text-foreground-muted">
+          {t("memory.createdLabel")}
+        </span>
+        <time
+          className="font-mono text-data text-foreground-secondary"
+          dateTime={memory.created_at}
+        >
+          {formatTimestamp(memory.created_at)}
+        </time>
         <Badge variant={statusBadgeVariant(memory.status)}>
           {t(statusLabelKey(memory.status))}
         </Badge>
         {typeof memory.confidence === "number" ? (
           <span
-            className="text-confidence"
+            className="font-mono text-data text-confidence"
             title={t("memory.confidenceTitle", { value: memory.confidence })}
           >
             {formatConfidence(memory.confidence)}
@@ -79,32 +95,36 @@ export function MemoryScroll({
         ) : null}
       </div>
 
-      {/* 2. Content area — the scroll itself. UI-27: the effective content
+      {/* 2. Content area — the scroll itself. U4: the reading column holds
+       * the --measure-scroll measure (vertical rhythm of reading), the
+       * title takes the display step in Lora. UI-27: the effective content
        * renders through the TextEngine primitive (plain prose → the exact
        * legacy pre-wrap; markdown → formatted). The RAW variant stays plain
        * ON PURPOSE: it is the source view the owner explicitly opted into. */}
       <div className="mt-4 rounded-lg border border-scroll-border bg-scroll-bg p-8 shadow-well">
-        <h1
-          className="font-scroll text-xl font-semibold leading-tight"
-          style={mono ? { fontFamily: "var(--font-mono)" } : undefined}
-        >
-          {memory.title ?? memory.id}
-        </h1>
-        {showRawVariant ? (
-          <p
-            className="mt-6 whitespace-pre-wrap text-md leading-relaxed text-foreground"
-            style={{ fontFamily: mono ? "var(--font-mono)" : "var(--font-scroll)" }}
+        <div className="mx-auto max-w-scroll">
+          <h1
+            className="font-scroll text-display font-semibold leading-tight text-foreground"
+            style={mono ? { fontFamily: "var(--font-mono)" } : undefined}
           >
-            {shown}
-          </p>
-        ) : (
-          <TextEngine
-            text={effective}
-            variant="full"
-            className="mt-6 text-md leading-relaxed text-foreground"
-            style={contentStyle}
-          />
-        )}
+            {memory.title ?? memory.id}
+          </h1>
+          {showRawVariant ? (
+            <p
+              className="mt-6 whitespace-pre-wrap text-md leading-relaxed text-foreground"
+              style={{ fontFamily: mono ? "var(--font-mono)" : "var(--font-scroll)" }}
+            >
+              {shown}
+            </p>
+          ) : (
+            <TextEngine
+              text={effective}
+              variant="full"
+              className="mt-6 text-md leading-relaxed text-foreground"
+              style={contentStyle}
+            />
+          )}
+        </div>
       </div>
 
       {/* 3. Raw content toggle */}

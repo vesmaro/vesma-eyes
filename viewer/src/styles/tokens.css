@@ -91,7 +91,7 @@
 
   /* ── Phase 1 «Кора-организм» additions (design blueprint v1.1 §5.2;
    *    seven new names on the frozen canon — ADR 0006 names untouched) ── */
-  --text-display: clamp(2.25rem, 3.5vw, 2.75rem); /* the ONE display step — Overview hero only; Inter 600 */
+  --text-display: clamp(2.25rem, 3.5vw, 2.75rem); /* the ONE display step — two legal consumers: Overview hero (Inter 600) + memory scroll title (U4: Lora, 36–44px, SPEC-2026-10-07 «Память») */
   /* U2 (2026-10-08): the well is inscribed into the Shell — from the topbar
    * to the bottom of the FIRST screen, crumbs row included (SPEC-2026-10-07
    * «Обзор»: full-bleed hero; --shell-* geometry). Value evolution per
