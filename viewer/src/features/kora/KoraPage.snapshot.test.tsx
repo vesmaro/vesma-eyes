@@ -106,7 +106,7 @@ async function renderKoraPage(lang: Lang, path = "/kora"): Promise<string> {
   );
 }
 
-describe("Kora workspace snapshots (union И1)", () => {
+describe("Kora workspace snapshots (union И1 → U5 v7 frame)", () => {
   it("pins the frame: header + summary + tree + Блок 2 + collapsed Пульт (ru)", async () => {
     const html = await renderKoraPage("ru");
     // The header: H1 with the name explanation in the tooltip, the
@@ -131,18 +131,22 @@ describe("Kora workspace snapshots (union И1)", () => {
     expect(html).toContain("процесс мёртв"); // the dead pi row, honest state
     // The coverage legend, folded at the bottom of the panel.
     expect(html).toContain("Что мы видим с ваших машин");
-    // The work zone invitation (no Эфир — no source in И1).
+    // The scene invitation + the honest Эфир card on the empty scene
+    // (U5: the empty scene carries the ring card; a silent bus = the
+    // honest empty line).
     expect(html).toContain("Выберите сессию — здесь откроется её ход");
-    // The Пульт strip: collapsed by default, honest tab labels — a pure
-    // control row. ME-072 №6: the session hint lives only in the expanded
-    // Дайджест body; in the strip it read as a broken third tab.
+    expect(html).toContain("Событий пока нет");
+    // The Пульт strip: collapsed by default (U5 — the honest cut stands),
+    // the wings deploy together; the tabs are gone (15-WOW §3.2).
     expect(html).toContain("Пульт");
-    expect(html).toContain("Дайджест");
-    expect(html).toContain("Эфир");
-    expect(html).not.toContain("Выберите сессию — её разбор появится здесь");
     expect(html).toContain("Развернуть");
-    // Collapsed ⇒ no tab content leaked into the strip.
-    expect(html).not.toContain("Разбор сессии собирается автоматически");
+    expect(html).not.toContain("Выберите сессию — её разбор появится здесь");
+    expect(html).not.toContain('role="tab"');
+    // The v7 seams (U5, 07l §3): the right panel width + the Пульт height
+    // are honest separators with the full aria geometry.
+    expect(html).toContain('role="separator"');
+    expect(html).toContain("Ширина панели хостов и сессий");
+    expect(html).toContain("Высота Пульта");
     // The mock-era furniture is gone: no demo chip, no chat panel.
     expect(html).not.toContain("Демо-данные");
     expect(html).not.toContain("Чат");

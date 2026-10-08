@@ -4,36 +4,35 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
-import { KoraPult } from "./KoraPult";
 import type { TaskInbox } from "@/gateway/boardTypes";
 import { MockAdapter } from "@/gateway/MockAdapter";
 import { GatewayContext } from "@/gateway/GatewayContext";
 import { keys } from "@/lib/queryKeys";
 import { I18nProvider } from "@/i18n";
 import { actUnmount } from "@/test/actTools";
+import { KoraPult } from "./KoraPult";
+import { resetEtherForTests } from "./koraEtherStore";
+import type { KoraEtherRow } from "./koraEtherStore";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 /**
- * Пульт (07j §4 / 07l §2, И1 decision from i1-dressing-map §1.2.3):
- * - STARTS COLLAPSED — the smart-default auto-expand would show an empty
- *   tab in И1 (the digest has no source until И4);
- * - the «ждут владельца» badge is the REAL UI-30 inbox counter: hidden
- *   while the source is pending/failed (no fake 0), muted at 0, always a
- *   link to /tasks/inbox;
- * - expansion is explicit; the tab choice persists ONLY on an explicit
- *   tab click (vesmaro.koraPanel), and the honest tab content renders:
- *   Дайджест — empty-CTA + the real «читать транскрипт» action; Эфир — an
- *   HonestLine naming what arrives. No fixture feeds, no demo pulses.
+ * Пульт (U5 — v7-стык + 15-WOW §3.2 «два крыла»): STARTS COLLAPSED (the И1
+ * honest cut stands — an auto-expanded empty Дайджест would be noise); the
+ * badge is the REAL UI-30 counter (hidden while unknown, muted at 0,
+ * /tasks/inbox link); expansion deploys BOTH wings (Дайджест + Эфир — the
+ * tabs are gone); the seams are honest separators; the height/width
+ * decisions persist ONLY on commit (vesmaro.koraPultH / vesmaro.koraEtherW);
+ * Home/dblclick resets to auto by REMOVING the height key.
  */
 
 const mountedRoots: Root[] = [];
 
-function mountPult(options: { inboxCount?: number; hasSession?: boolean }): {
-  container: HTMLElement;
-  root: Root;
-} {
+function mountPult(options: {
+  inboxCount?: number;
+  hasSession?: boolean;
+  etherRows?: readonly KoraEtherRow[];
+}): { container: HTMLElement; root: Root } {
   const adapter = new MockAdapter({ latency: false });
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -41,7 +40,7 @@ function mountPult(options: { inboxCount?: number; hasSession?: boolean }): {
   if (options.inboxCount !== undefined) {
     queryClient.setQueryData<TaskInbox>(keys.tasks.inbox(), {
       items: [],
-      refreshed_at: "2026-09-27T00:00:00Z",
+      refreshed_at: "2026-10-08T00:00:00Z",
       count: options.inboxCount,
     });
   }
@@ -56,7 +55,10 @@ function mountPult(options: { inboxCount?: number; hasSession?: boolean }): {
           <I18nProvider initialLang="ru">
             {/* The badge is an in-app Link — router context is required. */}
             <MemoryRouter>
-              <KoraPult hasSession={options.hasSession ?? false} />
+              <KoraPult
+                hasSession={options.hasSession ?? false}
+                etherRows={options.etherRows ?? []}
+              />
             </MemoryRouter>
           </I18nProvider>
         </QueryClientProvider>
@@ -66,28 +68,36 @@ function mountPult(options: { inboxCount?: number; hasSession?: boolean }): {
   return { container, root };
 }
 
+const expandButton = (container: HTMLElement): HTMLButtonElement => {
+  // The toggle is found by its aria wiring — the LABEL flips («Развернуть»
+  // ↔ «Свернуть») with the state, the wiring does not.
+  const found = container.querySelector<HTMLButtonElement>(
+    'button[aria-controls="kora-pult-body"]',
+  );
+  if (found === null) throw new Error("expand button not rendered");
+  return found;
+};
+
 afterEach(async () => {
   for (const root of mountedRoots.splice(0)) {
     await actUnmount(root);
   }
   document.body.innerHTML = "";
   localStorage.clear();
+  resetEtherForTests();
 });
 
-describe("KoraPult (union И1, dressing map §1.2.3)", () => {
-  it("starts COLLAPSED: a pure control strip (no pseudo-tab hint), no tab content", () => {
+describe("KoraPult — the collapsed strip (the honest default)", () => {
+  it("starts COLLAPSED: caps + Развернуть, no wing content, no tabs", () => {
     const { container } = mountPult({ inboxCount: 2 });
     const html = container.innerHTML;
     expect(html).toContain("Пульт");
-    expect(html).toContain("Дайджест");
-    expect(html).toContain("Эфир");
-    // ME-072 №6: the hint never renders in the strip — between the tabs
-    // and the badge, same size, it read as a broken third tab. It lives
-    // only in the expanded Дайджест body (asserted below).
-    expect(html).not.toContain("Выберите сессию — её разбор появится здесь");
     expect(html).toContain("Развернуть");
-    // Collapsed ⇒ no tab panels leaked.
-    expect(html).not.toContain('role="tabpanel"');
+    // The wings deploy together on expansion — nothing leaks on the strip.
+    expect(html).not.toContain("Выберите сессию — её разбор появится здесь");
+    expect(html).not.toContain("Эфир — всё, что происходит в сессиях сейчас");
+    // The И1 tabs are superseded by the wings (15-WOW §3.2).
+    expect(container.querySelectorAll('[role="tab"]')).toHaveLength(0);
   });
 
   it("shows the REAL inbox badge: the count, muted at 0, linked to /tasks/inbox", () => {
@@ -102,65 +112,145 @@ describe("KoraPult (union И1, dressing map §1.2.3)", () => {
       'a[href="/tasks/inbox"]',
     );
     expect(zeroBadge?.textContent).toContain("ждут владельца: 0");
-    expect(zeroBadge?.className).toContain("text-foreground-muted"); // N=0 — muted, still clickable
+    expect(zeroBadge?.className).toContain("text-foreground-muted"); // 0 — muted
   });
 
   it("hides the badge while the inbox source is unknown (no fake 0)", () => {
-    const { container } = mountPult({}); // no prefill ⇒ the query stays pending in the sync render
+    const { container } = mountPult({}); // no prefill ⇒ the query stays pending
     expect(container.querySelector('a[href="/tasks/inbox"]')).toBeNull();
   });
+});
 
-  it("expands by an explicit click: Дайджест shows the honest empty-CTA; a session adds the real transcript action", async () => {
+describe("KoraPult — the two wings (15-WOW §3.2)", () => {
+  it("expands by an explicit click: BOTH wings deploy, honest empties", async () => {
     const { container } = mountPult({ inboxCount: 1 });
-    const expand = [...container.querySelectorAll("button")].find((button) =>
-      button.textContent?.includes("Развернуть"),
-    );
-    expect(expand?.getAttribute("aria-expanded")).toBe("false");
     await act(async () => {
-      expand?.click();
+      expandButton(container).click();
     });
-    expect(expand?.getAttribute("aria-expanded")).toBe("true");
-    // No session ⇒ the invitation, no transcript action.
+    expect(expandButton(container).getAttribute("aria-expanded")).toBe("true");
+    // Wing 1: the honest digest invitation (no session).
     expect(container.textContent).toContain(
       "Выберите сессию — её разбор появится здесь",
     );
-    expect(container.textContent).not.toContain("Читать транскрипт");
-
-    const withSession = mountPult({ inboxCount: 1, hasSession: true });
-    const expand2 = [...withSession.container.querySelectorAll("button")].find(
-      (button) => button.textContent?.includes("Развернуть"),
-    );
-    await act(async () => {
-      expand2?.click();
-    });
-    expect(withSession.container.textContent).toContain(
-      "Разбор сессии собирается автоматически — появится позже",
-    );
-    expect(withSession.container.textContent).toContain("Читать транскрипт");
+    // Wing 2: the honest ether empty (a silent bus).
+    expect(container.textContent).toContain("Событий пока нет");
+    // The wings seams are honest separators.
+    const separators = container.querySelectorAll('[role="separator"]');
+    expect(separators.length).toBe(2); // the top seam + the wings seam
   });
 
-  it("Эфир names what arrives (an HonestLine, never a fixture feed)", async () => {
-    const { container } = mountPult({ inboxCount: 0 });
-    const etherTab = [...container.querySelectorAll("button")].find(
-      (button) => button.textContent === "Эфир",
-    );
+  it("a session flips the digest wing to the honest building note + transcript action", async () => {
+    const { container } = mountPult({ inboxCount: 1, hasSession: true });
     await act(async () => {
-      etherTab?.click();
+      expandButton(container).click();
     });
     expect(container.textContent).toContain(
-      "Лента событий появится позже — пока читайте ход сессий в транскриптах",
+      "Разбор сессии собирается автоматически — появится позже",
     );
-    // The tab click expanded the Пульт (an explicit action) AND persisted
-    // the choice (vesmaro.koraPanel, 07j §4.2).
-    expect(localStorage.getItem("vesmaro.koraPanel")).toBe("ether");
+    expect(container.textContent).toContain("Читать транскрипт");
   });
 
-  it("resets a garbage persisted tab to the digest default (never throws)", () => {
-    localStorage.setItem("vesmaro.koraPanel", "17");
+  it("the ether wing renders the REAL ring rows (no fixture feeds)", async () => {
+    const mounted = mountPult({
+      inboxCount: 0,
+      etherRows: [
+        {
+          id: 1,
+          ts: Date.parse("2026-10-08T10:00:00Z"),
+          host: "gpu-box",
+          key: "kora.ether.online",
+          params: { name: "zcode@box", host: "gpu-box" },
+        },
+      ],
+    });
+    await act(async () => {
+      expandButton(mounted.container).click();
+    });
+    expect(mounted.container.textContent).toContain(
+      "zcode@box на gpu-box — на связи",
+    );
+  });
+});
+
+describe("KoraPult — the height hardware (07l §3)", () => {
+  it("persists a fixed height ONLY via the seam commit; Home resets to auto", async () => {
     const { container } = mountPult({ inboxCount: 0 });
-    const digest = container.querySelectorAll('[role="tab"]')[0];
-    const ether = container.querySelectorAll('[role="tab"]')[1];
-    expect(digest.getAttribute("aria-selected")).toBe("true");
-    expect(ether.getAttribute("aria-selected")).toBe("false");
+    await act(async () => {
+      expandButton(container).click();
+    });
+    const topSeam = container.querySelector<HTMLElement>('[role="separator"]');
+    expect(topSeam?.getAttribute("aria-label")).toBe("Высота Пульта");
+    // Auto mode after the expand: no key written yet (the absence = auto).
+    expect(localStorage.getItem("vesmaro.koraPultH")).toBeNull();
+    // Keyboard: ArrowUp from auto widens to the minimum → the commit persists.
+    await act(async () => {
+      topSeam?.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+    });
+    await act(async () => {
+      topSeam?.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true, cancelable: true }),
+      );
+    });
+    await act(async () => {
+      topSeam?.dispatchEvent(
+        new KeyboardEvent("keyup", { key: "ArrowUp", bubbles: true, cancelable: true }),
+      );
+    });
+    expect(localStorage.getItem("vesmaro.koraPultH")).toBe("160");
+    // Home resets to auto by REMOVING the key (07l §3.2).
+    await act(async () => {
+      topSeam?.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Home", bubbles: true, cancelable: true }),
+      );
+    });
+    expect(localStorage.getItem("vesmaro.koraPultH")).toBeNull();
+  });
+
+  it("restores a persisted fixed height on mount; garbage resets to auto", async () => {
+    localStorage.setItem("vesmaro.koraPultH", "240");
+    const { container } = mountPult({ inboxCount: 0 });
+    const topSeam = container.querySelector<HTMLElement>('[role="separator"]');
+    // The seam mirrors the collapsed strip honestly (40px) until deployed.
+    expect(topSeam?.getAttribute("aria-valuenow")).toBe("40");
+    localStorage.setItem("vesmaro.koraEtherW", "garbage");
+    const second = mountPult({ inboxCount: 0 });
+    await act(async () => {
+      expandButton(second.container).click();
+    });
+    const etherSeam = [
+      ...second.container.querySelectorAll('[role="separator"]'),
+    ].find((el) => el.getAttribute("aria-label") === "Ширина Эфира");
+    // garbage → the documented default, never a throw (07l §5.2).
+    expect(etherSeam?.getAttribute("aria-valuenow")).toBe("320");
+  });
+
+  it("the Эфир width persists only on commit; dblclick resets to the default", async () => {
+    const { container } = mountPult({ inboxCount: 0 });
+    await act(async () => {
+      expandButton(container).click();
+    });
+    const etherSeam = [...container.querySelectorAll('[role="separator"]')].find(
+      (el) => el.getAttribute("aria-label") === "Ширина Эфира",
+    );
+    expect(etherSeam?.getAttribute("aria-valuemin")).toBe("280");
+    expect(etherSeam?.getAttribute("aria-valuemax")).toBe("480");
+    await act(async () => {
+      etherSeam?.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+    });
+    await act(async () => {
+      etherSeam?.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true, cancelable: true }),
+      );
+    });
+    await act(async () => {
+      etherSeam?.dispatchEvent(
+        new KeyboardEvent("keyup", { key: "ArrowLeft", bubbles: true, cancelable: true }),
+      );
+    });
+    expect(localStorage.getItem("vesmaro.koraEtherW")).toBe("336");
+    await act(async () => {
+      etherSeam?.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    });
+    expect(localStorage.getItem("vesmaro.koraEtherW")).toBe("320");
   });
 });

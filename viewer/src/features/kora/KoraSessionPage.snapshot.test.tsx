@@ -138,7 +138,7 @@ describe("Kora session screen snapshots (union И1)", () => {
     expect(html).toContain("Написать агенту в эту сессию");
     expect(html).toContain('placeholder="Написать агенту…"');
     expect(html).toContain(
-      "Отправка сообщений агенту появится позже — пока Кора показывает ход сессий. Черновик живёт, пока вы на странице сессии.",
+      "Отправка сообщений агенту появится позже — пока Кора показывает ход сессий. Черновик сохраняется на этой машине и переживёт перезагрузку страницы.",
     );
     expect(html).not.toMatch(/>Отправить</);
     // FORBIDDEN (07a §1): no fake delivery chips, no fake relay statuses.
@@ -172,7 +172,7 @@ describe("Kora session screen snapshots (union И1)", () => {
     expect(html).toContain("full run");
     expect(html).toContain("Write to the agent…");
     expect(html).toContain(
-      "Sending messages to the agent will arrive later — for now Kora shows how sessions run. Your draft stays while you are on this page.",
+      "Sending messages to the agent will arrive later — for now Kora shows how sessions run. The draft is kept on this machine and survives a page reload.",
     );
     expect(html).toMatchSnapshot();
   });

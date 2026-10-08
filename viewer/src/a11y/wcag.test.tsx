@@ -229,10 +229,15 @@ describe("Kora workspace (union И1 — 07j §6 / 07l §7)", () => {
     expect(html).toMatch(/<a[^>]*min-h-6/);
   });
 
-  it("the console is a tablist with aria-selected tabs (4.1.2)", () => {
+  it("the console exposes its seams as separators and its toggle as a disclosure (4.1.2)", () => {
+    // U5: the tabs are superseded by the two wings (15-WOW §3.2) — the
+    // console's a11y contract is now the resize seams (honest separators)
+    // + the expand disclosure.
     const html = renderKoraSession();
-    expect(html).toContain('role="tablist"');
-    expect(html).toMatch(/role="tab"[^>]*aria-selected="(true|false)"/);
+    expect(html).not.toContain('role="tablist"');
+    expect(html).toMatch(/role="separator"[^>]*aria-valuenow/);
+    expect(html).toMatch(/aria-expanded="(true|false)"/);
+    expect(html).toContain('aria-controls="kora-pult-body"');
   });
 
   it("session state is dot + text, never colour alone (1.4.1)", () => {
