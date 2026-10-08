@@ -517,3 +517,61 @@ html[data-motion="reduced"] .vesma-body {
 .b1-flash {
   animation: b1-flash var(--duration-impulse) var(--ease-enter);
 }
+
+/* ── Kora v7 frame (U5 — SPEC-2026-10-07, 07l via the v12 stand) ───────────
+ * The frame hardware: internal scrollbars are token-dressed and VISIBLE at
+ * rest (07l §4, the owner's direct ask): 8px, radius full, thumb
+ * --color-border (≥3:1 on the well stratum), hover --color-text-secondary.
+ * One class for every kora scroll surface — one implementation. */
+.kora-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+.kora-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.kora-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.kora-scroll::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: var(--color-border);
+}
+.kora-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+/* ── The Эфир arrival flash (U5; 15-WOW §3.2: «строка вспыхивает ирисом
+ * 240ms» — the ONE living beat of Кора, real bus arrivals only). Impulse
+ * 240ms (--duration-impulse) + decay 400ms (--duration-slow); the
+ * amplitude ceiling is the token --neura-breath-alpha (≤0.18 dark /
+ * 0.12 light) — no literal colour, no literal alpha anywhere. THE TOKENS
+ * CARRY THE REDUCED MIRROR: --duration-impulse collapses to 0ms in
+ * reduced contexts, so the same rule plays an instant no-op — the row
+ * just is (the spec: reduced = static tints). Text never rides the flash
+ * (contrast untouched); the tint paints only behind it. */
+@keyframes kora-ether-flash {
+  0% {
+    background-color: color-mix(
+      in srgb,
+      var(--color-iris) calc(var(--neura-breath-alpha) * 100%),
+      transparent
+    );
+  }
+  40% {
+    background-color: color-mix(
+      in srgb,
+      var(--color-iris) calc(var(--neura-breath-alpha) * 100%),
+      transparent
+    );
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.kora-ether-flash {
+  animation: kora-ether-flash
+    calc(var(--duration-impulse) + var(--duration-slow)) var(--ease-enter) both;
+}

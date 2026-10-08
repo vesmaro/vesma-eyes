@@ -5,7 +5,9 @@ import { HonestLine } from "@/components/HonestLine/HonestLine";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { KoraComposer } from "./KoraComposer";
+import { KoraEther } from "./KoraEther";
 import { KoraTranscript } from "./KoraTranscript";
+import type { KoraEtherRow } from "./koraEtherStore";
 import type { KoraIntentEventPoints } from "./koraIntentEvents";
 import type { KoraCoverage, KoraSession } from "./koraTypes";
 import {
@@ -35,18 +37,30 @@ export function KoraWorkzone({
   coverage,
   transcript,
   intentEvents,
+  etherRows,
+  hostFilter = null,
 }: {
   session: KoraSession | null;
   registryEmpty: KoraRegistryEmpty;
   coverage: KoraCoverage | null | undefined;
   transcript: KoraTranscriptPages;
   intentEvents: KoraIntentEventPoints;
+  /** The real-bus Эфир ring — the empty scene's card (07j §3.1 А). */
+  etherRows: readonly KoraEtherRow[];
+  /** The page's ONE host filter (07j §3.2) — the ether follows it. */
+  hostFilter?: string | null;
 }) {
   const t = useT();
 
   if (session === null) {
     return (
-      <section aria-label={t("kora.transcript.region")} className="min-w-0 px-6 py-5">
+      /* The scene in the v7 frame (07j §3.1 А): the invitation + the Эфир
+       * card own the free space; inside the frame the card scrolls its ring
+       * (≤6), on narrow screens it simply grows. */
+      <section
+        aria-label={t("kora.transcript.region")}
+        className="flex min-h-0 min-w-0 flex-1 flex-col px-6 py-5"
+      >
         <p className="text-sm text-foreground-secondary">{t("kora.workzone.invite")}</p>
         {registryEmpty !== null ? (
           <div className="mt-3">
@@ -75,6 +89,15 @@ export function KoraWorkzone({
             </HonestLine>
           </div>
         ) : null}
+        {/* One лента, два места посадки (07j §4.2): the same ring the Пульт
+         * wing renders — the store is the single source, mounts never dupe. */}
+        <div className="mt-4 min-h-0 flex-1">
+          <KoraEther
+            rows={etherRows}
+            hostFilter={hostFilter}
+            className="flex h-full min-h-0 flex-col"
+          />
+        </div>
       </section>
     );
   }
@@ -114,10 +137,14 @@ function SessionView({
           .length;
 
   return (
+    /* The scene column of the v7 frame (07l §4): the session head + tools
+     * stay pinned, the scroll (свиток) owns the free height, the composer
+     * docks at the bottom — nothing re-assembles on scroll. Outside the
+     * frame (<lg, no height lock) flex-1 is a no-op: the page scrolls. */
     <section
       id="kora-workzone"
       aria-label={t("kora.transcript.region")}
-      className="min-w-0"
+      className="flex min-h-0 min-w-0 flex-1 flex-col"
     >
       {/* 4.1.3: the opened session is announced politely (07j §6.1). */}
       <p role="status" aria-live="polite" className="sr-only">
@@ -192,7 +219,9 @@ function SessionView({
         ) : null}
       </div>
 
-      <div className="mt-3 px-4 pb-4">
+      {/* The scroll owns the free height inside the frame (07l §4: the
+       * свиток is THE scroll container of the scene). */}
+      <div className="kora-scroll mt-3 min-h-0 flex-1 overflow-y-auto px-4 pb-4">
         <KoraTranscript
           sessionId={session.id}
           pages={transcript}
