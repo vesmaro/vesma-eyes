@@ -1582,8 +1582,11 @@ export const en: Record<TranslationKey, string> = {
   "settings.security.saveFailed": "Could not save the password.",
   "settings.security.honestySession":
     "You are signed in with a password: this changes your own account's password — the current password is required.",
+  // fix/recovery-ux (the owner's complaint, prod 1.64.0): on the token leg
+  // the «Current password» field is not rendered at all, and the leg line
+  // says exactly that.
   "settings.security.honestyToken":
-    "You are signed in with a token: a new password can be set for an account without the current one (recovery).",
+    "You are signed in with a token: set a new password — the current one is not needed.",
   "settings.security.unavailable":
     "The form is unavailable: no active sign-in. Sign in with a password or a token and come back.",
   "settings.security.recoveryLine":

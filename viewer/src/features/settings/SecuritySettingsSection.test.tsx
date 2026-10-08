@@ -166,9 +166,31 @@ describe("SecuritySettingsSection — leg honesty", () => {
   it("a token-only browser: the token-recovery line, the name starts empty", async () => {
     const { container } = await mountSecurity({ tokenPresent: true });
     expect(container.querySelector('[data-testid="security-leg-line"]')?.textContent).toBe(
-      "You are signed in with a token: a new password can be set for an account without the current one (recovery).",
+      "You are signed in with a token: set a new password — the current one is not needed.",
     );
     expect(input(container, "security-username").value).toBe("");
+  });
+
+  it("fix/recovery-ux: the token leg does NOT render the current-password field at all; the session leg does", async () => {
+    // Token leg: the field is ABSENT, not optional — recovery never asks
+    // for the forgotten password (the owner's prod-1.64.0 complaint).
+    const tokenOnly = await mountSecurity({ tokenPresent: true });
+    expect(tokenOnly.container.querySelector('[data-testid="security-current"]')).toBeNull();
+    // The «if the password is lost — press Войти above» line is for the
+    // PASSWORD leg only: on the token leg the user IS in a token session
+    // and the pointer to the sign-in button would confuse (screenshot
+    // review, fix/recovery-ux).
+    expect(tokenOnly.container.textContent).not.toContain("If the password is lost");
+  });
+
+  it("the session leg still renders the current-password field (change-of-own-password)", async () => {
+    setPasswordUser({ username: "abyss", role: "owner" });
+    const { container } = await mountSecurity({
+      passwordUser: { username: "abyss", role: "owner" },
+    });
+    expect(input(container, "security-current")).toBeDefined();
+    expect(input(container, "security-current").type).toBe("password");
+    expect(container.textContent).toContain("If the password is lost");
   });
 
   it("anonymous: NO form — the honesty line says why", async () => {
@@ -207,13 +229,13 @@ describe("SecuritySettingsSection — client validation before the wire", () => 
 });
 
 describe("SecuritySettingsSection — wire verdicts and the success beat", () => {
-  it("success: the wire gets the trimmed name + passwords (current only when typed), toast fires, password fields clear", async () => {
+  it("session-leg success: the wire gets the trimmed name + passwords (current typed), toast fires, password fields clear", async () => {
     const setPassword = vi.fn().mockResolvedValue(undefined);
     const { container } = await mountSecurity({
-      tokenPresent: true,
+      passwordUser: { username: "abyss", role: "owner" },
       setPassword,
     });
-    await submitValid(container, { username: "  abyss  ", current: "staryy-parol-123" });
+    await submitValid(container, { current: "staryy-parol-123" });
     expect(setPassword).toHaveBeenCalledWith({
       username: "abyss",
       newPassword: "parol-nadezhnyy-123",
@@ -227,26 +249,46 @@ describe("SecuritySettingsSection — wire verdicts and the success beat", () =>
     expect(input(container, "security-confirm").value).toBe("");
   });
 
-  it("empty current stays absent from the wire body (the token-recovery shape)", async () => {
+  it("token leg: no current field on screen and the wire body carries no current_password (the recovery shape)", async () => {
     const setPassword = vi.fn().mockResolvedValue(undefined);
     const { container } = await mountSecurity({ tokenPresent: true, setPassword });
+    expect(container.querySelector('[data-testid="security-current"]')).toBeNull();
     await submitValid(container);
     expect(setPassword).toHaveBeenCalledWith({
       username: "abyss",
       newPassword: "parol-nadezhnyy-123",
     });
+    expect(container.querySelector('[data-testid="toast-titles"]')?.textContent).toContain(
+      "Password updated",
+    );
   });
 
-  it("401: «The current password does not match.» and focus moves to the current field", async () => {
+  it("401 on the session leg: «The current password does not match.» and focus moves to the current field", async () => {
     const setPassword = vi.fn().mockRejectedValue(
       new ApiError(401, "current password mismatch"),
     );
-    const { container } = await mountSecurity({ tokenPresent: true, setPassword });
-    await submitValid(container);
+    const { container } = await mountSecurity({
+      passwordUser: { username: "abyss", role: "owner" },
+      setPassword,
+    });
+    await submitValid(container, { current: "wrong-parol-123" });
     expect(container.querySelector('[data-testid="auth-verdict"]')?.textContent).toContain(
       "The current password does not match.",
     );
     expect(document.activeElement).toBe(input(container, "security-current"));
+  });
+
+  it("401 on the token leg (a stale token session): the honest save-failed line — no phantom field focus", async () => {
+    const setPassword = vi.fn().mockRejectedValue(
+      new ApiError(401, "the ui session is no longer live"),
+    );
+    const { container } = await mountSecurity({ tokenPresent: true, setPassword });
+    await submitValid(container);
+    expect(container.querySelector('[data-testid="auth-verdict"]')?.textContent).toContain(
+      "Could not save the password.",
+    );
+    // No current field exists on this leg — the focus beat must not fire.
+    expect(container.querySelector('[data-testid="security-current"]')).toBeNull();
   });
 
   it("403: the owner-only recovery verdict (unknown account answers the same — no oracle)", async () => {
