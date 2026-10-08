@@ -78,6 +78,12 @@ async function mountAuth(options: {
   meAuthenticated?: boolean;
   storedToken?: string;
   storedPasswordUser?: boolean;
+  /** fix/recovery-ux: the token leg of POST /api/auth/password — a full
+   * Response escape hatch (429 needs its Retry-After header). */
+  passwordResponse?: Response;
+  /** Shorthand when only a status (and optional JSON detail) is needed. */
+  passwordStatus?: number;
+  passwordDetail?: string;
 }): Promise<{ router: ReturnType<typeof createMemoryRouter>; container: HTMLDivElement; fetchCalls: { url: string; method: string; body?: unknown }[] }> {
   const {
     initialUrl,
@@ -90,6 +96,9 @@ async function mountAuth(options: {
     meAuthenticated = false,
     storedToken,
     storedPasswordUser = false,
+    passwordResponse,
+    passwordStatus = 204,
+    passwordDetail,
   } = options;
   const fetchCalls: { url: string; method: string; body?: unknown }[] = [];
   const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -129,6 +138,15 @@ async function mountAuth(options: {
     if (url.endsWith("/api/auth/register")) {
       if (registerBody) return registerBody as Response;
       return jsonResponse({ username: "abyss", role: "owner" }, registerStatus);
+    }
+    if (url.endsWith("/api/auth/password")) {
+      // fix/recovery-ux: the token leg — 204 by default, a crafted Response
+      // (429 + Retry-After) or a JSON detail when the test needs a refusal.
+      if (passwordResponse) return passwordResponse;
+      if (passwordDetail !== undefined) {
+        return jsonResponse({ detail: passwordDetail }, passwordStatus);
+      }
+      return new Response(null, { status: passwordStatus });
     }
     return jsonResponse({});
   });
@@ -236,6 +254,58 @@ async function submitRegisterForm(fields: { username: string; password: string; 
   await act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 20));
   });
+}
+
+// --- fix/recovery-ux walk helpers -------------------------------------------
+
+async function clickRecoveryLink(): Promise<void> {
+  const link = document.querySelector('[data-testid="auth-recovery-link"]') as HTMLButtonElement | null;
+  if (!link) throw new Error("the recovery link is not rendered");
+  await act(async () => {
+    link.click();
+  });
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  });
+}
+
+async function submitRecoveryToken(value: string): Promise<void> {
+  const token = document.querySelector('[data-testid="login-token-value"]') as HTMLInputElement | null;
+  if (!token) throw new Error("the recovery token form is not mounted");
+  await act(async () => setInputValue(token, value));
+  await act(async () => {
+    (token.closest("form") as HTMLFormElement).requestSubmit();
+  });
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 40));
+  });
+}
+
+async function submitRecoveryPassword(fields: { username: string; password: string; confirm: string }): Promise<void> {
+  const username = document.querySelector('[data-testid="auth-recovery-username"]') as HTMLInputElement | null;
+  const password = document.querySelector('[data-testid="auth-recovery-password"]') as HTMLInputElement | null;
+  const confirm = document.querySelector('[data-testid="auth-recovery-confirm"]') as HTMLInputElement | null;
+  if (!username || !password || !confirm) throw new Error("the recovery set-password form is not mounted");
+  for (const [input, value] of [[username, fields.username], [password, fields.password], [confirm, fields.confirm]] as const) {
+    await act(async () => setInputValue(input, value));
+  }
+  await act(async () => {
+    (username.closest("form") as HTMLFormElement).requestSubmit();
+  });
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 40));
+  });
+}
+
+/** The «← Back to sign-in» secondary of the step-1 token form (the outline
+ * button — the submit and the eye toggle carry other marks). */
+function recoveryBackButton(): HTMLButtonElement {
+  const buttons = Array.from(
+    document.querySelectorAll<HTMLButtonElement>('[data-testid="auth-recovery-token"] button'),
+  );
+  const back = buttons.find((button) => button.textContent?.includes("Back to sign-in"));
+  if (!back) throw new Error("the «Back to sign-in» button is not rendered");
+  return back;
 }
 
 describe("returnTo round trip (07k §4.2 + UI-18 transport, ME-026)", () => {
@@ -484,5 +554,166 @@ describe("the token admin view (?tab=token, legacy/machines)", () => {
     const second = await mountAuth({ initialUrl: "/auth?tab=token", verifyStatus: 200 });
     expect(second.container.querySelector('[role="alert"]')).toBeNull();
     expect(second.container.querySelector('[data-testid="auth-route"]')).not.toBeNull();
+  });
+});
+
+describe("password recovery walk (fix/recovery-ux)", () => {
+  it("«Forgot your password?» opens the walk: the tab pair hides, step 1 reuses the token form; «Back to sign-in» returns", { timeout: 20000 }, async () => {
+    const { container, router } = await mountAuth({ initialUrl: "/auth" });
+    await clickRecoveryLink();
+    // Page state, not a route: the URL stays put.
+    expect(router.state.location.pathname).toBe("/auth");
+    // The tab pair is GONE while the walk runs (not merely inert), the card
+    // hosts the token form with the honest lead line, and the admin quiet
+    // link hides (its switchTab would drop the walk).
+    expect(container.querySelectorAll('[role="tab"]')).toHaveLength(0);
+    expect(document.querySelector('[data-testid="auth-recovery-token"]')).not.toBeNull();
+    expect(document.querySelector('[data-testid="login-token-value"]')).not.toBeNull();
+    expect(container.textContent).toContain("Sign in with the token");
+    expect(document.querySelector('[data-testid="auth-token-mode-link"]')).toBeNull();
+    // «← Back to sign-in» leaves the walk: the ordinary tab pair is back.
+    await act(async () => {
+      recoveryBackButton().click();
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+    expect(container.querySelectorAll('[role="tab"]')).toHaveLength(2);
+    expect(document.querySelector('[data-testid="auth-recovery-token"]')).toBeNull();
+    expect(document.querySelector('[data-testid="auth-recovery-link"]')).not.toBeNull();
+  });
+
+  it("step 1 → step 2: the token sign-in lands on «Set a new password» — no redirect, no «already signed in»", { timeout: 20000 }, async () => {
+    const { container, router, fetchCalls } = await mountAuth({
+      initialUrl: "/auth?return=%2Ftasks",
+    });
+    await clickRecoveryLink();
+    await submitRecoveryToken("ui-live-recovery");
+    // The verify went through the door (the ONE token wire).
+    expect(fetchCalls.some((call) => call.url.endsWith("/api/auth/ui-token") && call.method === "POST")).toBe(true);
+    // Step 2 is the set-password form: empty name, human placeholder, NO
+    // current-password field anywhere.
+    expect(document.querySelector('[data-testid="auth-recovery-set"]')).not.toBeNull();
+    const username = document.querySelector('[data-testid="auth-recovery-username"]') as HTMLInputElement;
+    expect(username.value).toBe("");
+    expect(username.placeholder).toBe("for example, abyss");
+    expect(document.querySelector('[data-testid="auth-recovery-password"]')).not.toBeNull();
+    expect(document.querySelector('[data-testid="auth-recovery-confirm"]')).not.toBeNull();
+    // The honest «уже вошёл» redirect stayed fenced: still on /auth, the
+    // walk owns the card, the already-signed-in status never paints.
+    expect(router.state.location.pathname).toBe("/auth");
+    expect(container.textContent).not.toContain("You are already signed in");
+    expect(router.state.location.search).toBe("?return=%2Ftasks");
+  });
+
+  it("step 2 success: the token-leg shape on the wire (no current_password), teardown, and back to the Вход tab", { timeout: 20000 }, async () => {
+    const { container, router, fetchCalls } = await mountAuth({ initialUrl: "/auth" });
+    await clickRecoveryLink();
+    await submitRecoveryToken("ui-live-recovery");
+    await submitRecoveryPassword({
+      username: "abyss",
+      password: "parol-nadezhnyy-123",
+      confirm: "parol-nadezhnyy-123",
+    });
+    // The token leg of POST /auth/password: name + new password ONLY — the
+    // current one does not exist on this leg.
+    const password = fetchCalls.find((call) => call.url.endsWith("/api/auth/password"));
+    expect(password).toBeDefined();
+    expect(password?.method).toBe("POST");
+    expect(password?.body).toEqual({
+      username: "abyss",
+      new_password: "parol-nadezhnyy-123",
+    });
+    // The token session is torn down server-side (the cookie leg).
+    expect(fetchCalls.some((call) => call.url.endsWith("/api/auth/ui-token") && call.method === "DELETE")).toBe(true);
+    // The walk exits to the Вход tab: the fresh password awaits its first
+    // sign-in, the toast says exactly that, no redirect happened.
+    expect(router.state.location.pathname).toBe("/auth");
+    expect(document.querySelector('[data-testid="auth-username"]')).not.toBeNull();
+    expect(document.querySelector('[data-testid="auth-recovery-set"]')).toBeNull();
+    expect(container.textContent).toContain("The password is set — now sign in");
+  });
+
+  it("403 on the set step: the owner-only verdict, focus on the name, the walk stays put", { timeout: 20000 }, async () => {
+    const { container, router } = await mountAuth({
+      initialUrl: "/auth",
+      passwordResponse: jsonResponse(
+        { detail: "password recovery is owner-only" },
+        403,
+      ),
+    });
+    await clickRecoveryLink();
+    await submitRecoveryToken("ui-live-recovery");
+    await submitRecoveryPassword({
+      username: "who-is-this",
+      password: "parol-nadezhnyy-123",
+      confirm: "parol-nadezhnyy-123",
+    });
+    expect(router.state.location.pathname).toBe("/auth");
+    expect(container.textContent).toContain(
+      "Not allowed — password recovery is available to the board's owner.",
+    );
+    // The offending field gets the caret (07k §4.2).
+    expect(document.activeElement).toBe(
+      document.querySelector('[data-testid="auth-recovery-username"]'),
+    );
+    // The walk did NOT exit: the form (and its verdict) stay on screen.
+    expect(document.querySelector('[data-testid="auth-recovery-set"]')).not.toBeNull();
+  });
+
+  it("429 on the set step: the verdict counts the server's Retry-After seconds", { timeout: 20000 }, async () => {
+    const { container } = await mountAuth({
+      initialUrl: "/auth",
+      passwordResponse: new Response(null, {
+        status: 429,
+        headers: { "Retry-After": "30" },
+      }),
+    });
+    await clickRecoveryLink();
+    await submitRecoveryToken("ui-live-recovery");
+    await submitRecoveryPassword({
+      username: "abyss",
+      password: "parol-nadezhnyy-123",
+      confirm: "parol-nadezhnyy-123",
+    });
+    expect(container.textContent).toContain(
+      "Too many attempts — wait 30 s and try again.",
+    );
+  });
+
+  it("422 on the set step: the honest failure line + the server detail on the expandable tech line", { timeout: 20000 }, async () => {
+    const { container, fetchCalls } = await mountAuth({
+      initialUrl: "/auth",
+      passwordStatus: 422,
+      passwordDetail: "password is too long (max 512)",
+    });
+    await clickRecoveryLink();
+    await submitRecoveryToken("ui-live-recovery");
+    // A VALID input (the client checks pass) — the wire stays the
+    // authority, the 422 is the server's own word.
+    await submitRecoveryPassword({
+      username: "abyss",
+      password: "parol-nadezhnyy-123",
+      confirm: "parol-nadezhnyy-123",
+    });
+    expect(fetchCalls.some((call) => call.url.endsWith("/api/auth/password"))).toBe(true);
+    expect(container.textContent).toContain("Could not set the password.");
+    const detail = container.querySelector('[data-testid="auth-verdict-detail"]');
+    expect(detail?.textContent).toContain("password is too long (max 512)");
+  });
+
+  it("a client-side mismatch on the set step never leaves the browser", { timeout: 20000 }, async () => {
+    const { fetchCalls } = await mountAuth({ initialUrl: "/auth" });
+    await clickRecoveryLink();
+    await submitRecoveryToken("ui-live-recovery");
+    await submitRecoveryPassword({
+      username: "abyss",
+      password: "parol-nadezhnyy-123",
+      confirm: "parol-drugoy-12345",
+    });
+    expect(document.querySelector('[data-testid="auth-recovery-confirm-issue"]')?.textContent).toContain(
+      "The passwords do not match",
+    );
+    expect(fetchCalls.some((call) => call.url.endsWith("/api/auth/password"))).toBe(false);
   });
 });

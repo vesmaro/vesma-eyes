@@ -347,6 +347,29 @@ export const ru = {
   "auth.route.backAria": "На борт — вернуться на главную",
   "auth.route.alreadySignedIn": "Вы уже вошли",
 
+  // --- fix/recovery-ux: дорожка восстановления пароля на /auth (жалоба
+  // владельца, прод 1.64.0: «как сбросить пароль, если не помню старый?»).
+  // Два шага на состоянии страницы, без нового роута: вход по токену —
+  // и сразу задание нового пароля; текущий не спрашиваем никогда.
+  "auth.route.recoveryLink": "Забыли пароль?",
+  "auth.route.recoveryTitle": "Восстановление доступа",
+  "auth.route.recoveryTokenLead":
+    "Войдите по токену — сразу зададим новый пароль; текущий не понадобится.",
+  "auth.route.recoverySetLead":
+    "Токен принят. Задайте новый пароль аккаунту — текущий не нужен.",
+  "auth.route.recoveryFormTitle": "Задать новый пароль",
+  "auth.route.recoveryUsernameLabel": "Имя аккаунта",
+  "auth.route.recoveryUsernamePlaceholder": "например, abyss",
+  "auth.route.recoverySubmit": "Задать пароль",
+  "auth.route.recoverySaving": "Задаём…",
+  "auth.route.recoveryDoneToast": "Пароль задан — теперь войдите",
+  "auth.route.recoveryBack": "← Назад ко входу",
+  "auth.route.recoveryForbidden":
+    "Недостаточно прав — восстановление доступно владельцу борда.",
+  "auth.route.recoveryTooManyAttempts":
+    "Слишком много попыток — подождите {{n}} с и попробуйте снова.",
+  "auth.route.recoveryFailed": "Пароль задать не удалось.",
+
   // --- search -------------------------------------------------------------------
   "search.title": "Поиск",
   "search.tagline": "взгляд внутрь себя",
@@ -1620,8 +1643,10 @@ export const ru = {
   "settings.security.saveFailed": "Сохранить не удалось.",
   "settings.security.honestySession":
     "Вы вошли по паролю: это смена пароля своего аккаунта — текущий пароль обязателен.",
+  // fix/recovery-ux (жалоба владельца, прод 1.64.0): в токен-ноге поле
+  // «Текущий пароль» вообще не рендерится, и строка ноги говорит это прямо.
   "settings.security.honestyToken":
-    "Вы вошли по токену: можно задать новый пароль аккаунту без текущего (восстановление).",
+    "Вы вошли по токену: задайте новый пароль — текущий не нужен.",
   "settings.security.unavailable":
     "Форма недоступна: нет активного входа. Войдите по паролю или токену — и вернитесь сюда.",
   "settings.security.recoveryLine":

@@ -27,7 +27,10 @@ import { HubSection } from "./HubSection";
  * - `vesmaro_ui` (signed in with a token): recovery — sets a password for
  *   an owner account WITHOUT the current one. A nonexistent account
  *   answers the SAME 403 as a non-owner (no oracle), and the verdict says
- *   exactly that.
+ *   exactly that. On this leg the «Текущий пароль» field is NOT RENDERED
+ *   AT ALL — not as an optional field, absent (fix/recovery-ux: the owner
+ *   in token mode saw «Текущий пароль» on the recovery form, read it as
+ *   «the old password is required» and abandoned the form).
  *
  * Verdicts are human (dictionary-first): 401 wrong current password
  * (focus moves there), 403 owner-only recovery, 429 with the server's
@@ -121,7 +124,14 @@ export function SecuritySettingsSection() {
         ? error.message
         : undefined;
     if (status === 401) {
-      return { text: t("settings.security.wrongCurrent"), focus: "current" };
+      // The wrong-current beat exists only on the session leg — the field
+      // itself must be on screen for the focus to land somewhere real.
+      // On the token leg a 401 means the token session went stale: one
+      // honest save-failed line, the detail rides the tech line.
+      if (sessionLeg) {
+        return { text: t("settings.security.wrongCurrent"), focus: "current" };
+      }
+      return { text: t("settings.security.saveFailed"), detail };
     }
     if (status === 403) {
       return { text: t("settings.security.forbidden") };
@@ -211,24 +221,32 @@ export function SecuritySettingsSection() {
               disabled={pending}
               inputRef={usernameRef}
             />
-            <TextField
-              id="security-current"
-              testId="security-current"
-              label={t("settings.security.currentLabel")}
-              type="password"
-              value={current}
-              onChange={setCurrent}
-              onBlur={() => undefined}
-              autoComplete="current-password"
-              issue={null}
-              issueText=""
-              disabled={pending}
-              inputRef={currentRef}
-              revealable
-              revealed={revealed}
-              onToggleReveal={() => setRevealed((cur) => !cur)}
-              hint={t("settings.security.currentHint")}
-            />
+            {sessionLeg ? (
+              /* Session leg ONLY (fix/recovery-ux): the current password is
+               * required here, so the field exists. On the token leg it is
+               * NOT an optional field — it is absent: recovery's whole
+               * point is that no current password is needed, and showing
+               * the field made the owner read recovery as «the old
+               * password is required» and abandon the form. */
+              <TextField
+                id="security-current"
+                testId="security-current"
+                label={t("settings.security.currentLabel")}
+                type="password"
+                value={current}
+                onChange={setCurrent}
+                onBlur={() => undefined}
+                autoComplete="current-password"
+                issue={null}
+                issueText=""
+                disabled={pending}
+                inputRef={currentRef}
+                revealable
+                revealed={revealed}
+                onToggleReveal={() => setRevealed((cur) => !cur)}
+                hint={t("settings.security.currentHint")}
+              />
+            ) : null}
             <TextField
               id="security-next"
               testId="security-next"
@@ -260,9 +278,15 @@ export function SecuritySettingsSection() {
               disabled={pending}
               inputRef={confirmRef}
             />
-            <p className="text-xs text-foreground-muted">
-              {t("settings.security.recoveryLine")}
-            </p>
+            {/* The way-back line is for the password leg only: on the token
+             * leg the user is ALREADY in a token session — «нажмите Войти
+             * вверху» would point at a button that is not there
+             * (screenshot review, fix/recovery-ux). */}
+            {sessionLeg ? (
+              <p className="text-xs text-foreground-muted">
+                {t("settings.security.recoveryLine")}
+              </p>
+            ) : null}
             <div className="flex justify-end">
               <Button
                 type="button"

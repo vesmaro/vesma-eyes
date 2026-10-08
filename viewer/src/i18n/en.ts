@@ -324,6 +324,29 @@ export const en: Record<TranslationKey, string> = {
   "auth.route.roleOwner": "owner",
   "auth.route.roleMember": "member",
 
+  // --- fix/recovery-ux: the /auth password-recovery track (the owner's
+  // complaint, prod 1.64.0: «how do I reset the password if I don't remember
+  // the old one?»). Two steps on page state, no new route: sign in with the
+  // token, then set a new password — the current one is never asked for.
+  "auth.route.recoveryLink": "Forgot your password?",
+  "auth.route.recoveryTitle": "Password recovery",
+  "auth.route.recoveryTokenLead":
+    "Sign in with the token — we will set a new password right away. The current one is not needed.",
+  "auth.route.recoverySetLead":
+    "The token is accepted. Set a new password for the account — the current one is not needed.",
+  "auth.route.recoveryFormTitle": "Set a new password",
+  "auth.route.recoveryUsernameLabel": "Account name",
+  "auth.route.recoveryUsernamePlaceholder": "for example, abyss",
+  "auth.route.recoverySubmit": "Set the password",
+  "auth.route.recoverySaving": "Setting…",
+  "auth.route.recoveryDoneToast": "The password is set — now sign in",
+  "auth.route.recoveryBack": "← Back to sign-in",
+  "auth.route.recoveryForbidden":
+    "Not allowed — password recovery is available to the board's owner.",
+  "auth.route.recoveryTooManyAttempts":
+    "Too many attempts — wait {{n}} s and try again.",
+  "auth.route.recoveryFailed": "Could not set the password.",
+
   // --- search -------------------------------------------------------------------
   "search.title": "Search",
   "search.tagline": "a gaze into oneself",
@@ -1582,8 +1605,11 @@ export const en: Record<TranslationKey, string> = {
   "settings.security.saveFailed": "Could not save the password.",
   "settings.security.honestySession":
     "You are signed in with a password: this changes your own account's password — the current password is required.",
+  // fix/recovery-ux (the owner's complaint, prod 1.64.0): on the token leg
+  // the «Current password» field is not rendered at all, and the leg line
+  // says exactly that.
   "settings.security.honestyToken":
-    "You are signed in with a token: a new password can be set for an account without the current one (recovery).",
+    "You are signed in with a token: set a new password — the current one is not needed.",
   "settings.security.unavailable":
     "The form is unavailable: no active sign-in. Sign in with a password or a token and come back.",
   "settings.security.recoveryLine":
