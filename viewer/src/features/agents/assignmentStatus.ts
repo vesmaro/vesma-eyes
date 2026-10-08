@@ -26,6 +26,29 @@ export function activeAssignmentOf(
   );
 }
 
+/**
+ * U3 blocked-reason projection: the task's most recent failed/expired
+ * assignment (the server itself moves fail/expired → blocked, so the row's
+ * outcome IS the block's reason — blockedReason.ts translates it into
+ * words). Highest id wins (ids are monotonic in the wire corpus). Shares the
+ * assignments-list cache with activeAssignmentOf — no extra wire call.
+ */
+export function terminalReasonAssignmentOf(
+  items: readonly AssignmentItem[],
+  taskId: string,
+): AssignmentItem | undefined {
+  let found: AssignmentItem | undefined;
+  for (const row of items) {
+    if (
+      row.task_id === taskId &&
+      (row.state === "failed" || row.state === "expired")
+    ) {
+      if (found === undefined || row.id > found.id) found = row;
+    }
+  }
+  return found;
+}
+
 /** Visual treatment per state — variant is the Badge variant name. */
 export interface AssignmentStateStyle {
   /** Badge variant (tinted chips pass AA per the T7 audit). */

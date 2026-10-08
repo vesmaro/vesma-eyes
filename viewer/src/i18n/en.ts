@@ -951,6 +951,13 @@ export const en: Record<TranslationKey, string> = {
   "tasks.board.doneToast": "Task “{{title}}” done",
   "tasks.board.blockedReason": "the agent can't take the task",
 
+  // U3: the blocked-reason dictionary (the blocked edge with a reason,
+  // 15-WOW §3.4 item 4) — derived from the task's own data, never invented.
+  "tasks.blocked.failed": "the execution attempt failed",
+  "tasks.blocked.expired": "execution expired: the agent stopped responding",
+  "tasks.blocked.unrouted": "no eligible executor",
+  "tasks.blocked.unassigned": "no executor assigned",
+
   // --- ME-074: lifecycle time labels on cards ---------------------------------------
   "tasks.card.arrived": "arrived {{date}}",
   "tasks.card.hanging": "open for {{duration}}",

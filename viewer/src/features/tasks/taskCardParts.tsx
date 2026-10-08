@@ -1,8 +1,11 @@
 import { useT } from "@/i18n";
+import type { BoardTask } from "@/gateway/boardTypes";
+import { useActiveAssignment, useTerminalAssignment } from "@/features/agents/useAgents";
 import {
   isValidationOverdue,
   validationElapsed,
 } from "./taskStatus";
+import { blockedReasonOf } from "./blockedReason";
 import { useValidationNow } from "./useValidationClock";
 
 /**
@@ -45,6 +48,54 @@ export function ValidatingClock({
         hours: elapsed.hours,
         minutes: elapsed.minutes,
       })}
+    </p>
+  );
+}
+
+/**
+ * U3 blocked-reason line (SPEC-2026-10-07 «заново — blocked-кромка с
+ * причиной»; 15-WOW §3.4 п.4): the visible human reason under the title of a
+ * blocked card/row — the colour edge (TaskBoardCard's error accent) is never
+ * the only carrier: the ⟂ marker + THIS text duplicate it (WCAG 1.4.1), and
+ * the server's exact note rides as the tooltip when it adds context (the v12
+ * stand's title=blockedNote pattern). Reason derived from data the client
+ * already holds (blockedReason.ts — never invented); renders NOTHING unless
+ * the task actually sits in the blocked lane — a resolved task with a stale
+ * failed attempt does not resurrect the reason.
+ */
+export function BlockedReasonLine({
+  task,
+  className = "",
+}: {
+  task: BoardTask;
+  /** Skin spacing from the caller, prepended verbatim (the card/list rhythm). */
+  className?: string;
+}) {
+  const t = useT();
+  // Hook-order discipline: both reads run on every render; the render gate
+  // below decides visibility. Both observe the ONE shared assignments cache
+  // entry (no extra wire call beyond what ActiveAssignmentBadge already pays).
+  const active = useActiveAssignment(task.id).data;
+  const terminal = useTerminalAssignment(task.id).data;
+  if (task.col !== "blocked") return null;
+  const reason = blockedReasonOf(
+    task,
+    terminal,
+    active?.state === "queued" && active.routing?.reason === "unmatched",
+    t,
+  );
+  return (
+    <p
+      title={reason.note}
+      className={
+        className +
+        "flex items-start gap-1 text-xs leading-snug text-error"
+      }
+    >
+      <span aria-hidden="true" className="font-mono">
+        ⟂
+      </span>
+      <span className="min-w-0 break-words">{reason.text}</span>
     </p>
   );
 }

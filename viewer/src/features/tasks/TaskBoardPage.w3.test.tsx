@@ -255,12 +255,17 @@ describe("ME-071 W3: done-tempo + flash + blocked edge", () => {
     expect(resolvedHeader!.textContent).not.toContain("/h");
   });
 
-  it("the blocked lane carries the reason edge + the sr-only reason", async () => {
+  it("the blocked lane carries the reason edge + the VISIBLE derived reason (U3)", async () => {
     await renderAt("/tasks", [BLOCKED_TASK]);
     await waitFor(() => container!.textContent?.includes(BLOCKED_TASK.title) === true);
     const card = cardOf(BLOCKED_TASK.title);
     expect(card.className).toContain("before:bg-error/80");
-    expect(card.textContent).toContain("the agent can't take the task");
+    // U3 supersedes the W3 sr-only generic: the reason is now a VISIBLE
+    // human line derived from the task's own data (no agents → no executor
+    // assigned), ⟂-marked so the edge is never colour-alone (1.4.1).
+    const reason = card.querySelector("p.text-error");
+    expect(reason?.textContent).toContain("⟂");
+    expect(reason?.textContent).toContain("no executor assigned");
   });
 
   it("the waiting facade gives validating cards the golden attention edge", async () => {

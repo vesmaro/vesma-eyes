@@ -23,11 +23,19 @@ const ACTIVE_CHIP: Record<string, string> = {
   queued: "border border-border text-foreground-secondary hover:border-foreground-muted",
 };
 
-/** Shape dot classes (mirrors AssignmentStateBadge, aria-hidden). */
+/**
+ * Shape dot classes (mirrors AssignmentStateBadge, aria-hidden). U3 DOSAGE
+ * LAW (SPEC-2026-10-07, «Задачи: ТОЛЬКО task.done+курьеры»): the running
+ * state's dot used to `animate-pulse` forever — background motion on the
+ * task pages. Here it is a STATIC filled dot: the state is data (the chip's
+ * text + shape carry it, 1.4.1), and the only light that moves on /tasks is
+ * a real task.done. The agents-domain AssignmentStateBadge keeps its pulse —
+ * its dosage is that domain's verdict (U6).
+ */
 const SHAPE_CLASS: Record<string, string> = {
   hollow: "size-1.5 rounded-full border border-current",
   filled: "size-1.5 rounded-full bg-current",
-  pulse: "size-1.5 rounded-full bg-current motion-safe:animate-pulse",
+  pulse: "size-1.5 rounded-full bg-current",
   square: "size-1.5 rounded-[1px] bg-current",
 };
 

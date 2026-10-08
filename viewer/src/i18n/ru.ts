@@ -979,6 +979,13 @@ export const ru = {
   "tasks.board.doneToast": "Задача «{{title}}» завершена",
   "tasks.board.blockedReason": "агент не может взять задачу",
 
+  // U3: словарь причин блокировки (blocked-кромка с причиной, 15-WOW §3.4
+  // п.4) — причина выводится из данных задачи, никогда не выдумывается.
+  "tasks.blocked.failed": "попытка исполнения не удалась",
+  "tasks.blocked.expired": "исполнение истекло: агент перестал отвечать",
+  "tasks.blocked.unrouted": "нет доступного исполнителя",
+  "tasks.blocked.unassigned": "исполнитель не назначен",
+
   // --- ME-074: lifecycle time labels on cards ---------------------------------------
   "tasks.card.arrived": "поступила {{date}}",
   "tasks.card.hanging": "висит {{duration}}",

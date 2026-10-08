@@ -13,7 +13,7 @@ import { isAgentsMutationSource, isAgentsSource } from "@/gateway/capabilities";
 import { useGateway } from "@/gateway/GatewayContext";
 import { keys } from "@/lib/queryKeys";
 import { GC_TIMES, STALE_TIMES } from "@/lib/queryClient";
-import { activeAssignmentOf } from "./assignmentStatus";
+import { activeAssignmentOf, terminalReasonAssignmentOf } from "./assignmentStatus";
 
 /**
  * AGW-1 agents-domain data hooks (spec 2026-09-19). Reads are
@@ -108,6 +108,37 @@ export function useExecutionSettings() {
     enabled: capable,
     staleTime: STALE_TIMES.agentsSettings,
     gcTime: GC_TIMES.agentsSettings,
+  });
+}
+
+/**
+ * The task's most recent TERMINAL (failed/expired) assignment — U3's blocked-
+ * reason source (tasks/blockedReason.ts words it). Same single-cache decision
+ * as useActiveAssignment: one key, one wire call, `select` projects per
+ * consumer. undefined = no terminal attempt (or no agents capability — the
+ * blocked edge then falls back to the task's own fields, which is honest).
+ */
+export function useTerminalAssignment(taskId: string | undefined) {
+  const gateway = useGateway();
+  const capable = isAgentsSource(gateway) && taskId !== undefined;
+  const select = useCallback(
+    (page: AssignmentsPage) => terminalReasonAssignmentOf(page.items, taskId ?? ""),
+    [taskId],
+  );
+  return useQuery({
+    // MUST stay key-identical with useAssignments()/useActiveAssignment() —
+    // one cache entry feeds the tab, the badges and the blocked reasons.
+    queryKey: keys.agents.assignments.list({}),
+    queryFn: ({ signal }) => {
+      if (!isAgentsSource(gateway)) {
+        throw new Error("useTerminalAssignment: gateway has no agents capability.");
+      }
+      return gateway.listAssignments({}, signal);
+    },
+    enabled: capable,
+    select,
+    staleTime: STALE_TIMES.agentsAssignments,
+    gcTime: GC_TIMES.agentsAssignments,
   });
 }
 

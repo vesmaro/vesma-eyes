@@ -35,6 +35,7 @@ import {
 } from "./taskStatus";
 import { EditTaskDialog } from "./EditTaskDialog";
 import { humanOrRaw } from "./humanChannel";
+import { BlockedReasonLine } from "./taskCardParts";
 import { useTaskMutations } from "./useTaskMutations";
 import {
   useSyncReportCount,
@@ -265,6 +266,9 @@ export function TaskDetailPage() {
             </Badge>
           ))}
         </div>
+        {/* U3: the blocked reason under the badges — the same single
+         * implementation the kanban card and the list row speak. */}
+        {current.col === "blocked" ? <BlockedReasonLine task={current} /> : null}
         <p className="flex flex-wrap gap-x-4 text-xs text-foreground-muted">
           <span>
             {t("tasks.createdLabel")}: {formatTaskDate(current.created_at, lang)}

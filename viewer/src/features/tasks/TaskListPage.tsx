@@ -36,12 +36,14 @@ import {
   sortGroupTasks,
 } from "./taskGrouping";
 import { CreateTaskDialog } from "./CreateTaskDialog";
+import { BlockedReasonLine } from "./taskCardParts";
 import { TaskFilterSelect } from "./TaskFilterSelect";
 import { TaskDateFilter } from "./TaskDateFilter";
 import { TaskRowMenu } from "./TaskRowMenu";
 import { TasksUnsupported } from "./TasksUnsupported";
 import { TasksViewToggle } from "./TasksViewToggle";
 import { useBoardTasks, useReportCounts } from "./useTasks";
+import { useDoneTempo } from "./doneTransitStore";
 import { pageGridClass } from "@/layout/pageGrid";
 
 /**
@@ -67,6 +69,10 @@ export function TaskListPage() {
   const state = parseTaskListParams(searchParams);
   const [collapsed, setCollapsed] = useState(() => loadCollapsedGroups());
   const [createOpen, setCreateOpen] = useState(false);
+  // U3: the console's live resolution tempo (the board shares this store).
+  // Runs before the capability early return (hook-order discipline) and is
+  // inert until the domain SSE bridge sees a real terminal transition.
+  const doneTempo = useDoneTempo();
 
   const tasks = useMemo(() => board.data?.tasks ?? [], [board.data]);
   // Stable id list so the report-count memo does not re-derive per render.
@@ -115,6 +121,26 @@ export function TaskListPage() {
           <h1 id="tasks-title" className="text-xl font-semibold">
             {t("tasks.title")}
           </h1>
+          {/* U3 (15-WOW §3.4 «темп в шапках»): the live resolution tempo in
+           * the section header — the SAME doneTransitStore derivation the
+           * board's resolved-column chip reads (one implementation, no second
+           * counter). Inert until the bus delivers a terminal event (no fake
+           * zeros); the list renders it because the tempo belongs to the
+           * whole console, not to one lane. */}
+          {doneTempo > 0 ? (
+            <span
+              className="font-mono text-xs tabular-nums text-foreground-secondary"
+              title={t("tasks.board.doneTempoAria", { count: doneTempo })}
+            >
+              <span aria-hidden="true" className="text-confidence">
+                ·{doneTempo}
+                {t("tasks.board.doneTempoUnit")}
+              </span>
+              <span className="sr-only">
+                {t("tasks.board.doneTempoAria", { count: doneTempo })}
+              </span>
+            </span>
+          ) : null}
           <TasksViewToggle />
         </div>
         {canMutate ? (
@@ -483,6 +509,11 @@ function TaskTableRow({
         <Badge variant={statusBadgeVariant(task.status)}>
           {t(statusLabelKey(task.status))}
         </Badge>
+        {/* U3: the blocked reason under the status badge — visible, human,
+         * derived from the task's own data (never colour-alone, 1.4.1). */}
+        {task.col === "blocked" ? (
+          <BlockedReasonLine task={task} className="mt-0.5 max-w-44" />
+        ) : null}
       </td>
       <td className="max-w-[28rem] truncate px-2">
         <Link
@@ -571,6 +602,8 @@ function TaskCardRow({
             </span>
           ) : null}
         </span>
+        {/* U3: the blocked reason line (same component as the kanban card). */}
+        {task.col === "blocked" ? <BlockedReasonLine task={task} /> : null}
         <Link
           to={withReturn(
             `/tasks/${encodeURIComponent(task.id)}`,
