@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useState } from "react";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { formatTranscriptTime } from "./koraWorkspaceModel";
@@ -50,18 +50,23 @@ export function KoraEther({
       : rows;
 
   // Flash only LIVE arrivals: ids that appeared while THIS mount watched.
-  const seen = useRef<ReadonlySet<number> | null>(null);
-  const flashIds = useRef<ReadonlySet<number>>(new Set());
-  if (seen.current === null) {
-    // First render: adopt the current rows silently (no restore flashes).
-    seen.current = new Set(visible.map((row) => row.id));
+  // React's documented «storing information from previous renders» pattern
+  // (guarded setState during render — no effect, no render-time refs): the
+  // first pass adopts the restored rows silently, so a remount never
+  // re-flashes history; later passes diff the ids and flash only fresh ones.
+  const [seen, setSeen] = useState<ReadonlySet<number> | null>(null);
+  const [flashIds, setFlashIds] = useState<ReadonlySet<number>>(new Set());
+  if (seen === null) {
+    setSeen(new Set(visible.map((row) => row.id)));
   } else {
     const fresh = new Set<number>();
     for (const row of visible) {
-      if (!seen.current.has(row.id)) fresh.add(row.id);
+      if (!seen.has(row.id)) fresh.add(row.id);
     }
-    seen.current = new Set([...seen.current, ...fresh]);
-    flashIds.current = fresh;
+    if (fresh.size > 0) {
+      setSeen(new Set([...seen, ...fresh]));
+      setFlashIds(fresh);
+    }
   }
 
   if (visible.length === 0) {
@@ -96,7 +101,7 @@ export function KoraEther({
               key={row.id}
               className={cn(
                 "flex items-baseline gap-2 rounded-sm px-1 py-0.5 text-sm text-foreground-secondary",
-                flashIds.current.has(row.id) && "kora-ether-flash",
+                flashIds.has(row.id) && "kora-ether-flash",
               )}
             >
               <span className="w-9 shrink-0 font-mono text-xs tabular-nums text-foreground-muted">
