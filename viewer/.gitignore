@@ -13,3 +13,6 @@ coverage
 
 # ME-011 render-smoke local build (gitignored — rebuilt on demand)
 /dist-smoke/
+
+# U2/U3 honesty-gate screenshot artifacts (rebuilt on every gate run)
+/honesty-shots/

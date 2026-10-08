@@ -9,16 +9,34 @@
  * PIXEL-IDENTICAL frames. Phantom motion (timers/cycles without an event)
  * fails here, not in review.
  *
+ * U3 extends the gate to the TASKS console (/tasks; the U3 card's red line:
+ * «тихая шина → кадры через 5+сек попиксельно идентичны; позитивный
+ * контроль = реальное task.done событие двигает страницу»):
+ *
  * Scenarios:
- *   1. silent    — default mock bus: two shots ≥5s apart MUST be identical.
- *   2. muted     — ?quiet=1 (the anti-fake gate pinned) over the same
- *                  silent bus: two shots ≥5s apart MUST be identical — the
- *                  mute gate never ADDS motion. (The gate deliberately does
- *                  NOT demand identity over a SPEAKING bus: the HUD ticker
- *                  is data, not decor — it updates in every regime, §13.3.)
- *   3. bus=demo  — positive control: the bounded demo bus SPEAKS, the page
- *                  moves: two shots ~1.4s apart must DIFFER (guards against
- *                  «passed because nothing can ever move»).
+ *   1. silent       — default mock bus on /: two shots ≥5s apart MUST be
+ *                     identical.
+ *   2. muted        — ?quiet=1 (the anti-fake gate pinned) over the same
+ *                     silent bus: two shots ≥5s apart MUST be identical —
+ *                     the mute gate never ADDS motion. (The gate deliberately
+ *                     does NOT demand identity over a SPEAKING bus: the HUD
+ *                     ticker is data, not decor — it updates in every
+ *                     regime, §13.3.)
+ *   3. bus=demo     — positive control: the bounded demo bus SPEAKS, the
+ *                     page moves: two shots ~1.4s apart must DIFFER (guards
+ *                     against «passed because nothing can ever move»).
+ *   4. tasks-silent — /tasks on the silent bus: two shots ≥5s apart MUST be
+ *                     identical — the living console stands when the bus is
+ *                     quiet (the dosage law: only task.done + couriers).
+ *                     DATA aging (the WF-1 validating clock's minute field)
+ *                     is not motion; a minute-boundary rollover between the
+ *                     frames triggers exactly ONE honest recheck (a fresh
+ *                     pair), a persistent differ still fails.
+ *   5. tasks-done   — positive control: a REAL terminal transition emitted
+ *                     through the window.VesmaMockBus handle (the same
+ *                     wire frame the server sends) must move the page:
+ *                     the card flies, the gold flash plays, the toast and
+ *                     the tempo chip land (the U3 спектакль answers to it).
  *
  * Local gate, same discipline as smoke-render.mjs (build dist-smoke with
  * the mock adapter, serve via vite preview, drive real chromium). Browser
@@ -238,6 +256,100 @@ async function main() {
         differs,
         "bus=demo positive control: a speaking bus moves the page",
         differs ? "" : "frames identical — the bus events reached nothing",
+      );
+      await context.close();
+    }
+
+    // 4. TASKS SILENT (U3) — the living console stands on a quiet bus.
+    {
+      const context = await browser.newContext({
+        viewport: { width: 1440, height: 900 },
+        deviceScaleFactor: 1,
+      });
+      let identical = false;
+      let bytes = "";
+      // ONE honest recheck: the WF-1 validating clock prints a minutes field
+      // (data aging, not motion) — a minute boundary landing between the two
+      // frames is a rollover, not a phantom. A persistent differ fails.
+      for (let attempt = 1; attempt <= 2 && !identical; attempt += 1) {
+        const a = await settledShot(context, `${BASE}tasks`, "u3-honesty-tasks-silent-t0.png");
+        console.log("[honesty] tasks-silent: waiting 5.6s of real time…");
+        await sleep(QUIET_GAP_MS);
+        const b = await settledShot(
+          context,
+          `${BASE}tasks`,
+          `u3-honesty-tasks-silent-t5.png`,
+        );
+        identical = a.equals(b);
+        bytes = `bytes ${a.length} vs ${b.length}`;
+        if (!identical && attempt === 1) {
+          console.log("[honesty] tasks-silent: frames differ — rechecking once (a minute-field rollover is data aging, not motion)");
+        }
+      }
+      check(
+        identical,
+        "tasks: silent bus — two frames ≥5s apart are pixel-identical",
+        identical ? "" : bytes,
+      );
+      await context.close();
+    }
+
+    // 5. TASKS POSITIVE CONTROL (U3) — a REAL terminal transition moves the
+    // console: the card flies to «Решено», the gold flash plays, the toast
+    // and the tempo chip land, the courier is fed.
+    {
+      const context = await browser.newContext({
+        viewport: { width: 1440, height: 900 },
+        deviceScaleFactor: 1,
+      });
+      const page = await context.newPage();
+      await page.goto(`${BASE}tasks`, { waitUntil: "load" });
+      await page.evaluate(() => document.fonts.ready);
+      await sleep(SETTLE_MS);
+      const a = await page.screenshot({ fullPage: true });
+      writeFileSync(join(OUT_DIR, "u3-honesty-tasks-done-t0.png"), a);
+      // The same wire frame the server sends on a real resolution — a FULL
+      // TaskOut row (mirror of the fixture corpus's TB-11, in-progress →
+      // resolved; the cache must hold a pre-transition row for the transit
+      // to record). Emitted through the mock bus's test handle.
+      await page.evaluate(() => {
+        window.VesmaMockBus?.emit("task.moved", {
+          actor: "machine:board",
+          task: {
+            id: "TB-11",
+            col: "resolved",
+            position: 2,
+            title: "Собрать densité-токены и проверить контраст AA",
+            summary: "--row-h режимы + проверка 4.5:1 в обеих темах.",
+            spec: "Acceptance criteria:\n— [x] токены заморожены",
+            agents: [],
+            specialists: ["@GCW: Senior Frontend Developer"],
+            env: "local",
+            project: "vesma",
+            memory_ids: [],
+            mnemos_tags: ["project:mnemos", "topic:design"],
+            created_at: "2026-09-18T06:25:00+00:00",
+            updated_at: new Date().toISOString(),
+            archived: 0,
+            status: "resolved",
+            priority: "low",
+            archived_from: "",
+            validating_since: "",
+            resolved_at: new Date().toISOString(),
+            done_at: "",
+            human_view: "",
+          },
+        });
+      });
+      await sleep(400); // the patch + flash land well inside the window
+      const b = await page.screenshot({ fullPage: true });
+      writeFileSync(join(OUT_DIR, "u3-honesty-tasks-done-t1.png"), b);
+      await page.close();
+      const differs = !a.equals(b);
+      check(
+        differs,
+        "tasks: a real task.done transition moves the console (positive control)",
+        differs ? "" : "frames identical — the terminal transition reached nothing",
       );
       await context.close();
     }
