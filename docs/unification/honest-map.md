@@ -24,12 +24,12 @@
 | 6 | `/memory/pulse` | PulsePage | ✗ | ✓ (PulseFeed честные причины) | ✓ скелетоны ленты | ✓ EmptyState | ✓ retry-ветка | |
 | 7 | `/memory/tags` | TagsPage (+ drill) | ✗ | ✓ (TagDrillView честная пустота) | ✓ скелетоны (TagsPage, TagDrillView) | ✓ EmptyState («под тегом ничего нет») | ✓ retry (TagDrillView, TagsPage) | |
 | 8 | `/memory/:id` | MemoryDetailPage | ✗ | ◐ EmptyState-тексты | ✓ MemoryScrollSkeleton | ✓ EmptyState (запись исчезла) | ✓ retry-ветка | «stale»-состояние из 05 §2.3 — на карточке/строке, см. §3 |
-| 9 | `/tasks` (канбан) | TaskBoardPage | ✗ | ✓ честные карточки/причины | ✓ TableRowSkeleton | ✓ EmptyState | ✓ EmptyState error + retry | SSE-мост в TasksLayout; task.done-хореография U3 |
-| 10 | `/tasks/list` | TaskListPage | ✗ | ✓ | ✓ скелетон строк | ✓ EmptyState | ✓ retry-ветка | |
-| 11 | `/tasks/activity` | TaskActivityPage | ✗ | ✓ | ✓ скелетон строк | ✓ EmptyState | ✓ `role=alert` + retry | Живой буфер SSE |
-| 12 | `/tasks/inbox` | TaskInboxPage | ✗ | ✓ | ✓ скелетон строк | ✓ EmptyState | ✓ `role=alert` + retry | |
-| 13 | `/tasks/archive` | TaskArchivePage | ✗ | ✗ | ✓ скелетон строк | ✓ EmptyState | ✓ retry-ветка | Единственная страница задач без honest-словаря — терминальное хранилище; U3 решает, нужен ли слот |
-| 14 | `/tasks/:id` | TaskDetailPage | ✗ | ✓ | ✓ скелетон | ✓ EmptyState | ✓ retry-ветка | |
+| 9 | `/tasks` (канбан) | TaskBoardPage | ✗ | ✓ честные карточки/причины | ✓ TableRowSkeleton | ✓ EmptyState | ✓ EmptyState error + retry | SSE-мост в TasksLayout. **U3 (2026-10-08):** живой пульт v12 одет на конструктиве W3 — темп «·N/ч» в шапке resolved-колонки (doneTransitStore, только от живой шины, без фейковых нулей), task.done-спектакль 240/600→400ms→курьер→▸N (W3, верифицирован), фасад «Ждут владельца» с золотой кромкой (confidence-класс); **новое U3** — blocked-кромка с ВИДИМОЙ человеческой причиной (⟂ + строка из данных задачи: fail/expired-назначение → его note, unrouted-очередь, пустые агенты, словарь-фолбэк; `blockedReason.ts`), дозировка движения = только task.done+курьеры (animate-pulse бейджа снят); 5-сек тест честности расширен на /tasks (тихая шина → кадры идентичны; реальный task.done → страница двигается) — `npm run honesty` 5/5 |
+| 10 | `/tasks/list` | TaskListPage | ✗ | ✓ | ✓ скелетон строк | ✓ EmptyState | ✓ retry-ветка | **U3 (2026-10-08):** темп «·N/ч» в шапке раздела (тот же doneTransitStore — одна реализация, без второго счётчика; инертен до первого события шины); blocked-строки несут ту же видимую причину (статус-ячейка таблицы + мобильные card-строки — один компонент с канбаном) |
+| 11 | `/tasks/activity` | TaskActivityPage | ✗ | ✓ | ✓ скелетон строк | ✓ EmptyState | ✓ `role=alert` + retry | Живой буфер SSE; U3: дозировка подтверждена — без фонового движения, диаграмма пульса анимирует только переходы по данным (§8.10) |
+| 12 | `/tasks/inbox` | TaskInboxPage | ✗ | ✓ | ✓ скелетон строк | ✓ EmptyState | ✓ `role=alert` + retry | U3: дозировка подтверждена — без фонового движения |
+| 13 | `/tasks/archive` | TaskArchivePage | ✗ | ✓ | ✓ скелетон строк | ✓ EmptyState | ✓ retry-ветка | **Решение U3:** слот ЕСТЬ и достаточен — EmptyState с честной подсказкой `tasks.archiveEmpty(Hint)` («в архиве пока ничего нет / задачи попадают сюда из…»); терминальному хранилищу словарь причин не нужен — карта U0 здесь устарела |
+| 14 | `/tasks/:id` | TaskDetailPage | ✗ | ✓ | ✓ скелетон | ✓ EmptyState | ✓ retry-ветка | **U3:** у blocked-задачи та же видимая причина под бейджами статуса (один компонент с канбаном/списком) |
 | 15 | `/agents/hosts` | HostsRosterPage | ✗ | ✓ (roster честные пустоты) | ✓ скелетоны | ✓ EmptyState | ✓ retry-ветка | |
 | 16 | `/agents/execution` | ExecutionPage | ✗ | ✓ | ✓ скелетоны | ✓ EmptyState | ✓ retry-ветка | |
 | 17 | `/agents/harnesses` | ExecutorRegistryPage | ✗ | ✓ | ✓ скелетоны | ✓ EmptyState | ✓ retry-ветка | |
@@ -64,5 +64,5 @@
 1. **Gate-слой не подключён.** ~~Устарело к U1: ME-043 (gates v6) уже подключил `GatedOutlet`/`GateScreen`/замки сайдбара поверх этой карты.~~ U1 добавил недостающее: мини-превью раздела в gate-странице (GatePreview — статичный набросок, без контента/блюра) и скрытие глобального поиска у анонима (07k §2.3).
 2. **Docs-хаб и категория без error/empty-веток** (строки 20–21) — явная честная ошибка манифеста нужна в U6.
 3. **Карточка памяти: состояния строки из 05 §2.3** (hover строки, selected-край, stale, live-update) живут не на MemoryCard, а на уровне списков/детали — закрываются в U4 при свиток-одевании.
-4. **Архив задач** — единственная страница без honest-словаря; решение за U3 (допустимо: терминальное хранилище).
+4. ~~**Архив задач** — единственная страница без honest-словаря; решение за U3 (допустимо: терминальное хранилище).~~ Решено в U3 (2026-10-08): EmptyState с честной подсказкой уже является слотом терминального хранилища, отдельный словарь не нужен (строка 13).
 5. **`/memory/*` без HonestLine** — домен держит честность через EmptyState-словарь; при свиток-эстетике U4 решает, появляется ли HonestLine (например, в поиске/пульсе).
