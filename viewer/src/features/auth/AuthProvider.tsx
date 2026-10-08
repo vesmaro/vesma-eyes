@@ -163,6 +163,12 @@ export function AuthProvider({
           clearPasswordUser();
         }
       },
+      async setPassword(input) {
+        // No mirror to update: the password is not person state. The wire
+        // error propagates for the calling form's verdict (429 carries the
+        // server's Retry-After via PasswordRateLimitedError).
+        await passwordClient.setPassword(input);
+      },
       passwordUser,
       openOverlay: () => dispatch({ type: "OPEN_OVERLAY" }),
       closeOverlay: () => dispatch({ type: "CLOSE_OVERLAY" }),

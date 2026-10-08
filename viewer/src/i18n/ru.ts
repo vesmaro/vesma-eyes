@@ -326,7 +326,11 @@ export const ru = {
   "auth.route.loginFailedHelp": "Что проверить: раскладка RU/EN, регистр букв, Caps Lock.",
   "auth.route.tooManyAttempts": "Слишком много попыток — подождите минуту и попробуйте снова.",
   "auth.route.nameTaken": "Такое имя уже есть. Возьмите другое.",
-  "auth.route.registrationClosed": "Регистрация закрыта: у борта уже есть владелец.",
+  // fix/kora-auth-honesty (жалоба владельца, прод 1.63.0): вердикт называет
+  // причину И путь решения — кто и каким флагом открывает регистрацию.
+  "auth.route.registrationClosed":
+    "Регистрация закрыта — у борда уже есть владелец. Доступ новых членов открывает владелец в настройках сервера (флаг VESMARO_ALLOW_REGISTRATION).",
+  "auth.route.techDetail": "Техническая информация сервера",
   "auth.route.registerFailed": "Аккаунт создать не удалось.",
   "auth.route.networkFailed": "Сервер не ответил — проверьте связь и попробуйте ещё раз.",
   "auth.route.signedInToast": "Вы вошли: {{username}}",
@@ -1598,6 +1602,30 @@ export const ru = {
   "settings.hub.devicesHint":
     "Отзыв скомпрометированного устройства и доступы к компонентам (задачи, отчёты, инбокс, уведомления) — по каждому подключённому устройству.",
   "settings.hub.devicesCta": "Управлять устройствами",
+  // ME-080 follow-up: секция «Безопасность» — форма пароля (POST /auth/password).
+  "settings.hub.securityTitle": "Безопасность",
+  "settings.security.formTitle": "Пароль",
+  "settings.security.usernameLabel": "Имя аккаунта",
+  "settings.security.currentLabel": "Текущий пароль",
+  "settings.security.currentHint": "Если входили по паролю",
+  "settings.security.newLabel": "Новый пароль",
+  "settings.security.confirmLabel": "Новый пароль ещё раз",
+  "settings.security.save": "Сохранить",
+  "settings.security.saving": "Сохраняем…",
+  "settings.security.toastOk": "Пароль обновлён",
+  "settings.security.wrongCurrent": "Текущий пароль не подходит.",
+  "settings.security.forbidden": "Недостаточно прав: восстановление доступно владельцу.",
+  "settings.security.tooManyAttempts":
+    "Слишком много попыток — подождите {{n}} с и попробуйте снова.",
+  "settings.security.saveFailed": "Сохранить не удалось.",
+  "settings.security.honestySession":
+    "Вы вошли по паролю: это смена пароля своего аккаунта — текущий пароль обязателен.",
+  "settings.security.honestyToken":
+    "Вы вошли по токену: можно задать новый пароль аккаунту без текущего (восстановление).",
+  "settings.security.unavailable":
+    "Форма недоступна: нет активного входа. Войдите по паролю или токену — и вернитесь сюда.",
+  "settings.security.recoveryLine":
+    "Если пароль потерян — войдите по токену (кнопка «Войти» вверху) и задайте новый здесь: текущий пароль не понадобится.",
   "settings.hub.themeLabel": "Тема",
   "settings.hub.themeSystem": "Системная",
   "settings.hub.themeDark": "Тёмная",
@@ -2060,7 +2088,7 @@ export const ru = {
   "kora.list.loading": "Загружаем сессии",
   "kora.list.loadMore": "Показать ещё",
   "kora.list.loadFailed": "Не удалось загрузить список сессий",
-  "kora.list.inactiveTitle": "Сессия не активна",
+  "kora.list.inactiveTitle": "Кора ждёт входа на борт",
   "kora.list.inactiveHint": "Войдите — и сессии хостов появятся здесь",
   // UX-overhaul §5/§9.3 (Ф1): честное пустое — ветвление по числу исполнителей.
   // Вариант A (исполнителей 0) — призыв подключить; вариант B (исполнители
@@ -2084,7 +2112,7 @@ export const ru = {
   "kora.session.notFoundCoverage":
     "Хост недоступен для просмотра: борд читает транскрипты только хостов со сканером. Вернитесь к списку сессий или в карточку задачи — ссылка останется рабочей, когда хост станет читаемым.",
   "kora.session.backToList": "К списку сессий",
-  "kora.session.inactiveTitle": "Сессия не активна",
+  "kora.session.inactiveTitle": "Кора ждёт входа на борт",
   "kora.transcript.region": "Ход сессии",
   "kora.transcript.loading": "Загружаем транскрипт",
   "kora.transcript.loadFailed": "Не удалось загрузить транскрипт",

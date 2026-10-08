@@ -376,13 +376,26 @@ describe("password registration outcomes (07k §4.2)", () => {
     );
   });
 
-  it("closed registration (403) → the honest owner-policy verdict", { timeout: 20000 }, async () => {
+  it("closed registration (403) → the honest owner-policy verdict + the server detail as an expandable tech line", { timeout: 20000 }, async () => {
+    // The board's real closed-registration answer (owner complaint on prod
+    // 1.63.0: the verdict must name the cause AND the way out).
+    const serverDetail =
+      "registration is closed: the board already has its owner account (set VESMARO_ALLOW_REGISTRATION=1 to open it)";
     const { container } = await mountAuth({
       initialUrl: "/auth?tab=register",
-      registerStatus: 403,
+      registerBody: jsonResponse({ detail: serverDetail }, 403),
     });
     await submitRegisterForm({ username: "abyss", password: "parol-nadezhnyy-123", confirm: "parol-nadezhnyy-123" });
-    expect(container.textContent).toContain("Registration is closed: the board already has its owner.");
+    // The human verdict: cause + who opens access + the flag name.
+    expect(container.textContent).toContain(
+      "Registration is closed — the board already has its owner. The owner opens access for new members in the server settings (the VESMARO_ALLOW_REGISTRATION flag).",
+    );
+    // The raw server words stay reachable: an expandable tech line, the
+    // full text on the summary's title tooltip (hover diagnostics).
+    const detail = container.querySelector('[data-testid="auth-verdict-detail"]');
+    expect(detail).not.toBeNull();
+    expect(detail?.querySelector("summary")?.getAttribute("title")).toBe(serverDetail);
+    expect(detail?.textContent).toContain(serverDetail);
   });
 
   it("a confirm mismatch never leaves the browser — field issue, zero network", { timeout: 20000 }, async () => {

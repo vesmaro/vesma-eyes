@@ -53,6 +53,18 @@ export type UiTokenRejectKind = "verify" | "session";
 export type UiTokenGateEvent =
   | { type: "loginStored"; tokenClass: "ui" | "legacy" }
   | { type: "tokenRejected" }
+  /**
+   * The READ-side 401 verdict flip (rebuildAfterReadUnauthorized →
+   * anonymous): the server refused a background read, the verdict landed
+   * anonymous, and NO window was opened (a background read never
+   * interrupts with a modal). Distinct from `tokenRejected` on purpose —
+   * the «insert a fresh token, the login window is open» copy would lie
+   * twice here (no token was entered, no window is open); the gated
+   * surface (the gate screen / the Kora sign-in CTA) owns the verdict.
+   * Owner complaint on prod 1.63.0, 2026-10-07: this beat used to toast
+   * «Токен отклонён» beside the green «Вход выполнен».
+   */
+  | { type: "sessionEnded" }
   /** UI-22 (kept for scope v1's read scope): a mutation on a DEVICE-bound
    * browser whose scope cannot run it (ADR 0012 Amendment — every mutation
    * is a 403 verdict for `read`). The login window is the 401 affordance
@@ -292,7 +304,10 @@ export class UiTokenGate {
    *   scrubbed, `tokenPresent` drops, the login window is NOT forced open
    *   (a background read never interrupts with a modal — the gated
    *   surfaces re-render behind the honest gate screen instead), and the
-   *   `tokenRejected` event fires so the provider can toast the beat.
+   *   `sessionEnded` event fires (NOT `tokenRejected` — no token was
+   *   entered and no window opened, so the rejection copy would lie; the
+   *   surface verdicts — the gate screen, the Kora sign-in CTA — carry
+   *   the beat).
    */
   async rebuildAfterReadUnauthorized(): Promise<"recovered" | "anonymous"> {
     if (this.probe && !this.readRecoveryUsed && (await this.probe())) {
@@ -318,7 +333,7 @@ export class UiTokenGate {
       rejectKind: "session",
       rejectDetail: undefined,
     });
-    this.emit({ type: "tokenRejected" });
+    this.emit({ type: "sessionEnded" });
     return "anonymous";
   }
 

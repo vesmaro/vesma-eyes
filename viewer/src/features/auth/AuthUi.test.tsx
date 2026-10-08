@@ -40,6 +40,7 @@ function authValue(
     loginWithPassword: vi.fn(async () => ({ username: "abyss", role: "owner" as const })),
     registerAccount: vi.fn(async () => ({ username: "abyss", role: "owner" as const })),
     logoutPassword: vi.fn(async () => undefined),
+    setPassword: vi.fn(async () => undefined),
     passwordUser: null,
     openOverlay: vi.fn(),
     closeOverlay: vi.fn(),

@@ -165,20 +165,30 @@ export function UiTokenProvider({ children }: { children: React.ReactNode }) {
 
   // Login feedback toasts: success is confirmed once the value actually
   // lands in the tab (with an honest note in legacy mode — the board token
-  // logged the owner in); a server-side 401 is announced beside the
-  // window's inline line. Events only fire from user actions, always
-  // post-mount, so the effect subscription is attached before the first
-  // one can fire.
+  // logged the owner in); a server-side 401 at the window is announced
+  // beside its inline line. The auth pair shares a `displaces` group so a
+  // late verdict REPLACES the stale opposite on screen (owner complaint on
+  // prod 1.63.0: the green «Вход выполнен» and the red «Токен отклонён»
+  // stacked on one screen, telling opposite stories). The read-side
+  // `sessionEnded` beat toasts NOTHING here — no token was entered and no
+  // window opened, so the rejection copy would lie twice; the gated
+  // surface (the gate screen, the Kora sign-in CTA) owns that verdict.
   useEffect(() => {
     return gate.listen((event) => {
       if (event.type === "loginStored") {
         toast.push({
           kind: "ok",
           title: t("login.toastSignedIn"),
+          displaces: "auth-session",
           ...(event.tokenClass === "legacy"
             ? { detail: t("login.toastLegacy") }
             : {}),
         });
+        return;
+      }
+      if (event.type === "sessionEnded") {
+        // Honest silence: the surface verdict is already on screen (the
+        // gate screen took over / the Kora CTA shows «Кора ждёт входа»).
         return;
       }
       if (event.type === "deviceForbidden") {
@@ -197,6 +207,7 @@ export function UiTokenProvider({ children }: { children: React.ReactNode }) {
         kind: "error",
         title: t("login.toastRejected"),
         detail: t("login.toastRejectedDetail"),
+        displaces: "auth-session",
       });
     });
   }, [gate, toast, t]);

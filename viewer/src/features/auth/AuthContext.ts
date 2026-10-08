@@ -2,6 +2,7 @@ import { createContext, useContext } from "react";
 import type { AuthState } from "./authState";
 import type { PasswordUser } from "./passwordSession";
 import type { AdapterKind } from "@/gateway/adapterConfig";
+import type { PasswordSetInput } from "@/gateway/passwordAuth";
 
 /**
  * DI context for the auth flow. `AuthProvider` owns the state machine and the
@@ -40,6 +41,15 @@ export interface AuthContextValue {
    * be cleared from JS anyway; the whoami on the next boot tells the truth).
    */
   logoutPassword: () => Promise<void>;
+  /**
+   * ME-080 follow-up: set/change a password (`POST /api/auth/password`,
+   * 204). Two server legs: the `vesmaro_auth` session changes the OWN
+   * password (current_password required); the `vesmaro_ui` token leg sets a
+   * password for an owner account WITHOUT the current one (recovery).
+   * Rejects with the wire error for the form's verdict — 429 rides
+   * `PasswordRateLimitedError` with the server's Retry-After seconds.
+   */
+  setPassword: (input: PasswordSetInput) => Promise<void>;
   /** The confirmed password-session person, or null when anonymous. */
   passwordUser: PasswordUser | null;
   openOverlay: () => void;
