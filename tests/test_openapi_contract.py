@@ -61,6 +61,8 @@ class TestSchemasPresent:
         "ReportsFeedOut",
         # ADR 0014 (owner session): verify-at-the-door contracts
         "UiTokenVerifyIn", "UiTokenVerifyOut",
+        # ME-080 follow-up: password change / owner recovery
+        "AccountPasswordIn",
     ])
     def test_schema_exists(self, spec, name):
         assert name in _components(spec)
@@ -429,3 +431,23 @@ class TestKeyRoutesReferenceSchemas:
         assert "content" not in get["responses"]["204"]
         assert "content" not in get["responses"]["429"]
         assert "content" not in get["responses"]["503"]
+
+    def test_auth_password(self, spec):
+        """ME-080 follow-up: the password change / owner recovery route
+        pins its request model and the full verdict set — 204 no body /
+        401 / 403 (existence-neutral) / 422 / 429 (Retry-After). The
+        parallel FE password dialog codes against exactly this shape:
+        POST {username?, new_password, current_password?} → 204, errors
+        carry a human ``detail``."""
+        post = spec["paths"]["/api/auth/password"]["post"]
+        assert _ref_name(post["requestBody"]["content"]
+                         ["application/json"]["schema"]) == "AccountPasswordIn"
+        assert set(post["responses"]) == {"204", "401", "403", "422", "429"}
+        assert "content" not in post["responses"]["204"]
+        assert "content" not in post["responses"]["401"]
+        assert "content" not in post["responses"]["403"]
+        assert "content" not in post["responses"]["429"]
+        body = _components(spec)["AccountPasswordIn"]
+        props = set(body.get("properties", {}))
+        assert props == {"username", "new_password", "current_password"}
+        assert "password_hash" not in props

@@ -3796,6 +3796,44 @@ class Store:
                 (token_hash,))
         return cur.rowcount == 1
 
+    def update_account_password(self, account_id: int, password_hash: str,
+                                action: str, username: str,
+                                ip: str) -> bool:
+        """Set a new password hash for an ALREADY-AUTHENTICATED change
+        (ME-080 follow-up): the UPDATE and the persistent auth audit land
+        in the SAME transaction — a crash cannot split the new hash from
+        its audit row. ``action`` is 'auth.password.changed' (own-password
+        session leg) or 'auth.password.recovery' (owner ui-token leg); the
+        payload carries the target username and client IP — never any
+        password material (mask_secrets keeps a Bearer-shaped value from
+        poisoning the journal). server_log, NOT the events table (open SSE
+        feed — see note_auth_login_failed). False = the account row is
+        already gone (the caller fails closed)."""
+        with self._lock, self._conn() as db:
+            cur = db.execute(
+                "UPDATE accounts SET password_hash=? WHERE id=?",
+                (password_hash, account_id))
+            self._auth_audit(db, action,
+                             {"username": username[:64], "ip": ip[:64]})
+        return cur.rowcount == 1
+
+    def note_auth_password_failed(self, username: str, ip: str) -> None:
+        """FAILED own-password change (cascade F2 discipline, ME-080
+        follow-up): a wrong current_password is a credential rejection on
+        a credential surface, and the flat limiter is the only brute-force
+        barrier — so it leaves the same persistent server_log trail a
+        login rejection does. Self and foreign targets land as the SAME
+        event (no enumeration even in the audit); logs the SUBMITTED
+        username and IP, never the password or its shape; server_log, NOT
+        the events table (open SSE feed — see note_auth_login_failed)."""
+        detail = json.dumps({"username": username[:64], "ip": ip[:64]})
+        with self._lock, self._conn() as db:
+            db.execute(
+                "INSERT INTO server_log (ts, server, action, detail) "
+                "VALUES (?,?,?,?)",
+                (_now(), "auth", "auth.password.failed",
+                 mask_secrets(detail)[:500]))
+
     def touch_executor_last_seen(self, executor_id: str) -> bool:
         """Presence tick: last_seen = now. Revoked executors never tick —
         their presence must decay to offline (kill-switch, Amd 2 §5). The
