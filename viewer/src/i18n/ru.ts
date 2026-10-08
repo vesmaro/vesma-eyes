@@ -1602,6 +1602,30 @@ export const ru = {
   "settings.hub.devicesHint":
     "Отзыв скомпрометированного устройства и доступы к компонентам (задачи, отчёты, инбокс, уведомления) — по каждому подключённому устройству.",
   "settings.hub.devicesCta": "Управлять устройствами",
+  // ME-080 follow-up: секция «Безопасность» — форма пароля (POST /auth/password).
+  "settings.hub.securityTitle": "Безопасность",
+  "settings.security.formTitle": "Пароль",
+  "settings.security.usernameLabel": "Имя аккаунта",
+  "settings.security.currentLabel": "Текущий пароль",
+  "settings.security.currentHint": "Если входили по паролю",
+  "settings.security.newLabel": "Новый пароль",
+  "settings.security.confirmLabel": "Новый пароль ещё раз",
+  "settings.security.save": "Сохранить",
+  "settings.security.saving": "Сохраняем…",
+  "settings.security.toastOk": "Пароль обновлён",
+  "settings.security.wrongCurrent": "Текущий пароль не подходит.",
+  "settings.security.forbidden": "Недостаточно прав: восстановление доступно владельцу.",
+  "settings.security.tooManyAttempts":
+    "Слишком много попыток — подождите {{n}} с и попробуйте снова.",
+  "settings.security.saveFailed": "Сохранить не удалось.",
+  "settings.security.honestySession":
+    "Вы вошли по паролю: это смена пароля своего аккаунта — текущий пароль обязателен.",
+  "settings.security.honestyToken":
+    "Вы вошли по токену: можно задать новый пароль аккаунту без текущего (восстановление).",
+  "settings.security.unavailable":
+    "Форма недоступна: нет активного входа. Войдите по паролю или токену — и вернитесь сюда.",
+  "settings.security.recoveryLine":
+    "Если пароль потерян — войдите по токену (кнопка «Войти» вверху) и задайте новый здесь: текущий пароль не понадобится.",
   "settings.hub.themeLabel": "Тема",
   "settings.hub.themeSystem": "Системная",
   "settings.hub.themeDark": "Тёмная",

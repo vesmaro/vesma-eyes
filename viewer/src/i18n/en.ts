@@ -1564,6 +1564,30 @@ export const en: Record<TranslationKey, string> = {
   "settings.hub.devicesHint":
     "Revoke a compromised device or grant per-component access (tasks, reports, inbox, notifications) — managed per connected device.",
   "settings.hub.devicesCta": "Manage devices",
+  // ME-080 follow-up: the «Безопасность» security section — the password form (POST /auth/password).
+  "settings.hub.securityTitle": "Security",
+  "settings.security.formTitle": "Password",
+  "settings.security.usernameLabel": "Account name",
+  "settings.security.currentLabel": "Current password",
+  "settings.security.currentHint": "If you signed in with a password",
+  "settings.security.newLabel": "New password",
+  "settings.security.confirmLabel": "New password, again",
+  "settings.security.save": "Save",
+  "settings.security.saving": "Saving…",
+  "settings.security.toastOk": "Password updated",
+  "settings.security.wrongCurrent": "The current password does not match.",
+  "settings.security.forbidden": "Not allowed: password recovery is available to the owner.",
+  "settings.security.tooManyAttempts":
+    "Too many attempts — wait {{n}} s and try again.",
+  "settings.security.saveFailed": "Could not save the password.",
+  "settings.security.honestySession":
+    "You are signed in with a password: this changes your own account's password — the current password is required.",
+  "settings.security.honestyToken":
+    "You are signed in with a token: a new password can be set for an account without the current one (recovery).",
+  "settings.security.unavailable":
+    "The form is unavailable: no active sign-in. Sign in with a password or a token and come back.",
+  "settings.security.recoveryLine":
+    "If the password is lost — sign in with the token (the «Sign in» button above) and set a new one here: the current password is not needed.",
   "settings.hub.themeLabel": "Theme",
   "settings.hub.themeSystem": "System",
   "settings.hub.themeDark": "Dark",

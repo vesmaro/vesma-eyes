@@ -27,22 +27,27 @@ import type { FieldIssue } from "./passwordValidation";
  */
 
 /** Shared input look — the UiTokenLoginForm field, minus the mono face
- * (names and passwords are human words, not pasted machine values). */
-const inputClass =
+ * (names and passwords are human words, not pasted machine values).
+ * Exported for the settings security form (ME-080 follow-up) — ONE field canon. */
+export const inputClass =
   "h-9 w-full rounded-md border border-border bg-well px-2 pr-9 text-sm text-foreground placeholder:text-foreground-muted focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-60";
 
-/** Inline verdict the route hands back after a failed submit. */
+/** Inline verdict the route hands back after a failed submit. `focus` also
+ * carries "current" — the settings security form's 401 beat (wrong current
+ * password) focuses THAT field; the auth forms never emit it. */
 export interface FormVerdict {
   /** The main human line (already localized). */
   text: string;
   /** Optional secondary line (server detail). */
   detail?: string;
   /** Which field receives focus when the verdict lands. */
-  focus?: "username" | "password" | "confirm";
+  focus?: "username" | "current" | "password" | "confirm";
 }
 
-/** Shared one-row text field with blur-gated issue display. */
-function TextField({
+/** Shared one-row text field with blur-gated issue display. Exported for the
+ * settings security form (ME-080 follow-up) — the same a11y canon: labelled,
+ * aria-invalid + describedby, optional reveal toggle, optional static hint. */
+export function TextField({
   id,
   testId,
   label,
@@ -59,6 +64,7 @@ function TextField({
   revealable = false,
   revealed,
   onToggleReveal,
+  hint,
 }: {
   id: string;
   /** Stable hook for tests — the label/id stays the useId-generated pair
@@ -78,6 +84,9 @@ function TextField({
   revealable?: boolean;
   revealed?: boolean;
   onToggleReveal?: () => void;
+  /** Optional static hint line under the field (e.g. «если входили по
+   * паролю») — supplementary, never replaces the issue line. */
+  hint?: string;
 }) {
   const t = useT();
   const issueId = `${id}-issue`;
@@ -127,17 +136,23 @@ function TextField({
           {issueText}
         </p>
       ) : null}
+      {!invalid && hint ? (
+        <p data-testid={`${testId}-hint`} className="text-xs text-foreground-muted">
+          {hint}
+        </p>
+      ) : null}
     </div>
   );
 }
 
-/** The always-present polite live region for the submit verdict (07k §4.2:
- * the line is announced without stealing focus; «Ошибка:» prefix — the
- * verdict is never colour alone). The server's own detail rides as an
+/** The always-present polite live region for the submit verdict. Exported
+ * for the settings security form (ME-080 follow-up) — same contract: 07k
+ * §4.2 the line is announced without stealing focus; «Ошибка:» prefix — the
+ * verdict is never colour alone; the server's own detail rides as an
  * EXPANDABLE tech line (fix/kora-auth-honesty): collapsed by default —
  * humans read the localized verdict; the raw server words stay one click
  * away for diagnostics, with the full text on the summary's title tooltip. */
-function VerdictLine({ verdict }: { verdict: FormVerdict | null }) {
+export function VerdictLine({ verdict }: { verdict: FormVerdict | null }) {
   const t = useT();
   return (
     <div aria-live="polite" data-testid="auth-verdict">
@@ -167,10 +182,13 @@ function VerdictLine({ verdict }: { verdict: FormVerdict | null }) {
   );
 }
 
-/** Focus the first offending field after a failed submit (07k §4.2). */
-function focusField(
+/** Focus the first offending field after a failed submit (07k §4.2).
+ * Exported for the settings security form (ME-080 follow-up). */
+export function focusField(
   focus: FormVerdict["focus"],
-  refs: Partial<Record<"username" | "password" | "confirm", React.RefObject<HTMLInputElement>>>,
+  refs: Partial<
+    Record<"username" | "current" | "password" | "confirm", React.RefObject<HTMLInputElement>>
+  >,
 ): void {
   if (!focus) return;
   refs[focus]?.current?.focus();
@@ -178,10 +196,13 @@ function focusField(
 
 /** Move focus to the offending field whenever a NEW verdict lands — an
  * effect (post-commit) so the verdict line exists before focus moves, and
- * the polite live region announces while the caret sits in the field. */
-function useVerdictFocus(
+ * the polite live region announces while the caret sits in the field.
+ * Exported for the settings security form (ME-080 follow-up). */
+export function useVerdictFocus(
   verdict: FormVerdict | null,
-  refs: Partial<Record<"username" | "password" | "confirm", React.RefObject<HTMLInputElement>>>,
+  refs: Partial<
+    Record<"username" | "current" | "password" | "confirm", React.RefObject<HTMLInputElement>>
+  >,
 ): void {
   const last = useRef<FormVerdict | null>(null);
   useEffect(() => {

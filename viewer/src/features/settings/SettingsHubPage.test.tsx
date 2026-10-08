@@ -136,7 +136,7 @@ function stubMatchMediaOnly(matching: readonly string[]): void {
 }
 
 describe("SettingsHubPage v2 — structure (spec §3.1, acceptance §8.1)", () => {
-  it("renders ONE h1, the sticky anchor menu and all seven anchored sections", async () => {
+  it("renders ONE h1, the sticky anchor menu and all eight anchored sections", async () => {
     const { root, container } = await mountHub();
     const h1s = container.querySelectorAll("h1");
     expect(h1s).toHaveLength(1);
@@ -157,6 +157,8 @@ describe("SettingsHubPage v2 — structure (spec §3.1, acceptance §8.1)", () =
       "#automation",
       // §A.7 pointer: device access management lives on /system/devices.
       "#devices",
+      // ME-080 follow-up: the password section — LAST (an account action).
+      "#security",
     ]);
 
     for (const anchor of [
@@ -167,6 +169,7 @@ describe("SettingsHubPage v2 — structure (spec §3.1, acceptance §8.1)", () =
       "execution",
       "automation",
       "devices",
+      "security",
     ]) {
       const section = container.querySelector(`#${anchor}`);
       expect(section, `#${anchor}`).not.toBeNull();
@@ -183,6 +186,7 @@ describe("SettingsHubPage v2 — structure (spec §3.1, acceptance §8.1)", () =
         "Execution",
         "Automation",
         "Devices",
+        "Security",
       ]),
     );
     await actUnmount(root);

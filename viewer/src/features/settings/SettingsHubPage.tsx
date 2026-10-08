@@ -10,23 +10,27 @@ import { setMotion, useMotion, MOTIONS, type Motion } from "@/lib/motionStore";
 import { setLiveLayer, useLiveLayer, type LiveLayer } from "@/lib/liveLayerStore";
 import { ExecutionSettingsSection } from "@/features/agents/ExecutionSettingsPage";
 import { AutomationSettingsSection } from "./AutomationSettingsSection";
+import { SecuritySettingsSection } from "./SecuritySettingsSection";
 import { NotCustomizable } from "./NotCustomizable";
 import { SegmentedControl } from "./SegmentedControl";
+import { HubSection } from "./HubSection";
 import { pageGridClass } from "@/layout/pageGrid";
 
 /**
  * `/system/settings` — the settings hub v2 (UI-23, spec 2026-09-23): ONE h1
- * + six sibling sections in the owner's order (Внешний вид / Поведение /
- * Доска / Навигация / Исполнение / Автоматизация) under a sticky anchor
- * menu. Principle «одно состояние, два управления» (§0/§4.3): every local
- * control here calls the SAME provider/store the context controls call —
- * theme/density/lang via the app providers, board style and the sidebar via
- * lib stores, motion via lib/motionStore. «Исполнение» and «Автоматизация»
- * are the server sections reused verbatim from v1 (UI-21). Each local
- * section ends with a native `<details>` of reasoned verdicts (§3.4) — the
- * surfaces that deliberately have no setting. Live preview IS the hub (§3.3):
- * theme/density/lang apply immediately through the providers; the board
- * style carries the honest deferred hint.
+ * + sibling sections in the owner's order (Внешний вид / Поведение / Доска /
+ * Навигация / Исполнение / Автоматизация / Устройства / Безопасность) under
+ * a sticky anchor menu. Principle «одно состояние, два управления» (§0/§4.3):
+ * every local control here calls the SAME provider/store the context
+ * controls call — theme/density/lang via the app providers, board style and
+ * the sidebar via lib stores, motion via lib/motionStore. «Исполнение» and
+ * «Автоматизация» are the server sections reused verbatim from v1 (UI-21).
+ * «Безопасность» (ME-080 follow-up) is the password form — the LAST section:
+ * an account action, not a preference. Each local section ends with a native
+ * `<details>` of reasoned verdicts (§3.4) — the surfaces that deliberately
+ * have no setting. Live preview IS the hub (§3.3): theme/density/lang apply
+ * immediately through the providers; the board style carries the honest
+ * deferred hint.
  */
 
 /** Anchor map of the local sections (deep-linkable, spec §3.1). */
@@ -38,6 +42,7 @@ const HUB_SECTIONS = [
   { id: "execution", titleKey: "settings.hub.executionTitle" },
   { id: "automation", titleKey: "settings.hub.automationTitle" },
   { id: "devices", titleKey: "settings.hub.devicesTitle" },
+  { id: "security", titleKey: "settings.hub.securityTitle" },
 ] as const;
 
 /** Owner: features/agents/executionPrefs.ts (the key stays private there). */
@@ -103,31 +108,10 @@ export function SettingsHubPage() {
         <AutomationSettingsSection />
       </div>
       <DevicesLinkSection />
+      {/* ME-080 follow-up: the password section — LAST (an account action,
+       * not a preference); the well + anchor live on the section itself. */}
+      <SecuritySettingsSection />
     </div>
-  );
-}
-
-/** The shared section well: h2 + scroll margin clear of the sticky bars. */
-function HubSection({
-  id,
-  title,
-  children,
-}: {
-  id: string;
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section
-      id={id}
-      aria-labelledby={`${id}-settings-heading`}
-      className="scroll-mt-36 space-y-3 rounded-md border border-border-subtle bg-well p-4 shadow-well"
-    >
-      <h2 id={`${id}-settings-heading`} className="text-sm font-medium">
-        {title}
-      </h2>
-      {children}
-    </section>
   );
 }
 
