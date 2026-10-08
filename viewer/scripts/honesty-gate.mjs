@@ -45,6 +45,16 @@
  *                     (notification — the bus's recall-family carrier)
  *                     through the VesmaMockBus handle must move the page:
  *                     the vein bead + the tone shift on the Shell canvas.
+ *   8. kora-silent (U5) — /kora on the silent bus: two shots ≥5s apart MUST
+ *                     be identical — the frame stands when the bus is quiet
+ *                     (the dose = Эфир flashes only, and silence carries
+ *                     none: the ether card honestly reads «Событий пока
+ *                     нет» and NOTHING moves).
+ *   9. kora-ether (U5) — positive control: a REAL presence transition
+ *                     (executor.online — the bus's session-class carrier)
+ *                     through the VesmaMockBus handle must move the page:
+ *                     the ether row lands on the scene card with its iris
+ *                     arrival flash.
  *
  * Local gate, same discipline as smoke-render.mjs (build dist-smoke with
  * the mock adapter, serve via vite preview, drive real chromium). Browser
@@ -421,6 +431,73 @@ async function main() {
         differs,
         "memory: a real recall-class event moves the domain (positive control)",
         differs ? "" : "frames identical — the recall event reached nothing",
+      );
+      await context.close();
+    }
+    // 8. KORA SILENT (U5) — the frame stands on a quiet bus.
+    {
+      const context = await browser.newContext({
+        viewport: { width: 1440, height: 900 },
+        deviceScaleFactor: 1,
+      });
+      const a = await settledShot(context, `${BASE}kora`, "u5-honesty-kora-silent-t0.png");
+      console.log("[honesty] kora-silent: waiting 5.6s of real time…");
+      await sleep(QUIET_GAP_MS);
+      const b = await settledShot(
+        context,
+        `${BASE}kora`,
+        "u5-honesty-kora-silent-t5.png",
+      );
+      const identical = a.equals(b);
+      check(
+        identical,
+        "kora: silent bus — two frames ≥5s apart are pixel-identical",
+        identical ? "" : `bytes ${a.length} vs ${b.length}`,
+      );
+      await context.close();
+    }
+
+    // 9. KORA ETHER POSITIVE CONTROL (U5) — a REAL presence transition moves
+    // the domain: the executor.online frame (the bus's session-class
+    // carrier) lands an ether row with its iris arrival flash.
+    {
+      const context = await browser.newContext({
+        viewport: { width: 1440, height: 900 },
+        deviceScaleFactor: 1,
+      });
+      const page = await context.newPage();
+      await page.goto(`${BASE}kora`, { waitUntil: "load" });
+      await page.evaluate(() => document.fonts.ready);
+      await sleep(SETTLE_MS);
+      const a = await page.screenshot({ fullPage: true });
+      writeFileSync(join(OUT_DIR, "u5-honesty-kora-ether-t0.png"), a);
+      // The same wire frame the server sends on a real presence transition —
+      // the public executor row (`_executor_public` shape).
+      await page.evaluate(() => {
+        window.VesmaMockBus?.emit("executor.online", {
+          executor: {
+            id: "exec-honesty",
+            name: "zcode@honesty-box",
+            harness: "zcode",
+            host: "honesty-box",
+            transport: "local-poll",
+            capabilities: [],
+            presence: "online",
+          },
+          prev_state: null,
+          state: "online",
+          last_seen_at: new Date().toISOString(),
+        });
+      });
+      await sleep(400); // the row + the flash land well inside the window
+      const b = await page.screenshot({ fullPage: true });
+      writeFileSync(join(OUT_DIR, "u5-honesty-kora-ether-t1.png"), b);
+      await page.close();
+      const differs = !a.equals(b);
+      check(
+        differs,
+        "kora: a real presence transition lands an ether row (positive control)",
+        differs ? "" : "frames identical — the ether event reached nothing",
       );
       await context.close();
     }
