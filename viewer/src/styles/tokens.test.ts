@@ -946,3 +946,46 @@ describe("well substrate + tone consumers (W1b «Колодец — орган �
     expect(scope).not.toContain("--web-node-alpha");
   });
 });
+
+// ── U4 «Память» (SPEC-2026-10-07): the memory domain's honest light ────────
+
+describe("U4 honest light: iris breath + search recall edge", () => {
+  const irisCss = readFileSync(
+    new URL("../components/IrisLogo/IrisLogo.css", import.meta.url),
+    "utf8",
+  );
+  const searchCss = readFileSync(
+    new URL("../components/SearchResultList/SearchResultList.css", import.meta.url),
+    "utf8",
+  );
+
+  it("U4 audit fix: the iris pupil breathes ONLY inside a bus-opened window", () => {
+    // The search hero was the ONE always-on breather left (U4 audit): the
+    // pupil animation must be conjunctive on html[data-breath="true"] — the
+    // same window gate as .well-drift/.vesma-body — and rest at animation:none.
+    expect(irisCss).toMatch(
+      /html\[data-breath="true"\] \.iris-breathing \.iris-pupil\s*\{[^}]*animation: iris-breathe/s,
+    );
+    const rest = irisCss.match(/\.iris-breathing \.iris-pupil\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(rest).toContain("animation: none");
+    const media = irisCss
+      .match(/@media \(prefers-reduced-motion: reduce\)\s*\{(?:(?!\n\})[\s\S])*\}/g)
+      ?.find((block) => block.includes(".iris-pupil"));
+    expect(media ?? "").toContain("animation: none");
+  });
+
+  it("the search recall edge reads canon tokens only: --synapse-recall, impulse+hold", () => {
+    // 15-WOW §3 «попадание в память»: the flash colour is the recall token
+    // (no new hex) and the timing is the house flash idiom (240ms impulse +
+    // the hold), shared with task.done/В1 — one implementation per concept.
+    expect(searchCss).toMatch(/\.search-result-recall::before\s*\{[^}]*background: var\(--synapse-recall\)/s);
+    expect(searchCss).toMatch(
+      /search-recall-flash\s*\n?\s*calc\(var\(--duration-impulse\) \+ var\(--duration-flash-hold\)\)/,
+    );
+    // No literal colours may sneak into the edge.
+    expect(searchCss).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+    // Reduced: the static-tint hold (house pattern), never a removed amplifier.
+    // The declaration lives only inside the reduced media block.
+    expect(searchCss).toContain("animation-duration: var(--duration-flash-hold)");
+  });
+});

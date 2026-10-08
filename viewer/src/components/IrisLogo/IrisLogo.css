@@ -20,12 +20,24 @@
  * window); --duration-iris (5 s since the И0 v2 token wave, §7) remains the
  * design-system's generic breathing token, so the pupil cycle keeps its own
  * derived property.
+ *
+ * U2 honesty of light (SPEC-2026-10-07: «первое дыхание из шины реальных
+ * событий; шина молчит — экран стоит»; U4 audit finding: the search hero
+ * was the ONE always-on breather left): the pupil breathes ONLY inside a
+ * bus-opened breath window — html[data-breath="true"], written by the
+ * living engine / well organ (the same gate that drives .well-drift and
+ * .vesma-body). A silent bus means the hero stands. The JS hook still
+ * keeps the class off entirely under reduced motion.
  */
 .iris-breathing .iris-pupil {
   --iris-breathe-duration: 4800ms;
 
   transform-box: fill-box;
   transform-origin: center;
+  animation: none;
+}
+
+html[data-breath="true"] .iris-breathing .iris-pupil {
   animation: iris-breathe var(--iris-breathe-duration) var(--ease-breath) infinite;
 }
 
