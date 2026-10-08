@@ -1,0 +1,23 @@
+/* U4 tonal layer (SPEC-2026-10-07 «Память»: «посадка тона-кроссфейда» на
+ * памятных поверхностях). The scroll edge carries the LIVING tone from real
+ * data/bus status — the scrollTone organ (well-organ pattern) writes
+ * --scroll-tone + data-tone="active"; the crossfade is CSS at
+ * --duration-tone-fade (1200ms). The tone is ambient narration, never the
+ * only carrier of information (statuses/errors always also render as data);
+ * at rest the border holds the scroll token. --scroll-tone is an organ-
+ * written inline var, NOT a token (the --well-tone rule). */
+
+.memory-scroll {
+  transition: border-color var(--duration-tone-fade) var(--ease-enter);
+}
+
+.memory-scroll[data-tone="active"] {
+  border-color: var(--scroll-tone);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .memory-scroll {
+    /* Static mirror: the tint flips instantly (state, not motion). */
+    transition: none;
+  }
+}

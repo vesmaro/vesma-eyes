@@ -173,7 +173,16 @@ function SearchResults({
         {t("search.hitsCount", { count: results.length, query })}
         {type === "auto" ? "" : t("search.hitsTypedSuffix")}
       </p>
-      <SearchResultList results={results} queryTerms={terms} className="mt-3" returnSource={returnSource} />
+      {/* Keyed by the committed query + type: a NEW query is an arrival — the
+       * entrance and the U4 recall edge replay; a refetch of the SAME query
+       * keeps the DOM and stays still (no phantom re-flash). */}
+      <SearchResultList
+        key={`${type}:${query}`}
+        results={results}
+        queryTerms={terms}
+        className="mt-3"
+        returnSource={returnSource}
+      />
     </section>
   );
 }

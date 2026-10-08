@@ -1,6 +1,8 @@
 /* Staggered entrance for search results (design-system.md §8.2): opacity +
  * translateY, one step per --duration-stagger token, capped at five slots in
- * SearchResultList.tsx. Disabled under prefers-reduced-motion. */
+ * SearchResultList.tsx. The per-row delay rides the --stagger-delay custom
+ * property so the U4 recall edge can share the same rhythm. Disabled under
+ * prefers-reduced-motion. */
 
 @keyframes search-result-in {
   from {
@@ -15,10 +17,57 @@
 
 .search-result-enter {
   animation: search-result-in var(--duration-normal) var(--ease-out) backwards;
+  animation-delay: var(--stagger-delay, 0ms);
+}
+
+/* ── U4 recall flash (15-WOW §3 «попадание в память», SPEC-2026-10-07
+ * «Память»): when results surface from memory, a short iris flash runs
+ * along the row's LEFT edge — the search «saw» the well. House flash idiom
+ * (one implementation per concept, same as task.done/В1): beat 1 =
+ * --duration-impulse (240ms) at full, then the --duration-flash-hold decay;
+ * colour = --synapse-recall token (no new hex). An amplifier, not a status
+ * — the row itself stays the only carrier of the result. Reduced mirrors
+ * collapse --duration-impulse to 0 and hold the static tint for the
+ * 1500ms --duration-flash-hold (the house static-tint pattern). */
+
+@keyframes search-recall-flash {
+  0% {
+    opacity: 0.9;
+  }
+  40% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.search-result-recall {
+  position: relative;
+}
+
+.search-result-recall::before {
+  content: "";
+  position: absolute;
+  inset-block: -1px;
+  left: 0;
+  width: 2px;
+  border-radius: var(--radius-full);
+  background: var(--synapse-recall);
+  pointer-events: none;
+  animation: search-recall-flash
+    calc(var(--duration-impulse) + var(--duration-flash-hold)) var(--ease-enter)
+    var(--stagger-delay, 0ms) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .search-result-enter {
     animation: none;
+  }
+
+  .search-result-recall::before {
+    /* Static tint hold (house pattern): no motion, the tint releases after
+     * the 1500ms hold — mirrors the [data-motion="reduced"] token values. */
+    animation-duration: var(--duration-flash-hold);
   }
 }

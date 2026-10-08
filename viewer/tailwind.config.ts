@@ -139,7 +139,8 @@ export default {
         data: "var(--text-data)",
         ui: "var(--text-ui)",
         body: "var(--text-body)",
-        // Phase 1: the single display step — Overview hero only (§5.2).
+        // The single display step — two legal consumers since U4: the
+        // Overview hero (§5.2) and the memory scroll title (SPEC «Память»).
         display: "var(--text-display)",
       },
       letterSpacing: {

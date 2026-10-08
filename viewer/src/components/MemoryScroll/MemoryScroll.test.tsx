@@ -67,4 +67,19 @@ describe("MemoryScroll (the scroll)", () => {
     expect(html).toContain("id:");
     expect(html).toContain("manual"); // source
   });
+
+  it("dresses the U4 scroll canon: display title, caps provenance, reading measure", () => {
+    // SPEC-2026-10-07 «Память»: Lora display 36–44px for the record title
+    // (the ONE display step), 11px caps provenance labels, --measure-scroll
+    // reading column. Typography IS the scroll aesthetic — no parchment.
+    const html = render(MOCK_MEMORIES[0]);
+    expect(html).toContain("text-display"); // 36–44px title step
+    expect(html).toContain("font-scroll"); // Lora carries the «word»
+    expect(html).toContain("max-w-scroll"); // --measure-scroll rhythm
+    expect(html).toContain("text-caps"); // 11px provenance labels
+    expect(html).toContain("tracking-caps");
+    // No parchment simulation: the surface stays the scroll tokens.
+    expect(html).toContain("bg-scroll-bg");
+    expect(html).toContain("border-scroll-border");
+  });
 });
