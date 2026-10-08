@@ -101,6 +101,7 @@ afterEach(async () => {
     await actUnmount(root);
   }
   document.body.innerHTML = "";
+  localStorage.clear();
   vi.restoreAllMocks();
 });
 
@@ -112,7 +113,7 @@ describe("KoraComposer (07j §4.6, И1 honest cut)", () => {
     expect(html).toContain("Написать агенту в эту сессию");
     expect(input(container).placeholder).toBe("Написать агенту…");
     expect(html).toContain(
-      "Отправка сообщений агенту появится позже — пока Кора показывает ход сессий. Черновик живёт, пока вы на странице сессии.",
+      "Отправка сообщений агенту появится позже — пока Кора показывает ход сессий. Черновик сохраняется на этой машине и переживёт перезагрузку страницы.",
     );
     // Empty draft ⇒ no send button at all (07j §4.6).
     expect(html).not.toContain(">Отправить<");
@@ -206,5 +207,106 @@ describe("KoraComposer (07j §4.6, И1 honest cut)", () => {
     });
     expect(events.started).not.toHaveBeenCalled();
     expect(events.abandoned).not.toHaveBeenCalled();
+  });
+});
+
+describe("KoraComposer draft persistence (U5, vesmaro.koraDraft:{sessionId})", () => {
+  it("keeps the honest save beat: «сохранён» only after the real write, never before", async () => {
+    vi.useFakeTimers();
+    try {
+      const events = spyIntentEvents();
+      const { container } = mountComposer("live", events);
+      const field = input(container);
+      act(() => {
+        typeInto(field, "доделай кейс");
+      });
+      // Before the debounce fires: no claim (no phantom «сохранено»).
+      expect(container.textContent).not.toContain("Черновик сохранён");
+      await act(async () => {
+        vi.advanceTimersByTime(700);
+      });
+      expect(container.textContent).toContain("Черновик сохранён");
+      expect(localStorage.getItem("vesmaro.koraDraft:exec-zc:live")).toBe(
+        "доделай кейс",
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("restores the draft on a remount (reload/session-switch survival)", async () => {
+    localStorage.setItem("vesmaro.koraDraft:exec-zc:live", "черновик из прошлого");
+    const events = spyIntentEvents();
+    const { container } = mountComposer("live", events);
+    expect(input(container).value).toBe("черновик из прошлого");
+  });
+
+  it("an emptied field removes the key and clears the saved claim", async () => {
+    vi.useFakeTimers();
+    try {
+      const events = spyIntentEvents();
+      const { container } = mountComposer("live", events);
+      const field = input(container);
+      act(() => {
+        typeInto(field, "текст");
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(700);
+      });
+      expect(localStorage.getItem("vesmaro.koraDraft:exec-zc:live")).toBe("текст");
+      act(() => {
+        typeInto(field, "");
+      });
+      expect(localStorage.getItem("vesmaro.koraDraft:exec-zc:live")).toBeNull();
+      expect(container.textContent).not.toContain("Черновик сохранён");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("a failed write names itself («не сохранился») instead of lying", async () => {
+    vi.useFakeTimers();
+    // A storage whose writes fail (private mode / quota): the honest beat
+    // names the failure instead of claiming a save.
+    vi.stubGlobal("localStorage", {
+      getItem: () => null,
+      setItem: () => {
+        throw new Error("quota");
+      },
+      removeItem: () => undefined,
+    });
+    try {
+      const events = spyIntentEvents();
+      const { container } = mountComposer("live", events);
+      act(() => {
+        typeInto(input(container), "не сохранится");
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(700);
+      });
+      expect(container.textContent).toContain("Черновик не сохранился");
+      expect(container.textContent).not.toContain("Черновик сохранён");
+    } finally {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("unmount flushes the pending write (a quick session switch loses nothing)", async () => {
+    vi.useFakeTimers();
+    try {
+      const events = spyIntentEvents();
+      const mounted = mountComposer("live", events);
+      act(() => {
+        typeInto(input(mounted.container), "успей сохранить");
+      });
+      // Unmount BEFORE the debounce fires.
+      await actUnmount(mounted.root);
+      expect(localStorage.getItem("vesmaro.koraDraft:exec-zc:live")).toBe(
+        "успей сохранить",
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

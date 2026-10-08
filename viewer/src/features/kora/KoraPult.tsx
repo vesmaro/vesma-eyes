@@ -1,49 +1,53 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { HonestLine } from "@/components/HonestLine/HonestLine";
 import { useTaskInbox } from "@/features/tasks/useTasks";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
+import { KoraResizeHandle, seamPx } from "./KoraResizeHandle";
+import { KoraEther } from "./KoraEther";
+import type { KoraEtherRow } from "./koraEtherStore";
+import {
+  KORA_ETHER_DEFAULT,
+  KORA_ETHER_MAX,
+  KORA_ETHER_MIN,
+  KORA_PULT_COLLAPSE_AT,
+  KORA_PULT_MAX,
+  KORA_PULT_MIN,
+  clearKoraPultH,
+  readKoraEtherW,
+  readKoraPultH,
+  writeKoraEtherW,
+  writeKoraPultH,
+} from "./koraFrameStorage";
 
 /**
- * Пульт (07j §4 / 07l §2, union И1 honest cut): the bottom console strip of
- * the central column — 40px, caps «ПУЛЬТ», the [Дайджест | Эфир] segment
- * control, the «ждут владельца: N» badge from the REAL UI-30 inbox counter
- * (the same cache the sidebar badge reads; hidden while the source is
- * pending/failed — a fake 0 would lie; N=0 renders muted, still clickable).
+ * Пульт (U5 — the v7 стык + 15-WOW §3.2 «два крыла»): the bottom console of
+ * the central column, docked flush under the scene (07l §2 — «стык без
+ * зазора», the ONE contour is the workspace's). The collapsed state is a
+ * 40px strip (caps «ПУЛЬТ» + the REAL «ждут владельца» badge from the UI-30
+ * inbox counter); expansion deploys BOTH wings at once — the Дайджест of the
+ * selected session on the left, the permanent Эфир on the right — superseding
+ * the И1 tabs (the conductor sees the whole hall, not one musician). The
+ * wings are separated by their own col-resize seam (the Эфир width, 280–480,
+ * persists in `vesmaro.koraEtherW`).
  *
- * И1 decision (dressing map §1.2.3): the Пульт STARTS COLLAPSED — the 07j
- * smart-default (selection → auto-expand on Дайджест) would show an empty
- * tab in И1 (the digest has no source until И4), which is noise pretending
- * to be life. Expansion is an explicit click; the honest tab content:
- * Дайджест — empty-CTA + the REAL «читать транскрипт» action; Эфир — an
- * HonestLine naming what arrives. NO fixture feeds, NO demo pulses (12 §1).
+ * Height hardware (07l §3): auto by content (≤280px) or a fixed 160–420px
+ * dragged/typed on the TOP seam; a drag/keyboard step below 120px means
+ * «свернуть» (гистерезис); dblclick/Home resets to auto (the storage key is
+ * removed, not zeroed). Persist = `vesmaro.koraPultH`, written ONLY on
+ * commit (drag end / keyboard series end), never per frame. The
+ * collapsed/expanded choice stays session-only (the И1 honest cut stands:
+ * the Пульт STARTS COLLAPSED — an auto-expanded empty Дайджест would be
+ * noise pretending to be life).
  *
- * Persistence: `vesmaro.koraPanel` = "digest" | "ether" — written ONLY on
- * an explicit tab click (07j §4.2); garbage values reset to the digest
- * default, never throw. The collapsed/expanded state is session-only.
+ * Honesty unchanged from И1: the Дайджест names its empty state (no source
+ * until the relay lands), the badge hides while its source is unknown (a
+ * fake 0 would lie), the Эфир feeds ONLY from the real-bus ring.
  */
 
-const PANEL_STORAGE_KEY = "vesmaro.koraPanel";
-type PultTab = "digest" | "ether";
-
-function readPersistedTab(): PultTab {
-  try {
-    const raw = localStorage.getItem(PANEL_STORAGE_KEY);
-    return raw === "ether" ? "ether" : "digest";
-  } catch {
-    return "digest";
-  }
-}
-
-function persistTab(tab: PultTab): void {
-  try {
-    localStorage.setItem(PANEL_STORAGE_KEY, tab);
-  } catch {
-    // Private mode / storage disabled — the in-memory choice still works.
-  }
-}
+/** Auto-mode ceiling (07l §3.2: авто по контенту, пол 160, потолок 280). */
+const KORA_PULT_AUTO_MAX = 280;
 
 /** The real UI-30 counter: null while unknown (hidden badge), 0 = muted. */
 function useWaitingCount(): number | null {
@@ -52,31 +56,105 @@ function useWaitingCount(): number | null {
   return inbox.data?.count ?? null;
 }
 
-export function KoraPult({ hasSession }: { hasSession: boolean }) {
+export function KoraPult({
+  hasSession,
+  etherRows,
+  hostFilter = null,
+}: {
+  hasSession: boolean;
+  etherRows: readonly KoraEtherRow[];
+  /** The page's ONE host filter (07j §3.2) — the ether wing follows it. */
+  hostFilter?: string | null;
+}) {
   const t = useT();
   const [expanded, setExpanded] = useState(false);
-  const [tab, setTab] = useState<PultTab>(readPersistedTab);
+  /** 0 = auto mode (height by content, ≤280px) — the storage key's absence. */
+  const [fixedH, setFixedH] = useState<number>(readKoraPultH);
+  const [etherW, setEtherW] = useState<number>(readKoraEtherW);
   const waiting = useWaitingCount();
 
-  // A tab click is EXPLICIT — that is the only thing the persist captures
-  // (07j §4.2: «пишется только явным кликом по вкладке»); while collapsed
-  // the click also expands (the map's strip carries the tabs).
-  const selectTab = useCallback((next: PultTab) => {
-    setTab(next);
+  // The measured auto height feeds the honest aria values in auto mode
+  // (07l §3.3: «авто, 264 пикселя»). Unmeasured (older engines/tests) →
+  // the valuetext degrades to plain «авто», never a fake number.
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  const [autoH, setAutoH] = useState(0);
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (el === null || !expanded || fixedH !== 0) return;
+    const measure = (): void => setAutoH(Math.round(el.getBoundingClientRect().height));
+    measure();
+    if (typeof ResizeObserver !== "function") return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [expanded, fixedH]);
+
+  // The top-seam contract (KoraResizeHandle): a value defines the geometry
+  // AND deploys; the collapse line means «свернуть» — and from the strip,
+  // a deliberate move deploys (07l §3.2 гистерезис, mirrored for keyboard).
+  const onPultValue = useCallback((next: number): void => {
+    setFixedH(Math.min(KORA_PULT_MAX, Math.max(KORA_PULT_MIN, next)));
     setExpanded(true);
-    persistTab(next);
+  }, []);
+  const onPultCollapse = useCallback((): void => {
+    setExpanded((value) => !value);
+  }, []);
+  const onPultCommit = useCallback((): void => {
+    // Only a deployed fixed height is a persisted user decision; the auto
+    // mode is the ABSENCE of the key (07l §3.2).
+    if (fixedH > 0) writeKoraPultH(fixedH);
+  }, [fixedH]);
+  const onPultReset = useCallback((): void => {
+    // Reset = auto mode: the key is REMOVED, not zeroed (07l §3.2).
+    clearKoraPultH();
+    setFixedH(0);
+    setExpanded(true);
   }, []);
 
+  const onEtherValue = useCallback((next: number): void => {
+    setEtherW(next);
+  }, []);
+  const onEtherCommit = useCallback((): void => {
+    writeKoraEtherW(etherW);
+  }, [etherW]);
+  const onEtherReset = useCallback((): void => {
+    setEtherW(KORA_ETHER_DEFAULT);
+    writeKoraEtherW(KORA_ETHER_DEFAULT);
+  }, []);
+
+  const pultValue = expanded ? (fixedH > 0 ? fixedH : autoH) : 40;
+  const pultValueText = !expanded
+    ? t("kora.resize.valueCollapsed", { n: 40 })
+    : fixedH > 0
+      ? seamPx(fixedH)
+      : autoH > 0
+        ? t("kora.resize.valueAutoPx", { n: autoH })
+        : t("kora.resize.valueAuto");
+
   return (
-    // Flush seam under the work zone (07l §2 «стык без зазора»): the
-    // central column's ONE contour comes from the workspace; the Пульт
-    // contributes only the myelin seam.
-    <section aria-label={t("kora.pult.title")} className="border-t border-myelin">
-      {/* ME-072 C: the strip wraps ONLY below sm — from sm up every control
-       * is shrink-0 so «Развернуть» never folds to a second line at 1024+.
-       * The lg rail (20rem) can still squeeze the workzone below the content
-       * width at 1024–1279: there the strip scrolls on its ONE line instead
-       * of wrapping (the control stays reachable, nothing clips silently). */}
+    // Flush seam under the scene (07l §2): the workspace's ONE contour
+    // carries the outer frame; the Пульт contributes the myelin seams.
+    <section aria-label={t("kora.pult.title")} className="relative border-t border-myelin">
+      {/* The TOP seam: row-resize on the strip's upper edge (07l §3.1) —
+       * lives in both states (a drag down from the strip deploys). */}
+      <KoraResizeHandle
+        orientation="horizontal"
+        label={t("kora.resize.pult.label")}
+        tooltip={t("kora.resize.pult.tooltip")}
+        min={KORA_PULT_MIN}
+        max={KORA_PULT_MAX}
+        value={pultValue}
+        valueText={pultValueText}
+        dragSign={1}
+        collapseBelow={KORA_PULT_COLLAPSE_AT}
+        onValue={onPultValue}
+        onCommit={onPultCommit}
+        onReset={onPultReset}
+        onCollapse={onPultCollapse}
+        className="absolute inset-x-0 top-0 -translate-y-1/2"
+      />
+      {/* The strip (40px): caps + the real badge + Развернуть. ME-072 №6
+       * stands: a pure control row — the wing content lives in the body. */}
       <div className="flex min-h-10 flex-wrap items-center gap-x-3 gap-y-1 px-3 sm:flex-nowrap sm:overflow-x-auto">
         <span
           title={t("kora.pult.explain")}
@@ -84,52 +162,7 @@ export function KoraPult({ hasSession }: { hasSession: boolean }) {
         >
           {t("kora.pult.title")}
         </span>
-        <div
-          role="tablist"
-          aria-label={t("kora.pult.tabsLabel")}
-          className="flex shrink-0 items-center gap-1"
-        >
-          <button
-            type="button"
-            id="kora-pult-tab-digest"
-            role="tab"
-            aria-selected={tab === "digest"}
-            aria-controls="kora-pult-panel"
-            onClick={() => selectTab("digest")}
-            className={cn(
-              "min-h-6 rounded-sm px-2 text-xs transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
-              tab === "digest"
-                ? "bg-elevated font-medium text-foreground"
-                : "text-foreground-secondary hover:text-foreground",
-            )}
-          >
-            {t("kora.pult.digest")}
-          </button>
-          <button
-            type="button"
-            id="kora-pult-tab-ether"
-            role="tab"
-            aria-selected={tab === "ether"}
-            aria-controls="kora-pult-panel"
-            onClick={() => selectTab("ether")}
-            className={cn(
-              "min-h-6 rounded-sm px-2 text-xs transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
-              tab === "ether"
-                ? "bg-elevated font-medium text-foreground"
-                : "text-foreground-secondary hover:text-foreground",
-            )}
-          >
-            {t("kora.pult.ether")}
-          </button>
-        </div>
-        {/* ME-072 №6: the strip is a pure control row (caps + tabs + badge
-         * + Развернуть). The session hint lives ONLY in the expanded
-         * Дайджест body — in the strip, same-size and between the tabs and
-         * the badge, it read as a broken third tab. The empty flex spacer
-         * keeps the badge and Развернуть pinned to the right. */}
         <span aria-hidden className="min-w-0 flex-1" />
-        {/* The real inbox badge: hidden when the source is unknown, muted at
-         * 0, always a link to the real /tasks/inbox route. */}
         {waiting !== null ? (
           <Link
             to="/tasks/inbox"
@@ -160,17 +193,35 @@ export function KoraPult({ hasSession }: { hasSession: boolean }) {
         </button>
       </div>
       {expanded ? (
-        <div id="kora-pult-body" className="border-t border-myelin px-3 py-3">
+        <div
+          id="kora-pult-body"
+          ref={bodyRef}
+          style={
+            {
+              height: fixedH > 0 ? fixedH : undefined,
+              maxHeight: fixedH > 0 ? undefined : KORA_PULT_AUTO_MAX,
+              "--kora-ether-w": `${etherW}px`,
+            } as React.CSSProperties
+          }
+          /* Fixed height wins; auto mode caps at the 280px ceiling and the
+           * wings scroll inside (07l §4 — the wing is the scroll container,
+           * the frame never grows). Below lg the wings stack (the seam and
+           * the ether column leave with the frame geometry). */
+          className="relative grid grid-cols-1 border-t border-myelin lg:grid-cols-[minmax(0,1fr)_var(--kora-ether-w)]"
+        >
+          {/* Wing 1 — the Дайджест of the selected session (honest И1
+           * empties; the relay statuses arrive with the real relay). */}
           <div
-            id="kora-pult-panel"
-            role="tabpanel"
-            aria-labelledby={
-              tab === "digest" ? "kora-pult-tab-digest" : "kora-pult-tab-ether"
-            }
-            className="text-sm text-foreground-secondary"
+            id="kora-pult-digest"
+            role="region"
+            aria-label={t("kora.pult.digest")}
+            className="kora-scroll min-h-0 overflow-y-auto px-3 py-3"
           >
-            {tab === "digest" ? (
-              hasSession ? (
+            <p className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
+              {t("kora.pult.digest")}
+            </p>
+            <div className="mt-2 text-sm text-foreground-secondary">
+              {hasSession ? (
                 <div className="flex flex-wrap items-center gap-3">
                   <span>{t("kora.pult.digestEmpty")}</span>
                   <a
@@ -182,11 +233,38 @@ export function KoraPult({ hasSession }: { hasSession: boolean }) {
                 </div>
               ) : (
                 <p>{t("kora.pult.hint")}</p>
-              )
-            ) : (
-              <HonestLine>{t("kora.pult.etherEmpty")}</HonestLine>
-            )}
+              )}
+            </div>
           </div>
+          {/* Wing 2 — the permanent Эфир: the real-bus ring, honest empty. */}
+          <div
+            id="kora-pult-ether"
+            role="region"
+            aria-label={t("kora.pult.ether")}
+            className="min-h-0 overflow-hidden border-t border-myelin px-3 py-3 lg:border-l lg:border-t-0"
+          >
+            <KoraEther
+              rows={etherRows}
+              hostFilter={hostFilter}
+              className="flex h-full min-h-0 flex-col"
+            />
+          </div>
+          {/* The wings seam (15-WOW §3.2: «свой шов-разделитель внутри
+           * Пульта»): the Эфир column width, centered on the grid line. */}
+          <KoraResizeHandle
+            orientation="vertical"
+            label={t("kora.resize.ether.label")}
+            tooltip={t("kora.resize.ether.tooltip")}
+            min={KORA_ETHER_MIN}
+            max={KORA_ETHER_MAX}
+            value={etherW}
+            valueText={seamPx(etherW)}
+            dragSign={1}
+            onValue={onEtherValue}
+            onCommit={onEtherCommit}
+            onReset={onEtherReset}
+            className="absolute inset-y-0 left-[var(--kora-ether-w)] hidden -translate-x-1/2 lg:flex"
+          />
         </div>
       ) : null}
     </section>

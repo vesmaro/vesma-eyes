@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,12 +6,22 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { useExecutors } from "@/features/agents/useAgents";
 import { useT } from "@/i18n";
+import { cn } from "@/lib/utils";
 import { isKoraUnauthorized } from "./koraGateway";
 import { KoraSignInCta } from "./KoraSignInCta";
 import { KoraTree } from "./KoraTree";
 import { KoraSessionList, type KoraBlock2Context } from "./KoraSessionList";
 import { KoraWorkzone, type KoraRegistryEmpty } from "./KoraWorkzone";
 import { KoraPult } from "./KoraPult";
+import { KoraResizeHandle, seamPx } from "./KoraResizeHandle";
+import { useKoraEtherBridge, useKoraEtherRows } from "./useKoraEther";
+import {
+  KORA_SIDE_DEFAULT,
+  KORA_SIDE_MAX,
+  KORA_SIDE_MIN,
+  readKoraSideW,
+  writeKoraSideW,
+} from "./koraFrameStorage";
 import { NOOP_KORA_INTENT_EVENTS } from "./koraIntentEvents";
 import type { KoraCoverage } from "./koraTypes";
 import { buildKoraTree, koraSummary, type KoraQuickFilter } from "./koraWorkspaceModel";
@@ -20,19 +30,28 @@ import { pageGridClass } from "@/layout/pageGrid";
 import { useKoraEntered } from "@/telemetry/useKoraEntered"; // ME-041: kora.entered
 
 /**
- * The Kora workspace (union И1, 07j §3 / 07l §1–2): ONE composition for
- * both kora routes — the central work zone + the right panel (Блок 1 tree,
- * Блок 2 sessions, the coverage legend) + the Пульт strip docked to the
- * central column with a myelin seam («стык без зазора»). Selecting a
- * session is a ROUTE (/kora/:sessionId) — the frame stays mounted, the
- * center's content changes; the route table itself is untouched.
+ * The Kora workspace — the v7 FRAME (U5; 07l via the v12 stand, SPEC
+ * verdict «каркас v7: сцена, дерево, два крыла, композер»): from ≥lg the
+ * page is a 100vh app frame — NO page scroll, every surface scrolls inside
+ * itself (07l §1.2). Geometry: the 40px-style header row, then ONE grid —
+ * the central column (the scene + the Пульт, ONE contour with a myelin
+ * seam, «стык без зазора» 07l §2) and the right panel (Блок 1 tree, Блок 2,
+ * the coverage legend, ONE panel scroll 07l §4). The panel width is a REAL
+ * seam (07l §3: pointer drag + full keyboard path + `vesmaro.koraRightW`
+ * persist) — the wave's FINALE BLOCKER. Below lg the frame reflows honestly
+ * (07l §1.5): the seams leave, the page scrolls as before (the drawer/
+ * mobile pass is U7).
  *
- * И1 honest cuts (i1-dressing-map §1.2): the frame lives in the Shell's
- * DOCUMENT scroll (100vh/resize/drawer hardware is И3); no Эфир and no
- * Дайджест content (no source until И4 — the Пульт names what arrives);
- * the send is honestly deferred (07j §4.6). Everything data-shaped reads
- * the EXISTING slice 1–2 seams: the paged session registry, the paged
- * transcript cursor, the executors registry (hosts), the UI-30 inbox.
+ * Selection stays a ROUTE (/kora/:sessionId) — the frame never re-assembles,
+ * the center's content changes. The 401 gate / error / not-found states
+ * keep the document flow (they are not the frame).
+ *
+ * И1 honest cuts kept: no fake counters, the Пульт starts collapsed, the
+ * composer's send is deferred; the Эфир feeds ONLY from the real bus (one
+ * stream per workspace, the ring lives in koraEtherStore). Everything
+ * data-shaped reads the EXISTING slice 1–2 seams (the paged session
+ * registry, the paged transcript cursor, the executors registry, the UI-30
+ * inbox).
  */
 
 const PAGE_SIZE = 50;
@@ -45,6 +64,22 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
   // page the visit entered (list vs deep-linked transcript).
   useKoraEntered(sessionId ? !transcript.isPending : !sessions.isPending);
   const executors = useExecutors();
+
+  // The Эфир: ONE stream for the workspace; both mounts (the empty-scene
+  // card, the Пульт wing) read the same ring (koraEtherStore).
+  useKoraEtherBridge();
+  const etherRows = useKoraEtherRows();
+
+  // The right-panel seam (07l §3.1): width state + persist on commit.
+  const [sideW, setSideW] = useState<number>(readKoraSideW);
+  const onSideValue = useCallback((next: number): void => setSideW(next), []);
+  const onSideCommit = useCallback((): void => {
+    writeKoraSideW(sideW);
+  }, [sideW]);
+  const onSideReset = useCallback((): void => {
+    setSideW(KORA_SIDE_DEFAULT);
+    writeKoraSideW(KORA_SIDE_DEFAULT);
+  }, []);
 
   // §9.3 honest-empty branching: the connect CTA only shows when the
   // executor registry zero is a FACT; undefined (pending/failed/ incapable
@@ -247,20 +282,37 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
   }
 
   return (
-    <section aria-labelledby="kora-title" className={pageGridClass("operational")}>
-      <Header
-        summary={items.length > 0 ? summary : null}
-        hostOptions={hostOptions}
-        contextHost={contextHost}
-        onSelectHost={selectHost}
-        quickFilter={quickFilter}
-        onQuickFilter={setQuickFilter}
-      />
+    /* The v7 frame (07l §1.2): from lg the section IS the viewport minus
+     * the shell chrome (topbar 48 + crumbs 40 + main's p-6 ×2 — and the
+     * Vesma nest pad when on; the arithmetic lives in --kora-frame-h,
+     * global.css) — no page scroll; below lg it degrades to the stacked
+     * document flow. */
+    <section
+      aria-labelledby="kora-title"
+      className={cn(
+        pageGridClass("operational"),
+        "flex flex-col gap-4 lg:h-[var(--kora-frame-h)] lg:gap-3 lg:overflow-hidden",
+      )}
+    >
+      <div className="shrink-0">
+        <Header
+          summary={items.length > 0 ? summary : null}
+          hostOptions={hostOptions}
+          contextHost={contextHost}
+          onSelectHost={selectHost}
+          quickFilter={quickFilter}
+          onQuickFilter={setQuickFilter}
+        />
+      </div>
 
-      <div className="mt-4 grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-4">
-        {/* Central column: work zone + Пульт, ONE contour with a myelin
-         * seam (07l §2 — стык без зазора). */}
-        <div className="min-w-0 overflow-hidden rounded-md border border-myelin bg-well">
+      <div
+        className="relative grid min-h-0 min-w-0 flex-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_var(--kora-right-w)] lg:items-stretch lg:gap-0"
+        style={{ "--kora-right-w": `${sideW}px` } as React.CSSProperties}
+      >
+        {/* Central column: the scene + the Пульт, ONE contour with a myelin
+         * seam (07l §2 — стык без зазора). Flush inside the frame (§1.2:
+         * no outer radii on the frame blocks), a card below lg. */}
+        <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-md border border-myelin bg-well lg:rounded-none lg:border-0">
           {sessions.isPending || resolvingDeepLink ? (
             <div
               role="status"
@@ -279,15 +331,40 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
               coverage={sessions.coverage}
               transcript={transcript}
               intentEvents={NOOP_KORA_INTENT_EVENTS}
+              etherRows={etherRows}
+              hostFilter={contextHost}
             />
           )}
-          <KoraPult hasSession={session !== null} />
+          <KoraPult
+            hasSession={session !== null}
+            etherRows={etherRows}
+            hostFilter={contextHost}
+          />
         </div>
 
-        {/* Right panel: Блок 1 → Блок 2 → the coverage legend (07j §3.3–3.5). */}
+        {/* The RIGHT SEAM (07l §3): the finale blocker — pointer drag with
+         * capture, the full keyboard path (arrows/Home/End/Esc), dblclick
+         * reset, persist on commit. Lives only inside the frame (≥lg). */}
+        <KoraResizeHandle
+          orientation="vertical"
+          label={t("kora.resize.side.label")}
+          tooltip={t("kora.resize.side.tooltip")}
+          min={KORA_SIDE_MIN}
+          max={KORA_SIDE_MAX}
+          value={sideW}
+          valueText={seamPx(sideW)}
+          dragSign={1}
+          onValue={onSideValue}
+          onCommit={onSideCommit}
+          onReset={onSideReset}
+          className="absolute inset-y-0 left-[var(--kora-right-w)] hidden -translate-x-1/2 lg:flex"
+        />
+
+        {/* Right panel: Блок 1 → Блок 2 → the coverage legend (07j §3.3–3.5),
+         * ONE panel scroll inside the frame (07l §4). */}
         <aside
           aria-label={t("kora.side.region")}
-          className="min-w-0 rounded-md border border-myelin bg-well"
+          className="kora-scroll min-h-0 min-w-0 overflow-y-auto rounded-md border border-myelin bg-well lg:rounded-none lg:border-0"
         >
           <div className="space-y-4 px-3 py-3">
             <section aria-label={t("kora.tree.title")}>

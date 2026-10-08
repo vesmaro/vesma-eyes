@@ -2176,26 +2176,54 @@ export const en: Record<TranslationKey, string> = {
   "kora.workzone.searchPlaceholder": "Find in this session…",
   "kora.workzone.matches": "matches: {{n}}",
   "kora.pult.title": "Console",
-  "kora.pult.explain": "The console — the event feed and the session digest",
-  "kora.pult.tabsLabel": "Console tabs",
+  "kora.pult.explain": "The console — the session digest and the Ether",
   "kora.pult.digest": "Digest",
-  "kora.pult.ether": "Feed",
+  "kora.pult.ether": "Ether",
   "kora.pult.hint": "Pick a session — its digest will appear here",
   "kora.pult.digestEmpty":
     "The session digest is built automatically — it will arrive later",
-  "kora.pult.etherEmpty":
-    "The event feed will arrive later — for now read session transcripts",
   "kora.pult.readTranscript": "Read the transcript",
   "kora.pult.waiting": "awaiting owner: {{n}}",
   "kora.pult.waitingHint": "Tasks waiting for your decision",
   "kora.pult.expand": "Expand",
   "kora.pult.collapse": "Collapse",
+  // Resize seams (U5, 07l §3 — the finale blocker): surface names, tooltips
+  // and honest separator aria values.
+  "kora.resize.side.label": "Hosts and sessions panel width",
+  "kora.resize.side.tooltip": "Drag to resize. Double-click to restore",
+  "kora.resize.pult.label": "Console height",
+  "kora.resize.pult.tooltip": "Drag to resize the height. Double-click to restore",
+  "kora.resize.ether.label": "Ether width",
+  "kora.resize.ether.tooltip": "Drag to resize. Double-click to restore",
+  "kora.resize.valueCollapsed": "collapsed, {{n}} px",
+  "kora.resize.valueAuto": "auto",
+  "kora.resize.valueAutoPx": "auto, {{n}} px",
+  // The Ether (U5, 15-WOW §3.2): a live feed from REAL bus events only;
+  // a silent bus = the honest empty and zero movement.
+  "kora.ether.caps": "Ether — everything happening in the sessions right now",
+  "kora.ether.title": "Ether feed",
+  "kora.ether.empty":
+    "No events yet — the feed collects what happens in the sessions while you are here",
+  "kora.ether.emptyFiltered": "No events for host {{host}} yet",
+  "kora.ether.online": "{{name}} on {{host}} — online",
+  "kora.ether.onlineNoHost": "{{name}} — online",
+  "kora.ether.offline": "{{name}} on {{host}} — offline",
+  "kora.ether.offlineNoHost": "{{name}} — offline",
+  "kora.ether.registered": "New agent: {{name}} on {{host}}",
+  "kora.ether.registeredNoHost": "New agent: {{name}}",
+  "kora.ether.report": "Report on task {{task}}",
+  "kora.ether.reportBy": "{{actor}}: report on task {{task}}",
   "kora.composer.label": "Write to the agent in this session",
   "kora.composer.placeholder": "Write to the agent…",
   "kora.composer.send": "Send",
   "kora.composer.sendLaterChip": "Sending will arrive later",
   "kora.composer.sendLaterNote":
-    "Sending messages to the agent will arrive later — for now Kora shows how sessions run. Your draft stays while you are on this page.",
+    "Sending messages to the agent will arrive later — for now Kora shows how sessions run. The draft is kept on this machine and survives a page reload.",
+  // Draft persistence (U5, the vesmaro.koraDraft:{sessionId} key): honest
+  // indication — «saved» only after a real write, a failure is named.
+  "kora.composer.draftSaved": "Draft saved",
+  "kora.composer.draftFailed":
+    "The draft was not saved — it lives while the page is open",
   "kora.composer.finishedNote":
     "The session is finished — there is no one to write to; start a new one on the host",
   "kora.composer.interruptedNote":
