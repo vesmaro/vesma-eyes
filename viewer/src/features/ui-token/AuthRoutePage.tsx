@@ -11,9 +11,14 @@ import { useT } from "@/i18n";
 import { resolveReturnTarget } from "@/lib/returnParams";
 import { isApiError } from "@/lib/errors";
 import { useAuth } from "@/features/auth/AuthContext";
+import { PasswordRateLimitedError } from "@/gateway/passwordAuth";
 import { UiTokenLoginForm } from "./UiTokenLoginForm";
 import { useUiToken } from "./UiTokenContext";
-import { PasswordRegisterForm, PasswordSignInForm } from "./PasswordAuthForms";
+import {
+  PasswordRecoveryForm,
+  PasswordRegisterForm,
+  PasswordSignInForm,
+} from "./PasswordAuthForms";
 import type { FormVerdict } from "./PasswordAuthForms";
 
 /**
@@ -35,6 +40,21 @@ import type { FormVerdict } from "./PasswordAuthForms";
  * hosting the ONE UiTokenLoginForm unchanged — the kubectl hints ride along,
  * they are admin-only copy now (ME-078: the human tabs carry zero jargon).
  *
+ * Password recovery (fix/recovery-ux — the owner's prod-1.64.0 complaint:
+ * «как сбросить пароль, если не помню старый?»): a «Забыли пароль?»
+ * link-button under the sign-in form opens a TWO-STEP recovery walk on
+ * PAGE STATE (no new route — the URL and the return target stay put), and
+ * while it runs the tab pair is hidden. Step 1 reuses the ONE token form
+ * (sign in with the token); step 2 — after the verify-at-the-door flips
+ * `tokenPresent` — is «Задать новый пароль» on the token leg of
+ * `POST /auth/password`: name + new password + repeat, the current
+ * password is never asked for. Success toasts «Пароль задан — теперь
+ * войдите», tears the token session down server-side and lands back on the
+ * Вход tab. The honest «уже вошёл» redirect stays fenced off for the whole
+ * walk — a mid-walk sign-in is a step transition, not a journey's end.
+ * The settings «Безопасность» section remains the signed-in surface for
+ * the same wire; recovery here is for the locked-out owner.
+ *
  * returnTo (07k §4.2 + the UI-18 `?return=` transport, ME-026 precedent):
  * the gate screens and the TopBar link here carrying
  * `return=<encodeURIComponent(pathname+search)>`; after a successful
@@ -54,6 +74,11 @@ const BRAND_NAME = "vesma-eyes"; // brand canon: main's rebrand (union policy)
 
 type AuthTab = "signin" | "register" | "token";
 
+/** The recovery walk's steps (fix/recovery-ux): page state, never a route.
+ * Step 1 = token sign-in, step 2 = set the new password; `null` = the walk
+ * is off and the ordinary tab pair owns the card. */
+type RecoveryStep = "token" | "password";
+
 const SIGNIN_TAB_ID = "auth-tab-signin";
 const REGISTER_TAB_ID = "auth-tab-register";
 
@@ -70,9 +95,9 @@ export function AuthRoutePage() {
   const location = useLocation();
   const toast = useToast();
   const { theme, toggleTheme } = useTheme();
-  const { tokenPresent, submitToken, verifyPending, rejectKind, rejectDetail } =
+  const { tokenPresent, submitToken, verifyPending, rejectKind, rejectDetail, logout } =
     useUiToken();
-  const { loginWithPassword, registerAccount, passwordUser } = useAuth();
+  const { loginWithPassword, registerAccount, passwordUser, setPassword } = useAuth();
 
   const tab = tabFromSearch(location.search);
   // resolveReturnTarget rejects the self-return by construction (the current
@@ -96,6 +121,16 @@ export function AuthRoutePage() {
   const [signInVerdict, setSignInVerdict] = useState<FormVerdict | null>(null);
   const [registerVerdict, setRegisterVerdict] = useState<FormVerdict | null>(null);
 
+  // The recovery walk (fix/recovery-ux): page state — step 1 (token) and
+  // step 2 (set the new password). `recoveryDone` latches the SUCCESS beat:
+  // the walk may only exit once the token session teardown lands (the
+  // logout is a server round-trip — leaving earlier would trip the honest
+  // «уже вошёл» redirect mid-walk).
+  const [recovery, setRecovery] = useState<RecoveryStep | null>(null);
+  const [recoveryDone, setRecoveryDone] = useState(false);
+  const [recoveryPending, setRecoveryPending] = useState(false);
+  const [recoveryVerdict, setRecoveryVerdict] = useState<FormVerdict | null>(null);
+
   // Tablist wiring (roving tabindex): refs to the two segment buttons, so
   // the arrow keys move both selection AND focus.
   const signInTabRef = useRef<HTMLButtonElement | null>(null);
@@ -106,12 +141,16 @@ export function AuthRoutePage() {
   // Sign-in transitions: mounted-signed-in → the honest «уже вошёл»
   // redirect; signed-in mid-page (a submit below landed) → return to the
   // deep link. The ref distinguishes the two without a second effect.
+  // The recovery walk FENCES this off: its step-1 token sign-in flipping
+  // `tokenPresent` is a step transition (→ set the new password), never a
+  // journey's end — the walk exits by its own landing effect below.
   const wasPresentRef = useRef<boolean | null>(null);
   const present = tokenPresent || passwordUser !== null;
   useEffect(() => {
     const was = wasPresentRef.current;
     wasPresentRef.current = present;
     if (!present) return;
+    if (recovery !== null) return;
     if (was === null) {
       toast.push({
         kind: "ok",
@@ -121,7 +160,49 @@ export function AuthRoutePage() {
       });
     }
     navigate(returnTarget, { replace: true });
-  }, [present, passwordUser, navigate, returnTarget, toast, t]);
+  }, [present, passwordUser, navigate, returnTarget, toast, t, recovery]);
+
+  // Recovery step 1 → 2 (fix/recovery-ux): the token verify at the door
+  // flipped `tokenPresent` — the set-password step takes the card. The
+  // redirect above stays fenced while the walk is on.
+  useEffect(() => {
+    if (recovery === "token" && tokenPresent) setRecovery("password");
+  }, [recovery, tokenPresent]);
+
+  // Recovery landing (fix/recovery-ux): the success toast is up and the
+  // token session teardown (logout — DELETE first, the cookie leg is
+  // server-side) is in flight; the moment the board is anonymous again the
+  // walk exits to the Вход tab — the fresh password awaits its first
+  // sign-in. A FAILED teardown keeps the step on screen (the provider's
+  // honest «не вышло выйти» toast covers it; the user leaves via
+  // «Назад ко входу» — the walk then unblocks through the honest
+  // already-signed-in redirect, the visitor IS signed in).
+  useEffect(() => {
+    if (!recoveryDone || present) return;
+    setRecoveryDone(false);
+    setRecovery(null);
+    setRecoveryVerdict(null);
+    setSubmitted(false);
+    // Back to the Вход tab: the URL's tab param resets, the return survives.
+    const params = new URLSearchParams(location.search);
+    params.delete("tab");
+    const search = params.toString();
+    navigate(search ? `/auth?${search}` : "/auth", { replace: true });
+  }, [recoveryDone, present, location.search, navigate]);
+
+  // Leaving the walk hands the card back to the tab pair — the focus
+  // follows (07k §4.4: a surface switch moves focus to the new surface's
+  // first input). ENTERING needs no help: the token form autofocuses its
+  // own field on mount.
+  const wasInRecoveryRef = useRef(false);
+  useEffect(() => {
+    if (wasInRecoveryRef.current && recovery === null) {
+      signinPanelRef.current
+        ?.querySelector<HTMLInputElement>("input:not([type=hidden])")
+        ?.focus();
+    }
+    wasInRecoveryRef.current = recovery !== null;
+  }, [recovery]);
 
   // Panel switch → focus the first input of the panel that just became
   // visible (07k §4.4) — but never on the initial mount (the visitor's
@@ -140,8 +221,9 @@ export function AuthRoutePage() {
     }
   }, [tab]);
 
-  // A live session never sees the form (the redirect above is imminent).
-  if (present) {
+  // A live session never sees the form (the redirect above is imminent) —
+  // except mid-walk: recovery step 2 RUNS on a token session by design.
+  if (present && recovery === null) {
     return <p role="status" className="sr-only">{t("auth.route.alreadySignedIn")}</p>;
   }
 
@@ -223,6 +305,74 @@ export function AuthRoutePage() {
     }
   };
 
+  // --- recovery walk (fix/recovery-ux) -------------------------------------
+
+  /** Human verdicts for the set-password step: 403 — owner-only (an
+   * unknown account answers the SAME 403 — the copy does not distinguish,
+   * no oracle); 429 — the server's own Retry-After seconds; 401 (a token
+   * session that went stale mid-walk) and 422 — one honest failure line,
+   * the server's words on the expandable tech line; transport — the
+   * network line. */
+  const recoveryVerdictFrom = (error: unknown): FormVerdict => {
+    if (error instanceof PasswordRateLimitedError) {
+      // The server's own Retry-After; an absent header falls back to 60s.
+      return {
+        text: t("auth.route.recoveryTooManyAttempts", {
+          n: error.retryAfterSeconds ?? 60,
+        }),
+      };
+    }
+    const status = isApiError(error) ? error.status : 0;
+    const detail =
+      isApiError(error) && !/^\d{3}\b/.test(error.message) && error.message.length < 200
+        ? error.message
+        : undefined;
+    if (status === 403) {
+      return { text: t("auth.route.recoveryForbidden"), focus: "username" };
+    }
+    if (status === 422 || status === 401) {
+      return { text: t("auth.route.recoveryFailed"), detail };
+    }
+    return { text: t("auth.route.networkFailed"), detail };
+  };
+
+  /** Enter the walk from the «Забыли пароль?» link: page state only — the
+   * URL (and the return target it carries) stay untouched. A fresh start
+   * never inherits a stale token-refusal beat. */
+  const enterRecovery = () => {
+    setSubmitted(false);
+    setRecovery("token");
+  };
+
+  /** Leave the walk without setting a password — back to the tab pair (the
+   * focus-return effect moves the caret to the sign-in form). */
+  const exitRecovery = () => {
+    setRecovery(null);
+    setRecoveryDone(false);
+    setRecoveryVerdict(null);
+    setSubmitted(false);
+  };
+
+  /** Recovery step 2's submit: the token leg of `POST /auth/password` —
+   * `{username, new_password}`, the current password does not exist on
+   * this leg. Success toasts «теперь войдите» and starts the token
+   * teardown; the landing effect exits the walk once the board is
+   * anonymous again. */
+  const setRecoveryPassword = async (username: string, password: string) => {
+    setRecoveryPending(true);
+    setRecoveryVerdict(null);
+    try {
+      await setPassword({ username, newPassword: password });
+      toast.push({ kind: "ok", title: t("auth.route.recoveryDoneToast") });
+      setRecoveryDone(true);
+      logout();
+    } catch (error) {
+      setRecoveryVerdict(recoveryVerdictFrom(error));
+    } finally {
+      setRecoveryPending(false);
+    }
+  };
+
   /** Tab-switch URL update — return survives every switch (ME-026). */
   const switchTab = (next: AuthTab) => {
     const params = new URLSearchParams(location.search);
@@ -295,20 +445,63 @@ export function AuthRoutePage() {
           <div className="mb-3 flex">
             <BackToBoardLink />
           </div>
-          {/* The card on well (07k §4): the sign-in surface itself. */}
+          {/* The card on well (07k §4): the sign-in surface itself. While
+           * the recovery walk runs it hosts the walk instead — the tab pair
+           * is hidden, not merely inert. */}
           <div className="rounded-lg border border-border bg-well p-6 shadow-raised">
             <h1 className="text-lg font-semibold text-foreground">
-              {tab === "register" ? t("auth.route.registerTitle") : t("login.title")}
+              {recovery !== null
+                ? t("auth.route.recoveryTitle")
+                : tab === "register"
+                  ? t("auth.route.registerTitle")
+                  : t("login.title")}
             </h1>
             <p className="mt-1 text-xs text-foreground-secondary">
-              {tab === "register"
-                ? t("auth.route.registerDescription")
-                : tab === "token"
-                  ? t("auth.route.tokenDescription")
-                  : t("auth.route.passwordDescription")}
+              {recovery === "token"
+                ? t("auth.route.recoveryTokenLead")
+                : recovery === "password"
+                  ? t("auth.route.recoverySetLead")
+                  : tab === "register"
+                    ? t("auth.route.registerDescription")
+                    : tab === "token"
+                      ? t("auth.route.tokenDescription")
+                      : t("auth.route.passwordDescription")}
             </p>
 
-            {tab !== "token" ? (
+            {recovery !== null ? (
+              recovery === "token" ? (
+                /* Step 1: the ONE token form, reused unchanged (union И1) —
+                 * the secondary action leaves the walk («Назад ко входу»). */
+                <div className="mt-4" data-testid="auth-recovery-token">
+                  <UiTokenLoginForm
+                    onSubmitToken={(value) => {
+                      setSubmitted(true);
+                      submitToken(value);
+                    }}
+                    verifyPending={verifyPending}
+                    rejectKind={submitted ? rejectKind : undefined}
+                    rejectDetail={submitted ? rejectDetail : undefined}
+                    secondaryLabel={t("auth.route.recoveryBack")}
+                    onSecondary={exitRecovery}
+                  />
+                </div>
+              ) : (
+                /* Step 2: the token leg of /auth/password — name + new
+                 * password + repeat, the current one is never asked for. */
+                <div className="mt-4" data-testid="auth-recovery-set">
+                  <h2 className="text-sm font-medium text-foreground">
+                    {t("auth.route.recoveryFormTitle")}
+                  </h2>
+                  <PasswordRecoveryForm
+                    pending={recoveryPending}
+                    verdict={recoveryVerdict}
+                    onSubmit={(username, password) =>
+                      void setRecoveryPassword(username, password)
+                    }
+                  />
+                </div>
+              )
+            ) : tab !== "token" ? (
               <>
                 {/* The segment (07k §4.1): a real tablist — aria-selected,
                  * arrow keys, roving tabindex; the active tab reads
@@ -354,6 +547,19 @@ export function AuthRoutePage() {
                       verdict={signInVerdict}
                       onSubmit={(username, password) => void signIn(username, password)}
                     />
+                    {/* fix/recovery-ux: the way back in for a locked-out
+                     * owner — a quiet link-button under the password form.
+                     * It OPENS the walk; it never navigates. */}
+                    <p className="mt-3 text-center text-xs">
+                      <button
+                        type="button"
+                        data-testid="auth-recovery-link"
+                        onClick={enterRecovery}
+                        className="rounded-sm text-foreground-muted underline-offset-2 hover:text-foreground-secondary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                      >
+                        {t("auth.route.recoveryLink")}
+                      </button>
+                    </p>
                   </div>
                 </div>
                 <div
@@ -396,22 +602,25 @@ export function AuthRoutePage() {
 
           {/* The secondary legacy entry — a quiet link under the card, never
            * a third equal tab (machines/legacy only; ME-078 keeps the human
-           * surface clean). */}
-          <p className="mt-3 text-center text-xs text-foreground-muted">
-            <Link
-              to={tabHref(tab === "token" ? "signin" : "token")}
-              onClick={(event) => {
-                event.preventDefault();
-                switchTab(tab === "token" ? "signin" : "token");
-              }}
-              data-testid="auth-token-mode-link"
-              className="rounded-sm underline-offset-2 hover:text-foreground-secondary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-            >
-              {tab === "token"
-                ? t("auth.route.backToPassword")
-                : t("auth.route.tokenModeLink")}
-            </Link>
-          </p>
+           * surface clean). The recovery walk hides it: its step 1 IS the
+           * token form, and the link's switchTab would drop the walk. */}
+          {recovery === null ? (
+            <p className="mt-3 text-center text-xs text-foreground-muted">
+              <Link
+                to={tabHref(tab === "token" ? "signin" : "token")}
+                onClick={(event) => {
+                  event.preventDefault();
+                  switchTab(tab === "token" ? "signin" : "token");
+                }}
+                data-testid="auth-token-mode-link"
+                className="rounded-sm underline-offset-2 hover:text-foreground-secondary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+              >
+                {tab === "token"
+                  ? t("auth.route.backToPassword")
+                  : t("auth.route.tokenModeLink")}
+              </Link>
+            </p>
+          ) : null}
 
           {/* The public-contour footer (07k §1.3): «vesma-eyes <v> · аноним»
            * — the same single version source as the sidebar footer. */}

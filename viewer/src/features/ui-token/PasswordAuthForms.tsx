@@ -6,12 +6,14 @@ import { validateRegister, isValid } from "./passwordValidation";
 import type { FieldIssue } from "./passwordValidation";
 
 /**
- * The two password forms of the /auth route (ME-080, 07k §4.1): «Вход»
- * (username + password) and «Регистрация» (username + password + confirm).
- * Pure surfaces — the submit goes to the AuthProvider's wire methods and the
- * ROUTE owns the outcomes (redirect, toast); a server refusal comes back as
- * a structured `verdict` and renders inline, never as a toast, never a
- * reload.
+ * The password forms of the /auth route (ME-080, 07k §4.1; fix/recovery-ux
+ * adds the third): «Вход» (username + password), «Регистрация» (username +
+ * password + confirm) and the recovery step 2 «Задать новый пароль»
+ * (username + password + confirm, NO current — the token leg of
+ * `POST /auth/password`). Pure surfaces — the submit goes to the
+ * AuthProvider's wire methods and the ROUTE owns the outcomes (redirect,
+ * toast); a server refusal comes back as a structured `verdict` and
+ * renders inline, never as a toast, never a reload.
  *
  * A11y (07k §4.1/§4.4): every field is labelled; the password masks behind
  * type=password with an explicit eye toggle (aria-pressed, ≥24px target);
@@ -65,6 +67,8 @@ export function TextField({
   revealed,
   onToggleReveal,
   hint,
+  placeholder,
+  autoFocus = false,
 }: {
   id: string;
   /** Stable hook for tests — the label/id stays the useId-generated pair
@@ -87,6 +91,14 @@ export function TextField({
   /** Optional static hint line under the field (e.g. «если входили по
    * паролю») — supplementary, never replaces the issue line. */
   hint?: string;
+  /** Optional in-field example (fix/recovery-ux: «например, abyss» on the
+   * recovery form's empty name field — the user recovers an account whose
+   * name they know but the form must not presume). */
+  placeholder?: string;
+  /** Take the caret on mount — only for a surface that just BECAME the
+   * live step (the recovery set-password form after the token step; the
+   * 07k §4.4 panel-switch beat). Never on a page's initial paint. */
+  autoFocus?: boolean;
 }) {
   const t = useT();
   const issueId = `${id}-issue`;
@@ -108,6 +120,8 @@ export function TextField({
           autoComplete={autoComplete}
           spellCheck={spellCheck}
           disabled={disabled}
+          placeholder={placeholder}
+          autoFocus={autoFocus || undefined}
           aria-invalid={invalid || undefined}
           aria-describedby={invalid ? issueId : undefined}
           className={inputClass}
@@ -462,6 +476,173 @@ export function PasswordRegisterForm({
         <div className="flex justify-end">
           <Button type="submit" size="sm" disabled={pending}>
             {pending ? t("auth.route.creating") : t("auth.route.registerSubmit")}
+          </Button>
+        </div>
+      </form>
+    </>
+  );
+}
+
+/**
+ * Recovery step 2 (fix/recovery-ux): «Задать новый пароль» after a
+ * successful token sign-in on the /auth route. The `vesmaro_ui` token leg
+ * of `POST /auth/password` — NO current-password field, by contract and by
+ * product: the whole point of recovery is that the forgotten password is
+ * never asked for (the owner's prod-1.64.0 complaint — the settings form's
+ * always-rendered «Текущий пароль» field read as «the old one is required»
+ * and the form was abandoned).
+ *
+ * The name field starts EMPTY (the account to recover is typed, never
+ * presumed — the prefill would look like we know something the user
+ * hasn't said) with the human example in the placeholder. Client
+ * validation mirrors the server contract (validateRegister — the same
+ * shape rules as registration); a 403 (non-owner OR unknown account — the
+ * same answer, no oracle) comes back as the route's verdict.
+ *
+ * A11y: the same form canon verbatim (labelled fields, aria-invalid +
+ * describedby, reveal toggle, aria-live verdict, focus to the offending
+ * field); zero motion — reduced-motion safe by construction.
+ */
+export function PasswordRecoveryForm({
+  pending,
+  verdict,
+  onSubmit,
+}: {
+  pending: boolean;
+  verdict: FormVerdict | null;
+  onSubmit: (username: string, password: string) => void;
+}) {
+  const t = useT();
+  const usernameId = useId();
+  const passwordId = useId();
+  const confirmId = useId();
+  const usernameRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const confirmRef = useRef<HTMLInputElement>(null);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [revealed, setRevealed] = useState(false);
+  const [touched, setTouched] = useState({ username: false, password: false, confirm: false });
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+
+  const validation = validateRegister(username, password, confirm);
+  const live = submitAttempted || touched.username || touched.password || touched.confirm;
+  const shown: typeof validation = live
+    ? validation
+    : { username: null, password: null, confirm: null };
+
+  const issueText = (field: "username" | "password" | "confirm"): string => {
+    switch (validation[field]) {
+      case "required":
+        return t(
+          field === "username"
+            ? "auth.route.errRequiredUsername"
+            : field === "password"
+              ? "auth.route.errRequiredPassword"
+              : "auth.route.errRequiredConfirm",
+        );
+      case "username":
+        return t("auth.route.errUsername");
+      case "password":
+        return t("auth.route.errPassword");
+      case "confirm":
+        return t("auth.route.errConfirm");
+      default:
+        return "";
+    }
+  };
+
+  // Verdict-focus, same pattern as the sign-in form.
+  useVerdictFocus(verdict, {
+    username: usernameRef,
+    password: passwordRef,
+    confirm: confirmRef,
+  });
+
+  const submit = () => {
+    setSubmitAttempted(true);
+    if (!isValid(validation) || pending) {
+      // Focus the first offending field right away (client-side refusal).
+      const first: FormVerdict["focus"] =
+        validation.username !== null
+          ? "username"
+          : validation.password !== null
+            ? "password"
+            : validation.confirm !== null
+              ? "confirm"
+              : undefined;
+      focusField(first, { username: usernameRef, password: passwordRef, confirm: confirmRef });
+      return;
+    }
+    onSubmit(username.trim(), password);
+  };
+
+  return (
+    <>
+      <VerdictLine verdict={verdict} />
+      <form
+        className="mt-3 space-y-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          submit();
+        }}
+      >
+        <TextField
+          id={usernameId}
+          testId="auth-recovery-username"
+          label={t("auth.route.recoveryUsernameLabel")}
+          value={username}
+          onChange={setUsername}
+          onBlur={() => setTouched((current) => ({ ...current, username: true }))}
+          autoComplete="username"
+          issue={shown.username}
+          issueText={issueText("username")}
+          disabled={pending}
+          inputRef={usernameRef}
+          // The step just became the live surface — the caret starts where
+          // the user continues (07k §4.4, same beat as the tab panels).
+          placeholder={t("auth.route.recoveryUsernamePlaceholder")}
+          spellCheck={false}
+          autoFocus
+        />
+        <TextField
+          id={passwordId}
+          testId="auth-recovery-password"
+          label={t("settings.security.newLabel")}
+          type="password"
+          value={password}
+          onChange={setPassword}
+          onBlur={() => setTouched((current) => ({ ...current, password: true }))}
+          autoComplete="new-password"
+          issue={shown.password}
+          issueText={issueText("password")}
+          disabled={pending}
+          inputRef={passwordRef}
+          revealable
+          revealed={revealed}
+          onToggleReveal={() => setRevealed((current) => !current)}
+        />
+        <TextField
+          id={confirmId}
+          testId="auth-recovery-confirm"
+          label={t("settings.security.confirmLabel")}
+          type="password"
+          value={confirm}
+          onChange={setConfirm}
+          onBlur={() => setTouched((current) => ({ ...current, confirm: true }))}
+          autoComplete="new-password"
+          issue={shown.confirm}
+          issueText={issueText("confirm")}
+          disabled={pending}
+          inputRef={confirmRef}
+        />
+        <p className="text-xs text-foreground-muted">
+          {t("auth.route.passwordHint")} {t("auth.route.usernameHint")}
+        </p>
+        <div className="flex justify-end">
+          <Button type="submit" size="sm" disabled={pending}>
+            {pending ? t("auth.route.recoverySaving") : t("auth.route.recoverySubmit")}
           </Button>
         </div>
       </form>
