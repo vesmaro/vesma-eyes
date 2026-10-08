@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Link } from "react-router";
 import { TagBadge } from "@/components/TagBadge/TagBadge";
 import { TextEngine } from "@/components/TextEngine";
@@ -11,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n";
 import type { Memory } from "@/gateway/types";
+import "./MemoryScroll.css";
 
 /**
  * The scroll surface (component-inventory §5, design-system.md §8.3): full
@@ -22,7 +24,10 @@ import type { Memory } from "@/gateway/types";
  * the ONE display step (--text-display, 36–44px) in Lora against 11px caps
  * provenance labels; the reading column holds the --measure-scroll measure;
  * UI chrome (provenance values, footer) stays Inter/JBMono. No new colours —
- * the scroll keeps --color-scroll-bg/--color-scroll-border tokens.
+ * the scroll keeps --color-scroll-bg/--color-scroll-border tokens. The edge
+ * also carries the U4 TONAL LAYER: the scrollTone organ (lazy `web-tones`
+ * chunk, well-organ pattern) crossfades the border to the real data/bus
+ * tone over --duration-tone-fade; neutral rest is the plain scroll token.
  */
 export interface MemoryScrollProps {
   memory: Memory;
@@ -43,6 +48,22 @@ export function MemoryScroll({
   className,
 }: MemoryScrollProps) {
   const t = useT();
+  // U4 tonal layer: the organ mounts on this scroll surface only (one
+  // implementation per concept — the SAME lazy chunk pattern the well
+  // organ rides; loads after first paint, never on the LCP path).
+  const rootRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    let destroy: (() => void) | undefined;
+    let cancelled = false;
+    void import("@/living/scrollTone").then((m) => {
+      if (cancelled || !rootRef.current) return;
+      destroy = m.mountScrollTone(rootRef.current);
+    });
+    return () => {
+      cancelled = true;
+      destroy?.();
+    };
+  }, []);
   const raw = memory.raw_content ?? null;
   const effective = memory.clean_content ?? memory.content;
   // Inventory §5.3: the toggle exists only when raw differs from effective.
@@ -56,7 +77,7 @@ export function MemoryScroll({
   const contentStyle = mono ? MONO_FONT_STYLE : SCROLL_FONT_STYLE;
 
   return (
-    <article className={className}>
+    <article ref={rootRef} className={className ? `memory-scroll ${className}` : "memory-scroll"}>
       {/* 1. Provenance bar — v12 contrast pair: 11px caps labels vs the
        * display title below; values in JBMono data size (15-WOW §3 «the
        * record's provenance lives in mono»). */}

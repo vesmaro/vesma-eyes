@@ -988,4 +988,27 @@ describe("U4 honest light: iris breath + search recall edge", () => {
     // The declaration lives only inside the reduced media block.
     expect(searchCss).toContain("animation-duration: var(--duration-flash-hold)");
   });
+
+  it("the scroll edge crossfades on --duration-tone-fade; only an active tone paints", () => {
+    // U4 tonal layer: the memory scroll's border reads the organ-written
+    // --scroll-tone through data-tone="active" (the --well-tone rule —
+    // organ var, never a token) and the crossfade is the shared
+    // --duration-tone-fade (1200ms).
+    const scrollToneCss = readFileSync(
+      new URL("../components/MemoryScroll/MemoryScroll.css", import.meta.url),
+      "utf8",
+    );
+    expect(scrollToneCss).toMatch(
+      /\.memory-scroll\s*\{[^}]*transition: border-color var\(--duration-tone-fade\)/s,
+    );
+    expect(scrollToneCss).toMatch(
+      /\.memory-scroll\[data-tone="active"\]\s*\{[^}]*border-color: var\(--scroll-tone\)/s,
+    );
+    const media = scrollToneCss
+      .match(/@media \(prefers-reduced-motion: reduce\)\s*\{(?:(?!\n\})[\s\S])*\}/g)
+      ?.find((block) => block.includes(".memory-scroll"));
+    expect(media ?? "").toContain("transition: none");
+    // --scroll-tone stays an organ-written inline var, not a token.
+    expect(tokensCss).not.toMatch(/--scroll-tone\s*:/);
+  });
 });

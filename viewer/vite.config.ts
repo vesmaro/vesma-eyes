@@ -87,8 +87,13 @@ export default defineConfig(({ mode }) => ({
           if (chunkInfo.name === "vesma") return "vesma-[hash].js";
           // W1b: the well organ joins tones in the web-tones mask (rollup may
           // keep them as separate chunks sharing the name — the budget gate
-          // measures each file). The ENGINE chunk must stay free of well code.
-          if (chunkInfo.name === "tones" || chunkInfo.name === "wellOrgan") {
+          // measures each file). U4: the scroll tone organ rides the same
+          // mask. The ENGINE chunk must stay free of well/scroll code.
+          if (
+            chunkInfo.name === "tones" ||
+            chunkInfo.name === "wellOrgan" ||
+            chunkInfo.name === "scrollTone"
+          ) {
             return "web-tones-[hash].js";
           }
           return "[name]-[hash].js";
