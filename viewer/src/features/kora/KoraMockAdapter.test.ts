@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { ApiError } from "@/lib/errors";
 import { KoraMockAdapter, KoraMockError } from "./KoraMockAdapter";
 
 /**
@@ -141,5 +142,29 @@ describe("KoraMockAdapter — chat v1 store-tail (slice 3)", () => {
     await expect(a.sendMessage("nope:x", "рулить")).rejects.toBeInstanceOf(
       KoraMockError,
     );
+  });
+});
+
+describe("KoraMockAdapter — the ?koraAuth=locked demo lock (mock builds)", () => {
+  it("reads answer transport-shaped 401 (ApiError, NOT KoraError)", async () => {
+    vi.stubGlobal("location", { search: "?koraAuth=locked" });
+    try {
+      const a = new KoraMockAdapter({ latency: false });
+      // The honest 401-CTA branch keys on the TRANSPORT class (isApiError +
+      // status 401), so the lock must throw ApiError — a KoraError here
+      // would silently degrade to the raw error block.
+      const err = await a.listSessions().catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(ApiError);
+      expect((err as ApiError).status).toBe(401);
+      await expect(a.getTranscript(RELAY)).rejects.toMatchObject({ status: 401 });
+      await expect(a.getSession(RELAY)).rejects.toMatchObject({ status: 401 });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("without the param the reads answer normally", async () => {
+    const list = await new KoraMockAdapter({ latency: false }).listSessions();
+    expect(list.ok).toBe(true);
   });
 });

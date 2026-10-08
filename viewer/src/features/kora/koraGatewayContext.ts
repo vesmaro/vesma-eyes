@@ -15,12 +15,24 @@ import { createContext, useContext } from "react";
 import { KoraHttpAdapter } from "./KoraHttpAdapter";
 import { KoraMockAdapter } from "./KoraMockAdapter";
 import type { KoraGateway } from "./koraGateway";
+import { ADAPTER } from "@/gateway/adapterConfig";
 
 export const KoraGatewayContext = createContext<KoraGateway | null>(null);
 
-/** Slice-1 default: the HTTP adapter over the frozen board contract. */
+/**
+ * Slice-1 default: the HTTP adapter over the frozen board contract — in
+ * board/vesma builds that is the ONLY behaviour (unchanged from main).
+ * Mock builds (dev default, dist-smoke) serve the week-0 fixtures instead:
+ * the Kora seams live on their own context (not the main GatewayContext),
+ * so without this branch the frame honestly error-pages in every backend-
+ * less run of the app — the dev playground and the honesty gate need the
+ * same fixtures the rest of the app already shows (the week-0 swap plan:
+ * one line in one place).
+ */
 export function makeKoraGateway(): KoraGateway {
-  return new KoraHttpAdapter();
+  return ADAPTER === "mock"
+    ? new KoraMockAdapter({ latency: true })
+    : new KoraHttpAdapter();
 }
 
 /** Week-0 mock adapter (tests, snapshot fixtures, demo seam). */

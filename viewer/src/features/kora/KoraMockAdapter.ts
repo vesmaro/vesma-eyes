@@ -13,6 +13,7 @@
  *   while the PIN is inactive; enableStepUp opens a TTL window (~15 min).
  */
 import { KoraError, type KoraGateway } from "./koraGateway";
+import { ApiError } from "@/lib/errors";
 import {
   KORA_FIXTURE_SESSIONS,
   KORA_FIXTURE_TRANSCRIPT,
@@ -69,6 +70,8 @@ export class KoraMockAdapter implements KoraGateway {
   private readonly store: Map<string, KoraTranscriptItem[]>;
   private readonly sessions: Map<string, KoraSession>;
   private stepUpUntil: number | null;
+  /** `?koraAuth=locked` (mock builds): reads answer transport 401. */
+  private readonly authLocked: boolean;
 
   constructor(options: KoraMockAdapterOptions = {}) {
     this.latency = options.latency ?? true;
@@ -79,6 +82,24 @@ export class KoraMockAdapter implements KoraGateway {
     this.stepUpUntil = options.stepUpActive
       ? Date.now() + STEP_UP_TTL_SECONDS * 1000
       : null;
+    // The demo lock (`?koraAuth=locked`, mock builds only — the same
+    // location-param pattern as the main MockAdapter's `?bus=demo`):
+    // reads answer transport-shaped 401 (ApiError, NOT KoraError — the
+    // honest 401-CTA branch keys on the transport class) so the sign-in
+    // verdict «Кора ждёт входа на борт» is exercisable without a board.
+    this.authLocked =
+      typeof location !== "undefined" &&
+      new URLSearchParams(location.search).get("koraAuth") === "locked";
+  }
+
+  /** The `?koraAuth=locked` gate: throw before any read answers. */
+  private requireUnlocked(): void {
+    if (this.authLocked) {
+      throw new ApiError(
+        401,
+        "Кора ждёт входа на борт (мок-режим: koraAuth=locked).",
+      );
+    }
   }
 
   private delay(): Promise<void> {
@@ -99,6 +120,7 @@ export class KoraMockAdapter implements KoraGateway {
 
   listSessions(params?: KoraSessionsParams): Promise<KoraSessionsList> {
     return this.delay().then(() => {
+      this.requireUnlocked();
       // P4-7 (slice 2 load-more): the same limit/offset semantics the
       // board serves — page slicing over the registry order, no
       // pagination fields in the response (has_more = count === limit
@@ -121,6 +143,7 @@ export class KoraMockAdapter implements KoraGateway {
 
   async getSession(sessionId: string): Promise<KoraSession | null> {
     await this.delay();
+    this.requireUnlocked();
     return this.sessions.get(sessionId) ?? null;
   }
 
@@ -129,6 +152,7 @@ export class KoraMockAdapter implements KoraGateway {
     params?: { after_seq?: number; limit?: number },
   ): Promise<KoraTranscript> {
     await this.delay();
+    this.requireUnlocked();
     const items = this.store.get(sessionId);
     if (items === undefined) {
       // Unknown session resolves as 404-shaped (provenance-safe absence).
