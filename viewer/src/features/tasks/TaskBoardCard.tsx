@@ -16,7 +16,7 @@ import {
   priorityLabelKey,
   taskLifecycleLabel,
 } from "./taskStatus";
-import { HighlightedTitle, ValidatingClock } from "./taskCardParts";
+import { BlockedReasonLine, HighlightedTitle, ValidatingClock } from "./taskCardParts";
 import { useValidationNow } from "./useValidationClock";
 import { useFreshDoneTransit } from "./doneTransitStore";
 import { TaskRowMenu } from "./TaskRowMenu";
@@ -337,6 +337,14 @@ const TaskCardBody = forwardRef<
         </Link>
       </h3>
 
+      {/* ME-071 W3 → U3: the blocked lane's reason is now a VISIBLE human
+       * line (⟂ + text from the task's own data) — the colour edge alone was
+       * the 1.4.1 risk and the old sr-only line said only the generic. The
+       * caller-level gate keeps the observers off the 6 non-blocked lanes. */}
+      {blocked && !overlay ? (
+        <BlockedReasonLine task={task} className={spacing.clockGap} />
+      ) : null}
+
       {isValidatingTask(task) ? (
         <ValidatingClock since={task.validating_since} className={spacing.clockGap} />
       ) : null}
@@ -380,9 +388,6 @@ const TaskCardBody = forwardRef<
 
       {!canDrag ? (
         <span className="sr-only">{t("tasks.board.dragDisabled")}</span>
-      ) : null}
-      {blocked ? (
-        <span className="sr-only">{t("tasks.board.blockedReason")}</span>
       ) : null}
     </li>
   );

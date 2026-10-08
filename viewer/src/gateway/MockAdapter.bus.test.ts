@@ -8,7 +8,8 @@ import type { BoardEvent } from "./events";
  * premise — a silent mock means zero frames after `hello`); `events()`
  * hands out real EventStream connections over an in-memory source; the
  * test handle (emitBusEvent/quietBus) drives frames; `?bus=demo` runs the
- * bounded six-frame dev sequence.
+ * bounded seven-frame dev sequence ending with a real terminal transition
+ * (the U3 task.done positive control).
  */
 
 async function flush(): Promise<void> {
@@ -81,7 +82,7 @@ describe("MockAdapter — the SSE twin (U2)", () => {
     off();
   });
 
-  it("?bus=demo: SIX well-formed frames, paced, then silence forever", async () => {
+  it("?bus=demo: SEVEN well-formed frames, paced, then silence forever", async () => {
     location.search = "?bus=demo";
     try {
       const gateway = new MockAdapter({ latency: false });
@@ -91,7 +92,7 @@ describe("MockAdapter — the SSE twin (U2)", () => {
       expect(seen).toEqual(["hello"]);
       vi.advanceTimersByTime(400); // first demo frame at +400ms
       expect(seen).toEqual(["hello", "executor.online"]);
-      vi.advanceTimersByTime(1100 * 5); // the remaining five, 1.1s apart
+      vi.advanceTimersByTime(1100 * 6); // the remaining six, 1.1s apart
       expect(seen).toEqual([
         "hello",
         "executor.online",
@@ -100,9 +101,37 @@ describe("MockAdapter — the SSE twin (U2)", () => {
         "task.updated",
         "notification",
         "assignment.started",
+        "task.moved", // U3: the terminal transition — the task.done control
       ]);
       vi.advanceTimersByTime(60_000); // the sequence never repeats
-      expect(seen).toHaveLength(7);
+      expect(seen).toHaveLength(8);
+      off();
+    } finally {
+      location.search = "";
+    }
+  });
+
+  it("?bus=demo: the terminal frame is a FULL TaskOut row (a real task.done)", async () => {
+    location.search = "?bus=demo";
+    try {
+      const gateway = new MockAdapter({ latency: false });
+      let moved: Record<string, unknown> | undefined;
+      const off = gateway.events().onAny((event) => {
+        if (event.kind === "task.moved") {
+          moved = (event as { task: Record<string, unknown> }).task;
+        }
+      });
+      await flush();
+      vi.advanceTimersByTime(400 + 1100 * 6); // all seven demo frames
+      expect(moved).toBeDefined();
+      // The task.done спектакль demands a full row: title for the toast/live
+      // region, col + status for the terminal detection, stamps for the meta.
+      expect(typeof moved!.title).toBe("string");
+      expect((moved!.title as string).length).toBeGreaterThan(0);
+      expect(moved!.col).toBe("resolved");
+      expect(moved!.status).toBe("resolved");
+      expect(typeof moved!.created_at).toBe("string");
+      expect(typeof moved!.updated_at).toBe("string");
       off();
     } finally {
       location.search = "";

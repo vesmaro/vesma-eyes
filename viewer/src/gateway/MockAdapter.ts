@@ -405,8 +405,15 @@ export class MockAdapter implements MemoryGateway {
     }
   }
 
-  /** `?bus=demo`: SIX well-formed frames, 1.1s apart, then silence forever.
-   * Dev/screenshot affordance only — never wired by the app itself. */
+  /** `?bus=demo`: SEVEN well-formed frames, 1.1s apart, then silence forever.
+   * Dev/screenshot affordance only — never wired by the app itself.
+   *
+   * U3: the task frames carry FULL TaskOut rows cloned from the fixture
+   * corpus (the U2 partial rows patch the board cache with malformed cards —
+   * harmless on /, broken-looking on /tasks), and the sequence ENDS with a
+   * real terminal transition (`task.moved` in-progress → resolved, the wire's
+   * task.done shape): the living console's positive control — flash, courier,
+   * ▸N and the tempo chip all fire from this one honest frame. */
   private maybeStartBusDemo(): void {
     if (this.busDemoTimer || this.busQuiet) return;
     if (
@@ -416,6 +423,26 @@ export class MockAdapter implements MemoryGateway {
       return;
     }
     const iso = new Date(this.now()).toISOString();
+    // Full-row clones from the fixture corpus (deterministic — no Date.now()).
+    const demoTask = (id: string, over: Partial<BoardTask>): BoardTask => {
+      const base = MOCK_TASKS.find((row) => row.id === id);
+      if (!base) throw new Error(`bus demo: fixture task ${id} missing`);
+      return { ...base, ...over };
+    };
+    const demoCreated = demoTask("TB-3", {
+      id: "TB-901",
+      title: "Проверка живого слоя Обзора",
+      summary: "Демо-задача мок-шины (ограниченная демо-последовательность).",
+      created_at: iso,
+      updated_at: iso,
+    });
+    const demoDone = demoTask("TB-11", {
+      col: "resolved",
+      status: "resolved",
+      resolved_at: iso,
+      updated_at: iso,
+      position: MOCK_TASKS.filter((row) => row.col === "resolved").length,
+    });
     const demo: ReadonlyArray<Record<string, unknown>> = [
       {
         kind: "executor.online",
@@ -427,7 +454,7 @@ export class MockAdapter implements MemoryGateway {
       {
         kind: "task.created",
         actor: "ui",
-        task: { id: "TB-901", title: "Проверка живого слоя Обзора" },
+        task: demoCreated,
       },
       {
         kind: "report",
@@ -438,7 +465,7 @@ export class MockAdapter implements MemoryGateway {
       {
         kind: "task.updated",
         actor: "ui",
-        task: { id: "TB-901", title: "Проверка живого слоя Обзора" },
+        task: demoCreated,
       },
       {
         kind: "notification",
@@ -456,6 +483,13 @@ export class MockAdapter implements MemoryGateway {
         kind: "assignment.started",
         task_id: "TB-901",
         assignment: { id: "901", task_id: "TB-901", state: "running" },
+      },
+      {
+        // U3 positive control: the terminal transition (in-progress →
+        // resolved) — the one frame the whole task.done спектакль answers to.
+        kind: "task.moved",
+        actor: "machine:demo",
+        task: demoDone,
       },
     ];
     const tick = (): void => {
