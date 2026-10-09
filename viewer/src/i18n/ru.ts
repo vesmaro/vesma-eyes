@@ -1044,6 +1044,33 @@ export const ru = {
   "tasks.create.projectLabel": "Проект",
   "tasks.create.tagsLabel": "Теги vesma (через запятую)",
   "tasks.create.submit": "Создать задачу",
+  // --- U8: конвейер формирования задачи (v12-мастер «Что → Кому → Проверка»);
+  // шаг = реальная операция, «Кому» живёт движком исполнений (spec §2.4).
+  "tasks.create.stepWhat": "Что",
+  "tasks.create.stepWhom": "Кому",
+  "tasks.create.stepReview": "Проверка",
+  "tasks.create.conveyorLabel": "Шаги задачи",
+  "tasks.create.next": "Дальше",
+  "tasks.create.whatTitle": "Что сделать",
+  "tasks.create.whomTitle": "Кому поручить",
+  "tasks.create.whomSub":
+    "Каждая карточка обещает честный момент старта — когда задача реально начнётся.",
+  "tasks.create.queueChoice": "В очередь без исполнителя",
+  "tasks.create.queueNote":
+    "Задача ждёт в канбане — исполнителя назначите позже. Равноправный путь, не запасной.",
+  "tasks.create.startLive": "На связи: задача начнётся после ближайшего доклада агента",
+  "tasks.create.startOffline":
+    "Не на связи: задача встанет в очередь — агент заберёт её при возвращении",
+  "tasks.create.assignHint":
+    "Прямое поручение «{{name}}» идёт через движок исполнений: нужны специалист и харнесс.",
+  "tasks.create.specialistError": "движку поручений нужен специалист (1–120 символов)",
+  "tasks.create.sumWhat": "Что",
+  "tasks.create.sumTags": "Теги",
+  "tasks.create.whomQueue": "Очередь без исполнителя",
+  "tasks.create.whomExecutor": "{{name}} · специалист {{specialist}} · харнесс {{harness}}",
+  "tasks.create.give": "Дать задачу",
+  "tasks.create.assignmentFailed":
+    "Задача {{id}} создана, но поручение не встало — причина во всплывающем сообщении. Задачу можно поручить из её карточки.",
 
   // --- tasks: row action menu (Ф3) ---------------------------------------------------
   "tasks.menu.triggerAria": "Действия с задачей {{id}}",

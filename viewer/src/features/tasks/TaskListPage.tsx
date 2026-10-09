@@ -68,7 +68,11 @@ export function TaskListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const state = parseTaskListParams(searchParams);
   const [collapsed, setCollapsed] = useState(() => loadCollapsedGroups());
-  const [createOpen, setCreateOpen] = useState(false);
+  // U8: the v12 wizard deep link (tasks.html?wizard=1 canon) — reading
+  // init only, the param is not written back and the owner's toggle wins.
+  const [createOpen, setCreateOpen] = useState(
+    () => searchParams.get("wizard") === "1",
+  );
   // U3: the console's live resolution tempo (the board shares this store).
   // Runs before the capability early return (hook-order discipline) and is
   // inert until the domain SSE bridge sees a real terminal transition.

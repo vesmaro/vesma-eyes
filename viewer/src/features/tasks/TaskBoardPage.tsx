@@ -151,7 +151,11 @@ function TaskBoardView() {
       else next.add(column);
       return next;
     });
-  const [createOpen, setCreateOpen] = useState(false);
+  // U8: the v12 wizard deep link (tasks.html?wizard=1 canon) — reading
+  // init only, the param is not written back and the owner's toggle wins.
+  const [createOpen, setCreateOpen] = useState(
+    () => searchParams.get("wizard") === "1",
+  );
   const mutations = useTaskMutations();
 
   // ME-071 W3 (15-WOW §3.4/§8.5): the done-tempo derivation (решений/час,

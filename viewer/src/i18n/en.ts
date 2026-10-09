@@ -1016,6 +1016,33 @@ export const en: Record<TranslationKey, string> = {
   "tasks.create.projectLabel": "Project",
   "tasks.create.tagsLabel": "vesma tags (comma-separated)",
   "tasks.create.submit": "Create task",
+  // --- U8: the task-formation conveyor (the v12 wizard «What → Whom →
+  // Review»); a step IS a real operation, «Whom» rides the assignment engine.
+  "tasks.create.stepWhat": "What",
+  "tasks.create.stepWhom": "Whom",
+  "tasks.create.stepReview": "Review",
+  "tasks.create.conveyorLabel": "Task steps",
+  "tasks.create.next": "Next",
+  "tasks.create.whatTitle": "What to do",
+  "tasks.create.whomTitle": "Whom to assign",
+  "tasks.create.whomSub":
+    "Every card promises an honest start moment — when the task actually begins.",
+  "tasks.create.queueChoice": "Queue without an executor",
+  "tasks.create.queueNote":
+    "The task waits on the board — assign someone later. An equal path, not a fallback.",
+  "tasks.create.startLive": "Connected: the task starts after the agent's next report",
+  "tasks.create.startOffline":
+    "Away: the task queues up — the agent picks it up on return",
+  "tasks.create.assignHint":
+    "A direct hand-off to {{name}} goes through the assignment engine: it needs a specialist and a harness.",
+  "tasks.create.specialistError": "the assignment engine needs a specialist (1–120 chars)",
+  "tasks.create.sumWhat": "What",
+  "tasks.create.sumTags": "Tags",
+  "tasks.create.whomQueue": "Queue — no executor yet",
+  "tasks.create.whomExecutor": "{{name}} · specialist {{specialist}} · harness {{harness}}",
+  "tasks.create.give": "Give the task",
+  "tasks.create.assignmentFailed":
+    "Task {{id}} was created, but the hand-off did not land — the reason is in the toast. You can assign the task from its card.",
 
   // --- tasks: row action menu (Ф3) ---------------------------------------------------
   "tasks.menu.triggerAria": "Actions for task {{id}}",
