@@ -150,7 +150,7 @@ export function DocsSearch({ className }: DocsSearchProps) {
     >
       <div
         className={cn(
-          "flex h-9 items-center gap-2 rounded-md border border-border-subtle bg-well px-3",
+          "flex h-12 md:h-9 items-center gap-2 rounded-md border border-border-subtle bg-well px-3",
           "transition-colors duration-instant focus-within:border-iris-bright",
         )}
       >
@@ -177,7 +177,7 @@ export function DocsSearch({ className }: DocsSearchProps) {
           }
           autoComplete="off"
           spellCheck={false}
-          className="h-full min-w-0 flex-1 bg-transparent text-sm text-foreground placeholder:text-foreground-muted focus-visible:outline-none"
+          className="h-full min-w-0 flex-1 max-md:min-h-12 bg-transparent text-sm text-foreground placeholder:text-foreground-muted focus-visible:outline-none"
         />
       </div>
 

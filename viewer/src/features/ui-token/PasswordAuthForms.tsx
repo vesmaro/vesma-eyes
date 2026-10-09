@@ -32,7 +32,7 @@ import type { FieldIssue } from "./passwordValidation";
  * (names and passwords are human words, not pasted machine values).
  * Exported for the settings security form (ME-080 follow-up) — ONE field canon. */
 export const inputClass =
-  "h-9 w-full rounded-md border border-border bg-well px-2 pr-9 text-sm text-foreground placeholder:text-foreground-muted focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-60";
+  "h-12 md:h-9 w-full rounded-md border border-border bg-well px-2 pr-9 text-sm text-foreground placeholder:text-foreground-muted focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-60";
 
 /** Inline verdict the route hands back after a failed submit. `focus` also
  * carries "current" — the settings security form's 401 beat (wrong current

@@ -81,7 +81,7 @@ export function StepRail({
                   : undefined
               }
               className={
-                "flex items-center gap-1.5 rounded-sm px-1.5 py-0.5 text-xs transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright " +
+                "flex max-md:min-h-12 items-center gap-1.5 rounded-sm px-1.5 py-0.5 text-xs transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright " +
                 (state === "current"
                   ? "border border-iris-bright/60 bg-iris/10 font-medium text-iris-bright"
                   : state === "done"

@@ -31,7 +31,7 @@ export function BoardStyleToggle() {
       setStyle(value);
     },
     className:
-      "px-3 py-1.5 text-sm transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright " +
+      "max-md:min-h-12 max-md:inline-flex max-md:items-center px-3 py-1.5 text-sm transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright " +
       extra +
       (style === value
         ? "bg-iris-tint text-iris-bright"

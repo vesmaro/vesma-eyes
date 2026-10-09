@@ -133,7 +133,7 @@ export function GateScreen({
               return !open;
             });
           }}
-          className="inline-flex min-h-6 items-center gap-1 rounded-sm text-xs text-foreground-muted underline-offset-2 transition-colors duration-instant hover:text-foreground-secondary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          className="inline-flex min-h-12 md:min-h-6 items-center gap-1 rounded-sm text-xs text-foreground-muted underline-offset-2 transition-colors duration-instant hover:text-foreground-secondary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
         >
           <ChevronRight
             className={

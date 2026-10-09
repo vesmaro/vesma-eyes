@@ -678,7 +678,7 @@ function ActivityRow({
       </span>
       <Link
         to={href}
-        className="inline-flex min-h-6 min-w-0 items-baseline gap-1.5 rounded-sm py-0.5 underline-offset-2 hover:text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+        className="inline-flex min-h-12 md:min-h-6 min-w-0 items-baseline gap-1.5 rounded-sm py-0.5 underline-offset-2 hover:text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
       >
         <span className="font-mono text-xs">{row.task_id}</span>
         {row.task_title ? (

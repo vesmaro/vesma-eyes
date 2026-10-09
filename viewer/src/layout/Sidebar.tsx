@@ -291,7 +291,7 @@ function FooterRow({
       aria-label={label}
       aria-expanded={ariaExpanded}
       className={cn(
-        "flex h-10 w-full min-w-0 items-center rounded-md text-sm text-foreground-secondary",
+        "flex h-12 md:h-10 w-full min-w-0 items-center rounded-md text-sm text-foreground-secondary",
         "transition-colors duration-instant",
         "hover:bg-myelin-strong hover:text-foreground",
         "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
@@ -397,7 +397,7 @@ function DomainRow({
         disabled
         title={`${label} — ${hint}`}
         className={cn(
-          "flex h-10 w-full min-w-0 cursor-not-allowed items-center rounded-md px-3 text-left text-sm",
+          "flex h-12 md:h-10 w-full min-w-0 cursor-not-allowed items-center rounded-md px-3 text-left text-sm",
           "text-foreground-muted opacity-70",
           expanded ? "gap-3" : "justify-center px-0",
         )}
@@ -421,7 +421,7 @@ function DomainRow({
     // text-left: the UA button stylesheet centers inline text, which used to
     // shove GROUP-TOGGLE labels («Память», «Задачи», «Система») off the icon
     // column — one axis icon+label across ALL row branches (ME-072 A).
-    "flex h-10 w-full min-w-0 items-center rounded-md text-left text-sm transition-colors duration-instant",
+    "flex h-12 md:h-10 w-full min-w-0 items-center rounded-md text-left text-sm transition-colors duration-instant",
     "hover:bg-myelin-strong hover:text-foreground",
     "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
     activeDomain ? "font-medium text-foreground" : "text-foreground-secondary",
@@ -571,7 +571,7 @@ function SectionLink({
         type="button"
         disabled
         title={`${label} — ${hint}`}
-        className="flex h-9 w-full min-w-0 cursor-not-allowed items-center gap-3 rounded-md px-3 text-left text-sm text-foreground-muted opacity-70"
+        className="flex h-12 md:h-9 w-full min-w-0 cursor-not-allowed items-center gap-3 rounded-md px-3 text-left text-sm text-foreground-muted opacity-70"
       >
         <span className={cn("flex-1", hideLabels)}>{label}</span>
         <SlotBadge label={t(section.laterKey ? "nav.later" : "nav.soon")} />
@@ -588,7 +588,7 @@ function SectionLink({
       aria-label={label}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "relative flex h-9 w-full min-w-0 items-center rounded-md px-3 text-sm transition-colors duration-instant",
+        "relative flex h-12 md:h-9 w-full min-w-0 items-center rounded-md px-3 text-sm transition-colors duration-instant",
         "hover:bg-myelin-strong hover:text-foreground",
         "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
         active ? "font-medium text-iris-bright" : "text-foreground-secondary",

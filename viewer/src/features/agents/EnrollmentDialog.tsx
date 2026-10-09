@@ -261,7 +261,7 @@ function EnrollmentForm({
   };
 
   const fieldClass =
-    "h-9 rounded-md border border-border bg-background px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright";
+    "h-12 md:h-12 md:h-9 rounded-md border border-border bg-background px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright";
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
@@ -459,7 +459,7 @@ function TokenBlock({
           type="button"
           variant="ghost"
           size="sm"
-          className="h-7 px-2 text-xs"
+          className="h-12 md:h-7 px-2 text-xs"
           onClick={() => copy("token", created.token)}
         >
           {copied === "token" ? (
@@ -535,7 +535,7 @@ function TokenBlock({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-7 px-2 text-xs"
+              className="h-12 md:h-7 px-2 text-xs"
               onClick={() => copy("all", buildBootstrapScript(steps))}
             >
               {copied === "all" ? (

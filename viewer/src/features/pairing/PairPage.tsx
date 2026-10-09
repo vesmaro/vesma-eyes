@@ -306,7 +306,7 @@ function ExchangeForm({
           autoComplete="off"
           spellCheck={false}
           aria-invalid={codeInvalid}
-          className="h-9 rounded-md border border-border bg-background px-2 font-mono text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+          className="h-12 md:h-12 md:h-9 rounded-md border border-border bg-background px-2 font-mono text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
         />
         {codeInvalid ? (
           <span role="alert" className="text-xs text-error">
@@ -321,7 +321,7 @@ function ExchangeForm({
           value={deviceName}
           onChange={(event) => onDeviceNameChange(event.target.value)}
           maxLength={64}
-          className="h-9 rounded-md border border-border bg-background px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+          className="h-12 md:h-12 md:h-9 rounded-md border border-border bg-background px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
         />
       </label>
 

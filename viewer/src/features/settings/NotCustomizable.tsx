@@ -1,7 +1,7 @@
 import { useT } from "@/i18n";
 
 const cnSummary =
-  "cursor-pointer text-sm font-medium text-foreground-secondary transition-colors duration-instant hover:text-foreground " +
+  "cursor-pointer max-md:min-h-12 max-md:inline-flex max-md:items-center text-sm font-medium text-foreground-secondary transition-colors duration-instant hover:text-foreground " +
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright";
 
 /**

@@ -89,7 +89,7 @@ export function MemoriesPage() {
             id="memories-status"
             value={state.status ?? ""}
             onChange={(event) => patch({ status: event.target.value || undefined })}
-            className="h-9 rounded-md border border-border bg-well px-2 text-sm text-foreground focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            className="h-12 md:h-12 md:h-9 rounded-md border border-border bg-well px-2 text-sm text-foreground focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           >
             <option value="">{t("memories.allStatuses")}</option>
             {MEMORY_STATUSES.map((status) => (
@@ -111,7 +111,7 @@ export function MemoriesPage() {
             id="memories-project"
             value={state.project ?? ""}
             onChange={(event) => patch({ project: event.target.value || undefined })}
-            className="h-9 rounded-md border border-border bg-well px-2 text-sm text-foreground focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            className="h-12 md:h-12 md:h-9 rounded-md border border-border bg-well px-2 text-sm text-foreground focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           >
             <option value="">{t("memories.allProjects")}</option>
             {projects.map((project) => (
@@ -151,7 +151,7 @@ export function MemoriesPage() {
             id="memories-limit"
             value={String(state.limit)}
             onChange={(event) => patch({ limit: Number(event.target.value) })}
-            className="h-9 rounded-md border border-border bg-well px-2 text-sm text-foreground focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            className="h-12 md:h-12 md:h-9 rounded-md border border-border bg-well px-2 text-sm text-foreground focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           >
             {PAGE_SIZES.map((size) => (
               <option key={size} value={size}>

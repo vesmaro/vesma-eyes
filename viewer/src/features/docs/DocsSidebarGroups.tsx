@@ -67,7 +67,7 @@ export function DocsSidebarGroups({ collapsed, hideLabels }: DocsSidebarGroupsPr
               aria-label={project.name}
               aria-current={isHub ? "page" : undefined}
               className={cn(
-                "flex min-h-6 min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors duration-instant",
+                "flex min-h-12 md:min-h-6 min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors duration-instant",
                 "hover:bg-elevated hover:text-foreground",
                 FOCUS_RING,
                 groupClass,
@@ -100,7 +100,7 @@ export function DocsSidebarGroups({ collapsed, hideLabels }: DocsSidebarGroupsPr
                           // line instead of ellipsizing; a block row inside
                           // the fixed w-64 panel cannot push a horizontal
                           // scroll, so the overflow-hygiene invariant holds.
-                          "block min-h-6 min-w-0 rounded-md px-2 py-1.5 text-sm leading-snug transition-colors duration-instant",
+                          "block min-h-12 md:min-h-6 min-w-0 rounded-md px-2 py-1.5 text-sm leading-snug transition-colors duration-instant",
                           "hover:bg-elevated hover:text-foreground",
                           FOCUS_RING,
                           active

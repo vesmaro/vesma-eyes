@@ -60,7 +60,7 @@ export function ConditionEditor({
               type="button"
               variant="ghost"
               size="icon"
-              className="ml-auto size-6"
+              className="ml-auto size-12 md:size-6"
               aria-label={t("automation.form.removeClause", { clause: describeClause(clause) })}
               onClick={() => onChange(clauses.filter((_, i) => i !== index))}
             >

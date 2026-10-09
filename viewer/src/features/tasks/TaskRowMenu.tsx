@@ -197,7 +197,7 @@ export function TaskRowMenu({
           setOpen(!open);
         }}
         className={
-          "size-7 " +
+          "size-12 md:size-7 " +
           (revealOnParentHover
             ? "opacity-0 transition-opacity duration-instant group-hover/card:opacity-100 group-focus-within/card:opacity-100 aria-expanded:opacity-100 "
             : "")

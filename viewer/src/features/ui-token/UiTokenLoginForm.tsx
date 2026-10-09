@@ -108,7 +108,7 @@ export function UiTokenLoginForm({
               autoFocus
               disabled={verifyPending}
               aria-describedby={hintId}
-              className="h-9 min-w-0 flex-1 rounded-md border border-border bg-well px-2 font-mono text-sm text-foreground focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-60"
+              className="h-12 md:h-9 min-w-0 flex-1 rounded-md border border-border bg-well px-2 font-mono text-sm text-foreground focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-60"
             />
             <Button
               type="button"

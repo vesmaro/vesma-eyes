@@ -474,7 +474,7 @@ function Header({
           id="kora-host-filter"
           value={contextHost ?? ""}
           onChange={(event) => onSelectHost(event.target.value)}
-          className="h-7 rounded-md border border-border-subtle bg-background px-2 text-xs text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+          className="h-12 md:h-7 rounded-md border border-border-subtle bg-background px-2 text-xs text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
         >
           <option value="">{t("kora.filter.all")}</option>
           {hostOptions.map((host) => (
@@ -502,7 +502,7 @@ function SummaryChip({
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className="min-h-6 rounded-sm px-1 underline-offset-2 transition-colors duration-instant hover:text-foreground hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright aria-pressed:text-iris-bright aria-pressed:underline"
+      className="min-h-12 md:min-h-6 rounded-sm px-1 underline-offset-2 transition-colors duration-instant hover:text-foreground hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright aria-pressed:text-iris-bright aria-pressed:underline"
     >
       {label}
     </button>
@@ -522,7 +522,7 @@ function CoverageLegend({ coverage }: { coverage: KoraCoverage | null | undefine
         aria-expanded={expanded}
         aria-controls="kora-legend-body"
         onClick={() => setExpanded((value) => !value)}
-        className="flex min-h-6 w-full items-center gap-1.5 rounded-sm text-left text-xs font-semibold uppercase tracking-wide text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+        className="flex min-h-12 md:min-h-6 w-full items-center gap-1.5 rounded-sm text-left text-xs font-semibold uppercase tracking-wide text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
       >
         {expanded ? "▾" : "▸"} {t("kora.legend.title")}
       </button>

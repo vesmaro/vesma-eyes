@@ -139,7 +139,7 @@ export function ExecutorLinkCheck({
               type="button"
               variant="ghost"
               size="sm"
-              className="mt-1 h-7 px-2 text-xs"
+              className="mt-1 h-12 md:h-7 px-2 text-xs"
               onClick={() => setTestOpen(true)}
             >
               {t("agents.linkcheck.checkForReal")}

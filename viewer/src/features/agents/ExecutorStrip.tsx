@@ -102,7 +102,7 @@ export function ExecutorStrip({
         </span>
         <Link
           to="/agents/harnesses"
-          className="ml-auto inline-flex min-h-6 shrink-0 items-center text-xs font-medium text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+          className="ml-auto inline-flex min-h-12 md:min-h-6 shrink-0 items-center text-xs font-medium text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
         >
           {t("agents.strip.emptyAction")}
         </Link>

@@ -102,7 +102,9 @@ export function TaskBoardColumn({
   // horizontal space. The fold keys off the WHOLE-BOARD count — a column
   // emptied by the active filters still renders unfolded. aria-expanded +
   // a labelled unfold button keep the keyboard/screen-reader path equal to
-  // the pointer path.
+  // the pointer path. U7 mobile: below md the board stacks VERTICALLY, so
+  // the strip folds to a full-width horizontal band (same droppable, same
+  // unfold) instead of a vertical sliver.
   if (emptyCollapsed && totalCount === 0) {
     return (
       <section
@@ -110,7 +112,7 @@ export function TaskBoardColumn({
         data-column={column}
         aria-label={t("tasks.board.columnLabel", { col: label })}
         className={
-          "flex w-11 shrink-0 flex-col items-center gap-1 rounded-lg border border-border-subtle bg-base/40 py-2 " +
+          "flex h-11 w-full shrink-0 flex-row items-center justify-between gap-1 rounded-lg border border-border-subtle bg-base/40 px-2 py-1 md:h-auto md:w-11 md:flex-col md:justify-start md:px-0 md:py-2 " +
           (isOver ? " border-iris-bright/60" : "")
         }
       >
@@ -119,11 +121,11 @@ export function TaskBoardColumn({
           onClick={onToggleEmptyCollapse}
           aria-expanded={false}
           aria-label={t("tasks.board.expandColumn", { col: label })}
-          className="flex flex-col items-center gap-1 rounded-sm py-0.5 text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+          className="flex max-md:min-h-9 flex-row items-center gap-1 rounded-sm py-0.5 text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright md:flex-col"
         >
           <ChevronRight className="size-3.5" aria-hidden="true" />
           <span
-            className="text-xs font-semibold [writing-mode:vertical-rl]"
+            className="text-xs font-semibold md:[writing-mode:vertical-rl]"
             aria-hidden="true"
           >
             {label}
@@ -141,8 +143,10 @@ export function TaskBoardColumn({
       data-column={column}
       aria-label={t("tasks.board.columnLabel", { col: label })}
       className={
-        "flex shrink-0 flex-col rounded-lg border border-border-subtle bg-base/40 " +
-        (compact ? "w-60" : "w-72") +
+        // U7 mobile: the board stacks vertically below md — a column takes
+        // the full row width; the horizontal scroll affordance is md+ only.
+        "flex w-full shrink-0 flex-col rounded-lg border border-border-subtle bg-base/40 " +
+        (compact ? "md:w-60" : "md:w-72") +
         (isOver ? " border-iris-bright/60" : "")
       }
     >
@@ -191,17 +195,19 @@ export function TaskBoardColumn({
       <div
         ref={setNodeRef}
         className={
-          "flex-1 overflow-y-auto p-2 " +
+          "flex-1 p-2 md:overflow-y-auto " +
           // Classic columns run taller (CV-5 "во всю высоту" within the
           // document-scrolled shell): the viewport cap keeps the scroll
           // INTERNAL to the column, the page never scrolls under the board.
+          // U7 mobile: no internal cap below md — the honest document flow
+          // scrolls with the page.
           (style === "classic"
             ? compact
-              ? "max-h-[75vh] "
-              : "max-h-[80vh] "
+              ? "md:max-h-[75vh] "
+              : "md:max-h-[80vh] "
             : compact
-              ? "max-h-[70vh] "
-              : "max-h-[75vh] ")
+              ? "md:max-h-[70vh] "
+              : "md:max-h-[75vh] ")
         }
       >
         <SortableContext
@@ -300,7 +306,7 @@ function BoardGroup({
         onClick={onToggle}
         aria-expanded={!collapsed}
         className={
-          "flex w-full items-center gap-1 rounded-sm py-0.5 text-xs font-medium text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright " +
+          "flex max-md:min-h-12 w-full items-center gap-1 rounded-sm py-0.5 text-xs font-medium text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright " +
           (isOver ? "bg-iris/10 text-iris-bright" : "")
         }
       >

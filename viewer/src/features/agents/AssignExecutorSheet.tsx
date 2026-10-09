@@ -271,7 +271,7 @@ function AssignExecutorForm({
             value={specialist}
             onChange={(event) => setSpecialist(event.target.value)}
             list="assign-specialist-choices"
-            className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+            className="h-12 md:h-9 w-full rounded-md border border-border bg-background px-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
           />
           <datalist id="assign-specialist-choices">
             {specialistChoices.own.map((name) => (

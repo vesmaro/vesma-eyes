@@ -302,7 +302,7 @@ function CreateTaskWizard({ onClose }: { onClose: () => void }) {
   };
 
   const inputClass =
-    "w-full rounded-md border bg-well px-2 py-1.5 text-sm text-foreground placeholder:text-foreground-muted focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright ";
+    "min-h-12 md:min-h-9 w-full rounded-md border bg-well px-2 py-1.5 text-sm text-foreground placeholder:text-foreground-muted focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright ";
 
   return (
     <div className="space-y-3">

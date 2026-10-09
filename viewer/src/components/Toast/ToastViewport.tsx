@@ -94,7 +94,7 @@ function ToastCard({
         type="button"
         onClick={() => onDismiss(entry.key)}
         aria-label={t("toasts.dismissAria")}
-        className="rounded-sm p-0.5 text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+        className="flex size-12 items-center justify-center rounded-sm text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright md:size-auto md:p-0.5"
       >
         <X className="size-3.5" aria-hidden="true" />
       </button>

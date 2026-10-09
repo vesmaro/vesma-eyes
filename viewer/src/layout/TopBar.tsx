@@ -66,12 +66,12 @@ export function TopBar({ sidebarTrigger }: TopBarProps) {
   return (
     <header
       data-living-seam="topbar"
-      className="sticky top-0 z-40 flex h-topbar shrink-0 items-center gap-2 border-myelin-hairline border-b-hairline bg-well pl-2 pr-3 sm:gap-3 sm:pl-3"
+      className="sticky top-0 z-40 flex h-topbar shrink-0 items-center gap-1 border-myelin-hairline border-b-hairline bg-well pl-2 pr-2 sm:gap-3 sm:pl-3 sm:pr-3"
     >
       {sidebarTrigger}
       <Link
         to="/"
-        className="flex min-w-0 items-center gap-2 rounded-md py-1 font-semibold text-foreground transition-colors duration-instant hover:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+        className="flex min-w-0 items-center gap-2 rounded-md py-1 max-md:min-h-12 max-md:min-w-12 max-md:justify-center max-md:px-2 font-semibold text-foreground transition-colors duration-instant hover:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       >
         <IrisLogo size={20} decorative />
         <span className="hidden whitespace-nowrap text-sm tracking-wide sm:inline">
@@ -89,7 +89,7 @@ export function TopBar({ sidebarTrigger }: TopBarProps) {
         onClick={() => openPalette("button")}
         aria-label={t("cmdk.openAria")}
         aria-haspopup="dialog"
-        className="h-8 w-8 shrink-0 md:hidden"
+        className="size-12 shrink-0 md:hidden"
       >
         <Search className="size-4" aria-hidden="true" />
       </Button>
@@ -110,7 +110,7 @@ export function TopBar({ sidebarTrigger }: TopBarProps) {
             compact ? "topbar.densityToComfortable" : "topbar.densityToCompact",
           )}
           title={t(compact ? "topbar.densityToComfortable" : "topbar.densityToCompact")}
-          className="h-8 w-8"
+          className="size-12 md:size-8"
         >
           {/* Compact packs MORE rows; comfortable keeps them roomy. */}
           {compact ? (
@@ -128,7 +128,7 @@ export function TopBar({ sidebarTrigger }: TopBarProps) {
             nextTheme === "light" ? "topbar.themeToLight" : "topbar.themeToDark",
           )}
           title={t(nextTheme === "light" ? "topbar.themeToLight" : "topbar.themeToDark")}
-          className="h-8 w-8"
+          className="size-12 md:size-8"
         >
           {theme === "dark" ? (
             <Sun className="size-4" aria-hidden="true" />

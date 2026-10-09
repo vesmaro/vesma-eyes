@@ -187,7 +187,7 @@ export function MemoryScroll({
               <li key={id}>
                 <Link
                   to={`/memory/${id}`}
-                  className="inline-flex min-h-6 items-center font-mono text-sm text-iris-bright underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                  className="inline-flex min-h-12 md:min-h-6 items-center font-mono text-sm text-iris-bright underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                 >
                   {id}
                 </Link>

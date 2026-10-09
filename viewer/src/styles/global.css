@@ -650,3 +650,25 @@ html[data-vesma-pad] {
 .presence-dot-live {
   box-shadow: var(--glow-live);
 }
+
+/* ── U7 mobile pass (<768; SPEC-2026-10-07 «Глубокая проработка» п.4) ────
+ * Touch targets ≥48px. The TOPBAR and CRUMBS rows join at the same 48px
+ * touch bar below md, so every control anchored to them (drawer opener,
+ * crumb links) reaches the target without inflating the desktop canon —
+ * --shell-crumbs-h keeps its frozen 40px in tokens.css (board parity,
+ * ADR 0006); this is viewer-only layout arithmetic, same standing as
+ * --vesma-slot above. The --well-hero-h / --kora-frame-h consumers recompute
+ * from the var, no second place to touch. */
+@media (max-width: 767px) {
+  :root {
+    --shell-crumbs-h: 48px;
+  }
+}
+
+/* The nest keeper's speech-bubble button («Понятно»): inline text on
+ * desktop, a ≥48px target on mobile. */
+@media (max-width: 767px) {
+  .vesma-ok {
+    min-height: 48px;
+  }
+}

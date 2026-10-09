@@ -68,7 +68,7 @@ export function SearchBar({
           // displacement; focus-visible = --color-focus ring on this wrapper
           // (has-[] pattern); loading = aria-busy + a STATIC strata tint —
           // the old pulse broke the frequency gate (§10 slop-pass).
-          "flex items-center gap-2 rounded-xl border border-border bg-elevated py-1.5 pl-5 pr-1.5",
+          "flex items-center gap-2 rounded-xl border border-border bg-elevated py-1.5 pl-5 pr-1.5 max-md:min-h-12 max-md:py-0",
           "transition-colors duration-instant ease-out",
           "hover:border-myelin-strong hover:bg-strata-memory",
           "has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-focus",
@@ -88,7 +88,7 @@ export function SearchBar({
           autoComplete="off"
           spellCheck={false}
           className={cn(
-            "min-w-0 flex-1 bg-transparent text-base text-foreground",
+            "min-w-0 flex-1 self-stretch bg-transparent text-base text-foreground",
             "placeholder:text-foreground-muted focus:outline-none",
           )}
         />
@@ -97,7 +97,7 @@ export function SearchBar({
           disabled={isSearching}
           aria-label={t(isSearching ? "search.submitting" : "search.submit")}
           className={cn(
-            "inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-iris-strong text-foreground-inverse",
+            "inline-flex size-12 md:size-9 shrink-0 items-center justify-center rounded-full bg-iris-strong text-foreground-inverse",
             "transition-colors duration-instant hover:bg-iris-strong-hover", // AA in both themes
             "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
             "disabled:pointer-events-none disabled:opacity-60",

@@ -72,7 +72,7 @@ export function PasteBackApprove({
           type="button"
           variant="ghost"
           size="sm"
-          className="h-7 shrink-0 px-2 text-xs"
+          className="h-12 md:h-7 shrink-0 px-2 text-xs"
           onClick={() => copy("pin", fingerprint)}
         >
           {copied === "pin" ? (
@@ -99,7 +99,7 @@ export function PasteBackApprove({
               placeholder="0123abcd"
               aria-invalid={tail !== "" && !matches}
               aria-describedby="provision-pasteback-hint"
-              className="h-9 w-44 rounded-md border border-border bg-background px-2 font-mono text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+              className="h-12 md:h-9 w-44 rounded-md border border-border bg-background px-2 font-mono text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
             />
           </label>
           <p id="provision-pasteback-hint" className="text-xs text-foreground-muted">

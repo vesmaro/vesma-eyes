@@ -52,7 +52,7 @@ export function SearchResultCard({
           <h2 className="font-scroll text-base font-semibold leading-tight">
             <Link
               to={detailHref}
-              className="inline-flex min-h-6 items-center hover:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+              className="inline-flex min-h-12 md:min-h-6 items-center hover:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
             >
               {highlight(result.title || result.id, queryTerms)}
             </Link>

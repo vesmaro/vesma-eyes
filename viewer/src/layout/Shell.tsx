@@ -108,7 +108,7 @@ export function Shell() {
         variant="ghost"
         size="icon"
         aria-label={t("topbar.openSidebar")}
-        className="h-8 w-8 shrink-0 md:hidden"
+        className="size-12 shrink-0 md:hidden"
       >
         <PanelLeft className="size-4" aria-hidden="true" />
       </Button>

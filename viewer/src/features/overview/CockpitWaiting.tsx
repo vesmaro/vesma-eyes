@@ -61,7 +61,7 @@ export function CockpitWaiting() {
             <button
               type="button"
               onClick={waiting.retry}
-              className="inline-flex min-h-6 items-center gap-1 text-sm font-medium text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+              className="inline-flex min-h-12 md:min-h-6 items-center gap-1 text-sm font-medium text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
             >
               <RefreshCw className="size-3.5" aria-hidden="true" />
               {t("cockpit.retry")}
@@ -130,7 +130,7 @@ function QuietRowLink({ to, children }: { to: string; children: React.ReactNode 
   return (
     <Link
       to={to}
-      className="inline-flex min-h-6 items-center gap-1 text-foreground-secondary transition-colors duration-instant hover:text-foreground hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+      className="inline-flex min-h-12 md:min-h-6 items-center gap-1 text-foreground-secondary transition-colors duration-instant hover:text-foreground hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
     >
       {children}
       <ArrowRight className="size-3.5" aria-hidden="true" />
