@@ -2263,4 +2263,17 @@ export const en: Record<TranslationKey, string> = {
   // --- base kit state matrices (spec 05 §2.2/§2.5, wave U0) ------------------
   "field.errorPrefix": "Error:",
   "tag.filterUnavailable": "Filtering is unavailable here",
+
+  // --- conveyor (U8 v12-UX-flows): shared step-kit vocabulary -----------------
+  // Step state for screen readers: the number/✓ glyphs are visual only
+  // (aria-hidden), the state is named in words (WCAG 4.1.2).
+  "flows.rail.stateDone": "Step completed",
+  "flows.rail.stateCurrent": "Current step",
+  "flows.rail.stateUpcoming": "Upcoming step",
+  "flows.rail.backTitle": "Back to the “{{step}}” step",
+  // Draft resume (koraFrameStorage precedent): a restore is named and
+  // dated — the form does not pretend it was never closed.
+  "flows.draft.restored": "Draft restored after reload (saved at {{time}})",
+  "flows.draft.keepNote": "The draft is stored locally and survives a reload",
+  "flows.draft.startOver": "Start over",
 };

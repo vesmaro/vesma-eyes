@@ -2313,6 +2313,19 @@ export const ru = {
   "field.errorPrefix": "Ошибка:",
   // Чип-тег: отключённый фильтр объясняет причину (§2.2 disabled-ряд).
   "tag.filterUnavailable": "Фильтр недоступен здесь",
+
+  // --- конвейер (U8 v12-UX-потоки): общие слова пошагового кита --------------
+  // Состояние шага для скринридера: номер/✓ — визуальные глифы (aria-hidden),
+  // состояние названо словом (WCAG 4.1.2).
+  "flows.rail.stateDone": "Шаг пройден",
+  "flows.rail.stateCurrent": "Текущий шаг",
+  "flows.rail.stateUpcoming": "Шаг впереди",
+  "flows.rail.backTitle": "Вернуться к шагу «{{step}}»",
+  // Возобновление черновика (koraFrameStorage-прецедент): восстановление
+  // названо и датировано — форма не притворяется, что её не закрывали.
+  "flows.draft.restored": "Черновик восстановлен после перезагрузки (сохранён в {{time}})",
+  "flows.draft.keepNote": "Черновик хранится локально и переживает перезагрузку",
+  "flows.draft.startOver": "Начать заново",
 } as const;
 
 export type TranslationKey = keyof typeof ru;
