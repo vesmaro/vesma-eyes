@@ -80,9 +80,12 @@ const AgentsLayout = lazy(() =>
   import("@/features/agents/AgentsLayout").then((m) => ({ default: m.AgentsLayout })),
 );
 // ME-014: the agent roster («Хосты») — the section's default landing.
+// agents-redesign A1: the host selection is a ROUTE — ONE optional-param
+// element (`hosts/:host?`) so selecting a host never re-assembles the frame
+// (the Kora /kora/:sessionId contract).
 const AgentsHostsPage = lazy(() =>
   import("@/features/agents/HostsRosterPage").then((m) => ({
-    default: m.HostsRosterPage,
+    default: m.AgentsHostsPage,
   })),
 );
 const AgentsExecutionPage = lazy(() =>
@@ -295,8 +298,10 @@ export function buildRoutes(): RouteObject[] {
               children: [
                 { index: true, element: <Navigate to="/agents/hosts" replace /> },
                 // ME-014: the roster — hosts → agents, presence + chips,
-                // zero mutations (the registry owns them).
-                { path: "hosts", element: <AgentsHostsPage /> },
+                // zero mutations (the registry owns them). A1: the host
+                // selection is the :host param — ONE frame element, the
+                // selection never re-assembles it.
+                { path: "hosts/:host?", element: <AgentsHostsPage /> },
                 { path: "execution", element: <AgentsExecutionPage /> },
                 // AGW-4: the executor registry — connection guide + approve /
                 // enable / revoke / delete management (spec §1, wave 2).

@@ -2,10 +2,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { MemoryRouter, createMemoryRouter, RouterProvider } from "react-router";
+import {
+  MemoryRouter,
+  createMemoryRouter,
+  Route,
+  RouterProvider,
+  Routes,
+} from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-import { HostsRosterPage } from "./HostsRosterPage";
+import { AgentsHostsPage } from "./HostsRosterPage";
 import { recordPresenceFlash } from "./presenceLight";
 import { buildRoutes } from "@/app/routes";
 import { MockAdapter } from "@/gateway/MockAdapter";
@@ -18,18 +24,21 @@ import { AuthProvider } from "@/features/auth/AuthProvider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { DensityProvider } from "@/components/density-provider";
 import { HotkeysProvider } from "@/layout/Hotkeys";
-import type { AssignmentItem, ExecutorItem, ExecutorsPage } from "@/gateway/boardTypes";
+import type {
+  AssignmentItem,
+  ExecutorItem,
+  ExecutorsPage,
+} from "@/gateway/boardTypes";
 import { actFlush, actUnmount, actWaitUntil } from "@/test/actTools";
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 /**
- * `/agents/hosts` — the ME-014 agent roster: the host grouping over the
- * LIVE executors page, the ticking presence age off the server meta TTLs,
- * the disabled badge riding OVER the (green) presence dot, the active-
- * assignment chip (client join) or the honest «idle», the one-click
- * drill-down into the EXISTING AssignmentDrawer / ExecutorSheet, and the
- * roster's ZERO-mutation surface. The default-redirect case drives the REAL
- * route table (/agents must land here).
+ * `/agents/hosts/:host?` — the agents-redesign A1 HOSTS FRAME: the roster
+ * as the RIGHT panel of compact host rows (the inversion), the selected
+ * host's scaffold in the field, the selection as a ROUTE (one optional-param
+ * element — the frame never re-assembles), the three filter chips, the
+ * pending/revoked row verdicts, the first-host redirect, and the canonical
+ * empty roster. The surface stays mutation-free.
  *
  * Fixtures are built against a per-mount base (real clock); the tick test
  * fakes ONLY Date (real timers stay) so the shared 1 Hz ticker re-renders
@@ -38,6 +47,20 @@ import { actFlush, actUnmount, actWaitUntil } from "@/test/actTools";
 
 const ago = (base: number, seconds: number): string =>
   new Date(base - seconds * 1000).toISOString();
+
+function status(
+  state: NonNullable<ExecutorItem["status"]>["state"],
+  base: number,
+  reportAgeS: number | "" = 30,
+): ExecutorItem["status"] {
+  return {
+    state,
+    since: ago(base, 60),
+    last_report_age_s: reportAgeS,
+    reason: "fixture",
+    next_action: "",
+  };
+}
 
 function executor(
   base: number,
@@ -85,18 +108,52 @@ function assignment(base: number, overrides: Partial<AssignmentItem>): Assignmen
   };
 }
 
-/** The verdict's grouping fixture: 3 executors across 2 hosts. */
+/**
+ * The frame's fixture roster: laptop (one online + one silent member),
+ * mesh-2 (stale), new-host (pending decision), old-host (revoked).
+ */
 function rosterExecutors(base: number): ExecutorItem[] {
   return [
-    executor(base, { id: "ex-1", name: "zcode@laptop" }),
-    // Online BUT disabled — the badge must ride over the green dot.
-    executor(base, { id: "ex-2", name: "hermes@laptop", enabled: false }),
+    executor(base, {
+      id: "ex-1",
+      name: "zcode@laptop",
+      status: status("online", base),
+    }),
+    executor(base, {
+      id: "ex-2",
+      name: "hermes@laptop",
+      enabled: false,
+      last_seen: ago(base, 300),
+      presence: "stale",
+      status: status("silent", base, 300),
+    }),
     executor(base, {
       id: "ex-3",
       name: "zcode@mesh-2",
       host: "mesh-2",
-      last_seen: ago(base, 300), // stale (120–600 s)
+      last_seen: ago(base, 300),
       presence: "stale",
+      status: status("silent", base, 300),
+    }),
+    executor(base, {
+      id: "ex-4",
+      name: "copilot@new-host",
+      host: "new-host",
+      harness: "copilot",
+      enabled: false,
+      state: "pending",
+      status: status("awaiting-approval", base, 60),
+    }),
+    executor(base, {
+      id: "ex-5",
+      name: "copilot@old-host",
+      host: "old-host",
+      harness: "copilot",
+      enabled: false,
+      state: "revoked",
+      last_seen: ago(base, 7200),
+      presence: "offline",
+      status: status("revoked", base, 7200),
     }),
   ];
 }
@@ -111,14 +168,6 @@ function rosterAssignments(base: number): AssignmentItem[] {
       claimed_by_executor: "ex-1",
       claimed_at: ago(base, 30),
     }),
-    // ex-3's pre-claim pin: TB-5 queued for it, not claimed yet.
-    assignment(base, {
-      id: 12,
-      task_id: "TB-5",
-      state: "queued",
-      executor_id: "ex-3",
-      created_at: ago(base, 45),
-    }),
   ];
 }
 
@@ -130,6 +179,19 @@ function executorsPage(items: ExecutorItem[]): ExecutorsPage {
     meta: {
       presence: { online_max_age_s: 120, stale_max_age_s: 600 },
       sweeper_interval_s: 60,
+      lifecycle: {
+        silent_max_age_s: 600,
+        states: [
+          "provisioning",
+          "awaiting-approval",
+          "awaiting-first-report",
+          "online",
+          "silent",
+          "offline",
+          "disabled",
+          "revoked",
+        ],
+      },
     },
   };
 }
@@ -140,6 +202,15 @@ interface MountOptions {
   path?: string;
   /** Freeze the clock at the fixture base (fake Date, REAL timers). */
   freezeClock?: boolean;
+}
+
+/** The LOCAL route stand (the optional param needs a real pattern). */
+function PageUnderTest(): React.ReactElement {
+  return (
+    <Routes>
+      <Route path="/agents/hosts/:host?" element={<AgentsHostsPage />} />
+    </Routes>
+  );
 }
 
 async function mountPage(options: MountOptions = {}): Promise<{
@@ -180,7 +251,7 @@ async function mountPage(options: MountOptions = {}): Promise<{
             <UiTokenProvider>
               <I18nProvider initialLang="en">
                 <MemoryRouter initialEntries={[path]}>
-                  <HostsRosterPage />
+                  <PageUnderTest />
                 </MemoryRouter>
               </I18nProvider>
             </UiTokenProvider>
@@ -198,13 +269,20 @@ async function teardown(root: Root): Promise<void> {
   vi.useRealTimers();
 }
 
-const group = (container: HTMLElement, label: string): HTMLElement | null =>
-  container.querySelector<HTMLElement>(`section[aria-label="${label}"]`);
+/** The roster panel (aside region). */
+const panel = (container: HTMLElement): HTMLElement =>
+  container.querySelector('aside[aria-label="Host roster"]')!;
 
-const rowOf = (container: HTMLElement, host: string, name: string): HTMLButtonElement =>
-  [...group(container, host)!.querySelectorAll("button")].find((button) =>
-    button.textContent?.includes(name),
-  )!;
+/** The roster ROWS (the panel's ul excludes the bottom connect action). */
+const rows = (container: HTMLElement): NodeListOf<HTMLAnchorElement> =>
+  panel(container).querySelectorAll("ul a");
+
+const rowOf = (container: HTMLElement, host: string): HTMLAnchorElement =>
+  [...rows(container)].find((row) => row.textContent?.includes(host))!;
+
+/** The main field = the grid's FIRST child (the handle and the aside follow). */
+const mainField = (container: HTMLElement): HTMLElement =>
+  panel(container).parentElement!.firstElementChild as HTMLElement;
 
 beforeEach(() => {
   localStorage.clear();
@@ -216,44 +294,224 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("host grouping (the client-side projection)", () => {
-  it("lands 3 executors into 2 host groups with live «N/M online» counters", async () => {
-    const { root, container } = await mountPage();
-    const sections = [
-      ...container.querySelectorAll<HTMLElement>("section[aria-label]"),
-    ].map((section) => section.getAttribute("aria-label"));
-    expect(sections).toEqual(["laptop", "mesh-2"]);
-    // Laptop: both members report online; mesh-2: the stale member does not.
-    expect(group(container, "laptop")!.textContent).toContain("2/2 online");
-    expect(group(container, "mesh-2")!.textContent).toContain("0/1 online");
-    // Every agent appears exactly once, grouped under its host.
-    expect(group(container, "laptop")!.textContent).toContain("zcode@laptop");
-    expect(group(container, "laptop")!.textContent).toContain("hermes@laptop");
-    expect(group(container, "mesh-2")!.textContent).toContain("zcode@mesh-2");
+describe("the frame: selection as a route", () => {
+  it("redirects /agents/hosts to the FIRST host by the canon sort", async () => {
+    const router = createMemoryRouter(buildRoutes(), {
+      initialEntries: ["/agents/hosts"],
+    });
+    const gateway = new MockAdapter({ latency: false });
+    const base = Date.now();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    await client.prefetchQuery({
+      queryKey: keys.tasks.board(),
+      queryFn: () => gateway.board(),
+    });
+    client.setQueryData(
+      keys.agents.executors.list(),
+      executorsPage(rosterExecutors(base)),
+    );
+    client.setQueryData(keys.agents.assignments.list({}), {
+      ok: true,
+      count: 0,
+      items: [],
+    });
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(
+        <GatewayContext.Provider value={gateway}>
+          <QueryClientProvider client={client}>
+            <AuthProvider adapterMode="board" endpoint="test">
+              <ThemeProvider>
+                <I18nProvider initialLang="en">
+                  <DensityProvider initialDensity="comfortable">
+                    <HotkeysProvider>
+                      <ToastProvider>
+                        <UiTokenProvider>
+                          <RouterProvider router={router} />
+                        </UiTokenProvider>
+                      </ToastProvider>
+                    </HotkeysProvider>
+                  </DensityProvider>
+                </I18nProvider>
+              </ThemeProvider>
+            </AuthProvider>
+          </QueryClientProvider>
+        </GatewayContext.Provider>,
+      );
+    });
+    await actWaitUntil(() => {
+      // The first host by the canon sort («Без хоста» sinks last).
+      expect(router.state.location.pathname).toBe("/agents/hosts/laptop");
+      expect(container.querySelector('h2[id="agents-host-title"]')?.textContent).toBe(
+        "laptop",
+      );
+    });
     await actUnmount(root);
   });
 
-  it("renders the honest empty state pointing at the registry (no bands)", async () => {
+  it("clicking a row navigates to the host route and moves aria-current", async () => {
+    const { root, container } = await mountPage({ path: "/agents/hosts/laptop" });
+    expect(rowOf(container, "laptop").getAttribute("aria-current")).toBe("page");
+    await act(async () => {
+      rowOf(container, "mesh-2").click();
+    });
+    expect(rowOf(container, "mesh-2").getAttribute("aria-current")).toBe("page");
+    expect(rowOf(container, "laptop").getAttribute("aria-current")).toBeNull();
+    // The field followed the route without losing the frame.
+    expect(
+      container.querySelector('h2[id="agents-host-title"]')?.textContent,
+    ).toBe("mesh-2");
+    await actUnmount(root);
+  });
+});
+
+describe("the roster panel (the inversion: compact rows, not cards)", () => {
+  it("renders one row per host with presence, «N/M harnesses online», age, work chip", async () => {
+    const { root, container } = await mountPage({ path: "/agents/hosts/laptop" });
+    const laptop = rowOf(container, "laptop");
+    // Presence word + dot from the aggregate (one online member of two).
+    expect(laptop.textContent).toContain("online");
+    expect(laptop.textContent).toContain("1/2 harnesses online");
+    // The freshest report age (the online member's 30 s → «0min»).
+    expect(laptop.textContent).toContain("last seen: 0min");
+    // The active-work chip (the claimed TB-1 via ex-1) + the host name.
+    expect(laptop.textContent).toContain("борд v0.3");
+    expect(laptop.textContent).toContain("claimed");
+    // mesh-2: stale presence, honest idle (no chip).
+    const mesh = rowOf(container, "mesh-2");
+    expect(mesh.textContent).toContain("0/1 harnesses online");
+    expect(mesh.textContent).not.toContain("idle");
+    await actUnmount(root);
+  });
+
+  it("the pending host wears the «awaits decision» pill; the revoked host renders muted", async () => {
+    const { root, container } = await mountPage({ path: "/agents/hosts/laptop" });
+    const pendingRow = rowOf(container, "new-host");
+    expect(pendingRow.textContent).toContain("awaits decision");
+    // The pill's tooltip carries the WHY (the registry's pending reason).
+    const pill = [...pendingRow.querySelectorAll("span[title]")].find((span) =>
+      span.textContent?.includes("awaits decision"),
+    );
+    expect(pill?.getAttribute("title")).toContain("awaiting owner approval");
+    const revokedRow = rowOf(container, "old-host");
+    expect(revokedRow.className).toContain("text-foreground-muted");
+    await actUnmount(root);
+  });
+
+  it("U6 присутствие-свет: a real member transition flares the host row once", async () => {
+    const { root, container } = await mountPage({ path: "/agents/hosts/laptop" });
+    const row = rowOf(container, "mesh-2");
+    expect(row.className).not.toContain("agents-presence-online");
+    act(() => {
+      recordPresenceFlash("ex-3", "online");
+    });
+    expect(row.className).toContain("agents-presence-online");
+    act(() => {
+      recordPresenceFlash("ex-3", "offline");
+    });
+    expect(row.className).toContain("agents-presence-offline");
+    await actUnmount(root);
+  });
+
+  it("the filter chips: attention set, decision set, and the honest filter empty", async () => {
+    const { root, container } = await mountPage({ path: "/agents/hosts/laptop" });
+    const chip = (label: string): HTMLButtonElement =>
+      [...panel(container).querySelectorAll("button")].find(
+        (button) => button.textContent === label,
+      )!;
+    // All: four hosts.
+    expect(rows(container).length).toBe(4);
+    await act(async () => {
+      chip("Need attention").click();
+    });
+    // laptop + mesh-2 are silent; new-host is awaiting; old-host is NOT.
+    const attention = [...rows(container)].map((row) => row.textContent);
+    expect(attention).toHaveLength(3);
+    expect(attention.join("|")).toContain("laptop");
+    expect(attention.join("|")).toContain("mesh-2");
+    expect(attention.join("|")).toContain("new-host");
+    expect(attention.join("|")).not.toContain("old-host");
+    await act(async () => {
+      chip("Awaiting decision").click();
+    });
+    expect(rows(container).length).toBe(1);
+    expect(rows(container)[0].textContent).toContain("new-host");
+    await act(async () => {
+      chip("All").click();
+    });
+    expect(rows(container).length).toBe(4);
+    await actUnmount(root);
+  });
+
+  it("the connect action lives at the panel bottom and walks the OPEN conveyor", async () => {
+    const { root, container } = await mountPage({ path: "/agents/hosts/laptop" });
+    const action = panel(container).querySelector<HTMLAnchorElement>(
+      'a[href="/agents/harnesses?connect=1"]',
+    );
+    expect(action).not.toBeNull();
+    expect(action!.textContent).toContain("Connect a host");
+    await actUnmount(root);
+  });
+});
+
+describe("the main field: the selected host's scaffold", () => {
+  it("name + lifecycle pill + next_action + stats (the A1 scaffold)", async () => {
+    const { root, container } = await mountPage({ path: "/agents/hosts/laptop" });
+    const field = mainField(container);
+    // The host aggregate pill: laptop's ladder lands on silent (one member
+    // online, one silent — the attention verdict leads; EN label «quiet»).
+    expect(field.textContent).toContain("laptop");
+    expect(field.textContent).toContain("quiet");
+    // The next_action is a VISIBLE line (07a: a pill is never alone).
+    expect(field.textContent).toContain("No reports for");
+    // The stats line: the breakdown + the freshest report age.
+    expect(field.textContent).toContain("1/2 harnesses online");
+    expect(field.textContent).toContain("last seen: 0min");
+    // The honest placeholder (one line, no illustration; the union-review
+    // i18n gate bans internal phase words in user-visible strings).
+    expect(field.textContent).toContain("work field arrives in the next update");
+    await actUnmount(root);
+  });
+
+  it("a pending host shows the decision pill in the field; revoked reads revoked", async () => {
+    const { root, container } = await mountPage({ path: "/agents/hosts/new-host" });
+    expect(
+      container.querySelector('h2[id="agents-host-title"]')?.textContent,
+    ).toBe("new-host");
+    expect(mainField(container).textContent).toContain("awaits decision");
+    await actUnmount(root);
+    const { root: root2, container: container2 } = await mountPage({
+      path: "/agents/hosts/old-host",
+    });
+    expect(mainField(container2).textContent).toContain("revoked");
+    await actUnmount(root2);
+  });
+
+  it("a deep link past the roster renders the honest not-found, panel intact", async () => {
+    const { root, container } = await mountPage({ path: "/agents/hosts/ghost" });
+    expect(container.textContent).toContain("Host not found");
+    expect(container.textContent).toContain("ghost");
+    expect(rows(container).length).toBe(4);
+    await actUnmount(root);
+  });
+});
+
+describe("the empty roster", () => {
+  it("stays on /agents/hosts with the canonical empty + the connect CTA", async () => {
     const { root, container } = await mountPage({
       executors: () => [],
       assignments: () => [],
     });
     expect(container.textContent).toContain("No agents yet");
-    expect(container.querySelector('a[href="/agents/harnesses"]')).not.toBeNull();
-    expect(group(container, "laptop")).toBeNull();
-    await actUnmount(root);
-  });
-
-  it("U8: the page-action «Connect a machine» walks to the OPEN conveyor", async () => {
-    const { root, container } = await mountPage();
-    // The v12 hosts.html page-action: the explicit connect path is a
-    // deep link that lands on the OPEN conveyor (?connect=1), not a
-    // folded disclosure the owner must find.
-    const action = container.querySelector<HTMLAnchorElement>(
+    const cta = container.querySelector<HTMLAnchorElement>(
       'a[href="/agents/harnesses?connect=1"]',
     );
-    expect(action).not.toBeNull();
-    expect(action!.textContent).toContain("Connect a machine");
+    expect(cta).not.toBeNull();
+    expect(cta!.textContent).toContain("Connect a host");
+    // No rows, no redirect target — the URL keeps its place.
+    expect(rows(container).length).toBe(0);
     await actUnmount(root);
   });
 });
@@ -262,129 +520,41 @@ describe("presence age ticks from the server meta TTLs", () => {
   it("classifies by the meta bounds and re-renders the age as the clock ticks", async () => {
     const { root, container } = await mountPage({
       executors: (base) => [
-        executor(base, { id: "ex-1", host: "laptop", last_seen: ago(base, 59) }),
+        executor(base, {
+          id: "ex-1",
+          host: "laptop",
+          last_seen: ago(base, 59),
+          status: status("online", base, 59),
+        }),
       ],
       assignments: () => [],
+      path: "/agents/hosts/laptop",
       freezeClock: true,
     });
     // The module-level ticker may hold a snapshot from an earlier test —
     // one real tick aligns it with the frozen clock.
     await actFlush(1100);
     // 59 s ≤ 120 s (meta.presence.online_max_age_s) → online, age «0min».
-    const dot = container.querySelector("button span.size-2");
+    const row = rowOf(container, "laptop");
+    const dot = row.querySelector("span.size-2");
     expect(dot?.className).toContain("bg-success");
-    expect(container.textContent).toContain("last seen: 0min");
-    expect(container.textContent).toContain("1/1 online");
+    expect(row.textContent).toContain("last seen: 0min");
+    expect(row.textContent).toContain("1/1 harnesses online");
     // Tick the CLIENT clock past the online bound (59 + 65 = 124 s > 120 s
     // online, ≤ 600 s stale): the same server TTL contract reclassifies the
     // dot and the age ticks up — no refetch, the ticker alone.
     vi.setSystemTime(Date.now() + 65_000);
     await actFlush(1300); // one real 1 Hz tick
     expect(dot?.className).toContain("bg-warning");
-    expect(container.textContent).toContain("last seen: 2min");
-    expect(container.textContent).toContain("0/1 online");
+    expect(row.textContent).toContain("last seen: 2min");
+    expect(row.textContent).toContain("0/1 harnesses online");
     await teardown(root);
-  });
-});
-
-describe("the U6 presence flash (присутствие-свет)", () => {
-  it("a real executor.online transition flares the host card once", async () => {
-    const { root, container } = await mountPage({
-      executors: (base) => [
-        executor(base, { id: "ex-flash", host: "laptop", last_seen: ago(base, 59) }),
-      ],
-      assignments: () => [],
-    });
-    const card = rowOf(container, "laptop", "ex-flash");
-    expect(card?.className).not.toContain("agents-presence-online");
-    act(() => {
-      recordPresenceFlash("ex-flash", "online");
-    });
-    expect(card?.className).toContain("agents-presence-online");
-    // An offline transition re-tones the same card (the store coalesces to
-    // the newest transition per executor).
-    act(() => {
-      recordPresenceFlash("ex-flash", "offline");
-    });
-    expect(card?.className).toContain("agents-presence-offline");
-    await actUnmount(root);
-  });
-});
-
-describe("the disabled badge rides OVER the presence dot", () => {
-  it("a disabled agent stays green-dotted AND visibly undispatchable", async () => {
-    const { root, container } = await mountPage();
-    const row = rowOf(container, "laptop", "hermes@laptop");
-    // Presence honesty (two-clock rule): the dot stays online-green...
-    const dot = row.querySelector("span.size-2");
-    expect(dot?.className).toContain("bg-success");
-    // ...while the badge carries the owner-disabled verdict (07a §3.2:
-    // «выключен владельцем» — no routing parenthetical anymore).
-    const badge = [...row.querySelectorAll("span[title]")].find((span) =>
-      span.getAttribute("title")?.includes("disabled by the owner"),
-    );
-    expect(badge).toBeDefined();
-    expect(badge!.textContent).toBe("disabled");
-    await actUnmount(root);
-  });
-});
-
-describe("the active-assignment chip (the client join)", () => {
-  it("shows task title + state for active work and the honest idle otherwise", async () => {
-    const { root, container } = await mountPage();
-    // The claimed assignment: the corpus task title + the state badge.
-    const ex1 = rowOf(container, "laptop", "zcode@laptop");
-    expect(ex1.textContent).toContain("борд v0.3");
-    expect(ex1.textContent).toContain("claimed");
-    // The pre-claim pin shows the queued work it is already slated for.
-    const ex3 = rowOf(container, "mesh-2", "zcode@mesh-2");
-    expect(ex3.textContent).toContain("SSE-слой");
-    expect(ex3.textContent).toContain("queued");
-    // No active work → «idle», never a recycled row.
-    const ex2 = rowOf(container, "laptop", "hermes@laptop");
-    expect(ex2.textContent).toContain("idle");
-    await actUnmount(root);
-  });
-});
-
-describe("the drill-down reuses the existing surfaces", () => {
-  it("an agent WITH active work opens the AssignmentDrawer and the live-feed link", async () => {
-    const { root, container } = await mountPage();
-    await act(async () => {
-      rowOf(container, "laptop", "zcode@laptop").click();
-    });
-    // Radix portals the drawer into the body.
-    await actWaitUntil(() => {
-      expect(document.body.textContent).toContain("Phase timeline");
-    });
-    // The «сессия» transition: the link into the task's live execution feed
-    // carries the roster as the return target (UI-18 back-link).
-    const feedLink = document.body.querySelector<HTMLAnchorElement>(
-      'a[href*="/tasks/TB-1"]',
-    );
-    expect(feedLink).not.toBeNull();
-    expect(feedLink!.getAttribute("href")).toContain("tab=execution");
-    expect(feedLink!.getAttribute("href")).toContain(
-      `return=${encodeURIComponent("/agents/hosts")}`,
-    );
-    await actUnmount(root);
-  });
-
-  it("an idle agent opens the ExecutorSheet (the registry card as-is)", async () => {
-    const { root, container } = await mountPage();
-    await act(async () => {
-      rowOf(container, "laptop", "hermes@laptop").click();
-    });
-    await actWaitUntil(() => {
-      expect(document.body.textContent).toContain("Executor card");
-    });
-    await actUnmount(root);
   });
 });
 
 describe("the roster surface is mutation-free", () => {
   it("renders NO registry buttons and NO context-menu triggers", async () => {
-    const { root, container } = await mountPage();
+    const { root, container } = await mountPage({ path: "/agents/hosts/laptop" });
     const text = container.textContent ?? "";
     for (const forbidden of [
       "Approve",
@@ -396,7 +566,6 @@ describe("the roster surface is mutation-free", () => {
     ]) {
       expect(text).not.toContain(forbidden);
     }
-    // The registry rows' ⋯ menu trigger never appears on the roster.
     expect(
       container.querySelector('button[aria-label^="Actions for executor"]'),
     ).toBeNull();
@@ -406,7 +575,7 @@ describe("the roster surface is mutation-free", () => {
 });
 
 describe("the /agents default landing", () => {
-  it("the REAL route table redirects /agents to the roster", async () => {
+  it("the REAL route table still redirects /agents into the hosts frame", async () => {
     const base = Date.now();
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(base);
@@ -452,14 +621,14 @@ describe("the /agents default landing", () => {
         </GatewayContext.Provider>,
       );
     });
-    // The redirect resolved into the ROSTER (the host groups), not the
-    // execution view — and the router now sits on /agents/hosts.
+    // /agents → /agents/hosts (the alias) → the first host (the frame's
+    // own replace redirect): one landing, the roster panel visible.
     await actWaitUntil(() => {
-      expect(router.state.location.pathname).toBe("/agents/hosts");
-      expect(group(container, "laptop")).not.toBeNull();
+      expect(router.state.location.pathname).toBe("/agents/hosts/laptop");
+      expect(
+        container.querySelector('aside[aria-label="Host roster"]'),
+      ).not.toBeNull();
     });
-    // The execution view did NOT render as the landing.
-    expect(container.querySelector('[aria-label="Executors"]')).toBeNull();
     await actUnmount(root);
     vi.useRealTimers();
   });

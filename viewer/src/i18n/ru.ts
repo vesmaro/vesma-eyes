@@ -1223,19 +1223,39 @@ export const ru = {
   "nav.systemSettings": "Настройки",
   // ME-014: the host roster («Хосты») — the section's default landing.
   // ME-072 C: agents.roster.title retired — the visible h1 reads the nav key.
+  // agents-redesign A1: the card-grid keys retired with the grid; the frame
+  // speaks agents.hosts.* (below) + the survivors here.
   "nav.agentsHosts": "Хосты",
-  "agents.roster.loading": "Загружаем ростер агентов",
   "agents.roster.failed": "Не удалось загрузить ростер",
   "agents.roster.emptyTitle": "Агентов ещё нет",
   "agents.roster.emptyMessage": "Ростер оживёт, когда подключится первый исполнитель.",
-  "agents.roster.emptyAction": "Открыть «Подключить машину»",
-  "agents.roster.connectAction": "Подключить машину",
-  "agents.roster.hostUnknown": "хост не указан",
-  "agents.roster.onlineCounter": "{{online}}/{{total}} онлайн",
-  "agents.roster.idle": "простаивает",
-  "agents.roster.disabledBadge": "отключён",
-  "agents.roster.pendingBadge": "ожидает",
-  "agents.roster.revokedBadge": "отозван",
+  "agents.roster.hostUnknown": "Без хоста",
+  // agents-redesign A1 (blueprint 2026-10-09): the hosts FRAME — the roster
+  // panel (compact host rows + filter chips + the connect action) and the
+  // selected-host scaffold in the field.
+  "nav.agentsHost": "Хост",
+  "agents.hosts.loading": "Загружаем ростер хостов",
+  "agents.hosts.summary.machines": "машин: {{n}}",
+  "agents.hosts.summary.online": "на связи: {{n}}",
+  "agents.hosts.summary.attention": "требуют внимания: {{n}}",
+  "agents.hosts.filter.groupLabel": "Фильтр ростера хостов",
+  "agents.hosts.filter.all": "Все",
+  "agents.hosts.filter.attention": "Требуют внимания",
+  "agents.hosts.filter.decision": "Ожидают решения",
+  "agents.hosts.filterEmpty": "Под фильтр не попал ни один хост.",
+  "agents.hosts.onlineCounter": "{{online}}/{{total}} харнесов онлайн",
+  "agents.hosts.connectAction": "Подключить хост",
+  "agents.hosts.pendingPill": "ждёт решения",
+  "agents.hosts.fieldPlaceholder":
+    "Рабочее поле хоста появится в следующем обновлении.",
+  "agents.hosts.notFound": "Хост не найден",
+  "agents.hosts.notFoundMessage":
+    "Хоста «{{host}}» нет в ростере — возможно, его запись удалили.",
+  "agents.hosts.backToRoster": "К ростеру хостов",
+  "agents.hosts.rosterRegion": "Ростер хостов",
+  "agents.hosts.resize.label": "Ширина панели хостов",
+  "agents.hosts.resize.tooltip":
+    "Потяните, чтобы изменить ширину. Двойной клик — вернуть как было",
   "agents.execution.title": "Исполнение",
   "agents.execution.emptyTitle": "Поручений нет",
   "agents.execution.emptyMessage":

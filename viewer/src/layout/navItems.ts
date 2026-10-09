@@ -219,20 +219,25 @@ export function isPathActive(pathname: string, to: string, end = false): boolean
 }
 
 /**
- * Section highlight (Sidebar). Exact/prefix via isPathActive, EXCEPT the two
- * master-detail lists ("/memory", "/tasks"): the list owns its detail route
- * (`/memory/:id`, `/tasks/:id`) but never the sibling sections' exact roots.
- * ME-028: the old bare `/^\/memory\/[^/]+$/` matched `/memory/pulse` (and
- * `/memory/search`, `/memory/tags`, `/tasks/inbox`, …) too, so on Пульс BOTH
- * «Пульс» and «Записи» claimed aria-current="page" — two simultaneous
- * "current pages" and a highlight that pointed at the wrong place.
+ * Section highlight (Sidebar). Exact/prefix via isPathActive, EXCEPT the
+ * master-detail lists ("/memory", "/tasks", and — agents-redesign A1 —
+ * "/agents/hosts"): the list owns its detail route (`/memory/:id`,
+ * `/tasks/:id`, `/agents/hosts/:host`) but never the sibling sections'
+ * exact roots. ME-028: the old bare `/^\/memory\/[^/]+$/` matched
+ * `/memory/pulse` (and `/memory/search`, `/memory/tags`, `/tasks/inbox`, …)
+ * too, so on Пульс BOTH «Пульс» and «Записи» claimed aria-current="page" —
+ * two simultaneous "current pages" and a highlight that pointed at the
+ * wrong place.
  */
 export function sectionActive(
   pathname: string,
   section: NavSection,
   siblings: readonly NavSection[],
 ): boolean {
-  const master = section.to === "/memory" || section.to === "/tasks";
+  const master =
+    section.to === "/memory" ||
+    section.to === "/tasks" ||
+    section.to === "/agents/hosts";
   if (!master) return isPathActive(pathname, section.to, section.end);
   if (pathname === section.to) return true;
   // A sibling exact section root never counts as the list's detail route.
@@ -349,6 +354,15 @@ export function crumbsFor(pathname: string): Crumb[] {
   if (pathname.startsWith("/kora/")) {
     // Kora session (`/kora/:sessionId`) sits under the section root.
     return [KORA_CRUMB, { key: "nav.session" }];
+  }
+  if (pathname.startsWith("/agents/hosts/")) {
+    // agents-redesign A1: the host frame (`/agents/hosts/:host`) sits under
+    // the roster (its master view), Kora-session style.
+    return [
+      AGENTS_CRUMB,
+      { to: "/agents/hosts", key: "nav.agentsHosts" },
+      { key: "nav.agentsHost" },
+    ];
   }
   if (pathname.startsWith("/system/sessions/")) {
     return [

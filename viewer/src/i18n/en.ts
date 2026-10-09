@@ -1196,20 +1196,40 @@ export const en: Record<TranslationKey, string> = {
   "nav.systemSettings": "Settings",
   // ME-014: the host roster («Хосты») — the section's default landing.
   // ME-072 C: agents.roster.title retired — the visible h1 reads the nav key.
+  // agents-redesign A1: the card-grid keys retired with the grid; the frame
+  // speaks agents.hosts.* (below) + the survivors here.
   "nav.agentsHosts": "Hosts",
-  "agents.roster.loading": "Loading the agent roster",
+  "nav.agentsHost": "Host",
   "agents.roster.failed": "Failed to load the roster",
   "agents.roster.emptyTitle": "No agents yet",
   "agents.roster.emptyMessage":
     "The roster comes alive once the first executor connects.",
-  "agents.roster.emptyAction": "Open Connect a machine",
-  "agents.roster.connectAction": "Connect a machine",
-  "agents.roster.hostUnknown": "host not reported",
-  "agents.roster.onlineCounter": "{{online}}/{{total}} online",
-  "agents.roster.idle": "idle",
-  "agents.roster.disabledBadge": "disabled",
-  "agents.roster.pendingBadge": "pending",
-  "agents.roster.revokedBadge": "revoked",
+  "agents.roster.hostUnknown": "No host",
+  // agents-redesign A1 (blueprint 2026-10-09): the hosts FRAME — the roster
+  // panel (compact host rows + filter chips + the connect action) and the
+  // selected-host scaffold in the field.
+  "agents.hosts.loading": "Loading the host roster",
+  "agents.hosts.summary.machines": "machines: {{n}}",
+  "agents.hosts.summary.online": "connected: {{n}}",
+  "agents.hosts.summary.attention": "need attention: {{n}}",
+  "agents.hosts.filter.groupLabel": "Host roster filter",
+  "agents.hosts.filter.all": "All",
+  "agents.hosts.filter.attention": "Need attention",
+  "agents.hosts.filter.decision": "Awaiting decision",
+  "agents.hosts.filterEmpty": "No hosts match the filter.",
+  "agents.hosts.onlineCounter": "{{online}}/{{total}} harnesses online",
+  "agents.hosts.connectAction": "Connect a host",
+  "agents.hosts.pendingPill": "awaits decision",
+  "agents.hosts.fieldPlaceholder":
+    "The host work field arrives in the next update.",
+  "agents.hosts.notFound": "Host not found",
+  "agents.hosts.notFoundMessage":
+    "No host «{{host}}» in the roster — its record may have been deleted.",
+  "agents.hosts.backToRoster": "Back to the host roster",
+  "agents.hosts.rosterRegion": "Host roster",
+  "agents.hosts.resize.label": "Hosts panel width",
+  "agents.hosts.resize.tooltip":
+    "Drag to resize. Double-click to restore",
   "agents.execution.title": "Execution",
   "agents.execution.emptyTitle": "No assignments",
   "agents.execution.emptyMessage":

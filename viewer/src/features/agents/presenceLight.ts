@@ -76,3 +76,33 @@ export function usePresenceFlash(executorId: string): PresenceFlash | null {
   );
   return flashes.get(executorId) ?? null;
 }
+
+/**
+ * The latest flash across a SET of executors (the A1 host row flares when
+ * any of its members transitions). One store subscription per ROW (the
+ * snapshot is the max member seq — a stable primitive, so the hook count
+ * never tracks the member list), the record object read after.
+ */
+export function usePresenceFlashFor(
+  executorIds: readonly string[],
+): PresenceFlash | null {
+  const maxSeq = useSyncExternalStore(
+    subscribePresenceLight,
+    () => {
+      let max = 0;
+      for (const id of executorIds) {
+        const flash = flashes.get(id);
+        if (flash !== undefined && flash.seq > max) max = flash.seq;
+      }
+      return max;
+    },
+    () => 0,
+  );
+  if (maxSeq === 0) return null;
+  let best: PresenceFlash | null = null;
+  for (const id of executorIds) {
+    const flash = flashes.get(id);
+    if (flash !== undefined && flash.seq === maxSeq) best = flash;
+  }
+  return best;
+}

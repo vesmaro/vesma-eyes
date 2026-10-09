@@ -2,10 +2,12 @@ import type {
   AssignmentItem,
   AssignmentLifecycleState,
   ExecutorItem,
+  ExecutorLifecycleState,
   ExecutorListMeta,
+  ExecutorPresence,
 } from "@/gateway/boardTypes";
 import { ACTIVE_ASSIGNMENT_STATES } from "./assignmentStatus";
-import { presenceFromLastSeen } from "./presence";
+import { lastSeenAgeS, presenceFromLastSeen } from "./presence";
 
 /**
  * ME-014 roster model — the HOST projection of the executor registry (the
@@ -106,4 +108,148 @@ export function activeAssignmentForExecutor(
       CHIP_PRECEDENCE[a.state] - CHIP_PRECEDENCE[b.state] ||
       b.created_at.localeCompare(a.created_at),
   )[0];
+}
+
+// --- the HOST projection (agents-redesign A1, blueprint 2026-10-09) -----------
+// A «host» on /agents/hosts is a CLIENT-SIDE projection of the executor
+// registry (no host API exists in the engine — anti-scope, anti-invention):
+// every host fact below is an aggregate over the group's REAL member rows.
+// Fabricated host telemetry (OS / uptime / IP) is forbidden and impossible
+// from this module — there is no such field to aggregate.
+
+/**
+ * The URL id of a host group. The «never reported a host» bucket ('' on the
+ * wire) travels under the __unreported__ sentinel so the route parameter is
+ * never empty (`/agents/hosts/` would collide with the section root).
+ */
+export const UNREPORTED_HOST_ID = "__unreported__";
+
+export function hostRouteId(group: HostGroup): string {
+  return group.host === "" ? UNREPORTED_HOST_ID : group.host;
+}
+
+/**
+ * Host presence — the aggregate of the members' meta-TTL verdicts at `now`:
+ * online when ANY member is online; stale when none is online but one skips
+ * the pulse; offline when every member is beyond the offline bound; unknown
+ * when the server contract (meta) is absent. Pure aggregation — the same
+ * two-clock rule as the member rows (presence ≠ dispatch eligibility).
+ */
+export function hostPresence(
+  group: HostGroup,
+  meta: ExecutorListMeta | undefined,
+  now: number,
+): ExecutorPresence | null {
+  if (group.members.length === 0) return null;
+  const verdicts = group.members.map((member) =>
+    presenceFromLastSeen(member.last_seen, meta, now),
+  );
+  if (verdicts.includes("online")) return "online";
+  if (verdicts.includes("stale")) return "stale";
+  // meta absent → every verdict is null: the honest non-verdict.
+  if (verdicts.some((verdict) => verdict === null)) return null;
+  return "offline";
+}
+
+/**
+ * The ATTENTION ladder over the members' server-computed lifecycle states
+ * (`ExecutorItem.status`, UXE-2). A mixed host shows ONE pill: the highest-
+ * precedence member state, ordered by what needs the owner's eye first —
+ * the pending DECISION, the transient install, the unverified newcomer, the
+ * gone-quiet, the long-gone, then the living, the owner-disabled and the
+ * revoked tail. The N/M online stat next to it carries the presence
+ * breakdown — the pill never hides a partially-alive host's numbers.
+ * null = no member carries a lifecycle object (pre-UXE-2 board) — the UI
+ * falls back to the presence reading, never guesses a state.
+ */
+const HOST_LIFECYCLE_PRECEDENCE: readonly ExecutorLifecycleState[] = [
+  "awaiting-approval",
+  "provisioning",
+  "awaiting-first-report",
+  "silent",
+  "offline",
+  "online",
+  "disabled",
+  "revoked",
+];
+
+export function hostLifecycle(group: HostGroup): ExecutorLifecycleState | null {
+  const states = group.members
+    .map((member) => member.status?.state)
+    .filter((state): state is ExecutorLifecycleState => typeof state === "string");
+  if (states.length === 0) return null;
+  return HOST_LIFECYCLE_PRECEDENCE.find((state) => states.includes(state)) ?? null;
+}
+
+/** The A1 «Требуют внимания» filter: silent + offline + awaiting-* (the
+ * blueprint's own set; provisioning/disabled/revoked are NOT attention). */
+const ATTENTION_STATES: readonly ExecutorLifecycleState[] = [
+  "awaiting-approval",
+  "awaiting-first-report",
+  "silent",
+  "offline",
+];
+
+export function hostNeedsAttention(group: HostGroup): boolean {
+  const state = hostLifecycle(group);
+  return state !== null && ATTENTION_STATES.includes(state);
+}
+
+/**
+ * The host is pending a REGISTRATION DECISION: any member sits in
+ * awaiting-approval (or, on pre-UXE-2 boards, carries the pending registry
+ * state). Such a row wears the «ждёт решения» pill instead of the presence
+ * word — the owner's action, not the wire state, is the verdict.
+ */
+export function hostAwaitingDecision(group: HostGroup): boolean {
+  return group.members.some(
+    (member) =>
+      member.status?.state === "awaiting-approval" ||
+      (member.status === undefined && member.state === "pending"),
+  );
+}
+
+/** «Приглушённая строка»: every member is revoked — the host is dead access. */
+export function hostRevoked(group: HostGroup): boolean {
+  return (
+    group.members.length > 0 &&
+    group.members.every((member) => member.state === "revoked")
+  );
+}
+
+/**
+ * The host's freshest report age (seconds): the MINIMUM member age — the
+ * host «reported» when its most recent agent did. null = no parsable
+ * last_seen in the group (honest absence, never a fake 0).
+ */
+export function hostLastReportAgeS(group: HostGroup, now: number): number | null {
+  const ages = group.members
+    .map((member) => lastSeenAgeS(member.last_seen, now))
+    .filter((age): age is number => age !== null);
+  return ages.length > 0 ? Math.min(...ages) : null;
+}
+
+/**
+ * The host's active work — the chip join across ALL members (the per-
+ * executor join, deduplicated and precedence-ordered: running → claimed →
+ * queued, newest first). Empty = the host is honestly idle.
+ */
+export function activeAssignmentsForHost(
+  items: readonly AssignmentItem[],
+  group: HostGroup,
+): AssignmentItem[] {
+  const seen = new Set<number>();
+  const chips: AssignmentItem[] = [];
+  for (const member of group.members) {
+    const active = activeAssignmentForExecutor(items, member.id);
+    if (active && !seen.has(active.id)) {
+      seen.add(active.id);
+      chips.push(active);
+    }
+  }
+  return chips.sort(
+    (a, b) =>
+      CHIP_PRECEDENCE[a.state] - CHIP_PRECEDENCE[b.state] ||
+      b.created_at.localeCompare(a.created_at),
+  );
 }
