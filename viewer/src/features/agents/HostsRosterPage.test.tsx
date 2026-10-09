@@ -6,6 +6,7 @@ import { MemoryRouter, createMemoryRouter, RouterProvider } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { HostsRosterPage } from "./HostsRosterPage";
+import { recordPresenceFlash } from "./presenceLight";
 import { buildRoutes } from "@/app/routes";
 import { MockAdapter } from "@/gateway/MockAdapter";
 import { GatewayContext } from "@/gateway/GatewayContext";
@@ -258,7 +259,7 @@ describe("presence age ticks from the server meta TTLs", () => {
     await actFlush(1100);
     // 59 s ≤ 120 s (meta.presence.online_max_age_s) → online, age «0min».
     const dot = container.querySelector("button span.size-2");
-    expect(dot?.className).toContain("bg-iris-bright");
+    expect(dot?.className).toContain("bg-success");
     expect(container.textContent).toContain("last seen: 0min");
     expect(container.textContent).toContain("1/1 online");
     // Tick the CLIENT clock past the online bound (59 + 65 = 124 s > 120 s
@@ -273,13 +274,37 @@ describe("presence age ticks from the server meta TTLs", () => {
   });
 });
 
+describe("the U6 presence flash (присутствие-свет)", () => {
+  it("a real executor.online transition flares the host card once", async () => {
+    const { root, container } = await mountPage({
+      executors: (base) => [
+        executor(base, { id: "ex-flash", host: "laptop", last_seen: ago(base, 59) }),
+      ],
+      assignments: () => [],
+    });
+    const card = rowOf(container, "laptop", "ex-flash");
+    expect(card?.className).not.toContain("agents-presence-online");
+    act(() => {
+      recordPresenceFlash("ex-flash", "online");
+    });
+    expect(card?.className).toContain("agents-presence-online");
+    // An offline transition re-tones the same card (the store coalesces to
+    // the newest transition per executor).
+    act(() => {
+      recordPresenceFlash("ex-flash", "offline");
+    });
+    expect(card?.className).toContain("agents-presence-offline");
+    await actUnmount(root);
+  });
+});
+
 describe("the disabled badge rides OVER the presence dot", () => {
   it("a disabled agent stays green-dotted AND visibly undispatchable", async () => {
     const { root, container } = await mountPage();
     const row = rowOf(container, "laptop", "hermes@laptop");
     // Presence honesty (two-clock rule): the dot stays online-green...
     const dot = row.querySelector("span.size-2");
-    expect(dot?.className).toContain("bg-iris-bright");
+    expect(dot?.className).toContain("bg-success");
     // ...while the badge carries the owner-disabled verdict (07a §3.2:
     // «выключен владельцем» — no routing parenthetical anymore).
     const badge = [...row.querySelectorAll("span[title]")].find((span) =>

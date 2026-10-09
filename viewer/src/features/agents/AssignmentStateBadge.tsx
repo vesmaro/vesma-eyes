@@ -6,9 +6,8 @@ import { assignmentStateStyle } from "./assignmentStatus";
 /**
  * The 7-state assignment badge (spec §3.1): colour + text + SHAPE — never
  * colour alone (WCAG 1.4.1). Shape markers are aria-hidden dots: hollow
- * (queued — nothing taken it yet), filled (claimed), pulsing (running — a
- * live pulse, stilled by prefers-reduced-motion via motion-safe), square
- * (terminal states). The text label stays the primary signal for SRs.
+ * (queued — nothing taken it yet), filled (claimed), solid (running),
+ * square (terminal states). The text label stays the primary signal for SRs.
  */
 
 /** Shape marker classes per shape kind (aria-hidden decoration). */
@@ -19,8 +18,12 @@ const SHAPE_CLASS: Record<
   // Hollow dot: the ring is the shape, current colour keeps contrast.
   hollow: "size-1.5 rounded-full border border-current",
   filled: "size-1.5 rounded-full bg-current",
-  // motion-safe: reduced-motion users get a still dot (spec §3.2 Motion).
-  pulse: "size-1.5 rounded-full bg-current motion-safe:animate-pulse",
+  // U6 DOSAGE VERDICT (пульс-бейдж; SPEC-2026-10-07 «Агенты: присутствие-
+  // свет» — пульс допустим ТОЛЬКО как реакция на реальное событие, не фон):
+  // the running dot is a STATIC solid dot. The state is data (text + shape
+  // carry it, 1.4.1); the domain's only living beat is the one-shot
+  // presence flash (presenceLight.ts), never a background loop.
+  pulse: "size-1.5 rounded-full bg-current",
   square: "size-1.5 rounded-[1px] bg-current",
 };
 

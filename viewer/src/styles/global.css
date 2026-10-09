@@ -595,3 +595,58 @@ html[data-vesma-pad] {
   animation: kora-ether-flash
     calc(var(--duration-impulse) + var(--duration-slow)) var(--ease-enter) both;
 }
+
+/* ── Присутствие-свет агентов (U6; SPEC-2026-10-07 «Агенты: присутствие-
+ * свет»): the ONE living beat of the domain — a one-shot card flare on a
+ * REAL executor.online / executor.offline transition (presenceLight.ts,
+ * fed by the agents SSE bridge only). Same impulse grammar as the U5
+ * Ether flash: 240ms (--duration-impulse) + decay 400ms (--duration-slow),
+ * amplitude ceiling --neura-breath-alpha (≤0.18) — success tone for the
+ * arrival, warning for the departure. NO background pulse anywhere in the
+ * domain (the U6 пульс-бейдж verdict: the running/stage dots are static).
+ * The tokens carry the reduced mirror (durations → 0ms: the tint is
+ * instant and still); text never rides the tint (contrast untouched). */
+@keyframes agents-presence-online {
+  0%,
+  40% {
+    background-color: color-mix(
+      in srgb,
+      var(--color-success) calc(var(--neura-breath-alpha) * 100%),
+      transparent
+    );
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes agents-presence-offline {
+  0%,
+  40% {
+    background-color: color-mix(
+      in srgb,
+      var(--color-warning) calc(var(--neura-breath-alpha) * 100%),
+      transparent
+    );
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.agents-presence-online {
+  animation: agents-presence-online
+    calc(var(--duration-impulse) + var(--duration-slow)) var(--ease-enter) both;
+}
+
+.agents-presence-offline {
+  animation: agents-presence-offline
+    calc(var(--duration-impulse) + var(--duration-slow)) var(--ease-enter) both;
+}
+
+/* The online dot's STATIC glow — v12 canon (pill.live .dot → --glow-live):
+ * light as DATA, not motion. Paired with the shape/colour+text verdict
+ * (WCAG 1.4.1) the dot already carries. */
+.presence-dot-live {
+  box-shadow: var(--glow-live);
+}

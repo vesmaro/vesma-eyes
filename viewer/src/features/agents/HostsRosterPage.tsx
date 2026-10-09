@@ -26,6 +26,7 @@ import {
   presenceFromLastSeen,
   presenceLabelKey,
 } from "./presence";
+import { usePresenceFlash } from "./presenceLight";
 import { activeAssignmentForExecutor, groupExecutorsByHost } from "./rosterModel";
 import { useAssignments, useExecutors } from "./useAgents";
 import { useAssignmentMutations } from "./useAssignmentMutations";
@@ -152,9 +153,11 @@ export function HostsRosterPage() {
                 })}
               </span>
             </h2>
-            <ul className="mt-1 space-y-1.5">
+            {/* U6 (v12 canon hosts.html §07c): the roster is a GRID of host
+             * cards (auto-fill ≥240px), not stacked slim rows. */}
+            <ul className="mt-1 grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3">
               {group.members.map((executor) => (
-                <RosterRow
+                <RosterCard
                   key={executor.id}
                   executor={executor}
                   assignment={activeAssignmentForExecutor(assignmentItems, executor.id)}
@@ -194,11 +197,20 @@ export function HostsRosterPage() {
 }
 
 /**
- * One roster row — presence + badge + chip, one click target, ZERO action
- * buttons (the registry owns the mutations). Everything the row shows is a
- * status; every field beyond status lives in the drill-down cards.
+ * One roster card — the v12 host-card dress (hosts.html §07c: well surface,
+ * hairline border, name over meta lines) over the SAME ME-014 facts:
+ * presence + badge + chip, one click target, ZERO action buttons (the
+ * registry owns the mutations). Everything the card shows is a status;
+ * every field beyond status lives in the drill-down cards.
+ *
+ * U6 присутствие-свет: the card carries the visible presence WORD (the v12
+ * pill canon — the same fact the SR heard before) and flares ONCE on a
+ * real executor.online/offline transition (presenceLight.ts; impulse
+ * 240+400ms, amplitude ≤0.18, reduced = instant static tint). No pulse,
+ * no breathing — a silent bus leaves the card standing. The ticking
+ * last_seen age is DATA (the shared 1 Hz ticker), not motion.
  */
-function RosterRow({
+function RosterCard({
   executor,
   assignment,
   titleOf,
@@ -214,6 +226,7 @@ function RosterRow({
   onOpen: () => void;
 }) {
   const t = useT();
+  const flash = usePresenceFlash(executor.id);
   const revoked = executor.state === "revoked";
   const pending = executor.state === "pending";
   const disabled = executor.state === "approved" && !executor.enabled;
@@ -238,78 +251,91 @@ function RosterRow({
         type="button"
         onClick={onOpen}
         className={
-          "flex w-full flex-wrap items-center gap-2 rounded-md border bg-well px-2.5 py-1.5 text-left text-sm shadow-well transition-colors duration-instant hover:border-iris-bright/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright " +
+          "flex min-h-11 w-full flex-col items-start gap-1 rounded-lg border bg-well p-3 text-left text-sm shadow-well transition-colors duration-instant hover:border-iris-bright/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright " +
+          // The one-shot presence flare (event-driven, never background):
+          // success tone for an arrival, warning for a departure.
+          (flash
+            ? flash.tone === "online"
+              ? "agents-presence-online "
+              : "agents-presence-offline "
+            : "") +
           (revoked
             ? "border-border-subtle text-foreground-muted"
             : "border-border-subtle")
         }
       >
-        {/* Presence dot: colour + shape (hollow offline/unknown), the SR
-         * verdict rides beside it (WCAG 1.4.1) — the strip's language. */}
-        <span aria-hidden="true" className="flex items-center">
+        {/* Presence line (v12 pill canon): dot + visible verdict, the mono
+         * last_seen age right-aligned. The visible word IS the SR text
+         * (WCAG 1.4.1) — no hidden duplicate; the age keeps its explicit
+         * «последний доклад» prefix (data, not a stopwatch). */}
+        <span className="flex w-full items-center gap-1.5">
+          <span aria-hidden="true" className="flex items-center">
+            <span
+              className={
+                "size-2 shrink-0 rounded-full " +
+                (PRESENCE_DOT[presenceKey] ?? PRESENCE_DOT.unknown)
+              }
+            />
+          </span>
           <span
             className={
-              "size-2 shrink-0 rounded-full " +
-              (PRESENCE_DOT[presenceKey] ?? PRESENCE_DOT.unknown)
+              "shrink-0 text-xs " +
+              (PRESENCE_TEXT[presenceKey] ?? PRESENCE_TEXT.unknown)
             }
-          />
+          >
+            {t(presenceLabelKey(presenceKey))}
+          </span>
+          <span className="ml-auto truncate text-right font-mono text-xs tabular-nums text-foreground-muted">
+            {t("agents.strip.lastSeen")}: {pulseAge || t("agents.executor.neverSeen")}
+          </span>
         </span>
-        <span className="sr-only">{t(presenceLabelKey(presenceKey))}</span>
-        <span className="min-w-0 truncate font-medium">{executor.name}</span>
-        {/* The dispatch-refusal badge: a green dot never means «может
-         * взять задачу» — the badge states WHY not (the registry's keys,
-         * the roster's compact labels; no field duplication). */}
-        {disabled ? (
-          <Badge
-            variant="outline"
-            title={t("agents.executor.disabledReason")}
-            className="font-normal"
-          >
-            {t("agents.roster.disabledBadge")}
-          </Badge>
-        ) : null}
-        {pending ? (
-          <Badge
-            variant="outline"
-            title={t("agents.executor.pendingReason")}
-            className="font-normal"
-          >
-            {t("agents.roster.pendingBadge")}
-          </Badge>
-        ) : null}
-        {revoked ? (
-          <Badge
-            variant="outline"
-            title={t("agents.registry.revokedHint")}
-            className="font-normal"
-          >
-            {t("agents.roster.revokedBadge")}
-          </Badge>
-        ) : null}
+        <span className="flex w-full items-center gap-1.5">
+          <span className="min-w-0 truncate font-medium">{executor.name}</span>
+          {/* The dispatch-refusal badges: a green dot never means «может
+           * взять задачу» — the badge states WHY not (the registry's keys,
+           * the roster's compact labels; no field duplication). */}
+          {disabled ? (
+            <Badge
+              variant="outline"
+              title={t("agents.executor.disabledReason")}
+              className="font-normal"
+            >
+              {t("agents.roster.disabledBadge")}
+            </Badge>
+          ) : null}
+          {pending ? (
+            <Badge
+              variant="outline"
+              title={t("agents.executor.pendingReason")}
+              className="font-normal"
+            >
+              {t("agents.roster.pendingBadge")}
+            </Badge>
+          ) : null}
+          {revoked ? (
+            <Badge
+              variant="outline"
+              title={t("agents.registry.revokedHint")}
+              className="font-normal"
+            >
+              {t("agents.roster.revokedBadge")}
+            </Badge>
+          ) : null}
+        </span>
         {/* The active-assignment chip (client join): task title + state.
          * No active work → the honest «простаивает». */}
         {assignment ? (
-          <span className="ml-auto flex min-w-0 items-center gap-1.5">
+          <span className="flex w-full min-w-0 items-center gap-1.5">
             <span className="min-w-0 truncate text-xs text-foreground-secondary">
               {titleOf(assignment.task_id)}
             </span>
             <AssignmentStateBadge state={assignment.state} />
           </span>
         ) : (
-          <span className="ml-auto text-xs text-foreground-muted">
+          <span className="w-full truncate text-xs text-foreground-muted">
             {t("agents.roster.idle")}
           </span>
         )}
-        {/* Ticking last_seen age, mono (the visible text is the SR text —
-         * the verdict already rode beside the dot). */}
-        <span
-          className={
-            "w-full font-mono text-xs sm:w-auto " +
-            (PRESENCE_TEXT[presenceKey] ?? PRESENCE_TEXT.unknown)
-          }
-        >
-          {t("agents.strip.lastSeen")}: {pulseAge || t("agents.executor.neverSeen")}
-        </span>
       </button>
     </li>
   );
