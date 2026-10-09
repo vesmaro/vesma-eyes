@@ -249,7 +249,6 @@ export function ExecutorRegistryPage() {
       <EnrollmentDialog
         open={enrollmentOpen}
         onOpenChange={setEnrollmentOpen}
-        executors={items}
         liveCount={liveTokens}
       />
 

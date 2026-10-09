@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Check, Copy, ExternalLink } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, Copy, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,11 +10,19 @@ import {
 import type {
   EnrollmentCreatedResult,
   EnrollmentItem,
-  ExecutorItem,
 } from "@/gateway/boardTypes";
 import { useT } from "@/i18n";
 import type { TranslationKey } from "@/i18n";
 import { useValidationNow } from "@/features/tasks/useValidationClock";
+import { formatTaskDate } from "@/features/tasks/taskStatus";
+import { useI18n } from "@/i18n";
+import { StepRail, type ConveyorStepDef } from "@/components/conveyor/StepRail";
+import { useStepHeadingFocus } from "@/components/conveyor/useStepHeadingFocus";
+import {
+  clearConveyorDraft,
+  loadConveyorDraft,
+  saveConveyorDraft,
+} from "@/components/conveyor/conveyorStorage";
 import {
   buildBootstrapScript,
   buildBootstrapSteps,
@@ -22,40 +30,83 @@ import {
   formatTtlCountdown,
   maskEnrollmentToken,
 } from "./enrollment";
-import { useEnrollmentActions, useHonestCopy } from "./useEnrollment";
+import { useEnrollmentActions, useEnrollments, useHonestCopy } from "./useEnrollment";
+import { useExecutors } from "./useAgents";
 import { HarnessSelect } from "./HarnessSelect";
 import { useDefaultHarness } from "./useHarnesses";
+import { useUiToken } from "@/features/ui-token/UiTokenContext";
 
 /**
- * «Добавить исполнителя» — the enrollment dialog (AGW-5 phase 2, design
- * §Фазы.2). Two phases in ONE dialog (the AssignExecutorSheet pattern):
+ * «Добавить исполнителя» — the enrollment conveyor (AGW-5 phase 2; U8
+ * v12-UX-потоки: the v12 connect-master steps on the main engine). THREE
+ * steps, ONE real operation each:
  *
- * 1. FORM — label (≤64), harness_hint (the LIVE dictionary combobox with
+ * 1. ДАННЫЕ — label (≤64), harness_hint (the LIVE dictionary combobox with
  *    free entry — wave 3C; the server 422s unknown values with the
- *    authoritative list), name_hint (optional, ≤120).
- * 2. TOKEN SCREEN — the mne_… token MASKED on screen (AGW-11: the full
- *    plaintext exists only on the clipboard via «Копировать»), the LIVE
- *    TTL countdown (mm:ss off the shared 1 Hz ticker), the live-token
- *    ≤3 counter on the form, and the VPS bootstrap block — the commands
- *    are a copy-paste projection of deploy/poller/REMOTE-EXECUTOR.md
- *    §4б/§4в (the runbook is the source of truth; this screen never
- *    invents a second one); the one-command grows --expect-fp as soon as
- *    the board's mint answer carries the CA fingerprint (AGW-9).
+ *    authoritative list), name_hint (optional, ≤120). The typed draft
+ *    persists locally (vesmaro.flow.enrollment, NO secrets by
+ *    construction) and survives a reload; the restore is NAMED with its
+ *    stamp — the form does not pretend it was never closed.
+ * 2. ТОКЕН — the mne_… token MASKED on screen (AGW-11: the full plaintext
+ *    exists only on the clipboard via «Копировать»), the LIVE TTL countdown
+ *    (mm:ss off the shared 1 Hz ticker), the live-token ≤3 counter on the
+ *    form, and the VPS bootstrap block — the commands are a copy-paste
+ *    projection of deploy/poller/REMOTE-EXECUTOR.md §4б/§4в (the runbook
+ *    is the source of truth; this screen never invents a second one); the
+ *    one-command grows --expect-fp as soon as the board's mint answer
+ *    carries the CA fingerprint (AGW-9).
+ * 3. ПЕРВЫЙ КОННЕКТ — the WAIT, rendered from the LIVE enrollment row (the
+ *    same list query the panel below the registry reads; SSE
+ *    invalidation + a slow poll while the token is live — the at-most-once
+ *    stream must not freeze the wait). Every branch names a REAL state:
+ *    waiting (TTL countdown), used+pending (approve CTA), used+approved,
+ *    expired, revoked. No timer-driven progress — the countdown IS the
+ *    token's real TTL.
  *
- * The dialog owns NO enrollment state after close: the panel below the
- * registry (fed by the invalidated list query + enrollment.* SSE) is the
- * persistent status surface. Radix owns the focus trap / Esc / restore.
+ * Cancel is honest at every step: closing never kills the token — the
+ * panel below the registry stays the persistent surface (v12's «хост
+ * останется в списке» outcome). Radix owns the focus trap / Esc / restore.
  */
+
+const DRAFT_NAME = "enrollment";
+const DRAFT_VERSION = 1;
+
+/** The poll cadence while the watch step waits on a live token (SSE is
+ * the fast path; the stream is at-most-once — the provision LIVE_POLL
+ * posture). */
+const WATCH_POLL_MS = 5000;
+
+/** The step-1 form draft — secret-free by construction. */
+interface EnrollmentDraft {
+  readonly label: string;
+  readonly harnessChoice: string;
+  readonly nameHint: string;
+}
+
+const draftGuard = (value: unknown): EnrollmentDraft | null => {
+  if (typeof value !== "object" || value === null) return null;
+  const candidate = value as Partial<EnrollmentDraft>;
+  if (
+    typeof candidate.label !== "string" ||
+    typeof candidate.harnessChoice !== "string" ||
+    typeof candidate.nameHint !== "string"
+  ) {
+    return null;
+  }
+  return {
+    label: candidate.label,
+    harnessChoice: candidate.harnessChoice,
+    nameHint: candidate.nameHint,
+  };
+};
+
 export function EnrollmentDialog({
   open,
   onOpenChange,
-  executors,
   liveCount,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** The registry — a used token links to its minted pending row. */
-  executors: readonly ExecutorItem[];
   /**
    * AGW-11: live (created) token count for the ≤3 pre-flight (the server
    * 409s at the cap — the counter is UX parity, not enforcement). Absent
@@ -69,12 +120,22 @@ export function EnrollmentDialog({
   // and a re-open after the token screen never shows a stale token.
   const [formKey, setFormKey] = useState(0);
   const [created, setCreated] = useState<EnrollmentCreatedResult | null>(null);
+  // The REAL step of the conveyor: 0 form → 1 token → 2 first connect.
+  // Keyed alongside the form so a fresh open starts the conveyor over.
+  const [step, setStep] = useState(0);
 
   const close = (): void => {
     onOpenChange(false);
     setCreated(null);
+    setStep(0);
     setFormKey((value) => value + 1);
   };
+
+  const steps: readonly ConveyorStepDef[] = [
+    { id: "form", label: t("agents.enrollment.stepForm") },
+    { id: "token", label: t("agents.enrollment.stepToken") },
+    { id: "connect", label: t("agents.enrollment.stepConnect") },
+  ];
 
   return (
     <Dialog
@@ -85,12 +146,35 @@ export function EnrollmentDialog({
     >
       <DialogContent className="max-w-2xl">
         <DialogTitle>{t("agents.enrollment.title")}</DialogTitle>
+        {/* The rail mirrors the REAL phase — form → token → watching. The
+         * rail is read-only here: «назад» после минта подразумевал бы
+         * правку уже отправленных данных (второй токен), а живая установка
+         * не редактируется — пересмотр пройденного шага был бы ложью. A
+         * failed run (expired/revoked) restarts the conveyor explicitly. */}
+        <StepRail steps={steps} current={step} label={t("agents.enrollment.railLabel")} />
         {created ? (
-          <TokenScreen created={created} executors={executors} onDone={close} />
+          <TokenScreen
+            created={created}
+            step={step}
+            onWatch={() => setStep(2)}
+            onBackToToken={() => setStep(1)}
+            onDone={close}
+            onRestart={() => {
+              setCreated(null);
+              setStep(0);
+              setFormKey((value) => value + 1);
+            }}
+          />
         ) : (
           <EnrollmentForm
             key={formKey}
-            onCreated={setCreated}
+            onCreated={(result) => {
+              setCreated(result);
+              setStep(1);
+              // The typed draft did its job — the operation is minted and
+              // its state lives server-side now.
+              clearConveyorDraft(DRAFT_NAME);
+            }}
             onDone={close}
             liveCount={liveCount}
           />
@@ -104,7 +188,7 @@ export function EnrollmentDialog({
   );
 }
 
-/** Phase 1 — the mint form. */
+/** Phase 1 — the mint form (conveyor step 1 «Данные»). */
 function EnrollmentForm({
   onCreated,
   onDone,
@@ -115,16 +199,52 @@ function EnrollmentForm({
   liveCount?: number;
 }) {
   const t = useT();
+  const { lang } = useI18n();
   const actions = useEnrollmentActions();
-  const [label, setLabel] = useState("");
+  // Draft restore (the koraFrameStorage posture): a reload mid-form hands
+  // the typed fields back and SAYS so — never a silent restore. The saved
+  // stamp is read once with the value (the banner is data, not a clock).
+  const restoredDraft = loadConveyorDraft<EnrollmentDraft>(
+    DRAFT_NAME,
+    DRAFT_VERSION,
+    draftGuard,
+  );
+  const [restored, setRestored] = useState<EnrollmentDraft | null>(
+    restoredDraft?.value ?? null,
+  );
+  const restoredAt = restoredDraft?.savedAt ?? null;
+  const [label, setLabel] = useState(restored?.label ?? "");
   // Wave 3C review: the default is the first entry of the LIVE dictionary.
   const defaultHarness = useDefaultHarness();
-  const [harnessChoice, setHarnessChoice] = useState<string>("");
+  const [harnessChoice, setHarnessChoice] = useState<string>(restored?.harnessChoice ?? "");
   const harness = harnessChoice || defaultHarness;
-  const [nameHint, setNameHint] = useState("");
+  const [nameHint, setNameHint] = useState(restored?.nameHint ?? "");
   const [submitting, setSubmitting] = useState(false);
   // AGW-11: the ≤3 live-token pre-flight (ENROLLMENT_MAX_LIVE parity).
   const quotaReached = liveCount !== undefined && liveCount >= 3;
+
+  // Persist the draft on every change (secret-free by construction). An
+  // EMPTY form persists nothing — a pristine dialog must not come back as
+  // a «restored draft» (the restore banner names real typed work only).
+  useEffect(() => {
+    if (label.trim() === "" && harnessChoice === "" && nameHint.trim() === "") {
+      clearConveyorDraft(DRAFT_NAME);
+      return;
+    }
+    saveConveyorDraft<EnrollmentDraft>(DRAFT_NAME, DRAFT_VERSION, 0, {
+      label,
+      harnessChoice,
+      nameHint,
+    });
+  }, [label, harnessChoice, nameHint]);
+
+  const startOver = (): void => {
+    clearConveyorDraft(DRAFT_NAME);
+    setRestored(null);
+    setLabel("");
+    setHarnessChoice("");
+    setNameHint("");
+  };
 
   const submit = (event: React.FormEvent): void => {
     event.preventDefault();
@@ -140,9 +260,30 @@ function EnrollmentForm({
     );
   };
 
+  const fieldClass =
+    "h-9 rounded-md border border-border bg-background px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright";
+
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
       <DialogDescription>{t("agents.enrollment.formHint")}</DialogDescription>
+      {restored !== null ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-border-subtle bg-well px-2 py-1.5">
+          <p className="text-xs text-foreground-secondary" role="status">
+            {t("flows.draft.restored", {
+              time: formatTaskDate(restoredAt ?? new Date().toISOString(), lang),
+            })}
+          </p>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="ml-auto h-6 px-1.5 text-xs"
+            onClick={startOver}
+          >
+            {t("flows.draft.startOver")}
+          </Button>
+        </div>
+      ) : null}
       <label className="flex flex-col gap-1 text-sm font-medium">
         {t("agents.enrollment.label")}
         <input
@@ -150,7 +291,7 @@ function EnrollmentForm({
           onChange={(event) => setLabel(event.target.value)}
           maxLength={64}
           placeholder={t("agents.enrollment.labelPlaceholder")}
-          className="h-9 rounded-md border border-border bg-background px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+          className={fieldClass}
         />
       </label>
       <label className="flex flex-col gap-1 text-sm font-medium">
@@ -167,7 +308,7 @@ function EnrollmentForm({
           value={nameHint}
           onChange={(event) => setNameHint(event.target.value)}
           maxLength={120}
-          className="h-9 rounded-md border border-border bg-background px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+          className={fieldClass}
         />
       </label>
       <div className="mt-1 flex flex-wrap items-center justify-end gap-2">
@@ -202,15 +343,47 @@ function EnrollmentForm({
  */
 const CA_FINGERPRINT_RE = /^SHA256:(?:[A-Za-z0-9+/]{43}|[a-fA-F0-9]{64})$/;
 
-/** Phase 2 — the once-only token, the live TTL and the VPS bootstrap block. */
+/** Phases 2–3 — the token screen and the first-connect wait. */
 function TokenScreen({
   created,
-  executors,
+  step,
+  onWatch,
+  onBackToToken,
+  onRestart,
   onDone,
 }: {
   created: EnrollmentCreatedResult;
-  executors: readonly ExecutorItem[];
+  /** 1 = token screen, 2 = the wait. */
+  step: number;
+  onWatch: () => void;
+  onBackToToken: () => void;
+  onRestart: () => void;
   onDone: () => void;
+}) {
+  if (step === 2) {
+    return (
+      <ConnectWatch
+        created={created}
+        /* Back to the token screen while the token is live is a READ-BACK
+         * (re-copy the command), not an edit — the v12 maxReached rule;
+         * the watch offers it only while the token is alive. A dead token
+         * restarts the conveyor instead (fresh mint). */
+        onBackToToken={onBackToToken}
+        onRestart={onRestart}
+        onDone={onDone}
+      />
+    );
+  }
+  return <TokenBlock created={created} onWatch={onWatch} />;
+}
+
+/** Step 2 — the once-only token, the live TTL and the VPS bootstrap block. */
+function TokenBlock({
+  created,
+  onWatch,
+}: {
+  created: EnrollmentCreatedResult;
+  onWatch: () => void;
 }) {
   const t = useT();
   const now = useValidationNow();
@@ -221,6 +394,7 @@ function TokenScreen({
   // rejection is a visible failure (the token is shown once; a lying
   // «Скопировано» quietly loses it).
   const { copied, failed, copy } = useHonestCopy();
+  const headingRef = useStepHeadingFocus(1);
   const row: EnrollmentItem = created.enrollment;
 
   const ttl = formatTtlCountdown(row, now);
@@ -258,14 +432,12 @@ function TokenScreen({
     `curl -kfsSL ${origin}/api/poller/bootstrap.sh | sudo bash -s -- ` +
     `--url ${origin} --token ${maskEnrollmentToken(created.token)}` +
     ` --name ${bootstrapName} --harness ${bootstrapHarness}${expectFpArg}`;
-  // A used token links to the row it minted (enrollment.used carries the
-  // executor_id; the registry list query has it after the invalidation).
-  const minted = row.executor_id
-    ? (executors.find((executor) => executor.id === row.executor_id) ?? null)
-    : null;
 
   return (
     <div className="flex flex-col gap-3">
+      <h2 ref={headingRef} tabIndex={-1} className="text-sm font-medium outline-none">
+        {t("agents.enrollment.stepTokenTitle")}
+      </h2>
       <DialogDescription>{t("agents.enrollment.tokenOnce")}</DialogDescription>
 
       {/* The token: ALWAYS masked on screen (AGW-11 — the full plaintext
@@ -402,16 +574,186 @@ function TokenScreen({
         </div>
       </details>
 
+      <div className="flex items-center justify-end gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={onWatch}>
+          {t("agents.enrollment.watch")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Step 3 — the FIRST-CONNECT WAIT. Every line renders from a REAL state:
+ * the live enrollment row (the same query the panel below the registry
+ * reads) and the minted executor row (the same registry list). The slow
+ * poll exists because the SSE stream is at-most-once — a dropped frame
+ * must not freeze the wait (the provision LIVE_POLL posture). No
+ * spinner-as-progress: the TTL countdown IS the token's real remaining
+ * life, and the branch texts name exactly what happened.
+ */
+function ConnectWatch({
+  created,
+  onBackToToken,
+  onRestart,
+  onDone,
+}: {
+  created: EnrollmentCreatedResult;
+  onBackToToken: () => void;
+  onRestart: () => void;
+  onDone: () => void;
+}) {
+  const t = useT();
+  const { lang } = useI18n();
+  const uiToken = useUiToken();
+  const now = useValidationNow();
+  const headingRef = useStepHeadingFocus(2);
+  const row: EnrollmentItem = created.enrollment;
+
+  // The wait watches the SAME queries the registry page holds (one
+  // implementation of the enrollment/registry truth); while the token is
+  // live both also poll slowly — the at-most-once stream can drop frames.
+  const enrollments = useEnrollments({ tokenPresent: uiToken.tokenPresent });
+  const executors = useExecutors();
+  const liveRow = enrollments.data?.items.find(
+    (item) => item.enrollment_id === row.enrollment_id,
+  );
+  const viewRow = liveRow ?? row;
+  const state = effectiveEnrollmentState(viewRow, now);
+  const stillLive = state === "created";
+
+  useEffect(() => {
+    if (!stillLive) return;
+    const timer = window.setInterval(() => {
+      void enrollments.refetch();
+      void executors.refetch();
+    }, WATCH_POLL_MS);
+    return () => window.clearInterval(timer);
+  }, [stillLive, enrollments.refetch, executors.refetch]);
+
+  const mintedId = viewRow.executor_id;
+  const minted = mintedId
+    ? (executors.data?.items.find((executor) => executor.id === mintedId) ?? null)
+    : null;
+  const ttl = formatTtlCountdown(viewRow, now);
+
+  return (
+    <div className="flex flex-col gap-3" aria-live="polite">
+      <h2 ref={headingRef} tabIndex={-1} className="text-sm font-medium outline-none">
+        {t("agents.enrollment.stepConnectTitle", {
+          label: viewRow.label || viewRow.name_hint || viewRow.enrollment_id,
+        })}
+      </h2>
+
+      {state === "created" ? (
+        <div className="flex flex-col gap-2 rounded-md border border-border-subtle bg-well p-3">
+          <p className="text-sm text-foreground-secondary">
+            {t("agents.enrollment.watchWaiting")}
+          </p>
+          {ttl !== null ? (
+            <p className="font-mono text-xs text-foreground-secondary">
+              {t("agents.enrollment.ttl", { time: ttl })}
+            </p>
+          ) : null}
+          <p className="text-xs text-foreground-muted">
+            {t("agents.enrollment.watchPollNote")}
+          </p>
+        </div>
+      ) : null}
+
+      {state === "used" && minted !== null && minted.state === "pending" ? (
+        <div
+          role="status"
+          className="flex flex-col gap-2 rounded-md border border-iris-bright/40 bg-elevated p-3"
+        >
+          <p className="text-sm font-medium">
+            {t("agents.enrollment.watchConnected", { name: minted.name })}
+          </p>
+          <p className="text-xs text-foreground-secondary">
+            {t("agents.enrollment.watchApproveNote")}
+          </p>
+          <div>
+            <Button asChild variant="outline" size="sm">
+              <a href="/agents/harnesses">
+                <Link2 className="size-3.5" aria-hidden="true" />
+                {t("agents.enrollment.watchOpenRegistry")}
+              </a>
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {state === "used" && minted !== null && minted.state !== "pending" ? (
+        <div
+          role="status"
+          className="flex flex-col gap-1 rounded-md border border-iris-bright/40 bg-elevated p-3"
+        >
+          <p className="text-sm font-medium">
+            {t("agents.enrollment.watchApproved", { name: minted.name })}
+          </p>
+        </div>
+      ) : null}
+
+      {state === "used" && minted === null ? (
+        <div role="status" className="rounded-md border border-border-subtle bg-well p-3">
+          <p className="text-sm text-foreground-secondary">
+            {t("agents.enrollment.watchUsedNoRow")}
+          </p>
+        </div>
+      ) : null}
+
+      {state === "expired" ? (
+        <div
+          role="alert"
+          className="flex flex-col gap-2 rounded-md border border-error/40 bg-elevated p-3"
+        >
+          <p className="text-sm font-medium">{t("agents.enrollment.watchExpired")}</p>
+          <p className="text-xs text-foreground-secondary">
+            {t("agents.enrollment.watchExpiredHint")}
+          </p>
+          <div>
+            <Button type="button" variant="outline" size="sm" onClick={onRestart}>
+              {t("agents.enrollment.watchRestart")}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {state === "revoked" ? (
+        <div
+          role="alert"
+          className="flex flex-col gap-2 rounded-md border border-error/40 bg-elevated p-3"
+        >
+          <p className="text-sm font-medium">{t("agents.enrollment.watchRevoked")}</p>
+          <div>
+            <Button type="button" variant="outline" size="sm" onClick={onRestart}>
+              {t("agents.enrollment.watchRestart")}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {enrollments.isError ? (
+        <p role="alert" className="text-xs text-error">
+          {t("agents.enrollment.watchListError", {
+            message: enrollments.error instanceof Error ? enrollments.error.message : "",
+          })}
+        </p>
+      ) : null}
+
+      {/* Honest cancel: closing never kills the token — the panel below
+       * the registry keeps watching (the v12 «останется в списке»). */}
       <p className="text-xs text-foreground-muted">
-        {t("agents.enrollment.afterRegister")}
+        {t("agents.enrollment.cancelNote", {
+          time: formatTaskDate(viewRow.expires_at, lang),
+        })}
       </p>
 
       <div className="flex items-center justify-end gap-2">
-        {minted ? (
-          <span className="mr-auto flex items-center gap-1 text-xs text-foreground-secondary">
-            <ExternalLink className="size-3.5" aria-hidden="true" />
-            {t("agents.enrollment.usedBy", { name: minted.name })}
-          </span>
+        {state === "created" ? (
+          <Button type="button" variant="outline" size="sm" onClick={onBackToToken}>
+            {t("agents.enrollment.backToToken")}
+          </Button>
         ) : null}
         <Button type="button" variant="outline" size="sm" onClick={onDone}>
           {t("agents.enrollment.done")}

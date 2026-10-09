@@ -2326,6 +2326,40 @@ export const ru = {
   "flows.draft.restored": "Черновик восстановлен после перезагрузки (сохранён в {{time}})",
   "flows.draft.keepNote": "Черновик хранится локально и переживает перезагрузку",
   "flows.draft.startOver": "Начать заново",
+
+  // --- конвейер подключения агента (U8): шаги «Данные → Токен → Первый
+  // коннект». Прогресс = реальные состояния операции, не таймер.
+  "agents.enrollment.railLabel": "Шаги подключения агента",
+  "agents.enrollment.stepForm": "Данные",
+  "agents.enrollment.stepToken": "Токен и команда",
+  "agents.enrollment.stepConnect": "Первый коннект",
+  "agents.enrollment.stepTokenTitle": "Токен создан — выполняется один раз",
+  "agents.enrollment.watch": "Следить за коннектом",
+  "agents.enrollment.backToToken": "К команде установки",
+  "agents.enrollment.stepConnectTitle": "Ждём первый коннект: {{label}}",
+  "agents.enrollment.watchWaiting":
+    "Токен жив — выполните команду с шага «Токен и команда» на машине. Как только агент доложится серверу, шаг закроется сам.",
+  "agents.enrollment.watchPollNote":
+    "Статус обновляется автоматически; страницу можно закрыть — токен досматривается в списке ниже реестра.",
+  "agents.enrollment.watchConnected":
+    "Агент подключился — «{{name}}» зарегистрирован и ждёт одобрения",
+  "agents.enrollment.watchApproveNote":
+    "Остался последний шаг: одобрить нового исполнителя в реестре (сверка отпечатка).",
+  "agents.enrollment.watchOpenRegistry": "Открыть реестр — одобрить",
+  "agents.enrollment.watchApproved": "«{{name}}» подключён и одобрен — всё готово",
+  "agents.enrollment.watchUsedNoRow":
+    "Токен использован, но карточка исполнителя ещё не дошла до реестра — обновите страницу или загляните в реестр.",
+  "agents.enrollment.watchExpired":
+    "Срок действия токена истёк — коннекта не было",
+  "agents.enrollment.watchExpiredHint":
+    "Ничего не сломалось: машина просто не успела доложиться. Начните заново — свежий токен, те же поля.",
+  "agents.enrollment.watchRestart": "Начать подключение заново",
+  "agents.enrollment.watchRevoked":
+    "Токен отозван — подключение по нему невозможно. Начните заново со свежим токеном.",
+  "agents.enrollment.watchListError":
+    "Не удалось обновить статус токена: {{message}}",
+  "agents.enrollment.cancelNote":
+    "Закрыть окно можно на любом шаге — токен от этого не гаснет и останется в списке ниже реестра (срок истечёт {{time}}).",
 } as const;
 
 export type TranslationKey = keyof typeof ru;

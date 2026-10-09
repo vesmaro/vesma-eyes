@@ -2276,4 +2276,36 @@ export const en: Record<TranslationKey, string> = {
   "flows.draft.restored": "Draft restored after reload (saved at {{time}})",
   "flows.draft.keepNote": "The draft is stored locally and survives a reload",
   "flows.draft.startOver": "Start over",
+
+  // --- agent enrollment conveyor (U8): the «Details → Token → First
+  // connect» steps. Progress = real operation states, never a timer.
+  "agents.enrollment.railLabel": "Agent connection steps",
+  "agents.enrollment.stepForm": "Details",
+  "agents.enrollment.stepToken": "Token & command",
+  "agents.enrollment.stepConnect": "First connect",
+  "agents.enrollment.stepTokenTitle": "Token minted — it works exactly once",
+  "agents.enrollment.watch": "Watch for the connect",
+  "agents.enrollment.backToToken": "Back to the install command",
+  "agents.enrollment.stepConnectTitle": "Waiting for the first connect: {{label}}",
+  "agents.enrollment.watchWaiting":
+    "The token is live — run the command from the «Token & command» step on the machine. As soon as the agent reports in, this step closes by itself.",
+  "agents.enrollment.watchPollNote":
+    "The status refreshes on its own; you may close this dialog — the token keeps being watched in the list below the registry.",
+  "agents.enrollment.watchConnected":
+    "The agent connected — “{{name}}” registered and awaiting approval",
+  "agents.enrollment.watchApproveNote":
+    "One step left: approve the new executor in the registry (fingerprint verify).",
+  "agents.enrollment.watchOpenRegistry": "Open the registry to approve",
+  "agents.enrollment.watchApproved": "“{{name}}” is connected and approved — all set",
+  "agents.enrollment.watchUsedNoRow":
+    "The token was used, but the executor card has not reached the registry yet — refresh or check the registry.",
+  "agents.enrollment.watchExpired": "The token has expired — no connect happened",
+  "agents.enrollment.watchExpiredHint":
+    "Nothing broke: the machine simply did not report in time. Start over — a fresh token, the same fields.",
+  "agents.enrollment.watchRestart": "Restart the connection",
+  "agents.enrollment.watchRevoked":
+    "The token was revoked — connecting with it is impossible. Start over with a fresh token.",
+  "agents.enrollment.watchListError": "Failed to refresh the token status: {{message}}",
+  "agents.enrollment.cancelNote":
+    "You may close this dialog at any step — the token does not die and stays in the list below the registry (expires {{time}}).",
 };
