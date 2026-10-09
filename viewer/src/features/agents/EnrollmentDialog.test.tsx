@@ -437,7 +437,7 @@ describe("EnrollmentDialog — first-connect watch (U8 conveyor)", () => {
   });
 
   it("enrollment used + pending executor flips the watch to the approve CTA", async () => {
-    const { root, container, gateway, client } = await mountToWatch();
+    const { root, gateway, client } = await mountToWatch();
     // The world moved: the token was used and minted a PENDING executor.
     const enrollments = (
       gateway as unknown as { enrollments: { state: string; executor_id: string }[] }

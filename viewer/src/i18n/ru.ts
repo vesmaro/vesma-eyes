@@ -2360,6 +2360,15 @@ export const ru = {
     "Не удалось обновить статус токена: {{message}}",
   "agents.enrollment.cancelNote":
     "Закрыть окно можно на любом шаге — токен от этого не гаснет и останется в списке ниже реестра (срок истечёт {{time}}).",
+
+  // --- конвейер добавления хоста (U8): «Машина → Установка → Проверка».
+  // Шаг = реальное состояние provision-задачи; таймерных прогрессов нет.
+  "agents.provision.conveyorLabel": "Шаги подключения машины",
+  "agents.provision.stepMachine": "Машина",
+  "agents.provision.stepInstall": "Установка",
+  "agents.provision.stepVerify": "Проверка",
+  "agents.provision.detachNote":
+    "Карточку можно закрыть — установка НЕ отменится: она продолжится на сервере, а при возвращении карточка снова подхватит задачу.",
 } as const;
 
 export type TranslationKey = keyof typeof ru;

@@ -2308,4 +2308,13 @@ export const en: Record<TranslationKey, string> = {
   "agents.enrollment.watchListError": "Failed to refresh the token status: {{message}}",
   "agents.enrollment.cancelNote":
     "You may close this dialog at any step — the token does not die and stays in the list below the registry (expires {{time}}).",
+
+  // --- host-add conveyor (U8): «Machine → Install → Verify». A step IS a
+  // real provision-job state; there is no timer-driven progress.
+  "agents.provision.conveyorLabel": "Machine connection steps",
+  "agents.provision.stepMachine": "Machine",
+  "agents.provision.stepInstall": "Install",
+  "agents.provision.stepVerify": "Verify",
+  "agents.provision.detachNote":
+    "You may close this card — the install does NOT cancel: it keeps running on the server, and the card re-attaches to the job when you return.",
 };

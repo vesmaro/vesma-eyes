@@ -275,3 +275,65 @@ describe("ProvisionCard — the feed", () => {
     await actUnmount(root);
   });
 });
+
+describe("ProvisionCard — the conveyor (U8)", () => {
+  const currentRailButton = (): HTMLButtonElement | undefined =>
+    [...document.querySelectorAll<HTMLButtonElement>("button")].find(
+      (candidate) => candidate.getAttribute("aria-current") === "step",
+    );
+
+  it("the rail earns its steps from the REAL job: Machine → Install → Verify", async () => {
+    const { root, queryClient } = await mountCard();
+    // Step 1 is the form.
+    expect(currentRailButton()?.textContent).toContain("Machine");
+    await submitHappyForm();
+
+    // The live job moves the rail to Install — and stays there while the
+    // job is live (no step is claimed ahead of the operation).
+    await actWaitUntil(() => {
+      expect(currentRailButton()?.textContent).toContain("Install");
+    });
+    // Honest cancel: closing mid-install never cancels the job (the note
+    // rides the first status read — wait for it, the rail flips earlier).
+    await actWaitUntil(() => {
+      expect(document.body.textContent).toContain("does NOT cancel");
+    });
+
+    // The DONE verdict is the job's own — only then does Verify light up.
+    await advance(queryClient, 6);
+    await actWaitUntil(() => {
+      expect(currentRailButton()?.textContent).toContain("Verify");
+    });
+    expect(document.body.textContent).toContain("awaits your approval");
+    await actUnmount(root);
+  });
+
+  it("the form draft persists SAFE fields only — the private key never lands in storage", async () => {
+    const { root } = await mountCard();
+    await type(inputByLabel("Machine address"), "vps-draft-1");
+    await type(inputByLabel("Executor name"), "gpu-draft");
+    await type(inputByLabel("Private key"), "-----BEGIN OPENSSH SECRET-----");
+    const raw = localStorage.getItem("vesmaro.flow.provision") ?? "";
+    expect(raw).toContain("vps-draft-1");
+    expect(raw).toContain("gpu-draft");
+    // The red line: secrets NEVER persist — a reload must ask for them.
+    expect(raw).not.toContain("OPENSSH");
+    await actUnmount(root);
+  });
+
+  it("a reload restores the draft WITH the banner; secrets are re-asked", async () => {
+    const first = await mountCard();
+    await type(inputByLabel("Machine address"), "vps-draft-2");
+    await type(inputByLabel("Private key"), "-----BEGIN OPENSSH-----");
+    await actUnmount(first.root);
+
+    const second = await mountCard();
+    expect(document.body.textContent).toContain("Draft restored after reload");
+    expect((inputByLabel("Machine address") as HTMLInputElement).value).toBe(
+      "vps-draft-2",
+    );
+    // The secret field is EMPTY — the owner re-enters it (by design).
+    expect((inputByLabel("Private key") as HTMLTextAreaElement).value).toBe("");
+    await actUnmount(second.root);
+  });
+});

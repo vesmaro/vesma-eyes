@@ -9,6 +9,12 @@ import { useI18n } from "@/i18n";
 import { HarnessSelect } from "./HarnessSelect";
 import { useDefaultHarness } from "./useHarnesses";
 import { rememberProvisionApprove } from "./provisionContext";
+import { StepRail, type ConveyorStepDef } from "@/components/conveyor/StepRail";
+import {
+  clearConveyorDraft,
+  loadConveyorDraft,
+  saveConveyorDraft,
+} from "@/components/conveyor/conveyorStorage";
 import {
   PROVISION_CONNECTIVITY_INTERIM,
   isProvisionLive,
@@ -28,51 +34,124 @@ import { useExecutors } from "./useAgents";
 import { PasteBackApprove } from "./ProvisionApprove";
 
 /**
- * The CONNECT CARD (AGW-11, wave 4; design §A/§D) — the registry's
- * expansion entry point: «карточка = хост/агент/SSH», the board walks the
- * machine to a pending registry row by itself (zero console, zero yaml
- * for the owner). Two modes, ONE component:
+ * The CONNECT CARD (AGW-11, wave 4; design §A/§D; U8: the v12 connect
+ * conveyor) — the registry's expansion entry point: «карточка = хост/
+ * агент/SSH», the board walks the machine to a pending registry row by
+ * itself (zero console, zero yaml for the owner). The conveyor's steps
+ * ride the REAL job states only — «Машина» (the form) → «Установка» (the
+ * live job feed; the funnel is data-driven off the server's stages) →
+ * «Проверка» (the paste-back approve). No step exists that the operation
+ * has not earned, and no progress bar exists that a timer could drive.
  *
  * - FORM (no active job): host/port/name + the auth leg (key default,
  *   alias, password behind an EXPLICIT choice — the board keeps password
  *   auth off by default; a 422 lands verbatim from the server), harness
- *   hint, the board address the TARGET resolves. Secrets are masked,
- *   autocomplete=off, live in React state until the single POST fires
- *   and never touch a log line.
- * - FEED (active job): the install funnel (data-driven stage table) +
- *   the step log + the typed-hint failure block + the done state with
- *   the paste-back approve. Every state is VISIBLE — no silent spinner
- *   («тихий отказ» запрещён, Архком-8 §4); the interim transport leg is
- *   honestly labeled «временно: ручной туннель» with the reserved
- *   «профиль связности» slot (§5 — Ф2mesh lands as data, not a redesign).
+ *   hint, the board address the TARGET resolves. The typed draft persists
+ *   locally (vesmaro.flow.provision) WITHOUT the secrets — key/password/
+ *   passphrase are re-entered after a reload by design (they live in
+ *   React state until the single POST and never touch storage); the
+ *   restore is NAMED with its stamp.
+ * - FEED (active job): the install funnel + the step log + the typed-hint
+ *   failure block + the done state with the paste-back approve. Every
+ *   state is VISIBLE — no silent spinner («тихий отказ» запрещён); the
+ *   interim transport leg is honestly labeled «временно: ручной туннель».
+ *   Closing the card mid-install is honest: the job keeps running
+ *   server-side and the card re-attaches on return (the sessionStorage
+ *   active-job record) — the v12 «хост останется в списке» outcome.
  *
  * The feed rides the invalidation-only SSE bridge (provisioning.* → the
  * job query) plus a slow poll while live (the stream is at-most-once).
  */
+
+/** The step-1 form draft — the SAFE fields only; secrets never persist. */
+interface ProvisionDraft {
+  readonly host: string;
+  readonly port: string;
+  readonly name: string;
+  readonly authKind: string;
+  readonly harnessChoice: string;
+  readonly boardUrl: string;
+}
+
+const PROVISION_DRAFT_NAME = "provision";
+const PROVISION_DRAFT_VERSION = 1;
+
+const draftGuard = (value: unknown): ProvisionDraft | null => {
+  if (typeof value !== "object" || value === null) return null;
+  const candidate = value as Partial<ProvisionDraft>;
+  const strings = [
+    candidate.host,
+    candidate.port,
+    candidate.name,
+    candidate.authKind,
+    candidate.harnessChoice,
+    candidate.boardUrl,
+  ];
+  if (strings.some((field) => typeof field !== "string")) return null;
+  // A draft carrying a secret-shaped field would be yesterday's bug, not
+  // today's shape — drop it wholesale.
+  if (
+    (candidate as Record<string, unknown>).secret !== undefined ||
+    (candidate as Record<string, unknown>).passphrase !== undefined
+  ) {
+    return null;
+  }
+  return {
+    host: candidate.host!,
+    port: candidate.port!,
+    name: candidate.name!,
+    authKind: candidate.authKind!,
+    harnessChoice: candidate.harnessChoice!,
+    boardUrl: candidate.boardUrl!,
+  };
+};
+
 export function ProvisionCard() {
   const { active, attach, detach } = useActiveProvisionJob();
   // A retry seeds the form with the failed job's facts (fresh mint unless
   // the token is still live — the design's reuse rule).
   const [retrySeed, setRetrySeed] = useState<ProvisionFormSeed | null>(null);
+  // The verdict the feed reports up (the rail's «Проверка» step is the
+  // DONE state — a step the job itself earns, never the card).
+  const [verdict, setVerdict] = useState<"live" | "done" | "failed" | null>(null);
+  const t = useT();
+
+  const steps: readonly ConveyorStepDef[] = [
+    { id: "machine", label: t("agents.provision.stepMachine") },
+    { id: "install", label: t("agents.provision.stepInstall") },
+    { id: "verify", label: t("agents.provision.stepVerify") },
+  ];
+  const current = active === null ? 0 : verdict === "done" ? 2 : 1;
 
   if (active !== null) {
     return (
-      <ProvisionFeed
-        job={active}
-        onClose={detach}
-        onRetry={(seed) => {
-          detach();
-          setRetrySeed(seed);
-        }}
-      />
+      <section aria-label={t("agents.provision.conveyorLabel")} className="flex flex-col gap-3">
+        <StepRail steps={steps} current={current} label={t("agents.provision.conveyorLabel")} />
+        <ProvisionFeed
+          job={active}
+          onClose={detach}
+          onVerdict={setVerdict}
+          onRetry={(seed) => {
+            detach();
+            setVerdict(null);
+            setRetrySeed(seed);
+          }}
+        />
+      </section>
     );
   }
   return (
-    <ProvisionForm
-      key={retrySeed?.key ?? "fresh"}
-      seed={retrySeed}
-      onStart={attach}
-    />
+    <section aria-label={t("agents.provision.conveyorLabel")} className="flex flex-col gap-3">
+      <StepRail steps={steps} current={0} label={t("agents.provision.conveyorLabel")} />
+      <ProvisionForm
+        key={retrySeed?.key ?? "fresh"}
+        seed={retrySeed}
+        onStart={(job) => {
+          setVerdict(null);
+          attach(job);
+        }}
+      />
+    </section>
   );
 }
 
@@ -106,22 +185,64 @@ function ProvisionForm({
   onStart: (job: ActiveProvisionJob) => void;
 }) {
   const t = useT();
+  const { lang } = useI18n();
   const actions = useProvisionActions();
   const defaultHarness = useDefaultHarness();
-  const [host, setHost] = useState(seed?.host ?? "");
-  const [port, setPort] = useState(seed?.port ?? "22");
-  const [name, setName] = useState(seed?.name ?? "");
-  const [authKind, setAuthKind] = useState<AuthKind>("key");
+  // Draft restore (the koraFrameStorage posture; NO secrets in a draft —
+  // the key/password/passphrase are re-entered after a reload by design).
+  // A retry seed wins over the draft: the retry's facts ARE the draft.
+  const restoredDraft = seed === null
+    ? loadConveyorDraft<ProvisionDraft>(
+        PROVISION_DRAFT_NAME,
+        PROVISION_DRAFT_VERSION,
+        draftGuard,
+      )
+    : null;
+  const [restored, setRestored] = useState<ProvisionDraft | null>(
+    restoredDraft?.value ?? null,
+  );
+  const restoredAt = restoredDraft?.savedAt ?? null;
+  const [host, setHost] = useState(seed?.host ?? restored?.host ?? "");
+  const [port, setPort] = useState(seed?.port ?? restored?.port ?? "22");
+  const [name, setName] = useState(seed?.name ?? restored?.name ?? "");
+  const [authKind, setAuthKind] = useState<AuthKind>(
+    (restored?.authKind as AuthKind | undefined) ?? "key",
+  );
   const [secret, setSecret] = useState("");
   const [secretMasked, setSecretMasked] = useState(true);
   const [passphrase, setPassphrase] = useState("");
-  const [harnessChoice, setHarnessChoice] = useState(seed?.harness ?? "");
+  const [harnessChoice, setHarnessChoice] = useState<string>(
+    seed?.harness ?? restored?.harnessChoice ?? "",
+  );
   const harness = harnessChoice || seed?.harness || defaultHarness;
   const [boardUrl, setBoardUrl] = useState(
-    seed?.boardUrl ?? window.location.origin,
+    seed?.boardUrl ?? restored?.boardUrl ?? window.location.origin,
   );
   const [submitting, setSubmitting] = useState(false);
   const [validation, setValidation] = useState<string | null>(null);
+
+  // Persist the SAFE fields on every change; an empty form persists
+  // nothing (no fake «restored» banner on a pristine card).
+  useEffect(() => {
+    const empty =
+      host.trim() === "" &&
+      name.trim() === "" &&
+      boardUrl.trim() === window.location.origin &&
+      harnessChoice === "" &&
+      authKind === "key";
+    if (empty) {
+      clearConveyorDraft(PROVISION_DRAFT_NAME);
+      return;
+    }
+    saveConveyorDraft<ProvisionDraft>(PROVISION_DRAFT_NAME, PROVISION_DRAFT_VERSION, 0, {
+      host,
+      port,
+      name,
+      authKind,
+      harnessChoice,
+      boardUrl,
+    });
+  }, [host, port, name, authKind, harnessChoice, boardUrl]);
 
   const hostClean = host.trim().toLowerCase();
   const portClean = port.trim();
@@ -169,13 +290,18 @@ function ProvisionForm({
           : {}),
       },
       {
-        onCreated: (created) =>
+        onCreated: (created) => {
+          // The job is queued — its state lives server-side now (the
+          // sessionStorage active-job record resumes the feed); the typed
+          // draft did its job.
+          clearConveyorDraft(PROVISION_DRAFT_NAME);
           onStart({
             job_id: created.job_id,
             host: hostClean,
             port: portClean === "" ? 22 : portNum,
             name: nameClean,
-          }),
+          });
+        },
         onSettled: () => setSubmitting(false),
       },
     );
@@ -195,6 +321,37 @@ function ProvisionForm({
           {t("agents.provision.subtitle")}
         </p>
       </div>
+
+      {/* Draft restore: named and stamped — never a silent refilling of
+       * the form; the secrets (key/password/passphrase) are deliberately
+       * NOT part of the draft and are re-entered by hand. */}
+      {restored !== null && seed === null ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-border-subtle bg-well px-2 py-1.5">
+          <p className="text-xs text-foreground-secondary" role="status">
+            {t("flows.draft.restored", {
+              time: formatTaskDate(restoredAt ?? new Date().toISOString(), lang),
+            })}
+          </p>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="ml-auto h-6 px-1.5 text-xs"
+            onClick={() => {
+              clearConveyorDraft(PROVISION_DRAFT_NAME);
+              setRestored(null);
+              setHost("");
+              setPort("22");
+              setName("");
+              setAuthKind("key");
+              setHarnessChoice("");
+              setBoardUrl(window.location.origin);
+            }}
+          >
+            {t("flows.draft.startOver")}
+          </Button>
+        </div>
+      ) : null}
 
       <form onSubmit={submit} className="flex flex-col gap-3" noValidate>
         {/* host + port: the one mandatory pair */}
@@ -431,10 +588,14 @@ function ProvisionForm({
 function ProvisionFeed({
   job,
   onClose,
+  onVerdict,
   onRetry,
 }: {
   job: ActiveProvisionJob;
   onClose: () => void;
+  /** The REAL verdict reported up to the conveyor rail (the «Проверка»
+   * step is the job's own DONE — the card never claims it early). */
+  onVerdict: (verdict: "live" | "done" | "failed") => void;
   onRetry: (seed: ProvisionFormSeed) => void;
 }) {
   const t = useT();
@@ -464,6 +625,17 @@ function ProvisionFeed({
     : null;
   const tofu = view !== null && isTofuPin(view);
   const executorId = status?.enrollment.executor_id ?? "";
+
+  // The rail's «Проверка» step = the job's own DONE verdict, reported up
+  // once per state change (the rail never claims a step the job has not
+  // reached — the honest light line).
+  const jobState = status?.job.state;
+  useEffect(() => {
+    if (jobState === undefined) return;
+    onVerdict(
+      jobState === "done" ? "done" : jobState === "failed" ? "failed" : "live",
+    );
+  }, [jobState, onVerdict]);
 
   // Publish the paste-back context ONCE per done verdict — the registry
   // sheet reads it when the owner opens the pending row's card.
@@ -567,6 +739,15 @@ function ProvisionFeed({
               ? t("agents.provision.feedLive")
               : ""}
       </p>
+
+      {/* Honest cancel (the v12 «останется в списке» outcome): closing the
+       * card mid-install NEVER cancels the job — it keeps running on the
+       * board, and the card re-attaches on return (sessionStorage record). */}
+      {status && isProvisionLive(status.job.state) ? (
+        <p className="text-xs text-foreground-muted">
+          {t("agents.provision.detachNote")}
+        </p>
+      ) : null}
       {feed.isError ? (
         <div className="flex gap-2">
           <Button
