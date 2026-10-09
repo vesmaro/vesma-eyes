@@ -148,6 +148,14 @@ export function useAgentsEvents(): void {
           event.kind === "executor.online" ? "online" : "offline",
         );
       }
+      // U8 эфир-вспышка: a REAL assignment.started frame flares the row in
+      // «Исполнение» once — the v12 «Сейчас в работе» arrival, same one-shot
+      // store (the `assignment:` key namespace never meets executor ids).
+      // started is a TRANSITION (the server emits on change only, §11); the
+      // other assignment kinds are facts and ride the invalidation only.
+      if (event.kind === "assignment.started") {
+        recordPresenceFlash(`assignment:${event.assignment.id}`, "online");
+      }
       applyAgentsEventToCache(queryClient, event);
       pushExecutionEvent(event);
     });

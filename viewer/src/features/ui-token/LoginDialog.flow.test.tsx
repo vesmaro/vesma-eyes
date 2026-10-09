@@ -116,14 +116,6 @@ function setInputValue(input: HTMLInputElement | HTMLTextAreaElement, value: str
   input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
-function buttonByText(scope: ParentNode, text: string): HTMLButtonElement | undefined {
-  return (
-    Array.from(scope.querySelectorAll<HTMLButtonElement>("button")).find((button) =>
-      button.textContent?.includes(text),
-    ) ?? undefined
-  );
-}
-
 /**
  * ME-080: the TopBar accent «Sign in» no longer opens the token window —
  * it LINKS to /auth (login+password is the human front door). The manual
@@ -151,6 +143,29 @@ function createTaskButton(scope: ParentNode): HTMLButtonElement | undefined {
       (button) => button.textContent?.trim() === "Task",
     ) ?? undefined
   );
+}
+
+/**
+ * U8: creation is the formation conveyor now (What → Whom → Review) — the
+ * old single-screen «Create task» click becomes the walk: two «Next» steps
+ * (title valid = the wire's own gate) then the real submit on «Проверка».
+ */
+async function submitCreateThroughWizard(): Promise<void> {
+  const nextButton = (): HTMLButtonElement | undefined =>
+    Array.from(document.body.querySelectorAll<HTMLButtonElement>("button")).find(
+      (button) => button.textContent?.trim() === "Next",
+    );
+  await act(async () => {
+    nextButton()?.click();
+  });
+  await act(async () => {
+    nextButton()?.click();
+  });
+  await act(async () => {
+    Array.from(document.body.querySelectorAll<HTMLButtonElement>("button"))
+      .find((button) => button.textContent?.trim() === "Create task")
+      ?.click();
+  });
 }
 
 /** Roots created by the current test — unmounted in afterEach so Radix
@@ -266,9 +281,7 @@ describe("login flow regression (owner repro)", () => {
     await act(async () => {
       setInputValue(textarea as HTMLTextAreaElement, "Repro task");
     });
-    await act(async () => {
-      buttonByText(document.body, "Create task")?.click();
-    });
+    await submitCreateThroughWizard();
 
     // 3. The LOGIN WINDOW opens (not the old token panel) with the queued
     //    contextual line, and the create button is still mounted.
@@ -483,9 +496,7 @@ describe("login flow regression (owner repro)", () => {
     await act(async () => {
       setInputValue(textarea as HTMLTextAreaElement, "Doomed task");
     });
-    await act(async () => {
-      buttonByText(document.body, "Create task")?.click();
-    });
+    await submitCreateThroughWizard();
     let tokenInput = document.querySelector('[data-testid="login-token-value"]') as HTMLInputElement | null;
     expect(tokenInput).not.toBeNull();
 
@@ -691,9 +702,7 @@ describe("paired device (UI-22, read scope): mutation attempt → honest toast, 
     await act(async () => {
       setInputValue(textarea as HTMLTextAreaElement, "Device task");
     });
-    await act(async () => {
-      buttonByText(document.body, "Create task")?.click();
-    });
+    await submitCreateThroughWizard();
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 30));
     });
@@ -794,9 +803,7 @@ describe("paired device (scope v1, control): mutation runs without an owner sess
     await act(async () => {
       setInputValue(textarea as HTMLTextAreaElement, "Device task");
     });
-    await act(async () => {
-      buttonByText(document.body, "Create task")?.click();
-    });
+    await submitCreateThroughWizard();
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 30));
     });
@@ -915,9 +922,7 @@ describe("owner session (ADR 0014): boot hydration + server-side logout", () => 
     await act(async () => {
       setInputValue(textarea as HTMLTextAreaElement, "Cookie task");
     });
-    await act(async () => {
-      buttonByText(document.body, "Create task")?.click();
-    });
+    await submitCreateThroughWizard();
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 30));
     });
@@ -1159,9 +1164,7 @@ describe("password session (ME-081): mutations run without the token prompt", ()
     await act(async () => {
       setInputValue(textarea as HTMLTextAreaElement, "Cookie person task");
     });
-    await act(async () => {
-      buttonByText(document.body, "Create task")?.click();
-    });
+    await submitCreateThroughWizard();
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 30));
     });

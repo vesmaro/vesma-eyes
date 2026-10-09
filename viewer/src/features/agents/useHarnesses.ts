@@ -79,5 +79,8 @@ export function useHarnessNames(): string[] | undefined {
  */
 export function useDefaultHarness(): string {
   const harnesses = useHarnesses();
-  return harnesses.data?.items[0]?.name ?? "";
+  // `items?` — a wire page without the list (a stub, a degraded read)
+  // degrades to «no default», never a crash (U8: the task wizard mounts
+  // this hook on surfaces the assign sheet never reached).
+  return harnesses.data?.items?.[0]?.name ?? "";
 }

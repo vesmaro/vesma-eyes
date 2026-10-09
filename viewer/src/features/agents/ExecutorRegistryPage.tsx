@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { Check, UserPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -130,6 +130,13 @@ export function ExecutorRegistryPage() {
 
   // Dialog open state (the form is keyed inside — fresh per open).
   const [enrollmentOpen, setEnrollmentOpen] = useState(false);
+  // U8 (v12 hosts.html «Подключить хост» → connect.html): the explicit
+  // connect path lands on the OPEN conveyor, not a folded card. Reading
+  // init off `?connect=1` (the same URL-first contract as the execution
+  // page's ?executor=): seeds the disclosure once, the owner's toggle
+  // wins afterwards, the param is not written back.
+  const [searchParams] = useSearchParams();
+  const connectDeepLink = searchParams.get("connect") === "1";
   // AGW-11: the ≤3 live-token pre-flight count for the mint dialog — the
   // expiry-aware view state (a dead-but-unswept token must not eat quota).
   const now = useValidationNow();
@@ -226,7 +233,10 @@ export function ExecutorRegistryPage() {
        * registry's expansion entry point, FOLDED below the working state.
        * It opens itself when the registry is empty or a provision job is
        * live (the funnel is never hidden mid-run). */}
-      <ProvisionDisclosure registryEmpty={!executors.isPending && !executors.isError && items.length === 0} />
+      <ProvisionDisclosure
+        registryEmpty={!executors.isPending && !executors.isError && items.length === 0}
+        deepLinkOpen={connectDeepLink}
+      />
 
       {/* Token statuses: live countdowns + terminal history (ui-gated read —
        * the panel carries its own login hint without a token). */}
@@ -249,7 +259,6 @@ export function ExecutorRegistryPage() {
       <EnrollmentDialog
         open={enrollmentOpen}
         onOpenChange={setEnrollmentOpen}
-        executors={items}
         liveCount={liveTokens}
       />
 
@@ -275,11 +284,19 @@ export function ExecutorRegistryPage() {
  * visible — «тихий отказ» запрещён). The owner's toggle wins over the
  * defaults once touched.
  */
-function ProvisionDisclosure({ registryEmpty }: { registryEmpty: boolean }) {
+function ProvisionDisclosure({
+  registryEmpty,
+  deepLinkOpen = false,
+}: {
+  registryEmpty: boolean;
+  /** U8: the ?connect=1 deep link (v12 «Подключить машину») — the conveyor
+   * is the landing answer; the owner's toggle still wins over the seed. */
+  deepLinkOpen?: boolean;
+}) {
   const t = useT();
   const { active } = useActiveProvisionJob();
   const [userOpen, setUserOpen] = useState<boolean | null>(null);
-  const open = userOpen ?? (registryEmpty || active !== null);
+  const open = userOpen ?? (deepLinkOpen || registryEmpty || active !== null);
   return (
     <div className="flex flex-col gap-2">
       <button

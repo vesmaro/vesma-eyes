@@ -1044,6 +1044,33 @@ export const ru = {
   "tasks.create.projectLabel": "Проект",
   "tasks.create.tagsLabel": "Теги vesma (через запятую)",
   "tasks.create.submit": "Создать задачу",
+  // --- U8: конвейер формирования задачи (v12-мастер «Что → Кому → Проверка»);
+  // шаг = реальная операция, «Кому» живёт движком исполнений (spec §2.4).
+  "tasks.create.stepWhat": "Что",
+  "tasks.create.stepWhom": "Кому",
+  "tasks.create.stepReview": "Проверка",
+  "tasks.create.conveyorLabel": "Шаги задачи",
+  "tasks.create.next": "Дальше",
+  "tasks.create.whatTitle": "Что сделать",
+  "tasks.create.whomTitle": "Кому поручить",
+  "tasks.create.whomSub":
+    "Каждая карточка обещает честный момент старта — когда задача реально начнётся.",
+  "tasks.create.queueChoice": "В очередь без исполнителя",
+  "tasks.create.queueNote":
+    "Задача ждёт в канбане — исполнителя назначите позже. Равноправный путь, не запасной.",
+  "tasks.create.startLive": "На связи: задача начнётся после ближайшего доклада агента",
+  "tasks.create.startOffline":
+    "Не на связи: задача встанет в очередь — агент заберёт её при возвращении",
+  "tasks.create.assignHint":
+    "Прямое поручение «{{name}}» идёт через движок исполнений: нужны специалист и харнесс.",
+  "tasks.create.specialistError": "движку поручений нужен специалист (1–120 символов)",
+  "tasks.create.sumWhat": "Что",
+  "tasks.create.sumTags": "Теги",
+  "tasks.create.whomQueue": "Очередь без исполнителя",
+  "tasks.create.whomExecutor": "{{name}} · специалист {{specialist}} · харнесс {{harness}}",
+  "tasks.create.give": "Дать задачу",
+  "tasks.create.assignmentFailed":
+    "Задача {{id}} создана, но поручение не встало — причина во всплывающем сообщении. Задачу можно поручить из её карточки.",
 
   // --- tasks: row action menu (Ф3) ---------------------------------------------------
   "tasks.menu.triggerAria": "Действия с задачей {{id}}",
@@ -1201,7 +1228,8 @@ export const ru = {
   "agents.roster.failed": "Не удалось загрузить ростер",
   "agents.roster.emptyTitle": "Агентов ещё нет",
   "agents.roster.emptyMessage": "Ростер оживёт, когда подключится первый исполнитель.",
-  "agents.roster.emptyAction": "Открыть «Подключение»",
+  "agents.roster.emptyAction": "Открыть «Подключить машину»",
+  "agents.roster.connectAction": "Подключить машину",
   "agents.roster.hostUnknown": "хост не указан",
   "agents.roster.onlineCounter": "{{online}}/{{total}} онлайн",
   "agents.roster.idle": "простаивает",
@@ -1283,7 +1311,7 @@ export const ru = {
   "agents.settings.meshIneligible": "mesh-транспорт — маршрутизация недоступна до R4",
 
   // --- agents domain: registry page /agents/harnesses (AGW-4) ----------------------
-  "nav.agentsHarnesses": "Подключение",
+  "nav.agentsHarnesses": "Подключить машину",
   "agents.registry.title": "Подключение агентов",
   "agents.registry.loading": "Загружаем реестр исполнителей",
   "agents.registry.failed": "Не удалось загрузить реестр исполнителей",
@@ -2313,6 +2341,62 @@ export const ru = {
   "field.errorPrefix": "Ошибка:",
   // Чип-тег: отключённый фильтр объясняет причину (§2.2 disabled-ряд).
   "tag.filterUnavailable": "Фильтр недоступен здесь",
+
+  // --- конвейер (U8 v12-UX-потоки): общие слова пошагового кита --------------
+  // Состояние шага для скринридера: номер/✓ — визуальные глифы (aria-hidden),
+  // состояние названо словом (WCAG 4.1.2).
+  "flows.rail.stateDone": "Шаг пройден",
+  "flows.rail.stateCurrent": "Текущий шаг",
+  "flows.rail.stateUpcoming": "Шаг впереди",
+  "flows.rail.backTitle": "Вернуться к шагу «{{step}}»",
+  // Возобновление черновика (koraFrameStorage-прецедент): восстановление
+  // названо и датировано — форма не притворяется, что её не закрывали.
+  "flows.draft.restored": "Черновик восстановлен после перезагрузки (сохранён в {{time}})",
+  "flows.draft.keepNote": "Черновик хранится локально и переживает перезагрузку",
+  "flows.draft.startOver": "Начать заново",
+
+  // --- конвейер подключения агента (U8): шаги «Данные → Токен → Первый
+  // коннект». Прогресс = реальные состояния операции, не таймер.
+  "agents.enrollment.railLabel": "Шаги подключения агента",
+  "agents.enrollment.stepForm": "Данные",
+  "agents.enrollment.stepToken": "Токен и команда",
+  "agents.enrollment.stepConnect": "Первый коннект",
+  "agents.enrollment.stepTokenTitle": "Токен создан — выполняется один раз",
+  "agents.enrollment.watch": "Следить за коннектом",
+  "agents.enrollment.backToToken": "К команде установки",
+  "agents.enrollment.stepConnectTitle": "Ждём первый коннект: {{label}}",
+  "agents.enrollment.watchWaiting":
+    "Токен жив — выполните команду с шага «Токен и команда» на машине. Как только агент доложится серверу, шаг закроется сам.",
+  "agents.enrollment.watchPollNote":
+    "Статус обновляется автоматически; страницу можно закрыть — токен досматривается в списке ниже реестра.",
+  "agents.enrollment.watchConnected":
+    "Агент подключился — «{{name}}» зарегистрирован и ждёт одобрения",
+  "agents.enrollment.watchApproveNote":
+    "Остался последний шаг: одобрить нового исполнителя в реестре (сверка отпечатка).",
+  "agents.enrollment.watchOpenRegistry": "Открыть реестр — одобрить",
+  "agents.enrollment.watchApproved": "«{{name}}» подключён и одобрен — всё готово",
+  "agents.enrollment.watchUsedNoRow":
+    "Токен использован, но карточка исполнителя ещё не дошла до реестра — обновите страницу или загляните в реестр.",
+  "agents.enrollment.watchExpired":
+    "Срок действия токена истёк — коннекта не было",
+  "agents.enrollment.watchExpiredHint":
+    "Ничего не сломалось: машина просто не успела доложиться. Начните заново — свежий токен, те же поля.",
+  "agents.enrollment.watchRestart": "Начать подключение заново",
+  "agents.enrollment.watchRevoked":
+    "Токен отозван — подключение по нему невозможно. Начните заново со свежим токеном.",
+  "agents.enrollment.watchListError":
+    "Не удалось обновить статус токена: {{message}}",
+  "agents.enrollment.cancelNote":
+    "Закрыть окно можно на любом шаге — токен от этого не гаснет и останется в списке ниже реестра (срок истечёт {{time}}).",
+
+  // --- конвейер добавления хоста (U8): «Машина → Установка → Проверка».
+  // Шаг = реальное состояние provision-задачи; таймерных прогрессов нет.
+  "agents.provision.conveyorLabel": "Шаги подключения машины",
+  "agents.provision.stepMachine": "Машина",
+  "agents.provision.stepInstall": "Установка",
+  "agents.provision.stepVerify": "Проверка",
+  "agents.provision.detachNote":
+    "Карточку можно закрыть — установка НЕ отменится: она продолжится на сервере, а при возвращении карточка снова подхватит задачу.",
 } as const;
 
 export type TranslationKey = keyof typeof ru;

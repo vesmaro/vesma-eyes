@@ -13,7 +13,6 @@ import { I18nProvider } from "@/i18n";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
 import { ToastViewport } from "@/components/Toast/ToastViewport";
 import { UiTokenProvider } from "@/features/ui-token/UiTokenProvider";
-import type { ExecutorItem } from "@/gateway/boardTypes";
 import { actFlush, actUnmount, actWaitUntil } from "@/test/actTools";
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -29,12 +28,12 @@ import { actFlush, actUnmount, actWaitUntil } from "@/test/actTools";
  */
 
 async function mount(
-  executors: ExecutorItem[] = [],
   liveCount?: number,
 ): Promise<{
   root: Root;
   container: HTMLElement;
   gateway: MockAdapter;
+  client: QueryClient;
   onOpenChange: ReturnType<typeof vi.fn>;
 }> {
   const gateway = new MockAdapter({ latency: false });
@@ -50,12 +49,7 @@ async function mount(
           <ToastProvider>
             <UiTokenProvider>
               <I18nProvider initialLang="en">
-                <EnrollmentDialog
-                  open
-                  onOpenChange={onOpenChange}
-                  executors={executors}
-                  liveCount={liveCount}
-                />
+                <EnrollmentDialog open onOpenChange={onOpenChange} liveCount={liveCount} />
                 <ToastViewport />
               </I18nProvider>
             </UiTokenProvider>
@@ -64,7 +58,7 @@ async function mount(
       </GatewayContext.Provider>,
     );
   });
-  return { root, container, gateway, onOpenChange };
+  return { root, container, gateway, client, onOpenChange };
 }
 
 /** Peek the mock's runtime-minted rows (private field; tests only). */
@@ -124,7 +118,7 @@ describe("EnrollmentDialog — form phase", () => {
   });
 
   it("AGW-11 quota pre-flight: the counter blocks at 3 live tokens", async () => {
-    const { root } = await mount([], 3);
+    const { root } = await mount(3);
     // The honest full-state line renders and the submit is disabled.
     expect(document.body.textContent).toContain("Live-token limit (3) reached");
     expect(
@@ -135,7 +129,7 @@ describe("EnrollmentDialog — form phase", () => {
     await actUnmount(root);
 
     // Below the cap the count is visible and the button armed.
-    const second = await mount([], 1);
+    const second = await mount(1);
     expect(document.body.textContent).toContain("Live tokens: 1 of 3");
     expect(
       [...document.querySelectorAll("button")].find((b) =>
@@ -410,5 +404,167 @@ describe("EnrollmentDialog — honest copy (review P2-2)", () => {
       "Copy failed — the token stays visible",
     );
     await actUnmount(root);
+  });
+});
+
+describe("EnrollmentDialog — first-connect watch (U8 conveyor)", () => {
+  /** Mount straight into the watch step (mint → «Watch for the connect»). */
+  async function mountToWatch(): Promise<
+    Awaited<ReturnType<typeof mount>>
+  > {
+    const mounted = await mount();
+    await submitForm(mounted.container);
+    await actWaitUntil(() => {
+      expect(document.body.textContent).toContain("shown ONCE");
+    });
+    await act(async () => {
+      button(mounted.container, "Watch for the connect").click();
+    });
+    await actFlush();
+    return mounted;
+  }
+
+  it("the watch renders the REAL live state: waiting + live TTL + honest cancel", async () => {
+    const { root, container } = await mountToWatch();
+    // The branch names the fact (token live), not a fake progress bar.
+    expect(document.body.textContent).toContain("Waiting for the first connect");
+    expect(document.body.textContent ?? "").toMatch(/expires in \d{2}:\d{2}/);
+    // Honest cancel: closing never kills the token.
+    expect(document.body.textContent).toContain("the token does not die");
+    // The read-back path stays open while the token is alive.
+    expect(button(container, "Back to the install command")).toBeTruthy();
+    await actUnmount(root);
+  });
+
+  it("enrollment used + pending executor flips the watch to the approve CTA", async () => {
+    const { root, gateway, client } = await mountToWatch();
+    // The world moved: the token was used and minted a PENDING executor.
+    const enrollments = (
+      gateway as unknown as { enrollments: { state: string; executor_id: string }[] }
+    ).enrollments;
+    enrollments[0] = { ...enrollments[0], state: "used", executor_id: "exe-watch-1" };
+    const executors = (
+      gateway as unknown as {
+        executors: {
+          id: string;
+          name: string;
+          harness: string;
+          host: string;
+          transport: string;
+          capabilities: string[];
+          version: string;
+          enabled: boolean;
+          state: string;
+          last_seen: string;
+          presence: string;
+          registered_via: string;
+          registered_at: string;
+          updated_at: string;
+        }[];
+      }
+    ).executors;
+    executors.unshift({
+      id: "exe-watch-1",
+      name: "fresh-agent",
+      harness: "zcode",
+      host: "fresh-host",
+      transport: "local",
+      capabilities: [],
+      version: "1.0.0",
+      enabled: true,
+      state: "pending",
+      last_seen: new Date().toISOString(),
+      presence: "offline",
+      registered_via: "enrollment:test",
+      registered_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+    // The watch reads the SAME queries the registry page holds — a
+    // refetch (what the SSE bridge or the slow poll would drive) is the
+    // honest data path, no dialog-internal state edit.
+    await act(async () => {
+      await client.refetchQueries({ type: "active" });
+    });
+    await actFlush();
+    expect(document.body.textContent).toContain("fresh-agent");
+    expect(document.body.textContent).toContain("awaiting approval");
+    await actUnmount(root);
+  });
+
+  it("an expired token names the honest outcome and restarts the conveyor", async () => {
+    const { root, container, gateway, client } = await mountToWatch();
+    const enrollments = (
+      gateway as unknown as {
+        enrollments: { state: string; executor_id: string; expires_at: string }[];
+      }
+    ).enrollments;
+    enrollments[0] = {
+      ...enrollments[0],
+      state: "created",
+      executor_id: "",
+      expires_at: new Date(Date.now() - 1000).toISOString(),
+    };
+    await act(async () => {
+      await client.refetchQueries({ type: "active" });
+    });
+    await actFlush();
+    expect(document.body.textContent).toContain("The token has expired");
+    expect(document.body.textContent).toContain("Nothing broke");
+    // Restart is a FRESH mint (the stale token screen never returns).
+    await act(async () => {
+      button(container, "Restart the connection").click();
+    });
+    await actFlush();
+    expect(document.body.textContent).toContain("Create token");
+    // The rail is back to step 1 (aria-current on the FIRST step button).
+    const current = [...document.querySelectorAll("button")].find((b) =>
+      b.getAttribute("aria-current") === "step",
+    );
+    expect(current?.textContent).toContain("Details");
+    await actUnmount(root);
+  });
+});
+
+describe("EnrollmentDialog — form draft persistence (U8)", () => {
+  it("typing persists a draft; a RELOAD restores it with the honest banner", async () => {
+    const first = await mount();
+    const labelInput = [...document.querySelectorAll("input")][0]!;
+    // React owns the value — the native setter is the honest way in.
+    const setter = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      "value",
+    )?.set;
+    await act(async () => {
+      setter?.call(labelInput, "vps-watch");
+      labelInput.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await actFlush();
+    expect(localStorage.getItem("vesmaro.flow.enrollment")).toContain("vps-watch");
+    await actUnmount(first.root);
+
+    // The "reload": a fresh mount reads the same localStorage.
+    const second = await mount();
+    expect(document.body.textContent).toContain("Draft restored after reload");
+    const restoredInput = [...document.querySelectorAll("input")][0]!;
+    expect(restoredInput.value).toBe("vps-watch");
+    // Start over drops the draft AND the fields (the banner is honest about
+    // what it keeps, the reset is honest about what it drops).
+    await act(async () => {
+      button(second.container, "Start over").click();
+    });
+    await actFlush();
+    expect(localStorage.getItem("vesmaro.flow.enrollment")).toBeNull();
+    expect([...document.querySelectorAll("input")][0]!.value).toBe("");
+    await actUnmount(second.root);
+  });
+
+  it("a PRISTINE dialog persists no draft — no fake «restored» banner", async () => {
+    const first = await mount();
+    await actFlush();
+    expect(localStorage.getItem("vesmaro.flow.enrollment")).toBeNull();
+    await actUnmount(first.root);
+    const second = await mount();
+    expect(document.body.textContent).not.toContain("Draft restored after reload");
+    await actUnmount(second.root);
   });
 });

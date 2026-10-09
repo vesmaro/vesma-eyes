@@ -13,6 +13,7 @@ import {
   MOCK_EXECUTORS_PAGE,
 } from "@/gateway/boardFixtures";
 import { useAgentsEvents } from "./agentsEvents";
+import { usePresenceFlash } from "./presenceLight";
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 /**
@@ -160,5 +161,73 @@ describe("useAgentsEvents — §5.9 reconnect refetch (hook-level regression)", 
     expect(isKeyInvalidated(client, keys.agents.assignments.all)).toBe(false);
     expect(isKeyInvalidated(client, keys.agents.executors.all)).toBe(false);
     unmount();
+  });
+
+  it("U8: a REAL assignment.started frame records the ether flash (one store, `assignment:` namespace)", () => {
+    const client = seededClient();
+    const source = stubSource();
+    let flashTone = "none";
+    function FlashProbe() {
+      useAgentsEvents();
+      const flash = usePresenceFlash("assignment:401");
+      flashTone = flash?.tone ?? "none";
+      return null;
+    }
+    const gateway = {
+      events: () =>
+        new EventStream({
+          baseUrl: "/api",
+          eventSourceFactory: (url: string) => {
+            source.url = url;
+            return source as unknown as EventSource;
+          },
+        }),
+    };
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root: Root = createRoot(container);
+    act(() => {
+      root.render(
+        <GatewayContext.Provider value={gateway as never}>
+          <QueryClientProvider client={client}>
+            <FlashProbe />
+          </QueryClientProvider>
+        </GatewayContext.Provider>,
+      );
+    });
+    act(() => {
+      source.open();
+      source.emit(
+        JSON.stringify({
+          kind: "assignment.started",
+          assignment: {
+            id: 401,
+            task_id: "TB-1",
+            specialist: "SFE",
+            harness: "zcode",
+            state: "running",
+            created_by: "owner",
+            claimed_by: null,
+            note: "",
+            spec_hash: "",
+            executor_id: "",
+            claimed_by_executor: "zcode@laptop",
+            created_at: "2026-10-09T10:00:00Z",
+            claimed_at: "2026-10-09T10:00:05Z",
+            started_at: "2026-10-09T10:00:06Z",
+            heartbeat_at: null,
+            finished_at: null,
+          },
+          task_id: "TB-1",
+        }),
+      );
+    });
+    // The flash store (presenceLight) carries the record under the
+    // namespaced key — the row's one-shot flare rides REAL frames only.
+    expect(flashTone).toBe("online");
+    act(() => {
+      root.unmount();
+    });
+    container.remove();
   });
 });

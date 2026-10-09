@@ -1016,6 +1016,33 @@ export const en: Record<TranslationKey, string> = {
   "tasks.create.projectLabel": "Project",
   "tasks.create.tagsLabel": "vesma tags (comma-separated)",
   "tasks.create.submit": "Create task",
+  // --- U8: the task-formation conveyor (the v12 wizard «What → Whom →
+  // Review»); a step IS a real operation, «Whom» rides the assignment engine.
+  "tasks.create.stepWhat": "What",
+  "tasks.create.stepWhom": "Whom",
+  "tasks.create.stepReview": "Review",
+  "tasks.create.conveyorLabel": "Task steps",
+  "tasks.create.next": "Next",
+  "tasks.create.whatTitle": "What to do",
+  "tasks.create.whomTitle": "Whom to assign",
+  "tasks.create.whomSub":
+    "Every card promises an honest start moment — when the task actually begins.",
+  "tasks.create.queueChoice": "Queue without an executor",
+  "tasks.create.queueNote":
+    "The task waits on the board — assign someone later. An equal path, not a fallback.",
+  "tasks.create.startLive": "Connected: the task starts after the agent's next report",
+  "tasks.create.startOffline":
+    "Away: the task queues up — the agent picks it up on return",
+  "tasks.create.assignHint":
+    "A direct hand-off to {{name}} goes through the assignment engine: it needs a specialist and a harness.",
+  "tasks.create.specialistError": "the assignment engine needs a specialist (1–120 chars)",
+  "tasks.create.sumWhat": "What",
+  "tasks.create.sumTags": "Tags",
+  "tasks.create.whomQueue": "Queue — no executor yet",
+  "tasks.create.whomExecutor": "{{name}} · specialist {{specialist}} · harness {{harness}}",
+  "tasks.create.give": "Give the task",
+  "tasks.create.assignmentFailed":
+    "Task {{id}} was created, but the hand-off did not land — the reason is in the toast. You can assign the task from its card.",
 
   // --- tasks: row action menu (Ф3) ---------------------------------------------------
   "tasks.menu.triggerAria": "Actions for task {{id}}",
@@ -1175,7 +1202,8 @@ export const en: Record<TranslationKey, string> = {
   "agents.roster.emptyTitle": "No agents yet",
   "agents.roster.emptyMessage":
     "The roster comes alive once the first executor connects.",
-  "agents.roster.emptyAction": "Open Connect",
+  "agents.roster.emptyAction": "Open Connect a machine",
+  "agents.roster.connectAction": "Connect a machine",
   "agents.roster.hostUnknown": "host not reported",
   "agents.roster.onlineCounter": "{{online}}/{{total}} online",
   "agents.roster.idle": "idle",
@@ -1257,7 +1285,7 @@ export const en: Record<TranslationKey, string> = {
   "agents.settings.meshIneligible": "mesh transport — routing unavailable until R4",
 
   // --- agents domain: registry page /agents/harnesses (AGW-4) ----------------------
-  "nav.agentsHarnesses": "Connect",
+  "nav.agentsHarnesses": "Connect a machine",
   "agents.registry.title": "Agent connections",
   "agents.registry.loading": "Loading the executor registry",
   "agents.registry.failed": "Failed to load the executor registry",
@@ -2263,4 +2291,58 @@ export const en: Record<TranslationKey, string> = {
   // --- base kit state matrices (spec 05 §2.2/§2.5, wave U0) ------------------
   "field.errorPrefix": "Error:",
   "tag.filterUnavailable": "Filtering is unavailable here",
+
+  // --- conveyor (U8 v12-UX-flows): shared step-kit vocabulary -----------------
+  // Step state for screen readers: the number/✓ glyphs are visual only
+  // (aria-hidden), the state is named in words (WCAG 4.1.2).
+  "flows.rail.stateDone": "Step completed",
+  "flows.rail.stateCurrent": "Current step",
+  "flows.rail.stateUpcoming": "Upcoming step",
+  "flows.rail.backTitle": "Back to the “{{step}}” step",
+  // Draft resume (koraFrameStorage precedent): a restore is named and
+  // dated — the form does not pretend it was never closed.
+  "flows.draft.restored": "Draft restored after reload (saved at {{time}})",
+  "flows.draft.keepNote": "The draft is stored locally and survives a reload",
+  "flows.draft.startOver": "Start over",
+
+  // --- agent enrollment conveyor (U8): the «Details → Token → First
+  // connect» steps. Progress = real operation states, never a timer.
+  "agents.enrollment.railLabel": "Agent connection steps",
+  "agents.enrollment.stepForm": "Details",
+  "agents.enrollment.stepToken": "Token & command",
+  "agents.enrollment.stepConnect": "First connect",
+  "agents.enrollment.stepTokenTitle": "Token minted — it works exactly once",
+  "agents.enrollment.watch": "Watch for the connect",
+  "agents.enrollment.backToToken": "Back to the install command",
+  "agents.enrollment.stepConnectTitle": "Waiting for the first connect: {{label}}",
+  "agents.enrollment.watchWaiting":
+    "The token is live — run the command from the «Token & command» step on the machine. As soon as the agent reports in, this step closes by itself.",
+  "agents.enrollment.watchPollNote":
+    "The status refreshes on its own; you may close this dialog — the token keeps being watched in the list below the registry.",
+  "agents.enrollment.watchConnected":
+    "The agent connected — “{{name}}” registered and awaiting approval",
+  "agents.enrollment.watchApproveNote":
+    "One step left: approve the new executor in the registry (fingerprint verify).",
+  "agents.enrollment.watchOpenRegistry": "Open the registry to approve",
+  "agents.enrollment.watchApproved": "“{{name}}” is connected and approved — all set",
+  "agents.enrollment.watchUsedNoRow":
+    "The token was used, but the executor card has not reached the registry yet — refresh or check the registry.",
+  "agents.enrollment.watchExpired": "The token has expired — no connect happened",
+  "agents.enrollment.watchExpiredHint":
+    "Nothing broke: the machine simply did not report in time. Start over — a fresh token, the same fields.",
+  "agents.enrollment.watchRestart": "Restart the connection",
+  "agents.enrollment.watchRevoked":
+    "The token was revoked — connecting with it is impossible. Start over with a fresh token.",
+  "agents.enrollment.watchListError": "Failed to refresh the token status: {{message}}",
+  "agents.enrollment.cancelNote":
+    "You may close this dialog at any step — the token does not die and stays in the list below the registry (expires {{time}}).",
+
+  // --- host-add conveyor (U8): «Machine → Install → Verify». A step IS a
+  // real provision-job state; there is no timer-driven progress.
+  "agents.provision.conveyorLabel": "Machine connection steps",
+  "agents.provision.stepMachine": "Machine",
+  "agents.provision.stepInstall": "Install",
+  "agents.provision.stepVerify": "Verify",
+  "agents.provision.detachNote":
+    "You may close this card — the install does NOT cancel: it keeps running on the server, and the card re-attaches to the job when you return.",
 };
