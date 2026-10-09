@@ -17,6 +17,7 @@ import {
 } from "./assignmentStatus";
 import { assignmentRowTiming, queuedHintMinutes, timingCountdownMinutes } from "./assignmentTiming";
 import { AssignmentStateBadge } from "./AssignmentStateBadge";
+import { usePresenceFlash } from "./presenceLight";
 
 /**
  * One dense row of the execution list (spec §1.1 layer 2): state badge ·
@@ -55,6 +56,11 @@ export function ExecutionRow({
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const timing = assignmentRowTiming(row, now);
+  // U8 эфир-вспышка: the row flares ONCE when the REAL assignment.started
+  // frame lands (the same one-shot store the roster's presence light uses;
+  // the `assignment:` namespace keeps the keys apart). A silent bus records
+  // nothing — the row stands; reduced motion flattens to an instant tint.
+  const flash = usePresenceFlash(`assignment:${row.id}`);
   const terminal =
     row.state === "done" ||
     row.state === "failed" ||
@@ -86,7 +92,9 @@ export function ExecutionRow({
         "relative rounded-md border bg-well px-2.5 py-1.5 text-sm shadow-well transition-colors duration-instant " +
         (cursor
           ? "border-iris-bright/60 "
-          : "border-border-subtle hover:border-iris-bright/40 ")
+          : "border-border-subtle hover:border-iris-bright/40 ") +
+        // The one-shot start flare (event-driven, never background).
+        (flash ? "agents-presence-online " : "")
       }
     >
       <div className="flex flex-wrap items-center gap-2">
