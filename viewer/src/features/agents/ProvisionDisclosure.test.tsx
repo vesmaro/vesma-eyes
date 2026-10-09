@@ -38,7 +38,10 @@ const JOB: ActiveProvisionJob = {
   name: "agent-x",
 };
 
-async function mountRegistry(seedEmpty: boolean): Promise<{
+async function mountRegistry(
+  seedEmpty: boolean,
+  initialEntry = "/agents/harnesses",
+): Promise<{
   root: Root;
   container: HTMLElement;
 }> {
@@ -62,7 +65,7 @@ async function mountRegistry(seedEmpty: boolean): Promise<{
           <ToastProvider>
             <UiTokenProvider>
               <I18nProvider initialLang="en">
-                <MemoryRouter initialEntries={["/agents/harnesses"]}>
+                <MemoryRouter initialEntries={[initialEntry]}>
                   <ExecutorRegistryPage />
                 </MemoryRouter>
               </I18nProvider>
@@ -123,6 +126,21 @@ describe("ProvisionDisclosure (UX-overhaul §4.1, review P3-3)", () => {
     // mid-run), not the SSH form — the point is visibility, and the
     // running job is on screen («Connecting <host>»).
     expect(container.textContent).toContain("Connecting 192.0.2.10");
+    await actUnmount(root);
+  });
+
+  it("U8: the ?connect=1 deep link opens the conveyor on a NON-empty registry", async () => {
+    // The v12 «Подключить машину» path lands on the OPEN wizard, not a
+    // folded card — hosts.html's «Подключить хост» walks to connect.html.
+    const { root, container } = await mountRegistry(false, "/agents/harnesses?connect=1");
+    const toggle = disclosureToggle(container);
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(container.textContent).toContain("Connect over SSH");
+    // The owner's toggle still wins over the deep-link seed.
+    await act(async () => {
+      toggle.click();
+    });
+    expect(disclosureToggle(container).getAttribute("aria-expanded")).toBe("false");
     await actUnmount(root);
   });
 

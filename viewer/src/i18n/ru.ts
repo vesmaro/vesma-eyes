@@ -1201,7 +1201,8 @@ export const ru = {
   "agents.roster.failed": "Не удалось загрузить ростер",
   "agents.roster.emptyTitle": "Агентов ещё нет",
   "agents.roster.emptyMessage": "Ростер оживёт, когда подключится первый исполнитель.",
-  "agents.roster.emptyAction": "Открыть «Подключение»",
+  "agents.roster.emptyAction": "Открыть «Подключить машину»",
+  "agents.roster.connectAction": "Подключить машину",
   "agents.roster.hostUnknown": "хост не указан",
   "agents.roster.onlineCounter": "{{online}}/{{total}} онлайн",
   "agents.roster.idle": "простаивает",
@@ -1283,7 +1284,7 @@ export const ru = {
   "agents.settings.meshIneligible": "mesh-транспорт — маршрутизация недоступна до R4",
 
   // --- agents domain: registry page /agents/harnesses (AGW-4) ----------------------
-  "nav.agentsHarnesses": "Подключение",
+  "nav.agentsHarnesses": "Подключить машину",
   "agents.registry.title": "Подключение агентов",
   "agents.registry.loading": "Загружаем реестр исполнителей",
   "agents.registry.failed": "Не удалось загрузить реестр исполнителей",

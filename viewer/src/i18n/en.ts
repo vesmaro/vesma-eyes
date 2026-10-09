@@ -1175,7 +1175,8 @@ export const en: Record<TranslationKey, string> = {
   "agents.roster.emptyTitle": "No agents yet",
   "agents.roster.emptyMessage":
     "The roster comes alive once the first executor connects.",
-  "agents.roster.emptyAction": "Open Connect",
+  "agents.roster.emptyAction": "Open Connect a machine",
+  "agents.roster.connectAction": "Connect a machine",
   "agents.roster.hostUnknown": "host not reported",
   "agents.roster.onlineCounter": "{{online}}/{{total}} online",
   "agents.roster.idle": "idle",
@@ -1257,7 +1258,7 @@ export const en: Record<TranslationKey, string> = {
   "agents.settings.meshIneligible": "mesh transport — routing unavailable until R4",
 
   // --- agents domain: registry page /agents/harnesses (AGW-4) ----------------------
-  "nav.agentsHarnesses": "Connect",
+  "nav.agentsHarnesses": "Connect a machine",
   "agents.registry.title": "Agent connections",
   "agents.registry.loading": "Loading the executor registry",
   "agents.registry.failed": "Failed to load the executor registry",

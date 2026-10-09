@@ -106,8 +106,17 @@ export function HostsRosterPage() {
       {/* ME-072 C: the visible h1 on the page axis (the pattern-A posture of
        * Sessions/Tasks pages) — the section's default landing reads its name.
        * The nav key is the source («Хосты»), the roster title stays for the
-       * a11y outline parity. */}
-      <h1 className="text-xl font-semibold">{t("nav.agentsHosts")}</h1>
+       * a11y outline parity. U8: the v12 page-action (hosts.html «Подключить
+       * хост» → connect.html) — the explicit connect path lands on the OPEN
+       * conveyor via ?connect=1 (the registry page reads it). */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-xl font-semibold">{t("nav.agentsHosts")}</h1>
+        <Button asChild size="sm">
+          <Link to="/agents/harnesses?connect=1">
+            {t("agents.roster.connectAction")}
+          </Link>
+        </Button>
+      </div>
 
       {executors.isPending ? (
         <div role="status" aria-label={t("agents.roster.loading")}>

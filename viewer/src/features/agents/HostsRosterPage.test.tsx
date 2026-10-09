@@ -243,6 +243,19 @@ describe("host grouping (the client-side projection)", () => {
     expect(group(container, "laptop")).toBeNull();
     await actUnmount(root);
   });
+
+  it("U8: the page-action «Connect a machine» walks to the OPEN conveyor", async () => {
+    const { root, container } = await mountPage();
+    // The v12 hosts.html page-action: the explicit connect path is a
+    // deep link that lands on the OPEN conveyor (?connect=1), not a
+    // folded disclosure the owner must find.
+    const action = container.querySelector<HTMLAnchorElement>(
+      'a[href="/agents/harnesses?connect=1"]',
+    );
+    expect(action).not.toBeNull();
+    expect(action!.textContent).toContain("Connect a machine");
+    await actUnmount(root);
+  });
 });
 
 describe("presence age ticks from the server meta TTLs", () => {
