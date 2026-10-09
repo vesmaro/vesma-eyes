@@ -206,6 +206,72 @@ async function settledShot(context, url, name) {
   return shot;
 }
 
+// --- the raster-noise tolerance (agents-redesign A1, 2026-10-09) --------------
+// Headless Skia can flip a HANDFUL of sub-visible antialiasing pixels between
+// LOADS of an identical, still page — the same jitter class the launch flags
+// above already fight (the header records a 2-pixel case observed at rest).
+// Measured on the A1 hosts frame: 11 px at ΔRGB ≤ 12 across loads, ZERO
+// within-load motion (8 frames over 5 s byte-identical), the flipped pixels
+// invisible at 8× zoom (shell-chrome glyph/border AA; the glyph-atlas
+// nondeterminism class). Real motion paints REGIONS — the smallest honest
+// living dose (the presence impulse) tints a whole row — so the silent-bus
+// contract stays: byte-equal, or ≤ NOISE_PIXELS differing pixels each within
+// NOISE_DELTA per channel = the page stands; anything more = motion, FAIL.
+// The POSITIVE controls keep the strict byte comparison (a real event must
+// move the page — and does, by thousands of pixels).
+const NOISE_PIXELS = 12;
+const NOISE_DELTA = 16;
+
+/** The decoded-pixel verdict for a silent-bus frame pair (see above). PNG
+ * ENCODING is itself nondeterministic (a 1-byte size difference over ZERO
+ * differing pixels was measured on the muted pass) — the decoded pixels are
+ * the verdict; byte equality is only the fast path. */
+async function framesStand(browser, a, b) {
+  if (a.equals(b)) return true;
+  const page = await browser.newPage();
+  try {
+    return await page.evaluate(
+      async ([aB64, bB64, maxPixels, maxDelta]) => {
+        const load = (b64) =>
+          new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = `data:image/png;base64,${b64}`;
+          });
+        const [ia, ib] = await Promise.all([load(aB64), load(b64)]);
+        if (ia.width !== ib.width || ia.height !== ib.height) return false;
+        const canvas = document.createElement("canvas");
+        canvas.width = ia.width;
+        canvas.height = ia.height;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        ctx.drawImage(ia, 0, 0);
+        const da = ctx.getImageData(0, 0, ia.width, ia.height).data;
+        ctx.clearRect(0, 0, ia.width, ia.height);
+        ctx.drawImage(ib, 0, 0);
+        const db = ctx.getImageData(0, 0, ib.width, ib.height).data;
+        let pixels = 0;
+        for (let i = 0; i < da.length; i += 4) {
+          const delta = Math.max(
+            Math.abs(da[i] - db[i]),
+            Math.abs(da[i + 1] - db[i + 1]),
+            Math.abs(da[i + 2] - db[i + 2]),
+            Math.abs(da[i + 3] - db[i + 3]),
+          );
+          if (delta > 0) {
+            pixels += 1;
+            if (delta > maxDelta || pixels > maxPixels) return false;
+          }
+        }
+        return true;
+      },
+      [a.toString("base64"), b.toString("base64"), NOISE_PIXELS, NOISE_DELTA],
+    );
+  } finally {
+    await page.close();
+  }
+}
+
 async function main() {
   const playwright = resolvePlaywright();
   mkdirSync(OUT_DIR, { recursive: true });
@@ -250,7 +316,7 @@ async function main() {
       // Same context → the SECOND page loads caches but the sessionStorage
       // awakening flag is per-TAB: no events fired, so the flag was never
       // written; the well must stand identically anyway.
-      const identical = a.equals(b);
+      const identical = await framesStand(browser, a, b);
       check(
         identical,
         "silent bus: two frames ≥5s apart are pixel-identical",
@@ -273,7 +339,7 @@ async function main() {
         `${BASE}?quiet=1`,
         "u2-honesty-muted-t5.png",
       );
-      const identical = a.equals(b);
+      const identical = await framesStand(browser, a, b);
       check(
         identical,
         "muted (?quiet=1, silent bus): frames identical — mute adds no motion",
@@ -327,7 +393,7 @@ async function main() {
           `${BASE}tasks`,
           `u3-honesty-tasks-silent-t5.png`,
         );
-        identical = a.equals(b);
+        identical = await framesStand(browser, a, b);
         bytes = `bytes ${a.length} vs ${b.length}`;
         if (!identical && attempt === 1) {
           console.log("[honesty] tasks-silent: frames differ — rechecking once (a minute-field rollover is data aging, not motion)");
@@ -415,7 +481,7 @@ async function main() {
         `${BASE}memory`,
         "u4-honesty-memory-silent-t5.png",
       );
-      const identical = a.equals(b);
+      const identical = await framesStand(browser, a, b);
       check(
         identical,
         "memory: silent bus — two frames ≥5s apart are pixel-identical",
@@ -477,7 +543,7 @@ async function main() {
         `${BASE}kora`,
         "u5-honesty-kora-silent-t5.png",
       );
-      const identical = a.equals(b);
+      const identical = await framesStand(browser, a, b);
       check(
         identical,
         "kora: silent bus — two frames ≥5s apart are pixel-identical",
@@ -555,7 +621,7 @@ async function main() {
           `${BASE}agents/hosts`,
           "u6-honesty-agents-silent-t5.png",
         );
-        identical = a.equals(b);
+        identical = await framesStand(browser, a, b);
         bytes = `bytes ${a.length} vs ${b.length}`;
         if (!identical && attempt === 1) {
           console.log(
@@ -631,7 +697,7 @@ async function main() {
         `${BASE}docs/vesma-eyes`,
         "u6-honesty-docs-silent-t5.png",
       );
-      const identical = a.equals(b);
+      const identical = await framesStand(browser, a, b);
       check(
         identical,
         "docs: silent bus — two frames ≥5s apart are pixel-identical (no living layer, pinned)",
@@ -660,7 +726,7 @@ async function main() {
         `${BASE}system/settings`,
         "u6-honesty-system-silent-t5.png",
       );
-      const identical = a.equals(b);
+      const identical = await framesStand(browser, a, b);
       check(
         identical,
         "system: silent bus — two frames ≥5s apart are pixel-identical (no living layer, pinned)",
@@ -689,7 +755,7 @@ async function main() {
         `${BASE}agents/harnesses?connect=1`,
         "u8-honesty-connect-silent-t5.png",
       );
-      const identical = a.equals(b);
+      const identical = await framesStand(browser, a, b);
       check(
         identical,
         "connect conveyor: silent bus — two frames ≥5s apart are pixel-identical (no decorative progress)",
@@ -722,7 +788,7 @@ async function main() {
           `${BASE}tasks/list?wizard=1`,
           "u8-honesty-wizard-silent-t5.png",
         );
-        identical = a.equals(b);
+        identical = await framesStand(browser, a, b);
         bytes = `bytes ${a.length} vs ${b.length}`;
         if (!identical && attempt === 1) {
           console.log("[honesty] wizard-silent: frames differ — rechecking once (a minute-field rollover is data aging, not motion)");
