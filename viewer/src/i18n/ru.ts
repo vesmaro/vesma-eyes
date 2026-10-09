@@ -1253,6 +1253,9 @@ export const ru = {
     "Хоста «{{host}}» нет в ростере — возможно, его запись удалили.",
   "agents.hosts.backToRoster": "К ростеру хостов",
   "agents.hosts.rosterRegion": "Ростер хостов",
+  "agents.hosts.rosterTrigger": "Ростер · {{n}}",
+  "agents.hosts.ribbonLabel": "Лента хостов",
+  "agents.hosts.sheetHint": "Выберите хост — его карточка откроется в основном поле.",
   "agents.hosts.resize.label": "Ширина панели хостов",
   "agents.hosts.resize.tooltip":
     "Потяните, чтобы изменить ширину. Двойной клик — вернуть как было",

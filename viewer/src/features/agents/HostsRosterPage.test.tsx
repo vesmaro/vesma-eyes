@@ -273,16 +273,19 @@ async function teardown(root: Root): Promise<void> {
 const panel = (container: HTMLElement): HTMLElement =>
   container.querySelector('aside[aria-label="Host roster"]')!;
 
-/** The roster ROWS (the panel's ul excludes the bottom connect action). */
-const rows = (container: HTMLElement): NodeListOf<HTMLAnchorElement> =>
-  panel(container).querySelectorAll("ul a");
+/** The roster ROWS (listbox options; the panel's ul excludes the connect). */
+const rows = (container: HTMLElement): NodeListOf<HTMLElement> =>
+  panel(container).querySelectorAll('[role="listbox"] [role="option"]');
 
-const rowOf = (container: HTMLElement, host: string): HTMLAnchorElement =>
+const rowOf = (container: HTMLElement, host: string): HTMLElement =>
   [...rows(container)].find((row) => row.textContent?.includes(host))!;
 
 /** The main field = the grid's FIRST child (the handle and the aside follow). */
 const mainField = (container: HTMLElement): HTMLElement =>
   panel(container).parentElement!.firstElementChild as HTMLElement;
+
+const listBox = (container: HTMLElement): HTMLElement =>
+  panel(container).querySelector('[role="listbox"]')!;
 
 beforeEach(() => {
   localStorage.clear();
@@ -363,6 +366,128 @@ describe("the frame: selection as a route", () => {
     expect(
       container.querySelector('h2[id="agents-host-title"]')?.textContent,
     ).toBe("mesh-2");
+    await actUnmount(root);
+  });
+});
+
+describe("the roster listbox (A2 §3.E keyboard path)", () => {
+  it("arrows and j/k move the highlight; Enter opens the host and lands focus on the field title", async () => {
+    const { root, container } = await mountPage({ path: "/agents/hosts/laptop" });
+    const list = listBox(container);
+    expect(list.getAttribute("role")).toBe("listbox");
+    // The highlight starts on the selection (aria-current preserved).
+    expect(list.getAttribute("aria-activedescendant")).toBe(
+      rowOf(container, "laptop").id,
+    );
+    expect(rowOf(container, "laptop").getAttribute("aria-selected")).toBe("true");
+    await act(async () => {
+      list.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
+      );
+    });
+    expect(list.getAttribute("aria-activedescendant")).toBe(
+      rowOf(container, "mesh-2").id,
+    );
+    await act(async () => {
+      list.dispatchEvent(new KeyboardEvent("keydown", { key: "j", bubbles: true }));
+    });
+    expect(list.getAttribute("aria-activedescendant")).toBe(
+      rowOf(container, "new-host").id,
+    );
+    await act(async () => {
+      list.dispatchEvent(new KeyboardEvent("keydown", { key: "k", bubbles: true }));
+    });
+    expect(list.getAttribute("aria-activedescendant")).toBe(
+      rowOf(container, "mesh-2").id,
+    );
+    // Enter opens the highlighted host: route + the field + the focus.
+    await act(async () => {
+      list.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
+    await actFlush(50);
+    expect(
+      container.querySelector('h2[id="agents-host-title"]')?.textContent,
+    ).toBe("mesh-2");
+    expect(document.activeElement?.id).toBe("agents-host-title");
+    await actUnmount(root);
+  });
+
+  it("a plain click on an option navigates too (mouse parity)", async () => {
+    const { root, container } = await mountPage({ path: "/agents/hosts/laptop" });
+    await act(async () => {
+      rowOf(container, "old-host").click();
+    });
+    expect(
+      container.querySelector('h2[id="agents-host-title"]')?.textContent,
+    ).toBe("old-host");
+    await actUnmount(root);
+  });
+});
+
+describe("the md ribbon (A2 §3.D)", () => {
+  it("renders one compact chip per host and navigates on click", async () => {
+    const { root, container } = await mountPage({ path: "/agents/hosts/laptop" });
+    const ribbon = container.querySelector('[aria-label="Host ribbon"]');
+    expect(ribbon).not.toBeNull();
+    const chips = [...ribbon!.querySelectorAll("button")];
+    expect(chips).toHaveLength(4);
+    expect(
+      chips.find((chip) => chip.textContent?.includes("laptop"))!.getAttribute(
+        "aria-current",
+      ),
+    ).toBe("page");
+    // The pending host keeps its decision pill in the ribbon.
+    expect(
+      chips.find((chip) => chip.textContent?.includes("new-host"))!.textContent,
+    ).toContain("awaits decision");
+    await act(async () => {
+      chips.find((chip) => chip.textContent?.includes("mesh-2"))!.click();
+    });
+    expect(
+      container.querySelector('h2[id="agents-host-title"]')?.textContent,
+    ).toBe("mesh-2");
+    await actUnmount(root);
+  });
+});
+
+describe("the roster sheet (A2 §3.D, <xl)", () => {
+  it("opens from the trigger; Enter navigates + closes + lands the focus; Esc closes", async () => {
+    const { root, container } = await mountPage({ path: "/agents/hosts/laptop" });
+    const trigger = [...container.querySelectorAll("button")].find((button) =>
+      button.textContent?.includes("Roster · 4"),
+    )!;
+    await act(async () => {
+      trigger.click();
+    });
+    const dialog = document.body.querySelector("[role='dialog']");
+    expect(dialog).not.toBeNull();
+    expect(dialog!.querySelectorAll('[role="option"]').length).toBe(4);
+    // Esc closes the top overlay.
+    await act(async () => {
+      dialog!
+        .querySelector('[role="listbox"]')!
+        .dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+        );
+    });
+    expect(document.body.querySelector("[role='dialog']")).toBeNull();
+    // Reopen: the highlight moves, Enter navigates and closes the sheet.
+    await act(async () => {
+      trigger.click();
+    });
+    const list = document.body.querySelector('[role="dialog"] [role="listbox"]')! as HTMLElement;
+    await act(async () => {
+      list.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    });
+    await act(async () => {
+      list.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
+    await actFlush(50);
+    expect(document.body.querySelector("[role='dialog']")).toBeNull();
+    expect(
+      container.querySelector('h2[id="agents-host-title"]')?.textContent,
+    ).toBe("mesh-2");
+    expect(document.activeElement?.id).toBe("agents-host-title");
     await actUnmount(root);
   });
 });

@@ -1227,6 +1227,9 @@ export const en: Record<TranslationKey, string> = {
     "No host «{{host}}» in the roster — its record may have been deleted.",
   "agents.hosts.backToRoster": "Back to the host roster",
   "agents.hosts.rosterRegion": "Host roster",
+  "agents.hosts.rosterTrigger": "Roster · {{n}}",
+  "agents.hosts.ribbonLabel": "Host ribbon",
+  "agents.hosts.sheetHint": "Pick a host — its card opens in the main field.",
   "agents.hosts.resize.label": "Hosts panel width",
   "agents.hosts.resize.tooltip":
     "Drag to resize. Double-click to restore",

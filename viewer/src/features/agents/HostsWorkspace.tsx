@@ -1,7 +1,14 @@
-import { useCallback, useMemo, useState } from "react";
-import { Link, Navigate } from "react-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, Navigate, useNavigate } from "react-router";
+import { List } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import type {
@@ -56,18 +63,25 @@ import { pageGridClass } from "@/layout/pageGrid";
 
 /**
  * `/agents/hosts` — the HOSTS frame (agents-redesign A1, blueprint
- * 2026-10-09 «каркас-инверсия»): the Kora v7 frame pattern (100vh app frame
- * ≥xl, NO page scroll, one grid — the host field + the roster panel + a REAL
- * seam) with the selection as a ROUTE (`/agents/hosts/:host?`) — the frame
- * never re-assembles, the center's content changes.
+ * 2026-10-09 «каркас-инверсия»; A2 mobile reflow + keyboard path): the Kora
+ * v7 frame pattern ≥xl (100vh app frame, NO page scroll, one grid — the
+ * host field + the roster panel + a REAL seam) with the selection as a
+ * ROUTE (`/agents/hosts/:host?`) — the frame never re-assembles.
  *
- * THE INVERSION: the roster moves to the RIGHT PANEL as compact host ROWS
- * (not cards): presence word + dot, the host name, «N/M harnesses online»,
- * the active-work chip, the freshest report age. The MAIN FIELD is the
- * selected host's scaffold — name, lifecycle pill + next_action (the server
- * `ExecutorLifecycleStatus`), the stats line — and an honest one-line
- * placeholder: the work field itself (Сейчас / Харнесы / Недавно) lands in
- * slices B1/B2.
+ * A2 RESPONSIVE LADDER (blueprint §3.D):
+ * - ≥xl: the A1 frame — field | seam | roster panel (one list scroll).
+ * - md..xl (768–1279): the seams leave, the page scrolls honestly (the Kora
+ *   precedent); the roster compresses to a RIBBON of compact host chips
+ *   under the section header (one-tap selection) + a trigger opening the
+ *   full roster as a right-side SHEET; the details open over the page.
+ * - <768: the sheet IS the roster (trigger button, ≥48px rows, fullscreen
+ *   below sm); the field is one column; the conveyor stays a full page.
+ *
+ * A2 KEYBOARD PATH (§3.E): the roster rows are a LISTBOX — one tab stop,
+ * ↑/↓/j/k move the highlight (aria-activedescendant), Home/End jump, Enter
+ * opens the host (route + focus lands on the field's h2), Esc closes the
+ * top overlay (the sheet; Radix handles it, the list mirrors the intent).
+ * The ≥xl seam keeps its KoraResizeHandle arrow/Home/End/Esc path.
  *
  * A «host» is a CLIENT-SIDE projection of the executor registry
  * (rosterModel.groupExecutorsByHost — no host API exists in the engine):
@@ -89,6 +103,7 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
   const executors = useExecutors();
   const assignments = useAssignments();
   const board = useBoardTasks();
+  const navigate = useNavigate();
   // Shared 1 Hz ticker (SSR snapshot 0 — ages render client-side only).
   const now = useValidationNow();
 
@@ -106,6 +121,8 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
 
   // The ONE panel filter (the blueprint's three chips).
   const [filter, setFilter] = useState<HostFilter>("all");
+  // The roster SHEET (the <xl roster): session-only state, Radix owns Esc.
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const items = useMemo(() => executors.data?.items ?? [], [executors.data]);
   const meta = executors.data?.meta;
@@ -138,6 +155,34 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
 
   const titleOf = (taskId: string): string =>
     (board.data?.tasks ?? []).find((task) => task.id === taskId)?.title || taskId;
+
+  /** The shared «open this host» action: route only — the field-title focus
+   * is owned by the effect below (single focus owner, no races). */
+  const openHost = useCallback(
+    (group: HostGroup): void => {
+      navigate(`/agents/hosts/${encodeURIComponent(hostRouteId(group))}`);
+    },
+    [navigate],
+  );
+
+  // A2 §3.E: on a host CHANGE the focus lands on the field's title (the
+  // h2 is the landing landmark). Shell's FocusMain refocuses <main> on any
+  // pathname change in the SAME commit — parent effects run after child
+  // effects, so the title focus defers one frame (rAF) and lands last.
+  // Skipped on mount (no focus steal on plain load) and while the sheet is
+  // open (its own focus trap owns the tab).
+  const prevHostId = useRef(hostId);
+  useEffect(() => {
+    const changed = prevHostId.current !== hostId;
+    prevHostId.current = hostId;
+    if (!changed || hostId === null || sheetOpen) return;
+    const raf = requestAnimationFrame(() => {
+      document
+        .getElementById("agents-host-title")
+        ?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [hostId, sheetOpen]);
 
   if (!capable) {
     return <AgentsUnsupported />;
@@ -176,7 +221,9 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
   }
 
   const selected =
-    hostId === null ? null : (groups.find((group) => hostRouteId(group) === hostId) ?? null);
+    hostId === null
+      ? null
+      : (groups.find((group) => hostRouteId(group) === hostId) ?? null);
   // A settled roster + a URL host that projects to nothing = the honest
   // not-found (a deleted/renamed host deep link); the panel keeps working.
   const unknownHost = hostId !== null && groups.length > 0 && selected === null;
@@ -192,6 +239,35 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
       <div className="shrink-0">
         <Header summary={executors.isPending ? null : summary} />
       </div>
+
+      {/* A2 §3.D: the md..xl RIBBON — compact host chips under the section
+       * header, one tap selects the host (route); the full roster (counters,
+       * ages, filters) stays in the sheet. Hidden at xl (the panel owns the
+       * roster) and below md (the sheet IS the roster there). */}
+      {!executors.isPending && groups.length > 0 ? (
+        <HostRibbon
+          groups={groups}
+          selectedId={hostId}
+          meta={meta}
+          now={now}
+          onOpen={openHost}
+          className="shrink-0 max-md:hidden xl:hidden"
+        />
+      ) : null}
+
+      {/* A2 §3.D: the <xl roster trigger — opens the roster sheet (a right
+       * sheet ≥sm, FULLSCREEN below sm). ≥48px target (touch pass). */}
+      {!executors.isPending && groups.length > 0 ? (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setSheetOpen(true)}
+          className="min-h-12 justify-start gap-2 xl:hidden"
+        >
+          <List aria-hidden className="size-4" />
+          {t("agents.hosts.rosterTrigger", { n: groups.length })}
+        </Button>
+      ) : null}
 
       <div
         className="relative grid min-h-0 min-w-0 flex-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_var(--agents-right-w)] xl:items-stretch xl:gap-0"
@@ -250,13 +326,11 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
           )}
         </div>
 
-        {/* The RIGHT SEAM: pointer drag with capture, the full keyboard path
-         * (arrows/Home/End/Esc), dblclick reset, persist on commit — the
-         * Kora component as-is, anchored to the PANEL EDGE it rules (07l §2
-         * «стык без зазора»: the line rides calc(100% - w), NOT the bare var
-         * offset — the Kora call site anchors it to the bare var, which lets
-         * the line drift into the field; reported upstream, not copied).
-         * Lives only inside the frame (≥xl). */}
+        {/* The RIGHT SEAM (≥xl): pointer drag with capture, the full keyboard
+         * path (arrows/Home/End/Esc), dblclick reset, persist on commit —
+         * the Kora component as-is, anchored to the PANEL EDGE it rules
+         * (07l §2 «стык без зазора»; the bare-var drift is a Kora call-site
+         * finding, reported, not copied). Lives only inside the frame. */}
         <KoraResizeHandle
           orientation="vertical"
           label={t("agents.hosts.resize.label")}
@@ -272,12 +346,11 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
           className="absolute inset-y-0 left-[calc(100%-var(--agents-right-w))] hidden -translate-x-1/2 xl:flex"
         />
 
-        {/* Right panel: THE ROSTER (the inversion) — filter chips, compact
-         * host rows (ONE list scroll), the connect action pinned at the
-         * bottom (the conveyor via ?connect=1). */}
+        {/* Right panel (≥xl): THE ROSTER — filter chips, the listbox of host
+         * rows (ONE list scroll), the connect action pinned at the bottom. */}
         <aside
           aria-label={t("agents.hosts.rosterRegion")}
-          className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-md border border-myelin bg-well xl:rounded-none xl:border-0"
+          className="hidden min-h-0 min-w-0 flex-col overflow-hidden rounded-md border border-myelin bg-well xl:flex xl:rounded-none xl:border-0"
         >
           {groups.length > 0 ? (
             <div className="shrink-0 px-3 pt-3">
@@ -296,19 +369,16 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
                 <Skeleton className="h-10 w-4/5" />
               </div>
             ) : (
-              <ul className="space-y-0.5">
-                {visibleGroups.map((group) => (
-                  <HostRow
-                    key={group.host || "__unreported__"}
-                    group={group}
-                    selected={selected !== null && hostRouteId(group) === hostId}
-                    assignments={assignmentItems}
-                    meta={meta}
-                    now={now}
-                    titleOf={titleOf}
-                  />
-                ))}
-              </ul>
+              <HostsRosterList
+                idPrefix="hosts-panel"
+                groups={visibleGroups}
+                selectedId={hostId}
+                assignments={assignmentItems}
+                meta={meta}
+                now={now}
+                titleOf={titleOf}
+                onNavigate={openHost}
+              />
             )}
             {!executors.isPending &&
             groups.length > 0 &&
@@ -327,6 +397,72 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
           </div>
         </aside>
       </div>
+
+      {/* A2 §3.D: the roster SHEET (<xl) — the full roster as an overlay:
+       * filters + the listbox + connect; FULLSCREEN below sm, a right-side
+       * sheet ≥sm. Radix owns the focus trap and Esc; the listbox mirrors
+       * the Esc intent for its own key handler. */}
+      <Dialog open={sheetOpen} onOpenChange={setSheetOpen}>
+        <DialogContent
+          /* The roster is the dialog's purpose: the initial focus goes to
+           * the LISTBOX (Radix's default lands on the first filter chip),
+           * so Esc/arrow keys work from the first beat. */
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            document.getElementById("hosts-sheet-listbox")?.focus();
+          }}
+          className={cn(
+            "flex flex-col gap-3 p-4 text-left",
+            // The sheet: fullscreen <sm, right-anchored ≥sm (inset overrides
+            // of the centered dialog default).
+            "inset-y-0 left-auto right-0 top-auto h-full max-h-none w-full max-w-none translate-x-0 translate-y-0 rounded-none border-0 sm:max-w-sm sm:border-l",
+          )}
+        >
+          <DialogTitle className="text-base">
+            {t("agents.hosts.rosterRegion")}
+          </DialogTitle>
+          <DialogDescription className="text-xs">
+            {t("agents.hosts.sheetHint")}
+          </DialogDescription>
+          {groups.length > 0 ? (
+            <div className="shrink-0">
+              <HostFilterChips filter={filter} onFilter={setFilter} />
+            </div>
+          ) : null}
+          <div className="kora-scroll -mx-1 min-h-0 flex-1 overflow-y-auto px-1">
+            <HostsRosterList
+              idPrefix="hosts-sheet"
+              groups={visibleGroups}
+              selectedId={hostId}
+              assignments={assignmentItems}
+              meta={meta}
+              now={now}
+              titleOf={titleOf}
+              variant="sheet"
+              onNavigate={(group) => {
+                setSheetOpen(false);
+                openHost(group);
+              }}
+              onEscape={() => setSheetOpen(false)}
+            />
+            {groups.length > 0 && visibleGroups.length === 0 ? (
+              <p className="px-2 py-3 text-xs text-foreground-muted">
+                {t("agents.hosts.filterEmpty")}
+              </p>
+            ) : null}
+          </div>
+          <div className="shrink-0 border-t border-myelin-hairline pt-3">
+            <Button asChild size="sm" className="w-full">
+              <Link
+                to="/agents/harnesses?connect=1"
+                onClick={() => setSheetOpen(false)}
+              >
+                {t("agents.hosts.connectAction")}
+              </Link>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
@@ -382,7 +518,11 @@ function HostFilterChips({
  * K» — the plural-safe genitive counter style of the Kora header). While the
  * registry read is pending: a skeleton with NO numbers — no fake counters.
  */
-function Header({ summary }: { summary: { machines: number; online: number; attention: number } | null }) {
+function Header({
+  summary,
+}: {
+  summary: { machines: number; online: number; attention: number } | null;
+}) {
   const t = useT();
   return (
     <header className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -408,6 +548,84 @@ function Header({ summary }: { summary: { machines: number; online: number; atte
   );
 }
 
+// --- the md..xl ribbon ------------------------------------------------------------
+
+/**
+ * The compact host-chip ribbon (A2 §3.D): one chip per host — presence dot
+ * (+ the «ждёт решения» pill where a decision is pending), the name — one
+ * horizontal scroll, one tap selects (route). The counters/ages/filters
+ * stay in the panel/sheet; the ribbon is the quick-selection strip.
+ */
+function HostRibbon({
+  groups,
+  selectedId,
+  meta,
+  now,
+  onOpen,
+  className,
+}: {
+  groups: readonly HostGroup[];
+  selectedId: string | null;
+  meta: ExecutorListMeta | undefined;
+  now: number;
+  onOpen: (group: HostGroup) => void;
+  className?: string;
+}) {
+  const t = useT();
+  return (
+    <nav
+      aria-label={t("agents.hosts.ribbonLabel")}
+      className={cn("min-w-0", className)}
+    >
+      <ul className="flex items-center gap-1.5 overflow-x-auto pb-1">
+        {groups.map((group) => {
+          const routeId = hostRouteId(group);
+          const isSelected = routeId === selectedId;
+          const awaitingDecision = hostAwaitingDecision(group);
+          const presence = hostPresence(group, meta, now);
+          const presenceKey = presence ?? "unknown";
+          return (
+            <li key={group.host || "__unreported__"}>
+              <button
+                type="button"
+                aria-current={isSelected ? "page" : undefined}
+                onClick={() => onOpen(group)}
+                className={
+                  "flex min-h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-sm transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright " +
+                  (isSelected
+                    ? "border-transparent bg-iris-tint text-iris-bright"
+                    : "border-border-subtle text-foreground-secondary hover:bg-elevated hover:text-foreground")
+                }
+              >
+                {awaitingDecision ? (
+                  <Badge
+                    variant="outline"
+                    title={t("agents.executor.pendingReason")}
+                    className="shrink-0 whitespace-nowrap border-border-subtle font-normal"
+                  >
+                    {t("agents.hosts.pendingPill")}
+                  </Badge>
+                ) : (
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "size-2 shrink-0 rounded-full",
+                      PRESENCE_DOT[presenceKey] ?? PRESENCE_DOT.unknown,
+                    )}
+                  />
+                )}
+                <span className="min-w-0 truncate font-medium">
+                  {group.label ?? t("agents.roster.hostUnknown")}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
+
 // --- the main field (A1 scaffold) ------------------------------------------------
 
 /**
@@ -416,7 +634,8 @@ function Header({ summary }: { summary: { machines: number; online: number; atte
  * then the one-line placeholder for B1/B2. The pill reads the server's
  * `ExecutorLifecycleStatus` through the host aggregate (rosterModel
  * .hostLifecycle — the attention ladder); pre-UXE-2 boards (no member
- * status) fall back to the presence word, never a guessed state.
+ * status) fall back to the presence word, never a guessed state. The h2 is
+ * the keyboard landing target (tabIndex -1 — focusable, not tabbable).
  */
 function HostField({
   group,
@@ -487,8 +706,9 @@ function HostField({
         <div className="flex flex-wrap items-center gap-2">
           <h2
             id="agents-host-title"
+            tabIndex={-1}
             className={cn(
-              "text-lg font-semibold",
+              "text-lg font-semibold outline-none",
               revoked && "text-foreground-muted",
             )}
           >
@@ -498,19 +718,19 @@ function HostField({
             <Badge
               variant="outline"
               title={t("agents.executor.pendingReason")}
-              className="font-normal"
+              className="shrink-0 whitespace-nowrap font-normal"
             >
               {t("agents.hosts.pendingPill")}
             </Badge>
           ) : state !== null ? (
             <Badge
               variant={lifecycleBadgeVariant(state)}
-              className="font-normal"
+              className="shrink-0 whitespace-nowrap font-normal"
             >
               {t(lifecycleLabelKey(state))}
             </Badge>
           ) : (
-            <Badge variant="outline" className="font-normal">
+            <Badge variant="outline" className="shrink-0 whitespace-nowrap font-normal">
               {t(presenceLabelKey(presenceKey))}
             </Badge>
           )}
@@ -551,30 +771,183 @@ function HostField({
   );
 }
 
-// --- the roster row (the inversion: compact row, NOT a card) ---------------------
+// --- the roster LISTBOX (A2 §3.E) -------------------------------------------------
+
+const optionId = (prefix: string, group: HostGroup): string =>
+  `${prefix}-opt-${hostRouteId(group)}`;
 
 /**
- * One host row: presence word + dot (or the «ждёт решения» pill while a
- * registration decision is pending), the host name, «N/M harnesses online»,
- * the active-work chip, the freshest report age. The row IS the route link
- * (selection = URL), carries aria-current when selected and flares ONCE on
- * a real member presence transition (presenceLight; a revoked host renders
- * muted — a dead row invites no colour optimism).
+ * The roster rows as a LISTBOX (A2 §3.E): ONE tab stop on the list; the
+ * highlight rides aria-activedescendant; ↑/↓/j/k move it, Home/End jump,
+ * Enter opens the highlighted host (the caller navigates + lands focus on
+ * the field's h2), Esc mirrors «close the top overlay» to the caller. The
+ * selected option carries aria-selected + aria-current (the A1 contract).
+ * Sheet variant raises the rows to ≥48px (the touch pass).
  */
-function HostRow({
-  group,
-  selected,
+function HostsRosterList({
+  idPrefix,
+  groups,
+  selectedId,
   assignments,
   meta,
   now,
   titleOf,
+  onNavigate,
+  onEscape,
+  variant = "panel",
 }: {
-  group: HostGroup;
-  selected: boolean;
+  idPrefix: string;
+  groups: readonly HostGroup[];
+  selectedId: string | null;
   assignments: readonly AssignmentItem[];
   meta: ExecutorListMeta | undefined;
   now: number;
   titleOf: (taskId: string) => string;
+  onNavigate: (group: HostGroup) => void;
+  /** «Close the top overlay» — set only where an overlay exists (the sheet). */
+  onEscape?: () => void;
+  variant?: "panel" | "sheet";
+}) {
+  const t = useT();
+  // The highlighted option: null = track the selection (or the first row).
+  const [activeState, setActive] = useState<string | null>(null);
+
+  const activeRouteId = useMemo(() => {
+    if (activeState !== null && groups.some((g) => hostRouteId(g) === activeState)) {
+      return activeState;
+    }
+    if (selectedId !== null && groups.some((g) => hostRouteId(g) === selectedId)) {
+      return selectedId;
+    }
+    return groups.length > 0 ? hostRouteId(groups[0]) : null;
+  }, [activeState, groups, selectedId]);
+
+  const move = (offset: number | "first" | "last"): void => {
+    if (groups.length === 0) return;
+    const index = groups.findIndex((g) => hostRouteId(g) === activeRouteId);
+    const next =
+      offset === "first"
+        ? 0
+        : offset === "last"
+          ? groups.length - 1
+          : Math.max(0, Math.min(groups.length - 1, index + offset));
+    setActive(hostRouteId(groups[next]));
+    // Keep the moving highlight visible inside the list's own scroll.
+    document
+      .getElementById(optionId(idPrefix, groups[next]))
+      ?.scrollIntoView?.({ block: "nearest" });
+  };
+
+  const onKeyDown = (event: React.KeyboardEvent<HTMLUListElement>): void => {
+    switch (event.key) {
+      case "ArrowDown":
+      case "j":
+      case "J":
+        event.preventDefault();
+        move(1);
+        return;
+      case "ArrowUp":
+      case "k":
+      case "K":
+        event.preventDefault();
+        move(-1);
+        return;
+      case "Home":
+        event.preventDefault();
+        move("first");
+        return;
+      case "End":
+        event.preventDefault();
+        move("last");
+        return;
+      case "Enter": {
+        event.preventDefault();
+        const active =
+          activeRouteId === null
+            ? undefined
+            : groups.find((g) => hostRouteId(g) === activeRouteId);
+        if (active !== undefined) onNavigate(active);
+        return;
+      }
+      case "Escape":
+        // The caller owns the overlay (the sheet closes; ≥xl panel: no-op).
+        onEscape?.();
+        return;
+      default:
+        return;
+    }
+  };
+
+  return (
+    <ul
+      role="listbox"
+      id={`${idPrefix}-listbox`}
+      aria-label={t("agents.hosts.rosterRegion")}
+      aria-activedescendant={
+        activeRouteId !== null ? `${idPrefix}-opt-${activeRouteId}` : undefined
+      }
+      tabIndex={0}
+      onKeyDown={onKeyDown}
+      // The sheet mounts open: the LIST takes the initial focus (not the
+      // filter chips — the roster is the dialog's purpose).
+      autoFocus={variant === "sheet"}
+      className="space-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+    >
+      {groups.map((group) => (
+        <HostRow
+          key={group.host || "__unreported__"}
+          idPrefix={idPrefix}
+          group={group}
+          selected={hostRouteId(group) === selectedId}
+          active={hostRouteId(group) === activeRouteId}
+          onSelect={() => {
+            setActive(hostRouteId(group));
+            onNavigate(group);
+          }}
+          assignments={assignments}
+          meta={meta}
+          now={now}
+          titleOf={titleOf}
+          variant={variant}
+        />
+      ))}
+    </ul>
+  );
+}
+
+// --- the roster row (the inversion: compact row, NOT a card) ---------------------
+
+/**
+ * One host OPTION: presence word + dot (or the «ждёт решения» pill while a
+ * registration decision is pending), the host name, «N/M harnesses online»,
+ * the active-work chip, the freshest report age. The row is a listbox
+ * option (A2 §3.E) — click selects+opens, aria-selected+aria-current carry
+ * the selection, the row flares ONCE on a real member presence transition
+ * (presenceLight); a revoked host renders muted — a dead row invites no
+ * colour optimism. Sheet variant: ≥48px rows (the touch pass).
+ */
+function HostRow({
+  idPrefix,
+  group,
+  selected,
+  active,
+  onSelect,
+  assignments,
+  meta,
+  now,
+  titleOf,
+  variant = "panel",
+}: {
+  idPrefix: string;
+  group: HostGroup;
+  selected: boolean;
+  active: boolean;
+  onSelect: () => void;
+  assignments: readonly AssignmentItem[];
+  meta: ExecutorListMeta | undefined;
+  now: number;
+  titleOf: (taskId: string) => string;
+  variant?: "panel" | "sheet";
 }) {
   const t = useT();
   const flash = usePresenceFlashFor(group.members.map((member) => member.id));
@@ -594,85 +967,88 @@ function HostRow({
   const activeWork = activeAssignmentsForHost(assignments, group);
 
   return (
-    <li>
-      <Link
-        to={`/agents/hosts/${encodeURIComponent(hostRouteId(group))}`}
-        aria-current={selected ? "page" : undefined}
-        className={cn(
-          "flex min-h-11 flex-col gap-0.5 rounded-sm border-l-2 px-2 py-1.5 text-left text-sm transition-colors duration-instant hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
-          selected ? "border-iris bg-iris/10" : "border-transparent",
-          // The one-shot presence flare (event-driven, never background).
-          flash
-            ? flash.tone === "online"
-              ? "agents-presence-online"
-              : "agents-presence-offline"
-            : "",
-          revoked ? "text-foreground-muted" : undefined,
-        )}
-      >
-        <span className="flex w-full items-center gap-1.5">
-          {awaitingDecision ? (
-            <Badge
-              variant="outline"
-              title={t("agents.executor.pendingReason")}
-              className="shrink-0 whitespace-nowrap font-normal"
+    <li
+      role="option"
+      id={optionId(idPrefix, group)}
+      aria-selected={selected}
+      aria-current={selected ? "page" : undefined}
+      onClick={onSelect}
+      className={cn(
+        "flex min-h-11 cursor-pointer flex-col justify-center gap-0.5 rounded-sm border-l-2 px-2 py-1.5 text-left text-sm transition-colors duration-instant hover:bg-elevated",
+        variant === "sheet" && "min-h-12 py-2",
+        active && "-outline-offset-2 outline-2 outline-iris-bright",
+        selected ? "border-iris bg-iris/10" : "border-transparent",
+        // The one-shot presence flare (event-driven, never background).
+        flash
+          ? flash.tone === "online"
+            ? "agents-presence-online"
+            : "agents-presence-offline"
+          : "",
+        revoked ? "text-foreground-muted" : undefined,
+      )}
+    >
+      <span className="flex w-full items-center gap-1.5">
+        {awaitingDecision ? (
+          <Badge
+            variant="outline"
+            title={t("agents.executor.pendingReason")}
+            className="shrink-0 whitespace-nowrap font-normal"
+          >
+            {t("agents.hosts.pendingPill")}
+          </Badge>
+        ) : (
+          <>
+            <span
+              aria-hidden="true"
+              className={cn(
+                "size-2 shrink-0 rounded-full",
+                PRESENCE_DOT[presenceKey] ?? PRESENCE_DOT.unknown,
+              )}
+            />
+            <span
+              className={cn(
+                "shrink-0 text-xs",
+                PRESENCE_TEXT[presenceKey] ?? PRESENCE_TEXT.unknown,
+              )}
             >
-              {t("agents.hosts.pendingPill")}
-            </Badge>
-          ) : (
-            <>
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "size-2 shrink-0 rounded-full",
-                  PRESENCE_DOT[presenceKey] ?? PRESENCE_DOT.unknown,
-                )}
-              />
-              <span
-                className={cn(
-                  "shrink-0 text-xs",
-                  PRESENCE_TEXT[presenceKey] ?? PRESENCE_TEXT.unknown,
-                )}
-              >
-                {t(presenceLabelKey(presenceKey))}
-              </span>
-            </>
-          )}
-          <span className="ml-auto truncate text-right font-mono text-xs tabular-nums text-foreground-muted">
-            {t("agents.strip.lastSeen")}: {age || t("agents.executor.neverSeen")}
-          </span>
-        </span>
-        {/* Name + the work STATE (shrink-0 — the badge never wraps); the
-         * task TITLE rides the stats line where the counter leaves room. */}
-        <span className="flex w-full items-center gap-1.5">
-          <span className="min-w-0 truncate font-medium">
-            {group.label ?? t("agents.roster.hostUnknown")}
-          </span>
-          {activeWork.length > 0 ? (
-            <>
-              <AssignmentStateBadge state={activeWork[0].state} />
-              {activeWork.length > 1 ? (
-                <span className="shrink-0 text-xs text-foreground-muted">
-                  +{activeWork.length - 1}
-                </span>
-              ) : null}
-            </>
-          ) : null}
-        </span>
-        <span className="flex w-full items-center gap-1.5 text-xs">
-          <span className="shrink-0 font-mono tabular-nums text-foreground-muted">
-            {t("agents.hosts.onlineCounter", {
-              online: group.online,
-              total: group.members.length,
-            })}
-          </span>
-          {activeWork.length > 0 ? (
-            <span className="min-w-0 truncate text-foreground-secondary">
-              {titleOf(activeWork[0].task_id)}
+              {t(presenceLabelKey(presenceKey))}
             </span>
-          ) : null}
+          </>
+        )}
+        <span className="ml-auto truncate text-right font-mono text-xs tabular-nums text-foreground-muted">
+          {t("agents.strip.lastSeen")}: {age || t("agents.executor.neverSeen")}
         </span>
-      </Link>
+      </span>
+      {/* Name + the work STATE (shrink-0 — the badge never wraps); the
+       * task TITLE rides the stats line where the counter leaves room. */}
+      <span className="flex w-full items-center gap-1.5">
+        <span className="min-w-0 truncate font-medium">
+          {group.label ?? t("agents.roster.hostUnknown")}
+        </span>
+        {activeWork.length > 0 ? (
+          <>
+            <AssignmentStateBadge state={activeWork[0].state} />
+            {activeWork.length > 1 ? (
+              <span className="shrink-0 text-xs text-foreground-muted">
+                +{activeWork.length - 1}
+              </span>
+            ) : null}
+          </>
+        ) : null}
+      </span>
+      <span className="flex w-full items-center gap-1.5 text-xs">
+        <span className="shrink-0 font-mono tabular-nums text-foreground-muted">
+          {t("agents.hosts.onlineCounter", {
+            online: group.online,
+            total: group.members.length,
+          })}
+        </span>
+        {activeWork.length > 0 ? (
+          <span className="min-w-0 truncate text-foreground-secondary">
+            {titleOf(activeWork[0].task_id)}
+          </span>
+        ) : null}
+      </span>
     </li>
   );
 }
