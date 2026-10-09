@@ -1270,6 +1270,10 @@ export const ru = {
   "agents.hosts.recentEmpty": "Тишина. Первые события — после первого доклада.",
   "agents.hosts.recentFailed": "Ленту не удалось загрузить.",
   "agents.hosts.reconnectAction": "Подключить заново",
+  "agents.hosts.harnessesTitle": "Харнесы хоста",
+  "agents.hosts.refusalDisabled": "отключён",
+  "agents.hosts.refusalRevoked": "отозван",
+  "agents.hosts.sessions24Tooltip": "Сессии за 24 часа",
   "agents.hosts.resize.label": "Ширина панели хостов",
   "agents.hosts.resize.tooltip":
     "Потяните, чтобы изменить ширину. Двойной клик — вернуть как было",

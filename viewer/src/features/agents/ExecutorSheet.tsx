@@ -203,7 +203,7 @@ function NowWorkingSection({ executorId }: { executorId: string }) {
 }
 
 /** The card body: sections + the diff-save. Re-seeds via the parent key. */
-function ExecutorSheetForm({
+export function ExecutorSheetForm({
   executor,
   onDirtyChange,
 }: {

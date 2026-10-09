@@ -1244,6 +1244,10 @@ export const en: Record<TranslationKey, string> = {
   "agents.hosts.recentEmpty": "Quiet. The first events arrive after the first report.",
   "agents.hosts.recentFailed": "Failed to load the feed.",
   "agents.hosts.reconnectAction": "Reconnect",
+  "agents.hosts.harnessesTitle": "Host harnesses",
+  "agents.hosts.refusalDisabled": "disabled",
+  "agents.hosts.refusalRevoked": "revoked",
+  "agents.hosts.sessions24Tooltip": "Sessions in 24h",
   "agents.hosts.resize.label": "Hosts panel width",
   "agents.hosts.resize.tooltip":
     "Drag to resize. Double-click to restore",

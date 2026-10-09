@@ -119,6 +119,24 @@ function rosterExecutors(base: number): ExecutorItem[] {
       id: "ex-1",
       name: "zcode@laptop",
       status: status("online", base),
+      // The ME-064 inventory snapshot (the counters the row shows).
+      harness_inventory: [
+        {
+          name: "zcode",
+          kind: "cli",
+          home_path: "/home/u/.zcode",
+          capabilities: {
+            specialists: ["a", "b"],
+            specialists_count: 39,
+            skills: ["x"],
+            skills_count: 121,
+            plugins: [],
+            plugins_count: 0,
+            instructions: ["y"],
+            instructions_count: 24,
+          },
+        },
+      ],
     }),
     executor(base, {
       id: "ex-2",
@@ -492,6 +510,13 @@ describe("the roster sheet (A2 §3.D, <xl)", () => {
         );
     });
     expect(document.body.querySelector("[role='dialog']")).toBeNull();
+    // The canonical overlay return: the trigger regains the focus.
+    await actFlush(30);
+    expect(
+      (document.activeElement as HTMLElement | null)?.textContent?.includes(
+        "Roster ·",
+      ),
+    ).toBe(true);
     // Reopen: the highlight moves, Enter navigates and closes the sheet.
     await act(async () => {
       trigger.click();
@@ -510,6 +535,129 @@ describe("the roster sheet (A2 §3.D, <xl)", () => {
     ).toBe("mesh-2");
     expect(document.activeElement?.id).toBe("agents-host-title");
     await actUnmount(root);
+  });
+});
+
+describe("the host harnesses (B2 §3.C.3)", () => {
+  const harnessRows = (container: HTMLElement): NodeListOf<HTMLButtonElement> =>
+    container.querySelectorAll('[aria-label="Host harnesses"] [aria-expanded]');
+
+  it("one accordion row per member: presence, harness, refusal badge, counters, env slot", async () => {
+    const { root, container } = await mountPage({ path: "/agents/hosts/laptop" });
+    const rows = harnessRows(container);
+    expect(rows.length).toBe(2);
+    const zcode = [...rows].find((row) => row.textContent?.includes("zcode@laptop"))!;
+    // Presence + harness type + the reserved «среда исполнения» slot.
+    expect(zcode.textContent).toContain("online");
+    expect(zcode.textContent).toContain("zcode");
+    expect(zcode.querySelector('[data-slot="execution-env"]')).not.toBeNull();
+    // The four inventory counters (the ME-064 fixture counts).
+    expect(zcode.textContent).toContain("39");
+    expect(zcode.textContent).toContain("121");
+    // hermes: owner-disabled → the refusal badge rides the row.
+    const hermes = [...rows].find((row) => row.textContent?.includes("hermes@laptop"))!;
+    expect(hermes.textContent).toContain("disabled");
+    await actUnmount(root);
+  });
+
+  it("the sessions-in-24h counter joins the kora registry by executor_id", async () => {
+    const { root, container } = await mountPage({
+      path: "/agents/hosts/laptop",
+      koraSeed: (base) => ({
+        ok: true as const,
+        count: 1,
+        items: [
+          {
+            id: "ex-1:sess_42",
+            executor_id: "ex-1",
+            native_id: "sess_42",
+            harness: "vscode",
+            project: "vesma-eyes",
+            cwd: null,
+            state: "live",
+            origin: "relay",
+            steerable: true,
+            started_at: ago(base, 300),
+            last_activity_at: ago(base, 30),
+            age_seconds: 30,
+            last_line_preview: "работает",
+          },
+        ],
+        coverage: { harnesses: [], gaps: [] },
+        meta: { generated_at: ago(base, 10) },
+      }),
+    });
+    const zcode = [...harnessRows(container)].find((row) =>
+      row.textContent?.includes("zcode@laptop"),
+    )!;
+    expect(zcode.textContent).toContain("1");
+    await actUnmount(root);
+  });
+
+  it("expansion mounts the FULL sheet workbench in place (all sections)", async () => {
+    const { root, container } = await mountPage({ path: "/agents/hosts/laptop" });
+    const zcode = [...harnessRows(container)].find((row) =>
+      row.textContent?.includes("zcode@laptop"),
+    )!;
+    await act(async () => {
+      zcode.click();
+    });
+    const body = container.querySelector("#harness-body-ex-1")!;
+    expect(body).not.toBeNull();
+    // The ExecutorSheet's own sections (behavior parity by construction).
+    for (const section of ["Link", "Access", "Identity", "Capabilities (declared)", "Danger zone"]) {
+      expect(body.querySelector(`section[aria-label="${section}"]`)).not.toBeNull();
+    }
+    expect(body.textContent).toContain("Detected on the host");
+    // The secret clause: explained, never rendered.
+    expect(body.textContent).toContain("secret");
+    await actUnmount(root);
+  });
+
+  it("the mutation checklist is reachable within two clicks (expand → action)", async () => {
+    const { root, container } = await mountPage({ path: "/agents/hosts/new-host" });
+    // approve: expand the pending member → the Approve button.
+    const pending = [...harnessRows(container)].find((row) =>
+      row.textContent?.includes("copilot@new-host"),
+    )!;
+    await act(async () => {
+      pending.click();
+    });
+    const pendingBody = container.querySelector("#harness-body-ex-4")!;
+    expect(
+      [...pendingBody.querySelectorAll("button")].some((b) =>
+        b.textContent?.includes("Approve"),
+      ),
+    ).toBe(true);
+    await actUnmount(root);
+
+    // enabled kill-switch + name + caps + link-check: expand the live member.
+    const { root: root2, container: container2 } = await mountPage({
+      path: "/agents/hosts/laptop",
+    });
+    const zcode = [...harnessRows(container2)].find((row) =>
+      row.textContent?.includes("zcode@laptop"),
+    )!;
+    await act(async () => {
+      zcode.click();
+    });
+    const body2 = container2.querySelector("#harness-body-ex-1")!;
+    const labels = [...body2.querySelectorAll("label, button")].map((el) => el.textContent ?? "");
+    expect(labels.join("|")).toContain("Enabled for dispatch");
+    expect(body2.querySelector('input[type="checkbox"]')).not.toBeNull();
+    expect(body2.querySelector("input")).not.toBeNull(); // the name field
+    expect(
+      [...body2.querySelectorAll("button")].some((b) => b.textContent?.includes("Revoke")),
+    ).toBe(true);
+    expect(
+      [...body2.querySelectorAll("button")].some((b) => b.textContent?.includes("Delete")),
+    ).toBe(true);
+    expect(
+      [...body2.querySelectorAll("button")].some((b) =>
+        b.textContent?.includes("Refresh pulse"),
+      ),
+    ).toBe(true);
+    await actUnmount(root2);
   });
 });
 

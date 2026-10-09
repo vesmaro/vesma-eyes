@@ -37,6 +37,7 @@ import { AgentsUnsupported } from "./AgentsUnsupported";
 import { AssignmentStateBadge } from "./AssignmentStateBadge";
 import { CreateTaskDialog } from "@/features/tasks/CreateTaskDialog";
 import { ExecutorLinkCheck } from "./ExecutorLinkCheck";
+import { HostHarnesses } from "./HostHarnesses";
 import {
   formatReportAge,
   isLifecycle,
@@ -299,10 +300,10 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
         className="relative grid min-h-0 min-w-0 flex-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_var(--agents-right-w)] xl:items-stretch xl:gap-0"
         style={{ "--agents-right-w": `${sideW}px` } as React.CSSProperties}
       >
-        {/* Central column: the selected host's scaffold. The work field
-         * (Сейчас/Харнесы/Недавно) arrives in B1/B2 — the placeholder is
-         * one honest line, not an illustration. */}
-        <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-md border border-myelin bg-well xl:rounded-none xl:border-0">
+        {/* Central column: the selected host's WORKBENCH. At xl the frame
+         * height is fixed — the column scrolls INSIDE itself (07l §1.2:
+         * every surface scrolls internally, the page never does). */}
+        <div className="kora-scroll flex min-h-0 min-w-0 flex-col overflow-y-auto rounded-md border border-myelin bg-well xl:rounded-none xl:border-0">
           {executors.isPending ? (
             <div
               role="status"
@@ -989,6 +990,16 @@ function HostField({
           </div>
         )}
       </section>
+
+      {/* «Харнесы хоста» (B2 §3.C.3): one accordion per executor — the
+       * expansion is the ExecutorSheet's own workbench IN PLACE (behavior
+       * parity by construction). */}
+      <HostHarnesses
+        members={group.members}
+        meta={meta}
+        now={now}
+        koraItems={kora.items}
+      />
 
       {/* «Недавно»: the host-scoped activity — the 24h hourly strip + the
        * freshest rows; the honest quiet line when the host never spoke. */}
