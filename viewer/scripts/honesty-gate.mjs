@@ -69,6 +69,17 @@
  *                     ≥5s apart MUST be identical — Доки carry NO living
  *                     layer (the spec verdict): hub cards, statistics and
  *                     search are data, pinned still forever.
+ *  14. connect-silent (U8) — /agents/harnesses?connect=1 (the v12
+ *                     «Подключить машину» conveyor OPEN on a silent bus):
+ *                     two shots ≥5s apart MUST be identical — the rail and
+ *                     the connect card carry NO timer-driven progress; the
+ *                     rail's steps move on REAL provision-job states only.
+ *  15. wizard-silent (U8) — /tasks/list?wizard=1 (the v12 task-formation
+ *                     wizard open on a silent bus): two shots ≥5s apart
+ *                     MUST be identical — the wizard has no decorative
+ *                     progress (the same ONE-honest-recheck rule as
+ *                     tasks-silent: a minute-field rollover behind the
+ *                     dialog is data aging, not motion).
  *  13. system-silent (U6) — /system/settings on the silent bus: two shots
  *                     ≥5s apart MUST be identical — Система carries NO
  *                     living layer: the «Зеркало» is a live DATA preview,
@@ -654,6 +665,73 @@ async function main() {
         identical,
         "system: silent bus — two frames ≥5s apart are pixel-identical (no living layer, pinned)",
         identical ? "" : `bytes ${a.length} vs ${b.length}`,
+      );
+      await context.close();
+    }
+
+    // 14. CONNECT CONVEYOR SILENT (U8) — the «Подключить машину» flow
+    // stands on a quiet bus: no step exists that the operation has not
+    // earned, and no progress bar exists that a timer could drive.
+    {
+      const context = await browser.newContext({
+        viewport: { width: 1440, height: 900 },
+        deviceScaleFactor: 1,
+      });
+      const a = await settledShot(
+        context,
+        `${BASE}agents/harnesses?connect=1`,
+        "u8-honesty-connect-silent-t0.png",
+      );
+      console.log("[honesty] connect-silent: waiting 5.6s of real time…");
+      await sleep(QUIET_GAP_MS);
+      const b = await settledShot(
+        context,
+        `${BASE}agents/harnesses?connect=1`,
+        "u8-honesty-connect-silent-t5.png",
+      );
+      const identical = a.equals(b);
+      check(
+        identical,
+        "connect conveyor: silent bus — two frames ≥5s apart are pixel-identical (no decorative progress)",
+        identical ? "" : `bytes ${a.length} vs ${b.length}`,
+      );
+      await context.close();
+    }
+
+    // 15. TASK WIZARD SILENT (U8) — the task-formation wizard open on a
+    // quiet bus: no decorative progress (the ONE-honest-recheck rule from
+    // tasks-silent — a minute-field rollover behind the dialog is data
+    // aging, not motion; a persistent differ fails).
+    {
+      const context = await browser.newContext({
+        viewport: { width: 1440, height: 900 },
+        deviceScaleFactor: 1,
+      });
+      let identical = false;
+      let bytes = "";
+      for (let attempt = 1; attempt <= 2 && !identical; attempt += 1) {
+        const a = await settledShot(
+          context,
+          `${BASE}tasks/list?wizard=1`,
+          "u8-honesty-wizard-silent-t0.png",
+        );
+        console.log("[honesty] wizard-silent: waiting 5.6s of real time…");
+        await sleep(QUIET_GAP_MS);
+        const b = await settledShot(
+          context,
+          `${BASE}tasks/list?wizard=1`,
+          "u8-honesty-wizard-silent-t5.png",
+        );
+        identical = a.equals(b);
+        bytes = `bytes ${a.length} vs ${b.length}`;
+        if (!identical && attempt === 1) {
+          console.log("[honesty] wizard-silent: frames differ — rechecking once (a minute-field rollover is data aging, not motion)");
+        }
+      }
+      check(
+        identical,
+        "task wizard: silent bus — two frames ≥5s apart are pixel-identical (no decorative progress)",
+        identical ? "" : bytes,
       );
       await context.close();
     }
