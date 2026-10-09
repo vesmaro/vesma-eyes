@@ -1725,6 +1725,19 @@ export const ru = {
   "settings.hub.densityHint":
     "Рабочие списки — задачи, реестры, выдача. Поиск и память остаются просторными.",
   "settings.hub.appliesEverywhere": "Применяется сразу во всём интерфейсе.",
+  // «Зеркало» настроек (U6; SPEC-2026-10-07 «Система»: живое превью
+  // 380–480px — данные текущего вида, не анимация; ноль живого слоя).
+  "settings.mirror.title": "Зеркало",
+  "settings.mirror.hint":
+    "Живое превью текущего вида: обновляется сразу — это данные, не анимация.",
+  "settings.mirror.sampleCaps": "Образец",
+  "settings.mirror.sampleTitle": "Карточка в текущей теме",
+  "settings.mirror.sampleSecondary": "Вторичный текст остаётся читаемым",
+  "settings.mirror.sampleMuted": "Приглушённый — для служебных подписей",
+  "settings.mirror.sampleRow": "Строка при текущей плотности",
+  "settings.mirror.themeCaption": "Тема",
+  "settings.mirror.densityCaption": "Плотность",
+  "settings.mirror.livingCaption": "Живой слой",
   "settings.hub.boardStyleLabel": "Стиль канбан-доски",
   "settings.hub.boardStyleHint": "Применится на странице Задачи → Канбан.",
   "settings.hub.motionLabel": "Анимации",

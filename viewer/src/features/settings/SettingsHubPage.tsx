@@ -14,6 +14,7 @@ import { SecuritySettingsSection } from "./SecuritySettingsSection";
 import { NotCustomizable } from "./NotCustomizable";
 import { SegmentedControl } from "./SegmentedControl";
 import { HubSection } from "./HubSection";
+import { SettingsMirror } from "./SettingsMirror";
 import { pageGridClass } from "@/layout/pageGrid";
 
 /**
@@ -95,22 +96,36 @@ export function SettingsHubPage() {
         </ul>
       </nav>
 
-      <AppearanceSection />
-      <BehaviorSection />
-      <BoardSection />
-      <NavigationSection />
-      {/* Server sections (v1, reused verbatim): the anchor + scroll margin
-       * live on the wrapper so the reused blocks stay untouched. */}
-      <div id="execution" className="scroll-mt-36">
-        <ExecutionSettingsSection />
+      {/* U6 composition (≥1280): the sections column + the «Зеркало» rail —
+       * a live DATA preview of the current look (380–480px, the v12 canon
+       * measure), sticky beside the sections. NO living layer on Система
+       * (the spec verdict; the honesty gate pins this page's frames). */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_clamp(380px,30vw,480px)] xl:items-start">
+        <div className="min-w-0 space-y-4">
+          <AppearanceSection />
+          <BehaviorSection />
+          <BoardSection />
+          <NavigationSection />
+          {/* Server sections (v1, reused verbatim): the anchor + scroll margin
+           * live on the wrapper so the reused blocks stay untouched. */}
+          <div id="execution" className="scroll-mt-36">
+            <ExecutionSettingsSection />
+          </div>
+          <div id="automation" className="scroll-mt-36">
+            <AutomationSettingsSection />
+          </div>
+          <DevicesLinkSection />
+          {/* ME-080 follow-up: the password section — LAST (an account action,
+           * not a preference); the well + anchor live on the section itself. */}
+          <SecuritySettingsSection />
+        </div>
+        <aside
+          aria-label={t("settings.mirror.title")}
+          className="hidden xl:sticky xl:top-24 xl:block"
+        >
+          <SettingsMirror className="max-w-[480px]" />
+        </aside>
       </div>
-      <div id="automation" className="scroll-mt-36">
-        <AutomationSettingsSection />
-      </div>
-      <DevicesLinkSection />
-      {/* ME-080 follow-up: the password section — LAST (an account action,
-       * not a preference); the well + anchor live on the section itself. */}
-      <SecuritySettingsSection />
     </div>
   );
 }
@@ -197,6 +212,10 @@ function AppearanceSection() {
           t("settings.hub.verdict.contemplative"),
         ]}
       />
+      {/* U6: below ≥1280 the «Зеркало» rail is hidden — the same preview
+       * component mounts INLINE here (one component, two mounts; the rail
+       * owns the wide viewport). */}
+      <SettingsMirror className="max-w-[480px] xl:hidden" />
     </HubSection>
   );
 }

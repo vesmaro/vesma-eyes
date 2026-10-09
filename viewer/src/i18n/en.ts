@@ -1694,6 +1694,19 @@ export const en: Record<TranslationKey, string> = {
   "settings.hub.densityHint":
     "Working lists — tasks, registries, results. Search and memory stay airy.",
   "settings.hub.appliesEverywhere": "Applies everywhere immediately.",
+  // Settings «Mirror» (U6; SPEC-2026-10-07 «System»: the 380–480px live
+  // preview — current-look DATA, no animation, zero living layer).
+  "settings.mirror.title": "Mirror",
+  "settings.mirror.hint":
+    "A live preview of the current look: updates immediately — data, not animation.",
+  "settings.mirror.sampleCaps": "Specimen",
+  "settings.mirror.sampleTitle": "A card in the current theme",
+  "settings.mirror.sampleSecondary": "Secondary text stays readable",
+  "settings.mirror.sampleMuted": "Muted — service captions",
+  "settings.mirror.sampleRow": "Row at the current density",
+  "settings.mirror.themeCaption": "Theme",
+  "settings.mirror.densityCaption": "Density",
+  "settings.mirror.livingCaption": "Living layer",
   "settings.hub.boardStyleLabel": "Kanban board style",
   "settings.hub.boardStyleHint": "Takes effect on Tasks → Kanban.",
   "settings.hub.motionLabel": "Animations",
