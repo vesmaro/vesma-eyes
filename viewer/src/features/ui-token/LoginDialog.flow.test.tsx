@@ -116,14 +116,6 @@ function setInputValue(input: HTMLInputElement | HTMLTextAreaElement, value: str
   input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
-function buttonByText(scope: ParentNode, text: string): HTMLButtonElement | undefined {
-  return (
-    Array.from(scope.querySelectorAll<HTMLButtonElement>("button")).find((button) =>
-      button.textContent?.includes(text),
-    ) ?? undefined
-  );
-}
-
 /**
  * ME-080: the TopBar accent «Sign in» no longer opens the token window —
  * it LINKS to /auth (login+password is the human front door). The manual

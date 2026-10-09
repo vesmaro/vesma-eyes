@@ -163,7 +163,7 @@ describe("CreateTaskDialog — the formation conveyor (U8)", () => {
   });
 
   it("the executor hand-off reveals the engine's REAL fields and rides the SAME assignment mutation", async () => {
-    const { root, gateway, onOpenChange, createAssignmentSpy } = await mountDialog();
+    const { root, onOpenChange, createAssignmentSpy } = await mountDialog();
     await type(inputById("create-text"), "Починить поллер");
     await act(async () => {
       buttonByText("Next").click();
