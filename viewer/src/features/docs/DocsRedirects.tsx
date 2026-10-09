@@ -32,6 +32,29 @@ export function DocsNotFound() {
 }
 
 /**
+ * U6 honest manifest error (honest-map rows 20–21): the docs catalog failed
+ * to build — an explicit EmptyState with «Повторить» instead of an eternal
+ * skeleton. Zero living layer (the Доки verdict): only the Retry click
+ * moves anything. `onRetry` is caller-owned so the category page can also
+ * re-run its rows effect.
+ */
+export function DocsManifestError({ onRetry }: { onRetry: () => void }) {
+  const t = useT();
+  return (
+    <EmptyState
+      variant="error"
+      title={t("docs.error.manifestTitle")}
+      message={t("docs.error.manifestMessage")}
+      action={
+        <Button variant="outline" onClick={onRetry}>
+          {t("common.retry")}
+        </Button>
+      }
+    />
+  );
+}
+
+/**
  * Legacy `/docs/c/<category>` → the project-scoped URL (design spec §8):
  * synchronous, replace — invisible to the reader, Back skips the old URL.
  */

@@ -1,7 +1,7 @@
 import { Component, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import { ArrowLeft, ArrowRight, ChevronDown, GitCommitHorizontal, Languages } from "lucide-react";
-import { useI18n, useT } from "@/i18n";
+import { useI18n, useT, type TranslationKey } from "@/i18n";
 import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState/EmptyState";
@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { FOCUS_RING } from "@/components/TextEngine/core/constants";
 import { docCategory } from "./categories";
 import { extractHeadings, type TocItem } from "./headingSlug";
+import type { DocLocale } from "./markdownModules";
 import {
   loadDocBody,
   localeForPage,
@@ -360,40 +361,131 @@ const LANG_NAME_KEY = {
   en: "docs.lang.en",
 } as const;
 
+/**
+ * The RUS/ORIG bilingual switch (U6; SPEC-2026-10-07 «Доки: … билингв
+ * RUS/ORIG; заново — механика RUS/ORIG»): the v12 PRESENTATION over the
+ * main locale engine. Visible ONLY when the page is published in Russian
+ * AND its original language is different — otherwise RUS and ORIG are the
+ * same text and a switch would be a lie. The engine (loadDocBody +
+ * localeForPage) is untouched: the switch selects a locale the page
+ * PUBLISHES; the fallback chain never leaves the wire.
+ *
+ * A DATA control, zero living layer (the Доки verdict): pressing it swaps
+ * the article — no transition, no fade.
+ */
+function BilingualSwitch({
+  page,
+  readingLocale,
+  onPick,
+}: {
+  page: DocPage;
+  readingLocale: DocLocale;
+  onPick: (locale: DocLocale) => void;
+}) {
+  const t = useT();
+  const options: ReadonlyArray<{
+    locale: DocLocale;
+    mark: string;
+    labelKey: TranslationKey;
+  }> = [
+    { locale: "ru", mark: "РУС", labelKey: "docs.bilingual.rus" },
+    { locale: page.originalLocale, mark: "ORIG", labelKey: "docs.bilingual.orig" },
+  ];
+  return (
+    <div
+      role="group"
+      aria-label={t("docs.bilingual.group")}
+      className="inline-flex shrink-0 items-center rounded-full border border-border-subtle bg-elevated p-0.5"
+    >
+      {options.map((option) => {
+        const pressed = readingLocale === option.locale;
+        return (
+          <button
+            key={option.locale}
+            type="button"
+            aria-pressed={pressed}
+            onClick={() => onPick(option.locale)}
+            className={cn(
+              "flex min-h-7 items-center rounded-full px-3 text-xs font-medium transition-colors duration-instant",
+              FOCUS_RING,
+              pressed
+                ? "bg-overlay text-iris-bright"
+                : "text-foreground-secondary hover:text-foreground",
+            )}
+          >
+            {option.mark}
+            <span className="sr-only"> — {t(option.labelKey)}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function ArticleView({ slug, page }: { slug: string; page: DocPage }) {
   const t = useT();
   const { lang } = useI18n();
-  const [body, setBody] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
+  // The loaded body rides ITS locale: switching RUS/ORIG stales the old
+  // text immediately (the skeleton takes over until the new body lands) —
+  // the h1 and the body can never disagree. Writes happen ONLY inside the
+  // load callback (no synchronous effect resets).
+  const [result, setResult] = useState<{ locale: DocLocale; body: string } | null>(
+    null,
+  );
+  const [failedFor, setFailedFor] = useState<DocLocale | null>(null);
   const [attempt, setAttempt] = useState(0);
+  // U6 bilingual: the READING locale (the RUS/ORIG switch). Defaults to the
+  // engine's effective locale; the parent keys this view by slug+UI lang,
+  // so a UI-language change re-inits the choice honestly. SCOPE (the U6
+  // verdict): the switch targets the IMPORTED corpus (the v12 canon's
+  // RUS/ORIG = «перевод/оригинал» for the upsteam books; spec §51's open
+  // paper «что переводится» = upstream). Own pages are Russian-ORIGINAL
+  // mirrors — a RUS/ORIG pair would be a lie there (and their sidecar-less
+  // originalLocale is glob-order dependent — a pre-existing main quirk the
+  // badge path never exercises).
+  const engineLocale = localeForPage(page, lang);
+  const bilingual =
+    page.project !== DEFAULT_PROJECT &&
+    page.locales.includes("ru") &&
+    page.originalLocale !== "ru";
+  const [readingLocale, setReadingLocale] = useState<DocLocale>(engineLocale);
 
   useEffect(() => {
     let mounted = true;
-    void loadDocBody(slug, lang).then((loaded) => {
+    void loadDocBody(slug, readingLocale).then((loaded) => {
       if (!mounted) return;
-      if (loaded === null) setFailed(true);
-      else setBody(loaded.body);
+      if (loaded === null) {
+        setFailedFor(readingLocale);
+        setResult(null);
+      } else {
+        setResult({ locale: readingLocale, body: loaded.body });
+        setFailedFor(null);
+      }
     });
     return () => {
       mounted = false;
     };
-  }, [slug, lang, attempt]);
+  }, [slug, readingLocale, attempt]);
 
+  const staleResult = result !== null && result.locale !== readingLocale;
+  const body = staleResult ? null : (result?.body ?? null);
+  const failed = failedFor === readingLocale && !staleResult;
   const toc = useMemo(() => (body === null ? [] : extractHeadings(body)), [body]);
   const activeId = useScrollSpy(toc.map((item) => item.id));
   const category = docCategory(page.category);
   // Locale policy (contract §6, spec §7.1): the page renders in its
-  // EFFECTIVE locale; a missing UI locale shows the original + badge —
-  // in BOTH directions (ru UI on an en page, en UI on a ru page).
-  const effectiveLocale = localeForPage(page, lang);
-  const localeOriginal = lang !== effectiveLocale;
+  // EFFECTIVE locale. With the switch present the reader controls the
+  // locale explicitly (the segment is the verdict); the «на языке
+  // оригинала» badge stays for the NO-SWITCH fallback only — reading the
+  // original because the UI language is not published.
+  const localeOriginal = !bilingual && lang !== engineLocale;
 
   return (
     <div className={pageGridClass("operational")}>
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_16rem]">
         <article className="min-w-0 max-w-scroll">
           {/* Meta row: category chip → version badge → provenance badge →
-              locale badge, search right (design spec §6.1). */}
+              locale badge, RUS/ORIG + search right (design spec §6.1). */}
           <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex flex-wrap items-center gap-2">
               {category ? (
@@ -420,8 +512,15 @@ function ArticleView({ slug, page }: { slug: string; page: DocPage }) {
               {localeOriginal ? (
                 <Badge variant="outline">
                   <Languages className="mr-1 size-3.5" aria-hidden="true" />
-                  {t("docs.localeOriginal", { lang: t(LANG_NAME_KEY[effectiveLocale]) })}
+                  {t("docs.localeOriginal", { lang: t(LANG_NAME_KEY[engineLocale]) })}
                 </Badge>
+              ) : null}
+              {bilingual ? (
+                <BilingualSwitch
+                  page={page}
+                  readingLocale={readingLocale}
+                  onPick={setReadingLocale}
+                />
               ) : null}
             </div>
             <DocsSearch className="w-full sm:max-w-xs" />
@@ -439,10 +538,10 @@ function ArticleView({ slug, page }: { slug: string; page: DocPage }) {
           ) : (
             <>
               <TocDetails items={toc} activeId={activeId} />
-              {/* h1 rides the page's effective locale — the title language
-                  always matches the body language (spec §7.1). */}
+              {/* h1 rides the READING locale — the title language always
+                  matches the body language (spec §7.1). */}
               <h1 className="mt-4 text-xl font-semibold leading-tight text-foreground">
-                {titleFor(page, effectiveLocale)}
+                {titleFor(page, readingLocale)}
               </h1>
               <RenderBoundary>
                 <Markdown source={body} pageSlug={slug} />

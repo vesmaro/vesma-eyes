@@ -165,6 +165,49 @@ describe("imported article (/docs/mnemos/**, spec §6)", () => {
     await actUnmount(root);
   });
 
+  it("U6 RUS/ORIG: a bilingual imported page carries the switch; ORIG loads the original body", async () => {
+    const { root, container } = await mountDocs(
+      "/docs/mnemos/user/getting-started",
+    );
+    await actWaitUntil(() => {
+      expect(container.querySelector("h1")?.textContent).toBe("Начало работы");
+    });
+    // The switch (v12 подача): РУС pressed by default, ORIG beside it.
+    const group = container.querySelector(
+      "[role='group'][aria-label='Язык статьи: перевод или оригинал']",
+    );
+    expect(group).not.toBeNull();
+    const buttons = [...(group?.querySelectorAll("button") ?? [])];
+    expect(buttons.map((b) => b.textContent?.trim())).toEqual([
+      "РУС — Русский перевод",
+      "ORIG — Язык оригинала",
+    ]);
+    expect(buttons[0].getAttribute("aria-pressed")).toBe("true");
+    // ORIG: the original-locale body replaces the translation — h1 follows
+    // the reading locale (the title language always matches the body).
+    act(() => {
+      buttons[1].click();
+    });
+    await actWaitUntil(() => {
+      expect(container.querySelector("h1")?.textContent).toBe("Getting Started");
+      expect(
+        buttons[1].getAttribute("aria-pressed") ?? null,
+      ).toBe("true");
+    });
+    await actUnmount(root);
+  });
+
+  it("U6 RUS/ORIG: an own Russian-original page renders NO switch (RUS would equal ORIG)", async () => {
+    const { root, container } = await mountDocs("/docs/vesma-eyes/upgrade");
+    await actWaitUntil(() => {
+      expect(container.querySelector("h1")?.textContent).toBe("Обновление борда");
+    });
+    expect(
+      container.querySelector("[role='group'][aria-label='Язык статьи: перевод или оригинал']"),
+    ).toBeNull();
+    await actUnmount(root);
+  });
+
   it("prev/next stays inside the project (no cross-project reading, spec §9.7)", async () => {
     const { root, container } = await mountDocs(
       "/docs/mnemos/user/getting-started",

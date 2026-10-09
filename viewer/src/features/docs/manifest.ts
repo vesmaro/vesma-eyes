@@ -388,16 +388,43 @@ async function buildManifest(): Promise<DocsManifest> {
 
 let manifestPromise: Promise<DocsManifest> | null = null;
 let manifestSync: DocsManifest | null = null;
+// U6 honest error slot (honest-map rows 20–21 finding): a FAILED build
+// (e.g. a stale lazy chunk after a redeploy) must surface on the hub and
+// the category pages — never hang as an eternal skeleton.
+let manifestFailed = false;
 const listeners = new Set<() => void>();
 
 /** Kick (once) and await the manifest build. */
 export function getManifest(): Promise<DocsManifest> {
-  manifestPromise ??= buildManifest().then((manifest) => {
-    manifestSync = manifest;
-    for (const notify of listeners) notify();
-    return manifest;
-  });
+  manifestPromise ??= buildManifest().then(
+    (manifest) => {
+      manifestSync = manifest;
+      for (const notify of listeners) notify();
+      return manifest;
+    },
+    (error) => {
+      manifestFailed = true;
+      for (const notify of listeners) notify();
+      throw error;
+    },
+  );
   return manifestPromise;
+}
+
+/** Synchronous failure flag for the /docs error slots. */
+export function getManifestFailedSync(): boolean {
+  return manifestFailed;
+}
+
+/**
+ * Retry path for the error slots: forget the failed attempt and rebuild
+ * (a fresh import attempt of the lazy chunks — the stale-chunk case heals
+ * after a reload, but the in-page retry is the honest first move).
+ */
+export function retryManifest(): void {
+  manifestPromise = null;
+  manifestFailed = false;
+  for (const notify of listeners) notify();
 }
 
 /**
@@ -428,6 +455,11 @@ export function useDocsManifest(enabled = true): DocsManifest | null {
   useSyncExternalStore(subscribe, getManifestSync, getManifestSync);
   if (enabled) void getManifest();
   return manifestSync;
+}
+
+/** React binding over the failure flag (the /docs error slots). */
+export function useDocsManifestFailed(): boolean {
+  return useSyncExternalStore(subscribe, getManifestFailedSync, getManifestFailedSync);
 }
 
 /** Find one page by slug (route param → manifest). */

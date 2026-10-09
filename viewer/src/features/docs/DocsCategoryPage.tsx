@@ -9,12 +9,14 @@ import {
   firstParagraph,
   getManifest,
   localeForPage,
+  retryManifest,
   parseFrontmatter,
   titleFor,
+  useDocsManifestFailed,
 } from "./manifest";
 import { loadMarkdown } from "./markdownModules";
 import { DEFAULT_PROJECT, docProject, docUrl } from "./projects";
-import { DocsNotFound } from "./DocsRedirects";
+import { DocsManifestError, DocsNotFound } from "./DocsRedirects";
 import { DocsSearch } from "./DocsSearch";
 import { pageGridClass } from "@/layout/pageGrid";
 
@@ -76,17 +78,39 @@ function RowsSkeleton() {
 
 function CategoryRows({ categorySlug }: { categorySlug: string }) {
   const { lang } = useI18n();
+  // U6 honest error slot: a FAILED manifest build surfaces here with
+  // «Повторить» instead of an eternal skeleton (the rejection previously
+  // left `rows` null forever).
+  const manifestFailed = useDocsManifestFailed();
   const [rows, setRows] = useState<RowInfo[] | null>(null);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
+    if (manifestFailed) return undefined;
     let mounted = true;
-    void rowInfos(categorySlug, lang).then((infos) => {
-      if (mounted) setRows(infos);
-    });
+    rowInfos(categorySlug, lang).then(
+      (infos) => {
+        if (mounted) setRows(infos);
+      },
+      // The manifest failure flag (useDocsManifestFailed) carries the UI
+      // verdict — this handler only swallows the duplicate rejection.
+      () => undefined,
+    );
     return () => {
       mounted = false;
     };
-  }, [categorySlug, lang]);
+  }, [categorySlug, lang, attempt, manifestFailed]);
 
+  if (manifestFailed) {
+    return (
+      <DocsManifestError
+        onRetry={() => {
+          retryManifest();
+          setRows(null);
+          setAttempt((current) => current + 1);
+        }}
+      />
+    );
+  }
   if (rows === null) return <RowsSkeleton />;
   return (
     <div>
