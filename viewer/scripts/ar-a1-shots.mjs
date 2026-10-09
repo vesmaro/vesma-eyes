@@ -132,6 +132,14 @@ async function main() {
     await page.goto(url, { waitUntil: "load" });
     await page.evaluate(() => document.fonts.ready);
     await sleep(settle);
+    // Dismiss the nest-keeper welcome bubble — it floats over the panel's
+    // bottom action and would photobomb the acceptance frames.
+    try {
+      await page.getByRole("button", { name: "Понятно" }).click({ timeout: 2000 });
+      await sleep(300);
+    } catch {
+      /* no bubble this load */
+    }
     return page;
   };
 
@@ -144,8 +152,9 @@ async function main() {
     // 1. The frame, dark: /agents/hosts redirects to the first host.
     const p1 = await newPage(dark, `${BASE}agents/hosts`);
     await write(p1, "ar-a1-frame-dark.png");
-    // 2. The seam MID-DRAG: pointer down on the separator, +120 px, shoot
-    //    BEFORE pointerup (the 4px strong line + the live width change).
+    // 2. The seam MID-DRAG: pointer down on the separator (it sits ON the
+    //    panel edge), drag LEFT = widen (the v12 sign), shoot BEFORE
+    //    pointerup (the 4px strong line + the live width change).
     {
       const handle = p1.locator('[role="separator"][aria-orientation="vertical"]');
       const box = await handle.boundingBox();
@@ -153,7 +162,7 @@ async function main() {
       const y = box.y + box.height / 2;
       await p1.mouse.move(box.x + box.width / 2, y);
       await p1.mouse.down();
-      await p1.mouse.move(box.x + box.width / 2 + 120, y, { steps: 8 });
+      await p1.mouse.move(box.x + box.width / 2 - 60, y, { steps: 8 });
       await sleep(150);
       await write(p1, "ar-a1-seam-drag.png");
       await p1.mouse.up();
@@ -171,19 +180,32 @@ async function main() {
     // 5. The empty roster: driven through the REAL registry delete conveyor
     //    (menu → Delete → confirm), then the frame renders the canonical
     //    empty + CTA. No fixture surgery — the same path an owner walks.
+    //    (The UI runs RU here — match the menu labels in both languages.)
     {
       const p = await newPage(dark, `${BASE}agents/harnesses`, { settle: 2000 });
       p.on("dialog", (dialog) => void dialog.accept());
-      for (;;) {
-        const triggers = p.locator('button[aria-haspopup="menu"][aria-label^="Actions for executor"]');
-        const count = await triggers.count();
-        if (count === 0) break;
+      for (let guard = 0; guard < 12; guard += 1) {
+        // The executor menu trigger carries the executor NAME (name@host) in
+        // its aria-label — language-independent via the «@».
+        const triggers = p.locator('button[aria-haspopup="menu"][aria-label*="@"]');
+        if ((await triggers.count()) === 0) break;
         await triggers.first().click();
-        await p.getByRole("menuitem", { name: "Delete" }).click();
+        await p.getByRole("menuitem", { name: /Удалить|Delete/ }).click();
         await sleep(400);
       }
-      await p.goto(`${BASE}agents/hosts`, { waitUntil: "load" });
-      await sleep(2000);
+      // SPA navigation ONLY: the mock adapter lives in PAGE MEMORY — a full
+      // reload would resurrect the fixtures. Walk the sidebar link instead
+      // (the built app carries the /app base in its hrefs).
+      await p.click('a[href="/app/agents/hosts"]');
+      await sleep(1500);
+      // Dismiss the delete toasts — they photobomb the panel bottom.
+      for (let i = 0; i < 8; i += 1) {
+        const dismiss = p.getByRole("button", { name: /Закрыть уведомление|Dismiss notification/ });
+        if ((await dismiss.count()) === 0) break;
+        await dismiss.first().click();
+        await sleep(150);
+      }
+      await sleep(800);
       await write(p, "ar-a1-empty-roster.png");
       await p.close();
     }

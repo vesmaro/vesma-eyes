@@ -252,7 +252,11 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
 
         {/* The RIGHT SEAM: pointer drag with capture, the full keyboard path
          * (arrows/Home/End/Esc), dblclick reset, persist on commit — the
-         * Kora component as-is. Lives only inside the frame (≥xl). */}
+         * Kora component as-is, anchored to the PANEL EDGE it rules (07l §2
+         * «стык без зазора»: the line rides calc(100% - w), NOT the bare var
+         * offset — the Kora call site anchors it to the bare var, which lets
+         * the line drift into the field; reported upstream, not copied).
+         * Lives only inside the frame (≥xl). */}
         <KoraResizeHandle
           orientation="vertical"
           label={t("agents.hosts.resize.label")}
@@ -265,7 +269,7 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
           onValue={onSideValue}
           onCommit={onSideCommit}
           onReset={onSideReset}
-          className="absolute inset-y-0 left-[var(--agents-right-w)] hidden -translate-x-1/2 xl:flex"
+          className="absolute inset-y-0 left-[calc(100%-var(--agents-right-w))] hidden -translate-x-1/2 xl:flex"
         />
 
         {/* Right panel: THE ROSTER (the inversion) — filter chips, compact
@@ -611,7 +615,7 @@ function HostRow({
             <Badge
               variant="outline"
               title={t("agents.executor.pendingReason")}
-              className="font-normal"
+              className="shrink-0 whitespace-nowrap font-normal"
             >
               {t("agents.hosts.pendingPill")}
             </Badge>
@@ -638,10 +642,22 @@ function HostRow({
             {t("agents.strip.lastSeen")}: {age || t("agents.executor.neverSeen")}
           </span>
         </span>
+        {/* Name + the work STATE (shrink-0 — the badge never wraps); the
+         * task TITLE rides the stats line where the counter leaves room. */}
         <span className="flex w-full items-center gap-1.5">
           <span className="min-w-0 truncate font-medium">
             {group.label ?? t("agents.roster.hostUnknown")}
           </span>
+          {activeWork.length > 0 ? (
+            <>
+              <AssignmentStateBadge state={activeWork[0].state} />
+              {activeWork.length > 1 ? (
+                <span className="shrink-0 text-xs text-foreground-muted">
+                  +{activeWork.length - 1}
+                </span>
+              ) : null}
+            </>
+          ) : null}
         </span>
         <span className="flex w-full items-center gap-1.5 text-xs">
           <span className="shrink-0 font-mono tabular-nums text-foreground-muted">
@@ -651,17 +667,9 @@ function HostRow({
             })}
           </span>
           {activeWork.length > 0 ? (
-            <>
-              <span className="min-w-0 truncate text-foreground-secondary">
-                {titleOf(activeWork[0].task_id)}
-              </span>
-              <AssignmentStateBadge state={activeWork[0].state} />
-              {activeWork.length > 1 ? (
-                <span className="shrink-0 text-foreground-muted">
-                  +{activeWork.length - 1}
-                </span>
-              ) : null}
-            </>
+            <span className="min-w-0 truncate text-foreground-secondary">
+              {titleOf(activeWork[0].task_id)}
+            </span>
           ) : null}
         </span>
       </Link>

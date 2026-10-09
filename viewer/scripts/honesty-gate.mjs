@@ -239,7 +239,7 @@ async function framesStand(browser, a, b) {
             img.onerror = reject;
             img.src = `data:image/png;base64,${b64}`;
           });
-        const [ia, ib] = await Promise.all([load(aB64), load(b64)]);
+        const [ia, ib] = await Promise.all([load(aB64), load(bB64)]);
         if (ia.width !== ib.width || ia.height !== ib.height) return false;
         const canvas = document.createElement("canvas");
         canvas.width = ia.width;
