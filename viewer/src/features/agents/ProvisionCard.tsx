@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router";
 import { Check, Eye, EyeOff, RotateCcw, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -907,6 +908,16 @@ function ProvisionFeed({
                     fingerprint={status.job.host_key_fingerprint}
                     tofu={tofu}
                   />
+                  {/* agents-redesign C1: the mint lands IN the field — the
+                   * pending host (the executor reports this host) opens in
+                   * the workbench route for the approve decision. */}
+                  {executor.host ? (
+                    <Button asChild variant="ghost" size="sm" className="justify-start">
+                      <Link to={`/agents/hosts/${encodeURIComponent(executor.host)}`}>
+                        {t("agents.provision.openHost")}
+                      </Link>
+                    </Button>
+                  ) : null}
                 </div>
               ) : (
                 <p className="text-sm text-foreground-secondary">

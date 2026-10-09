@@ -149,11 +149,12 @@ describe("domain map", () => {
     // ME-014: the domain root has no index route — the domain link goes to
     // the host roster (the section's default landing).
     expect(agents?.linkTo).toBe("/agents/hosts");
-    // The roster leads; execution and the AGW-4 registry keep their paths.
+    // agents-redesign C1: TWO sections — the hosts workbench and
+    // Исполнение. The connect conveyor left the nav (contextual entries);
+    // its route /agents/harnesses stays LIVE for direct entries.
     expect(agents?.sections?.map((s) => s.to)).toEqual([
       "/agents/hosts",
       "/agents/execution",
-      "/agents/harnesses",
     ]);
   });
 });

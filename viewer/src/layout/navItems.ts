@@ -10,7 +10,6 @@ import {
   KanbanSquare,
   LayoutGrid,
   ListTodo,
-  PlugZap,
   Search,
   ServerCog,
   Server,
@@ -137,6 +136,10 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
     linkTo: "/agents/hosts",
     key: "nav.agents",
     icon: Bot,
+    // agents-redesign C1 (§2.2): the domain carries TWO sections — the hosts
+    // workbench and Исполнение. The connect conveyor LEAVES the nav: its
+    // route (/agents/harnesses) stays live, the entry is contextual (the
+    // roster panel CTA, the empty state, the field).
     sections: [
       {
         to: "/agents/hosts",
@@ -148,12 +151,6 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
         to: "/agents/execution",
         key: "nav.agentsExecution",
         icon: Workflow,
-        end: true,
-      },
-      {
-        to: "/agents/harnesses",
-        key: "nav.agentsHarnesses",
-        icon: PlugZap,
         end: true,
       },
     ],

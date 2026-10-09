@@ -1271,6 +1271,7 @@ export const ru = {
   "agents.hosts.recentFailed": "Ленту не удалось загрузить.",
   "agents.hosts.reconnectAction": "Подключить заново",
   "agents.hosts.harnessesTitle": "Харнесы хоста",
+  "agents.hosts.actionAddHarness": "Подключить харнес",
   "agents.hosts.refusalDisabled": "отключён",
   "agents.hosts.refusalRevoked": "отозван",
   "agents.hosts.sessions24Tooltip": "Сессии за 24 часа",
@@ -1659,6 +1660,7 @@ export const ru = {
   "agents.provision.knownHostsHint":
     "Ключ машины не совпал с закреплённым. Если машину ПЕРЕУСТАНАВЛИВАЛИ намеренно — на борде выполняется отдельная процедура re-pin (POST /api/executors/provision/host/{host}/repin). Вслепую повторять не надо: несовпадение может означать подмену (MITM).",
   "agents.provision.retry": "Повторить",
+  "agents.provision.openHost": "Открыть хост",
   "agents.provision.doneTitle": "Исполнитель «{{name}}» ждёт вашего одобрения",
   "agents.provision.doneLoadingRow": "Ждём появления строки в реестре…",
   "agents.provision.approvedAlready":

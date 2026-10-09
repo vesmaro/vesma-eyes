@@ -14,6 +14,7 @@ import { UiTokenProvider } from "@/features/ui-token/UiTokenProvider";
 import { keys } from "@/lib/queryKeys";
 import { fingerprintHex } from "./provisionTypes";
 import { actUnmount, actWaitUntil } from "@/test/actTools";
+import { MemoryRouter } from "react-router";
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 /**
@@ -50,7 +51,11 @@ async function mountCard(): Promise<Mount> {
           <ToastProvider>
             <UiTokenProvider>
               <I18nProvider initialLang="en">
-                <ProvisionCard />
+                {/* B1: the done block deep-links into the hosts frame —
+                 * the card needs the Router context now. */}
+                <MemoryRouter>
+                  <ProvisionCard />
+                </MemoryRouter>
                 <ToastViewport />
               </I18nProvider>
             </UiTokenProvider>

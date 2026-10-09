@@ -364,7 +364,7 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
           onValue={onSideValue}
           onCommit={onSideCommit}
           onReset={onSideReset}
-          className="absolute inset-y-0 left-[var(--kora-right-w)] hidden -translate-x-1/2 lg:flex"
+          className="absolute inset-y-0 left-[calc(100%-var(--kora-right-w))] hidden -translate-x-1/2 lg:flex"
         />
 
         {/* Right panel: Блок 1 → Блок 2 → the coverage legend (07j §3.3–3.5),

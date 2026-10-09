@@ -1245,6 +1245,7 @@ export const en: Record<TranslationKey, string> = {
   "agents.hosts.recentFailed": "Failed to load the feed.",
   "agents.hosts.reconnectAction": "Reconnect",
   "agents.hosts.harnessesTitle": "Host harnesses",
+  "agents.hosts.actionAddHarness": "Add a harness",
   "agents.hosts.refusalDisabled": "disabled",
   "agents.hosts.refusalRevoked": "revoked",
   "agents.hosts.sessions24Tooltip": "Sessions in 24h",
@@ -1628,6 +1629,7 @@ export const en: Record<TranslationKey, string> = {
   "agents.provision.knownHostsHint":
     "The machine key does not match the pinned one. If the machine was REINSTALLED on purpose, the board has a separate re-pin action (POST /api/executors/provision/host/{host}/repin). Do not blindly retry: a mismatch may mean a MITM.",
   "agents.provision.retry": "Retry",
+  "agents.provision.openHost": "Open the host",
   "agents.provision.doneTitle": "Executor “{{name}}” awaits your approval",
   "agents.provision.doneLoadingRow": "Waiting for the registry row to appear…",
   "agents.provision.approvedAlready":

@@ -12,6 +12,7 @@ import type {
   ExecutorItem,
   ExecutorListMeta,
 } from "@/gateway/boardTypes";
+import { Link } from "react-router";
 import { useT, type TranslationKey } from "@/i18n";
 import { cn } from "@/lib/utils";
 import type { KoraSession } from "@/features/kora/koraTypes";
@@ -54,9 +55,19 @@ export function HostHarnesses({
   const t = useT();
   return (
     <section aria-label={t("agents.hosts.harnessesTitle")} className="space-y-1">
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
-        {t("agents.hosts.harnessesTitle")}
-      </h3>
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
+          {t("agents.hosts.harnessesTitle")}
+        </h3>
+        {/* The contextual conveyor entry (C1: the connect action left the
+         * nav — the field carries it where a harness would be added). */}
+        <Link
+          to="/agents/harnesses?connect=1"
+          className="flex min-h-6 items-center rounded-sm px-1 text-xs text-foreground-secondary underline-offset-2 transition-colors duration-instant hover:text-foreground hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+        >
+          {t("agents.hosts.actionAddHarness")}
+        </Link>
+      </div>
       <ul className="space-y-1">
         {members.map((member) => (
           <HarnessRow
