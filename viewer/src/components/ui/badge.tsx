@@ -18,7 +18,10 @@ const badgeVariants = cva(
         // `expired` assignment state; no new colour — ADR 0003, the
         // --color-warning token has existed since T4).
         warning: "border-transparent bg-warning-tint text-warning",
-        error: "border-transparent bg-error-tint text-error",
+        // U7 (2026-10-09): text-error on the 15% tint collapsed to 3.2:1 on
+        // the dark well — the badge text rides the dedicated --color-error-text
+        // step (AA on the tint AND the clean strata, both themes; §4 U7 block).
+        error: "border-transparent bg-error-tint text-error-text",
       },
     },
     defaultVariants: {

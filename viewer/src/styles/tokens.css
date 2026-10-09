@@ -37,6 +37,11 @@
   --color-success: #3fbf7f;             /* live */
   --color-warning: #d9a03f;
   --color-error: #e0655c;
+  /* U7 (2026-10-09): badge-text step — text-error on a 15% error tint
+   * collapses to 3.2:1 on the dark well (the tint lifts the surface toward
+   * the text); this step holds AA on the tint AND on the clean strata.
+   * Consumed ONLY by the Badge error variant (§4 U7 block). */
+  --color-error-text: #f5a29b;
   --color-info: #4fc2ce;
 
   /* Text */
@@ -262,6 +267,7 @@
   --color-success: #1d6e48;
   --color-warning: #8a5a17;
   --color-error: #8a2020;
+  --color-error-text: #8a2020;          /* U7: light holds AA without a step */
   --color-info: #136e79;
 
   --color-text-primary: #1a1e2e;
@@ -346,6 +352,7 @@
   --color-success: #3fbf7f;
   --color-warning: #d9a03f;
   --color-error: #e0655c;
+  --color-error-text: #f5a29b;
   --color-info: #4fc2ce;
 
   --color-text-primary: #e6edf3;
