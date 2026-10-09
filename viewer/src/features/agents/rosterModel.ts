@@ -218,6 +218,40 @@ export function hostRevoked(group: HostGroup): boolean {
 }
 
 /**
+ * The host's PRIMARY executor for host-level actions («Дать задачу»,
+ * «Проверить связь»): the first registry-routable member (approved AND
+ * enabled) in the canon name order. null = nobody on this host can take
+ * work — the actions disable with the lifecycle explanation instead.
+ */
+export function hostPrimaryExecutor(group: HostGroup): ExecutorItem | null {
+  return (
+    group.members.find(
+      (member) => member.state === "approved" && member.enabled,
+    ) ?? null
+  );
+}
+
+/**
+ * Can the host take NEW work right now? The attention ladder gates it:
+ * online / silent / awaiting-first-report hosts are routable (the queue
+ * waits through a missed pulse); offline / provisioning / awaiting-approval
+ * / disabled / revoked are not (the button disables with the lifecycle
+ * explanation). Pre-UXE-2 boards fall back to the presence reading.
+ */
+export function hostRoutable(
+  group: HostGroup,
+  meta: ExecutorListMeta | undefined,
+  now: number,
+): boolean {
+  const state = hostLifecycle(group);
+  if (state !== null) {
+    return state === "online" || state === "silent" || state === "awaiting-first-report";
+  }
+  const presence = hostPresence(group, meta, now);
+  return presence === "online" || presence === "stale";
+}
+
+/**
  * The host's freshest report age (seconds): the MINIMUM member age — the
  * host «reported» when its most recent agent did. null = no parsable
  * last_seen in the group (honest absence, never a fake 0).

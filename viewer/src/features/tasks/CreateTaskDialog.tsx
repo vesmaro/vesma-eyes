@@ -63,9 +63,17 @@ const TITLE_MAX = 200;
 export interface CreateTaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** agents-redesign B1 «Дать задачу» from a HOST header: pre-select this
+   * executor on the «Кому» step (the host's primary, routable member).
+   * A stored draft still wins — the owner's own typing is sacred. */
+  initialExecutorId?: string | null;
 }
 
-export function CreateTaskDialog({ open, onOpenChange }: CreateTaskDialogProps) {
+export function CreateTaskDialog({
+  open,
+  onOpenChange,
+  initialExecutorId = null,
+}: CreateTaskDialogProps) {
   const t = useT();
   if (!open) return null;
   return (
@@ -78,7 +86,7 @@ export function CreateTaskDialog({ open, onOpenChange }: CreateTaskDialogProps) 
           </div>
           <DialogDescription>{t("tasks.create.description")}</DialogDescription>
         </DialogHeader>
-        <CreateTaskWizard onClose={() => onOpenChange(false)} />
+        <CreateTaskWizard onClose={() => onOpenChange(false)} initialExecutorId={initialExecutorId} />
       </DialogContent>
     </Dialog>
   );
@@ -123,7 +131,13 @@ const draftGuard = (value: unknown): TaskDraft | null => {
   };
 };
 
-function CreateTaskWizard({ onClose }: { onClose: () => void }) {
+function CreateTaskWizard({
+  onClose,
+  initialExecutorId = null,
+}: {
+  onClose: () => void;
+  initialExecutorId?: string | null;
+}) {
   const t = useT();
   const { lang } = useI18n();
   const { createTask } = useTaskMutations();
@@ -142,9 +156,14 @@ function CreateTaskWizard({ onClose }: { onClose: () => void }) {
   const [project, setProject] = useState(restored?.project ?? "");
   const [tags, setTags] = useState(restored?.tags ?? "");
   const [textError, setTextError] = useState(false);
-  // «Кому»: the queue is the equal first-class default (the v12 canon).
-  const [assignee, setAssignee] = useState<string>(restored?.assignee ?? "queue");
-  const [executorId, setExecutorId] = useState(restored?.executorId ?? "");
+  // «Кому»: the queue is the equal first-class default (the v12 canon);
+  // a host-header deep link pre-points the step at its primary executor.
+  const [assignee, setAssignee] = useState<string>(
+    restored?.assignee ?? (initialExecutorId ? "executor" : "queue"),
+  );
+  const [executorId, setExecutorId] = useState(
+    restored?.executorId ?? initialExecutorId ?? "",
+  );
   const [specialist, setSpecialist] = useState(restored?.specialist ?? "");
   const [specialistError, setSpecialistError] = useState(false);
   const [harnessChoice, setHarnessChoice] = useState<string>(restored?.harness ?? "");

@@ -42,12 +42,16 @@ export function ExecutorLinkCheck({
   executor,
   variant,
   autoCheck = false,
+  triggerLabel,
 }: {
   executor: ExecutorItem;
   /** menu-item: trigger is a non-closing menu entry, verdict inside the popup. */
   variant: "menu-item" | "card";
   /** Card mode: show the verdict on mount (the trigger only re-checks). */
   autoCheck?: boolean;
+  /** agents-redesign B1: an action-row label override («Проверить связь» on
+   * the host header); default stays the registry wording. */
+  triggerLabel?: string;
 }) {
   const t = useT();
   const queryClient = useQueryClient();
@@ -105,7 +109,7 @@ export function ExecutorLinkCheck({
             onClick={check}
           >
             <Activity className="size-3.5" aria-hidden="true" />
-            {t("agents.linkcheck.trigger")}
+            {triggerLabel ?? t("agents.linkcheck.trigger")}
           </Button>
         )
       ) : null}

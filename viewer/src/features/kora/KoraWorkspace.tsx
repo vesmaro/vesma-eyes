@@ -122,8 +122,15 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
   const summary = useMemo(() => koraSummary(model, items), [model, items]);
 
   // The ONE page filter (07j §3.2): the header select and the tree clicks
-  // write the same context; Блок 2 + the tree dimming follow it.
-  const [context, setContext] = useState<KoraBlock2Context>({ kind: "all" });
+  // write the same context; Блок 2 + the tree dimming follow it. The
+  // agents-hosts deep link (`/kora?host=<host>`, B1 «Сессии в Кору») lands
+  // with the host filter preset — INITIAL-ONLY: the select stays the owner
+  // of the context afterwards.
+  const [context, setContext] = useState<KoraBlock2Context>(() => {
+    if (typeof window === "undefined") return { kind: "all" };
+    const host = new URLSearchParams(window.location.search).get("host");
+    return host ? { kind: "host", host } : { kind: "all" };
+  });
   const [quickFilter, setQuickFilter] = useState<KoraQuickFilter | null>(null);
   const contextHost =
     context.kind === "host"

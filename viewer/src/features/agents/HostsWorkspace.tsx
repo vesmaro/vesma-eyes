@@ -12,18 +12,31 @@ import {
 import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import type {
+  ActivityKind,
   AssignmentItem,
+  ExecutorLifecycleState,
   ExecutorListMeta,
 } from "@/gateway/boardTypes";
 import { isAgentsSource } from "@/gateway/capabilities";
 import { useGateway } from "@/gateway/GatewayContext";
-import { useT, type TranslationKey } from "@/i18n";
+import { useT, useI18n, type TranslationKey } from "@/i18n";
 import { cn } from "@/lib/utils";
+import { withReturn } from "@/lib/returnParams";
 import { useBoardTasks } from "@/features/tasks/useTasks";
 import { useValidationNow } from "@/features/tasks/useValidationClock";
+import { useActivityBuckets, useActivityFeed } from "@/features/tasks/useActivity";
+import { buildPulseAxis } from "@/features/tasks/activityUrl";
+import {
+  KoraGatewayContext,
+  makeKoraGateway,
+} from "@/features/kora/koraGatewayContext";
+import { useKoraSessionPages } from "@/features/kora/useKora";
+import type { KoraSession } from "@/features/kora/koraTypes";
 import { KoraResizeHandle, seamPx } from "@/features/kora/KoraResizeHandle";
 import { AgentsUnsupported } from "./AgentsUnsupported";
 import { AssignmentStateBadge } from "./AssignmentStateBadge";
+import { CreateTaskDialog } from "@/features/tasks/CreateTaskDialog";
+import { ExecutorLinkCheck } from "./ExecutorLinkCheck";
 import {
   formatReportAge,
   isLifecycle,
@@ -46,7 +59,9 @@ import {
   hostLifecycle,
   hostNeedsAttention,
   hostPresence,
+  hostPrimaryExecutor,
   hostRevoked,
+  hostRoutable,
   hostRouteId,
   groupExecutorsByHost,
   type HostGroup,
@@ -123,6 +138,16 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
   const [filter, setFilter] = useState<HostFilter>("all");
   // The roster SHEET (the <xl roster): session-only state, Radix owns Esc.
   const [sheetOpen, setSheetOpen] = useState(false);
+  const sheetTriggerRef = useRef<HTMLButtonElement>(null);
+  // B1 «Дать задачу»: the new-task wizard pre-pointed at the host's primary
+  // executor (the engine's other legal assignment path — the sheet needs a
+  // task, the wizard creates task + assignment in one flow).
+  const [giveOpen, setGiveOpen] = useState(false);
+  // The Kora sessions read (B1 «Сейчас»): the kora seams live on their OWN
+  // context — the provider wraps the FIELD below (hooks read the tree), and
+  // the adapter choice follows the global ADAPTER (mock fixtures in
+  // dev/smoke builds).
+  const [koraGateway] = useState(makeKoraGateway);
 
   const items = useMemo(() => executors.data?.items ?? [], [executors.data]);
   const meta = executors.data?.meta;
@@ -259,6 +284,7 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
        * sheet ≥sm, FULLSCREEN below sm). ≥48px target (touch pass). */}
       {!executors.isPending && groups.length > 0 ? (
         <Button
+          ref={sheetTriggerRef}
           type="button"
           variant="outline"
           onClick={() => setSheetOpen(true)}
@@ -316,13 +342,16 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
               />
             </div>
           ) : (
-            <HostField
-              group={selected}
-              assignments={assignmentItems}
-              meta={meta}
-              now={now}
-              titleOf={titleOf}
-            />
+            <KoraGatewayContext.Provider value={koraGateway}>
+              <HostField
+                group={selected}
+                assignments={assignmentItems}
+                meta={meta}
+                now={now}
+                titleOf={titleOf}
+                onGiveTask={() => setGiveOpen(true)}
+              />
+            </KoraGatewayContext.Provider>
           )}
         </div>
 
@@ -411,6 +440,15 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
             event.preventDefault();
             document.getElementById("hosts-sheet-listbox")?.focus();
           }}
+          /* The canonical overlay return (A2 polish): the trigger regains
+           * focus on close — unless a host was just opened, in which case
+           * the field-title effect takes focus one frame later anyway. */
+          onCloseAutoFocus={(event) => {
+            if (document.activeElement?.id !== "agents-host-title") {
+              event.preventDefault();
+              sheetTriggerRef.current?.focus();
+            }
+          }}
           className={cn(
             "flex flex-col gap-3 p-4 text-left",
             // The sheet: fullscreen <sm, right-anchored ≥sm (inset overrides
@@ -463,6 +501,15 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* B1 «Дать задачу»: the new-task wizard («Что → Кому → Проверка»)
+       * pre-pointed at the host's primary executor — the engine's legal
+       * task+assignment creation flow. */}
+      <CreateTaskDialog
+        open={giveOpen}
+        onOpenChange={setGiveOpen}
+        initialExecutorId={selected ? hostPrimaryExecutor(selected)?.id ?? null : null}
+      />
     </section>
   );
 }
@@ -626,37 +673,71 @@ function HostRibbon({
   );
 }
 
-// --- the main field (A1 scaffold) ------------------------------------------------
+// --- the main field (B1: header + actions + Сейчас + Недавно) ---------------------
 
-/**
- * The selected host's scaffold: name + the lifecycle pill, the next_action
- * as a VISIBLE line (07a §1.1: a pill is never alone), the stats line —
- * then the one-line placeholder for B1/B2. The pill reads the server's
- * `ExecutorLifecycleStatus` through the host aggregate (rosterModel
- * .hostLifecycle — the attention ladder); pre-UXE-2 boards (no member
- * status) fall back to the presence word, never a guessed state. The h2 is
- * the keyboard landing target (tabIndex -1 — focusable, not tabbable).
- */
+/** The field is the host's WORKBENCH (agents-redesign B1, blueprint §3.C.1-2):
+ * the header (identity pill + stats + the three actions), «Сейчас» — the
+ * host's active assignments (→ the task's live execution feed) and live
+ * harness sessions (→ the Kora transcript), the honest state blocks (off /
+ * revoked / provisioning), and «Недавно» — the host-scoped activity feed
+ * with the 24h hourly strip. Every row links into an EXISTING surface.
+ * Nothing here is invented: the sessions come from the Kora registry (the
+ * `executor_id` join with the group members), the feed from
+ * `GET /api/activity?host=` — what the engine does not have, the field does
+ * not draw. */
 function HostField({
   group,
   assignments,
   meta,
   now,
   titleOf,
+  onGiveTask,
 }: {
   group: HostGroup;
   assignments: readonly AssignmentItem[];
   meta: ExecutorListMeta | undefined;
   now: number;
   titleOf: (taskId: string) => string;
+  onGiveTask: () => void;
 }) {
   const t = useT();
+  const { lang } = useI18n();
   const state = hostLifecycle(group);
   const presence = hostPresence(group, meta, now);
   const presenceKey = presence ?? "unknown";
   const awaitingDecision = hostAwaitingDecision(group);
   const revoked = hostRevoked(group);
+  const routable = hostRoutable(group, meta, now);
+  const primary = hostPrimaryExecutor(group);
   const activeWork = activeAssignmentsForHost(assignments, group);
+  const routeId = hostRouteId(group);
+
+  // The Kora registry (provider-mounted): the host's LIVE sessions (state
+  // `live`; idle/dead are not «сейчас»), joined by executor_id.
+  const kora = useKoraSessionPages(100);
+  const memberIds = useMemo(
+    () => new Set(group.members.map((member) => member.id)),
+    [group.members],
+  );
+  const liveSessions = useMemo(
+    () =>
+      kora.items.filter(
+        (session) => session.state === "live" && memberIds.has(session.executor_id),
+      ),
+    [kora.items, memberIds],
+  );
+  const sessionSupport = (session: KoraSession): string | undefined =>
+    kora.coverage?.harnesses.find((row) => row.harness === session.harness)
+      ?.support;
+
+  // The host-scoped activity (B1 «Недавно»): the cursor feed + the 24h
+  // hourly buckets — the SAME wire the Задачи activity page reads.
+  const activity = useActivityFeed({ host: group.host, limit: 8 });
+  const buckets = useActivityBuckets({ host: group.host, bucket: "hour", hours: 24 });
+  const pulseSlots = useMemo(
+    () => buildPulseAxis(buckets.data?.buckets ?? [], now),
+    [buckets.data, now],
+  );
 
   // The next_action line: the state-defining member's server-owned report
   // age, humanised exactly like the registry pill (the {{silentMax}} var
@@ -700,6 +781,19 @@ function HostField({
         })
       : "";
 
+  // The state block (B1 §3): the field says WHY it is not a workbench —
+  // off / revoked / provisioning speak in the server lifecycle's own words.
+  const blockState: ExecutorLifecycleState | null =
+    state !== null &&
+    (state === "offline" || state === "disabled" || state === "provisioning" || state === "revoked")
+      ? state
+      : null;
+  const giveDisabledReason =
+    state !== null && !routable ? t(lifecycleNextKey(state), nextVars) : null;
+
+  const activityRows = activity.data?.pages.flatMap((page) => [...page.items]) ?? [];
+  const maxSlot = Math.max(1, ...pulseSlots.map((slot) => slot.total));
+
   return (
     <div className="flex min-h-0 min-w-0 flex-col">
       <header className="space-y-1.5 px-6 pb-3 pt-5">
@@ -734,17 +828,6 @@ function HostField({
               {t(presenceLabelKey(presenceKey))}
             </Badge>
           )}
-          {activeWork.length > 0 ? (
-            <span className="flex min-w-0 items-center gap-1.5 text-xs text-foreground-secondary">
-              <span className="min-w-0 truncate">{titleOf(activeWork[0].task_id)}</span>
-              <AssignmentStateBadge state={activeWork[0].state} />
-              {activeWork.length > 1 ? (
-                <span className="shrink-0 text-foreground-muted">
-                  +{activeWork.length - 1}
-                </span>
-              ) : null}
-            </span>
-          ) : null}
         </div>
         {/* The next_action — the second line under the pill (07a §1.1), the
          * state-keyed dictionary hint the registry pill only whispers. */}
@@ -759,18 +842,255 @@ function HostField({
             total: group.members.length,
           })}
           {" · "}
+          {t("agents.hosts.taskCount", { n: activeWork.length })}
+          {" · "}
           {t("agents.strip.lastSeen")}: {age || t("agents.executor.neverSeen")}
         </p>
+        {/* The header actions (B1 §3.C.1): give a task (the wizard,
+         * pre-pointed at the host's primary executor), the Kora sessions of
+         * this host, and the real link verdict. off/revoked hosts disable
+         * «Дать задачу» with the lifecycle explanation in the tooltip. */}
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          <Button
+            type="button"
+            size="sm"
+            onClick={onGiveTask}
+            disabled={!routable || primary === null}
+            title={giveDisabledReason ?? undefined}
+          >
+            {t("agents.hosts.actionGiveTask")}
+          </Button>
+          <Button asChild type="button" variant="outline" size="sm">
+            <Link
+              to={
+                group.host
+                  ? `/kora?host=${encodeURIComponent(group.host)}`
+                  : "/kora"
+              }
+            >
+              {t("agents.hosts.actionKora")}
+            </Link>
+          </Button>
+          {primary !== null ? (
+            <ExecutorLinkCheck
+              executor={primary}
+              variant="card"
+              autoCheck
+              triggerLabel={t("agents.hosts.actionLinkCheck")}
+            />
+          ) : null}
+        </div>
       </header>
-      <div className="flex min-h-0 flex-1 items-start px-6 py-4">
-        <p className="text-sm text-foreground-muted">
-          {t("agents.hosts.fieldPlaceholder")}
-        </p>
-      </div>
+
+      {/* The state block: the field speaks in the server lifecycle's own
+       * words; a revoked host carries the reconnect CTA. */}
+      {blockState !== null ? (
+        <div
+          role="note"
+          className={cn(
+            "mx-6 mb-3 space-y-1 rounded-md border p-3",
+            blockState === "revoked"
+              ? "border-border bg-elevated"
+              : "border-border-subtle bg-elevated",
+          )}
+        >
+          <p className="text-sm font-medium text-foreground-secondary">
+            {t(lifecycleLabelKey(blockState))}
+          </p>
+          <p className="text-xs text-foreground-muted">
+            {t(lifecycleNextKey(blockState), nextVars)}
+          </p>
+          {blockState === "revoked" ? (
+            <Button asChild variant="outline" size="sm" className="mt-1">
+              <Link to="/agents/harnesses?connect=1">
+                {t("agents.hosts.reconnectAction")}
+              </Link>
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* «Сейчас»: the host's active work — assignments (→ the task's live
+       * execution feed) and live harness sessions (→ the Kora transcript;
+       * lists-only harnesses wear the honest badge, never a dead link). */}
+      <section aria-label={t("agents.hosts.nowTitle")} className="space-y-2 px-6 pb-4">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
+          {t("agents.hosts.nowTitle")}
+        </h3>
+        {activeWork.length === 0 && liveSessions.length === 0 ? (
+          <p className="text-sm text-foreground-muted">{t("agents.hosts.nowIdle")}</p>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-1">
+              <p className="text-xs text-foreground-muted">
+                {t("agents.hosts.nowAssignments")}
+              </p>
+              <ul className="space-y-0.5">
+                {activeWork.map((row) => (
+                  <li key={row.id}>
+                    <Link
+                      to={withReturn(
+                        `/tasks/${row.task_id}?tab=execution`,
+                        `/agents/hosts/${routeId}`,
+                      )}
+                      className="flex min-h-9 items-center gap-1.5 rounded-sm px-1 text-sm transition-colors duration-instant hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+                    >
+                      <AssignmentStateBadge state={row.state} />
+                      <span className="min-w-0 truncate">{titleOf(row.task_id)}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-foreground-muted">
+                {t("agents.hosts.nowSessions")}
+              </p>
+              {kora.error !== null ? (
+                <p className="px-1 text-xs text-foreground-muted">
+                  {t("agents.hosts.sessionsFailed")}
+                </p>
+              ) : liveSessions.length === 0 ? (
+                <p className="px-1 text-xs text-foreground-muted">
+                  {t("agents.hosts.nowNoSessions")}
+                </p>
+              ) : (
+                <ul className="space-y-0.5">
+                  {liveSessions.map((session) => (
+                    <li key={session.id}>
+                      <Link
+                        to={`/kora/${encodeURIComponent(session.id)}`}
+                        className="flex min-h-9 items-center gap-1.5 rounded-sm px-1 text-sm transition-colors duration-instant hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="size-2 shrink-0 rounded-full bg-success presence-dot-live"
+                        />
+                        <span className="shrink-0 font-mono text-xs text-foreground-secondary">
+                          {session.harness}
+                        </span>
+                        <span className="min-w-0 truncate text-foreground-secondary">
+                          {session.project ?? session.native_id}
+                        </span>
+                        {sessionSupport(session) === "lists-only" ? (
+                          <Badge
+                            variant="outline"
+                            className="shrink-0 whitespace-nowrap font-normal"
+                          >
+                            {t("kora.coverage.support.lists-only")}
+                          </Badge>
+                        ) : null}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* «Недавно»: the host-scoped activity — the 24h hourly strip + the
+       * freshest rows; the honest quiet line when the host never spoke. */}
+      <section aria-label={t("agents.hosts.recentTitle")} className="space-y-2 px-6 pb-6">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
+          {t("agents.hosts.recentTitle")}
+        </h3>
+        {activity.isError ? (
+          <p className="text-sm text-foreground-muted">{t("agents.hosts.recentFailed")}</p>
+        ) : activityRows.length === 0 && buckets.data === undefined ? (
+          <div role="status" aria-label={t("agents.hosts.loading")} className="space-y-2">
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-4 w-3/5" />
+          </div>
+        ) : activityRows.length === 0 ? (
+          <p className="text-sm text-foreground-muted">{t("agents.hosts.recentEmpty")}</p>
+        ) : buckets.data === undefined ? (
+          // The strip renders only from RESOLVED buckets — a zero-flat axis
+          // would read as «тишина» while the wire is still in flight.
+          <div role="status" aria-label={t("agents.hosts.loading")} className="space-y-2">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-4 w-3/5" />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div
+              aria-hidden="true"
+              className="flex h-12 items-end gap-px"
+            >
+              {pulseSlots.map((slot) => (
+                <div
+                  key={slot.ts}
+                  title={`${new Date(slot.ts).toLocaleTimeString(lang, { hour: "2-digit", minute: "2-digit" })} — ${slot.total}`}
+                  className={cn(
+                    "min-w-[2px] flex-1 rounded-t-sm",
+                    slot.total > 0 ? "bg-iris/80" : "bg-border-subtle",
+                  )}
+                  style={{
+                    height: `${slot.total > 0 ? Math.max(25, Math.round((slot.total / maxSlot) * 100)) : 8}%`,
+                  }}
+                />
+              ))}
+            </div>
+            <ul className="space-y-0.5">
+              {activityRows.slice(0, 8).map((row) => (
+                <li
+                  key={row.id}
+                  className="flex min-h-8 items-baseline gap-2 rounded-sm px-1 text-xs"
+                >
+                  <span className="shrink-0 font-mono tabular-nums text-foreground-muted">
+                    {new Date(row.ts).toLocaleTimeString(lang, {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                  <span className="shrink-0 text-foreground-secondary">
+                    {t(activityKindKey(row.kind))}
+                  </span>
+                  {row.task_title || row.task_id ? (
+                    <span className="min-w-0 truncate text-foreground-secondary">
+                      {row.task_title ?? row.task_id}
+                    </span>
+                  ) : null}
+                  {row.detail ? (
+                    <span className="min-w-0 truncate text-foreground-muted">
+                      {row.detail}
+                    </span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </section>
     </div>
   );
 }
 
+/** The activity kind → the agents feed dictionary (the SAME keys the
+ * execution feed speaks — one vocabulary per fact). */
+function activityKindKey(kind: ActivityKind): TranslationKey {
+  switch (kind) {
+    case "task.created":
+      return "agents.feed.created";
+    case "assignment.claimed":
+      return "agents.feed.claimed";
+    case "assignment.started":
+      return "agents.feed.started";
+    case "assignment.done":
+      return "agents.feed.done";
+    case "assignment.failed":
+      return "agents.feed.failed";
+    case "assignment.cancelled":
+      return "agents.feed.cancelled";
+    case "assignment.expired":
+      return "agents.feed.expired";
+    case "report":
+      return "agents.feed.report";
+    default:
+      return "agents.feed.created";
+  }
+}
 // --- the roster LISTBOX (A2 §3.E) -------------------------------------------------
 
 const optionId = (prefix: string, group: HostGroup): string =>

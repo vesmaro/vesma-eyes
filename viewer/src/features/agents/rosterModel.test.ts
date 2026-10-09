@@ -10,6 +10,8 @@ import {
   hostLifecycle,
   hostNeedsAttention,
   hostPresence,
+  hostPrimaryExecutor,
+  hostRoutable,
   hostRevoked,
   hostRouteId,
 } from "./rosterModel";
@@ -366,6 +368,69 @@ describe("hostLastReportAgeS — the host's freshest report", () => {
       NOW,
     )[0];
     expect(hostLastReportAgeS(silent, NOW)).toBeNull();
+  });
+});
+
+describe("hostPrimaryExecutor / hostRoutable — the host actions' gate", () => {
+  it("the primary is the first approved+enabled member; none on a dead host", () => {
+    const mixed = groupExecutorsByHost(
+      [
+        executor({ id: "a", enabled: false }),
+        executor({ id: "b", state: "revoked" }),
+        executor({ id: "c", last_seen: ago(300) }),
+      ],
+      META,
+      NOW,
+    )[0];
+    expect(hostPrimaryExecutor(mixed)?.id).toBe("c");
+    const dead = groupExecutorsByHost(
+      [executor({ id: "a", state: "revoked" })],
+      META,
+      NOW,
+    )[0];
+    expect(hostPrimaryExecutor(dead)).toBeNull();
+  });
+
+  it("routable: online/silent/awaiting-first-report; not offline/pending/revoked", () => {
+    const group = (members: ExecutorItem[]) =>
+      groupExecutorsByHost(members, META, NOW)[0];
+    expect(
+      hostRoutable(group([withStatus(executor({ id: "a" }), "online")]), META, NOW),
+    ).toBe(true);
+    expect(
+      hostRoutable(
+        group([withStatus(executor({ id: "a", last_seen: ago(300) }), "silent")]),
+        META,
+        NOW,
+      ),
+    ).toBe(true);
+    expect(
+      hostRoutable(
+        group([withStatus(executor({ id: "a" }), "awaiting-first-report")]),
+        META,
+        NOW,
+      ),
+    ).toBe(true);
+    expect(
+      hostRoutable(
+        group([withStatus(executor({ id: "a", last_seen: ago(3600) }), "offline")]),
+        META,
+        NOW,
+      ),
+    ).toBe(false);
+    expect(
+      hostRoutable(
+        group([withStatus(executor({ id: "a", state: "pending" }), "awaiting-approval")]),
+        META,
+        NOW,
+      ),
+    ).toBe(false);
+    expect(
+      hostRoutable(group([withStatus(executor({ id: "a", state: "revoked" }), "revoked")]), META, NOW),
+    ).toBe(false);
+    // Pre-UXE-2 board: the presence reading carries the verdict.
+    expect(hostRoutable(group([executor({ id: "a" })]), META, NOW)).toBe(true);
+    expect(hostRoutable(group([executor({ id: "a", last_seen: ago(3600) })]), META, NOW)).toBe(false);
   });
 });
 

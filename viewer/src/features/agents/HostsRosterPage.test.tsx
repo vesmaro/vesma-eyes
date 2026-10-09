@@ -17,6 +17,7 @@ import { buildRoutes } from "@/app/routes";
 import { MockAdapter } from "@/gateway/MockAdapter";
 import { GatewayContext } from "@/gateway/GatewayContext";
 import { keys } from "@/lib/queryKeys";
+import { koraKeys } from "@/features/kora/useKora";
 import { I18nProvider } from "@/i18n";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
 import { UiTokenProvider } from "@/features/ui-token/UiTokenProvider";
@@ -145,6 +146,14 @@ function rosterExecutors(base: number): ExecutorItem[] {
       status: status("awaiting-approval", base, 60),
     }),
     executor(base, {
+      id: "ex-6",
+      name: "zcode@gone",
+      host: "gone",
+      last_seen: ago(base, 7200),
+      presence: "offline",
+      status: status("offline", base, 7200),
+    }),
+    executor(base, {
       id: "ex-5",
       name: "copilot@old-host",
       host: "old-host",
@@ -202,6 +211,9 @@ interface MountOptions {
   path?: string;
   /** Freeze the clock at the fixture base (fake Date, REAL timers). */
   freezeClock?: boolean;
+  /** Seed the KORA registry BEFORE mount — with staleTime Infinity the
+   * mount-time fetch never fires and the seed survives. */
+  koraSeed?: (base: number) => Record<string, unknown>;
 }
 
 /** The LOCAL route stand (the optional param needs a real pattern). */
@@ -229,7 +241,9 @@ async function mountPage(options: MountOptions = {}): Promise<{
     vi.setSystemTime(base);
   }
   const gateway = new MockAdapter({ latency: false });
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  });
   await client.prefetchQuery({
     queryKey: keys.tasks.board(),
     queryFn: () => gateway.board(),
@@ -240,6 +254,12 @@ async function mountPage(options: MountOptions = {}): Promise<{
     count: assignments(base).length,
     items: assignments(base),
   });
+  if (options.koraSeed !== undefined) {
+    client.setQueryData(koraKeys.sessionsPaged(100), {
+      pages: [options.koraSeed(base)],
+      pageParams: [0],
+    });
+  }
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -345,10 +365,11 @@ describe("the frame: selection as a route", () => {
       );
     });
     await actWaitUntil(() => {
-      // The first host by the canon sort («Без хоста» sinks last).
-      expect(router.state.location.pathname).toBe("/agents/hosts/laptop");
+      // The first host by the canon sort («Без хоста» sinks last) — with
+      // this fixture set that is «gone» (alphabetically before laptop).
+      expect(router.state.location.pathname).toBe("/agents/hosts/gone");
       expect(container.querySelector('h2[id="agents-host-title"]')?.textContent).toBe(
-        "laptop",
+        "gone",
       );
     });
     await actUnmount(root);
@@ -430,7 +451,7 @@ describe("the md ribbon (A2 §3.D)", () => {
     const ribbon = container.querySelector('[aria-label="Host ribbon"]');
     expect(ribbon).not.toBeNull();
     const chips = [...ribbon!.querySelectorAll("button")];
-    expect(chips).toHaveLength(4);
+    expect(chips).toHaveLength(5);
     expect(
       chips.find((chip) => chip.textContent?.includes("laptop"))!.getAttribute(
         "aria-current",
@@ -454,14 +475,14 @@ describe("the roster sheet (A2 §3.D, <xl)", () => {
   it("opens from the trigger; Enter navigates + closes + lands the focus; Esc closes", async () => {
     const { root, container } = await mountPage({ path: "/agents/hosts/laptop" });
     const trigger = [...container.querySelectorAll("button")].find((button) =>
-      button.textContent?.includes("Roster · 4"),
+      button.textContent?.includes("Roster · 5"),
     )!;
     await act(async () => {
       trigger.click();
     });
     const dialog = document.body.querySelector("[role='dialog']");
     expect(dialog).not.toBeNull();
-    expect(dialog!.querySelectorAll('[role="option"]').length).toBe(4);
+    expect(dialog!.querySelectorAll('[role="option"]').length).toBe(5);
     // Esc closes the top overlay.
     await act(async () => {
       dialog!
@@ -546,17 +567,19 @@ describe("the roster panel (the inversion: compact rows, not cards)", () => {
       [...panel(container).querySelectorAll("button")].find(
         (button) => button.textContent === label,
       )!;
-    // All: four hosts.
-    expect(rows(container).length).toBe(4);
+    // All: five hosts.
+    expect(rows(container).length).toBe(5);
     await act(async () => {
       chip("Need attention").click();
     });
-    // laptop + mesh-2 are silent; new-host is awaiting; old-host is NOT.
+    // laptop + mesh-2 are silent; new-host is awaiting; gone is offline;
+    // old-host (revoked) is NOT.
     const attention = [...rows(container)].map((row) => row.textContent);
-    expect(attention).toHaveLength(3);
+    expect(attention).toHaveLength(4);
     expect(attention.join("|")).toContain("laptop");
     expect(attention.join("|")).toContain("mesh-2");
     expect(attention.join("|")).toContain("new-host");
+    expect(attention.join("|")).toContain("gone");
     expect(attention.join("|")).not.toContain("old-host");
     await act(async () => {
       chip("Awaiting decision").click();
@@ -566,7 +589,7 @@ describe("the roster panel (the inversion: compact rows, not cards)", () => {
     await act(async () => {
       chip("All").click();
     });
-    expect(rows(container).length).toBe(4);
+    expect(rows(container).length).toBe(5);
     await actUnmount(root);
   });
 
@@ -582,7 +605,7 @@ describe("the roster panel (the inversion: compact rows, not cards)", () => {
 });
 
 describe("the main field: the selected host's scaffold", () => {
-  it("name + lifecycle pill + next_action + stats (the A1 scaffold)", async () => {
+  it("name + lifecycle pill + next_action + stats (the B1 workbench header)", async () => {
     const { root, container } = await mountPage({ path: "/agents/hosts/laptop" });
     const field = mainField(container);
     // The host aggregate pill: laptop's ladder lands on silent (one member
@@ -591,13 +614,109 @@ describe("the main field: the selected host's scaffold", () => {
     expect(field.textContent).toContain("quiet");
     // The next_action is a VISIBLE line (07a: a pill is never alone).
     expect(field.textContent).toContain("No reports for");
-    // The stats line: the breakdown + the freshest report age.
+    // The stats line: the breakdown + active tasks + the freshest report age.
     expect(field.textContent).toContain("1/2 harnesses online");
+    expect(field.textContent).toContain("active tasks: 1");
     expect(field.textContent).toContain("last seen: 0min");
-    // The honest placeholder (one line, no illustration; the union-review
-    // i18n gate bans internal phase words in user-visible strings).
-    expect(field.textContent).toContain("work field arrives in the next update");
+    // The header actions: give-a-task (routable host → enabled), the Kora
+    // deep link carrying the host filter, the real link verdict.
+    const give = [...field.querySelectorAll("button")].find((button) =>
+      button.textContent?.includes("Give a task"),
+    )!;
+    expect(give.disabled).toBe(false);
+    expect(field.querySelector('a[href="/kora?host=laptop"]')).not.toBeNull();
+    expect(field.textContent).toContain("Check the link");
+    // «Сейчас»: the claimed assignment links into the task's LIVE feed with
+    // the roster as the return target.
+    const feedLink = field.querySelector<HTMLAnchorElement>('a[href*="/tasks/TB-1"]');
+    expect(feedLink).not.toBeNull();
+    expect(feedLink!.getAttribute("href")).toContain("tab=execution");
+    expect(feedLink!.getAttribute("href")).toContain(
+      `return=${encodeURIComponent("/agents/hosts/laptop")}`,
+    );
+    // No live kora sessions for the fixture executors → the honest line.
+    expect(field.textContent).toContain("No live sessions");
     await actUnmount(root);
+  });
+
+  it("«Сейчас» shows a live kora session joined by executor_id (B1 §3.C.2)", async () => {
+    const { root, container } = await mountPage({
+      path: "/agents/hosts/laptop",
+      // A LIVE session owned by the host's member (the frozen
+      // KoraSessionOut shape; vscode = the lists-only harness).
+      koraSeed: (base) => ({
+        ok: true as const,
+        count: 1,
+        items: [
+          {
+            id: "ex-1:sess_42",
+            executor_id: "ex-1",
+            native_id: "sess_42",
+            harness: "vscode",
+            project: "vesma-eyes",
+            cwd: null,
+            state: "live",
+            origin: "relay",
+            steerable: true,
+            started_at: ago(base, 300),
+            last_activity_at: ago(base, 30),
+            age_seconds: 30,
+            last_line_preview: "работает",
+          },
+        ],
+        coverage: {
+          harnesses: [
+            { harness: "vscode", support: "lists-only" as const, note: null },
+          ],
+          gaps: [],
+        },
+        meta: { generated_at: ago(base, 10) },
+      }),
+    });
+    const field = mainField(container);
+    const sessionLink = field.querySelector<HTMLAnchorElement>(
+      'a[href="/kora/ex-1%3Asess_42"]',
+    );
+    expect(sessionLink).not.toBeNull();
+    expect(sessionLink!.textContent).toContain("vscode");
+    // The lists-only harness wears the honest badge (never a dead link).
+    expect(sessionLink!.textContent).toContain("lists only");
+    await actUnmount(root);
+  });
+
+  it("«Недавно»: the revoked host's field answers with the honest quiet", async () => {
+    const { root, container } = await mountPage({ path: "/agents/hosts/old-host" });
+    await actFlush(200);
+    const field = mainField(container);
+    // The tombstone block + the reconnect CTA.
+    expect(field.textContent).toContain("Access revoked");
+    const reconnect = [...field.querySelectorAll("a")].find((a) =>
+      a.textContent?.includes("Reconnect"),
+    );
+    expect(reconnect).not.toBeNull();
+    expect(reconnect!.getAttribute("href")).toBe("/agents/harnesses?connect=1");
+    // The feed resolves empty for the dead host → the canonical quiet line.
+    expect(field.textContent).toContain("Quiet. The first events arrive");
+    await actUnmount(root);
+  });
+
+  it("«Дать задачу» disables on non-routable hosts with the lifecycle explanation", async () => {
+    const { root, container } = await mountPage({ path: "/agents/hosts/old-host" });
+    const give = [...mainField(container).querySelectorAll("button")].find((button) =>
+      button.textContent?.includes("Give a task"),
+    )!;
+    expect(give.disabled).toBe(true);
+    expect(give.getAttribute("title")).toContain("Access revoked");
+    await actUnmount(root);
+    const { root: root2, container: container2 } = await mountPage({
+      path: "/agents/hosts/gone",
+    });
+    const give2 = [...mainField(container2).querySelectorAll("button")].find((button) =>
+      button.textContent?.includes("Give a task"),
+    )!;
+    expect(give2.disabled).toBe(true);
+    expect(give2.getAttribute("title")).toContain("check the link");
+    await actUnmount(root2);
   });
 
   it("a pending host shows the decision pill in the field; revoked reads revoked", async () => {
@@ -618,7 +737,7 @@ describe("the main field: the selected host's scaffold", () => {
     const { root, container } = await mountPage({ path: "/agents/hosts/ghost" });
     expect(container.textContent).toContain("Host not found");
     expect(container.textContent).toContain("ghost");
-    expect(rows(container).length).toBe(4);
+    expect(rows(container).length).toBe(5);
     await actUnmount(root);
   });
 });
@@ -749,7 +868,7 @@ describe("the /agents default landing", () => {
     // /agents → /agents/hosts (the alias) → the first host (the frame's
     // own replace redirect): one landing, the roster panel visible.
     await actWaitUntil(() => {
-      expect(router.state.location.pathname).toBe("/agents/hosts/laptop");
+      expect(router.state.location.pathname).toBe("/agents/hosts/gone");
       expect(
         container.querySelector('aside[aria-label="Host roster"]'),
       ).not.toBeNull();
