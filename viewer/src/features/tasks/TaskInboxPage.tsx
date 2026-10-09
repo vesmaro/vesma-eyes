@@ -555,7 +555,7 @@ function EditInboxForm({ item, onDone }: { item: TaskInboxEntry; onDone: () => v
 }
 
 const INBOX_FIELD_CLASS =
-  "h-9 w-full rounded-md border border-border bg-well px-2 text-sm text-foreground placeholder:text-foreground-muted focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright";
+  "h-12 md:h-9 w-full rounded-md border border-border bg-well px-2 text-sm text-foreground placeholder:text-foreground-muted focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright";
 const INBOX_AREA_CLASS =
   "w-full rounded-md border border-border bg-well px-2 py-1.5 text-sm text-foreground placeholder:text-foreground-muted focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright";
 

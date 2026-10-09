@@ -102,7 +102,7 @@ export function OverviewPage() {
                   </h3>
                   <Link
                     to="/memory/pulse"
-                    className="inline-flex min-h-6 items-center gap-1 text-sm text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                    className="inline-flex min-h-12 md:min-h-6 items-center gap-1 text-sm text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                   >
                     {t("overview.pulseAll")}{" "}
                     <ArrowRight className="size-4" aria-hidden="true" />

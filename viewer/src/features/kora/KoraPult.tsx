@@ -168,7 +168,7 @@ export function KoraPult({
             to="/tasks/inbox"
             title={t("kora.pult.waitingHint")}
             className={cn(
-              "inline-flex min-h-6 shrink-0 items-center rounded-full border border-border-subtle px-2 font-mono text-xs tabular-nums focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
+              "inline-flex min-h-12 md:min-h-6 shrink-0 items-center rounded-full border border-border-subtle px-2 font-mono text-xs tabular-nums focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
               waiting === 0
                 ? "text-foreground-muted"
                 : "border-iris/40 text-iris-bright",
@@ -182,7 +182,7 @@ export function KoraPult({
           aria-expanded={expanded}
           aria-controls="kora-pult-body"
           onClick={() => setExpanded((value) => !value)}
-          className="inline-flex min-h-6 shrink-0 items-center gap-1 rounded-sm px-2 text-xs text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+          className="inline-flex min-h-12 md:min-h-6 shrink-0 items-center gap-1 rounded-sm px-2 text-xs text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
         >
           {expanded ? (
             <ChevronUp aria-hidden className="size-4" />
@@ -226,7 +226,7 @@ export function KoraPult({
                   <span>{t("kora.pult.digestEmpty")}</span>
                   <a
                     href="#kora-workzone"
-                    className="inline-flex min-h-6 items-center text-sm text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+                    className="inline-flex min-h-12 md:min-h-6 items-center text-sm text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
                   >
                     {t("kora.pult.readTranscript")}
                   </a>

@@ -34,7 +34,8 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           undefined
         }
         className={cn(
-          "flex h-9 w-full rounded-md border border-border bg-well px-3 py-1 text-base transition-colors duration-instant",
+          // U7 mobile: ≥48px touch height below md (SPEC-2026-10-07 п.4).
+          "flex h-12 md:h-9 w-full rounded-md border border-border bg-well px-3 py-1 text-base transition-colors duration-instant",
           "placeholder:text-foreground-muted focus-visible:placeholder:text-transparent",
           "hover:border-myelin-strong",
           "caret-iris-bright",

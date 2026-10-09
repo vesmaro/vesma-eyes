@@ -87,7 +87,7 @@ export function SettingsHubPage() {
             <li key={section.id}>
               <a
                 href={`#${section.id}`}
-                className="block whitespace-nowrap rounded px-2.5 py-1.5 text-sm text-foreground-secondary transition-colors duration-instant hover:bg-elevated hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+                className="block max-md:min-h-12 max-md:inline-flex max-md:items-center whitespace-nowrap rounded px-2.5 py-1.5 text-sm text-foreground-secondary transition-colors duration-instant hover:bg-elevated hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
               >
                 {t(section.titleKey)}
               </a>

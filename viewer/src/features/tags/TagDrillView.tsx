@@ -105,7 +105,7 @@ export function TagDrillView({
           type="button"
           onClick={() => onFamilyOpen(family)}
           aria-label={`${t("tags.family.all")}: ${familyLabel}`}
-          className="inline-flex min-h-6 items-center rounded-sm border border-border-subtle bg-well px-2 py-0.5 text-xs text-foreground-secondary transition-colors duration-instant hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          className="inline-flex min-h-12 md:min-h-6 items-center rounded-sm border border-border-subtle bg-well px-2 py-0.5 text-xs text-foreground-secondary transition-colors duration-instant hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
         >
           {familyLabel}
         </button>
@@ -184,7 +184,7 @@ export function TagDrillView({
                         location.pathname,
                         location.search,
                       )}
-                      className="flex min-h-6 flex-wrap items-center gap-2 rounded-sm text-sm text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                      className="flex min-h-12 md:min-h-6 flex-wrap items-center gap-2 rounded-sm text-sm text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                     >
                       <span className="font-mono text-xs text-iris-bright">
                         {task.id}
@@ -250,7 +250,7 @@ export function TagDrillView({
 
           <Link
             to={`/memory?tag=${encodeURIComponent(tag)}`}
-            className="inline-flex min-h-6 items-center gap-1 rounded-sm text-sm text-iris-bright transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            className="inline-flex min-h-12 md:min-h-6 items-center gap-1 rounded-sm text-sm text-iris-bright transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           >
             {t("tags.drill.openInMemories")}
             <ExternalLink className="size-4" aria-hidden="true" />

@@ -372,7 +372,7 @@ function ExecutorRow({
       : t("agents.strip.transportLocal");
 
   const ghostButton =
-    "h-7 px-2 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright";
+    "h-12 md:h-7 px-2 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright";
   // AGW-5 phase 2: the row-level context menu (TaskRowMenu posture) —
   // right-click anywhere on the row opens it at the pointer; the ⋯ trigger
   // beside the inline actions is the tab-reachable path.

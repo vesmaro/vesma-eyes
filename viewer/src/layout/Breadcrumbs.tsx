@@ -77,14 +77,14 @@ export function Breadcrumbs({ pathname, search }: { pathname: string; search: st
                 {crumb.to && crumb.key && !last ? (
                   <Link
                     to={crumb.to}
-                    className="inline-flex min-h-6 items-center rounded-sm text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                    className="inline-flex min-h-12 md:min-h-12 md:min-h-6 items-center rounded-sm text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                   >
                     {t(crumb.key)}
                   </Link>
                 ) : (
                   <span
                     aria-current="page"
-                    className="inline-flex min-h-6 items-center truncate font-medium text-foreground"
+                    className="inline-flex min-h-12 md:min-h-6 items-center truncate font-medium text-foreground"
                   >
                     {crumb.label ?? (crumb.key ? t(crumb.key) : "")}
                   </span>
@@ -103,7 +103,7 @@ export function Breadcrumbs({ pathname, search }: { pathname: string; search: st
         onClick={() => openPalette("button")}
         aria-label={t("cmdk.openAria")}
         aria-haspopup="dialog"
-        className="h-7 shrink-0 gap-1.5 px-2 text-xs"
+        className="h-12 md:h-7 shrink-0 gap-1.5 px-2 text-xs"
       >
         <kbd className="rounded-sm border border-border-subtle border-b-2 bg-elevated px-1 font-mono text-caps text-foreground-secondary">
           Ctrl
@@ -150,7 +150,7 @@ function BackControl({
     <Link
       to={target}
       aria-label={t("nav.backTo", { place })}
-      className="inline-flex min-h-6 min-w-6 shrink-0 items-center gap-1 rounded-sm text-sm text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+      className="inline-flex min-h-12 md:min-h-12 md:min-h-6 min-w-12 md:min-w-6 shrink-0 items-center gap-1 rounded-sm text-sm text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
     >
       <ArrowLeft className="size-4 shrink-0" aria-hidden="true" />
       <span className="hidden sm:inline">{place}</span>

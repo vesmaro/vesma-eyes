@@ -395,7 +395,7 @@ function TaskBoardView() {
             value={state.q ?? ""}
             onChange={(event) => patch({ q: event.target.value || undefined })}
             placeholder={t("tasks.searchPlaceholder")}
-            className="h-9 w-48 rounded-md border border-border bg-well px-2 text-sm text-foreground placeholder:text-foreground-muted focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+            className="h-12 md:h-9 w-48 rounded-md border border-border bg-well px-2 text-sm text-foreground placeholder:text-foreground-muted focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
           />
         </div>
         <TaskFilterSelect
@@ -483,7 +483,7 @@ function TaskBoardView() {
                 ref={boardRef}
                 aria-label={t("tasks.board.label")}
                 tabIndex={0}
-                className="board-scroll-x flex items-stretch gap-3 overflow-x-auto pb-2"
+                className="board-scroll-x flex flex-col items-stretch gap-3 pb-2 md:flex-row md:overflow-x-auto"
               >
                 {visibleColumns.map((column) => (
                   <TaskBoardColumn

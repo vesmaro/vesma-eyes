@@ -282,7 +282,7 @@ export function WellHero() {
           <button
             type="button"
             onClick={onShare}
-            className="inline-flex min-h-6 shrink-0 items-center gap-1.5 rounded-sm border border-border bg-canvas px-2 text-foreground transition-colors duration-instant hover:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            className="inline-flex min-h-12 md:min-h-6 shrink-0 items-center gap-1.5 rounded-sm border border-border bg-canvas px-2 text-foreground transition-colors duration-instant hover:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
             style={{
               fontSize: "var(--text-caps)",
               letterSpacing: "var(--tracking-caps)",
@@ -432,7 +432,7 @@ export function WellHero() {
             waiting.total > 0 ? (
               <Link
                 to={waiting.urgentTo}
-                className="inline-flex min-h-6 shrink-0 items-center gap-1.5 rounded-sm border border-border bg-canvas px-2 text-sm text-foreground transition-colors duration-instant hover:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                className="inline-flex min-h-12 md:min-h-6 shrink-0 items-center gap-1.5 rounded-sm border border-border bg-canvas px-2 text-sm text-foreground transition-colors duration-instant hover:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
               >
                 <span aria-hidden="true" className="text-confidence">
                   ◆
@@ -520,7 +520,7 @@ export function WellHero() {
           aria-expanded={legendOpen}
           aria-controls="well-legend-panel"
           onClick={() => setLegendOpen((v) => !v)}
-          className="inline-flex min-h-6 shrink-0 items-center rounded-sm border border-border bg-canvas px-2 text-foreground transition-colors duration-instant hover:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          className="inline-flex min-h-12 md:min-h-6 shrink-0 items-center rounded-sm border border-border bg-canvas px-2 text-foreground transition-colors duration-instant hover:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           style={{
             fontSize: "var(--text-caps)",
             letterSpacing: "var(--tracking-caps)",

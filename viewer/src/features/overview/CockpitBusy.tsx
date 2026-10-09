@@ -86,7 +86,7 @@ export function CockpitBusy() {
           action={
             <Link
               to="/agents/harnesses"
-              className="inline-flex min-h-6 items-center gap-1 text-sm font-medium text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+              className="inline-flex min-h-12 md:min-h-6 items-center gap-1 text-sm font-medium text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
             >
               {t("cockpit.agentsNoneAction")}
               <ArrowRight className="size-4" aria-hidden="true" />
@@ -112,7 +112,7 @@ export function CockpitBusy() {
       after={
         <Link
           to="/agents/hosts"
-          className="inline-flex min-h-6 items-center gap-1 text-sm text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          className="inline-flex min-h-12 md:min-h-6 items-center gap-1 text-sm text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
         >
           <Bot className="size-4" aria-hidden="true" />
           {t("cockpit.busyAll")}
@@ -178,14 +178,14 @@ export function CockpitBusy() {
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <Link
             to="/agents/execution"
-            className="inline-flex min-h-6 items-center gap-1 font-medium text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            className="inline-flex min-h-12 md:min-h-6 items-center gap-1 font-medium text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           >
             {t("nav.agentsExecution")}
             <ArrowRight className="size-4" aria-hidden="true" />
           </Link>
           <Link
             to="/tasks"
-            className="inline-flex min-h-6 items-center gap-1 font-medium text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            className="inline-flex min-h-12 md:min-h-6 items-center gap-1 font-medium text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           >
             {t("nav.tasks")}
             <ArrowRight className="size-4" aria-hidden="true" />
@@ -234,7 +234,7 @@ function RetryButton({
       onClick={() => {
         for (const query of queries) void query.refetch();
       }}
-      className="inline-flex min-h-6 items-center gap-1 text-sm font-medium text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+      className="inline-flex min-h-12 md:min-h-6 items-center gap-1 text-sm font-medium text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
     >
       <RefreshCw className="size-3.5" aria-hidden="true" />
       {t("cockpit.retry")}

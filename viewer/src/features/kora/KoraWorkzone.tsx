@@ -69,14 +69,14 @@ export function KoraWorkzone({
                 registryEmpty === "no-executors" ? (
                   <Link
                     to="/agents/harnesses"
-                    className="inline-flex min-h-6 items-center text-sm text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+                    className="inline-flex min-h-12 md:min-h-6 items-center text-sm text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
                   >
                     {t("kora.list.emptyAction")}
                   </Link>
                 ) : (
                   <Link
                     to="/system/status"
-                    className="inline-flex min-h-6 items-center text-sm text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+                    className="inline-flex min-h-12 md:min-h-6 items-center text-sm text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
                   >
                     {t("kora.list.emptyStatusLink")}
                   </Link>
@@ -187,7 +187,7 @@ function SessionView({
           type="button"
           aria-pressed={follow}
           onClick={() => setFollow((value) => !value)}
-          className="inline-flex min-h-6 items-center gap-1.5 rounded-sm px-2 text-xs text-foreground-secondary transition-colors duration-instant hover:text-foreground aria-pressed:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+          className="inline-flex min-h-12 md:min-h-6 items-center gap-1.5 rounded-sm px-2 text-xs text-foreground-secondary transition-colors duration-instant hover:text-foreground aria-pressed:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
         >
           <ArrowDownToLine aria-hidden className="size-3.5" />
           {t("kora.workzone.followTail")}

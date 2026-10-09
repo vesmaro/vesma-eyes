@@ -54,7 +54,7 @@ export function TagChip({
         onClick={onClick}
         aria-label={`${tag}, ${t("tags.memoriesCount", { count })}`}
         className={cn(
-          "flex min-h-6 max-w-full min-w-0 items-center rounded-sm border border-border-subtle bg-well px-2 py-0.5 text-left transition-colors duration-instant hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
+          "flex min-h-12 md:min-h-6 max-w-full min-w-0 items-center rounded-sm border border-border-subtle bg-well px-2 py-0.5 text-left transition-colors duration-instant hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
         )}
       >
         <Badge

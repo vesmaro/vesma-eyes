@@ -143,7 +143,7 @@ function HostBranch({
         active && "bg-iris/10",
       )}
     >
-      <div className="flex min-h-6 items-center gap-1">
+      <div className="flex min-h-12 md:min-h-6 items-center gap-1">
         <DisclosureButton
           expanded={expanded}
           controls={listId}
@@ -153,7 +153,7 @@ function HostBranch({
         <button
           type="button"
           onClick={() => host.host !== null && onHostContext(host.host)}
-          className="flex min-h-6 flex-1 items-center gap-1.5 rounded-sm px-1 text-left font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+          className="flex min-h-12 md:min-h-6 flex-1 items-center gap-1.5 rounded-sm px-1 text-left font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
         >
           {host.state !== null ? (
             <span
@@ -223,7 +223,7 @@ function AgentBranch({
 
   return (
     <li>
-      <div className="flex min-h-6 items-center gap-1">
+      <div className="flex min-h-12 md:min-h-6 items-center gap-1">
         {agent.sessions.length > 0 ? (
           <DisclosureButton
             expanded={expanded}
@@ -237,7 +237,7 @@ function AgentBranch({
         <button
           type="button"
           onClick={() => onAgentContext(agent)}
-          className="flex min-h-6 flex-1 items-center gap-1.5 rounded-sm px-1 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+          className="flex min-h-12 md:min-h-6 flex-1 items-center gap-1.5 rounded-sm px-1 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
         >
           <span className="truncate font-mono text-foreground-secondary">{label}</span>
           <span
@@ -258,7 +258,7 @@ function AgentBranch({
                   to={`/kora/${encodeURIComponent(session.id)}`}
                   aria-current={selected ? "page" : undefined}
                   className={cn(
-                    "flex min-h-6 items-center gap-1.5 rounded-sm border-l-2 px-1 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
+                    "flex min-h-12 md:min-h-6 items-center gap-1.5 rounded-sm border-l-2 px-1 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
                     selected
                       ? "border-iris bg-iris/10"
                       : "border-transparent hover:bg-elevated",
@@ -304,7 +304,7 @@ function DisclosureButton({
       aria-controls={controls}
       onClick={onToggle}
       aria-label={`${label}: ${expanded ? t("kora.tree.collapse") : t("kora.tree.expand")}`}
-      className="flex size-6 shrink-0 items-center justify-center rounded-sm text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+      className="flex size-12 md:size-6 shrink-0 items-center justify-center rounded-sm text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
     >
       {expanded ? (
         <ChevronDown aria-hidden className="size-4" />

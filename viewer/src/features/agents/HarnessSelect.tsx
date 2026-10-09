@@ -101,14 +101,14 @@ export function HarnessSelect({
             aria-label={t("agents.harness.addOption")}
             className={
               className ??
-              "h-9 w-full rounded-md border border-border bg-background px-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+              "h-12 md:h-9 w-full rounded-md border border-border bg-background px-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
             }
           />
           <button
             type="button"
             onClick={submit}
             disabled={add.isPending}
-            className="h-9 shrink-0 rounded-md border border-border bg-elevated px-2 text-xs font-medium hover:bg-background"
+            className="h-12 md:h-9 shrink-0 rounded-md border border-border bg-elevated px-2 text-xs font-medium hover:bg-background"
           >
             {add.isPending ? t("agents.harness.adding") : t("agents.harness.add")}
           </button>
@@ -118,7 +118,7 @@ export function HarnessSelect({
               setAdding(false);
               setError(null);
             }}
-            className="h-9 shrink-0 rounded-md border border-border px-2 text-xs font-medium hover:bg-elevated"
+            className="h-12 md:h-9 shrink-0 rounded-md border border-border px-2 text-xs font-medium hover:bg-elevated"
           >
             {t("agents.sheet.cancel")}
           </button>
@@ -147,7 +147,7 @@ export function HarnessSelect({
       }}
       className={
         className ??
-        "h-9 w-full rounded-md border border-border bg-background px-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+        "h-12 md:h-9 w-full rounded-md border border-border bg-background px-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
       }
     >
       {names === undefined ? (

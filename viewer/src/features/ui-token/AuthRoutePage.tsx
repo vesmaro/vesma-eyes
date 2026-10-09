@@ -665,7 +665,7 @@ function TabButton({
       tabIndex={selected ? 0 : -1}
       onClick={onSelect}
       className={
-        "min-h-9 rounded-sm px-3 py-1.5 text-sm transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus " +
+        "min-h-12 md:min-h-9 rounded-sm px-3 py-1.5 text-sm transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus " +
         (selected
           ? // The 07k §4.1 selected beats TOGETHER: the raised well, the
             // iris-bright label (≥3:1) and the 2px iris underline.

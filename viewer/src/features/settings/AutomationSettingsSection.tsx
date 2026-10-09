@@ -171,7 +171,7 @@ export function AutomationSettingsSection({ anchorId }: { anchorId?: string }) {
                   ? "automation-cap-hint"
                   : "automation-cap-hint automation-cap-error"
               }
-              className="h-9 w-28 rounded-md border border-border bg-background px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+              className="h-12 md:h-9 w-28 rounded-md border border-border bg-background px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
             />
             {/* Hint always; error joins describedby when present (§5). */}
             <p id="automation-cap-hint" className="mt-0.5 text-xs text-foreground-secondary">

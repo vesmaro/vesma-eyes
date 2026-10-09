@@ -71,7 +71,7 @@ function SessionRow({
         to={`/kora/${encodeURIComponent(session.id)}`}
         aria-current={selected ? "page" : undefined}
         className={cn(
-          "flex min-h-6 flex-col gap-1 rounded-md border-l-2 px-2 py-2 transition-colors duration-instant hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
+          "flex min-h-12 md:min-h-6 flex-col gap-1 rounded-md border-l-2 px-2 py-2 transition-colors duration-instant hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
           selected ? "border-iris bg-iris/10" : "border-transparent",
         )}
       >
@@ -272,7 +272,7 @@ export function KoraSessionList({
           type="button"
           aria-pressed={quickFilter === "running"}
           onClick={() => onQuickFilter(quickFilter === "running" ? null : "running")}
-          className="min-h-6 rounded-full border border-border-subtle px-2.5 text-xs text-foreground-secondary transition-colors duration-instant hover:text-foreground aria-pressed:border-iris aria-pressed:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+          className="min-h-12 md:min-h-6 rounded-full border border-border-subtle px-2.5 text-xs text-foreground-secondary transition-colors duration-instant hover:text-foreground aria-pressed:border-iris aria-pressed:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
         >
           {t("kora.block2.qfRunning")}
         </button>
@@ -280,7 +280,7 @@ export function KoraSessionList({
           type="button"
           aria-pressed={quickFilter === "day"}
           onClick={() => onQuickFilter(quickFilter === "day" ? null : "day")}
-          className="min-h-6 rounded-full border border-border-subtle px-2.5 text-xs text-foreground-secondary transition-colors duration-instant hover:text-foreground aria-pressed:border-iris aria-pressed:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+          className="min-h-12 md:min-h-6 rounded-full border border-border-subtle px-2.5 text-xs text-foreground-secondary transition-colors duration-instant hover:text-foreground aria-pressed:border-iris aria-pressed:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
         >
           {t("kora.block2.qfDay")}
         </button>
@@ -303,7 +303,7 @@ export function KoraSessionList({
               action={
                 <Link
                   to="/system/status"
-                  className="inline-flex min-h-6 items-center gap-1 text-sm text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+                  className="inline-flex min-h-12 md:min-h-6 items-center gap-1 text-sm text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
                 >
                   {t("kora.list.emptyStatusLink")}
                   <ChevronRight className="size-4" aria-hidden="true" />

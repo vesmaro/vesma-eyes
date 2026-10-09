@@ -20,10 +20,13 @@ const buttonVariants = cva(
         destructive: "bg-error text-foreground-inverse hover:bg-error/90",
       },
       size: {
-        default: "h-9 px-4 py-2",
-        sm: "h-8 rounded-sm px-3 text-xs",
-        lg: "h-10 rounded-md px-8",
-        icon: "h-9 w-9",
+        // U7 mobile pass (SPEC-2026-10-07 «Глубокая проработка» п.4): below
+        // md every button is a ≥48px touch target; the md: column keeps the
+        // desktop canon untouched. One implementation — the primitive.
+        default: "h-12 md:h-9 px-4 py-2",
+        sm: "h-12 md:h-8 rounded-sm px-3 text-xs",
+        lg: "h-12 md:h-10 rounded-md px-8",
+        icon: "size-12 md:size-9",
       },
     },
     defaultVariants: {

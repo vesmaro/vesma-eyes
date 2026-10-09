@@ -59,7 +59,7 @@ export function TraceRow({ trace, className }: TraceRowProps) {
       </td>
       <td className="px-4 py-3">
         <details>
-          <summary className="inline-flex min-h-6 cursor-pointer items-center text-xs text-iris-bright underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
+          <summary className="inline-flex min-h-12 md:min-h-6 cursor-pointer items-center text-xs text-iris-bright underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
             {t("traces.rawJson")}
           </summary>
           <pre

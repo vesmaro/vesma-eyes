@@ -29,7 +29,7 @@ export function TasksViewToggle() {
         to={target("kanban")}
         aria-current={onList ? undefined : "page"}
         className={
-          "px-3 py-1.5 text-sm transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright " +
+          "max-md:min-h-12 max-md:inline-flex max-md:items-center px-3 py-1.5 text-sm transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright " +
           (onList
             ? "text-foreground-secondary hover:text-foreground"
             : "bg-iris-tint text-iris-bright")
@@ -41,7 +41,7 @@ export function TasksViewToggle() {
         to={target("list")}
         aria-current={onList ? "page" : undefined}
         className={
-          "border-l border-border px-3 py-1.5 text-sm transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright " +
+          "border-l border-border max-md:min-h-12 max-md:inline-flex max-md:items-center px-3 py-1.5 text-sm transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright " +
           (onList
             ? "bg-iris-tint text-iris-bright"
             : "text-foreground-secondary hover:text-foreground")

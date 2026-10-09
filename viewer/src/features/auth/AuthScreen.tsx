@@ -153,7 +153,7 @@ export function AuthScreen() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-9 shrink-0"
+                  className="h-12 md:h-9 shrink-0"
                   onClick={() => setRevealToken((value) => !value)}
                   aria-pressed={revealToken}
                 >

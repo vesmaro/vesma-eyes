@@ -36,7 +36,10 @@ const DialogContent = React.forwardRef<
     >
       {children}
       <DialogPrimitive.Close
-        className="absolute right-4 top-4 rounded-sm text-foreground-secondary opacity-70 transition-opacity duration-instant hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright disabled:pointer-events-none"
+        // U7 mobile: the X is a 16px glyph but a 48px touch target below md
+        // (SPEC-2026-10-07 п.4) — the padding IS the target, the desktop
+        // anchor stays visually in place.
+        className="absolute right-2 top-2 p-4 rounded-sm text-foreground-secondary opacity-70 transition-opacity duration-instant hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright disabled:pointer-events-none"
         aria-label="Close"
       >
         <svg

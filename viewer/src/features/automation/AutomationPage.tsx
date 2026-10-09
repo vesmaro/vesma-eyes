@@ -347,7 +347,7 @@ function SchedulesTab({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 px-2 text-xs"
+                  className="h-12 md:h-7 px-2 text-xs"
                   disabled={!canMutate}
                   onClick={() => onToggle(rule, !rule.enabled)}
                 >
@@ -356,7 +356,7 @@ function SchedulesTab({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 px-2 text-xs"
+                  className="h-12 md:h-7 px-2 text-xs"
                   disabled={!canMutate}
                   title={t("automation.rule.runNowTitle")}
                   onClick={() => onRunNow(rule)}
@@ -367,7 +367,7 @@ function SchedulesTab({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 px-2 text-xs text-error"
+                  className="h-12 md:h-7 px-2 text-xs text-error"
                   disabled={!canMutate}
                   onClick={() => onDelete(rule)}
                 >
@@ -453,7 +453,7 @@ function HooksTab({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 px-2 text-xs"
+                  className="h-12 md:h-7 px-2 text-xs"
                   disabled={!canMutate}
                   onClick={() => onToggle(rule, !rule.enabled)}
                 >
@@ -462,7 +462,7 @@ function HooksTab({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 px-2 text-xs text-error"
+                  className="h-12 md:h-7 px-2 text-xs text-error"
                   disabled={!canMutate}
                   onClick={() => onDelete(rule)}
                 >

@@ -27,7 +27,7 @@ export function LanguageToggle() {
             onClick={() => setLang(code)}
             aria-pressed={active}
             className={cn(
-              "min-h-6 px-2.5 py-1 text-xs font-semibold uppercase transition-colors duration-instant",
+              "min-h-12 md:min-h-6 px-2.5 py-1 text-xs font-semibold uppercase transition-colors duration-instant",
               "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
               active
                 ? "bg-iris-tint text-iris-bright" // AA in both themes

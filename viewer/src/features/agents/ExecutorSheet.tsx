@@ -343,7 +343,7 @@ function ExecutorSheetForm({
   ];
 
   const fieldClass =
-    "h-9 w-full rounded-md border border-border bg-background px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright disabled:cursor-not-allowed disabled:opacity-60";
+    "h-12 md:h-9 w-full rounded-md border border-border bg-background px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright disabled:cursor-not-allowed disabled:opacity-60";
 
   return (
     <div className="flex min-h-0 flex-col gap-4">

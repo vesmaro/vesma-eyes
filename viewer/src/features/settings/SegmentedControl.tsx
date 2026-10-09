@@ -71,7 +71,7 @@ export function SegmentedControl<T extends string>({
                   if (!active) onChange(option.value);
                 }}
                 className={cn(
-                  "px-3 py-1.5 text-sm transition-colors duration-instant",
+                  "max-md:min-h-12 max-md:inline-flex max-md:items-center max-md:px-4 px-3 py-1.5 text-sm transition-colors duration-instant",
                   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
                   index > 0 && "border-l border-border-subtle",
                   active

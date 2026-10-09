@@ -212,7 +212,7 @@ export function TaskListPage() {
                 patch({ status: state.status === status ? undefined : status })
               }
               aria-pressed={state.status === status}
-              className="rounded-sm transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+              className="flex max-md:min-h-12 max-md:items-center rounded-sm transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
             >
               <Badge
                 variant={state.status === status ? "iris" : "outline"}
@@ -244,7 +244,7 @@ export function TaskListPage() {
             value={state.q ?? ""}
             onChange={(event) => patch({ q: event.target.value || undefined })}
             placeholder={t("tasks.searchPlaceholder")}
-            className="h-9 w-48 rounded-md border border-border bg-well px-2 text-sm text-foreground placeholder:text-foreground-muted focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+            className="h-12 md:h-9 w-48 rounded-md border border-border bg-well px-2 text-sm text-foreground placeholder:text-foreground-muted focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
           />
         </div>
         <TaskFilterSelect
@@ -429,7 +429,7 @@ function GroupToggle({
       type="button"
       onClick={onToggle}
       aria-expanded={!collapsed}
-      className="flex items-center gap-1 rounded-sm py-0.5 text-xs font-medium text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+      className="flex max-md:min-h-12 items-center gap-1 rounded-sm py-0.5 text-xs font-medium text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
     >
       {collapsed ? (
         <ChevronRight className="size-3.5" aria-hidden="true" />

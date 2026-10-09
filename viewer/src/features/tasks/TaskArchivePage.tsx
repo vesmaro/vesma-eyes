@@ -437,7 +437,7 @@ function ArchiveFilters({
           value={qInput}
           onChange={(event) => onSearch(event.target.value)}
           placeholder={t("tasks.archiveSearchPlaceholder")}
-          className="h-9 w-48 rounded-md border border-border bg-well px-2 text-sm text-foreground placeholder:text-foreground-muted focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+          className="h-12 md:h-9 w-48 rounded-md border border-border bg-well px-2 text-sm text-foreground placeholder:text-foreground-muted focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
         />
       </div>
       <FilterSelectInline
@@ -483,7 +483,7 @@ function ArchiveFilters({
           id="archive-limit"
           value={String(state.limit)}
           onChange={(event) => onPatch({ limit: Number(event.target.value), offset: 0 })}
-          className="h-9 rounded-md border border-border bg-well px-2 text-sm text-foreground focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+          className="h-12 md:h-12 md:h-9 rounded-md border border-border bg-well px-2 text-sm text-foreground focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
         >
           {ARCHIVE_PAGE_SIZES.map((size) => (
             <option key={size} value={size}>
@@ -521,7 +521,7 @@ function FilterSelectInline({
         id={id}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-9 rounded-md border border-border bg-well px-2 text-sm text-foreground focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+        className="h-12 md:h-12 md:h-9 rounded-md border border-border bg-well px-2 text-sm text-foreground focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
       >
         <option value="">{allLabel}</option>
         {options.map((option) => (

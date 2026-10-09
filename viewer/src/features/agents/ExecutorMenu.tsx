@@ -189,7 +189,7 @@ export function ExecutorMenu({
           setOpen(!open, null);
         }}
         className={
-          "inline-flex size-6 shrink-0 items-center justify-center rounded-sm text-foreground-secondary transition-colors duration-instant hover:bg-elevated hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright " +
+          "inline-flex size-12 md:size-6 shrink-0 items-center justify-center rounded-sm text-foreground-secondary transition-colors duration-instant hover:bg-elevated hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright " +
           (revealOnParentHover
             ? "opacity-0 group-hover/chip:opacity-100 group-focus-within/chip:opacity-100 aria-expanded:opacity-100 "
             : "")
