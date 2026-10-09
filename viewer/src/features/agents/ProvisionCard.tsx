@@ -613,8 +613,11 @@ function ProvisionFeed({
                   {t(stage.def.labelKey)}
                 </span>
                 {stage.status === "current" && isProvisionLive(status.job.state) ? (
+                  // U6 dosage verdict: a STATIC dot — the stage word beside
+                  // it carries the fact (1.4.1); no background pulse in the
+                  // agents domain (the living beat is the presence flash).
                   <span
-                    className="inline-block size-3 animate-pulse rounded-full bg-iris-bright"
+                    className="inline-block size-3 rounded-full bg-iris-bright"
                     aria-hidden="true"
                   />
                 ) : null}

@@ -1694,6 +1694,19 @@ export const en: Record<TranslationKey, string> = {
   "settings.hub.densityHint":
     "Working lists — tasks, registries, results. Search and memory stay airy.",
   "settings.hub.appliesEverywhere": "Applies everywhere immediately.",
+  // Settings «Mirror» (U6; SPEC-2026-10-07 «System»: the 380–480px live
+  // preview — current-look DATA, no animation, zero living layer).
+  "settings.mirror.title": "Mirror",
+  "settings.mirror.hint":
+    "A live preview of the current look: updates immediately — data, not animation.",
+  "settings.mirror.sampleCaps": "Specimen",
+  "settings.mirror.sampleTitle": "A card in the current theme",
+  "settings.mirror.sampleSecondary": "Secondary text stays readable",
+  "settings.mirror.sampleMuted": "Muted — service captions",
+  "settings.mirror.sampleRow": "Row at the current density",
+  "settings.mirror.themeCaption": "Theme",
+  "settings.mirror.densityCaption": "Density",
+  "settings.mirror.livingCaption": "Living layer",
   "settings.hub.boardStyleLabel": "Kanban board style",
   "settings.hub.boardStyleHint": "Takes effect on Tasks → Kanban.",
   "settings.hub.motionLabel": "Animations",
@@ -1910,6 +1923,18 @@ export const en: Record<TranslationKey, string> = {
     "Hub pages are synced from {{count}} repositories by pins; the latest sync is {{date}} — every page carries its own pin on its badge",
   "docs.hub.start": "Start here",
   "docs.hub.categories": "Categories",
+  // U6: hub cards with statistics (the v12 canon — counters are DATA, zero
+  // living layer). The strip lives on the section-root hub only.
+  "docs.hub.cardsLabel": "Hubs",
+  "docs.hub.cardUpdated": "updated {{stamp}}",
+  "docs.hub.cardHere": "You are here — the current hub",
+  "docs.hub.cardOpen": "Open the hub",
+  "docs.hub.cardMultiSource": "{{count}} sources",
+  // U6: the honest manifest error (honest-map rows 20–21) — an explicit
+  // slot with Retry instead of an eternal skeleton.
+  "docs.error.manifestTitle": "The docs catalog failed to build",
+  "docs.error.manifestMessage":
+    "The documentation index could not be loaded, so no pages can be shown. Check the connection and retry; if that does not help, reload the page (after a server update a stale cache may point at outdated files).",
   "docs.hub.vesmaroEyes.lede":
     "The board reference: from the first launch to upgrades — panels, agents, tokens and maintenance.",
   "docs.hub.mnemos.lede":
@@ -1931,6 +1956,12 @@ export const en: Record<TranslationKey, string> = {
   "docs.notFound.cta": "Open the docs",
   "docs.error.title": "The page could not be shown",
   "docs.loading": "Loading…",
+  // U6: the RUS/ORIG bilingual switch on a document page (the v12
+  // presentation over the main engine): visible only when both a
+  // translation and a distinct original exist.
+  "docs.bilingual.group": "Article language: translation or original",
+  "docs.bilingual.rus": "Russian translation",
+  "docs.bilingual.orig": "The original language",
   "docs.pages.one": "{{count}} page",
   "docs.pages.few": "{{count}} pages",
   "docs.pages.many": "{{count}} pages",

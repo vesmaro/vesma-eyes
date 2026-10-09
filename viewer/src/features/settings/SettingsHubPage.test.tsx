@@ -24,7 +24,7 @@ import { BOARD_STYLE_STORAGE_KEY } from "@/features/tasks/tasksViewPrefs";
 import { setBoardStyle } from "@/lib/boardStyleStore";
 import type { ExecutorsPage } from "@/gateway/boardTypes";
 import { actUnmount } from "@/test/actTools";
-import { getLiveLayer } from "@/lib/liveLayerStore";
+import { getLiveLayer, setLiveLayer } from "@/lib/liveLayerStore";
 
 /**
  * UI-23 hub v2 (spec §3, acceptance §8): one h1 + six anchored sibling
@@ -408,4 +408,26 @@ describe("Verdict blocks (spec §3.4, acceptance §8.10)", () => {
     expect(container.textContent).toContain("real data only");
   });
 
+});
+
+describe("SettingsMirror (U6 «Зеркало»)", () => {
+  it("renders the live preview (inline below xl) and reflects the living-layer state", async () => {
+    // The store is module-global and earlier tests in this file flipped it —
+    // align it with the owner default before reading the mirror.
+    setLiveLayer("live");
+    const { container } = await mountHub();
+    // The mirror mounts inline inside «Внешний вид» (the <xl slot) AND in
+    // the sticky rail slot (hidden on the test viewport, still in the DOM):
+    // one component, two mounts. The legend carries the three state words.
+    expect(container.textContent).toContain("Mirror");
+    expect(container.textContent).toContain("Row at the current density");
+    const legendValues = () =>
+      [...container.querySelectorAll("dd")].map((dd) => dd.textContent?.trim());
+    // Default legend: Dark (theme stub) · Comfortable · Full.
+    expect(legendValues().filter((v) => v === "Full").length).toBe(2);
+    // It is DATA: switching «Живой слой» re-words BOTH mirrors instantly.
+    press(container, "appearance", "Calm");
+    expect(legendValues().filter((v) => v === "Calm").length).toBe(2);
+    expect(legendValues().filter((v) => v === "Full").length).toBe(0);
+  });
 });

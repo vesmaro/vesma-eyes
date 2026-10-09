@@ -10,6 +10,7 @@ import {
   presenceFromLastSeen,
   presenceLabelKey,
 } from "./presence";
+import { usePresenceFlash } from "./presenceLight";
 import { useValidationNow } from "@/features/tasks/useValidationClock";
 import { ACTIVE_ASSIGNMENT_STATES } from "./assignmentStatus";
 import { ExecutorMenu } from "./ExecutorMenu";
@@ -183,6 +184,9 @@ function StripChip({
         })
       : "";
   const presenceKey = presence ?? "unknown";
+  // U6 присутствие-свет: the chip flares once on a REAL executor transition
+  // (the same store the roster cards read — one implementation).
+  const flash = usePresenceFlash(executor.id);
   const capabilities =
     executor.capabilities.length > 0
       ? executor.capabilities.join(", ")
@@ -213,6 +217,13 @@ function StripChip({
             (selected
               ? "border-iris-bright/60 bg-iris/10 "
               : "border-border-subtle bg-well hover:border-iris-bright/40 ") +
+            // U6 присутствие-свет: the one-shot transition flare (success =
+            // arrival, warning = departure; event-driven, never background).
+            (flash
+              ? flash.tone === "online"
+                ? "agents-presence-online "
+                : "agents-presence-offline "
+              : "") +
             // Entrance stagger: chips 0/70/140 ms, 200 ms each (≤3×200).
             ("motion-safe:transition-[opacity,border-color] motion-safe:duration-200 " +
               (entered ? "opacity-100" : "opacity-0"))

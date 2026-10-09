@@ -34,6 +34,7 @@ import {
   presenceFromLastSeen,
   presenceLabelKey,
 } from "./presence";
+import { usePresenceFlash } from "./presenceLight";
 import { orderRegistry } from "./registryOrder";
 import type { RegistryBands } from "./registryOrder";
 import { effectiveEnrollmentState } from "./enrollment";
@@ -332,6 +333,9 @@ function ExecutorRow({
   const now = useValidationNow();
   const revoked = executor.state === "revoked";
   const pending = executor.state === "pending";
+  // U6 присутствие-свет: the row flares once on a REAL executor transition
+  // (the same store the roster cards and the strip chips read).
+  const flash = usePresenceFlash(executor.id);
   // Presence reuses the strip's exact meta-TTL language (§2.1/§5.1) —
   // pending rows may tick, revoked ones decay to offline honestly.
   const presence = presenceFromLastSeen(executor.last_seen, meta, now);
@@ -369,6 +373,12 @@ function ExecutorRow({
       }}
       className={
         "rounded-md border bg-well px-2.5 py-1.5 text-sm shadow-well transition-colors duration-instant " +
+        // U6 присутствие-свет: the one-shot transition flare (event-driven).
+        (flash
+          ? flash.tone === "online"
+            ? "agents-presence-online "
+            : "agents-presence-offline "
+          : "") +
         (revoked
           ? // Dead identity: muted as a whole, no hover invitation.
             "border-border-subtle text-foreground-muted"

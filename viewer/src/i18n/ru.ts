@@ -1725,6 +1725,19 @@ export const ru = {
   "settings.hub.densityHint":
     "Рабочие списки — задачи, реестры, выдача. Поиск и память остаются просторными.",
   "settings.hub.appliesEverywhere": "Применяется сразу во всём интерфейсе.",
+  // «Зеркало» настроек (U6; SPEC-2026-10-07 «Система»: живое превью
+  // 380–480px — данные текущего вида, не анимация; ноль живого слоя).
+  "settings.mirror.title": "Зеркало",
+  "settings.mirror.hint":
+    "Живое превью текущего вида: обновляется сразу — это данные, не анимация.",
+  "settings.mirror.sampleCaps": "Образец",
+  "settings.mirror.sampleTitle": "Карточка в текущей теме",
+  "settings.mirror.sampleSecondary": "Вторичный текст остаётся читаемым",
+  "settings.mirror.sampleMuted": "Приглушённый — для служебных подписей",
+  "settings.mirror.sampleRow": "Строка при текущей плотности",
+  "settings.mirror.themeCaption": "Тема",
+  "settings.mirror.densityCaption": "Плотность",
+  "settings.mirror.livingCaption": "Живой слой",
   "settings.hub.boardStyleLabel": "Стиль канбан-доски",
   "settings.hub.boardStyleHint": "Применится на странице Задачи → Канбан.",
   "settings.hub.motionLabel": "Анимации",
@@ -1947,6 +1960,18 @@ export const ru = {
     "Страницы хаба синхронизированы из {{count}} репозиториев по пинам; самая свежая синхронизация {{date}} — пин каждой страницы на её бейдже",
   "docs.hub.start": "С чего начать",
   "docs.hub.categories": "Категории",
+  // U6: карточки хабов со статистикой (v12-канон; счётчики — данные,
+  // ноль живого слоя). Полоса стоит только на корневом хабе.
+  "docs.hub.cardsLabel": "Хабы",
+  "docs.hub.cardUpdated": "обновлено {{stamp}}",
+  "docs.hub.cardHere": "Вы здесь — текущий хаб",
+  "docs.hub.cardOpen": "Открыть хаб",
+  "docs.hub.cardMultiSource": "источников: {{count}}",
+  // U6: честная ошибка манифеста (honest-map строки 20–21) — явный слот
+  // с «Повторить» вместо вечного скелетона.
+  "docs.error.manifestTitle": "Каталог документов не собрался",
+  "docs.error.manifestMessage":
+    "Не удалось загрузить оглавление документации — страницы не могут быть показаны. Проверьте соединение и повторите; если не помогло — перезагрузите страницу (после обновления сервера старый кэш может ссылаться на устаревшие файлы).",
   "docs.hub.vesmaroEyes.lede":
     "Справочник по борду: от первого запуска до обновления — доска, агенты, токены и обслуживание.",
   "docs.hub.mnemos.lede":
@@ -1968,6 +1993,11 @@ export const ru = {
   "docs.notFound.cta": "Открыть документацию",
   "docs.error.title": "Не удалось показать страницу",
   "docs.loading": "Загрузка…",
+  // U6: билингв RUS/ORIG на странице документа (v12-подача над движком
+  // main): переключатель виден только когда есть и перевод, и оригинал.
+  "docs.bilingual.group": "Язык статьи: перевод или оригинал",
+  "docs.bilingual.rus": "Русский перевод",
+  "docs.bilingual.orig": "Язык оригинала",
   "docs.pages.one": "{{count}} страница",
   "docs.pages.few": "{{count}} страницы",
   "docs.pages.many": "{{count}} страниц",

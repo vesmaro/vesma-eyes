@@ -1,5 +1,5 @@
 import { Link, Navigate, useParams } from "react-router";
-import { Languages } from "lucide-react";
+import { ArrowRight, Languages } from "lucide-react";
 import { useI18n, useT } from "@/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,8 +9,10 @@ import { docCategoriesForProject } from "./categories";
 import { pagesLabel } from "./docsFormat";
 import {
   localeForPage,
+  retryManifest,
   titleFor,
   useDocsManifest,
+  useDocsManifestFailed,
   type DocPage,
   type DocsManifest,
 } from "./manifest";
@@ -18,11 +20,13 @@ import {
   docProject,
   docUrl,
   categoryUrl,
+  DOC_PROJECTS,
+  DEFAULT_PROJECT,
   type DocProject,
 } from "./projects";
 import { formatSyncDate } from "./sidecar";
 import { legacyDocsTarget } from "./legacyDocs";
-import { DocsNotFound } from "./DocsRedirects";
+import { DocsManifestError, DocsNotFound } from "./DocsRedirects";
 import { DocsSearch } from "./DocsSearch";
 import { pageGridClass } from "@/layout/pageGrid";
 
@@ -97,6 +101,16 @@ function HubSkeleton() {
   );
 }
 
+/**
+ * U6 honest error slot (the honest-map rows 20–21 finding): a FAILED
+ * manifest build is an explicit EmptyState with «Повторить» — never an
+ * eternal skeleton. Zero living layer (the domain verdict): the error is
+ * a standing state, only the Retry click moves anything.
+ */
+function HubError() {
+  return <DocsManifestError onRetry={() => retryManifest()} />;
+}
+
 function StatusBadges({ project, pages }: { project: DocProject; pages: readonly DocPage[] }) {
   const t = useT();
   const provenance = project.upstream ? hubProvenance(pages) : null;
@@ -147,6 +161,132 @@ function StatusBadges({ project, pages }: { project: DocProject; pages: readonly
         )
       ) : null}
     </div>
+  );
+}
+
+/** Per-hub statistics (U6, the v12 hub-card canon — счётчики это ДАННЫЕ):
+ * page count, the corpus freshness stamp and the provenance line. Own
+ * pages carry a version (lastVerified = vX.Y.Z); imported pages carry the
+ * sync date from provenance. Empty data renders honest absence — the line
+ * is simply not there. */
+function hubStats(
+  project: DocProject,
+  pages: readonly DocPage[],
+): { count: number; updated: string; prov: string | null; sources: number } {
+  const provenance = project.upstream ? hubProvenance(pages) : null;
+  let latest = "";
+  for (const page of pages) {
+    const stamp = page.provenance?.syncedAt ?? page.lastVerified;
+    if (stamp > latest) latest = stamp;
+  }
+  return {
+    count: pages.length,
+    // Own corpus: a version stamp (vX.Y.Z). Imported corpus: the sync date
+    // in the reader's calendar form (dd.mm.yyyy).
+    updated:
+      latest === ""
+        ? ""
+        : project.upstream
+          ? formatSyncDate(latest, true)
+          : `v${latest}`,
+    prov: provenance ? provenance.repo : null,
+    sources: provenance?.sourceCount ?? 0,
+  };
+}
+
+/**
+ * The hub cards (U6; SPEC-2026-10-07 «Доки: из v12 — карточки хабов со
+ * статистикой»): the corpus map as v12 well-cards on the section root —
+ * the featured CURRENT hub first, then the three siblings, each with its
+ * data counters (pages / freshness / provenance, mono tabular). Counters
+ * are DATA; zero living layer (the domain verdict). The current hub's card
+ * is marked aria-current and says «вы здесь» instead of a CTA.
+ */
+function HubCards({
+  activeProject,
+  manifest,
+}: {
+  activeProject: DocProject;
+  manifest: DocsManifest;
+}) {
+  const t = useT();
+  const { lang } = useI18n();
+  return (
+    <section aria-label={t("docs.hub.cardsLabel")}>
+      <p className="border-b border-border-subtle pb-2 text-xs font-medium text-foreground-secondary">
+        {t("docs.hub.cardsLabel")}
+      </p>
+      <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-[1.35fr_1fr_1fr_1fr]">
+        {DOC_PROJECTS.map((project) => {
+          const pages = manifest.pages.filter(
+            (page) => page.project === project.slug,
+          );
+          const stats = hubStats(project, pages);
+          const Icon = project.icon;
+          const current = project.slug === activeProject.slug;
+          return (
+            <article
+              key={project.slug}
+              aria-current={current ? "page" : undefined}
+              className={cn(
+                "flex min-h-60 flex-col gap-3 rounded-lg border bg-well p-5 shadow-well",
+                current ? "border-iris-bright/40" : "border-border-subtle",
+              )}
+            >
+              <div className="flex min-w-0 items-center gap-2">
+                <Icon
+                  className="size-5 shrink-0 text-foreground-secondary"
+                  aria-hidden="true"
+                />
+                <h3
+                  className={cn(
+                    "min-w-0 truncate text-base font-semibold text-foreground",
+                    // The featured «слово»: the current hub's title is the
+                    // one Lora display on the strip (the v12 hub-card canon).
+                    current && "font-scroll text-lg",
+                  )}
+                >
+                  {project.name}
+                </h3>
+              </div>
+              <hr className="border-border-subtle" />
+              <p className="text-sm leading-relaxed text-foreground-secondary">
+                {t(project.ledeKey)}
+              </p>
+              <div className="grid gap-1 font-mono text-xs tabular-nums text-foreground-secondary">
+                <span>{pagesLabel(lang, stats.count, t)}</span>
+                {stats.updated !== "" ? (
+                  <span>{t("docs.hub.cardUpdated", { stamp: stats.updated })}</span>
+                ) : null}
+                {stats.prov ? (
+                  <span className="text-foreground-muted">
+                    {stats.sources > 1
+                      ? t("docs.hub.cardMultiSource", { count: stats.sources })
+                      : stats.prov}
+                  </span>
+                ) : null}
+              </div>
+              {current ? (
+                <p className="mt-auto text-xs text-foreground-muted">
+                  {t("docs.hub.cardHere")}
+                </p>
+              ) : (
+                <Link
+                  to={`/docs/${project.slug}`}
+                  className={cn(
+                    "mt-auto inline-flex items-center gap-1 text-sm font-medium text-foreground-secondary transition-colors duration-instant hover:text-iris-bright",
+                    FOCUS_RING,
+                  )}
+                >
+                  {t("docs.hub.cardOpen")}
+                  <ArrowRight className="size-3.5" aria-hidden="true" />
+                </Link>
+              )}
+            </article>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -232,6 +372,7 @@ function HubCover({ project }: { project: DocProject }) {
   const Icon = project.icon;
   // Mounting the hook kicks the lazy manifest build (contract §7).
   const manifest = useDocsManifest();
+  const manifestFailed = useDocsManifestFailed();
   const pages = manifest?.pages.filter((page) => page.project === project.slug);
   return (
     <div className={pageGridClass("operational")}>
@@ -258,11 +399,21 @@ function HubCover({ project }: { project: DocProject }) {
           <div className="mb-6">
             <StartHere project={project} manifest={manifest} />
           </div>
+          {/* U6: the corpus map — v12 hub cards with data counters, on the
+           * section root (the default hub) only; the /docs root keeps its
+           * instant redirect into this hub (design spec §8 untouched). */}
+          {project.slug === DEFAULT_PROJECT ? (
+            <div className="mb-6">
+              <HubCards activeProject={project} manifest={manifest} />
+            </div>
+          ) : null}
           <p className="border-b border-border-subtle pb-2 text-xs font-medium text-foreground-secondary">
             {t("docs.hub.categories")}
           </p>
           <CategoryRows project={project} manifest={manifest} />
         </>
+      ) : manifestFailed ? (
+        <HubError />
       ) : (
         <HubSkeleton />
       )}

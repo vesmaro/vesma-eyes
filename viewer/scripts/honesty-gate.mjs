@@ -55,6 +55,24 @@
  *                     through the VesmaMockBus handle must move the page:
  *                     the ether row lands on the scene card with its iris
  *                     arrival flash.
+ *  10. agents-silent (U6) — /agents/hosts on the silent bus: two shots ≥5s
+ *                     apart MUST be identical — the domain stands when the
+ *                     bus is quiet (the dose = присутствие-свет only, and
+ *                     silence carries no transitions; the ticking last_seen
+ *                     age is DATA — a minute-field rollover triggers exactly
+ *                     ONE honest recheck, a persistent differ still fails).
+ *  11. agents-presence (U6) — positive control: a REAL presence transition
+ *                     (executor.online through the VesmaMockBus handle, a
+ *                     fixture executor id) must move the page: the host
+ *                     card flares once (success tint) — never background.
+ *  12. docs-silent (U6) — /docs/vesma-eyes on the silent bus: two shots
+ *                     ≥5s apart MUST be identical — Доки carry NO living
+ *                     layer (the spec verdict): hub cards, statistics and
+ *                     search are data, pinned still forever.
+ *  13. system-silent (U6) — /system/settings on the silent bus: two shots
+ *                     ≥5s apart MUST be identical — Система carries NO
+ *                     living layer: the «Зеркало» is a live DATA preview,
+ *                     not an animation; its frames do not move.
  *
  * Local gate, same discipline as smoke-render.mjs (build dist-smoke with
  * the mock adapter, serve via vite preview, drive real chromium). Browser
@@ -498,6 +516,144 @@ async function main() {
         differs,
         "kora: a real presence transition lands an ether row (positive control)",
         differs ? "" : "frames identical — the ether event reached nothing",
+      );
+      await context.close();
+    }
+
+    // 10. AGENTS SILENT (U6) — the domain stands on a quiet bus. The same
+    // ONE-honest-recheck contract as tasks: the roster's last_seen age is
+    // DATA (a minute-field rollover between the frames is aging, not
+    // motion); a persistent differ fails.
+    {
+      const context = await browser.newContext({
+        viewport: { width: 1440, height: 900 },
+        deviceScaleFactor: 1,
+      });
+      let identical = false;
+      let bytes = "";
+      for (let attempt = 1; attempt <= 2 && !identical; attempt += 1) {
+        const a = await settledShot(
+          context,
+          `${BASE}agents/hosts`,
+          "u6-honesty-agents-silent-t0.png",
+        );
+        console.log("[honesty] agents-silent: waiting 5.6s of real time…");
+        await sleep(QUIET_GAP_MS);
+        const b = await settledShot(
+          context,
+          `${BASE}agents/hosts`,
+          "u6-honesty-agents-silent-t5.png",
+        );
+        identical = a.equals(b);
+        bytes = `bytes ${a.length} vs ${b.length}`;
+        if (!identical && attempt === 1) {
+          console.log(
+            "[honesty] agents-silent: frames differ — rechecking once (a last_seen minute-field rollover is data aging, not motion)",
+          );
+        }
+      }
+      check(
+        identical,
+        "agents: silent bus — two frames ≥5s apart are pixel-identical",
+        identical ? "" : bytes,
+      );
+      await context.close();
+    }
+
+    // 11. AGENTS PRESENCE POSITIVE CONTROL (U6) — a REAL presence transition
+    // moves the domain: the executor.online frame (a fixture executor id)
+    // flares the host card once — the one-shot присутствие-свет impulse.
+    {
+      const context = await browser.newContext({
+        viewport: { width: 1440, height: 900 },
+        deviceScaleFactor: 1,
+      });
+      const page = await context.newPage();
+      await page.goto(`${BASE}agents/hosts`, { waitUntil: "load" });
+      await page.evaluate(() => document.fonts.ready);
+      await sleep(SETTLE_MS);
+      const a = await page.screenshot({ fullPage: true });
+      writeFileSync(join(OUT_DIR, "u6-honesty-agents-presence-t0.png"), a);
+      // The same wire frame the server's presence sweeper emits on a real
+      // transition (`_presence_sweep_once` shape) — the roster fixture id.
+      await page.evaluate(() => {
+        window.VesmaMockBus?.emit("executor.online", {
+          executor: {
+            id: "exec-laptop-zcode",
+            name: "zcode@laptop",
+            harness: "zcode",
+            host: "laptop",
+            transport: "local-poll",
+            capabilities: [],
+            presence: "online",
+          },
+          prev_state: "offline",
+          state: "online",
+          last_seen_at: new Date().toISOString(),
+        });
+      });
+      await sleep(400); // the flash is mid-decay well inside its window
+      const b = await page.screenshot({ fullPage: true });
+      writeFileSync(join(OUT_DIR, "u6-honesty-agents-presence-t1.png"), b);
+      await page.close();
+      const differs = !a.equals(b);
+      check(
+        differs,
+        "agents: a real presence transition flares the host card (positive control)",
+        differs ? "" : "frames identical — the presence event reached nothing",
+      );
+      await context.close();
+    }
+
+    // 12. DOCS SILENT (U6) — Доки carry NO living layer: the hub (cards,
+    // statistics, search) stands on a quiet bus — pinned forever.
+    {
+      const context = await browser.newContext({
+        viewport: { width: 1440, height: 900 },
+        deviceScaleFactor: 1,
+      });
+      const a = await settledShot(context, `${BASE}docs/vesma-eyes`, "u6-honesty-docs-silent-t0.png");
+      console.log("[honesty] docs-silent: waiting 5.6s of real time…");
+      await sleep(QUIET_GAP_MS);
+      const b = await settledShot(
+        context,
+        `${BASE}docs/vesma-eyes`,
+        "u6-honesty-docs-silent-t5.png",
+      );
+      const identical = a.equals(b);
+      check(
+        identical,
+        "docs: silent bus — two frames ≥5s apart are pixel-identical (no living layer, pinned)",
+        identical ? "" : `bytes ${a.length} vs ${b.length}`,
+      );
+      await context.close();
+    }
+
+    // 13. SYSTEM SILENT (U6) — Система carries NO living layer: the settings
+    // hub with its «Зеркало» (a live DATA preview, not an animation) stands
+    // on a quiet bus — pinned forever.
+    {
+      const context = await browser.newContext({
+        viewport: { width: 1440, height: 900 },
+        deviceScaleFactor: 1,
+      });
+      const a = await settledShot(
+        context,
+        `${BASE}system/settings`,
+        "u6-honesty-system-silent-t0.png",
+      );
+      console.log("[honesty] system-silent: waiting 5.6s of real time…");
+      await sleep(QUIET_GAP_MS);
+      const b = await settledShot(
+        context,
+        `${BASE}system/settings`,
+        "u6-honesty-system-silent-t5.png",
+      );
+      const identical = a.equals(b);
+      check(
+        identical,
+        "system: silent bus — two frames ≥5s apart are pixel-identical (no living layer, pinned)",
+        identical ? "" : `bytes ${a.length} vs ${b.length}`,
       );
       await context.close();
     }

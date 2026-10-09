@@ -62,12 +62,16 @@ export function formatPulseAge(ageS: number, unit: {
 
 /**
  * Presence dot classes (spec §3.2 — semantic aliases only, NO new colours:
- * iris / warning / muted). Offline is a HOLLOW dot — shape carries the
- * meaning with the colour; unknown is the same hollow shape with a muted
- * ring, visibly NOT a verdict.
+ * success/warning/muted). U6 присутствие-свет (v12 canon): online is the
+ * SUCCESS dot with its STATIC glow (`--glow-live` via .presence-dot-live —
+ * light as data, not motion); the same reading Кора's Ether already uses
+ * for executor rows, so «host online» has ONE implementation across
+ * domains. Offline is a HOLLOW dot — shape carries the meaning with the
+ * colour; unknown is the same hollow shape with a muted ring, visibly NOT
+ * a verdict.
  */
 export const PRESENCE_DOT: Readonly<Record<string, string>> = {
-  online: "bg-iris-bright",
+  online: "bg-success presence-dot-live",
   stale: "bg-warning",
   offline: "border border-border bg-transparent",
   unknown: "border border-border-subtle bg-transparent",

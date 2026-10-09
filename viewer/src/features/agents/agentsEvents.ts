@@ -5,6 +5,7 @@ import type { BoardEvent } from "@/gateway/events";
 import { isTaskEventSource } from "@/gateway/capabilities";
 import { useGateway } from "@/gateway/GatewayContext";
 import { keys } from "@/lib/queryKeys";
+import { recordPresenceFlash } from "./presenceLight";
 import { pushExecutionEvent, setFeedStreamState } from "./executionFeedStore";
 
 /**
@@ -136,6 +137,17 @@ export function useAgentsEvents(): void {
     if (!isTaskEventSource(gateway)) return;
     const stream = gateway.events();
     const unsubscribe = stream.onAny((event) => {
+      // U6 присутствие-свет: a REAL presence transition flares the host's
+      // card once (one-shot impulse, never background). Registered/updated/
+      // deleted are registry facts, not transitions — they ride the cache
+      // invalidation below with no flash. The ?quiet=1 anti-fake gate drops
+      // the record inside the store itself.
+      if (event.kind === "executor.online" || event.kind === "executor.offline") {
+        recordPresenceFlash(
+          event.executor.id,
+          event.kind === "executor.online" ? "online" : "offline",
+        );
+      }
       applyAgentsEventToCache(queryClient, event);
       pushExecutionEvent(event);
     });
