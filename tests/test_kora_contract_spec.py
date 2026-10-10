@@ -108,7 +108,11 @@ class TestSlice1ListContract:
                 "origin", "steerable", "age_seconds"} <= _required(out)
 
     def test_frozen_enums(self, spec: dict) -> None:
-        assert _schema(spec, "KoraHarness")["enum"] == ["zcode", "vscode", "pi"]
+        # T004 hermes bridge slice 1 (2026-10-10): 'hermes' added to the
+        # harness enum (the YAML description carries the provenance; the
+        # server CHECK + app gates move with this pin).
+        assert _schema(spec, "KoraHarness")["enum"] == [
+            "zcode", "vscode", "pi", "hermes"]
         assert _schema(spec, "KoraSessionState")["enum"] == ["live", "idle", "dead"]
         assert _schema(spec, "KoraOrigin")["enum"] == ["relay", "local"]
 

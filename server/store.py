@@ -1226,10 +1226,20 @@ CREATE INDEX IF NOT EXISTS idx_device_sessions_token ON device_sessions (token_h
 -- preview_* mirror the scanner's LAST scan; the serving path re-clamps
 -- and re-redacts through server/kora/redaction.py (single choke-point)
 -- regardless of what landed here — the board DB is untrusted input.
+-- T004 (hermes bridge slice 1): the harness enum gains 'hermes' — the
+-- board pulls session listings from the LIVE hermes API server (server/
+-- hermes_client.py, ClusterIP svc) and upserts them under the RESERVED
+-- synthetic executor id 'hermes' (KORA_HERMES_EXECUTOR_ID: hermes has no
+-- enrolled executor — the registry PK pair stays (executor_id, native_id)
+-- with the native hermes session id, never a generated surrogate).
+-- Additive enum extension: NEW databases get the widened CHECK directly;
+-- existing ones are rebuilt by _migrate_kora_hermes_harness (SQLite cannot
+-- ALTER a CHECK constraint — the table is copied on boot once, idempotent
+-- via the sqlite_master DDL probe). NO SEED_VERSION bump.
 CREATE TABLE IF NOT EXISTS kora_sessions (
     executor_id       TEXT NOT NULL,
     native_id         TEXT NOT NULL,
-    harness           TEXT NOT NULL CHECK (harness IN ('zcode','vscode','pi')),
+    harness           TEXT NOT NULL CHECK (harness IN ('zcode','vscode','pi','hermes')),
     project           TEXT NOT NULL DEFAULT '',
     cwd               TEXT NOT NULL DEFAULT '',
     state             TEXT NOT NULL DEFAULT 'idle'
@@ -1253,6 +1263,9 @@ ON kora_sessions (executor_id, last_scan_at);
 -- untouched — this table carries task-linkage, kora rows never did).
 -- PK mirrors the Kora glue id '{executor_id}:{native_id}' so the task
 -- card's deep-link needs no translation.
+-- T004: this harness CHECK stays ('zcode','vscode','pi') — session FACTS
+-- are agent-discovery rows (executor-hosted harnesses); hermes runs in
+-- the k3s cluster without an enrolled executor, nothing reports facts.
 CREATE TABLE IF NOT EXISTS task_session_facts (
     executor_id      TEXT NOT NULL,
     native_id        TEXT NOT NULL,
@@ -1403,6 +1416,7 @@ class Store:
             db.executescript(_SCHEMA)
             self._migrate_device_scope_v1(db)
             self._migrate_device_grants_v1(db)
+            self._migrate_kora_hermes_harness(db)
             self._migrate(db)
             self._seed_if_empty(db)
             self._seed_harnesses(db)
@@ -1467,6 +1481,71 @@ class Store:
         if cur.rowcount:
             self._log(db, "device.grants-migrated", None,
                       {"migrated": cur.rowcount, "grants": DEVICE_GRANTS})
+
+    def _migrate_kora_hermes_harness(self, db: sqlite3.Connection) -> None:
+        """T004 hermes-bridge slice 1: widen the kora_sessions harness
+        CHECK ('zcode','vscode','pi' → +'hermes') on databases bootstrapped
+        BEFORE the enum extension. SQLite cannot ALTER a CHECK constraint:
+        the table is rebuilt the copy-swap way, once, guarded by a
+        sqlite_master DDL probe (idempotent — second boot finds the new
+        DDL and writes nothing). Deliberately NO SEED_VERSION bump
+        (additive-evolution rule; the seed check wipes tasks).
+
+        Row fidelity: * is a column-list copy, every column survives
+        verbatim; FK/deferred constraints are not defined on this table
+        (the PK pair is the carrier). The LEFT-join readers
+        (store.kora_sessions/kora_session) keep working unchanged —
+        the swap is invisible to them."""
+        ddl = db.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' "
+            "AND name='kora_sessions'").fetchone()
+        if ddl is None:
+            # Fresh-boot path: _SCHEMA above has not created the table yet
+            # ... actually it HAS (the executescript runs before the
+            # migrations) — None here means a foreign schema; stay honest
+            # and skip (the CHECK probes below will fail loudly in tests).
+            return
+        if "'hermes'" in (ddl["sql"] or ""):
+            return  # migrated (or fresh schema) — nothing to do
+        db.execute("ALTER TABLE kora_sessions RENAME TO kora_sessions_old")
+        try:
+            db.execute(
+                """CREATE TABLE kora_sessions (
+                    executor_id       TEXT NOT NULL,
+                    native_id         TEXT NOT NULL,
+                    harness           TEXT NOT NULL
+                        CHECK (harness IN ('zcode','vscode','pi','hermes')),
+                    project           TEXT NOT NULL DEFAULT '',
+                    cwd               TEXT NOT NULL DEFAULT '',
+                    state             TEXT NOT NULL DEFAULT 'idle'
+                        CHECK (state IN ('live','idle','dead')),
+                    origin            TEXT NOT NULL DEFAULT 'local'
+                        CHECK (origin IN ('relay','local')),
+                    steerable         INTEGER NOT NULL DEFAULT 0,
+                    started_at        TEXT NOT NULL DEFAULT '',
+                    last_activity_at  TEXT NOT NULL DEFAULT '',
+                    preview           TEXT NOT NULL DEFAULT '',
+                    first_seen_at     TEXT NOT NULL,
+                    last_scan_at      TEXT NOT NULL DEFAULT '',
+                    PRIMARY KEY (executor_id, native_id)
+                )""")
+            db.execute(
+                """INSERT INTO kora_sessions
+                   SELECT * FROM kora_sessions_old""")
+            db.execute("DROP TABLE kora_sessions_old")
+            db.execute(
+                "CREATE INDEX IF NOT EXISTS idx_kora_sessions_scan "
+                "ON kora_sessions (executor_id, last_scan_at)")
+            self._log(db, "kora.hermes-harness-migrated", None,
+                      {"added": "hermes"})
+        except BaseException:
+            # Restore the rename so a failed boot leaves the original
+            # table in place under its original name (no half-swapped
+            # DB state; the owner sees the boot error, not a corrupt DB).
+            db.execute("DROP TABLE IF EXISTS kora_sessions")
+            db.execute(
+                "ALTER TABLE kora_sessions_old RENAME TO kora_sessions")
+            raise
 
     def _conn(self) -> sqlite3.Connection:
         db = sqlite3.connect(self._path, timeout=10)
@@ -4384,7 +4463,7 @@ class Store:
                     raise ValueError(
                         "kora session native_id must be 1..512 chars")
                 harness = str(row.get("harness") or "").strip()
-                if harness not in ("zcode", "vscode", "pi"):
+                if harness not in ("zcode", "vscode", "pi", "hermes"):
                     raise ValueError(f"invalid kora harness: {harness!r}")
                 state = str(row.get("state") or "idle").strip()
                 if state not in ("live", "idle", "dead"):

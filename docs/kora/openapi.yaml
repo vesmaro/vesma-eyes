@@ -439,10 +439,14 @@ components:
   schemas:
     KoraHarness:
       type: string
-      enum: [zcode, vscode, pi]
+      enum: [zcode, vscode, pi, hermes]
       description: >-
-        Harness families wired in phase 1. hermes is a KNOWN GAP until T004
-        (absent from the enum by design; the coverage block says so loudly).
+        Harness families wired in phase 1. T004 slice 1 (hermes-bridge,
+        2026-10-10) added `hermes`: the board pulls LIVE session listings
+        from the hermes API server (ClusterIP svc) under the reserved
+        synthetic executor id `hermes`; the frozen KoraSessionOut shape
+        is untouched (the FE tells sources apart by harness). hermes
+        transcripts/chat are later slices (the coverage block says so).
 
     KoraSessionState:
       type: string
