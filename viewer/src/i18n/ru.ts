@@ -129,6 +129,10 @@ export const ru = {
   "hotkeys.focusSearch": "Фокус глобального поиска",
   "hotkeys.toggleSidebar": "Свернуть или развернуть сайдбар",
   "hotkeys.cheatsheet": "Эта шпаргалка",
+  "hotkeys.paletteHost": "Палитра: открыть хост",
+  "hotkeys.paletteHostKeys": "хост <имя>",
+  "hotkeys.paletteConnect": "Палитра: подключить новый хост",
+  "hotkeys.paletteConnectKeys": "подключить хост",
   "hotkeys.closeDialog": "Закрыть диалог",
   "hotkeys.escKey": "Esc",
   "hotkeys.openAria": "Шпаргалка горячих клавиш",
@@ -1025,7 +1029,7 @@ export const ru = {
   "tasks.edit.submit": "Сохранить",
   "tasks.edit.lockedTitle": "Задача старше 24 часов — правка заблокирована (423)",
   "tasks.edit.lockedDetail":
-    "Сервер блокирует правку контента задач старше 24 часов (BE-12). Можно изменить принудительно — правка будет помечена force=true в истории.",
+    "Сервер блокирует правку контента задач старше 24 часов. Можно изменить принудительно — правка будет помечена force=true в истории.",
   "tasks.edit.forceLabel": "Изменить принудительно",
   "tasks.edit.forceConfirm":
     "Задача старше 24 часов. Изменить принудительно (force=true)? Правка попадёт в аудит как принудительная.",
@@ -1223,19 +1227,63 @@ export const ru = {
   "nav.systemSettings": "Настройки",
   // ME-014: the host roster («Хосты») — the section's default landing.
   // ME-072 C: agents.roster.title retired — the visible h1 reads the nav key.
+  // agents-redesign A1: the card-grid keys retired with the grid; the frame
+  // speaks agents.hosts.* (below) + the survivors here.
   "nav.agentsHosts": "Хосты",
-  "agents.roster.loading": "Загружаем ростер агентов",
   "agents.roster.failed": "Не удалось загрузить ростер",
   "agents.roster.emptyTitle": "Агентов ещё нет",
   "agents.roster.emptyMessage": "Ростер оживёт, когда подключится первый исполнитель.",
-  "agents.roster.emptyAction": "Открыть «Подключить машину»",
-  "agents.roster.connectAction": "Подключить машину",
-  "agents.roster.hostUnknown": "хост не указан",
-  "agents.roster.onlineCounter": "{{online}}/{{total}} онлайн",
-  "agents.roster.idle": "простаивает",
-  "agents.roster.disabledBadge": "отключён",
-  "agents.roster.pendingBadge": "ожидает",
-  "agents.roster.revokedBadge": "отозван",
+  "agents.roster.hostUnknown": "Без хоста",
+  // agents-redesign A1 (blueprint 2026-10-09): the hosts FRAME — the roster
+  // panel (compact host rows + filter chips + the connect action) and the
+  // selected-host scaffold in the field.
+  "nav.agentsHost": "Хост",
+  "agents.hosts.loading": "Загружаем ростер хостов",
+  "agents.hosts.summary.machines": "машин: {{n}}",
+  "agents.hosts.summary.online": "на связи: {{n}}",
+  "agents.hosts.summary.attention": "требуют внимания: {{n}}",
+  "agents.hosts.filter.groupLabel": "Фильтр ростера хостов",
+  "agents.hosts.filter.all": "Все",
+  "agents.hosts.filter.attention": "Требуют внимания",
+  "agents.hosts.filter.decision": "Ожидают решения",
+  "agents.hosts.filterEmpty": "Под фильтр не попал ни один хост.",
+  "agents.hosts.onlineCounter": "{{online}}/{{total}} харнесов онлайн",
+  "agents.hosts.connectAction": "Подключить хост",
+  "agents.hosts.pendingPill": "ждёт решения",
+  "agents.hosts.fieldPlaceholder":
+    "Рабочее поле хоста появится в следующем обновлении.",
+  "agents.hosts.notFound": "Хост не найден",
+  "agents.hosts.notFoundMessage":
+    "Хоста «{{host}}» нет в ростере — возможно, его запись удалили.",
+  "agents.hosts.backToRoster": "К ростеру хостов",
+  "agents.hosts.rosterRegion": "Ростер хостов",
+  "agents.hosts.rosterTrigger": "Ростер · {{n}}",
+  "agents.hosts.ribbonLabel": "Лента хостов",
+  "agents.hosts.sheetHint": "Выберите хост — его карточка откроется в основном поле.",
+  "agents.hosts.taskCount": "активные задачи: {{n}}",
+  "agents.hosts.actionGiveTask": "Дать задачу",
+  "agents.hosts.actionKora": "Сессии в Кору",
+  "agents.hosts.actionLinkCheck": "Проверить связь",
+  "agents.hosts.nowTitle": "Сейчас",
+  "agents.hosts.nowIdle": "Простаивает — активных задач и живых сессий нет.",
+  "agents.hosts.nowAssignments": "Активные задачи",
+  "agents.hosts.nowSessions": "Живые сессии",
+  "agents.hosts.nowNoSessions": "Живых сессий нет — появятся, когда харнес начнёт работу.",
+  "agents.hosts.sessionsFailed": "Сессии недоступны.",
+  "agents.hosts.recentTitle": "Недавно",
+  "agents.hosts.recentEmpty": "Тишина. Первые события — после первого доклада.",
+  "agents.hosts.recentFailed": "Ленту не удалось загрузить.",
+  "agents.hosts.reconnectAction": "Подключить заново",
+  "agents.hosts.harnessesTitle": "Харнесы хоста",
+  "agents.hosts.actionAddHarness": "Подключить харнес",
+  "palette.hostItem": "Хост {{host}}",
+  "palette.connectHost": "Подключить хост",
+  "agents.hosts.refusalDisabled": "отключён",
+  "agents.hosts.refusalRevoked": "отозван",
+  "agents.hosts.sessions24Tooltip": "Сессии за 24 часа",
+  "agents.hosts.resize.label": "Ширина панели хостов",
+  "agents.hosts.resize.tooltip":
+    "Потяните, чтобы изменить ширину. Двойной клик — вернуть как было",
   "agents.execution.title": "Исполнение",
   "agents.execution.emptyTitle": "Поручений нет",
   "agents.execution.emptyMessage":
@@ -1311,7 +1359,7 @@ export const ru = {
   "agents.settings.meshIneligible": "mesh-транспорт — маршрутизация недоступна до R4",
 
   // --- agents domain: registry page /agents/harnesses (AGW-4) ----------------------
-  "nav.agentsHarnesses": "Подключить машину",
+  "nav.agentsHarnesses": "Подключить хост",
   "agents.registry.title": "Подключение агентов",
   "agents.registry.loading": "Загружаем реестр исполнителей",
   "agents.registry.failed": "Не удалось загрузить реестр исполнителей",
@@ -1464,8 +1512,7 @@ export const ru = {
   // ME-064 «Обнаружено на хосте» (agents-ui-spec §3.1): инвентарь-дропдауны.
   "agents.card.sectionInventory": "Обнаружено на хосте",
   "agents.card.inventoryNone": "Нет данных",
-  "agents.card.inventoryNoneNote":
-    "Обнаружение установок умеет только агент (Go). Хост, подключённый поллером, пришлёт список после ME-056 — пусто здесь честный ответ, а не задержка.",
+  "agents.card.inventoryNoneNote": "Список установок присылает сам агент; хосты на поллере пришлют его позже — пусто здесь честный ответ, а не задержка.",
   "agents.card.inventorySpecialists": "специалисты",
   "agents.card.inventorySkills": "скиллы",
   "agents.card.inventoryPlugins": "плагины",
@@ -1618,6 +1665,7 @@ export const ru = {
   "agents.provision.knownHostsHint":
     "Ключ машины не совпал с закреплённым. Если машину ПЕРЕУСТАНАВЛИВАЛИ намеренно — на борде выполняется отдельная процедура re-pin (POST /api/executors/provision/host/{host}/repin). Вслепую повторять не надо: несовпадение может означать подмену (MITM).",
   "agents.provision.retry": "Повторить",
+  "agents.provision.openHost": "Открыть хост",
   "agents.provision.doneTitle": "Исполнитель «{{name}}» ждёт вашего одобрения",
   "agents.provision.doneLoadingRow": "Ждём появления строки в реестре…",
   "agents.provision.approvedAlready":

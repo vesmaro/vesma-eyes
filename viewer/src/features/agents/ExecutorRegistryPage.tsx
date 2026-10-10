@@ -573,7 +573,7 @@ function LifecyclePill({
        * (07a: status is never alone); provisioning/approval ages live in
        * the tooltip — the actionable fact there is the DECISION, not time. */}
       {ageText && status.state !== "awaiting-approval" && status.state !== "provisioning" ? (
-        <span className="font-normal text-foreground-secondary">· {ageText}</span>
+        <span className="font-normal text-foreground-secondary">&nbsp;· {ageText}</span>
       ) : null}
       <span className="sr-only">
         {t(lifecycleNextKey(status.state), nextActionVars(nextVars))}

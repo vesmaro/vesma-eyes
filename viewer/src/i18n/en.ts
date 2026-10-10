@@ -107,6 +107,10 @@ export const en: Record<TranslationKey, string> = {
   "hotkeys.focusSearch": "Focus the global search",
   "hotkeys.toggleSidebar": "Collapse or expand the sidebar",
   "hotkeys.cheatsheet": "This cheatsheet",
+  "hotkeys.paletteHost": "Palette: open a host",
+  "hotkeys.paletteHostKeys": "host <name>",
+  "hotkeys.paletteConnect": "Palette: connect a new host",
+  "hotkeys.paletteConnectKeys": "connect a host",
   "hotkeys.closeDialog": "Close the dialog",
   "hotkeys.escKey": "Esc",
   "hotkeys.openAria": "Keyboard shortcuts cheatsheet",
@@ -997,7 +1001,7 @@ export const en: Record<TranslationKey, string> = {
   "tasks.edit.submit": "Save",
   "tasks.edit.lockedTitle": "Task is older than 24 hours — edit locked (423)",
   "tasks.edit.lockedDetail":
-    "The server locks content edits on tasks older than 24 hours (BE-12). You can force the edit — it will be audited with force=true.",
+    "The server locks content edits on tasks older than 24 hours. You can force the edit — it will be audited with force=true.",
   "tasks.edit.forceLabel": "Edit anyway (force)",
   "tasks.edit.forceConfirm":
     "The task is older than 24 hours. Edit anyway (force=true)? The edit will be audited as forced.",
@@ -1196,20 +1200,64 @@ export const en: Record<TranslationKey, string> = {
   "nav.systemSettings": "Settings",
   // ME-014: the host roster («Хосты») — the section's default landing.
   // ME-072 C: agents.roster.title retired — the visible h1 reads the nav key.
+  // agents-redesign A1: the card-grid keys retired with the grid; the frame
+  // speaks agents.hosts.* (below) + the survivors here.
   "nav.agentsHosts": "Hosts",
-  "agents.roster.loading": "Loading the agent roster",
+  "nav.agentsHost": "Host",
   "agents.roster.failed": "Failed to load the roster",
   "agents.roster.emptyTitle": "No agents yet",
   "agents.roster.emptyMessage":
     "The roster comes alive once the first executor connects.",
-  "agents.roster.emptyAction": "Open Connect a machine",
-  "agents.roster.connectAction": "Connect a machine",
-  "agents.roster.hostUnknown": "host not reported",
-  "agents.roster.onlineCounter": "{{online}}/{{total}} online",
-  "agents.roster.idle": "idle",
-  "agents.roster.disabledBadge": "disabled",
-  "agents.roster.pendingBadge": "pending",
-  "agents.roster.revokedBadge": "revoked",
+  "agents.roster.hostUnknown": "No host",
+  // agents-redesign A1 (blueprint 2026-10-09): the hosts FRAME — the roster
+  // panel (compact host rows + filter chips + the connect action) and the
+  // selected-host scaffold in the field.
+  "agents.hosts.loading": "Loading the host roster",
+  "agents.hosts.summary.machines": "machines: {{n}}",
+  "agents.hosts.summary.online": "connected: {{n}}",
+  "agents.hosts.summary.attention": "need attention: {{n}}",
+  "agents.hosts.filter.groupLabel": "Host roster filter",
+  "agents.hosts.filter.all": "All",
+  "agents.hosts.filter.attention": "Need attention",
+  "agents.hosts.filter.decision": "Awaiting decision",
+  "agents.hosts.filterEmpty": "No hosts match the filter.",
+  "agents.hosts.onlineCounter": "{{online}}/{{total}} harnesses online",
+  "agents.hosts.connectAction": "Connect a host",
+  "agents.hosts.pendingPill": "awaits decision",
+  "agents.hosts.fieldPlaceholder":
+    "The host work field arrives in the next update.",
+  "agents.hosts.notFound": "Host not found",
+  "agents.hosts.notFoundMessage":
+    "No host «{{host}}» in the roster — its record may have been deleted.",
+  "agents.hosts.backToRoster": "Back to the host roster",
+  "agents.hosts.rosterRegion": "Host roster",
+  "agents.hosts.rosterTrigger": "Roster · {{n}}",
+  "agents.hosts.ribbonLabel": "Host ribbon",
+  "agents.hosts.sheetHint": "Pick a host — its card opens in the main field.",
+  "agents.hosts.taskCount": "active tasks: {{n}}",
+  "agents.hosts.actionGiveTask": "Give a task",
+  "agents.hosts.actionKora": "Sessions in Kora",
+  "agents.hosts.actionLinkCheck": "Check the link",
+  "agents.hosts.nowTitle": "Now",
+  "agents.hosts.nowIdle": "Idle — no active tasks, no live sessions.",
+  "agents.hosts.nowAssignments": "Active tasks",
+  "agents.hosts.nowSessions": "Live sessions",
+  "agents.hosts.nowNoSessions": "No live sessions — they appear when a harness starts working.",
+  "agents.hosts.sessionsFailed": "Sessions unavailable.",
+  "agents.hosts.recentTitle": "Recent",
+  "agents.hosts.recentEmpty": "Quiet. The first events arrive after the first report.",
+  "agents.hosts.recentFailed": "Failed to load the feed.",
+  "agents.hosts.reconnectAction": "Reconnect",
+  "agents.hosts.harnessesTitle": "Host harnesses",
+  "agents.hosts.actionAddHarness": "Add a harness",
+  "palette.hostItem": "Host {{host}}",
+  "palette.connectHost": "Connect a host",
+  "agents.hosts.refusalDisabled": "disabled",
+  "agents.hosts.refusalRevoked": "revoked",
+  "agents.hosts.sessions24Tooltip": "Sessions in 24h",
+  "agents.hosts.resize.label": "Hosts panel width",
+  "agents.hosts.resize.tooltip":
+    "Drag to resize. Double-click to restore",
   "agents.execution.title": "Execution",
   "agents.execution.emptyTitle": "No assignments",
   "agents.execution.emptyMessage":
@@ -1285,7 +1333,7 @@ export const en: Record<TranslationKey, string> = {
   "agents.settings.meshIneligible": "mesh transport — routing unavailable until R4",
 
   // --- agents domain: registry page /agents/harnesses (AGW-4) ----------------------
-  "nav.agentsHarnesses": "Connect a machine",
+  "nav.agentsHarnesses": "Connect a host",
   "agents.registry.title": "Agent connections",
   "agents.registry.loading": "Loading the executor registry",
   "agents.registry.failed": "Failed to load the executor registry",
@@ -1435,8 +1483,7 @@ export const en: Record<TranslationKey, string> = {
   // ME-064 «Detected on the host» (agents-ui-spec §3.1): inventory dropdowns.
   "agents.card.sectionInventory": "Detected on the host",
   "agents.card.inventoryNone": "No data",
-  "agents.card.inventoryNoneNote":
-    "Only the agent (Go) knows how to detect installations. A host connected via the poller will send the list after ME-056 — empty here is an honest answer, not a delay.",
+  "agents.card.inventoryNoneNote": "Installations are detected by the agent itself; poller-connected hosts will send the list later — empty here is an honest answer, not a delay.",
   "agents.card.inventorySpecialists": "specialists",
   "agents.card.inventorySkills": "skills",
   "agents.card.inventoryPlugins": "plugins",
@@ -1587,6 +1634,7 @@ export const en: Record<TranslationKey, string> = {
   "agents.provision.knownHostsHint":
     "The machine key does not match the pinned one. If the machine was REINSTALLED on purpose, the board has a separate re-pin action (POST /api/executors/provision/host/{host}/repin). Do not blindly retry: a mismatch may mean a MITM.",
   "agents.provision.retry": "Retry",
+  "agents.provision.openHost": "Open the host",
   "agents.provision.doneTitle": "Executor “{{name}}” awaits your approval",
   "agents.provision.doneLoadingRow": "Waiting for the registry row to appear…",
   "agents.provision.approvedAlready":

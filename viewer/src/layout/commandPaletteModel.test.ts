@@ -5,6 +5,7 @@ import type { SearchResult } from "@/gateway/types";
 import {
   clampSelection,
   filterExecutorItems,
+  hostPaletteItems,
   filterTaskItems,
   flattenGroups,
   groupItems,
@@ -91,8 +92,17 @@ describe("filterExecutorItems", () => {
     expect(filterExecutorItems(EXECUTORS, "hermes")).toEqual([]);
   });
 
-  it("leads to the roster (a section root — no return= context)", () => {
-    expect(filterExecutorItems(EXECUTORS, "mesh")[0].to).toBe("/agents/hosts");
+  it("leads to the executor's HOST page (B1: the field workbench)", () => {
+    expect(filterExecutorItems(EXECUTORS, "mesh")[0].to).toBe("/agents/hosts/mesh-2");
+  });
+
+  it("routes the never-reported host to the sentinel bucket id (C2: hostRouteId)", () => {
+    const unreported = [
+      { id: "exec-u", name: "zcode@?", host: "", harness: "zcode", state: "approved" },
+    ] as ExecutorItem[];
+    expect(filterExecutorItems(unreported, "zcode")[0].to).toBe(
+      `/agents/hosts/__unreported__`,
+    );
   });
 });
 
@@ -159,5 +169,43 @@ describe("selection walk", () => {
     expect(clampSelection(9, 4)).toBe(3);
     expect(clampSelection(2, 4)).toBe(2);
     expect(clampSelection(5, 0)).toBe(0);
+  });
+});
+
+
+describe("hostPaletteItems — the «хост <имя>» commands (agents-redesign C2)", () => {
+  const hosts = [
+    { id: "laptop", host: "laptop", online: 2, total: 2 },
+    { id: "__unreported__", host: "__unreported__", online: 0, total: 1 },
+  ];
+
+  it("one row per host, matched by the «хост <имя>» query form, capped", () => {
+    const items = hostPaletteItems(hosts, "хост laptop", "Хост {{host}}");
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      id: "agents:host:laptop",
+      group: "agents",
+      label: "Хост laptop",
+      hint: "2/2",
+      to: "/agents/hosts/laptop",
+    });
+    // The sentinel host routes under its reserved id.
+    const all = hostPaletteItems(hosts, "хост", "Хост {{host}}");
+    expect(all.map((item) => item.to)).toEqual([
+      "/agents/hosts/laptop",
+      "/agents/hosts/__unreported__",
+    ]);
+    expect(hostPaletteItems(hosts, "хост", "Хост {{host}}", 1)).toHaveLength(1);
+  });
+
+  it("the empty query keeps local indexes out (the palette opens on navigation)", () => {
+    expect(hostPaletteItems(hosts, "", "Хост {{host}}")).toEqual([]);
+  });
+
+  it("the RU command form works over the latin host id («хост lap» → laptop)", () => {
+    // The command word localizes («хост»), the name stays the wire id —
+    // the mixed-alphabet query is a substring of the localized row.
+    const items = hostPaletteItems(hosts, "хост lap", "Хост {{host}}");
+    expect(items.map((item) => item.to)).toEqual(["/agents/hosts/laptop"]);
   });
 });

@@ -539,6 +539,23 @@ html[data-vesma-pad] {
   );
 }
 
+/* ── Agents-hosts frame (agents-redesign A1, blueprint 2026-10-09) ─────────
+ * The SECOND no-page-scroll surface, same arithmetic as the Kora frame —
+ * under its OWN variable so the two workspaces never couple their geometry
+ * (a kora-side retune must not silently re-flow Хосты). Same viewer-only
+ * standing: layout arithmetic, not a design token. */
+:root {
+  --agents-frame-h: calc(
+    100dvh - var(--shell-topbar-h) - var(--shell-crumbs-h) - 3rem
+  );
+}
+html[data-vesma-pad] {
+  --agents-frame-h: calc(
+    100dvh - var(--shell-topbar-h) - var(--shell-crumbs-h) - 3rem -
+      var(--vesma-slot) - 16px
+  );
+}
+
 /* The frame hardware: internal scrollbars are token-dressed and VISIBLE at
  * rest (07l §4, the owner's direct ask): 8px, radius full, thumb
  * --color-border (≥3:1 on the well stratum), hover --color-text-secondary.

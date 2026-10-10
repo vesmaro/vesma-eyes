@@ -43,7 +43,9 @@ describe("routes — /agents single object with an index redirect (P3-7, ME-014)
     const paths = agents.children
       ?.filter((child) => !child.index)
       .map((child) => child.path);
-    expect(paths).toEqual(["hosts", "execution", "harnesses"]);
+    // agents-redesign A1: the hosts view carries the OPTIONAL :host param —
+    // ONE frame element, the selection never re-assembles it.
+    expect(paths).toEqual(["hosts/:host?", "execution", "harnesses"]);
   });
 
   it("the alias lands on /agents/hosts — the ME-014 roster (structural)", () => {

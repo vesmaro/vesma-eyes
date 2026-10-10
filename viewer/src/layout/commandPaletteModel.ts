@@ -1,6 +1,7 @@
 import type { SearchResult } from "@/gateway/types";
 import type { ExecutorItem } from "@/gateway/boardTypes";
 import type { BoardTask } from "@/gateway/boardTypes";
+import { UNREPORTED_HOST_ID } from "@/features/agents/rosterModel";
 
 /**
  * Pure model of the command palette (UX-overhaul §7.3, Ф2): item records,
@@ -87,9 +88,11 @@ export function filterExecutorItems(
       group: "agents" as const,
       label: executor.name || executor.id,
       hint: executor.host,
-      // The roster page is where the executor lives (its sheet opens there);
-      // a section root needs no `return=` context.
-      to: "/agents/hosts",
+      // agents-redesign B1: the executor lives on its HOST's page (the
+      // field workbench); the unreported bucket rides the sentinel id.
+      to: `/agents/hosts/${encodeURIComponent(
+        executor.host === "" ? UNREPORTED_HOST_ID : executor.host,
+      )}`,
     }));
 }
 
@@ -108,6 +111,40 @@ export function memoryHitItems(
     hint: hit.server,
     to: buildTo(hit.id),
   }));
+}
+
+/**
+ * agents-redesign C2: the HOST commands («хост <имя>» in the palette) — one
+ * row per host group, opening the field workbench directly. The caller
+ * passes the localized label template («Хост {{host}}») — this module stays
+ * i18n-free; the interpolation is the plain {{var}} replace.
+ */
+export interface HostPaletteHost {
+  /** The route id (rosterModel.hostRouteId — the __unreported__ sentinel). */
+  readonly id: string;
+  readonly host: string;
+  readonly online: number;
+  readonly total: number;
+}
+
+export function hostPaletteItems(
+  hosts: readonly HostPaletteHost[],
+  query: string,
+  labelTemplate: string,
+  cap = 6,
+): PaletteItem[] {
+  if (query === "") return [];
+  const q = query.toLowerCase();
+  return hosts
+    .map((host) => ({
+      id: `agents:host:${host.id}`,
+      group: "agents" as const,
+      label: labelTemplate.replace("{{host}}", host.host),
+      hint: `${host.online}/${host.total}`,
+      to: `/agents/hosts/${encodeURIComponent(host.id)}`,
+    }))
+    .filter((item) => matches(q, `${item.label} ${item.to}`))
+    .slice(0, cap);
 }
 
 // --- selection walk -----------------------------------------------------------

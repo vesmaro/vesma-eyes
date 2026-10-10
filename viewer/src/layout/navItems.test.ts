@@ -149,11 +149,12 @@ describe("domain map", () => {
     // ME-014: the domain root has no index route — the domain link goes to
     // the host roster (the section's default landing).
     expect(agents?.linkTo).toBe("/agents/hosts");
-    // The roster leads; execution and the AGW-4 registry keep their paths.
+    // agents-redesign C1: TWO sections — the hosts workbench and
+    // Исполнение. The connect conveyor left the nav (contextual entries);
+    // its route /agents/harnesses stays LIVE for direct entries.
     expect(agents?.sections?.map((s) => s.to)).toEqual([
       "/agents/hosts",
       "/agents/execution",
-      "/agents/harnesses",
     ]);
   });
 });
@@ -191,9 +192,17 @@ describe("sectionActive (ME-028: one current section, not two)", () => {
   it("non-master sections stay exact/prefix via isPathActive", () => {
     expect(sectionActive("/memory/pulse", pulse, memory.sections!)).toBe(true);
     expect(sectionActive("/memory/pulse/x", pulse, memory.sections!)).toBe(false);
+  });
+
+  it("the hosts roster owns its detail route (agents-redesign A1: /agents/hosts/:host)", () => {
     const hosts = NAV_DOMAINS.find((d) => d.to === "/agents")!.sections![0]!;
     expect(sectionActive("/agents/hosts", hosts, [])).toBe(true);
-    expect(sectionActive("/agents/hosts/x", hosts, [])).toBe(false);
+    // A1: the host selection is a route — the section stays current on it.
+    expect(sectionActive("/agents/hosts/laptop", hosts, [])).toBe(true);
+    // Sibling exact roots are never swallowed by the master.
+    const execution = NAV_DOMAINS.find((d) => d.to === "/agents")!.sections![1]!;
+    expect(sectionActive("/agents/execution", execution, [])).toBe(true);
+    expect(sectionActive("/agents/execution", hosts, [])).toBe(false);
   });
 });
 
@@ -232,6 +241,12 @@ describe("breadcrumbs (last crumb is not a link)", () => {
       { to: "/tasks", key: "nav.tasks" },
       { to: "/tasks", key: "nav.taskList" },
       { key: "nav.task" },
+    ]);
+    // agents-redesign A1: the host frame sits under the roster (its master).
+    expect(crumbsFor("/agents/hosts/laptop")).toEqual([
+      { to: "/agents", key: "nav.agents" },
+      { to: "/agents/hosts", key: "nav.agentsHosts" },
+      { key: "nav.agentsHost" },
     ]);
   });
 

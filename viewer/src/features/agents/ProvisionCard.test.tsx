@@ -14,6 +14,7 @@ import { UiTokenProvider } from "@/features/ui-token/UiTokenProvider";
 import { keys } from "@/lib/queryKeys";
 import { fingerprintHex } from "./provisionTypes";
 import { actUnmount, actWaitUntil } from "@/test/actTools";
+import { MemoryRouter } from "react-router";
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 /**
@@ -50,7 +51,11 @@ async function mountCard(): Promise<Mount> {
           <ToastProvider>
             <UiTokenProvider>
               <I18nProvider initialLang="en">
-                <ProvisionCard />
+                {/* B1: the done block deep-links into the hosts frame —
+                 * the card needs the Router context now. */}
+                <MemoryRouter>
+                  <ProvisionCard />
+                </MemoryRouter>
                 <ToastViewport />
               </I18nProvider>
             </UiTokenProvider>
@@ -304,7 +309,14 @@ describe("ProvisionCard — the conveyor (U8)", () => {
     await actWaitUntil(() => {
       expect(currentRailButton()?.textContent).toContain("Verify");
     });
-    expect(document.body.textContent).toContain("awaits your approval");
+    // The registry row rides its OWN cache update: between the Verify render
+    // and the executors refetch resolution the card shows the DESIGNED
+    // waiting line (doneLoadingRow) — the doneTitle lands one react-query
+    // notification later (a flake was observed asserting this
+    // synchronously: cache had the row, the DOM was one render behind).
+    await actWaitUntil(() => {
+      expect(document.body.textContent).toContain("awaits your approval");
+    });
     await actUnmount(root);
   });
 
