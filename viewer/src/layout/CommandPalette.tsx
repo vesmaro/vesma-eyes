@@ -11,9 +11,12 @@ import { useSearch } from "@/hooks/useSearch";
 import { useBoardTasks } from "@/features/tasks/useTasks";
 import { useExecutors } from "@/features/agents/useAgents";
 import { NAV_DOMAINS } from "./navItems";
+import { groupExecutorsByHost, hostRouteId } from "@/features/agents/rosterModel";
+import { useValidationNow } from "@/features/tasks/useValidationClock";
 import {
   clampSelection,
   filterExecutorItems,
+  hostPaletteItems,
   filterTaskItems,
   flattenGroups,
   groupItems,
@@ -129,6 +132,7 @@ function PaletteBody() {
     [location.pathname, location.search],
   );
 
+  const now = useValidationNow();
   const items = useMemo<PaletteItem[]>(() => {
     // Navigation index — the live routes only (soon-slots stay out: the
     // palette never offers a dead surface).
@@ -154,6 +158,15 @@ function PaletteBody() {
         });
       }
     }
+    // agents-redesign C1/C2: the connect conveyor's contextual entry — the
+    // command survives the nav 1+1 (the section left the sidebar).
+    nav.push({
+      id: "nav:connect-host",
+      group: "nav",
+      label: t("palette.connectHost"),
+      hint: "/agents/harnesses?connect=1",
+      to: "/agents/harnesses?connect=1",
+    });
     const navItems =
       typedQuery === ""
         ? nav
@@ -163,25 +176,48 @@ function PaletteBody() {
 
     // Memory — the extended-search escape hatch appears ONLY when the wire
     // answered and found nothing (honest empty, §7.3: the full page stays
-    // one row away).
+    // one row away). C2: the hatch is a TRANSITION, not a memory hit — it
+    // walks in the nav section (after the real rows), so a typed command
+    // («хост <имя>») keeps the first-row priority; memory HITS keep their
+    // first-section promise.
     const memory: PaletteItem[] = searchReady
       ? memoryHitItems(searchData ?? [], buildMemoryTo)
       : [];
-    if (searchReady && searchSettled && (searchData ?? []).length === 0) {
-      memory.push({
-        id: "memory:__extended",
-        group: "memory",
-        label: t("cmdk.extendedSearch"),
-        hint: `/memory/search?q=${trimmed}`,
-        to: `/memory/search?q=${encodeURIComponent(trimmed)}`,
-      });
-    }
+    const extended: PaletteItem[] =
+      searchReady && searchSettled && (searchData ?? []).length === 0
+        ? [
+            {
+              id: "memory:__extended",
+              group: "nav",
+              label: t("cmdk.extendedSearch"),
+              hint: `/memory/search?q=${trimmed}`,
+              to: `/memory/search?q=${encodeURIComponent(trimmed)}`,
+            },
+          ]
+        : [];
+
+    // agents-redesign C2: the HOST commands — «хост <имя>» opens the field
+    // workbench directly (one row per host group of the same registry read).
+    const hostItems = hostPaletteItems(
+      groupExecutorsByHost(executors.data?.items ?? [], executors.data?.meta, now).map(
+        (group) => ({
+          id: hostRouteId(group),
+          host: group.label ?? t("agents.roster.hostUnknown"),
+          online: group.online,
+          total: group.members.length,
+        }),
+      ),
+      typedQuery,
+      t("palette.hostItem"),
+    );
 
     return [
       ...memory,
       ...filterTaskItems(board.data?.tasks ?? [], typedQuery, buildTaskTo),
       ...filterExecutorItems(executors.data?.items ?? [], typedQuery),
+      ...hostItems,
       ...navItems,
+      ...extended,
     ];
   }, [
     t,
@@ -194,6 +230,7 @@ function PaletteBody() {
     executors.data,
     buildTaskTo,
     buildMemoryTo,
+    now,
   ]);
 
   const flat = useMemo(() => flattenGroups(items), [items]);

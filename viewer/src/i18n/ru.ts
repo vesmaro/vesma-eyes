@@ -129,6 +129,10 @@ export const ru = {
   "hotkeys.focusSearch": "Фокус глобального поиска",
   "hotkeys.toggleSidebar": "Свернуть или развернуть сайдбар",
   "hotkeys.cheatsheet": "Эта шпаргалка",
+  "hotkeys.paletteHost": "Палитра: открыть хост",
+  "hotkeys.paletteHostKeys": "хост <имя>",
+  "hotkeys.paletteConnect": "Палитра: подключить новый хост",
+  "hotkeys.paletteConnectKeys": "подключить хост",
   "hotkeys.closeDialog": "Закрыть диалог",
   "hotkeys.escKey": "Esc",
   "hotkeys.openAria": "Шпаргалка горячих клавиш",
@@ -1025,7 +1029,7 @@ export const ru = {
   "tasks.edit.submit": "Сохранить",
   "tasks.edit.lockedTitle": "Задача старше 24 часов — правка заблокирована (423)",
   "tasks.edit.lockedDetail":
-    "Сервер блокирует правку контента задач старше 24 часов (BE-12). Можно изменить принудительно — правка будет помечена force=true в истории.",
+    "Сервер блокирует правку контента задач старше 24 часов. Можно изменить принудительно — правка будет помечена force=true в истории.",
   "tasks.edit.forceLabel": "Изменить принудительно",
   "tasks.edit.forceConfirm":
     "Задача старше 24 часов. Изменить принудительно (force=true)? Правка попадёт в аудит как принудительная.",
@@ -1272,6 +1276,8 @@ export const ru = {
   "agents.hosts.reconnectAction": "Подключить заново",
   "agents.hosts.harnessesTitle": "Харнесы хоста",
   "agents.hosts.actionAddHarness": "Подключить харнес",
+  "palette.hostItem": "Хост {{host}}",
+  "palette.connectHost": "Подключить хост",
   "agents.hosts.refusalDisabled": "отключён",
   "agents.hosts.refusalRevoked": "отозван",
   "agents.hosts.sessions24Tooltip": "Сессии за 24 часа",
@@ -1353,7 +1359,7 @@ export const ru = {
   "agents.settings.meshIneligible": "mesh-транспорт — маршрутизация недоступна до R4",
 
   // --- agents domain: registry page /agents/harnesses (AGW-4) ----------------------
-  "nav.agentsHarnesses": "Подключить машину",
+  "nav.agentsHarnesses": "Подключить хост",
   "agents.registry.title": "Подключение агентов",
   "agents.registry.loading": "Загружаем реестр исполнителей",
   "agents.registry.failed": "Не удалось загрузить реестр исполнителей",
@@ -1506,8 +1512,7 @@ export const ru = {
   // ME-064 «Обнаружено на хосте» (agents-ui-spec §3.1): инвентарь-дропдауны.
   "agents.card.sectionInventory": "Обнаружено на хосте",
   "agents.card.inventoryNone": "Нет данных",
-  "agents.card.inventoryNoneNote":
-    "Обнаружение установок умеет только агент (Go). Хост, подключённый поллером, пришлёт список после ME-056 — пусто здесь честный ответ, а не задержка.",
+  "agents.card.inventoryNoneNote": "Список установок присылает сам агент; хосты на поллере пришлют его позже — пусто здесь честный ответ, а не задержка.",
   "agents.card.inventorySpecialists": "специалисты",
   "agents.card.inventorySkills": "скиллы",
   "agents.card.inventoryPlugins": "плагины",

@@ -108,6 +108,11 @@ export function HotkeysProvider({ children }: { children: ReactNode }) {
             <HotkeyRow keys="⌘K / Ctrl+K" label={t("hotkeys.openPaletteAnywhere")} />
             <HotkeyRow keys="[" label={t("hotkeys.toggleSidebar")} />
             <HotkeyRow keys="?" label={t("hotkeys.cheatsheet")} />
+            <HotkeyRow keys={t("hotkeys.paletteHostKeys")} label={t("hotkeys.paletteHost")} />
+            <HotkeyRow
+              keys={t("hotkeys.paletteConnectKeys")}
+              label={t("hotkeys.paletteConnect")}
+            />
             <HotkeyRow keys={t("hotkeys.escKey")} label={t("hotkeys.closeDialog")} />
           </ul>
         </DialogContent>

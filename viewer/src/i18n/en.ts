@@ -107,6 +107,10 @@ export const en: Record<TranslationKey, string> = {
   "hotkeys.focusSearch": "Focus the global search",
   "hotkeys.toggleSidebar": "Collapse or expand the sidebar",
   "hotkeys.cheatsheet": "This cheatsheet",
+  "hotkeys.paletteHost": "Palette: open a host",
+  "hotkeys.paletteHostKeys": "host <name>",
+  "hotkeys.paletteConnect": "Palette: connect a new host",
+  "hotkeys.paletteConnectKeys": "connect a host",
   "hotkeys.closeDialog": "Close the dialog",
   "hotkeys.escKey": "Esc",
   "hotkeys.openAria": "Keyboard shortcuts cheatsheet",
@@ -997,7 +1001,7 @@ export const en: Record<TranslationKey, string> = {
   "tasks.edit.submit": "Save",
   "tasks.edit.lockedTitle": "Task is older than 24 hours — edit locked (423)",
   "tasks.edit.lockedDetail":
-    "The server locks content edits on tasks older than 24 hours (BE-12). You can force the edit — it will be audited with force=true.",
+    "The server locks content edits on tasks older than 24 hours. You can force the edit — it will be audited with force=true.",
   "tasks.edit.forceLabel": "Edit anyway (force)",
   "tasks.edit.forceConfirm":
     "The task is older than 24 hours. Edit anyway (force=true)? The edit will be audited as forced.",
@@ -1246,6 +1250,8 @@ export const en: Record<TranslationKey, string> = {
   "agents.hosts.reconnectAction": "Reconnect",
   "agents.hosts.harnessesTitle": "Host harnesses",
   "agents.hosts.actionAddHarness": "Add a harness",
+  "palette.hostItem": "Host {{host}}",
+  "palette.connectHost": "Connect a host",
   "agents.hosts.refusalDisabled": "disabled",
   "agents.hosts.refusalRevoked": "revoked",
   "agents.hosts.sessions24Tooltip": "Sessions in 24h",
@@ -1327,7 +1333,7 @@ export const en: Record<TranslationKey, string> = {
   "agents.settings.meshIneligible": "mesh transport — routing unavailable until R4",
 
   // --- agents domain: registry page /agents/harnesses (AGW-4) ----------------------
-  "nav.agentsHarnesses": "Connect a machine",
+  "nav.agentsHarnesses": "Connect a host",
   "agents.registry.title": "Agent connections",
   "agents.registry.loading": "Loading the executor registry",
   "agents.registry.failed": "Failed to load the executor registry",
@@ -1477,8 +1483,7 @@ export const en: Record<TranslationKey, string> = {
   // ME-064 «Detected on the host» (agents-ui-spec §3.1): inventory dropdowns.
   "agents.card.sectionInventory": "Detected on the host",
   "agents.card.inventoryNone": "No data",
-  "agents.card.inventoryNoneNote":
-    "Only the agent (Go) knows how to detect installations. A host connected via the poller will send the list after ME-056 — empty here is an honest answer, not a delay.",
+  "agents.card.inventoryNoneNote": "Installations are detected by the agent itself; poller-connected hosts will send the list later — empty here is an honest answer, not a delay.",
   "agents.card.inventorySpecialists": "specialists",
   "agents.card.inventorySkills": "skills",
   "agents.card.inventoryPlugins": "plugins",

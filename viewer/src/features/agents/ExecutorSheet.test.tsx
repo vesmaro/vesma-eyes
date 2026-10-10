@@ -491,7 +491,9 @@ describe("ExecutorSheet — ME-064 «Detected on the host» inventory dropdowns"
     const text = mount.text();
     expect(text).toContain("Detected on the host");
     expect(text).toContain("No data");
-    expect(text).toContain("after ME-056");
+    // The honest-empty note names WHO sends the list (agents-redesign C2:
+    // the ticket code left the user-facing copy).
+    expect(text).toContain("will send the list later");
     // No dropdown rows are fabricated.
     expect(text).not.toContain("…and");
     await actUnmount(mount.root);
