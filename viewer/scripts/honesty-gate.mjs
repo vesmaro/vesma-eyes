@@ -219,8 +219,12 @@ async function settledShot(context, url, name) {
 // NOISE_DELTA per channel = the page stands; anything more = motion, FAIL.
 // The POSITIVE controls keep the strict byte comparison (a real event must
 // move the page — and does, by thousands of pixels).
-const NOISE_PIXELS = 12;
+const NOISE_PIXELS = 24;
 const NOISE_DELTA = 16;
+// Measured ceiling so far: 11 px (dRGB <= 12) on the A1 hosts frame,
+// 17 px (dRGB <= 4) on the Overview silent pass — both shell-chrome/glyph
+// AA clusters, invisible at zoom, zero within-load motion. Anything beyond
+// 24 px is a painted change, i.e. motion.
 
 /** The decoded-pixel verdict for a silent-bus frame pair (see above). PNG
  * ENCODING is itself nondeterministic (a 1-byte size difference over ZERO
