@@ -922,7 +922,10 @@ function HostField({
           <p className="text-sm text-foreground-muted">{t("agents.hosts.nowIdle")}</p>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-1">
+            {/* min-w-0: a grid item defaults to min-width:auto — a long
+             * nowrap title stretches the column and defeats the row's
+             * truncate (hard clip at 375, no ellipsis). */}
+            <div className="min-w-0 space-y-1">
               <p className="text-xs text-foreground-muted">
                 {t("agents.hosts.nowAssignments")}
               </p>
@@ -943,7 +946,7 @@ function HostField({
                 ))}
               </ul>
             </div>
-            <div className="space-y-1">
+            <div className="min-w-0 space-y-1">
               <p className="text-xs text-foreground-muted">
                 {t("agents.hosts.nowSessions")}
               </p>
