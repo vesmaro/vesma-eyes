@@ -1220,6 +1220,9 @@ export const en: Record<TranslationKey, string> = {
   "agents.hosts.filter.all": "All",
   "agents.hosts.filter.attention": "Need attention",
   "agents.hosts.filter.decision": "Awaiting decision",
+  // Roster-host-binding-cleanup: the archive view chip (aged-out disabled
+  // rows live here, out of the default views).
+  "agents.hosts.filter.archive": "Archive",
   "agents.hosts.filterEmpty": "No hosts match the filter.",
   "agents.hosts.onlineCounter": "{{online}}/{{total}} harnesses online",
   "agents.hosts.connectAction": "Connect a host",

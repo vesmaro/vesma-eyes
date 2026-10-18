@@ -461,3 +461,47 @@ describe("activeAssignmentsForHost — the chip join across members", () => {
     expect(activeAssignmentsForHost([], groups[0])).toEqual([]);
   });
 });
+
+// --- roster-host-binding-cleanup: the archive filter (2026-10-18) ----------
+
+describe("groupExecutorsByHost — the archive filter", () => {
+  const dead = executor({
+    id: "ex-dead",
+    name: "zcode@core-51",
+    host: "core-51",
+    enabled: false,
+    last_seen: ago(24 * 86400),
+    presence: "offline",
+    archived: true,
+  });
+  const alive = executor({ id: "ex-alive", name: "zcode@laptop" });
+
+  it("hides archived members in the default view — a host of only archived members disappears", () => {
+    const groups = groupExecutorsByHost([dead, alive], META, NOW);
+    expect(groups.map((g) => g.host)).toEqual(["laptop"]);
+  });
+
+  it("keeps a mixed host with its LIVE members only by default", () => {
+    const roommate = executor({
+      id: "ex-live2",
+      name: "go@core-51",
+      host: "core-51",
+    });
+    const groups = groupExecutorsByHost([dead, roommate, alive], META, NOW);
+    const core = groups.find((g) => g.host === "core-51")!;
+    expect(core.members.map((m) => m.id)).toEqual(["ex-live2"]);
+  });
+
+  it("includeArchived brings the dead host back (the «Архив» chip view)", () => {
+    const groups = groupExecutorsByHost([dead, alive], META, NOW, {
+      includeArchived: true,
+    });
+    expect(groups.map((g) => g.host)).toEqual(["core-51", "laptop"]);
+  });
+
+  it("absence of the archived flag (pre-cleanup board) never hides a row", () => {
+    const legacy = { ...dead, archived: undefined } as ExecutorItem;
+    const groups = groupExecutorsByHost([legacy], META, NOW);
+    expect(groups.map((g) => g.host)).toEqual(["core-51"]);
+  });
+});

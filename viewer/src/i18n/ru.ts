@@ -1246,6 +1246,9 @@ export const ru = {
   "agents.hosts.filter.all": "Все",
   "agents.hosts.filter.attention": "Требуют внимания",
   "agents.hosts.filter.decision": "Ожидают решения",
+  // Roster-host-binding-cleanup: чип «Архив» — уставшие disabled-строки
+  // живут здесь, из дефолтных видов они убраны.
+  "agents.hosts.filter.archive": "Архив",
   "agents.hosts.filterEmpty": "Под фильтр не попал ни один хост.",
   "agents.hosts.onlineCounter": "{{online}}/{{total}} харнесов онлайн",
   "agents.hosts.connectAction": "Подключить хост",

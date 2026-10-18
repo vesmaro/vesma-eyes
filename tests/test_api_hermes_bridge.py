@@ -649,3 +649,94 @@ class TestCoveragePin:
         # non-stream chat (SSE is future) + no hermes steering.
         assert any("hermes" in g and "SSE" in g
                    for g in body["coverage"]["gaps"])
+
+# ------------------------------------ 7. host binding (roster-host-binding)
+
+class TestHermesHostBinding:
+    """Roster-host-binding-cleanup (2026-10-18): the synthetic «hermes»
+    executor joins the REGISTRY with a real host — HERMES_HOST env (the
+    chart feeds it via Downward API spec.nodeName; honest «cluster»
+    fallback) — so the roster and the kora host projections group its
+    sessions under the REAL node instead of a pseudo-host keyed by the
+    bare executor id. The row is a bridge leg, not a polled agent:
+    approved, never enabled, never a secret, never a presence clock."""
+
+    def _rows(self, app_module) -> dict:
+        return {e["id"]: e for e in app_module.store.list_executors()}
+
+    def test_ingest_binds_env_host(
+            self, app_module, client: TestClient, monkeypatch) -> None:
+        monkeypatch.setenv("HERMES_HOST", "abyss-ai-agent")
+        resp = client.get("/api/kora/hermes/sessions",
+                          headers=_ui_headers(app_module))
+        assert resp.status_code == 200
+        row = self._rows(app_module)["hermes"]
+        assert row["host"] == "abyss-ai-agent"
+        assert row["name"] == "hermes"
+        assert row["harness"] == "hermes"
+        # A bridge leg is NOT a polled agent: approved (no pending-quota /
+        # owner-notification noise), never routing-eligible (enabled=0),
+        # no secret (authenticate_executor skips empty hashes), no
+        # presence clock (never polls — archiving a never-spoken row
+        # would be wrong too).
+        assert row["state"] == "approved"
+        assert row["enabled"] == 0
+        assert row["secret_hash"] == ""
+        assert row["last_seen"] == ""
+        assert row["registered_via"] == "bridge:hermes"
+
+    def test_empty_env_falls_back_to_honest_cluster(
+            self, app_module, client: TestClient, monkeypatch) -> None:
+        monkeypatch.delenv("HERMES_HOST", raising=False)
+        resp = client.get("/api/kora/hermes/sessions",
+                          headers=_ui_headers(app_module))
+        assert resp.status_code == 200
+        assert self._rows(app_module)["hermes"]["host"] == "cluster"
+
+    def test_host_move_refreshes_on_next_ingest(
+            self, app_module, client: TestClient, monkeypatch) -> None:
+        # The env (Downward API nodeName) is the authority: a rescheduled
+        # pod moves the leg, the next live pull re-pins the host.
+        monkeypatch.setenv("HERMES_HOST", "node-a")
+        client.get("/api/kora/hermes/sessions",
+                   headers=_ui_headers(app_module))
+        monkeypatch.setenv("HERMES_HOST", "node-b")
+        client.get("/api/kora/hermes/sessions",
+                   headers=_ui_headers(app_module))
+        assert self._rows(app_module)["hermes"]["host"] == "node-b"
+        # The events journal is SHARED across the suite session: scan it
+        # whole (ASC from id 0), not a small head window.
+        actions = [e["payload"].get("action")
+                   for e in app_module.store.events(limit=1_000_000)
+                   if e["kind"] == "executor.bridge_ensured"
+                   and e["payload"].get("executor_id") == "hermes"]
+        assert "host-moved" in actions
+
+    def test_off_bridge_creates_no_row(
+            self, app_module, client: TestClient, monkeypatch) -> None:
+        # The suite shares ONE store: drop the leg row first so the off
+        # premise («no ingest → no registry row») is testable at all.
+        app_module.store.delete_executor("hermes")
+        monkeypatch.delenv("HERMES_API_KEY", raising=False)
+        client.get("/api/kora/hermes/sessions",
+                   headers=_ui_headers(app_module))
+        assert "hermes" not in self._rows(app_module)
+
+    def test_bridge_row_public_and_never_archived(
+            self, app_module, client: TestClient) -> None:
+        client.get("/api/kora/hermes/sessions",
+                   headers=_ui_headers(app_module))
+        items = {e["id"]: e
+                 for e in client.get("/api/executors").json()["items"]}
+        assert items["hermes"]["archived"] is False
+        assert items["hermes"]["enabled"] is False
+        assert items["hermes"]["status"]["state"] == "disabled"
+
+    def test_bridge_row_never_routing_eligible(
+            self, app_module) -> None:
+        # Routing eligibility is approved AND enabled (Amd 2 §4); the leg
+        # is enabled=0, so even owner defaults pointed at it fall through.
+        routing = app_module._routing_annotation(
+            {"executor_id": "", "specialist": ""}, None,
+            app_module.store.list_executors(), "hermes", "hermes")
+        assert routing["resolved"] != "hermes"

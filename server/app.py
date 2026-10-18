@@ -96,6 +96,8 @@ from .store import (
     TaskNotAssignableError,
     UnknownHarnessError,
     VALID_STATUSES,
+    ARCHIVE_AFTER_DISABLED_S,
+    executor_archived,
     executor_lifecycle_status,
     presence_from_last_seen,
 )
@@ -203,10 +205,21 @@ if UI_WRITE_TOKEN and len(UI_WRITE_TOKEN) < 20:
 #   internal ClusterIP service (board pod lives in kube-agents ns, same
 #   namespace as hermes pod agentsnode-hermes) — verified by the TL live
 #   2026-10-10; overridable for tests and non-standard deployments.
+# - HERMES_HOST — roster-host-binding-cleanup (2026-10-18): the node name
+#   the synthetic «hermes» executor leg is bound to in the roster
+#   projections. Deployment contract (documented, owner verdict
+#   2026-10-18): the chart feeds it via the Downward API
+#   ``fieldRef: spec.nodeName`` — the board pod's OWN node, which is also
+#   where the hermes pod lives; the value follows reschedules, zero
+#   hardcode (a static chart value would drift). Empty/absent falls back
+#   to the honest literal "cluster" — the leg IS in the cluster, and an
+#   honest coarse name beats a fabricated specific one.
 HERMES_API_KEY_ENV = "HERMES_API_KEY"
 HERMES_ENDPOINT_ENV = "HERMES_ENDPOINT"
+HERMES_HOST_ENV = "HERMES_HOST"
 _HERMES_DEFAULT_ENDPOINT = (
     "http://agentsnode-hermes-clusterip.kube-agents.svc.cluster.local:8642")
+_HERMES_DEFAULT_HOST = "cluster"
 
 # The synthetic registry executor id hermes sessions are ingested under
 # (no enrolled executor exists for the cluster hermes; the PK pair
@@ -222,6 +235,12 @@ def _hermes_api_key() -> str:
 def _hermes_endpoint() -> str:
     raw = os.environ.get(HERMES_ENDPOINT_ENV, "").strip()
     return raw or _HERMES_DEFAULT_ENDPOINT
+
+
+def _hermes_host() -> str:
+    """The node name for the synthetic hermes executor leg (Downward API
+    spec.nodeName on the deploy side; honest «cluster» fallback)."""
+    return os.environ.get(HERMES_HOST_ENV, "").strip() or _HERMES_DEFAULT_HOST
 
 write_config_template(DATA_DIR / "memories.yaml")
 
@@ -484,6 +503,7 @@ def _executor_public(e: dict[str, Any]) -> dict[str, Any]:
         "harness_inventory": [i for i in inventory if isinstance(i, dict)],
         "enabled": bool(e.get("enabled")),
         "state": e.get("state", "pending"),
+        "archived": executor_archived(e),
         "last_seen": e.get("last_seen", ""),
         "presence": presence_from_last_seen(e.get("last_seen", "")),
         "status": executor_lifecycle_status(e),
@@ -1834,6 +1854,10 @@ class ExecutorOut(_ApiModel):
     harness_inventory: list[dict[str, Any]] = []  # ME-062: environments[] snapshot (advisory)
     enabled: bool = False
     state: str = "pending"             # pending | approved | revoked
+    # Roster-host-binding-cleanup: aged-out disabled (enabled=0, no report
+    # > meta.archive.after_disabled_days). COMPUTED on read, never stored;
+    # the default roster view hides it, the registry page keeps the row.
+    archived: bool = False
     last_seen: str = ""
     presence: str = "offline"          # online | stale | offline (computed)
     status: LifecycleStatus            # UXE-2: computed lifecycle (07a §4)
@@ -4569,6 +4593,12 @@ async def list_executors() -> ExecutorListOut:
                            "awaiting-first-report", "online", "silent",
                            "offline", "disabled", "revoked"],
             },
+            # Roster-host-binding-cleanup: the archive threshold — an
+            # item with archived=true (enabled=0, no report beyond this)
+            # leaves the DEFAULT roster view. Read, never hardcode.
+            "archive": {
+                "after_disabled_days": int(ARCHIVE_AFTER_DISABLED_S // 86400),
+            },
         },
     }
 
@@ -5532,7 +5562,18 @@ def _ingest_hermes_rows(rows: list[dict[str, Any]]) -> dict[str, int]:
     authority — sessions that left hermes leave the registry slice too
     (the scanner drop_missing semantics). The meta dict from the adapter
     is stripped before the store sees it (the ingest validates the
-    KoraSessionIn field set)."""
+    KoraSessionIn field set).
+
+    Roster-host-binding-cleanup: the same live pull pins the leg's HOST
+    (HERMES_HOST / Downward API spec.nodeName, honest «cluster» fallback)
+    onto the synthetic registry row — the roster and the kora tree group
+    the leg's sessions under the REAL node instead of a pseudo-host keyed
+    by the bare executor id. The row exists only once a live listing
+    actually served (bridge-off boards stay clean); the env is the
+    authority, a host move is refreshed at the next ingest."""
+    store.ensure_bridge_executor(
+        KORA_HERMES_EXECUTOR_ID, host=_hermes_host(),
+        harness=KORA_HERMES_EXECUTOR_ID, name=KORA_HERMES_EXECUTOR_ID)
     payload = []
     for row in rows:
         clean = {k: v for k, v in row.items() if not k.startswith("_")}

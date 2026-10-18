@@ -411,6 +411,15 @@ export interface ExecutorItem {
    * pre-ME-062 boards carry none (Э3) — absence is an answer, not a gap.
    */
   readonly harness_inventory?: readonly HarnessInventoryEnvironment[];
+  /**
+   * Roster-host-binding-cleanup (2026-10-18): the aged-out disabled
+   * verdict — enabled=0 with no report beyond `meta.archive`
+   * .after_disabled_days (server-computed on read, never stored). The
+   * DEFAULT roster view hides the row; the registry page keeps it
+   * (re-enable = un-archive). OPTIONAL: pre-cleanup boards omit it —
+   * absence is «not archived».
+   */
+  readonly archived?: boolean;
 }
 
 /**
