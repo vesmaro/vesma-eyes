@@ -87,6 +87,14 @@ spec:
                  and rolls back the same way — no image rebuild. */}}
             - name: VESMARO_ROOT_APP
               value: {{ default "board" .Values.rootApp | quote }}
+            {{- /* Roster order: the hermes bridge executor reads HERMES_HOST
+                 and binds its registry rows to this host; empty falls back to
+                 "cluster". fieldRef keeps it zero-hardcode — the host row is
+                 whatever node actually runs the board pod. */}}
+            - name: HERMES_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
             {{- if .Values.pollerBootstrap.caFile.enabled }}
             - name: VESMARO_TLS_CA_FILE
               value: /etc/vesmaro/tls/ca.crt
