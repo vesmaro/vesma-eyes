@@ -445,8 +445,13 @@ components:
         2026-10-10) added `hermes`: the board pulls LIVE session listings
         from the hermes API server (ClusterIP svc) under the reserved
         synthetic executor id `hermes`; the frozen KoraSessionOut shape
-        is untouched (the FE tells sources apart by harness). hermes
-        transcripts/chat are later slices (the coverage block says so).
+        is untouched (the FE tells sources apart by harness). T004
+        slice 3 (2026-10-18) serves hermes transcripts + non-stream chat
+        via the bridge routes GET /api/kora/hermes/sessions/{id}/messages
+        and POST /api/kora/hermes/chat (bridge routes stay OUTSIDE this
+        frozen slice 1-3 file — the slice-1 bridge precedent; SSE chat
+        stream and steering remain future work; the coverage block says
+        so).
 
     KoraSessionState:
       type: string
@@ -534,8 +539,9 @@ components:
           description: >-
             Visibility level: `full` = lists + transcripts; `lists-only` =
             metadata + previews (vscode in slice 2: full transcript is a
-            known gap, kind:1); `metadata-only`; `absent` = not scanned
-            (hermes until T004).
+            known gap, kind:1); `metadata-only`; `absent` = not
+            scanned. T004 slice 3: hermes serves `full` (live lists +
+            transcripts + non-stream chat).
         note:
           type: [string, "null"]
           description: Human explanation of the support level (shown on the coverage screen).
@@ -558,8 +564,9 @@ components:
             type: string
           description: >-
             Explicit gap strings (e.g. remote hosts pending the W4
-            loopback-ingress schedule; hermes → T004; vscode full
-            transcripts kind:1). Honest visibility, no silent holes.
+            loopback-ingress schedule; hermes chat SSE stream + session
+            steering; vscode full transcripts kind:1). Honest visibility,
+            no silent holes.
 
     KoraSessionsOut:
       type: object

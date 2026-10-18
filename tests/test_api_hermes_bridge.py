@@ -15,7 +15,8 @@ Layers:
 4. STATUS ROUTE — mode off/ok, registry count; never leaks the key.
 5. REGISTRY MIGRATION — the old CHECK ('zcode','vscode','pi') DB boots,
    keeps rows, accepts harness='hermes', idempotent second boot.
-6. CONTRACT PIN — coverage block declares hermes lists-only.
+6. CONTRACT PIN — coverage block declares hermes full (slice 3 serves
+   hermes transcripts + non-stream chat; the pin rides with reality).
 
 The loopback double (FakeHermes) serves the shapes recorded in the TL
 reconnaissance; the endpoint env points tests at it via
@@ -163,6 +164,12 @@ class _FakeHermesHandler(BaseHTTPRequestHandler):
         body = self.rfile.read(length) if length else b""
         self._record(body)
         fake: FakeHermes = self.server.fake  # type: ignore[attr-defined]
+        if fake.fail_transport:
+            # Same transport-failure semantics as do_GET: the connection
+            # closes with no response — slice 3 pins the chat leg's
+            # honest 503 on this path too.
+            self.close_connection = True
+            return
         if self.path == "/v1/chat/completions":
             if not fake.check_auth(self.headers.get("Authorization") or ""):
                 self._reply(401, {"error": "unauthorized"})
@@ -631,11 +638,14 @@ class TestRegistryMigration:
 # ------------------------------------------------------ 6. contract pin
 
 class TestCoveragePin:
-    def test_coverage_declares_hermes_lists_only(
+    def test_coverage_declares_hermes_full(
             self, app_module, client: TestClient) -> None:
         body = client.get("/api/kora/sessions",
                           headers=_ui_headers(app_module)).json()
         hermes = next(h for h in body["coverage"]["harnesses"]
                       if h["harness"] == "hermes")
-        assert hermes["support"] == "lists-only"
-        assert any("hermes" in g for g in body["coverage"]["gaps"])
+        assert hermes["support"] == "full"
+        # The honest nuance rides the gap list, not a downgraded support:
+        # non-stream chat (SSE is future) + no hermes steering.
+        assert any("hermes" in g and "SSE" in g
+                   for g in body["coverage"]["gaps"])
