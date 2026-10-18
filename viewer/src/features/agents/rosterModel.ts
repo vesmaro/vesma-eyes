@@ -39,17 +39,36 @@ export interface HostGroup {
 }
 
 /**
+ * The roster-archive view options (roster-host-binding-cleanup,
+ * 2026-10-18): by DEFAULT the grouping drops ARCHIVED members — enabled=0
+ * rows with no report beyond the server's archive threshold
+ * (`item.archived`, computed server-side on read) — so a dead machine
+ * leaves the roster without anyone deleting its data. The «Архив» chip
+ * passes `includeArchived` to show them again.
+ */
+export interface GroupExecutorsOptions {
+  /** Include archived members (the «Архив» roster view). Default: no. */
+  readonly includeArchived?: boolean;
+}
+
+/**
  * Group executors by the host they reported. Groups sort by host name;
  * the «never reported» bucket sinks last (least specific). Members sort by
  * name — a deterministic order the tests (and the eye) can rely on.
+ * Archived members are excluded unless `includeArchived` — a host whose
+ * ONLY members are archived honestly disappears from the default view.
  */
 export function groupExecutorsByHost(
   items: readonly ExecutorItem[],
   meta: ExecutorListMeta | undefined,
   now: number,
+  options: GroupExecutorsOptions = {},
 ): HostGroup[] {
+  const members = options.includeArchived
+    ? items
+    : items.filter((item) => item.archived !== true);
   const buckets = new Map<string, ExecutorItem[]>();
-  for (const item of items) {
+  for (const item of members) {
     const bucket = buckets.get(item.host);
     if (bucket) bucket.push(item);
     else buckets.set(item.host, [item]);

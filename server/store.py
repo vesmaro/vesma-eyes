@@ -258,6 +258,37 @@ EXECUTOR_TRANSPORTS = frozenset({"local-poll", "mesh-r4"})
 PRESENCE_ONLINE_S = 120.0
 PRESENCE_STALE_S = 600.0
 
+# Roster-host-binding-cleanup (2026-10-18): an owner-disabled executor whose
+# report clock is older than this leaves the DEFAULT roster view — the row
+# is ARCHIVED. ARCHIVED IS COMPUTED ON READ, NEVER STORED: the registry
+# ``state`` is the OWNER identity lifecycle (pending→approved→revoked,
+# ADR 0009 Amd 2), an age fact must not collapse into it; a stored flag
+# would need a sweeper writer + an un-archive writer — exactly the DB
+# mutation the two-clock discipline forbids. The flag un-computes itself on
+# any fresh heartbeat or re-enable; data is never deleted and
+# GET /api/executors keeps serving the row (the registry page is the
+# un-archive path: flip enabled back on). The threshold rides the list
+# ``meta.archive`` so clients read it, never hardcode it.
+ARCHIVE_AFTER_DISABLED_S = 14 * 86400.0
+
+
+def executor_archived(row: dict[str, Any]) -> bool:
+    """The aged-out disabled verdict: enabled=0 AND a report clock older
+    than ARCHIVE_AFTER_DISABLED_S.
+
+    A NEVER-reported row (``last_seen=''``) is NOT archived — «never
+    spoke» and «went silent» are different facts, and the synthetic bridge
+    legs (the hermes executor) carry an empty clock by design while very
+    much alive through their bridge. An unparsable last_seen fails open
+    (age 0 → not archived): archiving requires POSITIVE proof of age, the
+    same discipline as ``_age_seconds``."""
+    if row.get("enabled") not in (0, False, None):
+        return False
+    last_seen = row.get("last_seen", "")
+    if not last_seen:
+        return False
+    return _age_seconds(last_seen) > ARCHIVE_AFTER_DISABLED_S
+
 
 def executor_lifecycle_status(row: dict[str, Any]) -> dict[str, Any]:
     """Connection lifecycle for the UXE-2 honest-status contract (design
@@ -4427,6 +4458,61 @@ class Store:
     # visibility reads them through the redaction choke-point. The board
     # never writes harness stores — NO-DRIFT (view + relay, never a fork).
     # Audits: kora.sessions.upserted / kora.sessions.purged.
+
+    def ensure_bridge_executor(self, executor_id: str, *, host: str,
+                               harness: str, name: str) -> str:
+        """Roster-host-binding-cleanup (2026-10-18): the synthetic bridge
+        leg joins the executor REGISTRY so the host projections (the
+        roster, the kora tree) group its sessions under a REAL host node
+        instead of a pseudo-host keyed by the bare executor id.
+
+        NOT a registration ceremony: the leg is board-deployed
+        infrastructure (its existence rides the bridge env config), so it
+        deliberately skips the enrollment/harness-dictionary gates a
+        polled agent passes — and it carries NO secret (secret_hash='':
+        ``authenticate_executor`` only compares rows with a non-empty
+        hash, the leg can never authenticate as an executor token).
+        state='approved' dodges the pending quota and owner notifications;
+        enabled=0 keeps it out of routing forever (the leg never polls —
+        an assignment pinned to it would die in the queue).
+
+        Idempotent: 'created' on first sight, 'host-moved' when the env
+        source moved the leg to another node (host is refreshed at every
+        live ingest — the env is the authority), 'unchanged' otherwise.
+        A foreign row with this PK (registered_via mismatch — practically
+        impossible: minted ids carry the 'ex-' prefix) is left untouched:
+        the board never silently rewrites an owner-managed identity.
+        """
+        host = host.strip()[:200]
+        with self._lock, self._conn() as db:
+            row = db.execute(
+                "SELECT host, registered_via FROM executors WHERE id=?",
+                (executor_id,)).fetchone()
+            now = _now()
+            if row is None:
+                db.execute(
+                    """INSERT INTO executors
+                           (id, name, harness, host, transport, capabilities,
+                            version, enabled, state, secret_hash, last_seen,
+                            registered_via, registered_at, updated_at)
+                           VALUES (?,?,?,?,?,'[]','',0,'approved','','',?,?,?)""",
+                    (executor_id, name[:120], harness, host, "local-poll",
+                     f"bridge:{executor_id}", now, now))
+                self._log(db, "executor.bridge_ensured", None, {
+                    "executor_id": executor_id, "host": host,
+                    "action": "created"})
+                return "created"
+            if row["registered_via"] != f"bridge:{executor_id}":
+                return "foreign"
+            if row["host"] != host:
+                db.execute(
+                    "UPDATE executors SET host=?, updated_at=? WHERE id=?",
+                    (host, now, executor_id))
+                self._log(db, "executor.bridge_ensured", None, {
+                    "executor_id": executor_id, "host": host,
+                    "action": "host-moved", "old_host": row["host"]})
+                return "host-moved"
+            return "unchanged"
 
     def upsert_kora_sessions(
             self, executor_id: str, rows: list[dict[str, Any]],

@@ -1025,3 +1025,51 @@ describe("the /agents default landing", () => {
     vi.useRealTimers();
   });
 });
+
+// --- roster-host-binding-cleanup: the archive view (2026-10-18) ------------
+
+describe("the roster archive view", () => {
+  const withArchivedHost = (base: number): ExecutorItem[] => [
+    ...rosterExecutors(base),
+    executor(base, {
+      id: "ex-arch",
+      name: "zcode@core-51",
+      host: "core-51",
+      enabled: false,
+      last_seen: ago(base, 24 * 86400),
+      presence: "offline",
+      status: status("disabled", base, 24 * 86400),
+      archived: true,
+    }),
+  ];
+
+  const chipOf = (container: HTMLElement, label: string): HTMLButtonElement =>
+    [...panel(container).querySelectorAll("button")].find(
+      (button) => button.textContent === label,
+    )!;
+
+  it("archived rows stay out of the default views; the «Архив» chip shows them; the row click lands", async () => {
+    const { root, container } = await mountPage({
+      path: "/agents/hosts/laptop",
+      executors: withArchivedHost,
+    });
+    // DEFAULT: the archived host is not in the roster (5 live hosts only).
+    expect(rows(container).length).toBe(5);
+    expect(panel(container).textContent).not.toContain("core-51");
+    // The «Архив» chip: exactly the archived host's group.
+    await act(async () => {
+      chipOf(container, "Archive").click();
+    });
+    const archiveRows = [...rows(container)].map((row) => row.textContent);
+    expect(archiveRows).toHaveLength(1);
+    expect(archiveRows[0]).toContain("core-51");
+    // Clicking the archived row opens its host route — the field resolves
+    // from the archive view (no honest-not-found false alarm).
+    await act(async () => {
+      rowOf(container, "core-51").click();
+    });
+    expect(document.getElementById("agents-host-title")?.textContent)
+      .toContain("core-51");
+    await actUnmount(root);
+  });
+});

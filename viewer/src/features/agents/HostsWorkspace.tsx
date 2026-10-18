@@ -176,8 +176,16 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
   const visibleGroups = useMemo(() => {
     if (filter === "attention") return groups.filter(hostNeedsAttention);
     if (filter === "decision") return groups.filter(hostAwaitingDecision);
+    if (filter === "archive") {
+      // Roster-host-binding-cleanup (2026-10-18): the «Архив» view —
+      // groups built WITH archived members, filtered to the groups that
+      // actually carry one.
+      return groupExecutorsByHost(items, meta, now, { includeArchived: true })
+        .filter((group) =>
+          group.members.some((member) => member.archived === true));
+    }
     return groups;
-  }, [filter, groups]);
+  }, [filter, groups, items, meta, now]);
 
   const titleOf = (taskId: string): string =>
     (board.data?.tasks ?? []).find((task) => task.id === taskId)?.title || taskId;
@@ -249,10 +257,22 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
   const selected =
     hostId === null
       ? null
-      : (groups.find((group) => hostRouteId(group) === hostId) ?? null);
+      : (groups.find((group) => hostRouteId(group) === hostId) ??
+        // The «Архив» view can open an archived-only host (its members
+        // are hidden from the default projection) — resolve from the
+        // visible groups there so the row click lands, not 404s.
+        (filter === "archive"
+          ? (visibleGroups.find((group) => hostRouteId(group) === hostId) ??
+            null)
+          : null));
   // A settled roster + a URL host that projects to nothing = the honest
   // not-found (a deleted/renamed host deep link); the panel keeps working.
-  const unknownHost = hostId !== null && groups.length > 0 && selected === null;
+  const unknownHost =
+    hostId !== null &&
+    groups.length > 0 &&
+    selected === null &&
+    !(filter === "archive" &&
+      visibleGroups.some((group) => hostRouteId(group) === hostId));
 
   return (
     <section
@@ -382,7 +402,10 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
           aria-label={t("agents.hosts.rosterRegion")}
           className="hidden min-h-0 min-w-0 flex-col overflow-hidden rounded-md border border-myelin bg-well xl:flex xl:rounded-none xl:border-0"
         >
-          {groups.length > 0 ? (
+          {/* The chips stay reachable even when the DEFAULT view is empty
+           * (every host archived): the registry rows, not the default
+           * projection, gate the filter. */}
+          {!executors.isPending && items.length > 0 ? (
             <div className="shrink-0 px-3 pt-3">
               <HostFilterChips filter={filter} onFilter={setFilter} />
             </div>
@@ -411,7 +434,7 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
               />
             )}
             {!executors.isPending &&
-            groups.length > 0 &&
+            items.length > 0 &&
             visibleGroups.length === 0 ? (
               <p className="px-2 py-3 text-xs text-foreground-muted">
                 {t("agents.hosts.filterEmpty")}
@@ -463,7 +486,7 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
           <DialogDescription className="text-xs">
             {t("agents.hosts.sheetHint")}
           </DialogDescription>
-          {groups.length > 0 ? (
+          {!executors.isPending && items.length > 0 ? (
             <div className="shrink-0">
               <HostFilterChips filter={filter} onFilter={setFilter} />
             </div>
@@ -484,7 +507,7 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
               }}
               onEscape={() => setSheetOpen(false)}
             />
-            {groups.length > 0 && visibleGroups.length === 0 ? (
+            {items.length > 0 && visibleGroups.length === 0 ? (
               <p className="px-2 py-3 text-xs text-foreground-muted">
                 {t("agents.hosts.filterEmpty")}
               </p>
@@ -517,12 +540,15 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
 
 // --- the panel filter -----------------------------------------------------------
 
-type HostFilter = "all" | "attention" | "decision";
+type HostFilter = "all" | "attention" | "decision" | "archive";
 
 const FILTER_CHIPS: readonly { id: HostFilter; labelKey: TranslationKey }[] = [
   { id: "all", labelKey: "agents.hosts.filter.all" },
   { id: "attention", labelKey: "agents.hosts.filter.attention" },
   { id: "decision", labelKey: "agents.hosts.filter.decision" },
+  // Roster-host-binding-cleanup: the «Архив» view — aged-out disabled
+  // rows stay out of the default views; this chip shows them.
+  { id: "archive", labelKey: "agents.hosts.filter.archive" },
 ];
 
 function HostFilterChips({
