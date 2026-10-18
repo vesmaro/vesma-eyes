@@ -25,7 +25,14 @@ import {
 import { NOOP_KORA_INTENT_EVENTS } from "./koraIntentEvents";
 import type { KoraCoverage } from "./koraTypes";
 import { buildKoraTree, koraSummary, type KoraQuickFilter } from "./koraWorkspaceModel";
-import { useKoraSessionPages, useKoraTranscriptPages } from "./useKora";
+import {
+  useKoraSessionPages,
+  useKoraTranscriptPages,
+  useKoraHermesStatus,
+  useKoraHermesPull,
+  useKoraHermesTranscriptPages,
+} from "./useKora";
+import { HermesSourceLine } from "./KoraHermesSource";
 import { pageGridClass } from "@/layout/pageGrid";
 import { useKoraEntered } from "@/telemetry/useKoraEntered"; // ME-041: kora.entered
 
@@ -56,13 +63,33 @@ import { useKoraEntered } from "@/telemetry/useKoraEntered"; // ME-041: kora.ent
 
 const PAGE_SIZE = 50;
 
+/** The hermes source option VALUE in the ONE filter select (T004 slice 2).
+ * Mirrors the reserved synthetic executor id — the registry filter branch
+ * keys on harness=hermes, so the value only routes the select. */
+const HERMES_SOURCE = "hermes";
+
 export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null }) {
   const t = useT();
   const sessions = useKoraSessionPages(PAGE_SIZE);
-  const transcript = useKoraTranscriptPages(sessionId ?? undefined, PAGE_SIZE);
+  // T004 slice 3 — ONE transcript leg per source: the canonical
+  // «hermes:<native>» deep link rides the LIVE hermes messages route, the
+  // registry ids ride the zcode transcript route. The id prefix is the
+  // routing fact (the FE only ever links the canonical form), so the
+  // disabled hook stays a no-op instead of a guaranteed-404 call.
+  const hermesDeepLink = sessionId !== null && sessionId.startsWith(`${HERMES_SOURCE}:`);
+  const transcript = useKoraTranscriptPages(
+    sessionId !== null && !hermesDeepLink ? sessionId : undefined,
+    PAGE_SIZE,
+  );
+  const hermesTranscript = useKoraHermesTranscriptPages(
+    hermesDeepLink ? sessionId : undefined,
+    PAGE_SIZE,
+  );
   // kora.entered (taxonomy §1.2 #3): settle = first honest verdict of the
   // page the visit entered (list vs deep-linked transcript).
-  useKoraEntered(sessionId ? !transcript.isPending : !sessions.isPending);
+  useKoraEntered(
+    sessionId ? !(hermesDeepLink ? hermesTranscript.isPending : transcript.isPending) : !sessions.isPending,
+  );
   const executors = useExecutors();
 
   // The Эфир: ONE stream for the workspace; both mounts (the empty-scene
@@ -89,7 +116,8 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
 
   const unauthorized =
     (sessions.error !== null && isKoraUnauthorized(sessions.error)) ||
-    (transcript.error !== null && isKoraUnauthorized(transcript.error));
+    (transcript.error !== null && isKoraUnauthorized(transcript.error)) ||
+    (hermesTranscript.error !== null && isKoraUnauthorized(hermesTranscript.error));
 
   const items = sessions.items;
   const session = useMemo(
@@ -139,6 +167,12 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
         ? context.host
         : null;
 
+  // T004 slice 2 — the hermes source (cluster) as a FIRST-CLASS filter: the
+  // status read is DATA (no live probe, no pulse); the pull runs ONLY on the
+  // explicit refresh button. The context branches read/writes stay local.
+  const hermesStatus = useKoraHermesStatus();
+  const hermesPull = useKoraHermesPull();
+
   const contextSessions = useMemo(() => {
     if (context.kind === "all") return items;
     if (context.kind === "host") {
@@ -146,8 +180,29 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
         .filter((host) => host.host === context.host)
         .flatMap((host) => host.agents.flatMap((agent) => [...agent.sessions]));
     }
+    if (context.kind === "hermes") {
+      return items.filter((item) => item.harness === "hermes");
+    }
     return items.filter((item) => item.executor_id === context.executorId);
   }, [context, items, model]);
+
+  // T004 slice 3 — the chat anchor: the api_server session of the source,
+  // the LAST ACTIVE one (live first, then freshest) — the conversation the
+  // chat continues. No api_server row (pre-pull, or the cluster serves
+  // other sources only) → the chat starts from a clean slate, honestly.
+  const hermesChatSession = useMemo(() => {
+    const api = items.filter(
+      (item) => item.harness === "hermes" && item.project === "hermes:api_server",
+    );
+    if (api.length === 0) return null;
+    const live = api.filter((item) => item.state === "live");
+    const pool = live.length > 0 ? live : api;
+    // last_activity_at is nullable on the frozen row — «fresher» compares
+    // with the empty string as the floor (a missing stamp is the oldest).
+    return pool.reduce((a, b) =>
+      (a.last_activity_at ?? "") >= (b.last_activity_at ?? "") ? a : b,
+    );
+  }, [items]);
 
   const registryEmpty: KoraRegistryEmpty =
     !sessions.isPending && sessions.error === null && items.length === 0
@@ -166,6 +221,12 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
   const treeReady = !sessions.isPending && executorsSettled;
 
   const selectHost = (host: string) => {
+    // The hermes SOURCE option (T004 slice 2) rides the same ONE filter
+    // select: value "hermes" selects the cluster-source context, "" clears.
+    if (host === HERMES_SOURCE) {
+      setContext({ kind: "hermes" });
+      return;
+    }
     if (host === "") {
       setContext({ kind: "all" });
       return;
@@ -183,7 +244,11 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
   const hostOptions = [
     ...model.hosts.map((host) => host.host ?? ""),
     ...model.unknown.map((host) => host.agents[0]?.executorId ?? ""),
-  ].filter((host) => host.length > 0);
+  ]
+    // The reserved synthetic hermes executor is NOT a host — its rows are
+    // the SOURCE option above (T004 slice 2); listing it twice splits the
+    // one source into two filter targets.
+    .filter((host) => host.length > 0 && host !== HERMES_SOURCE);
 
   // ── The 401 gate: the CTA replaces every data-shaped surface (the old
   // hotfix contract, kept verbatim through the rework). ──
@@ -193,7 +258,7 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
         <Header
           summary={null}
           hostOptions={[]}
-          contextHost={null}
+          context={context}
           onSelectHost={() => undefined}
           quickFilter={null}
           onQuickFilter={() => undefined}
@@ -238,7 +303,7 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
         <Header
           summary={null}
           hostOptions={[]}
-          contextHost={null}
+          context={context}
           onSelectHost={() => undefined}
           quickFilter={null}
           onQuickFilter={() => undefined}
@@ -269,7 +334,7 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
         <Header
           summary={items.length > 0 ? summary : null}
           hostOptions={hostOptions}
-          contextHost={contextHost}
+          context={context}
           onSelectHost={selectHost}
           quickFilter={quickFilter}
           onQuickFilter={setQuickFilter}
@@ -305,7 +370,7 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
         <Header
           summary={items.length > 0 ? summary : null}
           hostOptions={hostOptions}
-          contextHost={contextHost}
+          context={context}
           onSelectHost={selectHost}
           quickFilter={quickFilter}
           onQuickFilter={setQuickFilter}
@@ -337,6 +402,12 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
               registryEmpty={registryEmpty}
               coverage={sessions.coverage}
               transcript={transcript}
+              hermesTranscript={hermesDeepLink ? hermesTranscript : null}
+              hermesChat={
+                context.kind === "hermes" && session === null
+                  ? { session: hermesChatSession }
+                  : null
+              }
               intentEvents={NOOP_KORA_INTENT_EVENTS}
               etherRows={etherRows}
               hostFilter={contextHost}
@@ -418,7 +489,28 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
               coverage={sessions.coverage}
               noExecutors={noExecutors}
               sessionsEmpty={registryEmpty !== null}
+              hermesRefresh={
+                context.kind === "hermes"
+                  ? {
+                      onRefresh: () => void hermesPull.mutate(),
+                      pending: hermesPull.isPending,
+                    }
+                  : null
+              }
             />
+
+            {/* T004 slice 2 — the source status line: DATA from
+             * /api/kora/hermes/status (mode ok/off + the human reason).
+             * Shown only in the hermes context; the honest-off branch is a
+             * quiet slot, never an error wall. */}
+            {context.kind === "hermes" ? (
+              <HermesSourceLine
+                status={hermesStatus.data ?? null}
+                isPending={hermesStatus.isPending}
+                isError={hermesStatus.isError}
+                pullError={hermesPull.error}
+              />
+            ) : null}
 
             <CoverageLegend coverage={sessions.coverage} />
           </div>
@@ -435,19 +527,28 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
 function Header({
   summary,
   hostOptions,
-  contextHost,
+  context,
   onSelectHost,
   quickFilter,
   onQuickFilter,
 }: {
   summary: { hosts: number; running: number; day: number } | null;
   hostOptions: readonly string[];
-  contextHost: string | null;
+  /** The page's ONE filter context — the select's value maps it verbatim. */
+  context: KoraBlock2Context;
   onSelectHost: (host: string) => void;
   quickFilter: KoraQuickFilter | null;
   onQuickFilter: (filter: KoraQuickFilter | null) => void;
 }) {
   const t = useT();
+  const contextHost =
+    context.kind === "host"
+      ? context.host
+      : context.kind === "agent"
+        ? context.host
+        : null;
+  const selectValue =
+    contextHost ?? (context.kind === "hermes" ? HERMES_SOURCE : "");
 
   return (
     <header className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -479,11 +580,12 @@ function Header({
         </label>
         <select
           id="kora-host-filter"
-          value={contextHost ?? ""}
+          value={selectValue}
           onChange={(event) => onSelectHost(event.target.value)}
           className="h-12 md:h-7 rounded-md border border-border-subtle bg-background px-2 text-xs text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
         >
           <option value="">{t("kora.filter.all")}</option>
+          <option value={HERMES_SOURCE}>{t("kora.hermes.filterOption")}</option>
           {hostOptions.map((host) => (
             <option key={host} value={host}>
               {host}

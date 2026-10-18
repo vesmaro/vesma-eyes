@@ -167,7 +167,7 @@ class TestListContract:
         schema = kora_spec["components"]["schemas"]["KoraSessionOut"]
         assert set(schema["required"]) <= set(item.keys()), (
             "required KoraSessionOut fields missing")
-        assert item["harness"] in ("zcode", "vscode", "pi")
+        assert item["harness"] in ("zcode", "vscode", "pi", "hermes")
         assert item["state"] in ("live", "idle", "dead")
         assert item["origin"] in ("relay", "local")
         assert isinstance(item["steerable"], bool)

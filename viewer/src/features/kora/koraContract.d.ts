@@ -145,10 +145,10 @@ export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
     /**
-     * @description Harness families wired in phase 1. hermes is a KNOWN GAP until T004 (absent from the enum by design; the coverage block says so loudly).
+     * @description Harness families wired in phase 1. T004 slice 1 (hermes-bridge, 2026-10-10) added `hermes`: the board pulls LIVE session listings from the hermes API server (ClusterIP svc) under the reserved synthetic executor id `hermes`; the frozen KoraSessionOut shape is untouched (the FE tells sources apart by harness). hermes transcripts/chat are later slices (the coverage block says so).
      * @enum {string}
      */
-    readonly KoraHarness: "zcode" | "vscode" | "pi";
+    readonly KoraHarness: "zcode" | "vscode" | "pi" | "hermes";
     /**
      * @description Session liveness (presence ≠ liveness — executor presence is a separate concept). `dead` = the process was marked dead (recovery semantics): the SESSION stays in the registry and remains visible; relay sessions survive executor restarts.
      * @enum {string}

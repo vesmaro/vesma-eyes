@@ -40,6 +40,7 @@ from fastapi.responses import (
 from pydantic import BaseModel, ConfigDict, Field
 
 from . import mnemos_client
+from . import hermes_client
 from .kora import redaction as kora_redaction
 from .memory_registry import ServerRegistry, resolve_token, write_config_template
 from .profiles import build_profile
@@ -185,6 +186,42 @@ if UI_WRITE_TOKEN and len(UI_WRITE_TOKEN) < 20:
     logging.getLogger("vesmaro.auth").warning(
         "VESMARO_UI_TOKEN is shorter than 20 chars — owner-login strength "
         "rests on token entropy; consider a longer secret")
+
+# Hermes bridge (T004 slice 1). Two knobs, read LIVE (module-level helper
+# functions, not import-time constants — the deploy channel may add them
+# without a pod restart in tests, and mock-based tests monkeypatch cleanly).
+# - HERMES_API_KEY — the hermes API server bearer (hermes pod env
+#   API_SERVER_KEY; arrives on the board pod via the deploy channel like
+#   the vesmaro-* tokens do). Empty/absent = the whole hermes leg is
+#   honestly OFF: the routes answer with an explanatory body (never a
+#   bare 500), nothing calls the cluster.
+#   Naming: deliberately NOT VESMARO_-prefixed — the VESMARO_* namespace
+#   belongs to the board's own config surface (pinned by the Helm chart /
+#   conftest sweeps); this key is a foreign system's credential passed
+#   through, like the harness-side API_SERVER_KEY it mirrors.
+# - HERMES_ENDPOINT — the hermes API base URL. Default is the cluster-
+#   internal ClusterIP service (board pod lives in kube-agents ns, same
+#   namespace as hermes pod agentsnode-hermes) — verified by the TL live
+#   2026-10-10; overridable for tests and non-standard deployments.
+HERMES_API_KEY_ENV = "HERMES_API_KEY"
+HERMES_ENDPOINT_ENV = "HERMES_ENDPOINT"
+_HERMES_DEFAULT_ENDPOINT = (
+    "http://agentsnode-hermes-clusterip.kube-agents.svc.cluster.local:8642")
+
+# The synthetic registry executor id hermes sessions are ingested under
+# (no enrolled executor exists for the cluster hermes; the PK pair
+# (executor_id, native_id) carries the NATIVE hermes session id). The
+# 'ex-' prefix is reserved for minted executor ids — no collision.
+KORA_HERMES_EXECUTOR_ID = "hermes"
+
+
+def _hermes_api_key() -> str:
+    return os.environ.get(HERMES_API_KEY_ENV, "").strip()
+
+
+def _hermes_endpoint() -> str:
+    raw = os.environ.get(HERMES_ENDPOINT_ENV, "").strip()
+    return raw or _HERMES_DEFAULT_ENDPOINT
 
 write_config_template(DATA_DIR / "memories.yaml")
 
@@ -1020,6 +1057,13 @@ _DEVICE_READ_ROUTES: tuple[tuple[str, str], ...] = (
     # (_kora_transcript_denied) stops every device BEFORE any content
     # leaves the board; invalid mnd_ tokens still 401 in the middleware.
     ("GET", "/api/kora/sessions/*/transcript"),
+    # Kora hermes-bridge transcript (T004 slice 3): the same discipline as
+    # the zcode transcript row above — a VALID device reaches the
+    # handler's explanatory wall (403 KoraErrorOut code=metadata_only,
+    # hermes transcripts are transcripts) instead of the bare middleware
+    # 403; the handler guard stops every device BEFORE any content or an
+    # outbound hermes call happens.
+    ("GET", "/api/kora/hermes/sessions/*/messages"),
 )
 
 # The old control scope, decomposed into per-device granules (§A.7). Each
@@ -4925,7 +4969,7 @@ async def delete_executor(executor_id: str, request: Request) -> OkOut:
 # metadata, the mnd_ wall guards TRANSCRIPTS, slice 2). Serving goes
 # through server/kora/redaction.py — the single choke-point.
 
-_KORA_HARNESSES = ("zcode", "vscode", "pi")
+_KORA_HARNESSES = ("zcode", "vscode", "pi", "hermes")
 _KORA_STATES = ("live", "idle", "dead")
 _KORA_SCAN_RATE_LIMIT = 12          # scans per window per client
 _KORA_SCAN_RATE_WINDOW = 60.0       # seconds — a full zcode scan is ~1-2s;
@@ -4986,7 +5030,7 @@ class KoraSessionIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     native_id: str = Field(min_length=1, max_length=512)
-    harness: Literal["zcode", "vscode", "pi"]
+    harness: Literal["zcode", "vscode", "pi", "hermes"]
     project: str = Field(default="", max_length=300)
     cwd: str = Field(default="", max_length=1000)
     state: Literal["live", "idle", "dead"] = "idle"
@@ -5053,12 +5097,16 @@ class KoraSessionsOut(_ApiModel):
 
 
 def _kora_coverage() -> KoraCoverageOut:
-    """The honest per-harness visibility statement (slice-2 reality):
-    zcode lists + read-only transcripts land via the scanner/serving
-    path; vscode/pi lists landed in slice 2 (vscode full transcript is
-    the known kind:1 gap; pi transcripts are not served yet); hermes is
-    a known gap until T004. Computed per request — no caching, the board
-    sees single-digit rps."""
+    """The honest per-harness visibility statement (T004 slice-3
+    reality): hermes lists + previews land via the live bridge pull
+    (the ClusterIP API server; the board pod must reach the svc —
+    verified from the pod after deploy), transcripts + non-stream chat
+    via the bridge routes (slice 3; SSE chat stream and session
+    steering stay future work — the gap line says so). zcode lists +
+    read-only transcripts land via the scanner/serving path; vscode/pi
+    lists landed in slice 2 (vscode full transcript is the known kind:1
+    gap; pi transcripts are not served yet). Computed per request — no
+    caching, the board sees single-digit rps."""
     harnesses = [
         KoraCoverageHarnessOut(
             harness="zcode", support="full",
@@ -5073,15 +5121,19 @@ def _kora_coverage() -> KoraCoverageOut:
             note="Списки с превью (read-only сканер JSONL); "
                  "транскрипты pi пока не отдаются"),
         KoraCoverageHarnessOut(
-            harness="hermes", support="absent",
-            note="Не сканируется до T004 (известный пробел)"),
+            harness="hermes", support="full",
+            note="Живые списки, транскрипты и чат (не-потоковый) через "
+                 "мост (ClusterIP API-сервер, pull по запросу "
+                 "владельца); стиринга у hermes-сессий нет, SSE-стрим "
+                 "чата — будущий срез"),
     ]
     gaps = [
         "Полные транскрипты vscode — известный пробел среза 2 (kind:1)",
         "Транскрипты pi не отдаются (срез 2 даёт только списки)",
         "Транскрипты сессий удалённых хостов ждут расписания "
         "W4 loopback-ingress",
-        "hermes-сессии не видны до T004",
+        "Чат hermes отвечает не-потоково (SSE-стрим — будущий срез); "
+        "стиринг hermes-сессий мостом не предусмотрен",
     ]
     return KoraCoverageOut(harnesses=harnesses, gaps=gaps)
 
@@ -5406,6 +5458,399 @@ async def get_kora_session_transcript(
         next_after_seq=result.next_after_seq,
         has_more=result.has_more,
     )
+
+
+# ---------------------------------------------------- kora hermes bridge
+# T004 slice 1 (owner directive 2026-10-10 «найти hermes в кластере,
+# подключить, чат с агентами, видны реальные сессии»): the SERVER leg.
+# The board pulls the LIVE hermes session listing (ClusterIP svc) and
+# lands it in the SAME Kora registry the host scanners feed — the board
+# gets ONE session leg; the FE tells sources apart by harness='hermes'
+# without a second viewer implementation. Transcripts/chat for hermes are
+# following slices (the coverage block says so honestly); the chat client
+# (fetch_messages/chat) ships in server/hermes_client.py already, unused
+# by routes in slice 1.
+#
+# Access discipline mirrors the Kora slice-1 decision: the bridge is an
+# owners' metadata surface — ui class (owner session) only. The mnd_ wall
+# (metadata-only devices) opens the LISTING of the registry, not a live
+# per-harness pull; a live pull also writes the registry (a mutation),
+# which devices must not trigger. Honest-off: no HERMES_API_KEY → 503
+# with an explanation; hermes unreachable/401 → 502/503 with a human
+# reason (typed HermesError mapping). Secrets: the key never enters a
+# log line, an exception detail, an SSE frame or an audit payload.
+#
+# Rate limit (the Kora precedent, ME-030): one live pull = one hermes
+# listing roundtrip (up to ~27 sessions live-verified) + a registry
+# upsert; a client hammering the route would turn the board into a
+# hermes-listing loop. Same budget shape as the scanner ingest (12/60s
+# per client).
+
+_KORA_HERMES_RATE_LIMIT = 12        # live pulls per window per client
+_KORA_HERMES_RATE_WINDOW = 60.0
+_kora_hermes_limiter = RateLimiter(
+    limit=_KORA_HERMES_RATE_LIMIT, window=_KORA_HERMES_RATE_WINDOW)
+
+
+class HermesBridgeStatusOut(_ApiModel):
+    """The honest leg status: config/deploy facts, never secrets."""
+    configured: bool
+    endpoint: str          # the base URL is config, not a secret
+    mode: str              # off | unreachable | refused | ok
+    registry_sessions: int  # hermes rows currently in the Kora registry
+    detail: str | None = None
+
+
+def _hermes_error_response(exc: hermes_client.HermesError) -> JSONResponse:
+    """Typed HermesError → the frozen KoraErrorOut envelope with a human
+    reason. 503 = not configured / transport failure; 502 = hermes
+    answered but refused/failed (auth, rate-limit, bad status)."""
+    if isinstance(exc, hermes_client.HermesNotConfiguredError):
+        return _kora_error(
+            503, "hermes_off",
+            "Мост hermes выключен: HERMES_API_KEY не задан на борде. "
+            "Ключ передаётся через deploy-канал (env пода борда), после "
+            "чего leg включится без изменения кода.")
+    if isinstance(exc, hermes_client.HermesSessionNotFoundError):
+        return _kora_error(
+            404, "session_not_found",
+            f"Сессия {exc} не найдена в hermes.")
+    if isinstance(exc, hermes_client.HermesUnavailableError):
+        refused = "refused the API key" in str(exc)
+        return _kora_error(
+            502 if refused else 503, "hermes_unavailable",
+            f"hermes недоступен или отказал: {exc}")
+    return _kora_error(
+        500, "hermes_bridge_error",
+        "Внутренняя ошибка моста hermes (типизированное исключение "
+        "без деталей наружу).")
+
+
+def _ingest_hermes_rows(rows: list[dict[str, Any]]) -> dict[str, int]:
+    """Live hermes listing → the Kora registry upsert under the reserved
+    synthetic executor id. drop_missing=True: the live listing IS the
+    authority — sessions that left hermes leave the registry slice too
+    (the scanner drop_missing semantics). The meta dict from the adapter
+    is stripped before the store sees it (the ingest validates the
+    KoraSessionIn field set)."""
+    payload = []
+    for row in rows:
+        clean = {k: v for k, v in row.items() if not k.startswith("_")}
+        payload.append(clean)
+    result = store.upsert_kora_sessions(
+        KORA_HERMES_EXECUTOR_ID, payload, drop_missing=True)
+    at = _now_iso()
+    for new in result["new_rows"]:
+        _broadcast({
+            "event": "session.listed",
+            "session_id": f"{new['executor_id']}:{new['native_id']}",
+            "executor_id": new["executor_id"],
+            "native_id": new["native_id"],
+            "harness": new["harness"],
+            "project": new.get("project"),
+            "at": at,
+        })
+    return result
+
+
+@app.get("/api/kora/hermes/status")
+async def kora_hermes_status(request: Request) -> Response:
+    """Bridge leg status (owner-ui read). Honest mode reporting: 'off'
+    (no API key), 'ok' (last live listing roundtrip is not attempted
+    HERE — this route is cheap and deterministic), registry row count.
+    No Authorization leg exists for devices by design (see module doc):
+    a device asking gets the same owner-session wall as any write."""
+    _guard_kora_read(request)
+    # Devices ARE allowed the registry LIST (metadata-only tier) but a
+    # hermes STATUS page is board-ops detail — keep it ui-only beyond
+    # the device gate for symmetry with the live pull below.
+    if getattr(request.state, "device", None) is not None:
+        return _kora_error(
+            403, "metadata_only",
+            "Статус моста hermes — операционная метадата борда и "
+            "тригиерит живые проверки: доступно только владельцу "
+            "(owner-сессия).")
+    key = _hermes_api_key()
+    if not key:
+        body = HermesBridgeStatusOut(
+            configured=False, endpoint=_hermes_endpoint(), mode="off",
+            registry_sessions=0,
+            detail="HERMES_API_KEY не задан — мост честно выключен")
+        return JSONResponse(status_code=200, content=body.model_dump())
+    # Configured: report the registry slice + endpoint, mode 'ok'.
+    # A live hermes probe is deliberately NOT part of status (rate
+    # budget): the listing route is the probe.
+    rows = store.kora_sessions(harness="hermes")
+    body = HermesBridgeStatusOut(
+        configured=True, endpoint=_hermes_endpoint(), mode="ok",
+        registry_sessions=len(rows))
+    return JSONResponse(status_code=200, content=body.model_dump())
+
+
+@app.get("/api/kora/hermes/sessions")
+async def kora_hermes_live_sessions(request: Request,
+                                    limit: int | None = Query(
+                                        None, ge=1, le=2000),
+                                    offset: int = Query(0, ge=0)) -> Response:
+    """ONE live pull: hermes listing → registry upsert → the SAME frozen
+    KoraSessionsOut shape the scanner feed serves (the unified session
+    leg; the FE needs no second viewer). ui-class only (owner session —
+    header or cookie): a device triggering a live OUTBOUND pull + a
+    registry mutation is out of its metadata tier. Errors: 503 off /
+    unreachable (typed reason), 502 hermes refused — the KoraErrorOut
+    envelope, never a bare 500."""
+    _guard_kora_read(request)
+    if getattr(request.state, "device", None) is not None:
+        return _kora_error(
+            403, "metadata_only",
+            "Пул живых сессий hermes — живой запрос в кластер и запись в "
+            "реестр: только владелец (owner-сессия). Список уже "
+            "подтянутых сессий доступен устройствам через GET "
+            "/api/kora/sessions (метаданные).")
+    key = _hermes_api_key()
+    if not key:
+        return _hermes_error_response(
+            hermes_client.HermesNotConfiguredError())
+    client_ip = request.client.host if request.client else "unknown"
+    if not _kora_hermes_limiter.acquire(client_ip):
+        raise HTTPException(
+            429, "hermes bridge rate limit exceeded "
+                 f"({_KORA_HERMES_RATE_LIMIT} per "
+                 f"{_KORA_HERMES_RATE_WINDOW:.0f}s per client)")
+    try:
+        rows = await hermes_client.fetch_sessions(
+            _hermes_endpoint(), key)
+    except hermes_client.HermesError as exc:
+        return _hermes_error_response(exc)
+    ingest = _ingest_hermes_rows(rows)
+    # Serve through the ONE leg: the registry read (redaction choke-point
+    # inside _kora_session_public), same shape/filters as the scanner feed.
+    listing = store.kora_sessions(harness="hermes", limit=limit,
+                                  offset=offset)
+    items = [_kora_session_public(r) for r in listing]
+    return KoraSessionsOut(
+        ok=True,
+        count=len(items),
+        items=items,
+        coverage=_kora_coverage(),
+        meta={
+            "generated_at": _now_iso(),
+            "source": "hermes-live",
+            "upserted": str(ingest["upserted"]),
+            "dropped": str(ingest["dropped"]),
+        },
+    )
+
+
+# ----------------------------- kora hermes bridge: transcript + chat (T004 s3)
+# The bridge's transcript and chat legs on the ALREADY-shipped client
+# (server/hermes_client.py, slice 1 — fetch_messages/chat were verified
+# live in the TL recon but served by no route until here).
+#
+# GET /api/kora/hermes/sessions/{id}/messages serves the live hermes
+# transcript through the FROZEN Kora transcript form (seq cursor paging,
+# the zcode route discipline); hermes display_kind/reasoning/tool_calls
+# ride through as additive optional fields (the contracts were agreed
+# with the FE slice). POST /api/kora/hermes/chat is a NON-STREAM
+# OpenAI-compatible call — the hermes SSE stream is noted in the client
+# docstring as future work and is deliberately NOT used here.
+#
+# Access (slice-1 bridge decision + the Kora transcript rule): both legs
+# are ui-only. GET rides _kora_transcript_denied — the SAME explanatory
+# mnd_ wall as the zcode transcript route (the _DEVICE_READ_ROUTES row
+# above exists so a valid device gets the 403 BODY, not a bare
+# middleware 403). POST is an outbound ACTION spending hermes tokens:
+# _guard_kora_read + the device wall; a chat POST is in no device table,
+# so the middleware stops valid devices before the handler — the
+# in-handler wall is defense in depth.
+#
+# Honest serving: seq is the 1-based position in THIS live read (hermes
+# has no stable store cursor — the frozen «seq is never renumbered»
+# guarantee belongs to the store-backed zcode path; a hermes transcript
+# is a live proxy view: pages are consistent within one read, hermes may
+# append between reads). Every content byte passes the redaction
+# choke-point. Every successful read emits the frozen
+# session.transcript_viewed audit (the Kora precedent). Chat answers
+# carry the honest source marker «hermes · real-time» — the board never
+# presents hermes output as local.
+#
+# Rate budgets: GET shares the slice-1 live-pull limiter (12/60s per
+# client — same cost class: one hermes roundtrip per call). Chat gets
+# its OWN 12/60s budget: a generation runs up to 60s and must not be
+# starved by (nor starve) the cheap pulls.
+
+_HERMES_CHAT_SOURCE = "hermes · real-time"
+_HERMES_CHAT_DEFAULT_MODEL = "hermes-4.5-405b"   # live-verified 2026-10-10
+
+_KORA_HERMES_CHAT_RATE_LIMIT = 12     # chat calls per window per client
+_KORA_HERMES_CHAT_RATE_WINDOW = 60.0
+_kora_hermes_chat_limiter = RateLimiter(
+    limit=_KORA_HERMES_CHAT_RATE_LIMIT, window=_KORA_HERMES_CHAT_RATE_WINDOW)
+
+
+class HermesTranscriptItemOut(KoraTranscriptItemOut):
+    """The frozen Kora transcript row + the hermes passthrough fields
+    (additive, optional): display_kind maps to ``kind`` (the base
+    contract), reasoning/tool_calls ride as hermes sent them."""
+    reasoning: str | None = None
+    tool_calls: list[dict[str, Any]] | None = None
+
+
+class HermesTranscriptOut(_ApiModel):
+    session_id: str
+    items: list[HermesTranscriptItemOut]
+    next_after_seq: int
+    has_more: bool
+
+
+class HermesChatMessageIn(BaseModel):
+    """One chat turn. ``extra='forbid'``: tool-result turns are NOT
+    accepted (the v1 chat leg is a conversation with the agent, not a
+    tool replay — hermes answers an unmatched tool turn with a 4xx we
+    would have to explain away)."""
+    model_config = ConfigDict(extra="forbid")
+
+    role: Literal["system", "user", "assistant"]
+    content: str = Field(min_length=1, max_length=8000)
+
+
+class HermesChatIn(BaseModel):
+    """Chat request. Caps are entry validation (the body cap discipline),
+    not a rate guard: ≤20 turns × ≤8000 chars per turn. ``model``
+    omitted → the live-verified default (one named constant; if hermes
+    retires the model it answers honestly and the route maps it to 502)."""
+    model_config = ConfigDict(extra="forbid")
+
+    messages: list[HermesChatMessageIn] = Field(min_length=1, max_length=20)
+    model: str = Field(default="", max_length=120)
+
+
+class HermesChatOut(_ApiModel):
+    ok: bool
+    source: str                  # «hermes · real-time» — honest provenance
+    model: str                   # the model the request rode to hermes with
+    completion: dict[str, Any]   # the hermes answer VERBATIM
+
+
+@app.get("/api/kora/hermes/sessions/{session_id}/messages")
+async def kora_hermes_session_messages(
+        session_id: str, request: Request,
+        after_seq: int = Query(0, ge=0),
+        limit: int = Query(50, ge=1, le=200)):
+    # No return annotation on purpose (the zcode-transcript-route
+    # convention): the handler answers EITHER the transcript page OR a
+    # KoraErrorOut JSONResponse — a union annotation would make FastAPI
+    # build an impossible response model.
+    """Live hermes transcript through the frozen Kora transcript form
+    (seq cursor: items with seq > after_seq, next_after_seq / has_more).
+    ui-only (the explanatory mnd_ wall), redaction choke-point on every
+    content byte, session.transcript_viewed audit on every successful
+    read — the zcode-transcript discipline. The handle is the native
+    hermes id or the listing's canonical 'hermes:<native_id>'. NO
+    registry re-validation by design: hermes IS the authority for a live
+    bridge (the registry is a derived cache) — unknown ids answer
+    hermes' own 404 as code session_not_found."""
+    denied = _kora_transcript_denied(request)
+    if denied is not None:
+        return denied
+    native_id = session_id
+    if ":" in session_id:
+        prefix, _, tail = session_id.partition(":")
+        if prefix != KORA_HERMES_EXECUTOR_ID or not tail:
+            return _kora_error(
+                404, "session_not_found",
+                f"Сессия {session_id} не найдена в hermes.")
+        native_id = tail
+    key = _hermes_api_key()
+    if not key:
+        return _hermes_error_response(
+            hermes_client.HermesNotConfiguredError())
+    client_ip = request.client.host if request.client else "unknown"
+    if not _kora_hermes_limiter.acquire(client_ip):
+        raise HTTPException(
+            429, "hermes bridge rate limit exceeded "
+                 f"({_KORA_HERMES_RATE_LIMIT} per "
+                 f"{_KORA_HERMES_RATE_WINDOW:.0f}s per client)")
+    try:
+        rows = await hermes_client.fetch_messages(
+            _hermes_endpoint(), key, native_id)
+    except hermes_client.HermesError as exc:
+        return _hermes_error_response(exc)
+    items: list[HermesTranscriptItemOut] = []
+    for idx, raw in enumerate(rows, start=1):
+        row = hermes_client.message_row(raw)
+        content, applied = kora_redaction.redact_body(row["content"])
+        reasoning = raw.get("reasoning", raw.get("reasoning_content"))
+        tool_calls = raw.get("tool_calls")
+        items.append(HermesTranscriptItemOut(
+            seq=idx,
+            role=row["role"],
+            kind=row["kind"],
+            ts=(row["ts"] or None),
+            content=content,
+            redaction_applied=applied,
+            reasoning=(None if reasoning is None else str(reasoning)),
+            tool_calls=(tool_calls if isinstance(tool_calls, list) else None),
+        ))
+    page = [it for it in items if it.seq > after_seq][:limit]
+    next_after_seq = (page[-1].seq if page else after_seq)
+    has_more = bool(page) and next_after_seq < len(items)
+    # The frozen audit record (the Kora precedent): WHO/WHEN/WHAT-opened
+    # into the existing board audit trail; content never rides along.
+    store.log_kora_audit("session.transcript_viewed", {
+        "device_class": "ui",
+        "network_path": _kora_network_path(request),
+        "session_host": "",     # a cluster svc has no executor host
+        "session_id": session_id,
+        "executor_id": KORA_HERMES_EXECUTOR_ID,
+        "native_id": native_id,
+    })
+    return HermesTranscriptOut(
+        session_id=session_id,
+        items=page,
+        next_after_seq=next_after_seq,
+        has_more=has_more,
+    )
+
+
+@app.post("/api/kora/hermes/chat")
+async def kora_hermes_chat(body: HermesChatIn, request: Request) -> Response:
+    """ONE non-stream chat call to hermes (OpenAI-compatible). ui-only;
+    rate budget 12/60s per client (the Kora precedent number, its OWN
+    limiter — a generation is a different cost class from the cheap
+    pulls). Errors: 503 hermes_off / transport failure, 502 hermes
+    refused — the frozen KoraErrorOut envelope, never a bare 500. The
+    answer rides VERBATIM under ``completion`` with the honest source
+    marker «hermes · real-time»."""
+    _guard_kora_read(request)
+    if getattr(request.state, "device", None) is not None:
+        return _kora_error(
+            403, "metadata_only",
+            "Чат hermes — исходящее действие от лица владельца (списывает "
+            "токены hermes): доступно только владельцу (owner-сессия). "
+            "Устройствам доступен список сессий (метаданные).")
+    key = _hermes_api_key()
+    if not key:
+        return _hermes_error_response(
+            hermes_client.HermesNotConfiguredError())
+    client_ip = request.client.host if request.client else "unknown"
+    if not _kora_hermes_chat_limiter.acquire(client_ip):
+        raise HTTPException(
+            429, "hermes chat rate limit exceeded "
+                 f"({_KORA_HERMES_CHAT_RATE_LIMIT} per "
+                 f"{_KORA_HERMES_CHAT_RATE_WINDOW:.0f}s per client)")
+    model = body.model.strip() or _HERMES_CHAT_DEFAULT_MODEL
+    try:
+        completion = await hermes_client.chat(
+            _hermes_endpoint(), key, model=model,
+            messages=[{"role": m.role, "content": m.content}
+                      for m in body.messages])
+    except hermes_client.HermesError as exc:
+        return _hermes_error_response(exc)
+    out = HermesChatOut(
+        ok=True, source=_HERMES_CHAT_SOURCE, model=model,
+        completion=completion)
+    return JSONResponse(status_code=200, content=out.model_dump())
 
 
 # ----------------------------------------- harness dictionary (wave 3C)

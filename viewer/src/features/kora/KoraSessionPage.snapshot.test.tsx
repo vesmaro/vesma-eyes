@@ -73,12 +73,17 @@ function renderKoraSessionPage(sessionId: string, lang: Lang = "ru"): string {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  // T004 slice 2: hermes rows enter the registry ONLY on a live pull — the
+  // snapshot pins the pre-pull truth the adapter's listSessions serves.
+  const prePull = KORA_FIXTURE_SESSIONS.filter(
+    (session) => session.harness !== "hermes",
+  );
   queryClient.setQueryData(koraKeys.sessionsPaged(PAGE_SIZE), {
     pages: [
       {
         ok: true as const,
-        count: KORA_FIXTURE_SESSIONS.length,
-        items: KORA_FIXTURE_SESSIONS,
+        count: prePull.length,
+        items: prePull,
         coverage: KORA_FIXTURE_COVERAGE,
         meta: { generated_at: "2026-09-24T11:45:00Z" },
       },
