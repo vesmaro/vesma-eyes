@@ -93,3 +93,70 @@ export interface HermesBridgeStatus {
   registry_sessions: number;
   detail: string | null;
 }
+
+/**
+ * HermesMessage — one hermes transcript row (T004 slice 3, ui-only). The
+ * frozen KoraTranscriptItemOut base (seq/role/kind/ts/content/redaction —
+ * the display_kind maps into `kind` server-side) + the hermes passthrough
+ * fields (additive, optional), mirrored from HermesTranscriptItemOut in
+ * server/app.py. Like the status type: hand-typed on the seam, the routes
+ * live OUTSIDE the frozen week-0 artifact by design.
+ */
+export interface HermesMessage {
+  seq: number;
+  role: string;
+  kind: string | null;
+  ts: string | null;
+  content: string;
+  redaction_applied: boolean;
+  reasoning?: string | null;
+  tool_calls?: readonly Record<string, unknown>[] | null;
+}
+
+/**
+ * HermesMessagesPage — GET /api/kora/hermes/sessions/{id}/messages: the
+ * frozen transcript form (seq cursor: items with seq > after_seq) over the
+ * LIVE hermes transcript. `session_id` echoes the requested handle.
+ */
+export interface HermesMessagesPage {
+  session_id: string;
+  items: HermesMessage[];
+  next_after_seq: number;
+  has_more: boolean;
+}
+
+/** Transcript cursor params for the hermes messages route. */
+export interface HermesMessagesParams {
+  after_seq?: number;
+  limit?: number;
+}
+
+/**
+ * HermesChatTurn — one POST /api/kora/hermes/chat turn. The server forbids
+ * role "tool" (extra='forbid', Literal system|user|assistant) and caps the
+ * body at 20 turns x 8000 chars — the UI composes within those caps.
+ */
+export interface HermesChatTurn {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
+
+export interface HermesChatRequest {
+  messages: HermesChatTurn[];
+  /** Omitted → the server's live-verified default (hermes-4.5-405b). */
+  model?: string;
+}
+
+/**
+ * HermesChatReply — the chat answer. `completion` rides VERBATIM (the
+ * OpenAI-compatible hermes body); the FE extracts choices[0].message.content
+ * defensively and names the unknown-format case honestly instead of faking.
+ * `source` («hermes · real-time») is the honest provenance marker — rendered
+ * as DATA on the reply, never as decor.
+ */
+export interface HermesChatReply {
+  ok: boolean;
+  source: string;
+  model: string;
+  completion: unknown;
+}

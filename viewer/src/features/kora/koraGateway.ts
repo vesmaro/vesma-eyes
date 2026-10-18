@@ -18,6 +18,10 @@
 import { isApiError } from "@/lib/errors";
 import type {
   HermesBridgeStatus,
+  HermesChatRequest,
+  HermesChatReply,
+  HermesMessagesPage,
+  HermesMessagesParams,
   KoraErrorCode,
   KoraMessageAccepted,
   KoraSession,
@@ -138,4 +142,28 @@ export interface KoraGateway {
    * only trigger.
    */
   pullHermesSessions(signal?: AbortSignal): Promise<KoraSessionsList>;
+
+  /**
+   * T004 slice 3 — GET /api/kora/hermes/sessions/{id}/messages: the LIVE
+   * hermes transcript through the frozen transcript form (seq cursor:
+   * after_seq / limit → items, next_after_seq, has_more). The handle is
+   * the canonical «hermes:<native_id>» (a bare native id works too; a
+   * foreign prefix answers 404). Shares the live-pull limiter (12/60s).
+   */
+  hermesMessages(
+    sessionId: string,
+    params?: HermesMessagesParams,
+    signal?: AbortSignal,
+  ): Promise<HermesMessagesPage>;
+
+  /**
+   * T004 slice 3 — POST /api/kora/hermes/chat: ONE non-stream chat call
+   * (ui-only; its OWN 12/60s budget — a generation is a different cost
+   * class from the cheap pulls). The reply carries the honest source
+   * marker «hermes · real-time» and the completion VERBATIM.
+   */
+  hermesChat(
+    body: HermesChatRequest,
+    signal?: AbortSignal,
+  ): Promise<HermesChatReply>;
 }

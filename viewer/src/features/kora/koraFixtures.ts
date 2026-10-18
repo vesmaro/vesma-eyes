@@ -1,4 +1,5 @@
 import type { components } from "./koraContract";
+import type { HermesMessage } from "./koraTypes";
 
 type SpecSession = components["schemas"]["KoraSessionOut"];
 type SpecTranscriptItem = components["schemas"]["KoraTranscriptItemOut"];
@@ -43,15 +44,15 @@ export const KORA_FIXTURE_COVERAGE: components["schemas"]["KoraCoverageOut"] = {
     },
     {
       harness: "hermes",
-      support: "lists-only",
-      note: "Списки из кластера hermes через мост борда; транскрипты и чат hermes — в следующих обновлениях",
+      support: "full",
+      note: "Живые списки, транскрипты и чат (не-потоковый) через мост (ClusterIP API-сервер, pull по запросу владельца); стиринга у hermes-сессий нет, SSE-стрим чата — будущий срез",
     },
   ],
   gaps: [
     "Полные транскрипты vscode — известный пробел среза 2 (kind:1)",
     "Транскрипты pi не отдаются (срез 2 даёт только списки)",
     "Транскрипты сессий удалённых хостов ждут расписания W4 loopback-ingress",
-    "Транскрипты и чат hermes — в следующих обновлениях (мост уже даёт списки)",
+    "Чат hermes отвечает не-потоково (SSE-стрим — будущий срез); стиринг hermes-сессий мостом не предусмотрен",
   ],
 };
 
@@ -116,6 +117,238 @@ export const KORA_FIXTURE_HERMES_STATUS = {
   registry_sessions: KORA_FIXTURE_HERMES_SESSIONS.length,
   detail: null,
 };
+
+/**
+ * The hermes transcript rows (T004 slice 3 — GET /api/kora/hermes/sessions/
+ * {id}/messages mock). TYPED BY THE UI-ONLY SEAM TYPE: the frozen
+ * KoraTranscriptItemOut base + the hermes passthrough (reasoning, tool_calls;
+ * display_kind rides the base `kind`). Served regardless of the registry
+ * pull state — the server proxies hermes LIVE for messages (hermes IS the
+ * authority; the registry is a derived cache) — but a pre-pull session page
+ * never renders (the registry-derived session row is absent), so the gap
+ * stays honest.
+ *
+ * The api-server transcript is a LONG session (63 rows): the seq-cursor
+ * paging story («Показать ещё» over has_more) needs a full first page at
+ * the default limit 50. Content mirrors the TL recon headers: the Hysteria
+ * proxy for Telegram in the cluster, the Mnemos memory federation checks,
+ * the deploy-train «Confirm with OK» protocol. The telegram session stays
+ * small (6 rows — a short honest transcript, no load-more).
+ */
+
+/** Fixed UTC minute grid — deterministic RFC 3339 stamps, no Date.now(). */
+function hermesTs(minute: number): string {
+  return new Date(Date.UTC(2026, 8, 24, 8, minute, 0)).toISOString();
+}
+
+/** One OpenAI-shaped tool call (the shape hermes passes through verbatim). */
+function hermesToolCall(
+  name: string,
+  args: string,
+): Record<string, unknown> {
+  return {
+    id: `call_${name}`,
+    type: "function",
+    function: { name, arguments: args },
+  };
+}
+
+type HermesFixtureMessage = Omit<HermesMessage, "seq" | "ts">;
+
+const KORA_HERMES_API_SERVER_OPENERS: readonly HermesFixtureMessage[] = [
+  {
+    role: "user",
+    kind: null,
+    content:
+      "Разведай Hysteria прокси для Telegram в кластере: туннель живой, порт слушает?",
+    redaction_applied: false,
+  },
+  {
+    role: "assistant",
+    kind: null,
+    content:
+      "Да: agentsnode-hermes держит hysteria на 443/udp, Telegram-нога ходит через него. Конфиг перечитал после правок — план Apply без ошибок.",
+    redaction_applied: false,
+  },
+  {
+    role: "user",
+    kind: null,
+    content: "Покажи статус туннеля и последние строки журнала.",
+    redaction_applied: false,
+  },
+  {
+    role: "assistant",
+    kind: "tool_call",
+    content: "Снимаю статус сервиса и хвост журнала одним проходом.",
+    redaction_applied: false,
+    reasoning:
+      "Статус и журнал отвечают на разные вопросы (живость + свежие ошибки) — два вызова подряд, потом сводка.",
+    tool_calls: [
+      hermesToolCall("hysteria_status", '{"node":"agentsnode-hermes"}'),
+      hermesToolCall("journal_tail", '{"unit":"hysteria","lines":40}'),
+    ],
+  },
+  {
+    role: "tool",
+    kind: "tool_result",
+    content:
+      "hysteria_status → up (uptime 4d 2h); journal_tail → 40 строк, ошибок нет",
+    redaction_applied: false,
+  },
+  {
+    role: "assistant",
+    kind: null,
+    content:
+      "Туннель зелёный четвёртые сутки, в журнале ошибок нет — Telegram-трафик ходит стабильно.",
+    redaction_applied: false,
+  },
+  {
+    role: "user",
+    kind: null,
+    content:
+      "Проверить работу федерации памяти Mnemos: пинг соседей и хвост репликации.",
+    redaction_applied: false,
+  },
+  {
+    role: "assistant",
+    kind: "tool_call",
+    content: "Федерация — это связность плюс отставание репликации; снимаю оба показателя.",
+    redaction_applied: false,
+    reasoning:
+      "Пинг показывает связность, lag репликации — целостность; оба нужны для вердикта «порядок».",
+    tool_calls: [
+      hermesToolCall("mesh_ping", '{"peers":3}'),
+      hermesToolCall("replication_status", '{"lag":true}'),
+    ],
+  },
+  {
+    role: "tool",
+    kind: "tool_result",
+    content: "mesh_ping → 3/3 peers отвечают; replication_status → lag 0s (полная)",
+    redaction_applied: false,
+  },
+  {
+    role: "assistant",
+    kind: null,
+    content:
+      "Федерация в порядке: 3 из 3 соседей отвечают, отставание репликации нулевое.",
+    redaction_applied: false,
+  },
+  {
+    role: "user",
+    kind: null,
+    content: "В журнале мелькнул ключ доступа — покажи хвост ещё раз.",
+    redaction_applied: false,
+  },
+  {
+    role: "tool",
+    kind: "tool_result",
+    content: "journal_tail → …auth token: [REDACTED] upstream=443",
+    redaction_applied: true,
+  },
+  {
+    role: "assistant",
+    kind: null,
+    content:
+      "Хвост отдал 40 строк; секрет борд маскирует до отдачи — в транскрипте его нет, стоит честная пометка о редактуре.",
+    redaction_applied: false,
+  },
+];
+
+const KORA_HERMES_API_SERVER_CHECKINS: readonly HermesFixtureMessage[] =
+  Array.from({ length: 25 }, (_, i) => {
+    const node = `mesh-${i + 1}`;
+    return [
+      {
+        role: "user",
+        kind: null,
+        content: `Проверить узел ${node}: пинг и хвост журнала, ответь коротко.`,
+        redaction_applied: false,
+      },
+      {
+        role: "assistant",
+        kind: null,
+        content: `${node}: зелёный — пинг 12 мс, туннель слушает, ошибок в журнале нет.`,
+        redaction_applied: false,
+      },
+    ] satisfies HermesFixtureMessage[];
+  }).flat();
+
+const KORA_HERMES_TELEGRAM_MESSAGES: readonly HermesFixtureMessage[] = [
+  {
+    role: "user",
+    kind: null,
+    content: "Сводка по деплой-поезду vesma: что ждёт подтверждения?",
+    redaction_applied: false,
+  },
+  {
+    role: "assistant",
+    kind: null,
+    content:
+      "Релиз 1.72.0 опубликован; ждёт Confirm with OK — тег и release-object на месте, осталось закрыть приёмку.",
+    redaction_applied: false,
+  },
+  {
+    role: "user",
+    kind: null,
+    content: "Confirm with OK to resume the deploy train… — это что?",
+    redaction_applied: false,
+  },
+  {
+    role: "assistant",
+    kind: null,
+    content:
+      "Это протокольная строка поезда: без явного OK следующие шаги не стартуют — защита от гонок с daily main.",
+    redaction_applied: false,
+  },
+  {
+    role: "user",
+    kind: null,
+    content: "Дай OK на паузу поезда до вечера.",
+    redaction_applied: false,
+  },
+  {
+    role: "assistant",
+    kind: null,
+    content:
+      "Принято: поезд на паузе до 18:00 UTC; реестр сессий обновится следующим pull.",
+    redaction_applied: false,
+  },
+];
+
+/** The hermes transcripts the messages route serves (hermes IS the
+ * authority — served regardless of the registry pull, like the server). */
+export const KORA_FIXTURE_HERMES_MESSAGES: Record<
+  string,
+  readonly HermesMessage[]
+> = {
+  "hermes:api-server-main": [
+    ...KORA_HERMES_API_SERVER_OPENERS,
+    ...KORA_HERMES_API_SERVER_CHECKINS,
+  ].map((message, index) => ({
+    ...message,
+    seq: index + 1,
+    ts: hermesTs(2 + index * 3),
+  })),
+  "hermes:telegram-bridge": KORA_HERMES_TELEGRAM_MESSAGES.map(
+    (message, index) => ({
+      ...message,
+      seq: index + 1,
+      ts: hermesTs(5 + index * 4),
+    }),
+  ),
+};
+
+/** The canned mock chat reply: deterministic, references the last user
+ * turn (a mock, honestly labelled «hermes · real-time» by the adapter). */
+export function koraFixtureHermesChatReply(lastUser: string): string {
+  const topic = lastUser.length > 0 ? lastUser.slice(0, 80) : "пустой вопрос";
+  return (
+    `Принял: «${topic}». По кластеру: туннель Hysteria слушает 443, ` +
+    "федерация Mnemos отвечает 3/3, отставания репликации нет. " +
+    "Что проверяем дальше?"
+  );
+}
 
 export const KORA_FIXTURE_SESSIONS: readonly SpecSession[] = [
   {

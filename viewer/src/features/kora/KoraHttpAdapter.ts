@@ -34,6 +34,10 @@
 import type { KoraGateway, KoraHermesErrorCode } from "./koraGateway";
 import type {
   HermesBridgeStatus,
+  HermesChatRequest,
+  HermesChatReply,
+  HermesMessagesPage,
+  HermesMessagesParams,
   KoraMessageAccepted,
   KoraSession,
   KoraSessionCreated,
@@ -64,6 +68,13 @@ interface KoraWireError {
   ok?: boolean;
   code?: string;
   message?: string;
+  /**
+   * FastAPI's own envelope ({detail}) — the bare HTTPException verdicts
+   * (429 rate limiters, validation) speak it. Extracted as a human-message
+   * fallback so a limiter hit reads as the server wrote it, never as a
+   * bare «Kora … failed: 429».
+   */
+  detail?: unknown;
 }
 
 export class KoraHttpAdapter implements KoraGateway {
@@ -201,6 +212,43 @@ export class KoraHttpAdapter implements KoraGateway {
   }
 
   /**
+   * T004 slice 3 — GET /api/kora/hermes/sessions/{id}/messages: the live
+   * hermes transcript through the frozen seq-cursor form. The handle rides
+   * the path (encodeURIComponent keeps the canonical «hermes:» prefix
+   * intact as %3A; the server decodes it back). Shares the live-pull
+   * limiter — 12/60s per client, so the UI pages it by USER action only.
+   */
+  hermesMessages(
+    sessionId: string,
+    params?: HermesMessagesParams,
+    signal?: AbortSignal,
+  ): Promise<HermesMessagesPage> {
+    const query: Record<string, number | string> = {};
+    if (params?.after_seq !== undefined) query.after_seq = params.after_seq;
+    if (params?.limit !== undefined) query.limit = params.limit;
+    return this.request<HermesMessagesPage>(
+      `/kora/hermes/sessions/${encodeURIComponent(sessionId)}/messages`,
+      { query, signal },
+    );
+  }
+
+  /**
+   * T004 slice 3 — POST /api/kora/hermes/chat: ONE non-stream generation
+   * (up to 60s server-side). ui bearer + the headerless replay like every
+   * mutation; its OWN 12/60s budget. Errors ride the frozen envelope with
+   * the server's human reason (hermes_off / hermes_unavailable) — the bare
+   * 429 limiter verdict surfaces through the `detail` extraction below.
+   */
+  hermesChat(body: HermesChatRequest, signal?: AbortSignal): Promise<HermesChatReply> {
+    return this.request<HermesChatReply>("/kora/hermes/chat", {
+      method: "POST",
+      body,
+      auth: true,
+      signal,
+    });
+  }
+
+  /**
    * One JSON request: timeout composition, the class auth discipline
    * (bare reads; ui-bearer on mutations with a ONE headerless replay on
    * 401), and non-2xx → ApiError carrying the Kora error code (the frozen
@@ -248,7 +296,14 @@ export class KoraHttpAdapter implements KoraGateway {
     }
     if (!resp.ok) {
       const errBody = (wire ?? {}) as KoraWireError;
-      const message = errBody.message ?? `Kora ${path} failed: ${resp.status}`;
+      // Message priority: the frozen envelope's message → FastAPI's bare
+      // `detail` string (the limiter/HTTPException voice) → the status
+      // verdict. Never a swallowed body.
+      const detail =
+        typeof errBody.detail === "string" && errBody.detail.length > 0
+          ? errBody.detail
+          : undefined;
+      const message = errBody.message ?? detail ?? `Kora ${path} failed: ${resp.status}`;
       // The hermes-bridge codes ride the same KoraErrorOut envelope but sit
       // OUTSIDE the frozen KoraErrorCode enum (ui-only routes) — widened at
       // the extraction point only (koraErrorCode), never inside the frozen

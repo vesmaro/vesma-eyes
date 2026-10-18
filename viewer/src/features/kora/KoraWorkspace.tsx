@@ -25,7 +25,13 @@ import {
 import { NOOP_KORA_INTENT_EVENTS } from "./koraIntentEvents";
 import type { KoraCoverage } from "./koraTypes";
 import { buildKoraTree, koraSummary, type KoraQuickFilter } from "./koraWorkspaceModel";
-import { useKoraSessionPages, useKoraTranscriptPages, useKoraHermesStatus, useKoraHermesPull } from "./useKora";
+import {
+  useKoraSessionPages,
+  useKoraTranscriptPages,
+  useKoraHermesStatus,
+  useKoraHermesPull,
+  useKoraHermesTranscriptPages,
+} from "./useKora";
 import { HermesSourceLine } from "./KoraHermesSource";
 import { pageGridClass } from "@/layout/pageGrid";
 import { useKoraEntered } from "@/telemetry/useKoraEntered"; // ME-041: kora.entered
@@ -65,10 +71,25 @@ const HERMES_SOURCE = "hermes";
 export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null }) {
   const t = useT();
   const sessions = useKoraSessionPages(PAGE_SIZE);
-  const transcript = useKoraTranscriptPages(sessionId ?? undefined, PAGE_SIZE);
+  // T004 slice 3 — ONE transcript leg per source: the canonical
+  // «hermes:<native>» deep link rides the LIVE hermes messages route, the
+  // registry ids ride the zcode transcript route. The id prefix is the
+  // routing fact (the FE only ever links the canonical form), so the
+  // disabled hook stays a no-op instead of a guaranteed-404 call.
+  const hermesDeepLink = sessionId !== null && sessionId.startsWith(`${HERMES_SOURCE}:`);
+  const transcript = useKoraTranscriptPages(
+    sessionId !== null && !hermesDeepLink ? sessionId : undefined,
+    PAGE_SIZE,
+  );
+  const hermesTranscript = useKoraHermesTranscriptPages(
+    hermesDeepLink ? sessionId : undefined,
+    PAGE_SIZE,
+  );
   // kora.entered (taxonomy §1.2 #3): settle = first honest verdict of the
   // page the visit entered (list vs deep-linked transcript).
-  useKoraEntered(sessionId ? !transcript.isPending : !sessions.isPending);
+  useKoraEntered(
+    sessionId ? !(hermesDeepLink ? hermesTranscript.isPending : transcript.isPending) : !sessions.isPending,
+  );
   const executors = useExecutors();
 
   // The Эфир: ONE stream for the workspace; both mounts (the empty-scene
@@ -95,7 +116,8 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
 
   const unauthorized =
     (sessions.error !== null && isKoraUnauthorized(sessions.error)) ||
-    (transcript.error !== null && isKoraUnauthorized(transcript.error));
+    (transcript.error !== null && isKoraUnauthorized(transcript.error)) ||
+    (hermesTranscript.error !== null && isKoraUnauthorized(hermesTranscript.error));
 
   const items = sessions.items;
   const session = useMemo(
@@ -163,6 +185,24 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
     }
     return items.filter((item) => item.executor_id === context.executorId);
   }, [context, items, model]);
+
+  // T004 slice 3 — the chat anchor: the api_server session of the source,
+  // the LAST ACTIVE one (live first, then freshest) — the conversation the
+  // chat continues. No api_server row (pre-pull, or the cluster serves
+  // other sources only) → the chat starts from a clean slate, honestly.
+  const hermesChatSession = useMemo(() => {
+    const api = items.filter(
+      (item) => item.harness === "hermes" && item.project === "hermes:api_server",
+    );
+    if (api.length === 0) return null;
+    const live = api.filter((item) => item.state === "live");
+    const pool = live.length > 0 ? live : api;
+    // last_activity_at is nullable on the frozen row — «fresher» compares
+    // with the empty string as the floor (a missing stamp is the oldest).
+    return pool.reduce((a, b) =>
+      (a.last_activity_at ?? "") >= (b.last_activity_at ?? "") ? a : b,
+    );
+  }, [items]);
 
   const registryEmpty: KoraRegistryEmpty =
     !sessions.isPending && sessions.error === null && items.length === 0
@@ -362,6 +402,12 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
               registryEmpty={registryEmpty}
               coverage={sessions.coverage}
               transcript={transcript}
+              hermesTranscript={hermesDeepLink ? hermesTranscript : null}
+              hermesChat={
+                context.kind === "hermes" && session === null
+                  ? { session: hermesChatSession }
+                  : null
+              }
               intentEvents={NOOP_KORA_INTENT_EVENTS}
               etherRows={etherRows}
               hostFilter={contextHost}

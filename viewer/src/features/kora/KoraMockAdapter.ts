@@ -15,14 +15,21 @@
 import { KoraError, type KoraGateway } from "./koraGateway";
 import { ApiError } from "@/lib/errors";
 import {
+  KORA_FIXTURE_HERMES_MESSAGES,
   KORA_FIXTURE_HERMES_SESSIONS,
   KORA_FIXTURE_HERMES_STATUS,
   KORA_FIXTURE_SESSIONS,
   KORA_FIXTURE_TRANSCRIPT,
   KORA_FIXTURE_COVERAGE,
+  koraFixtureHermesChatReply,
 } from "./koraFixtures";
 import type {
   HermesBridgeStatus,
+  HermesChatReply,
+  HermesChatRequest,
+  HermesChatTurn,
+  HermesMessagesPage,
+  HermesMessagesParams,
   KoraMessageAccepted,
   KoraSession,
   KoraSessionCreate,
@@ -83,11 +90,24 @@ export class KoraMockAdapter implements KoraGateway {
    */
   private readonly hermesBridgeOff: boolean;
   /**
+   * `?hermesChat=limited` (mock builds): the chat POST answers the bare
+   * limiter verdict (429, FastAPI {detail} voice) so the limiter frame is
+   * exercisable without hammering a real budget — the same demo-knob
+   * pattern as `hermesBridge=off`.
+   */
+  private readonly hermesChatLimited: boolean;
+  /**
    * The hermes registry slice: populated by pullHermesSessions (the pull IS
    * the ingest) so the mock models the server's pull→upsert→serve flow —
    * hermes sessions do NOT appear in the registry until a pull happens.
    */
   private hermesIngested: boolean;
+  /**
+   * The chat body the LAST hermesChat call rode with (a test seam for the
+   * history-composition contract: tool roles filtered, ≤20 turns, the new
+   * user text last). Null until the first chat call.
+   */
+  lastChatMessages: HermesChatTurn[] | null = null;
 
   constructor(options: KoraMockAdapterOptions = {}) {
     this.latency = options.latency ?? true;
@@ -109,6 +129,9 @@ export class KoraMockAdapter implements KoraGateway {
     this.hermesBridgeOff =
       typeof location !== "undefined" &&
       new URLSearchParams(location.search).get("hermesBridge") === "off";
+    this.hermesChatLimited =
+      typeof location !== "undefined" &&
+      new URLSearchParams(location.search).get("hermesChat") === "limited";
     this.hermesIngested = false;
   }
 
@@ -401,6 +424,95 @@ export class KoraMockAdapter implements KoraGateway {
           source: "hermes-live",
           upserted: "2",
           dropped: "0",
+        },
+      };
+    });
+  }
+
+  hermesMessages(
+    sessionId: string,
+    params?: HermesMessagesParams,
+  ): Promise<HermesMessagesPage> {
+    return this.delay().then(() => {
+      this.requireUnlocked();
+      if (this.hermesBridgeOff) {
+        // The honest OFF (the server's typed verdict, mirrored): 503
+        // hermes_off with the human reason.
+        throw new KoraError(
+          "hermes_off",
+          "Мост hermes выключен: HERMES_API_KEY не задан на борде. " +
+            "Ключ передаётся через deploy-канал (env пода борда), после " +
+            "чего leg включится без изменения кода.",
+        );
+      }
+      const rows = KORA_FIXTURE_HERMES_MESSAGES[sessionId];
+      if (rows === undefined) {
+        // The server does NOT re-validate the registry (hermes IS the
+        // authority) — an unknown id answers hermes' own 404 verbatim.
+        throw new KoraMockError(
+          "session_not_found",
+          `Сессия ${sessionId} не найдена в hermes.`,
+        );
+      }
+      // The frozen seq-cursor form: items with seq > after_seq, one page,
+      // next_after_seq / has_more — the live proxy view (the server's
+      // «hermes may append between reads» honesty rides unchanged).
+      const afterSeq = Math.max(params?.after_seq ?? 0, 0);
+      const limit = Math.min(Math.max(params?.limit ?? 50, 1), 200);
+      const page = rows.filter((row) => row.seq > afterSeq).slice(0, limit);
+      const nextAfterSeq = page.length > 0 ? page[page.length - 1].seq : afterSeq;
+      return {
+        session_id: sessionId,
+        items: [...page],
+        next_after_seq: nextAfterSeq,
+        has_more: page.length > 0 && nextAfterSeq < rows.length,
+      };
+    });
+  }
+
+  hermesChat(body: HermesChatRequest): Promise<HermesChatReply> {
+    return this.delay().then(() => {
+      this.requireUnlocked();
+      if (this.hermesBridgeOff) {
+        throw new KoraError(
+          "hermes_off",
+          "Мост hermes выключен: HERMES_API_KEY не задан на борде. " +
+            "Ключ передаётся через deploy-канал (env пода борда), после " +
+            "чего leg включится без изменения кода.",
+        );
+      }
+      if (this.hermesChatLimited) {
+        // `?hermesChat=limited` demo knob: the bare limiter verdict the
+        // real server raises (HTTPException 429 — FastAPI's {detail}
+        // envelope; the adapter's detail extraction surfaces the string).
+        throw new ApiError(
+          429,
+          "hermes chat rate limit exceeded (12 per 60s per client)",
+        );
+      }
+      // The last user turn drives the canned reply (deterministic).
+      const lastUser = [...body.messages]
+        .reverse()
+        .find((turn) => turn.role === "user")?.content;
+      this.lastChatMessages = [...body.messages];
+      return {
+        ok: true,
+        source: "hermes · real-time",
+        model: body.model !== undefined && body.model !== "" ? body.model : "hermes-4.5-405b",
+        completion: {
+          id: "chatcmpl-mock-hermes",
+          object: "chat.completion",
+          model: body.model !== undefined && body.model !== "" ? body.model : "hermes-4.5-405b",
+          choices: [
+            {
+              index: 0,
+              finish_reason: "stop",
+              message: {
+                role: "assistant",
+                content: koraFixtureHermesChatReply(lastUser ?? ""),
+              },
+            },
+          ],
         },
       };
     });

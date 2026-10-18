@@ -18,7 +18,10 @@ import type { KoraTranscriptPages } from "./useKora";
  * match count over the loaded lines.
  */
 
-const ROLE_TONE: Record<string, string> = {
+/** The role chip tone vocabulary (tokens only) — shared with the hermes
+ * transcript renderer (T004 slice 3), the SAME grammar for both sources. */
+// eslint-disable-next-line react-refresh/only-export-components -- the tone map and the highlight are the transcript's shared GRAMMAR, not a second module; splitting them would orphan the one renderer they belong to (the pre-existing KoraResizeHandle warning is the same trade-off).
+export const ROLE_TONE: Record<string, string> = {
   user: "bg-iris/15 text-iris-bright",
   assistant: "bg-elevated text-foreground-secondary",
   system: "bg-warning/15 text-warning",
@@ -158,7 +161,7 @@ function TranscriptLine({
 }
 
 /** Search highlight — an iris tint over the match, colour never the only signal. */
-function Highlighted({ content, needle }: { content: string; needle: string }) {
+export function Highlighted({ content, needle }: { content: string; needle: string }) {
   if (needle === "") return <>{content}</>;
   const lower = content.toLowerCase();
   const parts: React.ReactNode[] = [];

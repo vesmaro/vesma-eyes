@@ -1,9 +1,13 @@
-import { AlertTriangle } from "lucide-react";
+import { useEffect, useMemo, useRef } from "react";
+import { AlertTriangle, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
-import type { HermesBridgeStatus } from "./koraTypes";
+import { Highlighted, ROLE_TONE } from "./KoraTranscript";
+import { formatTranscriptTime } from "./koraWorkspaceModel";
+import type { KoraHermesTranscriptPages } from "./useKora";
+import type { HermesBridgeStatus, HermesMessage } from "./koraTypes";
 
 /**
  * The hermes source status line (T004 slice 2, hermes-bridge FE): ONE
@@ -98,28 +102,180 @@ export function HermesSourceLine({
 }
 
 /**
- * The hermes transcript placeholder (slice-3 gap): a hermes session clicked
- * → the center honestly names the gap instead of an empty click (the
- * composer sendLater precedent). NOT a disabled row — the session data
- * (metadata, preview) is real and stays readable in Блок 2.
+ * The hermes transcript scroll (T004 slice 3): the LIVE cluster transcript
+ * through the SAME visual grammar as the zcode scroll — Lora ≤72ch, mono
+ * tnum times, the redaction mark, load-more over the contract's has_more —
+ * plus the hermes passthrough fields rendered honestly: the display kind
+ * suffix (kind ≠ role), the collapsed reasoning block, the tool-call names.
+ * READ-ONLY: the composer is a zcode-session affordance — the hermes chat
+ * lives in the source view (no session selected).
  */
-export function HermesTranscriptPlaceholder() {
+export function HermesTranscript({
+  sessionId,
+  pages,
+  follow,
+  query,
+}: {
+  sessionId: string;
+  pages: KoraHermesTranscriptPages;
+  follow: boolean;
+  query: string;
+}) {
   const t = useT();
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const needle = query.trim().toLowerCase();
+  const items = useMemo(() => {
+    if (needle === "") return pages.items;
+    return pages.items.filter((item) => item.content.toLowerCase().includes(needle));
+  }, [pages.items, needle]);
+
+  // Follow-tail: scroll pinning only, the same canon as the zcode scroll.
+  useEffect(() => {
+    if (follow && needle === "") {
+      bottomRef.current?.scrollIntoView({ block: "end" });
+    }
+  }, [follow, needle, pages.items.length, pages.isLoadingMore]);
+
+  if (pages.isPending) {
+    return (
+      <div
+        role="status"
+        aria-label={t("kora.transcript.loading")}
+        className="max-w-scroll space-y-3 font-scroll"
+      >
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-4/5" />
+        <Skeleton className="h-4 w-3/5" />
+      </div>
+    );
+  }
+
+  if (pages.error !== null) {
+    return (
+      <p role="alert" className="max-w-scroll text-sm text-error">
+        {t("kora.transcript.loadFailed")} {pages.error.message}
+      </p>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <p className="max-w-scroll font-scroll text-sm text-foreground-secondary">
+        {needle !== ""
+          ? t("kora.workzone.matches", { n: 0 })
+          : t("kora.transcript.emptyMessage")}
+      </p>
+    );
+  }
+
   return (
-    <section
-      aria-label={t("kora.hermes.transcriptRegion")}
-      className="flex min-h-0 min-w-0 flex-1 flex-col items-start justify-center gap-3 px-6 py-5"
-    >
-      <p className="max-w-lg text-sm text-foreground-secondary">
-        {t("kora.hermes.transcriptPlaceholder")}
-      </p>
-      <p className="max-w-lg text-xs text-foreground-muted">
-        {t("kora.hermes.transcriptPlaceholderNote")}
-      </p>
-      <Button variant="ghost" size="sm" disabled className="text-foreground-muted">
-        <span aria-hidden>···</span>
-        {t("kora.hermes.transcriptLaterChip")}
-      </Button>
-    </section>
+    <div className="min-w-0">
+      <ol className="max-w-scroll space-y-4 font-scroll">
+        {items.map((item) => (
+          <HermesTranscriptLine
+            key={`${sessionId}:${item.seq}`}
+            item={item}
+            needle={needle}
+          />
+        ))}
+      </ol>
+      {pages.hasMore ? (
+        <div className="mt-4 flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pages.isLoadingMore}
+            onClick={() => void pages.loadMore()}
+          >
+            <ChevronDown aria-hidden className="size-4" />
+            {t("kora.list.loadMore")}
+          </Button>
+        </div>
+      ) : null}
+      <div ref={bottomRef} />
+    </div>
   );
 }
+
+/** Tool-call names the FE can honestly read out of the verbatim dicts; a
+ * call without a parsable name degrades to the bare count (never invented). */
+function hermesToolNames(
+  calls: readonly Record<string, unknown>[] | null,
+): string[] {
+  if (calls === null) return [];
+  return calls
+    .map((call) => {
+      const fn = call["function"];
+      if (typeof fn !== "object" || fn === null) return "";
+      const name = (fn as Record<string, unknown>)["name"];
+      return typeof name === "string" ? name : "";
+    })
+    .filter((name) => name !== "");
+}
+
+function HermesTranscriptLine({
+  item,
+  needle,
+}: {
+  item: HermesMessage;
+  needle: string;
+}) {
+  const t = useT();
+  const toolNames = hermesToolNames(item.tool_calls ?? null);
+  const kindLabel = item.kind !== null && item.kind !== item.role ? item.kind : null;
+  return (
+    <li className="flex gap-3 text-sm leading-relaxed">
+      <span className="w-11 shrink-0 pt-0.5 text-right font-mono text-xs tabular-nums text-foreground-muted">
+        {formatTranscriptTime(item.ts) || t("kora.transcript.line")}
+      </span>
+      <div className="min-w-0">
+        <p className="whitespace-pre-wrap break-words">
+          <span
+            aria-hidden
+            className={cn(
+              "mr-2 inline-block h-fit rounded-sm px-1.5 py-0.5 font-ui text-xs font-medium",
+              ROLE_TONE[item.role] ?? ROLE_TONE.system,
+            )}
+          >
+            {item.role}
+          </span>
+          {kindLabel !== null ? (
+            <span className="mr-2 inline-block h-fit rounded-sm border border-border-subtle px-1.5 py-0.5 font-mono text-xs text-foreground-muted">
+              {kindLabel}
+            </span>
+          ) : null}
+          <Highlighted content={item.content} needle={needle} />
+        </p>
+        {item.reasoning ? (
+          <details className="mt-1 text-xs text-foreground-muted">
+            <summary className="cursor-pointer select-none">
+              {t("kora.hermes.reasoning")}
+            </summary>
+            <p className="mt-1 whitespace-pre-wrap break-words leading-relaxed">
+              {item.reasoning}
+            </p>
+          </details>
+        ) : null}
+        {item.tool_calls != null ? (
+          <p className="mt-0.5 font-mono text-xs text-foreground-muted">
+            {toolNames.length > 0
+              ? `${t("kora.hermes.toolCalls", { n: item.tool_calls.length })}: ${toolNames.join(", ")}`
+              : t("kora.hermes.toolCalls", { n: item.tool_calls.length })}
+          </p>
+        ) : null}
+        {item.redaction_applied ? (
+          <p
+            className="mt-0.5 font-ui text-xs text-foreground-muted"
+            title={t("kora.transcript.redactedNote")}
+          >
+            {t("kora.transcript.redacted")}
+          </p>
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
+/** The verbatim-highlight reuse: the same iris tint over the match as the
+ * zcode scroll — one search grammar, two sources (exported by the shared
+ * transcript renderer). */

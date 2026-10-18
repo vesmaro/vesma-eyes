@@ -2402,14 +2402,29 @@ export const ru = {
   "kora.hermes.refreshing": "Обновляем…",
   "kora.hermes.emptyNoPull":
     "Сессий пока нет — нажмите «Обновить»: борд запросит живой список у кластера hermes и положит его в реестр",
-  // Транскрипты hermes — следующий срез (честный слот вместо пустого клика,
-  // прецедент: «Отправка появится позже»).
-  "kora.hermes.transcriptRegion": "Ход сессии hermes",
-  "kora.hermes.transcriptPlaceholder":
-    "Просмотр транскриптов hermes — в следующем обновлении. Пока мост даёт списки сессий из кластера: название, состояние и последнее сообщение видны в списке справа.",
-  "kora.hermes.transcriptPlaceholderNote":
-    "Сессия живёт в кластере hermes и остаётся в реестре; её ход откроется, когда мост научится отдавать транскрипты.",
-  "kora.hermes.transcriptLaterChip": "Транскрипты — позже",
+  // Транскрипты и чат hermes (T004 срез 3, финал моста): транскрипт —
+  // read-only, чат источника живёт в виде Коры без выбранной сессии.
+  "kora.hermes.transcriptReadonly":
+    "Транскрипт только для чтения; чат с источником — в Коре, пока не выбрана сессия",
+  "kora.hermes.reasoning": "Размышления",
+  "kora.hermes.toolCalls": "Вызовы инструментов: {{n}}",
+  "kora.hermes.chatTitle": "Чат с hermes",
+  "kora.hermes.chatRegion": "Чат hermes",
+  "kora.hermes.chatAnchor": "продолжение сессии {{name}}",
+  "kora.hermes.chatNoAnchor":
+    "сессий api_server источника в реестре нет — ответ начнётся с чистого листа",
+  "kora.hermes.chatEmpty":
+    "Пока пусто — напишите в кластер hermes; ответ придёт целиком, без потока",
+  "kora.hermes.chatInput": "Сообщение для hermes",
+  "kora.hermes.chatPlaceholder": "Напишите в кластер hermes…",
+  "kora.hermes.chatSend": "Отправить",
+  "kora.hermes.chatSending": "Отправляем… (ответ придёт целиком, до 60 секунд)",
+  "kora.hermes.chatErrorPrefix": "Не доставлено: ",
+  "kora.hermes.chatNote":
+    "Ответ приходит целиком, не потоково; лимит чата — 12 сообщений в минуту",
+  "kora.hermes.chatUnknownReply":
+    "Ответ получен, но текст в нём не распознан — формат hermes не совпал с ожидаемым",
+  "kora.hermes.chatAnnounce": "Ответ hermes получен",
 
   // --- base kit state matrices (spec 05 §2.2/§2.5, волна U0) -----------------
   // Поле ввода: ошибка называется текстом, не только цветом (§2.5 error-ряд).
