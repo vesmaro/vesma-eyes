@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { KoraComposer } from "./KoraComposer";
 import { KoraEther } from "./KoraEther";
 import { KoraTranscript } from "./KoraTranscript";
+import { HermesTranscriptPlaceholder } from "./KoraHermesSource";
 import type { KoraEtherRow } from "./koraEtherStore";
 import type { KoraIntentEventPoints } from "./koraIntentEvents";
 import type { KoraCoverage, KoraSession } from "./koraTypes";
@@ -135,6 +136,54 @@ function SessionView({
       ? null
       : transcript.items.filter((item) => item.content.toLowerCase().includes(needle))
           .length;
+
+  // T004 slice 2 — the hermes transcript gap (slice 3): the session clicked
+  // gets the honest placeholder INSTEAD of the transcript scroll + composer.
+  // The head (name/state/coverage) stays — the metadata is real, the gap is
+  // named once, no empty click, no fake content.
+  if (session.harness === "hermes") {
+    return (
+      <section
+        id="kora-workzone"
+        aria-label={t("kora.transcript.region")}
+        className="flex min-h-0 min-w-0 flex-1 flex-col"
+      >
+        <p role="status" aria-live="polite" className="sr-only">
+          {t("kora.workzone.openedAnnounce", { name: koraSessionName(session) })}
+        </p>
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 pt-3">
+          <h2
+            id="kora-session-heading"
+            className="min-w-0 flex-1 truncate font-scroll text-lg font-semibold"
+            title={koraSessionName(session)}
+          >
+            {koraSessionName(session)}
+          </h2>
+          <span className="inline-flex shrink-0 items-center gap-1 text-xs text-foreground-secondary">
+            <span
+              aria-hidden
+              className={cn(
+                "size-2 rounded-full",
+                session.state === "live" ? "bg-success" : "bg-elevated",
+              )}
+            />
+            {session.state === "live"
+              ? t("kora.pill.liveAge", { age })
+              : t(`kora.session.state.${session.state}`)}
+          </span>
+        </div>
+        <p className="px-4 pt-1 text-xs uppercase tracking-wide text-foreground-muted">
+          {t("kora.about.coverage")}:{" "}
+          {support !== null ? (
+            t(`kora.sessionCov.${support === "lists-only" ? "partial" : support}`)
+          ) : (
+            <span className="normal-case">{t("kora.sessionCov.unknown")}</span>
+          )}
+        </p>
+        <HermesTranscriptPlaceholder />
+      </section>
+    );
+  }
 
   return (
     /* The scene column of the v7 frame (07l §4): the session head + tools

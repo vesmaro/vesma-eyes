@@ -31,8 +31,9 @@
  * Non-2xx maps to ApiError with the Kora error vocabulary in `body.code`
  * when present (`metadata_only`, `step_up_required`, `session_not_found`, …).
  */
-import type { KoraGateway } from "./koraGateway";
+import type { KoraGateway, KoraHermesErrorCode } from "./koraGateway";
 import type {
+  HermesBridgeStatus,
   KoraMessageAccepted,
   KoraSession,
   KoraSessionCreated,
@@ -177,6 +178,29 @@ export class KoraHttpAdapter implements KoraGateway {
   }
 
   /**
+   * T004 slice 2 — GET /api/kora/hermes/status: a cheap deterministic read
+   * (config facts + registry slice count; the server deliberately runs NO
+   * hermes probe here, so status = DATA, honest light, no pulse). Ships
+   * bare (the cookie leg) like every Kora read. The ui-only wall answers
+   * 403 metadata_only for devices — it surfaces as the frozen error
+   * vocabulary through the shared request path.
+   */
+  hermesStatus(signal?: AbortSignal): Promise<HermesBridgeStatus> {
+    return this.request<HermesBridgeStatus>("/kora/hermes/status", { signal });
+  }
+
+  /**
+   * T004 slice 2 — GET /api/kora/hermes/sessions: ONE live pull → registry
+   * upsert → the frozen KoraSessionsOut (serving through the ONE leg).
+   * Triggered ONLY by the explicit refresh button (the server's 12/60s
+   * limiter makes a hammering UI pointless); 503 hermes_off / 502
+   * hermes_unavailable surface with the server's human reason via KoraError.
+   */
+  pullHermesSessions(signal?: AbortSignal): Promise<KoraSessionsList> {
+    return this.request<KoraSessionsList>("/kora/hermes/sessions", { signal });
+  }
+
+  /**
    * One JSON request: timeout composition, the class auth discipline
    * (bare reads; ui-bearer on mutations with a ONE headerless replay on
    * 401), and non-2xx → ApiError carrying the Kora error code (the frozen
@@ -225,12 +249,13 @@ export class KoraHttpAdapter implements KoraGateway {
     if (!resp.ok) {
       const errBody = (wire ?? {}) as KoraWireError;
       const message = errBody.message ?? `Kora ${path} failed: ${resp.status}`;
-      throw new KoraHttpError(
-        resp.status,
-        message,
-        errBody.code as KoraErrorCode | undefined,
-        url,
-      );
+      // The hermes-bridge codes ride the same KoraErrorOut envelope but sit
+      // OUTSIDE the frozen KoraErrorCode enum (ui-only routes) — widened at
+      // the extraction point only (koraErrorCode), never inside the frozen
+      // vocabulary.
+      const code = (errBody.code as KoraErrorCode | KoraHermesErrorCode | undefined) ??
+        undefined;
+      throw new KoraHttpError(resp.status, message, code, url);
     }
     return wire as T;
   }
@@ -293,7 +318,7 @@ export class KoraHttpError extends ApiError {
   constructor(
     status: number,
     message: string,
-    readonly koraCode?: KoraErrorCode,
+    readonly koraCode?: KoraErrorCode | KoraHermesErrorCode,
     url?: string,
   ) {
     super(status, message, url ? { url } : undefined);

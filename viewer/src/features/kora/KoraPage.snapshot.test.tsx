@@ -8,6 +8,7 @@ import { KoraMockAdapter } from "./KoraMockAdapter";
 import { KoraGatewayContext } from "./koraGatewayContext";
 import { koraKeys } from "./useKora";
 import { KORA_FIXTURE_COVERAGE, KORA_FIXTURE_SESSIONS } from "./koraFixtures";
+import type { KoraSession } from "./koraTypes";
 import type { ExecutorsPage } from "@/gateway/boardTypes";
 import { MockAdapter } from "@/gateway/MockAdapter";
 import { GatewayContext } from "@/gateway/GatewayContext";
@@ -71,12 +72,17 @@ function koraExecutorsPage(): ExecutorsPage {
 }
 
 function seedWorkspaceCache(queryClient: QueryClient): void {
+  // T004 slice 2: hermes rows enter the registry ONLY on a live pull — the
+  // snapshot pins the pre-pull truth the adapter's listSessions serves.
+  const prePull = KORA_FIXTURE_SESSIONS.filter(
+    (session: KoraSession) => session.harness !== "hermes",
+  );
   queryClient.setQueryData(koraKeys.sessionsPaged(PAGE_SIZE), {
     pages: [
       {
         ok: true as const,
-        count: KORA_FIXTURE_SESSIONS.length,
-        items: KORA_FIXTURE_SESSIONS,
+        count: prePull.length,
+        items: prePull,
         coverage: KORA_FIXTURE_COVERAGE,
         meta: { generated_at: "2026-09-24T11:45:00Z" },
       },

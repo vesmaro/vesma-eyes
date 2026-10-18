@@ -76,3 +76,20 @@ export type KoraStepUpStatus = Schemas["KoraStepUpStatusOut"];
 
 /** KoraErrorOut codes — the frozen error vocabulary. */
 export type KoraErrorCode = NonNullable<Schemas["KoraErrorOut"]["code"]>;
+
+/**
+ * HermesBridgeStatus — GET /api/kora/hermes/status (T004 slice 1, ui-only).
+ * The board's honest leg report: configured/deploy facts, never secrets.
+ * `mode` mirrors the server's vocabulary (off = no key; ok = configured);
+ * `detail` carries the HUMAN reason when the leg is off/unreachable.
+ * NOTE: this route lives OUTSIDE the frozen week-0 artifact by design
+ * (a board-ops read, not a Kora contract line) — hand-typed on the seam,
+ * mirrored from HermesBridgeStatusOut in server/app.py.
+ */
+export interface HermesBridgeStatus {
+  configured: boolean;
+  endpoint: string;
+  mode: "off" | "ok";
+  registry_sessions: number;
+  detail: string | null;
+}

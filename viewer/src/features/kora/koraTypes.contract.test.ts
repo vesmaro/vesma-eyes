@@ -42,7 +42,9 @@ describe("kora fixtures vs frozen contract (generated types)", () => {
   });
 
   it("fixture enums sit inside the frozen vocabulary", () => {
-    const HARNESS = ["zcode", "vscode", "pi"];
+    // T004 slice 1 (hermes-bridge): `hermes` joined the FROZEN enum — the
+    // registry rides ONE leg, the FE tells sources apart by harness.
+    const HARNESS = ["zcode", "vscode", "pi", "hermes"];
     const STATE = ["live", "idle", "dead"];
     const ORIGIN = ["relay", "local"];
     for (const session of KORA_FIXTURE_SESSIONS as readonly SpecSession[]) {

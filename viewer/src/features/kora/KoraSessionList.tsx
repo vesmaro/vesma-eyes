@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { Check, ChevronRight, Copy, Radio } from "lucide-react";
+import { Check, ChevronRight, Copy, Radio, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { HonestLine } from "@/components/HonestLine/HonestLine";
@@ -25,11 +25,13 @@ import {
  * session is selected — details never replace content.
  */
 
-/** The Блок 2 context: all sessions, one host, or one agent (07j §1.2). */
+/** The Блок 2 context: all sessions, one host, one agent, or the hermes
+ * source (T004 slice 2 — the cluster source is a first-class filter). */
 export type KoraBlock2Context =
   | { kind: "all" }
   | { kind: "host"; host: string }
-  | { kind: "agent"; executorId: string; harness: string; host: string | null };
+  | { kind: "agent"; executorId: string; harness: string; host: string | null }
+  | { kind: "hermes" };
 
 const STATE_DOT: Record<KoraSession["state"], string> = {
   live: "bg-success",
@@ -52,6 +54,21 @@ function StatePill({ session }: { session: KoraSession }) {
         ? t("kora.pill.liveAge", { age })
         : t(`kora.session.state.${session.state}`)}
     </span>
+  );
+}
+
+/**
+ * The source badge (T004 slice 2): the harness name as DATA on the same
+ * outline token vocabulary as the origin badge — «бейдж по слотам токенами,
+ * не новый цвет». The hermes source reads «hermes» verbatim (the source is
+ * a proper name); other harnesses keep their bare mono label.
+ */
+function SourceBadge({ harness }: { harness: string }) {
+  if (harness !== "hermes") return <span>{harness}</span>;
+  return (
+    <Badge variant="outline" className="font-mono">
+      {harness}
+    </Badge>
   );
 }
 
@@ -82,8 +99,10 @@ function SessionRow({
           <StatePill session={session} />
         </span>
         <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-xs text-foreground-muted">
-          {/* «host · harness» only where the context does not already say it (07j §3.4). */}
-          {context.kind === "all" ? <span>{session.harness}</span> : null}
+          {/* «host · harness» only where the context does not already say it (07j §3.4).
+           * T004 slice 2: harness name rides a badge — the source is DATA on
+           * both themes; tokens only, no new colour vocabulary. */}
+          {context.kind === "all" ? <SourceBadge harness={session.harness} /> : null}
           <span>{session.executor_id}</span>
           <Badge variant="outline">{t(`kora.session.origin.${session.origin}`)}</Badge>
           {session.steerable ? (
@@ -219,6 +238,7 @@ export function KoraSessionList({
   coverage,
   noExecutors,
   sessionsEmpty,
+  hermesRefresh = null,
 }: {
   context: KoraBlock2Context;
   /** Sessions of the CURRENT context (the caller applies the context). */
@@ -231,6 +251,13 @@ export function KoraSessionList({
   noExecutors: boolean;
   /** The WHOLE registry is empty (drives the variant-B empty state). */
   sessionsEmpty: boolean;
+  /** T004 slice 2: the hermes context owns the ONE manual-refresh slot —
+   * present only when the context is hermes (a pull is a live cluster
+   * roundtrip + a registry write, triggered by THIS button alone). */
+  hermesRefresh?: {
+    onRefresh: () => void;
+    pending: boolean;
+  } | null;
 }) {
   const t = useT();
   const rows = sortKoraSessions(
@@ -241,14 +268,16 @@ export function KoraSessionList({
   const title =
     context.kind === "all"
       ? t("kora.block2.titleAll")
-      : context.kind === "host"
-        ? t("kora.block2.titleHost", { host: context.host })
-        : context.host !== null
-          ? t("kora.block2.titleAgent", {
-              harness: context.harness,
-              host: context.host,
-            })
-          : t("kora.block2.titleExecutor", { name: context.executorId });
+      : context.kind === "hermes"
+        ? t("kora.block2.titleHermes")
+        : context.kind === "host"
+          ? t("kora.block2.titleHost", { host: context.host })
+          : context.host !== null
+            ? t("kora.block2.titleAgent", {
+                harness: context.harness,
+                host: context.host,
+              })
+            : t("kora.block2.titleExecutor", { name: context.executorId });
 
   return (
     <section aria-label={t("kora.block2.section")}>
@@ -265,6 +294,24 @@ export function KoraSessionList({
         >
           · {rows.length}
         </span>
+        {/* The ONE manual pull (T004 slice 2): hermes context only — the
+         * refresh is DATA (the live listing answer), never a pulse. The
+         * Button spec-05 loading row (spinner + aria-busy) carries pending. */}
+        {context.kind === "hermes" && hermesRefresh !== null ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            loading={hermesRefresh.pending}
+            onClick={hermesRefresh.onRefresh}
+            className="ml-auto h-7 border-border-subtle px-2 font-mono text-xs text-foreground-secondary"
+          >
+            <RefreshCw aria-hidden className="size-3" />
+            {hermesRefresh.pending
+              ? t("kora.hermes.refreshing")
+              : t("kora.hermes.refresh")}
+          </Button>
+        ) : null}
       </div>
 
       <div className="mt-2 flex items-center gap-2">
@@ -313,6 +360,11 @@ export function KoraSessionList({
               {t("kora.list.emptyNoSessions")}
             </HonestLine>
           )
+        ) : context.kind === "hermes" && rows.length === 0 && quickFilter === null ? (
+          // The hermes honest empty (T004 slice 2): the registry slice fills
+          // ONLY on a pull — the empty names the one action, no auto-pull,
+          // no promises that sessions «появятся сами».
+          <HonestLine>{t("kora.hermes.emptyNoPull")}</HonestLine>
         ) : rows.length === 0 ? (
           <p className="text-sm text-foreground-secondary">
             {quickFilter !== null

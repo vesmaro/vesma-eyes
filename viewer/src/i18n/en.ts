@@ -2335,6 +2335,33 @@ export const en: Record<TranslationKey, string> = {
     "The session is finished — there is no one to write to; start a new one on the host",
   "kora.composer.interruptedNote":
     "The session was interrupted — the agent is no longer listening here",
+  // The hermes bridge (T004 slice 2, hermes-bridge 2026-10-10): the hermes
+  // source as a first-class filter, a data status line (no pulse), ONE
+  // manual pull per button press, the honest off + the honest empty.
+  "kora.hermes.filterOption": "Hermes (cluster)",
+  "kora.hermes.sourceName": "Hermes (cluster)",
+  "kora.hermes.stateOk": "connected",
+  "kora.hermes.stateOff": "not connected",
+  "kora.hermes.registryCount": "sessions in the registry: {{n}}",
+  "kora.hermes.statusLoading": "Reading the hermes bridge status",
+  "kora.hermes.statusUnknown": "The hermes bridge status is not known yet",
+  "kora.hermes.offTitle": "Hermes is not connected",
+  "kora.hermes.offDefaultReason": "The board did not name the reason",
+  "kora.hermes.offHint":
+    "The HERMES_API_KEY key arrives through the deploy channel (the board's env) — and the source turns on without a code change.",
+  "kora.block2.titleHermes": "Sessions · Hermes (cluster)",
+  "kora.hermes.refresh": "Refresh",
+  "kora.hermes.refreshing": "Refreshing…",
+  "kora.hermes.emptyNoPull":
+    "No sessions yet — press «Refresh»: the board will ask the hermes cluster for the live listing and put it into the registry",
+  // Hermes transcripts are the NEXT slice (the honest slot instead of an
+  // empty click; precedent: «Sending will arrive later»).
+  "kora.hermes.transcriptRegion": "Hermes session flow",
+  "kora.hermes.transcriptPlaceholder":
+    "Viewing hermes transcripts — in the next update. The bridge already lists cluster sessions: the name, state and last message are visible in the list on the right.",
+  "kora.hermes.transcriptPlaceholderNote":
+    "The session lives in the hermes cluster and stays in the registry; its flow opens once the bridge learns to serve transcripts.",
+  "kora.hermes.transcriptLaterChip": "Transcripts — later",
 
   // --- base kit state matrices (spec 05 §2.2/§2.5, wave U0) ------------------
   "field.errorPrefix": "Error:",

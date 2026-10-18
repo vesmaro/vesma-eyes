@@ -2383,6 +2383,33 @@ export const ru = {
   "kora.composer.finishedNote":
     "Сессия завершена — писать некому; начните новую на хосте",
   "kora.composer.interruptedNote": "Сессия прервана — агент здесь уже не слушает",
+  // Hermes-мост (T004 срез 2, hermes-bridge 2026-10-10): источник «hermes» —
+  // первый класс: селектор фильтра, статус-строка (данные, не пульс),
+  // ручное обновление (один живой пулл по кнопке), честный офф и пустота.
+  "kora.hermes.filterOption": "Hermes (кластер)",
+  "kora.hermes.sourceName": "Hermes (кластер)",
+  "kora.hermes.stateOk": "подключён",
+  "kora.hermes.stateOff": "не подключён",
+  "kora.hermes.registryCount": "сессий в реестре: {{n}}",
+  "kora.hermes.statusLoading": "Читаем статус моста hermes",
+  "kora.hermes.statusUnknown": "Статус моста hermes пока неизвестен",
+  "kora.hermes.offTitle": "Hermes не подключён",
+  "kora.hermes.offDefaultReason": "Причина включения не названа на борде",
+  "kora.hermes.offHint":
+    "Ключ HERMES_API_KEY передаётся через deploy-канал (env пода борда) — и источник включится без изменения кода.",
+  "kora.block2.titleHermes": "Сессии · Hermes (кластер)",
+  "kora.hermes.refresh": "Обновить",
+  "kora.hermes.refreshing": "Обновляем…",
+  "kora.hermes.emptyNoPull":
+    "Сессий пока нет — нажмите «Обновить»: борд запросит живой список у кластера hermes и положит его в реестр",
+  // Транскрипты hermes — следующий срез (честный слот вместо пустого клика,
+  // прецедент: «Отправка появится позже»).
+  "kora.hermes.transcriptRegion": "Ход сессии hermes",
+  "kora.hermes.transcriptPlaceholder":
+    "Просмотр транскриптов hermes — в следующем обновлении. Пока мост даёт списки сессий из кластера: название, состояние и последнее сообщение видны в списке справа.",
+  "kora.hermes.transcriptPlaceholderNote":
+    "Сессия живёт в кластере hermes и остаётся в реестре; её ход откроется, когда мост научится отдавать транскрипты.",
+  "kora.hermes.transcriptLaterChip": "Транскрипты — позже",
 
   // --- base kit state matrices (spec 05 §2.2/§2.5, волна U0) -----------------
   // Поле ввода: ошибка называется текстом, не только цветом (§2.5 error-ряд).

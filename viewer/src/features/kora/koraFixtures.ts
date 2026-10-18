@@ -14,6 +14,14 @@ type SpecTranscriptItem = components["schemas"]["KoraTranscriptItemOut"];
  * (steerable), an idle vscode session (lists-only coverage, known gap), and
  * a dead pi session (recovery semantics — dead process, session stays in
  * the registry).
+ *
+ * T004 slice 2 (hermes-bridge, 2026-10-10): the registry rides ONE leg —
+ * hermes sessions are KoraSessionOut rows under the RESERVED synthetic
+ * executor id `hermes` (server: KORA_HERMES_EXECUTOR_ID), origin relay,
+ * project prefix `hermes:<source>`; the FE tells sources apart by
+ * `harness: "hermes"`. The hermes fixture models a live cluster session
+ * arriving after a pull; its transcript is a DELIBERATE gap (slice 3) —
+ * the mock throws session_not_found for it, the honest «transcripts later».
  */
 
 export const KORA_FIXTURE_COVERAGE: components["schemas"]["KoraCoverageOut"] = {
@@ -33,14 +41,80 @@ export const KORA_FIXTURE_COVERAGE: components["schemas"]["KoraCoverageOut"] = {
       support: "lists-only",
       note: "Списки с превью; транскрипты pi пока не отдаются",
     },
-    { harness: "hermes", support: "absent", note: "Не сканируется до T004" },
+    {
+      harness: "hermes",
+      support: "lists-only",
+      note: "Списки из кластера hermes через мост борда; транскрипты и чат hermes — в следующих обновлениях",
+    },
   ],
   gaps: [
     "Полные транскрипты vscode — известный пробел среза 2 (kind:1)",
     "Транскрипты pi не отдаются (срез 2 даёт только списки)",
     "Транскрипты сессий удалённых хостов ждут расписания W4 loopback-ingress",
-    "hermes-сессии не видны до T004",
+    "Транскрипты и чат hermes — в следующих обновлениях (мост уже даёт списки)",
   ],
+};
+
+/** The reserved synthetic executor id for hermes-bridge sessions
+ * (server/app.py KORA_HERMES_EXECUTOR_ID — the FE mirrors it only for the
+ * mock fixture shape; all UI logic branches on harness=hermes). */
+export const KORA_FIXTURE_HERMES_EXECUTOR_ID = "hermes";
+
+/** The hermes sessions the mock serves in the registry after a pull.
+ * TYPED BY THE GENERATED CONTRACT (satisfies): one live relay session and
+ * one idle one — the two states the status frames show. The sources mirror
+ * the hermes разведка (api_server + telegram): the project prefix carries
+ * the source name and the previews are the real session-header shapes
+ * («Hysteria прокси…», «Confirm with OK…»). */
+export const KORA_FIXTURE_HERMES_SESSIONS: readonly (components["schemas"]["KoraSessionOut"] & {
+  harness: "hermes";
+})[] = [
+  {
+    id: "hermes:api-server-main",
+    executor_id: "hermes",
+    native_id: "api-server-main",
+    harness: "hermes",
+    project: "hermes:api_server",
+    cwd: null,
+    state: "live",
+    origin: "relay",
+    steerable: false,
+    started_at: "2026-09-24T08:02:00Z",
+    last_activity_at: "2026-09-24T11:30:00Z",
+    age_seconds: 12480,
+    last_line_preview: "Hysteria прокси: перечитал конфиг, туннель слушает 443…",
+  },
+  {
+    id: "hermes:telegram-bridge",
+    executor_id: "hermes",
+    native_id: "telegram-bridge",
+    harness: "hermes",
+    project: "hermes:telegram",
+    cwd: null,
+    state: "idle",
+    origin: "relay",
+    steerable: false,
+    started_at: "2026-09-23T14:40:00Z",
+    last_activity_at: "2026-09-23T18:05:00Z",
+    age_seconds: 79200,
+    last_line_preview: "Confirm with OK to resume the deploy train…",
+  },
+] as const satisfies readonly (components["schemas"]["KoraSessionOut"] & {
+  harness: "hermes";
+})[];
+
+/**
+ * The honest hermes bridge status (GET /api/kora/hermes/status mock):
+ * configured + ok, registry slice = the fixture count. The OFF mode is a
+ * runtime mock knob (`hermesBridge=off` location param, same pattern as
+ * `koraAuth=locked`), not a second fixture set.
+ */
+export const KORA_FIXTURE_HERMES_STATUS = {
+  configured: true,
+  endpoint: "http://agentsnode-hermes-clusterip.kube-agents.svc.cluster.local:8642",
+  mode: "ok" as const,
+  registry_sessions: KORA_FIXTURE_HERMES_SESSIONS.length,
+  detail: null,
 };
 
 export const KORA_FIXTURE_SESSIONS: readonly SpecSession[] = [
@@ -90,6 +164,7 @@ export const KORA_FIXTURE_SESSIONS: readonly SpecSession[] = [
     age_seconds: 169200,
     last_line_preview: null,
   },
+  ...KORA_FIXTURE_HERMES_SESSIONS,
 ] as const satisfies readonly SpecSession[];
 
 export const KORA_FIXTURE_TRANSCRIPT: Record<string, readonly SpecTranscriptItem[]> = {

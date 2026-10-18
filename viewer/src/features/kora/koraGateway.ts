@@ -17,6 +17,7 @@
  */
 import { isApiError } from "@/lib/errors";
 import type {
+  HermesBridgeStatus,
   KoraErrorCode,
   KoraMessageAccepted,
   KoraSession,
@@ -32,7 +33,7 @@ import type {
 /** Contract error: the frozen KoraErrorOut vocabulary on the seam. */
 export class KoraError extends Error {
   constructor(
-    readonly code: KoraErrorCode,
+    readonly code: KoraErrorCode | KoraHermesErrorCode,
     message: string,
   ) {
     super(message);
@@ -41,13 +42,24 @@ export class KoraError extends Error {
 }
 
 /**
+ * The hermes-bridge error codes (T004 slice 1). The hermes routes are
+ * ui-only board reads OUTSIDE the frozen week-0 artifact — their error
+ * vocabulary (`hermes_off`, `hermes_unavailable`) rides the same
+ * KoraErrorOut ENVELOPE but is not part of the frozen enum, so the seam
+ * names it separately (additive-only, no frozen-vocabulary edit).
+ */
+export type KoraHermesErrorCode = "hermes_off" | "hermes_unavailable";
+
+/**
  * Extract the frozen error code from ANY gateway failure (P4-4): the
  * mock's KoraError subclasses carry `.code`; the HTTP adapter's
  * KoraHttpError carries `.koraCode`; anything else (transport ApiError)
  * answers undefined. ONE extraction point — the UI never imports a
  * concrete adapter's error class.
  */
-export function koraErrorCode(err: unknown): KoraErrorCode | undefined {
+export function koraErrorCode(
+  err: unknown,
+): KoraErrorCode | KoraHermesErrorCode | undefined {
   if (err instanceof KoraError) return err.code;
   const code = (err as { koraCode?: KoraErrorCode } | null)?.koraCode;
   return typeof code === "string" ? code : undefined;
@@ -110,4 +122,20 @@ export interface KoraGateway {
 
   /** Slice 3 — DELETE /api/kora/steering/step-up (revoke now). */
   revokeStepUp(signal?: AbortSignal): Promise<void>;
+
+  /**
+   * T004 slice 2 — GET /api/kora/hermes/status (DATA, no live probe on
+   * the server side: config facts + the registry slice count). The UI
+   * renders the status line from this; `mode: "off"` carries the human
+   * reason in `detail`.
+   */
+  hermesStatus(signal?: AbortSignal): Promise<HermesBridgeStatus>;
+
+  /**
+   * T004 slice 2 — GET /api/kora/hermes/sessions: ONE live pull on
+   * EXPLICIT user action only (upserts into the registry; 12/60s limiter
+   * server-side). NEVER called on a timer — the refresh button is the
+   * only trigger.
+   */
+  pullHermesSessions(signal?: AbortSignal): Promise<KoraSessionsList>;
 }
