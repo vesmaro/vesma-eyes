@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Mermaid } from "mermaid";
+import { attrIsLightFamily } from "@/components/theme-provider";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { normalizeMermaidSvgXml } from "./mermaidSvgXml";
@@ -44,9 +45,10 @@ function mermaidModule(): Promise<Mermaid> {
   return mermaidModulePromise;
 }
 
-/** [data-theme] contract (theme-provider): "light" set, dark = absence. */
+/** [data-theme] contract (theme-provider): dark family = no attribute or a
+ * dark preset id; light family = "light" | "prosvet" (themes-presets-wave1). */
 function rootThemeIsLight(): boolean {
-  return document.documentElement.getAttribute("data-theme") === "light";
+  return attrIsLightFamily(document.documentElement.getAttribute("data-theme"));
 }
 
 function diagramWarning(message: string): string {

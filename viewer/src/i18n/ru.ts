@@ -1807,11 +1807,18 @@ export const ru = {
     "Форма недоступна: нет активного входа. Войдите по паролю или токену — и вернитесь сюда.",
   "settings.security.recoveryLine":
     "Если пароль потерян — войдите по токену (кнопка «Войти» вверху) и задайте новый здесь: текущий пароль не понадобится.",
-  "settings.hub.themeLabel": "Тема",
+  // Presets brief §1 (themes-presets-wave1): ONE «Оформление» control —
+  // «Системная» + five lore-named presets. The topbar toggle keeps its
+  // family-level aria (topbar.themeToLight/themeToDark).
+  "settings.hub.themeLabel": "Оформление",
   "settings.hub.themeSystem": "Системная",
-  "settings.hub.themeDark": "Тёмная",
-  "settings.hub.themeLight": "Светлая",
-  "settings.hub.themeHint": "«Системная» следует за настройкой вашей ОС.",
+  "settings.hub.presetWell": "Колодец",
+  "settings.hub.presetZhila": "Жила",
+  "settings.hub.presetSozvezdia": "Созвездия",
+  "settings.hub.presetLight": "Береста",
+  "settings.hub.presetProsvet": "Просвет",
+  "settings.hub.themeHint":
+    "«Системная» следует за настройкой вашей ОС. Тумблер в топбаре переключает тёмное↔светлое семейство, не сбрасывая выбранный пресет.",
   "settings.hub.langLabel": "Язык интерфейса",
   "settings.hub.densityLabel": "Плотность строк",
   "settings.hub.densityComfortable": "Просторная",

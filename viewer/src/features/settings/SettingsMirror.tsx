@@ -1,5 +1,5 @@
 import { useT } from "@/i18n";
-import { useTheme } from "@/components/theme-provider";
+import { presetLabelKey, useTheme } from "@/components/theme-provider";
 import { useDensity } from "@/components/density-provider";
 import { useLiveLayer, type LiveLayer } from "@/lib/liveLayerStore";
 import { cn } from "@/lib/utils";
@@ -28,16 +28,16 @@ import { cn } from "@/lib/utils";
  */
 export function SettingsMirror({ className }: { className?: string }) {
   const t = useT();
-  const { themePreference } = useTheme();
+  // Presets brief §1: the legend names the RESOLVED look — the chosen
+  // preset, or «Системная» when the mode is on top (not the family).
+  const { presetChoice, resolvedPreset } = useTheme();
   const { density } = useDensity();
   const live = useLiveLayer();
 
   const themeLabel = t(
-    themePreference === "dark"
-      ? "settings.hub.themeDark"
-      : themePreference === "light"
-        ? "settings.hub.themeLight"
-        : "settings.hub.themeSystem",
+    presetChoice === "system"
+      ? "settings.hub.themeSystem"
+      : presetLabelKey(resolvedPreset),
   );
   const densityLabel = t(
     density === "comfortable"

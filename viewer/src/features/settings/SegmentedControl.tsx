@@ -33,6 +33,14 @@ interface SegmentedControlProps<T extends string> {
   disabled?: boolean;
   /** Extra text SR users hear INSTEAD of the disabled affordance. */
   ariaNote?: string;
+  /**
+   * Wrapping pill variant (themes-presets-wave1): the group reflows its
+   * options onto multiple lines instead of clipping — a WIDE registry (the
+   * six-option «Оформление» control) would overflow a 375px viewport as
+   * one inline strip. Same a11y grammar (role=group + aria-pressed, state
+   * never colour-only); only the geometry differs.
+   */
+  wrap?: boolean;
 }
 
 export function SegmentedControl<T extends string>({
@@ -45,6 +53,7 @@ export function SegmentedControl<T extends string>({
   hintId,
   disabled = false,
   ariaNote,
+  wrap = false,
 }: SegmentedControlProps<T>) {
   return (
     <div className="space-y-1">
@@ -57,7 +66,11 @@ export function SegmentedControl<T extends string>({
           aria-labelledby={labelId}
           aria-describedby={hint ? hintId : undefined}
           aria-disabled={disabled || undefined}
-          className="inline-flex overflow-hidden rounded-md border border-border-subtle"
+          className={
+            wrap
+              ? "flex flex-wrap gap-1"
+              : "inline-flex overflow-hidden rounded-md border border-border-subtle"
+          }
         >
           {options.map((option, index) => {
             const active = option.value === value;
@@ -73,7 +86,9 @@ export function SegmentedControl<T extends string>({
                 className={cn(
                   "max-md:min-h-12 max-md:inline-flex max-md:items-center max-md:px-4 px-3 py-1.5 text-sm transition-colors duration-instant",
                   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
-                  index > 0 && "border-l border-border-subtle",
+                  wrap
+                    ? "rounded-md border border-border-subtle"
+                    : index > 0 && "border-l border-border-subtle",
                   active
                     ? "bg-iris-tint text-iris-bright"
                     : "text-foreground-secondary hover:bg-elevated hover:text-foreground",

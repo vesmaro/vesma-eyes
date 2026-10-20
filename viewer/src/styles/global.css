@@ -8,7 +8,10 @@
     color-scheme: dark;
   }
 
-  html[data-theme="light"] {
+  /* Light presets (themes-presets-wave1): Береста + Просвет. Native
+   * widgets (scrollbars, inputs) follow the resolved FAMILY, not one id. */
+  html[data-theme="light"],
+  html[data-theme="prosvet"] {
     color-scheme: light;
   }
 
