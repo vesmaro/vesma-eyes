@@ -4,9 +4,12 @@ import type { KoraSession } from "./koraTypes";
 import {
   buildKoraTree,
   formatTranscriptTime,
+  groupKoraTranscript,
   koraAgeUnit,
   koraSessionName,
   koraSummary,
+  koraTranscriptAnchorId,
+  koraTranscriptFoldId,
   quickFilterMatches,
   sessionCoverageSupport,
   sortKoraSessions,
@@ -232,5 +235,60 @@ describe("formatting helpers", () => {
     expect(koraAgeUnit(2_460)).toEqual({ unit: "min", n: 41 });
     expect(koraAgeUnit(8_940)).toEqual({ unit: "hour", n: 2 });
     expect(koraAgeUnit(169_200)).toEqual({ unit: "day", n: 1 });
+  });
+});
+
+describe("groupKoraTranscript (transcript-ux wave)", () => {
+  type Row = { readonly seq: number; readonly role: string };
+
+  const row = (seq: number, role: string): Row => ({ seq, role });
+
+  it("dialog rows open groups in order; raw rows append to the current group", () => {
+    const groups = groupKoraTranscript([
+      row(1, "user"),
+      row(2, "assistant"),
+      row(3, "tool"),
+      row(4, "system"),
+      row(5, "user"),
+    ]);
+    expect(groups).toHaveLength(3);
+    expect(groups[0]?.anchor).toEqual(row(1, "user"));
+    expect(groups[0]?.raw).toEqual([]);
+    expect(groups[1]?.anchor).toEqual(row(2, "assistant"));
+    expect(groups[1]?.raw).toEqual([row(3, "tool"), row(4, "system")]);
+    expect(groups[2]?.anchor).toEqual(row(5, "user"));
+    expect(groups[2]?.raw).toEqual([]);
+  });
+
+  it("leading raw rows (anchor on a previous page) form a null-anchor group", () => {
+    const groups = groupKoraTranscript([
+      row(7, "tool"),
+      row(8, "tool"),
+      row(9, "assistant"),
+    ]);
+    expect(groups).toHaveLength(2);
+    expect(groups[0]?.anchor).toBeNull();
+    expect(groups[0]?.raw).toEqual([row(7, "tool"), row(8, "tool")]);
+    expect(groups[1]?.anchor).toEqual(row(9, "assistant"));
+  });
+
+  it("empty page → no groups; consecutive dialog rows → one group each", () => {
+    expect(groupKoraTranscript([])).toEqual([]);
+    const groups = groupKoraTranscript([row(1, "user"), row(2, "assistant")]);
+    expect(groups).toHaveLength(2);
+    expect(groups.every((group) => group.raw.length === 0)).toBe(true);
+  });
+
+  it("order preserving and non-mutating: the input array comes back untouched", () => {
+    const items = [row(1, "user"), row(2, "tool"), row(3, "assistant")];
+    const frozen = [...items];
+    groupKoraTranscript(items);
+    expect(items).toEqual(frozen);
+  });
+
+  it("anchor/fold DOM ids are deterministic and seq-disjoint", () => {
+    expect(koraTranscriptAnchorId(12)).toBe("kora-anchor-12");
+    expect(koraTranscriptFoldId(12)).toBe("kora-fold-12");
+    expect(koraTranscriptAnchorId(12)).not.toBe(koraTranscriptFoldId(12));
   });
 });
