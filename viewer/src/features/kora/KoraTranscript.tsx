@@ -70,6 +70,18 @@ export const ROW_TONE: Record<string, string> = {
 /** The scarlet row accent for a redacted line — overrides the role wash. */
 const REDACTED_ROW_TONE = "border-error bg-error-wash";
 
+/**
+ * The anchor-row tone of the transcript-ux grammar, shared by BOTH
+ * transcript renderers (zcode scroll + hermes scroll): the scarlet
+ * `redaction_applied` override wins over the role wash; roles without an
+ * entry render neutral. The single source — renderers never copy the
+ * strings.
+ */
+// eslint-disable-next-line react-refresh/only-export-components -- same GRAMMAR trade-off as the maps above: the tone helper is consumed by the renderers that import this module.
+export function transcriptRowTone(role: string, redacted: boolean): string {
+  return redacted ? REDACTED_ROW_TONE : (ROW_TONE[role] ?? "");
+}
+
 export function KoraTranscript({
   sessionId,
   pages,
@@ -237,7 +249,7 @@ export function TranscriptBlock({
       id={koraTranscriptAnchorId(anchor.seq)}
       className={cn(
         "flex gap-3 rounded-r-md border-l-2 py-1.5 pr-2 pl-1 text-sm leading-relaxed transition-colors duration-instant",
-        redacted ? REDACTED_ROW_TONE : (ROW_TONE[anchor.role] ?? ""),
+        transcriptRowTone(anchor.role, redacted),
         spotSeq === anchor.seq &&
           "outline outline-2 -outline-offset-2 outline-iris-bright",
       )}
