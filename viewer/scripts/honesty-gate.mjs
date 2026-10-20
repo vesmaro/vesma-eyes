@@ -151,6 +151,15 @@ function chromiumExecutablePath() {
   }
 }
 
+/** Stamp written AFTER a gate build: the gate may only drive a MOCK-adapter
+ * bundle (the positive controls emit through `window.VesmaMockBus`, which
+ * exists only in the mock chunk). A dist-smoke built by ANY other command
+ * (plain `vite build`, another wave's probe) silently ships the prod
+ * adapter — the bus handle is absent, `VesmaMockBus?.emit` no-ops, and all
+ * five positive controls fail as «the event reached nothing» on ANY branch.
+ * themes-presets-wave1 fix: the gate rebuilds unless THIS stamp says mock. */
+const ADAPTER_STAMP = join(DIST_SMOKE, ".adapter-mock");
+
 function buildDistSmoke() {
   console.log("[honesty] building dist-smoke (VITE_ADAPTER=mock)…");
   execSync("npx tsc --noEmit -p tsconfig.json && npx vite build --outDir dist-smoke", {
@@ -159,6 +168,8 @@ function buildDistSmoke() {
     env: { ...process.env, VITE_ADAPTER: "mock", VITE_SMOKE_ALLOW_MOCK: "1" },
     stdio: "inherit",
   });
+  // vite build empties the outDir — stamp AFTER the build.
+  writeFileSync(ADAPTER_STAMP, "mock\n");
 }
 
 async function startPreview() {
@@ -279,7 +290,17 @@ async function framesStand(browser, a, b) {
 async function main() {
   const playwright = resolvePlaywright();
   mkdirSync(OUT_DIR, { recursive: true });
-  if (hasFlag("--rebuild") || !existsSync(join(DIST_SMOKE, "index.html"))) {
+  if (hasFlag("--rebuild")) {
+    buildDistSmoke();
+  } else if (!existsSync(join(DIST_SMOKE, "index.html"))) {
+    buildDistSmoke();
+  } else if (!existsSync(ADAPTER_STAMP)) {
+    // An existing dist-smoke WITHOUT the mock stamp is a foreign build
+    // (prod adapter — the exact trap that once produced a false 10/15 on a
+    // healthy branch). Rebuild rather than drive a bus that cannot speak.
+    console.log(
+      "[honesty] dist-smoke has no mock-adapter stamp — rebuilding with VITE_ADAPTER=mock…",
+    );
     buildDistSmoke();
   }
   const preview = await startPreview();
