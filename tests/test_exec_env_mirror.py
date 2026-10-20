@@ -251,6 +251,19 @@ class TestNoWipeSemantics:
         k8s = _row(client, executor["id"])["exec_env_inventory"]["k8s"]
         assert k8s == {"pods": []}
 
+    def test_explicit_empty_containers_is_a_real_zero(self, client, auth):
+        """The distrobox leg has the SAME zero-and-ran semantics as the
+        k8s leg: ``distrobox_containers=[]`` replaces the stored list
+        even when empty — containers of the previous pass must not
+        survive a report that honestly saw zero (review P2)."""
+        executor, secret = _register(client, auth)
+        assert _post(client, executor["id"], secret,
+                     distrobox_containers=V090_CONTAINERS).status_code == 200
+        assert _post(client, executor["id"], secret,
+                     distrobox_containers=[]).status_code == 200
+        inv = _row(client, executor["id"])["exec_env_inventory"]
+        assert inv == {"distrobox_containers": []}
+
     def test_identical_re_report_is_a_noop(self, client, auth, app_module):
         executor, secret = _register(client, auth)
         assert _post(client, executor["id"], secret,
