@@ -38,6 +38,7 @@ import pty
 import shlex
 import shutil
 import ssl
+import sys
 import subprocess
 import threading
 import time
@@ -117,7 +118,8 @@ def stubs(tmp_path, lab_ca):
     # /opt writability, or venv toolchain — and the stub world must never
     # create a real /opt/vesma-eyes or pip-install into it); everything
     # else (normalize_fp heredoc) goes to the real interpreter.
-    real_python = shutil.which("python3")
+    # sys.executable, not PATH: the stub child's sterile env must not depend on PATH (here the first python3 is a distrobox wrapper that eats the normalize_fp heredoc).
+    real_python = sys.executable
     (d / "python3").write_text(
         "#!/usr/bin/env bash\n"
         'if [[ "$1" == "-c" && "$2" == *version_info* ]]; then echo 310; exit 0; fi\n'
