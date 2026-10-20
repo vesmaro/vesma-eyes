@@ -247,7 +247,10 @@ function memberPresence(
 }
 
 /** The four inventory category counters (specialists/skills/plugins/
- * instructions) — the honest ME-064 counts, no names on the row. */
+ * instructions) — the honest ME-064 counts. UX-AUDIT A6 (2026-10-20): the
+ * category name used to ride `title` only — dead on touch; now the ≥lg
+ * breakpoint shows the WORD next to the glyph, and the accessible name is
+ * a width-independent `role="img"` + aria-label (no title anywhere). */
 const INVENTORY_GLYPHS: Record<string, React.ReactNode> = {
   specialists: <Users aria-hidden className="size-3" />,
   skills: <Sparkles aria-hidden className="size-3" />,
@@ -272,13 +275,18 @@ function InventoryCounters({ member }: { member: ExecutorItem }) {
   return (
     <span className="flex shrink-0 items-center gap-1.5 text-foreground-muted">
       {counters.map(({ key, count, labelKey }) => (
+        // role="img" (the glyph+count composite) gives the span a NAMABLE
+        // role, so aria-label replaces the touch-unavailable title at EVERY
+        // width; the visible ≥lg label is presentational by the img role.
         <span
           key={key}
+          role="img"
+          aria-label={`${t(labelKey)}: ${count}`}
           className="flex items-center gap-0.5 font-mono text-xs tabular-nums"
-          title={t(labelKey)}
         >
           {INVENTORY_GLYPHS[key]}
           {count}
+          <span className="hidden lg:inline">{t(labelKey)}</span>
         </span>
       ))}
     </span>

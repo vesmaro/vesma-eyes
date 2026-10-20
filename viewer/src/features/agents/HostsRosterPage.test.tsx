@@ -565,6 +565,15 @@ describe("the host harnesses (B2 §3.C.3)", () => {
     // The four inventory counters (the ME-064 fixture counts).
     expect(zcode.textContent).toContain("39");
     expect(zcode.textContent).toContain("121");
+    // UX-AUDIT A6: the counters announce meaningfully WITHOUT title (dead
+    // on touch) — role="img" + aria-label at EVERY width; the visible ≥lg
+    // word rides CSS only (happy-dom has no breakpoints).
+    const counter = zcode.querySelector<HTMLSpanElement>(
+      '[role="img"][aria-label="specialists: 39"]',
+    );
+    expect(counter).not.toBeNull();
+    expect(counter!.getAttribute("title")).toBeNull();
+    expect(zcode.querySelector('[role="img"][aria-label="plugins: 0"]')).not.toBeNull();
     // hermes: owner-disabled → the refusal badge rides the row; and with
     // no surface facts reported the reserved slot stays honestly empty
     // (the hidden geometry, never a fabricated label).
