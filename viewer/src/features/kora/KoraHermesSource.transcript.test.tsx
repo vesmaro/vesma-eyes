@@ -160,6 +160,39 @@ describe("HermesTranscript (transcript-ux grammar, hermes leg)", () => {
     expect(container.querySelectorAll("button")).toHaveLength(0);
   });
 
+  it("search keeps the raw walk under its REAL spawner, not a matching neighbour (P2)", () => {
+    // The needle hits the seq-3 raw row (real spawner: the seq-2 answer)
+    // AND a FOREIGN answer (seq-4), while the seq-2 spawner itself does NOT
+    // match. The fold must stay inside the seq-2 block — never migrate to
+    // the matching neighbour; non-matching rows leave the page.
+    const items = [
+      message({ seq: 1, role: "user", content: "check the mesh" }),
+      message({ seq: 2, role: "assistant", content: "Taking both readings." }),
+      message({
+        seq: 3,
+        role: "tool",
+        kind: "tool_result",
+        content: "mesh_ping → 3/3 peers; replication_status → lag 0s",
+      }),
+      message({ seq: 4, role: "assistant", content: "Mesh is green: ping and replication clean." }),
+    ];
+    const container = mountTranscript({ items, query: "ping" });
+    // The fold rides INSIDE its real spawner's block, open (raw hit)…
+    const spawner = container.querySelector("#kora-anchor-2");
+    if (spawner === null) throw new Error("spawner anchor missing");
+    const fold = spawner.querySelector("details");
+    if (fold === null) throw new Error("fold missing under the real spawner");
+    expect(fold.id).toBe("kora-fold-2");
+    expect((fold as HTMLDetailsElement).hasAttribute("open")).toBe(true);
+    expect(fold.textContent).toContain("mesh_ping");
+    // …and the matching neighbour answer carries NO borrowed fold.
+    const neighbour = container.querySelector("#kora-anchor-4");
+    if (neighbour === null) throw new Error("neighbour anchor missing");
+    expect(neighbour.querySelector("details")).toBeNull();
+    // Non-matching rows left the page.
+    expect(container.querySelector("#kora-anchor-1")).toBeNull();
+  });
+
   it("keeps the polite spotlight announcement region mounted", () => {
     const container = mountTranscript();
     const live = container.querySelector("p[role='status'][aria-live='polite']");

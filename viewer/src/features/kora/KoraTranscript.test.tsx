@@ -155,14 +155,52 @@ describe("KoraTranscript (transcript-ux grammar)", () => {
   });
 
   it("search mode force-opens the fold and never renders a dead jump button", () => {
-    // The needle matches ONLY the seq-3 tool row — the anchor lives on the
-    // "previous page", so the fold renders standalone and MUST be open.
-    const container = mountTranscript({ query: "zcode_reader" });
+    // The page starts MID-WALK: the needle matches the seq-3 tool row whose
+    // spawner lives on the "previous page", so the fold renders standalone
+    // and MUST be open.
+    const headItems = [
+      item({
+        seq: 3,
+        role: "tool",
+        kind: "file_read",
+        content: "read server/kora/zcode_reader.py — [redacted: path]",
+        redaction_applied: true,
+      }),
+    ];
+    const container = mountTranscript({ items: headItems, query: "zcode_reader" });
     const fold = container.querySelector("details");
     if (fold === null) throw new Error("standalone fold not rendered");
     expect(fold.hasAttribute("open")).toBe(true);
     // No anchor on this page → the row is plain text, no dead button.
     expect(fold.querySelectorAll("button")).toHaveLength(0);
+  });
+
+  it("search keeps the raw walk under its REAL spawner, not a matching neighbour (P2)", () => {
+    // The needle hits the seq-3 raw row (real spawner: the seq-2 answer)
+    // AND a FOREIGN answer (seq-5), while the seq-2 spawner itself does NOT
+    // match. The fold must stay inside the seq-2 block — never migrate to
+    // the matching neighbour; non-matching rows leave the page.
+    const items = [
+      item({ seq: 1, role: "user", content: "какой вход настраиваем для прокси" }),
+      item({ seq: 2, role: "assistant", content: "Принял, проверяю конфиг." }),
+      item({ seq: 3, role: "tool", content: "ss -tlnp — порт слушает" }),
+      item({ seq: 4, role: "user", content: "а логи что говорят?" }),
+      item({ seq: 5, role: "assistant", content: "Порт 443 живой." }),
+    ];
+    const container = mountTranscript({ items, query: "порт" });
+    // The fold rides INSIDE its real spawner's block, open (raw hit)…
+    const spawner = anchor(container, 2);
+    const fold = spawner.querySelector("details");
+    if (fold === null) throw new Error("fold missing under the real spawner");
+    expect(fold.id).toBe("kora-fold-2");
+    expect((fold as HTMLDetailsElement).hasAttribute("open")).toBe(true);
+    expect(fold.textContent).toContain("порт слушает");
+    // …and the matching neighbour answer carries NO borrowed fold.
+    const neighbour = anchor(container, 5);
+    expect(neighbour.querySelector("details")).toBeNull();
+    // Non-matching rows left the page.
+    expect(container.querySelector("#kora-anchor-1")).toBeNull();
+    expect(container.querySelector("#kora-anchor-4")).toBeNull();
   });
 
   it("keeps the polite spotlight announcement region mounted", () => {
