@@ -142,11 +142,21 @@ export function HermesTranscript({
   const t = useT();
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const needle = query.trim().toLowerCase();
-  const items = useMemo(() => {
-    if (needle === "") return pages.items;
-    return pages.items.filter((item) => item.content.toLowerCase().includes(needle));
+  // Group over the FULL read first — a fold must stay bound to its REAL
+  // spawner even in search mode (regrouping the filtered rows would fold a
+  // raw row under a matching NEIGHBOUR answer — false attribution, P2
+  // review 2026-10-20). The needle then keeps only the groups it touches:
+  // the anchor matched OR any raw row matched.
+  const groups = useMemo(() => {
+    const all = groupKoraTranscript(pages.items);
+    if (needle === "") return all;
+    const hit = (content: string) => content.toLowerCase().includes(needle);
+    return all.filter(
+      (group) =>
+        (group.anchor !== null && hit(group.anchor.content)) ||
+        group.raw.some((item) => hit(item.content)),
+    );
   }, [pages.items, needle]);
-  const groups = useMemo(() => groupKoraTranscript(items), [items]);
 
   // The anchor wires — the shared state machine (the zcode scroll rides
   // the same hook). Component-local, nothing saved.
@@ -188,7 +198,7 @@ export function HermesTranscript({
     );
   }
 
-  if (items.length === 0) {
+  if (groups.length === 0) {
     return (
       <p className="max-w-scroll font-scroll text-sm text-foreground-secondary">
         {needle !== ""
