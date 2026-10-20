@@ -4498,11 +4498,14 @@ class Store:
             if normalized:
                 next_inv["runtime"] = normalized
         if isinstance(distrobox_containers, list):
+            # An explicit ``[]`` is a real zero-and-ran fact — the stored
+            # list is REPLACED even when empty (k8s-leg parity); only an
+            # ABSENT key (None, an old agent) keeps the previous mirror.
             rows = [r for c in distrobox_containers if isinstance(c, dict)
                     for r in (self._normalize_container_fact(c),) if r]
             if rows:
                 rows.sort(key=lambda r: r["name"])
-                next_inv["distrobox_containers"] = rows
+            next_inv["distrobox_containers"] = rows
         if (isinstance(k8s_nodes, list) or isinstance(k8s_pods, list)
                 or isinstance(k8s_verdicts, dict)):
             leg: dict[str, Any] = {}
