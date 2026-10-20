@@ -1283,6 +1283,7 @@ export const ru = {
   "palette.connectHost": "Подключить хост",
   "agents.hosts.refusalDisabled": "отключён",
   "agents.hosts.refusalRevoked": "отозван",
+  "agents.hosts.execEnvTooltip": "Среда исполнения (данные агента)",
   "agents.hosts.sessions24Tooltip": "Сессии за 24 часа",
   "agents.hosts.resize.label": "Ширина панели хостов",
   "agents.hosts.resize.tooltip":

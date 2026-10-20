@@ -119,12 +119,14 @@ function rosterExecutors(base: number): ExecutorItem[] {
       id: "ex-1",
       name: "zcode@laptop",
       status: status("online", base),
-      // The ME-064 inventory snapshot (the counters the row shows).
+      // The ME-064 inventory snapshot (the counters the row shows) +
+      // the AGW-23 surface badge the «среда исполнения» slot renders.
       harness_inventory: [
         {
           name: "zcode",
           kind: "cli",
           home_path: "/home/u/.zcode",
+          exec_env: "metal",
           capabilities: {
             specialists: ["a", "b"],
             specialists_count: 39,
@@ -547,16 +549,22 @@ describe("the host harnesses (B2 §3.C.3)", () => {
     const rows = harnessRows(container);
     expect(rows.length).toBe(2);
     const zcode = [...rows].find((row) => row.textContent?.includes("zcode@laptop"))!;
-    // Presence + harness type + the reserved «среда исполнения» slot.
+    // Presence + harness type + the «среда исполнения» slot (AGW-23: the
+    // agent's own surface label rides the badge when reported).
     expect(zcode.textContent).toContain("online");
     expect(zcode.textContent).toContain("zcode");
-    expect(zcode.querySelector('[data-slot="execution-env"]')).not.toBeNull();
+    const envSlot = zcode.querySelector('[data-slot="execution-env"]');
+    expect(envSlot).not.toBeNull();
+    expect(envSlot?.textContent).toBe("metal");
     // The four inventory counters (the ME-064 fixture counts).
     expect(zcode.textContent).toContain("39");
     expect(zcode.textContent).toContain("121");
-    // hermes: owner-disabled → the refusal badge rides the row.
+    // hermes: owner-disabled → the refusal badge rides the row; and with
+    // no surface facts reported the reserved slot stays honestly empty
+    // (the hidden geometry, never a fabricated label).
     const hermes = [...rows].find((row) => row.textContent?.includes("hermes@laptop"))!;
     expect(hermes.textContent).toContain("disabled");
+    expect(hermes.querySelector('[data-slot="execution-env"]')?.textContent).toBe("");
     await actUnmount(root);
   });
 

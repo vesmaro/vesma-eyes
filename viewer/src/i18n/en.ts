@@ -1257,6 +1257,7 @@ export const en: Record<TranslationKey, string> = {
   "palette.connectHost": "Connect a host",
   "agents.hosts.refusalDisabled": "disabled",
   "agents.hosts.refusalRevoked": "revoked",
+  "agents.hosts.execEnvTooltip": "Execution environment (agent-reported)",
   "agents.hosts.sessions24Tooltip": "Sessions in 24h",
   "agents.hosts.resize.label": "Hosts panel width",
   "agents.hosts.resize.tooltip":
