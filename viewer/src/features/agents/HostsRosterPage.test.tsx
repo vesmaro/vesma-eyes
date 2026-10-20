@@ -127,6 +127,8 @@ function rosterExecutors(base: number): ExecutorItem[] {
           kind: "cli",
           home_path: "/home/u/.zcode",
           exec_env: "metal",
+          // AGW-23: the dedupe trail rides the badge tooltip.
+          found_at: ["/home/u/.zcode", "/box/home/u/.zcode"],
           capabilities: {
             specialists: ["a", "b"],
             specialists_count: 39,
@@ -556,6 +558,10 @@ describe("the host harnesses (B2 §3.C.3)", () => {
     const envSlot = zcode.querySelector('[data-slot="execution-env"]');
     expect(envSlot).not.toBeNull();
     expect(envSlot?.textContent).toBe("metal");
+    // The found_at dedupe trail rides the badge tooltip (AGW-23), not the
+    // row body — the B2 row geometry stays reserved.
+    expect(envSlot?.getAttribute("title")).toContain("/home/u/.zcode");
+    expect(envSlot?.getAttribute("title")).toContain("/box/home/u/.zcode");
     // The four inventory counters (the ME-064 fixture counts).
     expect(zcode.textContent).toContain("39");
     expect(zcode.textContent).toContain("121");

@@ -17,7 +17,7 @@ import { useT, type TranslationKey } from "@/i18n";
 import { cn } from "@/lib/utils";
 import type { KoraSession } from "@/features/kora/koraTypes";
 import { inventoryCategories } from "./harnessInventoryModel";
-import { executorExecEnv } from "./execEnvModel";
+import { executorExecEnv, executorFoundTrail } from "./execEnvModel";
 import {
   PRESENCE_DOT,
   PRESENCE_TEXT,
@@ -116,6 +116,12 @@ function HarnessRow({
   const presence = memberPresence(member, meta, now);
   const presenceKey = presence ?? "unknown";
   const execEnv = executorExecEnv(member);
+  // AGW-23: the dedupe trail of the SAME installation rides the badge
+  // tooltip (audit data of one fact — the row geometry stays reserved).
+  const foundTrail = executorFoundTrail(member);
+  const execEnvTitle = foundTrail.length
+    ? `${t("agents.hosts.execEnvTooltip")}\n${t("agents.hosts.foundAtTooltip")}\n${foundTrail.join("\n")}`
+    : t("agents.hosts.execEnvTooltip");
 
   return (
     <li
@@ -206,7 +212,7 @@ function HarnessRow({
           <Badge
             data-slot="execution-env"
             variant="outline"
-            title={t("agents.hosts.execEnvTooltip")}
+            title={execEnvTitle}
             className="shrink-0 whitespace-nowrap font-mono font-normal"
           >
             {execEnv}
