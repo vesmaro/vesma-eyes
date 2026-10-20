@@ -28,6 +28,7 @@ import { AssignmentStateBadge } from "./AssignmentStateBadge";
 import { ACTIVE_ASSIGNMENT_STATES } from "./assignmentStatus";
 import { ExecutorLinkCheck } from "./ExecutorLinkCheck";
 import { HarnessInventorySection } from "./HarnessInventorySection";
+import { SurfaceFactsSection } from "./SurfaceFactsSection";
 import {
   EXECUTOR_CAPABILITIES_MAX,
   addCapability,
@@ -555,6 +556,10 @@ export function ExecutorSheetForm({
 
       {/* --- ME-064: discovered inventory (dropdowns, spec §3.1) -------- */}
       <HarnessInventorySection executor={executor} />
+
+      {/* --- AGW-23/24: surface facts (runtime / distrobox / k8s mirror) -
+       * renders NOTHING for pre-v0.9 executors — honest absence. ------- */}
+      <SurfaceFactsSection executor={executor} />
 
       {/* --- Service facts, folded (persona-review: not primary text) --- */}
       <section

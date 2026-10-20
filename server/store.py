@@ -1730,6 +1730,20 @@ class Store:
             db.execute(
                 "ALTER TABLE executors "
                 "ADD COLUMN harness_inventory TEXT NOT NULL DEFAULT '[]'")
+        # AGW-23/24 (exec-env binding + k8s mirror, 2026-10-20): the SURFACE
+        # facts of the last discovery report — runtime verdict, per-container
+        # distrobox verdicts, the k8s leg (nodes/pods/verdicts) — as ONE
+        # additive JSON-object column. A separate column, not a
+        # ``harness_inventory`` reshaping: pod facts are their OWN fact class
+        # (no home_path exists for a pod — the agent protocol forbids folding
+        # them into the environments shape) and harness_inventory is a LIST
+        # contract already served/typed (v0.8 additive rule). '{}' DEFAULT
+        # covers pre-existing rows; no SEED_VERSION bump (harness_inventory
+        # precedent).
+        if "exec_env_inventory" not in ecols:
+            db.execute(
+                "ALTER TABLE executors "
+                "ADD COLUMN exec_env_inventory TEXT NOT NULL DEFAULT '{}'")
         # P2-1: provision_host_pins was reshaped from host-PK to (host,port)
         # PK while still WIP (unreleased). A dev DB carrying the old shape
         # would silently break every pin call — drop it; pins are TOFU
@@ -4320,6 +4334,21 @@ class Store:
             version = str(env.get("version") or "").strip()[:60]
             if version:
                 row["version"] = version
+            # AGW-23 (exec-env binding, 2026-10-20): the surface badge and
+            # the dedupe trail ride the row verbatim-but-bounded — the
+            # honest surface label ("metal" | "distrobox:<name>") and every
+            # path that saw THIS SAME installation. Absent = absent: an
+            # old agent's rows stay exactly as they were (no fabricated
+            # defaults — the anti-fabrication rule).
+            exec_env = str(env.get("exec_env") or "").strip()[:60]
+            if exec_env:
+                row["exec_env"] = exec_env
+            found_at = env.get("found_at")
+            if isinstance(found_at, list):
+                paths = [str(p)[:200] for p in found_at[:8]
+                         if str(p).strip()]
+                if paths:
+                    row["found_at"] = paths
             caps = env.get("capabilities")
             if isinstance(caps, dict):
                 row["capabilities"] = caps  # caps-validated at the route
@@ -4340,6 +4369,189 @@ class Store:
                 self._log(db, "inventory.reported", None, {
                     "executor_id": executor_id,
                     "environments": [r["name"] for r in normalized]})
+            return self._executor(db, executor_id)
+
+    # -- AGW-23/24 surface facts (exec-env binding + k8s mirror) ----------
+    #
+    # Wire shapes below mirror the agent's frozen v0.9.0 contract
+    # (internal/discovery: Runtime, Container, K8sNode, K8sPod, the
+    # verdict map) — the same targeted-normalization style as
+    # report_executor_inventory: type-checked, string-bounded, additive
+    # at the PAYLOAD level (unknown top-level keys were already accepted
+    # by the body model; row shapes are contract-frozen).
+
+    @staticmethod
+    def _normalize_runtime_fact(rt: dict[str, Any]) -> dict[str, Any]:
+        """One runtime verdict ({"kind": "metal"} | {"kind": "pod",
+        "signals": [...], "systemd": ...}) — bounded, no fabricated keys."""
+        out: dict[str, Any] = {}
+        kind = str(rt.get("kind") or "").strip()[:20]
+        if kind:
+            out["kind"] = kind
+        signals = rt.get("signals")
+        if isinstance(signals, list):
+            vals = [str(s)[:200] for s in signals[:16] if str(s).strip()]
+            if vals:
+                out["signals"] = vals
+        systemd = str(rt.get("systemd") or "").strip()[:200]
+        if systemd:
+            out["systemd"] = systemd
+        return out
+
+    @staticmethod
+    def _normalize_container_fact(c: dict[str, Any]) -> dict[str, Any] | None:
+        """One distrobox container verdict — name/status/verdict only."""
+        name = str(c.get("name") or "").strip()[:60]
+        if not name:
+            return None
+        out: dict[str, Any] = {"name": name}
+        status = str(c.get("status") or "").strip()[:60]
+        if status:
+            out["status"] = status
+        if isinstance(c.get("running"), bool):
+            out["running"] = c["running"]
+        verdict = str(c.get("scan_verdict") or "").strip()[:20]
+        if verdict:
+            out["scan_verdict"] = verdict
+        detail = str(c.get("detail") or "").strip()[:200]
+        if detail:
+            out["detail"] = detail
+        agents = c.get("agents_found")
+        if isinstance(agents, int) and not isinstance(agents, bool):
+            out["agents_found"] = agents
+        return out
+
+    @staticmethod
+    def _normalize_k8s_node(n: dict[str, Any]) -> dict[str, Any] | None:
+        """One cluster node fact — name/readiness/kubelet version."""
+        name = str(n.get("name") or "").strip()[:253]
+        if not name:
+            return None
+        out: dict[str, Any] = {"name": name}
+        if isinstance(n.get("ready"), bool):
+            out["ready"] = n["ready"]
+        version = str(n.get("kubelet_version") or "").strip()[:60]
+        if version:
+            out["kubelet_version"] = version
+        return out
+
+    @staticmethod
+    def _normalize_k8s_pod(p: dict[str, Any]) -> dict[str, Any] | None:
+        """One namespace pod fact — the content-free v5 row (name/phase/
+        node/images/ports/restarts/harness/exec_env)."""
+        name = str(p.get("name") or "").strip()[:253]
+        if not name:
+            return None
+        out: dict[str, Any] = {"name": name}
+        for key, cap in (("namespace", 63), ("phase", 20), ("node", 253),
+                         ("harness", 60), ("exec_env", 60)):
+            val = str(p.get(key) or "").strip()[:cap]
+            if val:
+                out[key] = val
+        images = p.get("images")
+        if isinstance(images, list):
+            vals = [str(i)[:200] for i in images[:16] if str(i).strip()]
+            if vals:
+                out["images"] = vals
+        ports = p.get("ports")
+        if isinstance(ports, list):
+            nums = [n for n in ports[:16]
+                    if isinstance(n, int) and not isinstance(n, bool)]
+            if nums:
+                out["ports"] = nums
+        restarts = p.get("restarts")
+        if isinstance(restarts, int) and not isinstance(restarts, bool):
+            out["restarts"] = restarts
+        return out
+
+    def report_executor_exec_env(
+            self, executor_id: str,
+            runtime: dict[str, Any] | None = None,
+            distrobox_containers: list[dict[str, Any]] | None = None,
+            k8s_nodes: list[dict[str, Any]] | None = None,
+            k8s_pods: list[dict[str, Any]] | None = None,
+            k8s_verdicts: dict[str, Any] | None = None,
+    ) -> dict[str, Any] | None:
+        """Surface-facts ingest (AGW-23/24): store the last discovery
+        report's runtime verdict, per-container distrobox verdicts and
+        the k8s leg as the additive ``exec_env_inventory`` snapshot —
+        names/statuses/counts only, content-free, advisory, OPEN-read
+        like the ``harness_inventory`` mirror. The route has ALREADY
+        validated the caps (containers/nodes ≤ 64, pods ≤ 128 rows;
+        per-object byte ceilings) — honest 422s upstream; this method
+        normalizes the frozen wire shapes and writes.
+
+        Semantics (the P3-1 precedent, per TOP-LEVEL key): the stored
+        object mirrors the LAST report that carried each key — a key
+        ABSENT from this report never wipes its previous mirror (an old
+        agent, or a leg that did not run this pass, leaves the row
+        untouched); an identical re-report is a silent no-op (hourly
+        cadence, no churn). The k8s subtree replaces as ONE unit: the
+        leg's output is one pass's truth (a fresh ``denied`` verdict
+        must not sit next to a stale pods list). Audit:
+        ``exec_env.reported`` — only when the snapshot changed. Returns
+        the fresh executor row, or None when gone/revoked.
+        """
+        next_inv: dict[str, Any] = {}
+        if isinstance(runtime, dict):
+            normalized = self._normalize_runtime_fact(runtime)
+            if normalized:
+                next_inv["runtime"] = normalized
+        if isinstance(distrobox_containers, list):
+            rows = [r for c in distrobox_containers if isinstance(c, dict)
+                    for r in (self._normalize_container_fact(c),) if r]
+            if rows:
+                rows.sort(key=lambda r: r["name"])
+                next_inv["distrobox_containers"] = rows
+        if (isinstance(k8s_nodes, list) or isinstance(k8s_pods, list)
+                or isinstance(k8s_verdicts, dict)):
+            leg: dict[str, Any] = {}
+            if isinstance(k8s_nodes, list):
+                nodes = [n for x in k8s_nodes if isinstance(x, dict)
+                         for n in (self._normalize_k8s_node(x),) if n]
+                leg["nodes"] = nodes
+            if isinstance(k8s_pods, list):
+                pods = [p for x in k8s_pods if isinstance(x, dict)
+                        for p in (self._normalize_k8s_pod(x),) if p]
+                pods.sort(key=lambda r: r["name"])
+                leg["pods"] = pods
+            if isinstance(k8s_verdicts, dict):
+                leg["verdicts"] = {
+                    str(k)[:30]: str(v)[:200]
+                    for k, v in list(k8s_verdicts.items())[:8]
+                    if str(v).strip()
+                }
+            next_inv["k8s"] = leg
+        if not next_inv:
+            # Nothing this report claims about surfaces — the mirror is
+            # left exactly as it was (the no-wipe rule; also covers old
+            # agents that post neither field).
+            return self._executor_by_id(executor_id)
+        with self._lock, self._conn() as db:
+            row = db.execute(
+                "SELECT * FROM executors WHERE id=?", (executor_id,)).fetchone()
+            if row is None or row["state"] == "revoked":
+                return None
+            stored = _loads(row["exec_env_inventory"])
+            if not isinstance(stored, dict):
+                stored = {}
+            merged = dict(stored)
+            merged.update(next_inv)
+            if merged != stored:
+                db.execute(
+                    "UPDATE executors SET exec_env_inventory=?, "
+                    "updated_at=? WHERE id=? AND state<>'revoked'",
+                    (json.dumps(merged, ensure_ascii=False), _now(),
+                     executor_id))
+                self._log(db, "exec_env.reported", None, {
+                    "executor_id": executor_id,
+                    "sections": sorted(next_inv.keys())})
+            return self._executor(db, executor_id)
+
+    def _executor_by_id(self, executor_id: str) -> dict[str, Any] | None:
+        """Row read without a write lock (the no-op leg of the surface
+        ingest — same shape as report_executor_inventory's return)."""
+        with self._lock, self._conn() as db:
             return self._executor(db, executor_id)
 
 

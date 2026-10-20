@@ -745,6 +745,9 @@ export const MOCK_EXECUTORS: ExecutorItem[] = [
         name: "zcode",
         kind: "cli",
         home_path: "/home/u/.zcode",
+        // AGW-23: the surface badge the B2 slot renders (the agent's own
+        // honest label; here the own-namespace scan = metal).
+        exec_env: "metal",
         capabilities: {
           specialists: ["bathys-researcher", "gcw-tech-lead", "gcw-senior-qa-engineer"],
           specialists_count: 39,

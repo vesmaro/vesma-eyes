@@ -491,6 +491,10 @@ def _executor_public(e: dict[str, Any]) -> dict[str, Any]:
         inventory = json.loads(e.get("harness_inventory") or "[]")
     except (TypeError, ValueError):
         inventory = []
+    try:
+        exec_env = json.loads(e.get("exec_env_inventory") or "{}")
+    except (TypeError, ValueError):
+        exec_env = {}
     return {
         "id": e["id"],
         "name": e["name"],
@@ -501,6 +505,7 @@ def _executor_public(e: dict[str, Any]) -> dict[str, Any]:
         "version": e.get("version", ""),
         "discovered": [d for d in discovered if isinstance(d, dict)],
         "harness_inventory": [i for i in inventory if isinstance(i, dict)],
+        "exec_env_inventory": exec_env if isinstance(exec_env, dict) else {},
         "enabled": bool(e.get("enabled")),
         "state": e.get("state", "pending"),
         "archived": executor_archived(e),
@@ -1852,6 +1857,10 @@ class ExecutorOut(_ApiModel):
     version: str = ""
     discovered: list[dict[str, Any]] = []  # ME-015: last discovery mirror (advisory)
     harness_inventory: list[dict[str, Any]] = []  # ME-062: environments[] snapshot (advisory)
+    # AGW-23/24: the surface-facts snapshot (runtime / distrobox_containers
+    # / k8s) — the last report that carried each key; {} = never reported
+    # (honest absence, never a fabricated zero).
+    exec_env_inventory: dict[str, Any] = {}
     enabled: bool = False
     state: str = "pending"             # pending | approved | revoked
     # Roster-host-binding-cleanup: aged-out disabled (enabled=0, no report
@@ -1927,10 +1936,24 @@ class ExecutorDiscoveryBody(BaseModel):
     ``environments`` field and the ME-062 additive ``sessions[]`` field
     are validated and STORED board-side (spec §6.1: the BE slice turns
     accept-and-ignore into store-and-serve); old agents that post neither
-    leave both mirrors untouched."""
+    leave both mirrors untouched.
+
+    AGW-23/24 (agent v0.9.0, exec-env binding + k8s mirror): the SURFACE
+    facts stop being silently dropped too. ``runtime`` (the honest
+    where-does-this-process-run verdict), ``distrobox_containers`` (the
+    per-container honest verdicts), and the k8s leg lists
+    (``k8s_nodes``/``k8s_pods``/``k8s_verdicts``, content-free) land in
+    the additive ``exec_env_inventory`` snapshot. ``None`` default =
+    ABSENT (the leg did not report) — an explicit ``[]`` is a real
+    zero-and-ran fact; the distinction drives the no-wipe semantics."""
     harnesses: list[DiscoveryEntry] = []
     environments: list[dict[str, Any]] = []  # additive, content-free
     sessions: list[SessionFactIn] = []       # ME-062: task-linked facts
+    runtime: dict[str, Any] | None = None            # AGW-24, additive
+    distrobox_containers: list[dict[str, Any]] | None = None  # AGW-23
+    k8s_nodes: list[dict[str, Any]] | None = None    # AGW-24, additive
+    k8s_pods: list[dict[str, Any]] | None = None     # AGW-24, additive
+    k8s_verdicts: dict[str, Any] | None = None       # AGW-24, non-ok only
 
 
 class ExecutorDiscoveryOut(_ApiModel):
@@ -4815,6 +4838,21 @@ _INVENTORY_LIST_CAPS = {"specialists": 50, "skills": 50,
                         "plugins": 30, "instructions": 30}
 _INVENTORY_MAX_BYTES = 8 * 1024
 
+# AGW-23/24 (agent v0.9.0): the surface-facts caps — the same honest-422
+# discipline as the environments leg. The real cluster shape is 2 nodes /
+# 27 pods (deploy-gate 18.10); the caps leave an order of magnitude of
+# headroom without letting a broken client stream an unbounded list into
+# the mirror. Per-object byte ceilings keep one hostile row from bloating
+# the snapshot.
+_SURFACE_MAX_CONTAINERS = 64
+_SURFACE_CONTAINER_BYTES = 2 * 1024
+_K8S_MAX_NODES = 64
+_K8S_NODE_BYTES = 2 * 1024
+_K8S_MAX_PODS = 128
+_K8S_POD_BYTES = 4 * 1024
+_SURFACE_RUNTIME_BYTES = 2 * 1024
+_K8S_VERDICTS_BYTES = 2 * 1024
+
 
 def _validate_discovery_environments(
         environments: list[dict[str, Any]]) -> None:
@@ -4850,6 +4888,46 @@ def _validate_discovery_environments(
             raise HTTPException(
                 422, f"environment {name}: capabilities object exceeds "
                      f"8 KiB ({size} bytes)")
+
+
+def _validate_discovery_surfaces(body: ExecutorDiscoveryBody) -> None:
+    """AGW-23/24 caps for the surface facts (the same honest-422
+    discipline as the environments leg): row counts and per-object byte
+    ceilings for ``distrobox_containers`` and the k8s leg. A breach
+    means a broken or hostile client — the board refuses the payload
+    instead of silently trimming the agent's honest report."""
+    sections: list[tuple[str, list[dict[str, Any]] | None, int, int]] = [
+        ("distrobox_containers", body.distrobox_containers,
+         _SURFACE_MAX_CONTAINERS, _SURFACE_CONTAINER_BYTES),
+        ("k8s_nodes", body.k8s_nodes, _K8S_MAX_NODES, _K8S_NODE_BYTES),
+        ("k8s_pods", body.k8s_pods, _K8S_MAX_PODS, _K8S_POD_BYTES),
+    ]
+    for label, rows, cap, obj_bytes in sections:
+        if rows is None:
+            continue
+        if len(rows) > cap:
+            raise HTTPException(
+                422, f"too many {label}: {len(rows)} (cap {cap})")
+        for row in rows:
+            name = str(row.get("name") or "").strip()
+            if not name:
+                raise HTTPException(
+                    422, f"{label} row without a name")
+            size = len(json.dumps(row, ensure_ascii=False).encode("utf-8"))
+            if size > obj_bytes:
+                raise HTTPException(
+                    422, f"{label} {name}: row exceeds "
+                         f"{obj_bytes // 1024} KiB ({size} bytes)")
+    for label, obj, cap_bytes in (
+            ("runtime", body.runtime, _SURFACE_RUNTIME_BYTES),
+            ("k8s_verdicts", body.k8s_verdicts, _K8S_VERDICTS_BYTES)):
+        if obj is None:
+            continue
+        size = len(json.dumps(obj, ensure_ascii=False).encode("utf-8"))
+        if size > cap_bytes:
+            raise HTTPException(
+                422, f"{label} exceeds {cap_bytes // 1024} KiB "
+                     f"({size} bytes)")
 
 
 @app.post("/api/executors/{executor_id}/discovery")
@@ -4890,6 +4968,7 @@ async def executor_discovery(executor_id: str, body: ExecutorDiscoveryBody,
             f"too many discovery session facts: {len(body.sessions)} "
             f"(cap {_DISCOVERY_MAX_SESSIONS})")
     _validate_discovery_environments(body.environments)
+    _validate_discovery_surfaces(body)
     executor = _authenticate_executor(request)
     if executor is None:
         raise HTTPException(401, "executor token required")
@@ -4912,6 +4991,11 @@ async def executor_discovery(executor_id: str, body: ExecutorDiscoveryBody,
     if row is None:
         raise HTTPException(404, f"executor {executor_id} not found")
     store.report_executor_inventory(executor_id, body.environments)
+    store.report_executor_exec_env(
+        executor_id, runtime=body.runtime,
+        distrobox_containers=body.distrobox_containers,
+        k8s_nodes=body.k8s_nodes, k8s_pods=body.k8s_pods,
+        k8s_verdicts=body.k8s_verdicts)
     sessions = store.report_session_facts(
         executor_id, [s.model_dump() for s in body.sessions])
     fresh = store.get_executor(executor_id) or row

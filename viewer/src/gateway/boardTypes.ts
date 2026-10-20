@@ -369,9 +369,43 @@ export interface HarnessInventoryEnvironment {
   readonly name: string;
   readonly kind?: string;
   readonly home_path?: string;
+  /**
+   * AGW-23: the execution surface the fact came from — "metal" (the
+   * agent's own-namespace scan) or "distrobox:<name>" (a probe inside
+   * that container). OPTIONAL: pre-v0.9 agents omit it — absence is an
+   * answer, never a fabricated "metal".
+   */
+  readonly exec_env?: string;
+  /**
+   * AGW-23: every surface that saw THIS SAME installation (the
+   * cross-surface dedupe's audit trail). Omitted for a single-surface
+   * fact — never a one-element echo of home_path.
+   */
+  readonly found_at?: readonly string[];
   /** Names+counters, lists server-capped (50/50/30/30), object ≤ 8 KiB. */
   readonly capabilities?: Readonly<Record<string, unknown>>;
   readonly [key: string]: unknown;
+}
+
+/**
+ * AGW-23/24: the surface-facts snapshot (`exec_env_inventory` on the
+ * board `ExecutorOut`) — the LAST discovery report that carried each
+ * top-level key (a key absent from a report never wipes its mirror).
+ * AGENT-reported and advisory — the UI narrows it defensively, shapes
+ * are the frozen v0.9.0 wire contract. OPTIONAL: pre-v0.9 boards and
+ * old agents carry none — honest absence.
+ */
+export interface ExecEnvInventory {
+  /** Where the agent's own process runs: {"kind": "metal"|"pod", ...}. */
+  readonly runtime?: Readonly<Record<string, unknown>>;
+  /** Per-container distrobox verdicts (name/status/verdict only). */
+  readonly distrobox_containers?: readonly Readonly<Record<string, unknown>>[];
+  /** The k8s leg as ONE unit: nodes, pods, non-ok verdicts. */
+  readonly k8s?: {
+    readonly nodes?: readonly Readonly<Record<string, unknown>>[];
+    readonly pods?: readonly Readonly<Record<string, unknown>>[];
+    readonly verdicts?: Readonly<Record<string, string>>;
+  };
 }
 
 /**
@@ -411,6 +445,12 @@ export interface ExecutorItem {
    * pre-ME-062 boards carry none (Э3) — absence is an answer, not a gap.
    */
   readonly harness_inventory?: readonly HarnessInventoryEnvironment[];
+  /**
+   * AGW-23/24: the surface-facts snapshot (runtime verdict, distrobox
+   * containers, the k8s leg). OPTIONAL: pre-v0.9 agents leave it absent
+   * — honest absence, never a fabricated zero.
+   */
+  readonly exec_env_inventory?: ExecEnvInventory;
   /**
    * Roster-host-binding-cleanup (2026-10-18): the aged-out disabled
    * verdict — enabled=0 with no report beyond `meta.archive`
