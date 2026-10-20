@@ -271,3 +271,61 @@ export function quickFilterMatches(
   if (filter === "running") return session.state === "live";
   return session.age_seconds < 86_400; // "day"
 }
+
+/* ── transcript-ux wave: the Диалог / Сырой ход grammar ──────────────────
+ * The owner directive (2026-10-10, journey 1.73.1): the transcript without
+ * grouping is a dump — separate the WORKING dialogue (user↔assistant) from
+ * the RAW WALK (how the agent thought and acted: reasoning, tool calls,
+ * service rows), keep the raw walk folded around the answer that spawned
+ * it, and wire the anchors both ways (click a raw row → the answer, and
+ * back). The data stays the frozen linear seq stream — grouping is a PURE
+ * render-side derivation, zero contract impact. */
+
+/** Roles that ARE the working dialogue (the «Диалог» surface). */
+export const KORA_DIALOG_ROLES: ReadonlySet<string> = new Set(["user", "assistant"]);
+
+/**
+ * One grouped transcript block: a dialog row (user|assistant) ANCHOR plus
+ * the raw-walk rows (tool|system) that follow it in the seq stream — the
+ * raw walk is chronologically bound to the answer above it, so the fold
+ * renders inside that anchor's block. `anchor === null` happens only when a
+ * loaded page STARTS with raw rows (the spawning answer sits on a previous
+ * page) — the rows render as a standalone fold, still honest, nothing
+ * re-attributed.
+ */
+export interface KoraTranscriptGroup<T> {
+  readonly anchor: T | null;
+  readonly raw: readonly T[];
+}
+
+/**
+ * Group a linear transcript page into anchor+raw blocks. Stable, order
+ * preserving: dialog rows open groups, raw rows append to the current
+ * group; leading raw rows form a null-anchor group. O(n), no data mutated.
+ */
+export function groupKoraTranscript<T extends { readonly role: string }>(
+  items: readonly T[],
+): readonly KoraTranscriptGroup<T>[] {
+  const groups: { anchor: T | null; raw: T[] }[] = [];
+  for (const item of items) {
+    const last = groups[groups.length - 1];
+    if (KORA_DIALOG_ROLES.has(item.role)) {
+      groups.push({ anchor: item, raw: [] });
+    } else if (last !== undefined) {
+      last.raw.push(item);
+    } else {
+      groups.push({ anchor: null, raw: [item] });
+    }
+  }
+  return groups;
+}
+
+/** DOM anchor id of a dialog row (the click-to-answer wire of the wave). */
+export function koraTranscriptAnchorId(seq: number): string {
+  return `kora-anchor-${seq}`;
+}
+
+/** DOM id of a group's raw-walk fold (the answer-to-raw-walk wire). */
+export function koraTranscriptFoldId(seq: number): string {
+  return `kora-fold-${seq}`;
+}
