@@ -1228,6 +1228,9 @@ export const en: Record<TranslationKey, string> = {
   "agents.hosts.filterEmpty": "No hosts match the filter.",
   "agents.hosts.onlineCounter": "{{online}}/{{total}} harnesses online",
   "agents.hosts.connectAction": "Connect a host",
+  // UX-AUDIT A5: the roster header's quiet button label (the «+» rides the
+  // icon glyph; the panel/empty-state CTA keeps the full "a host" wording).
+  "agents.hosts.connectShort": "Connect",
   "agents.hosts.pendingPill": "awaits decision",
   "agents.hosts.fieldPlaceholder": "The host work field arrives in the next update.",
   "agents.hosts.notFound": "Host not found",

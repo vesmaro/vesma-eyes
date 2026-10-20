@@ -1253,6 +1253,9 @@ export const ru = {
   "agents.hosts.filterEmpty": "Под фильтр не попал ни один хост.",
   "agents.hosts.onlineCounter": "{{online}}/{{total}} харнесов онлайн",
   "agents.hosts.connectAction": "Подключить хост",
+  // UX-AUDIT A5: короткая подпись тихой кнопки в шапке ростера (глиф «+»
+  // несёт иконка; полный CTA пустого состояния/панели остаётся «хост»).
+  "agents.hosts.connectShort": "Подключить",
   "agents.hosts.pendingPill": "ждёт решения",
   "agents.hosts.fieldPlaceholder":
     "Рабочее поле хоста появится в следующем обновлении.",

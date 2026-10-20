@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router";
-import { List } from "lucide-react";
+import { List, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -591,6 +591,13 @@ function HostFilterChips({
  * «Хосты» + the derived summary («машин: N · на связи: M · требуют внимания:
  * K» — the plural-safe genitive counter style of the Kora header). While the
  * registry read is pending: a skeleton with NO numbers — no fake counters.
+ *
+ * The header also carries the PERMANENT quiet connect entry (UX-AUDIT A5,
+ * 2026-10-20): the connect conveyor left the nav (agents-redesign C1), and
+ * on a FILLED roster its contextual entries (the panel CTA, the empty
+ * state) are out of sight — the «how do I add a host» path went dark. The
+ * button rides the SAME route as those CTAs (one action, not a second
+ * implementation) and stays visible in every state of the page.
  */
 function Header({
   summary,
@@ -618,6 +625,14 @@ function Header({
           </span>
         </p>
       )}
+      {/* The quiet connect action (ghost — the button dictionary's quietest
+       * step); the Plus glyph + the short word read as «+ Подключить». */}
+      <Button asChild variant="ghost" size="sm" className="ml-auto shrink-0">
+        <Link to="/agents/harnesses?connect=1">
+          <Plus aria-hidden="true" />
+          {t("agents.hosts.connectShort")}
+        </Link>
+      </Button>
     </header>
   );
 }

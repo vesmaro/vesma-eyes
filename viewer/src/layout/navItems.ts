@@ -139,7 +139,8 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
     // agents-redesign C1 (§2.2): the domain carries TWO sections — the hosts
     // workbench and Исполнение. The connect conveyor LEAVES the nav: its
     // route (/agents/harnesses) stays live, the entry is contextual (the
-    // roster panel CTA, the empty state, the field).
+    // roster header's permanent quiet action — UX-AUDIT A5 — the roster
+    // panel CTA, the empty state, the field).
     sections: [
       {
         to: "/agents/hosts",
