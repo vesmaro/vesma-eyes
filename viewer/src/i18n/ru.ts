@@ -1071,7 +1071,8 @@ export const ru = {
   "tasks.create.sumWhat": "Что",
   "tasks.create.sumTags": "Теги",
   "tasks.create.whomQueue": "Очередь без исполнителя",
-  "tasks.create.whomExecutor": "{{name}} · специалист {{specialist}} · харнесс {{harness}}",
+  "tasks.create.whomExecutor":
+    "{{name}} · специалист {{specialist}} · харнесс {{harness}}",
   "tasks.create.give": "Дать задачу",
   "tasks.create.assignmentFailed":
     "Задача {{id}} создана, но поручение не встало — причина во всплывающем сообщении. Задачу можно поручить из её карточки.",
@@ -1271,7 +1272,8 @@ export const ru = {
   "agents.hosts.nowIdle": "Простаивает — активных задач и живых сессий нет.",
   "agents.hosts.nowAssignments": "Активные задачи",
   "agents.hosts.nowSessions": "Живые сессии",
-  "agents.hosts.nowNoSessions": "Живых сессий нет — появятся, когда харнес начнёт работу.",
+  "agents.hosts.nowNoSessions":
+    "Живых сессий нет — появятся, когда харнес начнёт работу.",
   "agents.hosts.sessionsFailed": "Сессии недоступны.",
   "agents.hosts.recentTitle": "Недавно",
   "agents.hosts.recentEmpty": "Тишина. Первые события — после первого доклада.",
@@ -1283,6 +1285,8 @@ export const ru = {
   "palette.connectHost": "Подключить хост",
   "agents.hosts.refusalDisabled": "отключён",
   "agents.hosts.refusalRevoked": "отозван",
+  "agents.hosts.execEnvTooltip": "Среда исполнения (данные агента)",
+  "agents.hosts.foundAtTooltip": "Эта же установка также найдена в",
   "agents.hosts.sessions24Tooltip": "Сессии за 24 часа",
   "agents.hosts.resize.label": "Ширина панели хостов",
   "agents.hosts.resize.tooltip":
@@ -1515,7 +1519,8 @@ export const ru = {
   // ME-064 «Обнаружено на хосте» (agents-ui-spec §3.1): инвентарь-дропдауны.
   "agents.card.sectionInventory": "Обнаружено на хосте",
   "agents.card.inventoryNone": "Нет данных",
-  "agents.card.inventoryNoneNote": "Список установок присылает сам агент; хосты на поллере пришлют его позже — пусто здесь честный ответ, а не задержка.",
+  "agents.card.inventoryNoneNote":
+    "Список установок присылает сам агент; хосты на поллере пришлют его позже — пусто здесь честный ответ, а не задержка.",
   "agents.card.inventorySpecialists": "специалисты",
   "agents.card.inventorySkills": "скиллы",
   "agents.card.inventoryPlugins": "плагины",
@@ -1523,6 +1528,16 @@ export const ru = {
   "agents.card.inventoryNoNames": "имён нет — только счётчик",
   "agents.card.inventoryOverflow": "…и ещё {{count}}",
   "agents.card.inventoryGcwShare": "из них gcw-*: {{count}}",
+  // AGW-23/24 «Среда исполнения» (карточка): зеркало surface-фактов агента.
+  "agents.card.surfaceFacts": "Среда исполнения (данные агента)",
+  "agents.card.surfaceRuntime": "Процесс агента",
+  "agents.card.surfaceContainers": "Distrobox-контейнеры",
+  "agents.card.surfaceNodes": "Узлы кластера",
+  "agents.card.surfacePods": "Поды кластера",
+  "agents.card.surfaceVerdicts": "Вердикты последнего скана",
+  "agents.card.surfaceReady": "готов",
+  "agents.card.surfaceNotReady": "не готов",
+  "agents.card.surfaceReadyUnknown": "статус неизвестен",
   "agents.card.capsInputAria": "Новая возможность",
   "agents.card.capsAdd": "Добавить",
   "agents.card.capsClear": "Очистить",
@@ -2316,6 +2331,13 @@ export const ru = {
   "kora.transcript.redacted": "маскировано",
   "kora.transcript.redactedNote":
     "Часть строки скрыта единым redaction-модулем при выдаче",
+  // transcript-ux (2026-10-10): сырой ход под катом + связность лог↔ответ.
+  "kora.transcript.rawWalk": "Сырой ход",
+  "kora.transcript.rawWalkHint":
+    "Как агент думал и действовал: служебные строки и вызовы инструментов",
+  "kora.transcript.jumpToAnswer": "Показать ответ, к которому относится строка",
+  "kora.transcript.spotlightAnnounce":
+    "Ответ, к которому относится строка, подсвечен в транскрипте",
   // UX-overhaul П4 (Ф1): строки транскрипта без таймстемпа показывают
   // нейтральную метку; курсор seq — служебная метрика, живёт в тултипе.
   "kora.transcript.line": "строка транскрипта",
@@ -2444,7 +2466,8 @@ export const ru = {
   "flows.rail.backTitle": "Вернуться к шагу «{{step}}»",
   // Возобновление черновика (koraFrameStorage-прецедент): восстановление
   // названо и датировано — форма не притворяется, что её не закрывали.
-  "flows.draft.restored": "Черновик восстановлен после перезагрузки (сохранён в {{time}})",
+  "flows.draft.restored":
+    "Черновик восстановлен после перезагрузки (сохранён в {{time}})",
   "flows.draft.keepNote": "Черновик хранится локально и переживает перезагрузку",
   "flows.draft.startOver": "Начать заново",
 
@@ -2470,15 +2493,13 @@ export const ru = {
   "agents.enrollment.watchApproved": "«{{name}}» подключён и одобрен — всё готово",
   "agents.enrollment.watchUsedNoRow":
     "Токен использован, но карточка исполнителя ещё не дошла до реестра — обновите страницу или загляните в реестр.",
-  "agents.enrollment.watchExpired":
-    "Срок действия токена истёк — коннекта не было",
+  "agents.enrollment.watchExpired": "Срок действия токена истёк — коннекта не было",
   "agents.enrollment.watchExpiredHint":
     "Ничего не сломалось: машина просто не успела доложиться. Начните заново — свежий токен, те же поля.",
   "agents.enrollment.watchRestart": "Начать подключение заново",
   "agents.enrollment.watchRevoked":
     "Токен отозван — подключение по нему невозможно. Начните заново со свежим токеном.",
-  "agents.enrollment.watchListError":
-    "Не удалось обновить статус токена: {{message}}",
+  "agents.enrollment.watchListError": "Не удалось обновить статус токена: {{message}}",
   "agents.enrollment.cancelNote":
     "Закрыть окно можно на любом шаге — токен от этого не гаснет и останется в списке ниже реестра (срок истечёт {{time}}).",
 

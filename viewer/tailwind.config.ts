@@ -40,6 +40,10 @@ export default {
         success: "var(--color-success)",
         warning: "var(--color-warning)",
         error: "var(--color-error)",
+        // U7 badge-text step (transcript-ux wave fixed the MAPPING: the token
+        // existed since U7 but had no Tailwind name, so `text-error-text`
+        // silently rendered as inherited colour — the AA step never shipped).
+        "error-text": "var(--color-error-text)",
         info: "var(--color-info)",
         // Text
         foreground: "var(--color-text-primary)",
@@ -82,6 +86,10 @@ export default {
         "warning-tint":
           "color-mix(in srgb, var(--color-warning) 15%, transparent)",
         "error-tint": "color-mix(in srgb, var(--color-error) 15%, transparent)",
+        // transcript-ux wave: the ROW-level wash for the redacted line (the
+        // 15% error-tint is a text-bearing surface; a full row needs the
+        // quieter strata-class wash — same canon token, strata alpha).
+        "error-wash": "color-mix(in srgb, var(--color-error) 5%, transparent)",
       },
       // Neuro strata washes (canvas/hero surfaces only — never on text cards).
       backgroundImage: {

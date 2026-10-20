@@ -17,6 +17,7 @@ import { useT, type TranslationKey } from "@/i18n";
 import { cn } from "@/lib/utils";
 import type { KoraSession } from "@/features/kora/koraTypes";
 import { inventoryCategories } from "./harnessInventoryModel";
+import { executorExecEnv, executorFoundTrail } from "./execEnvModel";
 import {
   PRESENCE_DOT,
   PRESENCE_TEXT,
@@ -37,9 +38,10 @@ import { ExecutorSheetForm } from "./ExecutorSheet";
  * Row facts (one glance): presence word + dot, the name, the harness type,
  * the REFUSAL badge («почему не возьмёт задачу» — registry verdicts only:
  * pending / owner-disabled / revoked), the four inventory counters, the
- * sessions-in-24h count, and the RESERVED «среда исполнения» badge slot —
- * empty today (the engine carries no environment field yet; the distrobox
- * wave fills it data-driven, no rework).
+ * sessions-in-24h count, and the «среда исполнения» badge (AGW-23 — the
+ * agent's own surface label: "metal" / "distrobox:<name>" / "pod:<name>";
+ * data-driven since the exec-env wave, the reserved empty geometry stays
+ * when the agent reports none).
  */
 export function HostHarnesses({
   members,
@@ -113,6 +115,13 @@ function HarnessRow({
   const flash = usePresenceFlashFor([member.id]);
   const presence = memberPresence(member, meta, now);
   const presenceKey = presence ?? "unknown";
+  const execEnv = executorExecEnv(member);
+  // AGW-23: the dedupe trail of the SAME installation rides the badge
+  // tooltip (audit data of one fact — the row geometry stays reserved).
+  const foundTrail = executorFoundTrail(member);
+  const execEnvTitle = foundTrail.length
+    ? `${t("agents.hosts.execEnvTooltip")}\n${t("agents.hosts.foundAtTooltip")}\n${foundTrail.join("\n")}`
+    : t("agents.hosts.execEnvTooltip");
 
   return (
     <li
@@ -195,10 +204,22 @@ function HarnessRow({
           <MessageSquareIcon />
           {sessions24}
         </span>
-        {/* The RESERVED «среда исполнения» slot: empty today — the engine
-         * carries no environment field (anti-invention); the distrobox wave
-         * fills it data-driven, no rework. */}
-        <span data-slot="execution-env" className="hidden" aria-hidden="true" />
+        {/* The «среда исполнения» slot (B2, filled data-driven by the
+         * exec-env wave): the agent's own surface label when reported
+         * (AGW-23), the reserved hidden geometry when not — absence is
+         * an answer, never a fabricated "metal". */}
+        {execEnv ? (
+          <Badge
+            data-slot="execution-env"
+            variant="outline"
+            title={execEnvTitle}
+            className="shrink-0 whitespace-nowrap font-mono font-normal"
+          >
+            {execEnv}
+          </Badge>
+        ) : (
+          <span data-slot="execution-env" className="hidden" aria-hidden="true" />
+        )}
       </button>
       {expanded ? (
         <div id={`harness-body-${member.id}`} className="px-2.5 pb-3">

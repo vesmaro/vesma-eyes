@@ -1039,11 +1039,13 @@ export const en: Record<TranslationKey, string> = {
     "Away: the task queues up — the agent picks it up on return",
   "tasks.create.assignHint":
     "A direct hand-off to {{name}} goes through the assignment engine: it needs a specialist and a harness.",
-  "tasks.create.specialistError": "the assignment engine needs a specialist (1–120 chars)",
+  "tasks.create.specialistError":
+    "the assignment engine needs a specialist (1–120 chars)",
   "tasks.create.sumWhat": "What",
   "tasks.create.sumTags": "Tags",
   "tasks.create.whomQueue": "Queue — no executor yet",
-  "tasks.create.whomExecutor": "{{name}} · specialist {{specialist}} · harness {{harness}}",
+  "tasks.create.whomExecutor":
+    "{{name}} · specialist {{specialist}} · harness {{harness}}",
   "tasks.create.give": "Give the task",
   "tasks.create.assignmentFailed":
     "Task {{id}} was created, but the hand-off did not land — the reason is in the toast. You can assign the task from its card.",
@@ -1227,8 +1229,7 @@ export const en: Record<TranslationKey, string> = {
   "agents.hosts.onlineCounter": "{{online}}/{{total}} harnesses online",
   "agents.hosts.connectAction": "Connect a host",
   "agents.hosts.pendingPill": "awaits decision",
-  "agents.hosts.fieldPlaceholder":
-    "The host work field arrives in the next update.",
+  "agents.hosts.fieldPlaceholder": "The host work field arrives in the next update.",
   "agents.hosts.notFound": "Host not found",
   "agents.hosts.notFoundMessage":
     "No host «{{host}}» in the roster — its record may have been deleted.",
@@ -1245,7 +1246,8 @@ export const en: Record<TranslationKey, string> = {
   "agents.hosts.nowIdle": "Idle — no active tasks, no live sessions.",
   "agents.hosts.nowAssignments": "Active tasks",
   "agents.hosts.nowSessions": "Live sessions",
-  "agents.hosts.nowNoSessions": "No live sessions — they appear when a harness starts working.",
+  "agents.hosts.nowNoSessions":
+    "No live sessions — they appear when a harness starts working.",
   "agents.hosts.sessionsFailed": "Sessions unavailable.",
   "agents.hosts.recentTitle": "Recent",
   "agents.hosts.recentEmpty": "Quiet. The first events arrive after the first report.",
@@ -1257,10 +1259,11 @@ export const en: Record<TranslationKey, string> = {
   "palette.connectHost": "Connect a host",
   "agents.hosts.refusalDisabled": "disabled",
   "agents.hosts.refusalRevoked": "revoked",
+  "agents.hosts.execEnvTooltip": "Execution environment (agent-reported)",
+  "agents.hosts.foundAtTooltip": "The same installation was also found at",
   "agents.hosts.sessions24Tooltip": "Sessions in 24h",
   "agents.hosts.resize.label": "Hosts panel width",
-  "agents.hosts.resize.tooltip":
-    "Drag to resize. Double-click to restore",
+  "agents.hosts.resize.tooltip": "Drag to resize. Double-click to restore",
   "agents.execution.title": "Execution",
   "agents.execution.emptyTitle": "No assignments",
   "agents.execution.emptyMessage":
@@ -1486,7 +1489,8 @@ export const en: Record<TranslationKey, string> = {
   // ME-064 «Detected on the host» (agents-ui-spec §3.1): inventory dropdowns.
   "agents.card.sectionInventory": "Detected on the host",
   "agents.card.inventoryNone": "No data",
-  "agents.card.inventoryNoneNote": "Installations are detected by the agent itself; poller-connected hosts will send the list later — empty here is an honest answer, not a delay.",
+  "agents.card.inventoryNoneNote":
+    "Installations are detected by the agent itself; poller-connected hosts will send the list later — empty here is an honest answer, not a delay.",
   "agents.card.inventorySpecialists": "specialists",
   "agents.card.inventorySkills": "skills",
   "agents.card.inventoryPlugins": "plugins",
@@ -1494,6 +1498,16 @@ export const en: Record<TranslationKey, string> = {
   "agents.card.inventoryNoNames": "no names — counter only",
   "agents.card.inventoryOverflow": "…and {{count}} more",
   "agents.card.inventoryGcwShare": "gcw-* among them: {{count}}",
+  // AGW-23/24 execution-environment section (card): the agent's surface mirror.
+  "agents.card.surfaceFacts": "Execution environment (agent-reported)",
+  "agents.card.surfaceRuntime": "Agent process",
+  "agents.card.surfaceContainers": "Distrobox containers",
+  "agents.card.surfaceNodes": "Cluster nodes",
+  "agents.card.surfacePods": "Cluster pods",
+  "agents.card.surfaceVerdicts": "Last scan verdicts",
+  "agents.card.surfaceReady": "ready",
+  "agents.card.surfaceNotReady": "not ready",
+  "agents.card.surfaceReadyUnknown": "status unknown",
   "agents.card.capsInputAria": "New capability",
   "agents.card.capsAdd": "Add",
   "agents.card.capsClear": "Clear",
@@ -2276,6 +2290,13 @@ export const en: Record<TranslationKey, string> = {
   "kora.transcript.redacted": "redacted",
   "kora.transcript.redactedNote":
     "Part of the line was masked by the single redaction module on serving",
+  // transcript-ux (2026-10-10): the raw walk folded + the log↔answer wires.
+  "kora.transcript.rawWalk": "Raw walk",
+  "kora.transcript.rawWalkHint":
+    "How the agent thought and acted: service rows and tool calls",
+  "kora.transcript.jumpToAnswer": "Show the answer this row belongs to",
+  "kora.transcript.spotlightAnnounce":
+    "The answer this row belongs to is highlighted in the transcript",
   // UX-overhaul П4 (Ф1): timestamp-less transcript lines get a neutral
   // label; the seq cursor is an internal metric — it lives in the tooltip.
   "kora.transcript.line": "transcript line",

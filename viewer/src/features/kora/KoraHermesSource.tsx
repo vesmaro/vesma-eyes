@@ -4,8 +4,20 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
-import { Highlighted, ROLE_TONE } from "./KoraTranscript";
-import { formatTranscriptTime } from "./koraWorkspaceModel";
+import {
+  Highlighted,
+  RawWalkFold,
+  RedactionMark,
+  RoleChip,
+  transcriptRowTone,
+} from "./KoraTranscript";
+import {
+  formatTranscriptTime,
+  groupKoraTranscript,
+  koraTranscriptAnchorId,
+  type KoraTranscriptGroup,
+} from "./koraWorkspaceModel";
+import { useTranscriptWires } from "./useTranscriptWires";
 import type { KoraHermesTranscriptPages } from "./useKora";
 import type { HermesBridgeStatus, HermesMessage } from "./koraTypes";
 
@@ -104,9 +116,15 @@ export function HermesSourceLine({
 /**
  * The hermes transcript scroll (T004 slice 3): the LIVE cluster transcript
  * through the SAME visual grammar as the zcode scroll — Lora ≤72ch, mono
- * tnum times, the redaction mark, load-more over the contract's has_more —
- * plus the hermes passthrough fields rendered honestly: the display kind
- * suffix (kind ≠ role), the collapsed reasoning block, the tool-call names.
+ * tnum times, load-more over the contract's has_more — now with the
+ * transcript-ux wave grammar (the SAME pieces, one shared module):
+ * the dialog/raw-walk grouping (a raw row folds under the dialog row it
+ * follows), the strata row washes, the SCARLET redaction mark at both
+ * placements, and the log↔answer wires (click a raw row → its answer
+ * spotlights; the answer's fold summary is the reverse wire by
+ * construction). The hermes passthrough fields stay rendered honestly:
+ * the display kind suffix (kind ≠ role), the collapsed reasoning block,
+ * the tool-call names.
  * READ-ONLY: the composer is a zcode-session affordance — the hermes chat
  * lives in the source view (no session selected).
  */
@@ -128,6 +146,18 @@ export function HermesTranscript({
     if (needle === "") return pages.items;
     return pages.items.filter((item) => item.content.toLowerCase().includes(needle));
   }, [pages.items, needle]);
+  const groups = useMemo(() => groupKoraTranscript(items), [items]);
+
+  // The anchor wires — the shared state machine (the zcode scroll rides
+  // the same hook). Component-local, nothing saved.
+  const {
+    openFolds,
+    spotSeq,
+    flashFold,
+    jumpToAnswer,
+    onFoldToggle,
+    announce,
+  } = useTranscriptWires();
 
   // Follow-tail: scroll pinning only, the same canon as the zcode scroll.
   useEffect(() => {
@@ -168,14 +198,24 @@ export function HermesTranscript({
     );
   }
 
+  // Search mode opens every fold — a match inside a collapsed raw walk
+  // would hide the very line the searcher asked for.
+  const forceOpen = needle !== "";
+
   return (
     <div className="min-w-0">
-      <ol className="max-w-scroll space-y-4 font-scroll">
-        {items.map((item) => (
-          <HermesTranscriptLine
-            key={`${sessionId}:${item.seq}`}
-            item={item}
+      <ol className="max-w-scroll space-y-2 font-scroll">
+        {groups.map((group) => (
+          <HermesTranscriptBlock
+            key={`${sessionId}:${group.anchor?.seq ?? `raw:${group.raw[0]?.seq ?? 0}`}`}
+            group={group}
             needle={needle}
+            forceOpen={forceOpen}
+            openFolds={openFolds}
+            spotSeq={spotSeq}
+            flashFold={flashFold}
+            onJumpToAnswer={jumpToAnswer}
+            onFoldToggle={onFoldToggle}
           />
         ))}
       </ol>
@@ -192,6 +232,10 @@ export function HermesTranscript({
           </Button>
         </div>
       ) : null}
+      {/* 4.1.3: the anchor jump is announced politely. */}
+      <p role="status" aria-live="polite" className="sr-only">
+        {announce}
+      </p>
       <div ref={bottomRef} />
     </div>
   );
@@ -213,69 +257,188 @@ function hermesToolNames(
     .filter((name) => name !== "");
 }
 
-function HermesTranscriptLine({
-  item,
+/**
+ * One grouped hermes block: the same grammar as the zcode scroll's
+ * TranscriptBlock, with the hermes passthrough kept honest — the kind tag
+ * inline, the reasoning fold and the tool-call names riding their own row
+ * (block-level, under the content, outside the raw-walk fold). Timestamp
+ * fallback is the hermes canon's neutral label (Ф1), not the zcode dot.
+ */
+function HermesTranscriptBlock({
+  group,
   needle,
+  forceOpen,
+  openFolds,
+  spotSeq,
+  flashFold,
+  onJumpToAnswer,
+  onFoldToggle,
 }: {
-  item: HermesMessage;
+  group: KoraTranscriptGroup<HermesMessage>;
   needle: string;
+  forceOpen: boolean;
+  openFolds: ReadonlySet<number>;
+  spotSeq: number | null;
+  flashFold: number | null;
+  onJumpToAnswer: (seq: number) => void;
+  onFoldToggle: (seq: number, open: boolean) => void;
 }) {
   const t = useT();
-  const toolNames = hermesToolNames(item.tool_calls ?? null);
-  const kindLabel = item.kind !== null && item.kind !== item.role ? item.kind : null;
+  if (group.anchor === null) {
+    const head = group.raw[0]?.seq ?? 0;
+    return (
+      <li className="pt-1">
+        <RawWalkFold
+          seq={head}
+          count={group.raw.length}
+          open={forceOpen || openFolds.has(head)}
+          flash={flashFold === head}
+          onOpenChange={(open) => onFoldToggle(head, open)}
+        >
+          {group.raw.map((item) => (
+            <HermesRawRow key={item.seq} item={item} needle={needle} anchorSeq={null} />
+          ))}
+        </RawWalkFold>
+      </li>
+    );
+  }
+  const anchor = group.anchor;
+  const redacted = anchor.redaction_applied;
   return (
-    <li className="flex gap-3 text-sm leading-relaxed">
+    <li
+      id={koraTranscriptAnchorId(anchor.seq)}
+      className={cn(
+        "flex gap-3 rounded-r-md border-l-2 py-1.5 pr-2 pl-1 text-sm leading-relaxed transition-colors duration-instant",
+        transcriptRowTone(anchor.role, redacted),
+        spotSeq === anchor.seq &&
+          "outline outline-2 -outline-offset-2 outline-iris-bright",
+      )}
+    >
       <span className="w-11 shrink-0 pt-0.5 text-right font-mono text-xs tabular-nums text-foreground-muted">
-        {formatTranscriptTime(item.ts) || t("kora.transcript.line")}
+        {formatTranscriptTime(anchor.ts) || t("kora.transcript.line")}
       </span>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="whitespace-pre-wrap break-words">
-          <span
-            aria-hidden
-            className={cn(
-              "mr-2 inline-block h-fit rounded-sm px-1.5 py-0.5 font-ui text-xs font-medium",
-              ROLE_TONE[item.role] ?? ROLE_TONE.system,
-            )}
-          >
-            {item.role}
-          </span>
-          {kindLabel !== null ? (
-            <span className="mr-2 inline-block h-fit rounded-sm border border-border-subtle px-1.5 py-0.5 font-mono text-xs text-foreground-muted">
-              {kindLabel}
-            </span>
-          ) : null}
-          <Highlighted content={item.content} needle={needle} />
+          <RoleChip role={anchor.role} />
+          <HermesKindTag item={anchor} />
+          <Highlighted content={anchor.content} needle={needle} />
         </p>
-        {item.reasoning ? (
-          <details className="mt-1 text-xs text-foreground-muted">
-            <summary className="cursor-pointer select-none">
-              {t("kora.hermes.reasoning")}
-            </summary>
-            <p className="mt-1 whitespace-pre-wrap break-words leading-relaxed">
-              {item.reasoning}
-            </p>
-          </details>
-        ) : null}
-        {item.tool_calls != null ? (
-          <p className="mt-0.5 font-mono text-xs text-foreground-muted">
-            {toolNames.length > 0
-              ? `${t("kora.hermes.toolCalls", { n: item.tool_calls.length })}: ${toolNames.join(", ")}`
-              : t("kora.hermes.toolCalls", { n: item.tool_calls.length })}
-          </p>
-        ) : null}
-        {item.redaction_applied ? (
-          <p
-            className="mt-0.5 font-ui text-xs text-foreground-muted"
-            title={t("kora.transcript.redactedNote")}
+        <HermesRowExtras item={anchor} />
+        {redacted ? <RedactionMark /> : null}
+        {group.raw.length > 0 ? (
+          <RawWalkFold
+            seq={anchor.seq}
+            count={group.raw.length}
+            open={forceOpen || openFolds.has(anchor.seq)}
+            flash={flashFold === anchor.seq}
+            onOpenChange={(open) => onFoldToggle(anchor.seq, open)}
           >
-            {t("kora.transcript.redacted")}
-          </p>
+            {group.raw.map((item) => (
+              <HermesRawRow
+                key={item.seq}
+                item={item}
+                needle={needle}
+                anchorSeq={anchor.seq}
+                onJumpToAnswer={onJumpToAnswer}
+              />
+            ))}
+          </RawWalkFold>
         ) : null}
       </div>
     </li>
   );
 }
 
-/** The verbatim-highlight reuse: the same iris tint over the match as the
- * zcode scroll — one search grammar, two sources (exported by the shared
- * transcript renderer). */
+/** The display-kind tag (kind ≠ role) — the hermes passthrough honesty. */
+function HermesKindTag({ item }: { item: HermesMessage }) {
+  if (item.kind === null || item.kind === item.role) return null;
+  return (
+    <span className="mr-2 inline-block h-fit rounded-sm border border-border-subtle px-1.5 py-0.5 font-mono text-xs text-foreground-muted">
+      {item.kind}
+    </span>
+  );
+}
+
+/** The hermes passthrough beats — the collapsed reasoning fold and the
+ * tool-call names — rendered on THEIR OWN row (whatever role it rides). */
+function HermesRowExtras({ item }: { item: HermesMessage }) {
+  const t = useT();
+  const toolNames = hermesToolNames(item.tool_calls ?? null);
+  return (
+    <>
+      {item.reasoning ? (
+        <details className="mt-1 text-xs text-foreground-muted">
+          <summary className="cursor-pointer select-none">
+            {t("kora.hermes.reasoning")}
+          </summary>
+          <p className="mt-1 whitespace-pre-wrap break-words leading-relaxed">
+            {item.reasoning}
+          </p>
+        </details>
+      ) : null}
+      {item.tool_calls != null ? (
+        <p className="mt-0.5 font-mono text-xs text-foreground-muted">
+          {toolNames.length > 0
+            ? `${t("kora.hermes.toolCalls", { n: item.tool_calls.length })}: ${toolNames.join(", ")}`
+            : t("kora.hermes.toolCalls", { n: item.tool_calls.length })}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+/** One raw-walk hermes entry. When the anchor is on this read, the entry
+ * is the click wire TO the answer; without an anchor (read-head walk) it
+ * renders as plain text — no dead button. */
+function HermesRawRow({
+  item,
+  needle,
+  anchorSeq,
+  onJumpToAnswer,
+}: {
+  item: HermesMessage;
+  needle: string;
+  anchorSeq: number | null;
+  onJumpToAnswer?: (seq: number) => void;
+}) {
+  const t = useT();
+  const body = (
+    <>
+      <span className="w-11 shrink-0 pt-0.5 text-right font-mono text-xs tabular-nums text-foreground-muted">
+        {formatTranscriptTime(item.ts) || t("kora.transcript.line")}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block whitespace-pre-wrap break-words">
+          <RoleChip role={item.role} />
+          <HermesKindTag item={item} />
+          <Highlighted content={item.content} needle={needle} />
+        </span>
+        <HermesRowExtras item={item} />
+        {item.redaction_applied ? <RedactionMark /> : null}
+      </span>
+      {anchorSeq !== null ? (
+        <>
+          <span aria-hidden className="shrink-0 self-center text-foreground-muted">
+            ↩
+          </span>
+          <span className="sr-only">{t("kora.transcript.jumpToAnswer")}</span>
+        </>
+      ) : null}
+    </>
+  );
+  if (anchorSeq === null) {
+    return <li className="flex gap-2 rounded-r-md py-0.5 pr-1 text-sm leading-relaxed">{body}</li>;
+  }
+  return (
+    <li className="rounded-r-md text-sm leading-relaxed transition-colors duration-instant hover:bg-elevated">
+      <button
+        type="button"
+        title={t("kora.transcript.jumpToAnswer")}
+        onClick={() => onJumpToAnswer?.(anchorSeq)}
+        className="flex w-full gap-2 rounded-r-md py-0.5 pr-1 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+      >
+        {body}
+      </button>
+    </li>
+  );
+}
