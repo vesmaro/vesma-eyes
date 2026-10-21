@@ -62,7 +62,7 @@ export function CommandPalette() {
   return (
     <DialogPrimitive.Root open={open} onOpenChange={setPaletteOpen}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-overlay/80" />
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-overlay-scrim" />
         <DialogPrimitive.Content
           aria-describedby={undefined}
           className={
@@ -428,7 +428,7 @@ function PaletteGroupBlock({
                   "flex w-full items-baseline gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors duration-instant " +
                   (isActive
                     ? "bg-well text-foreground"
-                    : "text-foreground-secondary hover:bg-well/60 hover:text-foreground")
+                    : "text-foreground-secondary hover:bg-well hover:text-foreground")
                 }
               >
                 <span className="min-w-0 flex-1 truncate">{item.label}</span>

@@ -80,7 +80,7 @@ export function SettingsHubPage() {
        * screens; plain links — no JS active-section tracking (spec self-review). */}
       <nav
         aria-label={t("settings.hub.navLabel")}
-        className="sticky top-24 z-10 overflow-x-auto rounded-md border border-border-subtle bg-background/95 backdrop-blur-sm"
+        className="sticky top-24 z-10 overflow-x-auto rounded-md border border-border-subtle bg-background backdrop-blur-sm"
       >
         <ul className="flex w-max gap-1 p-1">
           {HUB_SECTIONS.map((section) => (
@@ -359,7 +359,7 @@ function DevicesLinkSection() {
       </p>
       <Link
         to="/system/devices"
-        className="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-elevated px-3 py-1.5 text-sm font-medium transition-colors duration-instant hover:border-iris-bright/40 hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+        className="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-elevated px-3 py-1.5 text-sm font-medium transition-colors duration-instant hover:border-border-iris hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
       >
         {t("settings.hub.devicesCta")}
       </Link>

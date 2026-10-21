@@ -232,7 +232,7 @@ function EditTaskForm({ task, onDone }: { task: BoardTask; onDone: () => void })
       {locked ? (
         <div
           role="alert"
-          className="rounded-md border border-warning/50 bg-elevated p-3 text-sm"
+          className="rounded-md border border-warning-tint bg-elevated p-3 text-sm"
         >
           <p className="font-medium">{t("tasks.edit.lockedTitle")}</p>
           <p className="mt-1 text-xs text-foreground-secondary">

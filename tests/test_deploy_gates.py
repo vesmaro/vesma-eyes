@@ -261,11 +261,22 @@ class TestLockGate:
              f'exec 9>"{lock}"; flock 9; echo ready > "{world.state}/holder-ready"; sleep 30'],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         try:
-            for _ in range(50):
+            # Load-flake hardening (ux-hygiene-followups-20261020): the
+            # holder-ready wait was 50x0.1s; under parallel-suite load the
+            # holder process can take longer to schedule than 5s, and the
+            # gate below would then fail on an EMPTY lock (a lie). 10s of
+            # waiting, then a NAMED failure that says exactly what happened.
+            holder_ready = False
+            for _ in range(100):
                 if (world.state / "holder-ready").exists():
+                    holder_ready = True
                     break
                 import time
                 time.sleep(0.1)
+            assert holder_ready, (
+                "holder never became ready in 10s — the flock holder process "
+                "did not start under load; the gate was never exercised"
+            )
             r = world.run_function("acquire_lock")
             assert r.returncode == 1
             assert "another deploy holds" in r.stderr

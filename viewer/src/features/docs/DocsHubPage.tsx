@@ -230,7 +230,7 @@ function HubCards({
               aria-current={current ? "page" : undefined}
               className={cn(
                 "flex min-h-60 flex-col gap-3 rounded-lg border bg-well p-5 shadow-well",
-                current ? "border-iris-bright/40" : "border-border-subtle",
+                current ? "border-iris" : "border-border-subtle",
               )}
             >
               <div className="flex min-w-0 items-center gap-2">

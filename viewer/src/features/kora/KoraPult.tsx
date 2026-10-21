@@ -171,7 +171,7 @@ export function KoraPult({
               "inline-flex min-h-12 md:min-h-6 shrink-0 items-center rounded-full border border-border-subtle px-2 font-mono text-xs tabular-nums focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
               waiting === 0
                 ? "text-foreground-muted"
-                : "border-iris/40 text-iris-bright",
+                : "border-border-iris text-iris-bright",
             )}
           >
             {t("kora.pult.waiting", { n: waiting })}

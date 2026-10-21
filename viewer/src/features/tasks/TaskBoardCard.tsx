@@ -265,19 +265,19 @@ const TaskCardBody = forwardRef<
           : undefined
       }
       className={
-        "group/card relative list-none rounded-md border border-border-subtle bg-well text-sm shadow-well transition-colors duration-instant hover:border-iris-bright/40 [content-visibility:auto] " +
+        "group/card relative list-none rounded-md border border-border-subtle bg-well text-sm shadow-well transition-colors duration-instant hover:border-border-iris [content-visibility:auto] " +
         spacing.pad +
         spacing.intrinsic +
         (overlay
-          ? "rotate-2 border-iris-bright/60 shadow-modal "
-          : "focus-within:border-iris-bright/60 ") +
+          ? "rotate-2 border-iris shadow-modal "
+          : "focus-within:border-iris-bright ") +
         (canDrag && !overlay
           ? "cursor-grab active:cursor-grabbing "
           : "cursor-default ") +
         (dragging && !overlay ? "opacity-30 " : "") +
         // ME-071 W3: blocked reason edge (left accent, error family).
         (blocked && !overlay
-          ? "before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:rounded-l-md before:bg-error/80 before:content-[''] "
+          ? "before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:rounded-l-md before:bg-error before:content-[''] "
           : "") +
         // ME-071 W3: the waiting facade's golden attention edge — colour
         // duplicated by the pressed chip and the count (1.4.1). No alpha

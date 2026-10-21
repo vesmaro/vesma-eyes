@@ -89,7 +89,7 @@ function SessionRow({
         aria-current={selected ? "page" : undefined}
         className={cn(
           "flex min-h-12 md:min-h-6 flex-col gap-1 rounded-md border-l-2 px-2 py-2 transition-colors duration-instant hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
-          selected ? "border-iris bg-iris/10" : "border-transparent",
+          selected ? "border-iris bg-iris-tint" : "border-transparent",
         )}
       >
         <span className="flex items-baseline gap-2">

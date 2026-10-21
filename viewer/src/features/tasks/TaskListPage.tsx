@@ -588,7 +588,7 @@ function TaskCardRow({
   const location = useLocation();
   return (
     <div className="relative flex min-h-row items-start gap-2">
-      <div className="relative flex min-h-row flex-1 flex-col gap-1 rounded-md border border-border-subtle bg-well px-3 py-2 text-sm shadow-well transition-colors duration-instant hover:border-iris-bright focus-within:border-iris-bright/60 cursor-pointer">
+      <div className="relative flex min-h-row flex-1 flex-col gap-1 rounded-md border border-border-subtle bg-well px-3 py-2 text-sm shadow-well transition-colors duration-instant hover:border-iris-bright focus-within:border-iris-bright cursor-pointer">
         <span className="flex flex-wrap items-center gap-1.5">
           <Badge variant={priorityBadgeVariant(task.priority)}>
             {t(priorityLabelKey(task.priority))}

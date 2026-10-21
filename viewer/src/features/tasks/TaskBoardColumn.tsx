@@ -112,8 +112,8 @@ export function TaskBoardColumn({
         data-column={column}
         aria-label={t("tasks.board.columnLabel", { col: label })}
         className={
-          "flex h-11 w-full shrink-0 flex-row items-center justify-between gap-1 rounded-lg border border-border-subtle bg-base/40 px-2 py-1 md:h-auto md:w-11 md:flex-col md:justify-start md:px-0 md:py-2 " +
-          (isOver ? " border-iris-bright/60" : "")
+          "flex h-11 w-full shrink-0 flex-row items-center justify-between gap-1 rounded-lg border border-border-subtle px-2 py-1 md:h-auto md:w-11 md:flex-col md:justify-start md:px-0 md:py-2 " +
+          (isOver ? " border-iris-bright" : "")
         }
       >
         <button
@@ -145,9 +145,9 @@ export function TaskBoardColumn({
       className={
         // U7 mobile: the board stacks vertically below md — a column takes
         // the full row width; the horizontal scroll affordance is md+ only.
-        "flex w-full shrink-0 flex-col rounded-lg border border-border-subtle bg-base/40 " +
+        "flex w-full shrink-0 flex-col rounded-lg border border-border-subtle " +
         (compact ? "md:w-60" : "md:w-72") +
-        (isOver ? " border-iris-bright/60" : "")
+        (isOver ? " border-iris-bright" : "")
       }
     >
       <header
@@ -307,7 +307,7 @@ function BoardGroup({
         aria-expanded={!collapsed}
         className={
           "flex max-md:min-h-12 w-full items-center gap-1 rounded-sm py-0.5 text-xs font-medium text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright " +
-          (isOver ? "bg-iris/10 text-iris-bright" : "")
+          (isOver ? "bg-iris-tint text-iris-bright" : "")
         }
       >
         {collapsed ? (

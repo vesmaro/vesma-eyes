@@ -33,10 +33,11 @@ import type { KoraTranscriptPages } from "./useKora";
  *   plain-word note, the whole row accented in the error family;
  * - the raw walk (tool/system rows — how the agent thought and acted) is
  *   grouped around the answer that spawned it, folded under a «Сырой ход»
- *   disclosure, and wired to the answer both ways: click a raw row → the
- *   answer scrolls into view and flashes; the answer's «Сырой ход» summary
- *   opens its fold. Anchors are DOM ids; grouping is pure model code
- *   (groupKoraTranscript), the frozen linear seq stream is untouched.
+ *   disclosure, and wired one way: click a raw row → the answer scrolls
+ *   into view and spotlights; the answer's «Сырой ход» summary opens its
+ *   fold (that summary IS the reverse wire). Anchors are DOM ids; grouping
+ *   is pure model code (groupKoraTranscript), the frozen linear seq stream
+ *   is untouched.
  */
 
 /**
@@ -115,9 +116,9 @@ export function KoraTranscript({
   }, [pages.items, needle]);
 
   // The anchor wires (transcript-ux wave): which folds are open, which
-  // answer is spotlit, which fold flashes — the shared hook (the hermes
-  // scroll rides the same grammar). Component-local, nothing saved.
-  const { openFolds, spotSeq, flashFold, jumpToAnswer, onFoldToggle, announce } =
+  // answer is spotlit — the shared hook (the hermes scroll rides the same
+  // grammar). Component-local, nothing saved.
+  const { openFolds, spotSeq, jumpToAnswer, onFoldToggle, announce } =
     useTranscriptWires();
 
   // Follow-tail: on every content change with follow ON, the view pins to
@@ -175,7 +176,6 @@ export function KoraTranscript({
             forceOpen={forceOpen}
             openFolds={openFolds}
             spotSeq={spotSeq}
-            flashFold={flashFold}
             onJumpToAnswer={jumpToAnswer}
             onFoldToggle={onFoldToggle}
           />
@@ -212,8 +212,8 @@ export function KoraTranscript({
  * fold. The redacted anchor rides the scarlet row; the mark sits directly
  * under the content, OUTSIDE the fold, so folding never hides it. The
  * answer→raw-walk direction IS the fold summary itself (adjacent by
- * construction); the programmatic jumpToRawWalk wire stays in the hook for
- * the hermes scroll leg.
+ * construction) — its programmatic wire had no consumer and was removed
+ * (ux-hygiene-followups-20261020; обратное направление живёт в ката).
  */
 export function TranscriptBlock({
   group,
@@ -221,7 +221,6 @@ export function TranscriptBlock({
   forceOpen,
   openFolds,
   spotSeq,
-  flashFold,
   onJumpToAnswer,
   onFoldToggle,
 }: {
@@ -230,7 +229,6 @@ export function TranscriptBlock({
   forceOpen: boolean;
   openFolds: ReadonlySet<number>;
   spotSeq: number | null;
-  flashFold: number | null;
   onJumpToAnswer: (seq: number) => void;
   onFoldToggle: (seq: number, open: boolean) => void;
 }) {
@@ -242,7 +240,6 @@ export function TranscriptBlock({
           seq={head}
           count={group.raw.length}
           open={forceOpen || openFolds.has(head)}
-          flash={flashFold === head}
           onOpenChange={(open) => onFoldToggle(head, open)}
         >
           {group.raw.map((item) => (
@@ -279,7 +276,6 @@ export function TranscriptBlock({
             seq={anchor.seq}
             count={group.raw.length}
             open={forceOpen || openFolds.has(anchor.seq)}
-            flash={flashFold === anchor.seq}
             onOpenChange={(open) => onFoldToggle(anchor.seq, open)}
           >
             {group.raw.map((item) => (
@@ -336,21 +332,19 @@ export function RedactionMark() {
 /**
  * The «Сырой ход» disclosure — the raw walk folded around the answer that
  * spawned it. A native details/summary (keyboard path for free); the count
- * is the honest number of raw entries. `flash` is the answer→raw-walk beat
- * (a static iris tint, no animation).
+ * is the honest number of raw entries. (The answer→raw-walk jump beat was
+ * removed with its unconsumed wire — ux-hygiene-followups-20261020.)
  */
 export function RawWalkFold({
   seq,
   count,
   open,
-  flash,
   onOpenChange,
   children,
 }: {
   seq: number;
   count: number;
   open: boolean;
-  flash: boolean;
   onOpenChange: (open: boolean) => void;
   children: React.ReactNode;
 }) {
@@ -360,10 +354,7 @@ export function RawWalkFold({
       id={koraTranscriptFoldId(seq)}
       open={open}
       onToggle={(event) => onOpenChange((event.target as HTMLDetailsElement).open)}
-      className={cn(
-        "group/fold mt-1 rounded-md border-l border-border-subtle pl-2",
-        flash && "bg-iris-tint",
-      )}
+      className="group/fold mt-1 rounded-md border-l border-border-subtle pl-2"
     >
       <summary
         title={t("kora.transcript.rawWalkHint")}

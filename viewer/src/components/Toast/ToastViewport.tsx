@@ -64,7 +64,7 @@ function ToastCard({
       className={
         "flex items-start gap-2 rounded-md border px-3 py-2 text-sm shadow-modal " +
         (isError
-          ? "border-error/40 bg-well text-foreground"
+          ? "border-error-tint bg-well text-foreground"
           : "border-border-subtle bg-well text-foreground")
       }
     >

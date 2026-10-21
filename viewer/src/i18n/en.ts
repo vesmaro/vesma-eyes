@@ -2326,7 +2326,7 @@ export const en: Record<TranslationKey, string> = {
     "How the agent thought and acted: service rows and tool calls",
   "kora.transcript.jumpToAnswer": "Show the answer this row belongs to",
   "kora.transcript.spotlightAnnounce":
-    "The answer this row belongs to is highlighted in the transcript",
+    "The answer this row belongs to is highlighted in the transcript (answer {{n}})",
   // UX-overhaul П4 (Ф1): timestamp-less transcript lines get a neutral
   // label; the seq cursor is an internal metric — it lives in the tooltip.
   "kora.transcript.line": "transcript line",

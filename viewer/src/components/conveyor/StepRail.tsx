@@ -83,7 +83,7 @@ export function StepRail({
               className={
                 "flex max-md:min-h-12 items-center gap-1.5 rounded-sm px-1.5 py-0.5 text-xs transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright " +
                 (state === "current"
-                  ? "border border-iris-bright/60 bg-iris/10 font-medium text-iris-bright"
+                  ? "border border-iris bg-iris-tint font-medium text-iris-bright"
                   : state === "done"
                     ? "text-foreground-secondary hover:text-foreground"
                     : "cursor-not-allowed text-foreground-muted")
@@ -94,7 +94,7 @@ export function StepRail({
                 className={
                   "flex size-4 shrink-0 items-center justify-center rounded-full border text-[10px] leading-none " +
                   (state === "current"
-                    ? "border-iris-bright/60 text-iris-bright"
+                    ? "border-iris-bright text-iris-bright"
                     : "border-border-strong text-foreground-muted")
                 }
               >

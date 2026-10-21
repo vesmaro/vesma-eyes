@@ -12,12 +12,12 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "bg-iris-strong text-foreground-inverse hover:bg-iris-strong-hover", // AA in both themes
-        confidence: "bg-confidence text-foreground-inverse hover:bg-confidence/90",
+        confidence: "bg-confidence text-foreground-inverse hover:opacity-90",
         outline:
           "border border-border bg-transparent hover:bg-elevated hover:text-foreground",
         ghost: "hover:bg-elevated hover:text-foreground",
         link: "text-iris-bright underline-offset-4 hover:underline", // iris alone fails AA as text
-        destructive: "bg-error text-foreground-inverse hover:bg-error/90",
+        destructive: "bg-error text-foreground-inverse hover:opacity-90",
       },
       size: {
         // U7 mobile pass (SPEC-2026-10-07 «Глубокая проработка» п.4): below

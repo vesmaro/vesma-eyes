@@ -109,7 +109,7 @@ export function HighlightedTitle({ title, query }: { title: string; query: strin
   return (
     <>
       {title.slice(0, index)}
-      <mark className="rounded-sm bg-iris/20 px-0.5 text-foreground">
+      <mark className="rounded-sm bg-iris-tint px-0.5 text-foreground">
         {title.slice(index, index + needle.length)}
       </mark>
       {title.slice(index + needle.length)}
