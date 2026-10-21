@@ -118,11 +118,12 @@
 }
 
 /* Drift: the well is not a photograph — ≤4px/s ambient, --duration-iris
- * breath rhythm. U2 honesty of light (SPEC-2026-10-07: «шина молчит —
- * экран стоит»): the animation mounts ONLY inside a breath window opened
- * by a real bus event — [data-breath="true"] written by the well organ —
- * and only in the «Полный» layer (calm/off settle the composition; the
- * reduced mirrors never open a window at all). At rest: transform none. */
+ * breath rhythm. D1b-ambient (2026-10-21, the honest reformulation of U2):
+ * the well breathes AMBIENTLY in the «Полный» layer — html[data-ambient]
+ * is written by the living engine (live layer, not muted, not input-
+ * frozen); a silent bus means zero EVENT-driven motion, not a dead well.
+ * Calm keeps the event windows only (the carrier never turns on there);
+ * at rest, in calm/off/reduced/?quiet=1: transform none. */
 @keyframes well-drift {
   from {
     transform: translateY(-4px);
@@ -136,24 +137,36 @@
   animation: none;
 }
 
-[data-live="live"][data-breath="true"] .well-drift {
+html[data-ambient="true"] [data-live="live"] .well-drift {
   animation: well-drift var(--duration-iris) var(--ease-breath) infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .well-drift {
+    animation: none;
+  }
+}
+
+[data-motion="reduced"] .well-drift {
+  animation: none;
 }
 
 /* ── Well substrate (W1b «Колодец — орган состояния») ────────────────────
  * The deterministic myelin fabric breathes between the golden alphas —
  * the FIRST consumers of --web-node-alpha ↔ --web-wave-alpha at the
- * --duration-web-idle period (15-WOW §14.1). U2 honesty of light: the
- * breath mounts ONLY inside a bus-opened breath window in the «Полный»
- * layer ([data-breath="true"] — see the drift note); at rest — and in
- * calm/off/reduced — the fabric pins the resting alpha (static tint). The
- * tone NEVER touches the substrate: it is monochrome by construction. */
+ * --duration-web-idle period (15-WOW §14.1). D1b-ambient: the breath is
+ * AMBIENT in the «Полный» layer (html[data-ambient] — see the drift note);
+ * the wave ceiling is clamped by the canon breath alpha --neura-breath-
+ * alpha (≤0.18 dark / 0.12 light) — the cap is declared, not assumed. At
+ * rest — and in calm/off/reduced/?quiet=1 — the fabric pins the resting
+ * alpha (static tint). The tone NEVER touches the substrate: it is
+ * monochrome by construction. */
 @keyframes well-substrate-breath {
   from {
     opacity: var(--web-node-alpha);
   }
   to {
-    opacity: var(--web-wave-alpha);
+    opacity: min(var(--web-wave-alpha), var(--neura-breath-alpha));
   }
 }
 
@@ -162,7 +175,7 @@
   opacity: var(--web-node-alpha);
 }
 
-[data-live="live"][data-breath="true"] .well-substrate {
+html[data-ambient="true"] [data-live="live"] .well-substrate {
   animation: well-substrate-breath var(--duration-web-idle) var(--ease-breath) infinite
     alternate;
 }

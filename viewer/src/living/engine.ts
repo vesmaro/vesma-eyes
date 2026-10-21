@@ -12,26 +12,37 @@
  *   Ж1 topbar spine (h, full width) · Ж2 sidebar contour (v) · Ж3 crumbs
  *   seam (h). Seam elements carry `data-living-seam`; geometry is measured,
  *   never copied from the stand.
- * HOW (canon):
- *   - Breathing = a slow sheen travelling along each vein — U2 honesty of
- *     light (SPEC-2026-10-07: «первое дыхание из шины; шина молчит — экран
- *     стоит»): a REAL bus event opens ONE breath window (--duration-breath),
- *     and ONLY inside it does the sheen travel (supersedes the W1a
- *     always-on reading of SUPERSEDE 14.1; the 5-second honesty gate is the
- *     wave's acceptance). After the window the veins rest ≥
- *     --duration-breath-rest (duty ≤25%); events keep toning the static
- *     drawing. Any input freezes instantly (the ≤80ms law).
+ * HOW (canon, D1b-ambient 2026-10-21 — the honest reformulation of U2):
+ *   - AMBIENT breath («Полный» only): the veins undulate ALWAYS within the
+ *     W1a caps — amplitude ≤0.08 (§14.1), period --duration-web-idle
+ *     (8–12s) — the sheen travelling each vein even while the bus is
+ *     silent (owner verdict 2026-10-21: «не вижу дышащего интерфейса»;
+ *     SUPERSEDE §14.1 «the web always undulates» restored IN CAPS). A
+ *     silent bus still means zero EVENT-driven motion — decor never wakes
+ *     without data; the ambient layer breathes quietly instead.
+ *   - EVENT breath: a real bus event still opens ONE breath window
+ *     (--duration-breath, duty ≤25%) for the window-gated family (Iris
+ *     pupil, search-hero iris, Весма body) and drives tones/beads as
+ *     before. «Спокойный»: event windows only, minimal amplitude.
+ *   - Input freeze (the ≤80ms law): any input freezes the ambient AND the
+ *     window instantly; the ambient resumes after --duration-breath-rest
+ *     (one wake timer), the window only on the next real event.
+ *   - STRICT STATIC: ?quiet=1 (mute), prefers-reduced-motion /
+ *     vesmaro.motion=reduced, «Выключен», <45fps degradation — zero
+ *     motion, pixel-still. The ambient state is announced on
+ *     <html data-ambient> — the WELL (drift/substrate breath) reads the
+ *     same carrier: one source of truth for every ambient pixel.
  *   - Base tone from real health; event tones per §14.6.1 (chunk web-tones);
  *     the tone colours the vein glow, the structure stays myelin.
  *   - Impulses (Полный only): a real bus event spawns a bead running along
  *     a deterministic vein at 600px/s, trail decays 1.5s (08 §2.2);
  *     ≤2 alive, extra events only feed tones (coalesce).
- *   - Anti-fake: muted → strictly neutral hairlines, zero impulses.
- * HYGIENE: one RAF — alive ONLY inside a breath window or while beads are
- *   travelling; paused on document.hidden; DPR ≤2 (degrades to 1.5 on
- *   slow frames, <45fps → static); prefers-reduced-motion / vesmaro.motion
- *   → a static drawing with no animation; every subscription/observer is
- *   torn down by the returned destructor (StrictMode-safe).
+ *   - Anti-fake: muted → strictly neutral hairlines, zero impulses, no
+ *     ambient.
+ * HYGIENE: one RAF — alive while the ambient breathes (Полный), inside a
+ *   breath window or while beads travel; paused on document.hidden; DPR ≤2
+ *   (degrades to 1.5 on slow frames, <45fps → static); every subscription/
+ *   observer is torn down by the returned destructor (StrictMode-safe).
  */
 
 import { getLiveLayer, subscribeLiveLayer } from "@/lib/liveLayerStore";
@@ -154,6 +165,7 @@ export function mountLivingLayer(canvas: HTMLCanvasElement): () => void {
   let hairCss = "rgb(122,138,158)";
   let rest = 0.07;
   let period = 10000;
+  let holdMs = 10500; // ambient input-freeze hold (--duration-breath-rest)
   let dprCap = 2;
   let lite = false; // slow-frame degradation: glow pass dropped
   let statik = false; // <45fps: settle into the static drawing
@@ -163,6 +175,13 @@ export function mountLivingLayer(canvas: HTMLCanvasElement): () => void {
   let spent = 0;
   let impulses: Impulse[] = [];
   let destroyed = false;
+  let ambientHold = 0; // perf.now() until which the ambient is frozen (input)
+  let wake: ReturnType<typeof setTimeout> | 0 = 0; // the one ambient resume
+
+  /** D1b: the ambient carrier on <html> — the WELL's CSS breath reads it. */
+  const setAmbient = (on: boolean): void => {
+    document.documentElement.dataset.ambient = on ? "true" : "false";
+  };
 
   function resize(): void {
     if (destroyed) return;
@@ -176,6 +195,8 @@ export function mountLivingLayer(canvas: HTMLCanvasElement): () => void {
     hairCss = `rgb(${css("--myelin-hairline", "rgb(122 138 158)").match(/\d+/g)!.slice(0, 3)})`;
     rest = parseFloat(css("--web-edge-alpha", "0.07")) || 0.07;
     period = parseFloat(css("--duration-web-idle", "10000")) || 10000;
+    const hv = parseFloat(css("--duration-breath-rest", "10500"));
+    holdMs = Number.isFinite(hv) && hv >= 0 ? hv : 10500;
     if (statik || reducedMotion() || getLiveLayer() === "off" || !active())
       drawStatic();
   }
@@ -185,9 +206,20 @@ export function mountLivingLayer(canvas: HTMLCanvasElement): () => void {
     !statik &&
     !reducedMotion() &&
     getLiveLayer() !== "off" &&
-    // U2 honesty: the RAF chain lives ONLY inside a breath window or while
-    // bead trails are still decaying — a silent bus means zero frames.
-    (breath.isOpen || impulses.length > 0);
+    // D1b: a silent bus no longer means zero frames — the AMBIENT breath
+    // («Полный» only, caps W1a) keeps the undulation alive. Events still
+    // open the window for the window-gated family; beads ride events.
+    (breath.isOpen || impulses.length > 0 || ambientOn());
+
+  /** The quiet undulation: «Полный» layer, not muted (?quiet=1 pins the
+   * anti-fake gate — strict static), not frozen by a recent input. */
+  const ambientOn = (): boolean =>
+    !destroyed &&
+    !statik &&
+    !reducedMotion() &&
+    getLiveLayer() === "live" &&
+    !isLivingMuted() &&
+    performance.now() >= ambientHold;
 
   function line(
     c: CanvasRenderingContext2D,
@@ -301,6 +333,7 @@ export function mountLivingLayer(canvas: HTMLCanvasElement): () => void {
       if (fps < 45) {
         statik = true;
         stop();
+        setAmbient(false); // strict static — the carrier must not lie
         drawStatic();
         return;
       }
@@ -371,8 +404,11 @@ export function mountLivingLayer(canvas: HTMLCanvasElement): () => void {
     else if (s.type === "health") tones.health(s.states);
     else if (s.type === "update") tones.setUpdate(s.on);
     else if (s.type === "mute") {
+      // Anti-fake: strictly neutral — the window closes too (a window that
+      // outlived the mute would keep hairlines moving without a source).
       impulses = [];
-      if (statik || reducedMotion()) drawStatic();
+      breath.freeze();
+      sync();
     }
   }
 
@@ -381,37 +417,55 @@ export function mountLivingLayer(canvas: HTMLCanvasElement): () => void {
     if (getLiveLayer() === "off") {
       breath.freeze();
       stop();
+      setAmbient(false);
       ctx!.clearRect(0, 0, window.innerWidth, window.innerHeight);
     } else if (reducedMotion() || statik) {
       breath.freeze();
       stop();
+      setAmbient(false);
       drawStatic();
     } else if (active()) {
+      setAmbient(ambientOn());
       start();
     } else {
       stop();
+      setAmbient(false);
       drawStatic();
     }
   }
 
   // --- the input freeze (замирание, ≤80ms law): ANY key/pointer press stops
-  // ambient motion instantly; the next real event may breathe again. --------
+  // ambient motion instantly; the ambient holds still for
+  // --duration-breath-rest (one wake resumes it — a single interaction must
+  // not leave the live interface permanently dead), the window re-opens on
+  // the next real event. --------
   const onInput = (): void => {
     if (destroyed) return;
     impulses = []; // kill bead trails too — zero motion while interacting
-    breath.freeze(); // close → the subscription settles the static frame
+    ambientHold = performance.now() + holdMs; // freeze the ambient FIRST…
+    if (wake) clearTimeout(wake);
+    wake =
+      holdMs > 0
+        ? setTimeout(() => {
+            wake = 0;
+            sync();
+          }, holdMs)
+        : 0;
+    breath.freeze(); // …then close the window (its handler sees the hold)
+    sync();
   };
 
   // --- subscriptions (ALL torn down by the destructor) ---------------------
   const offFeed = subscribeLiving(onSignal);
   const offLayer = subscribeLiveLayer(() => sync());
   const offBreath = breath.subscribe((open) => {
-    // The window state rides <html> too — the SHELL ambient (Весма's breath)
-    // is gated by the SAME bus-opened window (U2: nothing moves without it).
+    // The window state rides <html> too — the WINDOW-GATED family (Iris
+    // pupil, search-hero iris, Весма body) breathes only inside it. The
+    // AMBIENT layers (veins, well) ride <html data-ambient> instead (D1b).
     document.documentElement.dataset.breath = open ? "true" : "false";
     if (destroyed || statik) return;
     if (open) start();
-    else if (impulses.length === 0) {
+    else if (impulses.length === 0 && !ambientOn()) {
       stop();
       drawStatic();
     }
@@ -453,6 +507,8 @@ export function mountLivingLayer(canvas: HTMLCanvasElement): () => void {
   return function destroy(): void {
     destroyed = true;
     stop();
+    if (wake) clearTimeout(wake);
+    wake = 0;
     offFeed();
     offLayer();
     offBreath();

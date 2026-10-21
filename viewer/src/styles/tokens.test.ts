@@ -1166,12 +1166,23 @@ describe("well substrate + tone consumers (W1b «Колодец — орган �
     expect(breath).toContain("var(--web-wave-alpha)");
   });
 
-  it("U2: the breath mounts ONLY inside a bus-opened window; rest is static", () => {
-    // SPEC-2026-10-07: «шина молчит — экран стоит». The animation rule is
-    // conjunctive — «Полный» layer AND [data-breath="true"] (the organ's
-    // event-opened window); every other state pins the rest opacity.
+  it("D1b: the ambient breath mounts in «Полный» via html[data-ambient]; rest is static", () => {
+    // D1b-ambient (2026-10-21) supersedes the U2 window gate for the WELL's
+    // drift/substrate: the quiet bus undulates IN CAPS — the ambient carrier
+    // is written by the living engine (live layer, not muted, not input-
+    // frozen); «Спокойный»/off/reduced/?quiet=1 never see it. The window-
+    // gated family (Iris pupil, search-hero iris, Весма body) keeps riding
+    // html[data-breath].
+    expect(globalCss).toMatch(/\.well-substrate\s*\{[^}]*--duration-web-idle/);
+    const breath =
+      globalCss.match(/@keyframes well-substrate-breath\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+    expect(breath).toContain("var(--web-node-alpha)");
+    expect(breath).toContain("var(--web-wave-alpha)");
+    // The amplitude ceiling is declared: the wave alpha clamped by the canon
+    // breath alpha (--neura-breath-alpha ≤0.18 dark / 0.12 light).
+    expect(breath).toContain("min(var(--web-wave-alpha), var(--neura-breath-alpha))");
     expect(globalCss).toMatch(
-      /\[data-live="live"\]\[data-breath="true"\] \.well-substrate\s*\{[^}]*animation: well-substrate-breath/s,
+      /html\[data-ambient="true"\] \[data-live="live"\] \.well-substrate\s*\{[^}]*animation: well-substrate-breath/s,
     );
     const rest = globalCss.match(/\.well-substrate\s*\{([^}]*)\}/)?.[1] ?? "";
     expect(rest).toContain("animation: none");
@@ -1187,9 +1198,9 @@ describe("well substrate + tone consumers (W1b «Колодец — орган �
       )?.[1] ?? "";
     expect(forced).toContain("animation: none");
     expect(forced).toContain("var(--web-node-alpha)");
-    // The drift is gated by the SAME window.
+    // The drift rides the SAME ambient carrier.
     expect(globalCss).toMatch(
-      /\[data-live="live"\]\[data-breath="true"\] \.well-drift\s*\{[^}]*animation: well-drift/s,
+      /html\[data-ambient="true"\] \[data-live="live"\] \.well-drift\s*\{[^}]*animation: well-drift/s,
     );
     const driftRest = globalCss.match(/\.well-drift\s*\{([^}]*)\}/)?.[1] ?? "";
     expect(driftRest).toContain("animation: none");
