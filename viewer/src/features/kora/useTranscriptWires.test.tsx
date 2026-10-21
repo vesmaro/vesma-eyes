@@ -10,11 +10,13 @@ import { useTranscriptWires } from "./useTranscriptWires";
 /**
  * The transcript wire STATE MACHINE (transcript-ux wave, «связность
  * лог↔ответ»): raw row → answer (jumpToAnswer: scroll + spotlight beat +
- * the polite announcement) and answer → raw walk (jumpToRawWalk: open the
- * fold + scroll + flash beat), the manual toggle, the beat expiry (one
+ * the polite announcement), the manual toggle, the beat expiry (one
  * attention window) and the timer cleanup on unmount. The renderers
- * (zcode scroll today, hermes scroll next leg) consume these through
- * props — the render grammar is pinned in KoraTranscript.test.tsx.
+ * (zcode scroll + hermes scroll) consume these through props — the render
+ * grammar is pinned in KoraTranscript.test.tsx. The answer → raw-walk
+ * direction is the fold summary itself (adjacent by construction) — its
+ * programmatic wire was unconsumed and removed with its flash beat
+ * (ux-hygiene-followups-20261020; обратное направление живёт в ката).
  */
 
 /** The probe hands the machine over OUTSIDE render (an effect — the
@@ -50,22 +52,17 @@ async function mountProbe(): Promise<void> {
   });
 }
 
-/** The wire targets: DOM ids the machine scrolls to (the renderers mint
- * the same ids through the model helpers). */
+/** The wire target: the DOM id the machine scrolls to (the renderers mint
+ * the same id through the model helper). */
 function installWireTargets(): {
   anchorScroll: ReturnType<typeof vi.fn>;
-  foldScroll: ReturnType<typeof vi.fn>;
 } {
   const anchorScroll = vi.fn();
-  const foldScroll = vi.fn();
   const anchorEl = document.createElement("div");
   anchorEl.id = "kora-anchor-2";
   anchorEl.scrollIntoView = anchorScroll;
-  const foldEl = document.createElement("div");
-  foldEl.id = "kora-fold-2";
-  foldEl.scrollIntoView = foldScroll;
-  document.body.append(anchorEl, foldEl);
-  return { anchorScroll, foldScroll };
+  document.body.append(anchorEl);
+  return { anchorScroll };
 }
 
 beforeEach(() => {
@@ -97,23 +94,19 @@ describe("useTranscriptWires («связность лог↔ответ»)", () =
     expect(probe.announce).not.toBe("");
   });
 
-  it("jumpToRawWalk: opens the fold, then scrolls it into view after the frame", async () => {
-    const { foldScroll } = installWireTargets();
+  it("two quick jumps to different anchors never announce the same line (live region)", async () => {
+    installWireTargets();
     await mountProbe();
     act(() => {
-      probeHolder.current?.jumpToRawWalk(2);
+      probeHolder.current?.jumpToAnswer(2);
     });
-    const probe = currentWires();
-    expect(probe.openFolds.has(2)).toBe(true);
-    expect(probe.flashFold).toBe(2);
-    // The scroll waits one frame (the fold must exist/open first).
-    expect(foldScroll).not.toHaveBeenCalled();
+    const first = currentWires().announce;
     act(() => {
-      vi.advanceTimersByTime(32); // one rAF tick
+      probeHolder.current?.jumpToAnswer(7);
     });
-    expect(foldScroll).toHaveBeenCalledWith(
-      expect.objectContaining({ block: "center" }),
-    );
+    const second = currentWires().announce;
+    expect(first).not.toBe("");
+    expect(second).not.toBe(first);
   });
 
   it("the beat expires after one attention window (static, no animation)", async () => {
@@ -128,7 +121,6 @@ describe("useTranscriptWires («связность лог↔ответ»)", () =
     });
     const probe = currentWires();
     expect(probe.spotSeq).toBeNull();
-    expect(probe.flashFold).toBeNull();
     expect(probe.announce).toBe("");
   });
 

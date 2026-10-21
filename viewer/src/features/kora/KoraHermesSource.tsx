@@ -163,7 +163,6 @@ export function HermesTranscript({
   const {
     openFolds,
     spotSeq,
-    flashFold,
     jumpToAnswer,
     onFoldToggle,
     announce,
@@ -223,7 +222,6 @@ export function HermesTranscript({
             forceOpen={forceOpen}
             openFolds={openFolds}
             spotSeq={spotSeq}
-            flashFold={flashFold}
             onJumpToAnswer={jumpToAnswer}
             onFoldToggle={onFoldToggle}
           />
@@ -280,7 +278,6 @@ function HermesTranscriptBlock({
   forceOpen,
   openFolds,
   spotSeq,
-  flashFold,
   onJumpToAnswer,
   onFoldToggle,
 }: {
@@ -289,7 +286,6 @@ function HermesTranscriptBlock({
   forceOpen: boolean;
   openFolds: ReadonlySet<number>;
   spotSeq: number | null;
-  flashFold: number | null;
   onJumpToAnswer: (seq: number) => void;
   onFoldToggle: (seq: number, open: boolean) => void;
 }) {
@@ -302,7 +298,6 @@ function HermesTranscriptBlock({
           seq={head}
           count={group.raw.length}
           open={forceOpen || openFolds.has(head)}
-          flash={flashFold === head}
           onOpenChange={(open) => onFoldToggle(head, open)}
         >
           {group.raw.map((item) => (
@@ -340,7 +335,6 @@ function HermesTranscriptBlock({
             seq={anchor.seq}
             count={group.raw.length}
             open={forceOpen || openFolds.has(anchor.seq)}
-            flash={flashFold === anchor.seq}
             onOpenChange={(open) => onFoldToggle(anchor.seq, open)}
           >
             {group.raw.map((item) => (
