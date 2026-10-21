@@ -19,7 +19,7 @@
 projects:
   # ---------------------------------------------------------------- vesma ---
   mnemos:
-    repo: ../mnemos
+    repo: ../vesma
     # Pinned 2026-09-29 (ME-039 re-sync, ecosystem revision; was 23f0fce,
     # 2026-09-23/W1a — 35 commits behind). Re-pin deliberately: update the
     # SHA, re-run `npm run sync-docs`, diff-review the corpus (Docs Writer).
@@ -375,7 +375,12 @@ projects:
         reason: RU-зеркало правила выше
 
   # ----------------------------------------------------------- vesma-mesh ---
-  vesma-mesh:
+  # KEY = the published slug namespace (`mnemos-mesh/...`): it MUST match the
+  # viewer's protected docs slug namespace (projects.ts slug `mnemos-mesh`,
+  # /docs/mnemos-mesh/* URLs, tests). The PRODUCT name is vesma-mesh; the key
+  # is the URL contract, not the brand — do not "rebrand" it (a mismatch
+  # drops the mesh pages into the default hub on the next sync).
+  mnemos-mesh:
     repo: ../vesma-mesh
     # Pinned 2026-09-29 (ME-039 re-sync; was 331ef3a, 2026-09-23/W1a —
     # 106 commits behind). b428ea9 = tag v1.6.8 — the release-charting
@@ -493,7 +498,7 @@ api_hub:
   # --- источники md-тел (L0: клон + пин; те же L1-правила, что у sync) -----
   sources:
     mnemos:
-      repo: ../mnemos
+      repo: ../vesma
       # Свежий main на момент волны ME-038 (2026-09-29). Пин НЕ пересекается
       # с projects.mnemos (владение ME-039) — это отдельная выборка.
       ref: 8bc139bf0749c0a50b9f1661e34d33b03ca78e3a
@@ -575,7 +580,7 @@ api_hub:
             публичного HTTP API у меша нет — внутренние gRPC-контракты
             (proto/federation.proto, proto/mnemos_core_api.proto); вместо
             выдумывания — честная кураторская заметка
-            (curated api/vesma-mesh/index)
+            (curated api/mnemos-mesh/index)
 
   # --- vesma-eyes board API: OpenAPI-снапшот → страницы ru+en (ME-044) ---
   # title/about — локале-маппинги {ru, en} (как title у include-записей
@@ -760,7 +765,7 @@ api_hub:
         source: vesmaro-agent
         path: docs/decisions/CHARTER-v2.md
         sha: pin
-    - slug: vesma-mesh/index
+    - slug: mnemos-mesh/index
       category: api-mesh
       order: 1
       verified_against:

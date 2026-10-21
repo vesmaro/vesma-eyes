@@ -184,7 +184,7 @@ family member](first-login.md).
 For a try-out on one machine Docker is enough:
 
 ```bash
-git clone https://github.com/Korrnals/vesma-eyes.git && cd vesma-eyes
+git clone https://github.com/vesmaro/vesma-eyes.git && cd vesma-eyes
 export MNEMOS_URL=http://your-mnemos-host:8787
 export MNEMOS_TOKEN=mnk_…
 docker compose up -d
