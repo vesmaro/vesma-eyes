@@ -1282,7 +1282,12 @@ export const ru = {
   "agents.hosts.recentEmpty": "Тишина. Первые события — после первого доклада.",
   "agents.hosts.recentFailed": "Ленту не удалось загрузить.",
   "agents.hosts.reconnectAction": "Подключить заново",
-  "agents.hosts.harnessesTitle": "Харнесы хоста",
+  // Зоны мозга Z1 (BRAIN-ZONES-VISUAL-DOC §2-3): хост = зона коры, харнес =
+  // сплетение, специалист = нейрон — та же иерархия владельца, словарь лора.
+  "agents.hosts.zoneStructureTitle": "Сплетения зоны",
+  "agents.hosts.zoneNeuronsCounter": "нейронов: {{n}}",
+  "agents.hosts.zoneEmpty":
+    "В зоне нет сплетений — подключите харнес, и он появится здесь.",
   "agents.hosts.actionAddHarness": "Подключить харнес",
   "palette.hostItem": "Хост {{host}}",
   "palette.connectHost": "Подключить хост",
@@ -1291,6 +1296,19 @@ export const ru = {
   "agents.hosts.execEnvTooltip": "Среда исполнения (данные агента)",
   "agents.hosts.foundAtTooltip": "Эта же установка также найдена в",
   "agents.hosts.sessions24Tooltip": "Сессии за 24 часа",
+  "agents.hosts.sessions24Short": "сессии",
+  // Лор-словарь зон (BRAIN-ZONES-VISUAL-DOC §2, гейт i18n): «зона / сплетение
+  // / нейрон / ядро / путь». «Ядро» (команда) и «путь» (миссия) — задел
+  // Z2/Z3: в ростере НЕ рендерятся, подписи честно говорят об этом.
+  "agents.lore.zone": "зона коры",
+  "agents.lore.plexus": "сплетение",
+  "agents.lore.neuron": "нейрон",
+  "agents.lore.core": "ядро",
+  "agents.lore.path": "путь",
+  "agents.lore.coreHint":
+    "Ядро — команда специалистов, функциональная группа нейронов. В ростере пока не отображается.",
+  "agents.lore.pathHint":
+    "Путь — проводящий путь делегации: дерево задач от замысла до отчёта. В ростере пока не отображается.",
   "agents.hosts.resize.label": "Ширина панели хостов",
   "agents.hosts.resize.tooltip":
     "Потяните, чтобы изменить ширину. Двойной клик — вернуть как было",

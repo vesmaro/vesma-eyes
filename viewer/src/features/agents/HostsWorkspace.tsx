@@ -839,6 +839,13 @@ function HostField({
   return (
     <div className="flex min-h-0 min-w-0 flex-col">
       <header className="space-y-1.5 px-6 pb-3 pt-5">
+        {/* Brain-zones Z1 (BRAIN-ZONES-VISUAL-DOC §2-3): the field names its
+         * entity — the host IS a cortex zone. A vocabulary label, not data:
+         * the lore term sits above the name, the facts stay in the stats
+         * line below. */}
+        <p className="text-xs font-medium uppercase tracking-wide text-foreground-secondary">
+          {t("agents.lore.zone")}
+        </p>
         <div className="flex flex-wrap items-center gap-2">
           <h2
             id="agents-host-title"
@@ -1035,9 +1042,9 @@ function HostField({
         )}
       </section>
 
-      {/* «Харнесы хоста» (B2 §3.C.3): one accordion per executor — the
-       * expansion is the ExecutorSheet's own workbench IN PLACE (behavior
-       * parity by construction). */}
+      {/* «Сплетения зоны» (B2 §3.C.3; brain-zones Z1): one accordion per
+       * executor — the expansion is the ExecutorSheet's own workbench IN
+       * PLACE (behavior parity by construction). */}
       <HostHarnesses
         members={group.members}
         meta={meta}
