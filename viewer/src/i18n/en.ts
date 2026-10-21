@@ -1257,6 +1257,13 @@ export const en: Record<TranslationKey, string> = {
   "agents.hosts.recentFailed": "Failed to load the feed.",
   "agents.hosts.reconnectAction": "Reconnect",
   "agents.hosts.harnessesTitle": "Host harnesses",
+  // Brain zones Z1 (BRAIN-ZONES-VISUAL-DOC §2-3): host = cortex zone,
+  // harness = plexus, specialist = neuron — the owner's same hierarchy,
+  // spoken in the lore vocabulary.
+  "agents.hosts.zoneStructureTitle": "Zone plexuses",
+  "agents.hosts.zoneNeuronsCounter": "neurons: {{n}}",
+  "agents.hosts.zoneEmpty":
+    "No plexuses in this zone yet — connect a harness and it will appear here.",
   "agents.hosts.actionAddHarness": "Add a harness",
   "palette.hostItem": "Host {{host}}",
   "palette.connectHost": "Connect a host",
@@ -1265,6 +1272,20 @@ export const en: Record<TranslationKey, string> = {
   "agents.hosts.execEnvTooltip": "Execution environment (agent-reported)",
   "agents.hosts.foundAtTooltip": "The same installation was also found at",
   "agents.hosts.sessions24Tooltip": "Sessions in 24h",
+  "agents.hosts.sessions24Short": "sessions",
+  // Zone lore vocabulary (BRAIN-ZONES-VISUAL-DOC §2, i18n gate): zone /
+  // plexus / neuron / core / path. «Core» (a team) and «path» (a mission)
+  // are Z2/Z3 groundwork: NOT rendered in the roster yet, the hints say
+  // so honestly.
+  "agents.lore.zone": "cortex zone",
+  "agents.lore.plexus": "plexus",
+  "agents.lore.neuron": "neuron",
+  "agents.lore.core": "core",
+  "agents.lore.path": "path",
+  "agents.lore.coreHint":
+    "A core is a specialist team — a functional group of neurons. Not shown in the roster yet.",
+  "agents.lore.pathHint":
+    "A path is the delegation tract: the task tree from intent to report. Not shown in the roster yet.",
   "agents.hosts.resize.label": "Hosts panel width",
   "agents.hosts.resize.tooltip": "Drag to resize. Double-click to restore",
   "agents.execution.title": "Execution",

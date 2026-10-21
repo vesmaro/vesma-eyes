@@ -128,6 +128,25 @@ describe("translation", () => {
     expect(Object.keys(en).sort()).toEqual(Object.keys(ru).sort());
   });
 
+  it("brain-zones Z1: the zone lore vocabulary exists in BOTH dictionaries", async () => {
+    const { ru } = await import("./ru");
+    const { en } = await import("./en");
+    // The five lore words (BRAIN-ZONES-VISUAL-DOC §2): зона / сплетение /
+    // нейрон / ядро / путь — the owner's hierarchy in the neuro analogy.
+    const lore = ["zone", "plexus", "neuron", "core", "path"] as const;
+    for (const word of lore) {
+      const key = `agents.lore.${word}` as keyof typeof ru;
+      expect(ru[key], key).toBeTruthy();
+      expect(en[key as keyof typeof en], key).toBeTruthy();
+    }
+    // «Core» and «path» are Z2/Z3 groundwork: not rendered anywhere yet,
+    // and their hints say so HONESTLY (no fake promises of presence).
+    expect(ru["agents.lore.coreHint"]).toContain("не отображается");
+    expect(ru["agents.lore.pathHint"]).toContain("не отображается");
+    expect(en["agents.lore.coreHint"]).toContain("Not shown");
+    expect(en["agents.lore.pathHint"]).toContain("Not shown");
+  });
+
   it("the auth.* gates-v6 family interpolates the SAME placeholders in ru and en", async () => {
     const { ru } = await import("./ru");
     const { en } = await import("./en");
