@@ -60,15 +60,16 @@ interface Bead {
 /** Mount the organ on the well window. Returns the idempotent destructor. */
 export function mountWellOrgan(win: HTMLElement): () => void {
   let tones = createTones(css, isLivingMuted);
-  // The breath window (U2): the well's drift/substrate animations run ONLY
-  // inside a window opened by a real bus event («шина молчит — экран
-  // стоит»); the attribute is read by global.css.
+  // The breath window (U2): the WINDOW-GATED family (Iris pupil, search-hero
+  // iris, Весма body) breathes only inside a window opened by a real bus
+  // event; the attribute rides <html> for them. The well's own drift/
+  // substrate breath moved to the AMBIENT carrier html[data-ambient]
+  // (D1b-ambient) — written by the shell engine, one source of truth.
   const breathAllowed = (): boolean => getLiveLayer() !== "off" && !isReducedMotion();
   const breath = createBreath(css, breathAllowed);
   const offBreath = breath.subscribe((open) => {
     win.dataset.breath = open ? "true" : "false";
-    // Mirror onto <html> for the SHELL ambient (Весма's breath) — the same
-    // bus-opened window gates every living pixel on the page (U2).
+    // Mirror onto <html> for the window-gated family (see above).
     document.documentElement.dataset.breath = open ? "true" : "false";
   });
   let beads: Bead[] = [];

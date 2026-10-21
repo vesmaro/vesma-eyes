@@ -43,14 +43,17 @@ import {
  * chrome), so the hero's text budget holds: title, subtitle, waiting chip,
  * vitals, ticker.
  *
- * Motion gates (§10 + U2 honesty of light): NOTHING moves without a real
- * bus event. The awakening (once per session, sessionStorage flag) waits
- * for the FIRST /api/events frame — before it the well stands fully drawn
- * and still («первое дыхание из шины; шина молчит — экран стоит»); any
- * input cancels the wave. The drift/substrate breath mount only inside a
- * breath window the well organ opens on a real event. The ticker line
- * updates from bus frames alone (data — it moves in every regime, the
- * fade-swap only in «Полный»).
+ * Motion gates (§10 + D1b-ambient, the honest reformulation of U2): the
+ * quiet bus undulates IN CAPS — the well's drift/substrate breathe
+ * ambiently in the «Полный» layer (html[data-ambient], written by the
+ * shell engine; amplitude ceiling min(--web-wave-alpha,
+ * --neura-breath-alpha)), freeze on any input (the ≤80ms law) and die
+ * outright in ?quiet=1/reduced/off. EVENT-driven motion still waits for
+ * the bus: the awakening (once per session, sessionStorage flag) waits
+ * for the FIRST /api/events frame — before it the well stands fully
+ * drawn and still; any input cancels the wave; beads/tones ride real
+ * events only. The ticker line updates from bus frames alone (data — it
+ * moves in every regime, the fade-swap only in «Полный»).
  */
 
 const AWAKEN_SESSION_KEY = "vesmaro.awakened";
