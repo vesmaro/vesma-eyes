@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { MemoryRouter } from "react-router";
 
 import { MemoryScroll } from "./MemoryScroll";
 import { I18nProvider } from "@/i18n";
@@ -12,6 +13,7 @@ import type { Memory } from "@/gateway/types";
  * through the TextEngine primitive — markdown formats, plain stays plain —
  * and the RAW toggle keeps showing the source verbatim (pre-wrap, no
  * markdown elements): the raw view is the owner's explicit «как лежит».
+ * (MemoryRouter: the D7 actions row renders real hrefs.)
  */
 
 let container: HTMLDivElement | null = null;
@@ -25,9 +27,11 @@ async function mountScroll(memory: Memory): Promise<HTMLDivElement> {
   root = createRoot(container);
   await act(async () => {
     root!.render(
-      <I18nProvider initialLang="en">
-        <MemoryScroll memory={memory} showRaw={false} onToggleRaw={() => {}} />
-      </I18nProvider>,
+      <MemoryRouter>
+        <I18nProvider initialLang="en">
+          <MemoryScroll memory={memory} showRaw={false} onToggleRaw={() => {}} />
+        </I18nProvider>
+      </MemoryRouter>,
     );
   });
   return container;
@@ -118,9 +122,11 @@ describe("MemoryScroll × TextEngine (UI-27)", () => {
     // Raw → the toggle re-render must show the SOURCE as plain text.
     await act(async () => {
       root!.render(
-        <I18nProvider initialLang="en">
-          <MemoryScroll memory={memory} showRaw onToggleRaw={() => {}} />
-        </I18nProvider>,
+        <MemoryRouter>
+          <I18nProvider initialLang="en">
+            <MemoryScroll memory={memory} showRaw onToggleRaw={() => {}} />
+          </I18nProvider>
+        </MemoryRouter>,
       );
     });
     expect(el.textContent).toContain("## Сырой источник");

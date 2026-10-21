@@ -4,6 +4,7 @@ import {
   isGenericMemoryTitle,
   memoryCardPreview,
   memoryHumanFace,
+  memorySearchQuery,
 } from "./memoryDisplay";
 
 describe("isGenericMemoryTitle", () => {
@@ -117,5 +118,25 @@ describe("humanMemoryTitle / memoryCardPreview", () => {
     expect(memoryCardPreview({ title: "User", content: "Одна-единственная строка письма." })).toBe(
       "",
     );
+  });
+});
+
+describe("memorySearchQuery («Найти похожее»)", () => {
+  it("strips punctuation from the human title and keeps the leading words", () => {
+    expect(memorySearchQuery({ title: "ADR: gateway via same-origin /api proxy", content: "" })).toBe(
+      "ADR gateway via same origin /api proxy",
+    );
+  });
+
+  it("uses the mined headline for generically-titled records", () => {
+    expect(memorySearchQuery({ title: "User", content: "## User Звуковая версия проходит." })).toBe(
+      "Звуковая версия проходит",
+    );
+  });
+
+  it("caps the query so the search URL stays shareable", () => {
+    const long = "word ".repeat(40).trim();
+    const query = memorySearchQuery({ title: long, content: "" });
+    expect(query.length).toBeLessThanOrEqual(80);
   });
 });

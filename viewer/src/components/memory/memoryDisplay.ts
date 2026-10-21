@@ -117,6 +117,24 @@ export function memoryCardPreview(memory: HumanFaceSource): string {
   return (memory.clean_content ?? memory.content) ?? "";
 }
 
+/** Query for the «Найти похожее» action (D7 P2): the human title's leading
+ * words, punctuation stripped — the unified search ranks on them. Capped so
+ * the URL stays shareable. */
+export function memorySearchQuery(memory: HumanFaceSource, maxChars = 80): string {
+  const raw = humanMemoryTitle(memory);
+  const words = raw
+    .replace(/["'`«»„“”()\[\]{}.,!?;:—–-]+/g, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+  let query = "";
+  for (const word of words) {
+    const next = query ? `${query} ${word}` : word;
+    if (next.length > maxChars) break;
+    query = next;
+  }
+  return query;
+}
+
 /**
  * Rule/code memories render in mono (D11: frozen — Lora for everything else).
  * The tag contract spells these `type:rule` / `mnemos:rule` / `*:code`; any
