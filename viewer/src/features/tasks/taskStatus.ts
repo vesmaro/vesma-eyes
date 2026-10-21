@@ -106,6 +106,19 @@ export function statusLabelKey(status: string): TranslationKey {
     : "tasks.status.unknown";
 }
 
+/**
+ * D4 correspondence map (user-panel verdict): workflow STATUS words (list
+ * chips) and kanban COLUMN words are two vocabularies for one axis — where
+ * the words differ, the list chip's tooltip names the column(s) the status
+ * sits in, so the owner never translates between them in their head.
+ * Null for unknown statuses — callers render no tooltip.
+ */
+export function statusColumnHintKey(status: string): TranslationKey | null {
+  return isTaskStatus(status)
+    ? (`tasks.statusColumn.${status}` as const)
+    : null;
+}
+
 /** Priority label key. */
 export function priorityLabelKey(priority: string): TranslationKey {
   return isTaskPriority(priority)

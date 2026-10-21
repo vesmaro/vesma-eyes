@@ -12,7 +12,7 @@ import { useI18n, useT } from "@/i18n";
 import type { TranslationKey } from "@/i18n";
 import { useBoardTasks } from "@/features/tasks/useTasks";
 import { formatTaskDate } from "@/features/tasks/taskStatus";
-import { ACTIVE_ASSIGNMENT_STATES } from "./assignmentStatus";
+import { ACTIVE_ASSIGNMENT_STATES, assignmentStateHintKey } from "./assignmentStatus";
 import { AgentsUnsupported } from "./AgentsUnsupported";
 import { AssignmentDrawer } from "./AssignmentDrawer";
 import { AssignExecutorSheet } from "./AssignExecutorSheet";
@@ -277,7 +277,11 @@ export function ExecutionPage() {
        * filters, auto-expanded ONCE (the first collapse persists). */}
       <OnboardingRow />
 
-      {/* Filters: state chips + specialist (client) + text search. */}
+      {/* Filters: state chips + specialist (client) + text search.
+       * W-B (D4): the chips filter the EXECUTION axis (assignments), and the
+       * words collide with board-column words — the note says so once, each
+       * chip's tooltip explains its state. */}
+      <p className="text-xs text-foreground-muted">{t("agents.statesAxisNote")}</p>
       <div className="flex flex-wrap items-center gap-2">
         {(
           [
@@ -294,6 +298,7 @@ export function ExecutionPage() {
             key={state}
             type="button"
             aria-pressed={stateFilter === state}
+            title={t(assignmentStateHintKey(state))}
             onClick={() => setStateFilter(stateFilter === state ? null : state)}
             className={
               "rounded-sm border px-2 py-0.5 text-xs transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright " +

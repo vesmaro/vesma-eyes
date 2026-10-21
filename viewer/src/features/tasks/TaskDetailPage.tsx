@@ -31,6 +31,7 @@ import {
   priorityBadgeVariant,
   priorityLabelKey,
   statusBadgeVariant,
+  statusColumnHintKey,
   statusLabelKey,
 } from "./taskStatus";
 import { EditTaskDialog } from "./EditTaskDialog";
@@ -207,6 +208,8 @@ export function TaskDetailPage() {
   // detail header's single source for the gate.
   const archived = current.archived === 1;
   const canEdit = canMutate && !archived;
+  // W-B (D4): the status word's board column(s) — the chip tooltip.
+  const statusHintKey = statusColumnHintKey(current.status);
   // ME-078: human channel first, raw spec as the «исходник» view. The
   // toggle only renders when the two channels actually differ — a dead
   // control (human == raw, or nothing to flip to) would be noise.
@@ -248,7 +251,11 @@ export function TaskDetailPage() {
           {current.title}
         </h1>
         <div className="flex flex-wrap items-center gap-1.5">
-          <Badge variant={statusBadgeVariant(current.status)}>
+          {/* W-B (D4): the status word's column lives in the tooltip. */}
+          <Badge
+            variant={statusBadgeVariant(current.status)}
+            title={statusHintKey ? t(statusHintKey) : undefined}
+          >
             {t(statusLabelKey(current.status))}
           </Badge>
           <Badge variant={priorityBadgeVariant(current.priority)}>

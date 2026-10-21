@@ -26,10 +26,10 @@ The board has seven columns. A column is a stage of a task's life:
 | --- | --- |
 | backlog | ideas and drafts, before work |
 | validating | a check before picking the task up |
-| open | taken into work, waiting for an executor |
+| queued | taken into work, waiting for an executor |
 | in progress | being worked on right now |
 | blocked | stuck on something external |
-| resolved | done, waiting for confirmation |
+| awaiting review | done, waiting for the owner's confirmation |
 | done | the finish |
 
 Besides the column, a task carries a status (open, in progress,

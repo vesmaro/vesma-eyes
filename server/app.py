@@ -914,10 +914,12 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
 COLUMN_RU = {
     # ME-077: owner-facing display names — kept in sync with the kanban
-    # («В очереди» / «Ждёт проверки»); the WIRE column ids never change.
+    # («В очереди» / «На проверке»); the WIRE column ids never change.
+    # W-B (D4): «ждёт проверки» → «на проверке» — the board column and the
+    # counter chip (W-A) share one word; the SSE feed follows.
     "backlog": "бэклог", "validating": "на валидации",
     "open": "в очереди", "in-progress": "в работе", "blocked": "блокировано",
-    "resolved": "ждёт проверки", "done": "готово",
+    "resolved": "на проверке", "done": "готово",
 }
 
 # /docs belongs to the SPA documentation section when the viewer owns the

@@ -932,6 +932,18 @@ export const en: Record<TranslationKey, string> = {
   "tasks.column.resolved": "Awaiting review",
   "tasks.column.done": "Done",
 
+  // --- W-B (D4): the status → column correspondence map ----------------------------
+  // A workflow status (list-chip word) and its column (board word) name one
+  // thing with two words; the chip tooltip names the column so nobody
+  // translates dictionaries in their head.
+  "tasks.statusColumn.open":
+    "early lanes: the Backlog, Validating or Queued column",
+  "tasks.statusColumn.in-progress": "the In progress column",
+  "tasks.statusColumn.blocked": "the Blocked column",
+  "tasks.statusColumn.resolved": "the Awaiting review column — waiting for your call",
+  "tasks.statusColumn.done": "the Done column",
+  "tasks.statusColumn.withdrawn": "no board column — the task was withdrawn",
+
   // --- ME-077: column hints (whose action moves the card onward) -------------------
   "tasks.columnHint.backlog": "moves: owner — queue for work",
   "tasks.columnHint.validating": "moves: owner — accept or return",
@@ -1038,8 +1050,9 @@ export const en: Record<TranslationKey, string> = {
   // W-C (D5): the mobile creation entry names the action.
   "tasks.create.labelMobile": "New task",
   "tasks.create.title": "New task",
+  // W-B (D4): the “open” column never existed — a new task lands in Queued.
   "tasks.create.description":
-    "The first line becomes the title, the rest the summary. The task is created on the board in the “open” column right away.",
+    "The first line becomes the title, the rest the summary. The task is created on the board in the Queued column right away.",
   "tasks.create.textLabel": "Raw text",
   "tasks.create.textPlaceholder":
     "Task title on the first line…\nThen the summary and context.",
@@ -1159,6 +1172,20 @@ export const en: Record<TranslationKey, string> = {
   "agents.state.failed": "failed",
   "agents.state.cancelled": "cancelled",
   "agents.state.expired": "expired",
+  // W-B (D4): assignment-state tooltips — the EXECUTION axis (attempts at a
+  // task), not board columns; the words partly collide («queued»), so every
+  // state chip explains itself in one line.
+  "agents.stateHint.queued": "the assignment waits for an executor to pick it up",
+  "agents.stateHint.claimed": "an executor took the assignment and is about to start",
+  "agents.stateHint.running": "an executor is working on the assignment right now",
+  "agents.stateHint.done": "the attempt finished — see the task's report",
+  "agents.stateHint.failed": "the attempt failed — the task is likely blocked now",
+  "agents.stateHint.cancelled": "the attempt was cancelled manually",
+  "agents.stateHint.expired": "the assignment ran out of time — the task is likely blocked now",
+  // W-B (D4): one line for the two axes — the chips below filter
+  // assignments, not kanban columns.
+  "agents.statesAxisNote":
+    "The filters below are about assignments (attempts at tasks), not kanban columns.",
   "agents.age.queued": "queued {{age}}",
   "agents.age.claimed": "taken {{age}} ago",
   "agents.age.running": "pulse {{age}} ago",

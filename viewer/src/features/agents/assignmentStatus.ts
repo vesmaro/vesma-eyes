@@ -72,6 +72,17 @@ export function assignmentStateStyle(state: AssignmentLifecycleState): Assignmen
   return STATE_STYLES[state];
 }
 
+/**
+ * D4 correspondence map (user-panel verdict): assignment states are the
+ * EXECUTION axis (one attempt at a task), not the board axis (columns) —
+ * the words partly collide («в очереди» means a queued ASSIGNMENT here, a
+ * board column there). Every state chip carries this one-line tooltip, so
+ * the owner never translates between the dictionaries in their head.
+ */
+export function assignmentStateHintKey(state: AssignmentLifecycleState): TranslationKey {
+  return `agents.stateHint.${state}` as TranslationKey;
+}
+
 /** Short routing-reason label for row signatures (spec §2.3 honest preview). */
 export function routingReasonKey(reason: string): TranslationKey {
   switch (reason) {
