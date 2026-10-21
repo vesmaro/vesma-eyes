@@ -16,15 +16,11 @@ export const en: Record<TranslationKey, string> = {
   "nav.tasks": "Tasks",
   "nav.agents": "Agents",
   "nav.kora": "Kora",
-  "nav.stores": "Stores",
   "nav.system": "System",
-  "nav.soon": "soon",
-  // ME-072 A: honest badge for a blocked-but-EXISTING section (its route
-  // answers) — «later», not «soon».
-  "nav.later": "later",
-  "nav.soonAgents": "the Agents domain arrives in Phase 4",
-  "nav.soonStores": "the Stores domain arrives in Phase 4",
-  // UX-overhaul §6/§8 (Ф1): Sessions/Traces leave the nav as disabled slots.
+  // D8 (user-panel verdict 2026-10-21): the dead menu rows (Stores — soon /
+  // Sessions / Traces — later) left the daily navigation; the slot machinery
+  // (nav.soon / nav.later / soonStores) went with them. The placeholder
+  // ROUTES stay alive for direct URLs — their honest lines keep these keys.
   "nav.soonSessions": "Sessions coming later",
   "nav.soonTraces": "Traces coming later",
   // Section labels (level 2 pages).

@@ -18,9 +18,11 @@ import { pageGridClass } from "@/layout/pageGrid";
  * commits into the URL (debounced) — no sync effects, URL stays the source of
  * truth.
  *
- * UX-overhaul §6 (Ф1, П1): the route stays alive for bookmarks/legacy
- * redirects, but the board-mode 501 is ONE HonestLine («Трассировки появятся
- * позже»), matching the nav disabled-slot — not a fullscreen dead-end. Raw
+ * UX panel D8 (2026-10-21): the menu row is gone, the route stays alive for
+ * bookmarks/legacy redirects — and a PLACEHOLDER must look like one: in the
+ * board-unsupported state the page is title + ONE HonestLine, with NO
+ * working controls (the filter input promised work the page can't do). The
+ * full page (filter, table) renders only where the wire answers. Raw
  * adapter error text rides `techDetail`, never open copy.
  */
 const DEBOUNCE_MS = 300; // same commit budget as the search page keystrokes
@@ -65,6 +67,19 @@ export function TracesPage() {
     isApiError(traces.error) &&
     traces.error.status === 501;
 
+  // D8: the placeholder is the WHOLE page — no filter, no skeleton, no
+  // table chrome (hooks stay above this branch; order is stable).
+  if (boardUnsupported) {
+    return (
+      <section aria-labelledby="traces-title" className={pageGridClass("operational", "space-y-4")}>
+        <h1 id="traces-title" className="text-xl font-semibold">
+          {t("traces.title")}
+        </h1>
+        <HonestLine>{t("nav.soonTraces")}</HonestLine>
+      </section>
+    );
+  }
+
   return (
     <section aria-labelledby="traces-title" className={pageGridClass("operational", "space-y-4")}>
       <h1 id="traces-title" className="text-xl font-semibold">
@@ -89,8 +104,6 @@ export function TracesPage() {
         <div role="status" aria-label={t("traces.loading")}>
           <TableRowSkeleton rows={5} columns={5} />
         </div>
-      ) : boardUnsupported ? (
-        <HonestLine>{t("nav.soonTraces")}</HonestLine>
       ) : traces.isError ? (
         <EmptyState
           variant="error"

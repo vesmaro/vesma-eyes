@@ -55,27 +55,27 @@ describe("App (smoke)", () => {
     expect(typeof buildRoutes).toBe("function");
   });
 
-  it("mounts the domain sidebar: 5 domains + honest soon-slots (mock adapter)", () => {
+  it("mounts the domain sidebar: live domains only, no placeholder rows (D8)", () => {
     const html = renderAppAt("/");
-    // Brand + every Ф1 domain of the concept IA (§2.1).
+    // Brand + every live domain of the IA (D8 2026-10-21: the /stores slot
+    // and the Sessions/Traces placeholder rows left the daily navigation).
     for (const label of [
       "vesma-eyes",
       "Overview",
       "Memory",
       "Tasks",
       "Agents",
-      "Stores",
       "System",
     ]) {
       expect(html).toContain(label);
     }
-    // Ф2: the Tasks domain is LIVE — a real link, not a soon-slot anymore.
     expect(html).toContain('href="/tasks"');
-    // Phase-4+ slots stay honest disabled items with a visible "soon" badge —
-    // never dead links (no href to /agents or /stores).
-    expect(html).toContain(">soon<");
-    expect(html).not.toContain('href="/agents"');
+    // Placeholder surfaces have no nav row at all: no slot badges, no rows.
+    expect(html).not.toContain("Stores");
+    expect(html).not.toContain(">soon<");
     expect(html).not.toContain('href="/stores"');
+    expect(html).not.toContain('href="/system/sessions"');
+    expect(html).not.toContain('href="/system/traces"');
   });
 
   it("mounts the global search entry in the top bar (every route)", () => {

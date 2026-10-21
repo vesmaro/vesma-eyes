@@ -158,12 +158,12 @@ describe("translation", () => {
     }
   });
 
-  it("ME-072 A: the honest slot badge + not-found keys pair across ru/en", async () => {
+  it("D8: the placeholder pages' honest keys + the ONE 404 pattern pair across ru/en", async () => {
     const { translate } = await import("./index");
-    // «позже» — for a blocked-but-EXISTING section; «скоро» stays with the
-    // never-built domains.
-    expect(translate("ru", "nav.later")).toBe("позже");
-    expect(translate("en", "nav.later")).toBe("later");
+    // The placeholder ROUTES stay alive for direct URLs; their honest lines
+    // keep their keys even though the menu rows are gone (D8 2026-10-21).
+    expect(translate("ru", "nav.soonSessions")).toBe("Сессии появятся позже");
+    expect(translate("en", "nav.soonTraces")).toBe("Traces coming later");
     // The ONE 404 pattern: explain + an action, both dictionaries.
     expect(translate("ru", "app.notFoundTitle")).toBe("Нет такой страницы");
     expect(translate("en", "app.notFoundTitle")).toBe("Page not found");

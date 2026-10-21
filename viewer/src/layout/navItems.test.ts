@@ -17,10 +17,12 @@ import { getManifest } from "@/features/docs/manifest";
  * is never a link) and TopBar titles, pure over pathnames.
  */
 describe("domain map", () => {
-  it("is the concept IA: Overview root + Memory + Tasks/Agents + Kora + Docs + Stores slot + System", () => {
-    // ADR 0015: the docs domain slots in after «Агенты», before «Хранилища».
-    // ADR 0019 rev.2: «Кора» slots in after «Агенты» — live from week 0
-    // (the section IS the early-UI-contact deliverable, mock-backed).
+  it("is the concept IA: Overview root + Memory + Tasks/Agents + Kora + Docs + System (D8: no placeholder rows)", () => {
+    // ADR 0015: the docs domain slots in after «Агенты». ADR 0019 rev.2:
+    // «Кора» slots in after «Агенты» — live from week 0.
+    // D8 (panel verdict 2026-10-21): the /stores slot and the
+    // Sessions/Traces disabled rows LEFT the daily navigation — the menu
+    // carries live surfaces only.
     expect(NAV_DOMAINS.map((d) => d.to)).toEqual([
       "/",
       "/memory",
@@ -28,47 +30,31 @@ describe("domain map", () => {
       "/agents",
       "/kora",
       "/docs",
-      "/stores",
       "/system",
     ]);
   });
 
-  it("marks only the phase-4+ domains as soon-slots (AGW-3 activates Agents)", () => {
-    const slots = NAV_DOMAINS.filter((d) => d.soonKey).map((d) => d.to);
-    expect(slots).toEqual(["/stores"]);
+  it("D8: no domain or section is a disabled slot anymore — live rows only", () => {
+    for (const domain of NAV_DOMAINS) {
+      expect(domain.to).not.toBe("/stores");
+      for (const section of domain.sections ?? []) {
+        expect(section.to).not.toBe("/system/sessions");
+        expect(section.to).not.toBe("/system/traces");
+      }
+    }
   });
 
-  it("UX-overhaul §6 (Ф1) + ME-072 A: Sessions/Traces are honest LATER slots — disabled in the menu, routes alive", () => {
-    // The System domain keeps its live sections and gains two section-level
-    // slots; the DOMAIN stays linkable (it still has live sections).
-    // ME-072 A badge honesty: the slots' ROUTES answer, so they carry
-    // `laterKey` («позже»), not `soonKey` («скоро» — that stays with the
-    // never-built /stores domain).
-    const system = NAV_DOMAINS.find((d) => d.to === "/system");
-    expect(system?.soonKey).toBeUndefined();
-    const sections = system?.sections ?? [];
-    const slotKeys = sections
-      .filter(
-        (section) => section.soonKey !== undefined || section.laterKey !== undefined,
-      )
-      .map((section) => ({ to: section.to, laterKey: section.laterKey }));
-    // The two blocked-but-live menu items stay disabled slots with "later"
-    // tooltips.
-    expect(slotKeys).toEqual([
-      { to: "/system/sessions", laterKey: "nav.soonSessions" },
-      { to: "/system/traces", laterKey: "nav.soonTraces" },
-    ]);
-    // The live sections stay live — no collateral slot marks.
-    for (const live of ["/system/status", "/system/settings", "/system/automation", "/system/devices"]) {
-      const section = sections.find((item) => item.to === live);
-      expect(section?.soonKey).toBeUndefined();
-      expect(section?.laterKey).toBeUndefined();
-    }
-    // The ROUTES stay alive for breadcrumbs/legacy redirects (§6): the
-    // crumbs and TopBar titles still resolve — bookmarks keep working.
+  it("D8: the retired placeholder ROUTES still answer for crumbs and titles (bookmarks alive)", () => {
+    // The menu rows are gone; direct URLs keep their orientation: the
+    // crumbs and TopBar titles still resolve.
     expect(crumbsFor("/system/sessions")[1]).toEqual({ key: "nav.sessions" });
     expect(crumbsFor("/system/traces")[1]).toEqual({ key: "nav.traces" });
     expect(routeTitleKey("/system/sessions")).toBe("nav.sessions");
+  });
+
+  it("D12: the Kora nav row carries the ready dictionary hint at the lore word's first use", () => {
+    const kora = NAV_DOMAINS.find((d) => d.to === "/kora");
+    expect(kora?.hintKey).toBe("kora.workspace.hint");
   });
 
   it("never links a domain at a path without a route (no dead links)", () => {
@@ -78,7 +64,7 @@ describe("domain map", () => {
     // is the Overview itself and /docs is its own live index route (both
     // legitimately carry no trail). ADR 0015.
     for (const domain of NAV_DOMAINS) {
-      if (domain.soonKey || domain.to === "/" || domain.to === "/docs") continue;
+      if (domain.to === "/" || domain.to === "/docs") continue;
       const target = domain.linkTo ?? domain.to;
       expect(
         crumbsFor(target).length,
@@ -110,7 +96,6 @@ describe("domain map", () => {
 
   it("gives the task domain its Ф2–Ф3 sections (kanban / list / activity / inbox / archive)", () => {
     const tasks = NAV_DOMAINS.find((d) => d.to === "/tasks");
-    expect(tasks?.soonKey).toBeUndefined();
     // UI-28 (spec §1/§8.1): «Активность» sits between the list and the inbox.
     expect(tasks?.sections?.map((s) => s.to)).toEqual([
       "/tasks",
@@ -145,7 +130,6 @@ describe("domain map", () => {
 
   it("gives the agents domain its AGW-3/ME-014 sections (root = hosts roster)", () => {
     const agents = NAV_DOMAINS.find((d) => d.to === "/agents");
-    expect(agents?.soonKey).toBeUndefined();
     // ME-014: the domain root has no index route — the domain link goes to
     // the host roster (the section's default landing).
     expect(agents?.linkTo).toBe("/agents/hosts");
@@ -288,7 +272,6 @@ describe("routeTitleKey (TopBar label = deepest crumb)", () => {
 describe("docs domain (ADR 0015 + ADR 0016)", () => {
   it("links the domain at the default hub; sections moved to project groups", () => {
     const docs = NAV_DOMAINS.find((d) => d.to === "/docs");
-    expect(docs?.soonKey).toBeUndefined();
     expect(docs?.key).toBe("nav.docs");
     // ADR 0016: the flat section list is replaced by THREE project groups
     // rendered by DocsSidebarGroups; the domain link enters at the hub.

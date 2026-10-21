@@ -2,7 +2,6 @@ import type { LucideIcon } from "lucide-react";
 import {
   Activity,
   Archive,
-  Database,
   Files,
   HeartPulse,
   Home,
@@ -15,8 +14,6 @@ import {
   Server,
   Settings,
   Tag,
-  Users,
-  Layers,
   Bot,
   BrainCircuit,
   Smartphone,
@@ -27,9 +24,16 @@ import { DOCS_DOMAIN, docsCrumbsFor } from "@/features/docs/docsNav";
 
 /**
  * Domain navigation (redesign concept §2.1–§2.2, ADR 0011 Ф1). The sidebar is
- * two-layered: domain → section. Phase-2+ domains render as HONEST disabled
- * slots (a disabled button + "soon" badge + tooltip), never as dead links —
- * the IA map is visible ahead of the content waves.
+ * two-layered: domain → section.
+ *
+ * UX panel verdict D8 (2026-10-21): placeholder rows do not live in the
+ * DAILY navigation. The honest-slot era (disabled rows with «скоро»/«позже»
+ * badges) is retired — not-yet-shipped surfaces have no nav row at all; the
+ * roadmap lives in Документация («О продукте»), the ONE explain-place. Live
+ * themes keep their homes (sessions → Кора; memory → Память). The ROUTES of
+ * the retired placeholders (/system/sessions, /system/traces) stay alive for
+ * bookmarks/legacy redirects — their pages render the honest line, and the
+ * breadcrumbs below still orient a direct visit.
  */
 /** Live sidebar counter ids (UI-30). One id per data source; the registry of
  * readers lives in Sidebar.tsx (useNavCounterValues — the single hook that
@@ -47,20 +51,6 @@ export interface NavSection {
    * The Sidebar renders the matching counter component; undefined = none.
    */
   counter?: NavCounterId;
-  /**
-   * UX-overhaul §6/§9.4 (Ф1): honest disabled slot for not-yet-shipped
-   * SECTIONS — the section-level twin of the domain `soonKey`. The route
-   * itself stays alive (bookmarks/legacy redirects keep working); the
-   * sidebar row becomes a disabled button with a "soon" badge.
-   */
-  soonKey?: TranslationKey;
-  /**
-   * ME-072 A: the honest-blocked slot — a section whose ROUTE already
-   * answers but the menu keeps non-navigable (System Sessions/Traces).
-   * Badge reads «позже» (not «скоро»: the surface exists), tooltip carries
-   * the promise word. Mutually exclusive with `soonKey` by contract.
-   */
-  laterKey?: TranslationKey;
 }
 
 export interface NavDomain {
@@ -75,8 +65,12 @@ export interface NavDomain {
   icon: LucideIcon;
   /** Exact matching for the app root. */
   end?: boolean;
-  /** Honest "coming in phase N" tooltip key for not-yet-shipped domains. */
-  soonKey?: TranslationKey;
+  /**
+   * Optional one-line lore/dictionary hint (D12): rendered as the row's
+   * title/aria suffix — the ready docs wording at the label's FIRST use,
+   * never a re-definition.
+   */
+  hintKey?: TranslationKey;
   sections?: readonly NavSection[];
   /**
    * UI-30 (owner directive): the domain row carries a LIVE badge = the
@@ -160,17 +154,18 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
   // session list (slice 1); the transcript mock sits at /kora/:sessionId.
   // Week 0 renders mock data (the route page says so honestly); no
   // soon-slot — the section is the early-UI-contact deliverable itself.
+  // D12: the nav row carries the ready dictionary hint at the lore word's
+  // first use (the SAME wording the workspace page says about itself).
   {
     to: "/kora",
     key: "nav.kora",
     icon: BrainCircuit,
     end: false,
+    hintKey: "kora.workspace.hint",
   },
   // Документация domain (ADR 0015): live — one section per docs category.
   // The domain tree itself lives in features/docs/docsNav.ts (pure data).
   DOCS_DOMAIN,
-  // Phase-4 slot (stores — the registry wave).
-  { to: "/stores", key: "nav.stores", icon: Database, soonKey: "nav.soonStores" },
   {
     to: "/system",
     // No /system index route in Ф1 — the domain link goes to its first
@@ -185,26 +180,11 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
       // Устройства (CV-7, ADR 0012 Consequences): the paired-device list
       // + QR pairing, in the Система domain per the IA design concept.
       { to: "/system/devices", key: "nav.devices", icon: Smartphone, end: true },
-      // UX-overhaul §6 (Ф1): Sessions/Traces are dead MENU items — they
-      // promised a live surface and delivered a 501 screen (audit #2, J8).
-      // They stay as honest disabled slots; the ROUTES survive untouched
-      // (legacyRedirects + bookmarks keep working, the pages render an
-      // HonestLine placeholder instead of a fullscreen dead-end).
-      // ME-072 A: the badge is «позже» (laterKey) — the routes DO answer,
-      // unlike the /stores domain that never existed («скоро» stays there).
-      {
-        to: "/system/sessions",
-        key: "nav.sessions",
-        icon: Users,
-        laterKey: "nav.soonSessions",
-      },
-      {
-        to: "/system/traces",
-        key: "nav.traces",
-        icon: Layers,
-        end: true,
-        laterKey: "nav.soonTraces",
-      },
+      // D8 (panel verdict 2026-10-21): the Sessions/Traces MENU rows are
+      // gone — placeholder rows left the daily navigation. The ROUTES
+      // survive untouched (legacyRedirects + bookmarks keep working, the
+      // pages render an HonestLine placeholder, the crumbs below still
+      // orient a direct visit).
     ],
   },
 ];
@@ -267,10 +247,8 @@ export function domainCounterIds(domain: NavDomain): NavCounterId[] {
 /** Domain whose subtree the pathname sits in (for section expansion). */
 export function activeDomain(pathname: string): NavDomain | null {
   return (
-    NAV_DOMAINS.find(
-      (domain) =>
-        domain.soonKey === undefined && isPathActive(pathname, domain.to, domain.end),
-    ) ?? null
+    NAV_DOMAINS.find((domain) => isPathActive(pathname, domain.to, domain.end)) ??
+    null
   );
 }
 
