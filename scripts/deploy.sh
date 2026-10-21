@@ -223,10 +223,16 @@ lock_holder() {
   fi
   local real
   real="$(readlink -f "$LOCK_PATH" 2>/dev/null || echo "$LOCK_PATH")"
-  local fd
-  for fd in /proc/[0-9]*/fd/*; do
+  # ONE find process walks /proc/*/fd natively. The previous bash loop
+  # forked readlink PER fd — ~7k forks x ~12ms under load ≈ 90s, blowing
+  # past any sane gate timeout (the 2026-10-21 test_held_lock_refuses
+  # 60s-subprocess-timeout incident on hosts without psmisc/fuser).
+  # -lname is a coarse glob prefilter; the exact compare below keeps the
+  # old strict semantics (glob metachars in the path cannot false-match).
+  local hit fd pid
+  hit="$(find /proc/[0-9]*/fd -lname "$real" -print 2>/dev/null | head -20)"
+  for fd in $hit; do
     if [[ "$(readlink "$fd" 2>/dev/null || true)" == "$real" ]]; then
-      local pid
       pid="$(echo "$fd" | cut -d/ -f3)"
       printf 'pid %s (%s)' "$pid" "$(ps -o comm= -p "$pid" 2>/dev/null || echo unknown)"
       return 0
