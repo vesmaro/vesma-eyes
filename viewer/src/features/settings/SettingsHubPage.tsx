@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router";
 import { Button } from "@/components/ui/button";
-import { useTheme, THEME_PREFERENCES } from "@/components/theme-provider";
+import { useTheme, THEME_PRESETS } from "@/components/theme-provider";
 import { useDensity, DENSITIES } from "@/components/density-provider";
 import { LANGUAGES, useI18n, useT } from "@/i18n";
 import { setSidebarCollapsed, useSidebarCollapsedEffective } from "@/lib/sidebarState";
@@ -137,7 +137,7 @@ export function SettingsHubPage() {
 function AppearanceSection() {
   const t = useT();
   const live = useLiveLayer();
-  const { themePreference, setTheme } = useTheme();
+  const { presetChoice, setPreset } = useTheme();
   const { lang, setLang } = useI18n();
   const { density, setDensity } = useDensity();
 
@@ -162,22 +162,24 @@ function AppearanceSection() {
           { value: "off", label: t("settings.hub.livingOff") },
         ]}
       />
+      {/* Presets brief §1: ONE «Оформление» control over the whole registry
+       * (Системная · Колодец · Жила · Созвездия · Береста · Просвет) — it
+       * replaces the old dark/light pair and closes the UX-audit A2 frame
+       * (scattered theme controls). `wrap` lets six labels reflow on
+       * narrow screens while staying ONE control (one state, the
+       * provider's). The top-bar toggle stays the fast family flip —
+       * theme-provider documents the preset-vs-family storage model. */}
       <SegmentedControl
         label={t("settings.hub.themeLabel")}
         labelId="settings-theme-label"
         hint={t("settings.hub.themeHint")}
         hintId="settings-theme-hint"
-        value={themePreference}
-        onChange={setTheme}
-        options={THEME_PREFERENCES.map((value) => ({
-          value,
-          label: t(
-            value === "system"
-              ? "settings.hub.themeSystem"
-              : value === "dark"
-                ? "settings.hub.themeDark"
-                : "settings.hub.themeLight",
-          ),
+        value={presetChoice}
+        onChange={setPreset}
+        wrap
+        options={THEME_PRESETS.map((preset) => ({
+          value: preset.id,
+          label: t(preset.labelKey),
         }))}
       />
       <SegmentedControl

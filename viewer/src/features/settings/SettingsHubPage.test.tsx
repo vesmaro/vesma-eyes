@@ -10,7 +10,12 @@ import { MockAdapter } from "@/gateway/MockAdapter";
 import { GatewayContext } from "@/gateway/GatewayContext";
 import { keys } from "@/lib/queryKeys";
 import { I18nProvider } from "@/i18n";
-import { ThemeProvider, THEME_STORAGE_KEY, LEGACY_THEME_STORAGE_KEY } from "@/components/theme-provider";
+import {
+  ThemeProvider,
+  THEME_STORAGE_KEY,
+  LEGACY_THEME_STORAGE_KEY,
+  LEGACY_MNEMOS_THEME_STORAGE_KEY,
+} from "@/components/theme-provider";
 import { DensityProvider, DENSITY_STORAGE_KEY } from "@/components/density-provider";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
 import { UiTokenProvider } from "@/features/ui-token/UiTokenProvider";
@@ -201,30 +206,59 @@ describe("SettingsHubPage v2 — structure (spec §3.1, acceptance §8.1)", () =
   });
 });
 
-describe("Appearance — theme is three-state and live (§8.2)", () => {
-  it("System is pressed by default; picking Dark/Light applies <html> immediately", async () => {
+describe("Appearance — the preset registry is one control and live (presets brief §1)", () => {
+  it("System is pressed by default; the registry lists all six options", async () => {
     const { root, container } = await mountHub();
     expect(
       sectionButton(container, "appearance", "System").getAttribute("aria-pressed"),
     ).toBe("true");
-
-    press(container, "appearance", "Dark");
-    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
-    expect(document.documentElement.dataset.theme).toBeUndefined(); // dark = no attr
-
-    press(container, "appearance", "Light");
-    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("light");
-    expect(document.documentElement.dataset.theme).toBe("light");
+    for (const label of ["Well", "Vein", "Constellations", "Bark", "Glimmer"]) {
+      expect(
+        sectionButton(container, "appearance", label),
+        `${label} option present`,
+      ).not.toBeNull();
+    }
     await actUnmount(root);
   });
 
-  it("«System» removes the new AND the legacy record (fallback must not resurrect)", async () => {
-    localStorage.setItem(LEGACY_THEME_STORAGE_KEY, "light");
+  it("picking a preset applies <html data-theme> immediately and persists the family + slots", async () => {
     const { root, container } = await mountHub();
-    press(container, "appearance", "Light"); // explicit write first
+
+    press(container, "appearance", "Well");
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
+    expect(document.documentElement.dataset.theme).toBeUndefined(); // Колодец = no attr
+
+    press(container, "appearance", "Vein");
+    expect(document.documentElement.dataset.theme).toBe("zhila");
+    expect(
+      sectionButton(container, "appearance", "Vein").getAttribute("aria-pressed"),
+    ).toBe("true");
+
+    press(container, "appearance", "Glimmer");
+    expect(document.documentElement.dataset.theme).toBe("prosvet");
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("light");
+    expect(JSON.parse(localStorage.getItem("vesmaro.appearance")!)).toEqual({
+      lastDark: "zhila",
+      lastLight: "prosvet",
+    });
+    await actUnmount(root);
+  });
+
+  it("«System» removes the theme records AND keeps the preset slots (fallback must not resurrect)", async () => {
+    localStorage.setItem(LEGACY_THEME_STORAGE_KEY, "light");
+    localStorage.setItem(LEGACY_MNEMOS_THEME_STORAGE_KEY, "light");
+    const { root, container } = await mountHub();
+    press(container, "appearance", "Glimmer"); // explicit write first
     press(container, "appearance", "System");
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
     expect(localStorage.getItem(LEGACY_THEME_STORAGE_KEY)).toBeNull();
+    // BOTH legacy records die — a surviving one would resurrect the choice.
+    expect(localStorage.getItem(LEGACY_MNEMOS_THEME_STORAGE_KEY)).toBeNull();
+    // The slots survive: the topbar toggle lands back on «Просвет».
+    expect(JSON.parse(localStorage.getItem("vesmaro.appearance")!)).toEqual({
+      lastDark: "well",
+      lastLight: "prosvet",
+    });
     expect(
       sectionButton(container, "appearance", "System").getAttribute("aria-pressed"),
     ).toBe("true");
@@ -423,7 +457,8 @@ describe("SettingsMirror (U6 «Зеркало»)", () => {
     expect(container.textContent).toContain("Row at the current density");
     const legendValues = () =>
       [...container.querySelectorAll("dd")].map((dd) => dd.textContent?.trim());
-    // Default legend: Dark (theme stub) · Comfortable · Full.
+    // Default legend: Well (the resolved preset under the theme stub) ·
+    // Comfortable · Full.
     expect(legendValues().filter((v) => v === "Full").length).toBe(2);
     // It is DATA: switching «Живой слой» re-words BOTH mirrors instantly.
     press(container, "appearance", "Calm");

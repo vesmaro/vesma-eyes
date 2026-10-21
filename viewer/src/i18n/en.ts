@@ -1778,11 +1778,18 @@ export const en: Record<TranslationKey, string> = {
     "The form is unavailable: no active sign-in. Sign in with a password or a token and come back.",
   "settings.security.recoveryLine":
     "If the password is lost — sign in with the token (the «Sign in» button above) and set a new one here: the current password is not needed.",
-  "settings.hub.themeLabel": "Theme",
+  // Presets brief §1 (themes-presets-wave1): ONE «Оформление» control —
+  // «Системная» + five lore-named presets. The topbar toggle keeps its
+  // family-level aria (topbar.themeToLight/themeToDark).
+  "settings.hub.themeLabel": "Appearance",
   "settings.hub.themeSystem": "System",
-  "settings.hub.themeDark": "Dark",
-  "settings.hub.themeLight": "Light",
-  "settings.hub.themeHint": "“System” follows your OS preference.",
+  "settings.hub.presetWell": "Well",
+  "settings.hub.presetZhila": "Vein",
+  "settings.hub.presetSozvezdia": "Constellations",
+  "settings.hub.presetLight": "Bark",
+  "settings.hub.presetProsvet": "Glimmer",
+  "settings.hub.themeHint":
+    "“System” follows your OS preference. The top-bar toggle switches the dark↔light family without resetting the chosen preset.",
   "settings.hub.langLabel": "Interface language",
   "settings.hub.densityLabel": "Row density",
   "settings.hub.densityComfortable": "Comfortable",

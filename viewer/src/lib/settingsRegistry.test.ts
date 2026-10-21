@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { LANG_STORAGE_KEY } from "@/i18n";
 import { DENSITY_STORAGE_KEY } from "@/components/density-provider";
 import {
+  APPEARANCE_STORAGE_KEY,
+  LEGACY_MNEMOS_THEME_STORAGE_KEY,
   LEGACY_THEME_STORAGE_KEY,
   THEME_STORAGE_KEY,
 } from "@/components/theme-provider";
@@ -68,12 +70,29 @@ describe("registry ↔ owner drift guards", () => {
     expect(row("vesmaro.density").default).toBe("comfortable");
   });
 
-  it("theme matches the migrated theme-provider.tsx (§4.2)", () => {
+  it("theme matches the migrated theme-provider.tsx (§4.2 + presets brief §1)", () => {
     const entry = row("vesmaro.theme");
     expect(entry.key).toBe(THEME_STORAGE_KEY);
-    expect(entry.values).toEqual(["system", "light", "dark"]);
-    expect(entry.default).toBe("system");
+    // Only the explicit family lock is ever WRITTEN; «system» is the ABSENCE
+    // of the record (the hub's «Системная» removes it, the OS is followed).
+    expect(entry.values).toEqual(["dark", "light"]);
+    expect(entry.default).toBe("dark");
+    // BOTH legacy fallbacks are documented — the P2-1 split is closed.
     expect(entry.note).toContain(LEGACY_THEME_STORAGE_KEY);
+    expect(entry.note).toContain(LEGACY_MNEMOS_THEME_STORAGE_KEY);
+  });
+
+  it("appearance matches the preset slots record (presets brief §1)", () => {
+    const entry = row("vesmaro.appearance");
+    expect(entry.key).toBe(APPEARANCE_STORAGE_KEY);
+    expect(entry.owner).toBe("src/components/theme-provider.tsx");
+    expect(JSON.parse(entry.default)).toEqual({
+      lastDark: "well",
+      lastLight: "light",
+    });
+    expect(entry.scope).toBe("global");
+    expect(entry.note).toContain("PER FAMILY");
+    expect(entry.note).toContain("whitelist");
   });
 
   it("motion matches lib/motionStore.ts (NEW v2, §2.5)", () => {

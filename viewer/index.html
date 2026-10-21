@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="dark light" />
-    <!-- theme-color follows the RESOLVED theme (blueprint §12.7): the
-         bootstrap script sets it from --color-bg-base's dark/light values,
+    <!-- theme-color follows the RESOLVED preset (blueprint §12.7): the
+         bootstrap script sets it from each preset's --color-bg-base,
          ThemeProvider re-reads the live token after mount. The hexes are
          guarded against token drift by src/styles/tokens.test.ts. -->
     <meta name="theme-color" content="#081217" />
@@ -15,36 +15,76 @@
     />
     <title>vesma-eyes</title>
     <script>
-      // Theme bootstrap: resolves the theme before first paint so system-light
-      // users never flash the dark :root tokens (design-system.md §9: stored
-      // choice wins, else system preference, else dark). Mirrors
-      // src/components/theme-provider.tsx — keep the storage keys and
-      // resolution order in sync (guarded by src/styles/tokens.test.ts):
-      // UI-23 migration reads vesmaro.theme first, then the legacy
-      // mnemos-eyes:theme, then the OS preference.
+      // Theme + preset bootstrap (themes-presets-wave1): resolves the FULL
+      // look before first paint — a system-light user must never flash the
+      // dark :root tokens, and a «Жила»/«Просвет» user must never flash the
+      // canonical family either. Mirrors src/components/theme-provider.tsx —
+      // keep the storage keys and resolution order in sync (guarded by
+      // src/styles/tokens.test.ts):
+      // - vesmaro.theme: "dark"/"light" = explicit family (UI-23); absent =
+      //   «Системная» (OS). Legacy fallbacks are BOTH read, in order:
+      //   vesma-eyes:theme (rename-wave defensive read) then mnemos-eyes:theme
+      //   (the REAL pre-rename writer — the pre-migration cohort's only
+      //   record). Never written; «Системная» clears all three in the app.
+      // - vesmaro.appearance: {"lastDark","lastLight"} preset slots; the
+      //   resolved preset = slots[family]; Колодец = NO data-theme attribute
+      //   (dark :root), every other preset sets its [data-theme] scope.
+      // theme-color rides the same resolution: PRESET_BASE mirrors each
+      // preset's --color-bg-base (tokens.test.ts pins the hexes).
       try {
+        var PRESET_BASE = {
+          well: "#081217",
+          zhila: "#17110b",
+          sozvezdia: "#060a12",
+          light: "#f5f6f8",
+          prosvet: "#f4efe6"
+        };
+        // Own-property lookup ONLY — a truthy prototype read ("constructor")
+        // must never pass as a preset id (P3-2 review hardening).
+        function ownsPreset(key) {
+          return (
+            typeof key === "string" &&
+            Object.prototype.hasOwnProperty.call(PRESET_BASE, key)
+          );
+        }
+        var slots = { lastDark: "well", lastLight: "light" };
+        try {
+          var storedSlots = JSON.parse(
+            localStorage.getItem("vesmaro.appearance") || "null"
+          );
+          if (
+            storedSlots &&
+            ownsPreset(storedSlots.lastDark) &&
+            ownsPreset(storedSlots.lastLight)
+          ) {
+            slots = storedSlots;
+          }
+        } catch (_slotsError) {
+          /* Corrupt slots record: canonical defaults. */
+        }
         var stored = localStorage.getItem("vesmaro.theme");
+        if (stored !== "light" && stored !== "dark") {
+          stored = localStorage.getItem("vesma-eyes:theme");
+        }
         if (stored !== "light" && stored !== "dark") {
           stored = localStorage.getItem("mnemos-eyes:theme");
         }
-        var theme =
+        var family =
           stored === "light" || stored === "dark"
             ? stored
             : matchMedia("(prefers-color-scheme: light)").matches
               ? "light"
               : "dark";
-        if (theme === "light") document.documentElement.dataset.theme = "light";
-        // theme-color rides the same resolution: the two hexes mirror the
-        // dark/light --color-bg-base values (tokens.test.ts pins them).
+        var preset = family === "dark" ? slots.lastDark : slots.lastLight;
+        if (preset !== "well") {
+          document.documentElement.dataset.theme = preset;
+        }
         var themeColor = document.querySelector('meta[name="theme-color"]');
         if (themeColor) {
-          themeColor.setAttribute(
-            "content",
-            theme === "light" ? "#f5f6f8" : "#081217",
-          );
+          themeColor.setAttribute("content", PRESET_BASE[preset]);
         }
       } catch (_error) {
-        /* Storage unavailable: keep dark :root defaults. */
+        /* Storage unavailable: keep the dark Колодец defaults. */
       }
     </script>
     <script>

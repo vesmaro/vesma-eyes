@@ -8,6 +8,15 @@
  * ADDS names. Value evolution is legal per ADR 0006 §8 — every changed value
  * is listed in docs/design/02-TOKENS.md §5 (WCAG 2.2 recompute: §4).
  * Keep in sync with web/styles/tokens.css (board parity, ADR 0006).
+ *
+ * Appearance presets (themes-presets-wave1, 2026-10-20 — design brief §1):
+ * a preset is a COMPLETE «surfaces + warmth + text» kit on the SAME token
+ * names — [data-theme] scopes only, ZERO new token names (ТЛ verdict §4).
+ * Storage compat: no attribute = Колодец (dark :root), "light" = Береста —
+ * pre-wave stored values keep their look. Accent values (iris/gold/statuses/
+ * lilac) are IDENTICAL inside every dark preset (canon dark column) and
+ * every light preset (canon light column) — only surfaces/warmth/text move.
+ * Viewer-only until the board grows preset support (hub lives here).
  */
 
 /* ── Dark theme (default) ───────────────────────────────────────────── */
@@ -383,6 +392,260 @@
   --glow-gold: 0 0 24px rgb(201 147 58 / 0.30);
   --glow-live: 0 0 16px rgb(63 191 127 / 0.30);
   --glow-error: 0 0 16px rgb(224 101 92 / 0.30);
+}
+
+/* ── Appearance presets (themes-presets-wave1 — design brief §2) ────────
+ * Complete «surfaces + warmth + text» kits on frozen names. Direction-level
+ * brief values re-fitted to WCAG 2.2 AA (worst-case = elevated; badge tints
+ * over well) — every deviation is marked inline and listed in
+ * docs/design/02-TOKENS.md §7. Accent values NEVER move: dark presets carry
+ * the canon dark column, light presets the canon light column (asserted by
+ * tokens.test.ts). The hero follows DARK presets through the descendant
+ * overrides right below (higher specificity than [data-well-window]);
+ * LIGHT presets keep the owner-approved dark hero exception untouched. */
+
+/* «Жила» — warm dark, lighter and warmer than the Well (§2). Deviations:
+ * base #1a140e → #17110b, overlay #30251a → #2a2016 (one step each) —
+ * iris-as-text on base 4.45 → 4.57 and error on overlay 4.40 → 4.70. */
+[data-theme="zhila"] {
+  --color-well-canvas: #14100b;
+  --color-bg-base: #17110b;
+  --color-bg-well: #221a12;
+  --color-bg-elevated: #281f15;
+  --color-bg-overlay: #2a2016;
+  --color-scroll-bg: #1e1710;
+  --color-scroll-border: #3a2e1f;
+
+  --color-iris-dim: #0e4a52;
+  --color-iris: #1a8a96;
+  --color-iris-bright: #4fc2ce;
+  --color-iris-glow: #4fc2ce40;
+  --color-iris-solid: #1a8a96;
+  --color-iris-solid-hover: #4fc2ce;
+
+  --color-confidence: #c9933a;
+  --color-confidence-dim: #7a5520;
+
+  --color-success: #3fbf7f;
+  --color-warning: #d9a03f;
+  --color-error: #e0655c;
+  --color-error-text: #f5a29b;
+  --color-info: #4fc2ce;
+
+  --color-text-primary: #f0e9de;
+  --color-text-secondary: #c2b4a0;
+  --color-text-muted: #9c8f7c;          /* worst-case 5.1:1 on elevated */
+  --color-text-inverse: #0d0f14;
+
+  --color-border-subtle: #3a2e20;
+  --color-border: #8a7a62;              /* ≥3.5:1 on every stratum */
+  --color-border-iris: #4fc2ce40;
+
+  --color-focus: #4fc2ce;
+  --myelin-hairline: rgb(240 233 222 / 0.08);
+  --myelin-strong: rgb(240 233 222 / 0.15);
+
+  --strata-memory: rgb(79 194 206 / 0.05);
+  --strata-tasks: rgb(122 138 158 / 0.05);
+  --strata-agents: rgb(201 147 58 / 0.05);
+  --strata-docs: rgb(186 176 158 / 0.05);
+  --strata-system: rgb(122 138 158 / 0.035);
+
+  --synapse-idle: rgb(122 138 158 / 0.35);
+  --synapse-recall: #4fc2ce;
+  --synapse-write: #c9933a;
+  --synapse-error: #e0655c;
+
+  --glow-iris: 0 0 24px rgb(79 194 206 / 0.35);
+  --glow-gold: 0 0 24px rgb(201 147 58 / 0.30);
+  --glow-live: 0 0 16px rgb(63 191 127 / 0.30);
+  --glow-error: 0 0 16px rgb(224 101 92 / 0.30);
+
+  --shadow-well: 0 1px 3px 0 rgb(0 0 0 / 0.4);
+  --shadow-raised: 0 4px 12px 0 rgb(0 0 0 / 0.5);
+  --shadow-float: 0 8px 24px 0 rgb(0 0 0 / 0.6);
+  --shadow-modal: 0 16px 48px 0 rgb(0 0 0 / 0.7);
+  --shadow-iris: 0 0 32px 8px var(--color-iris-glow);
+
+  --hud-veil: rgb(20 16 11 / 0.78);     /* composite = the zhila canvas */
+  --palette-scrim: rgb(20 16 11 / 0.55);
+  --web-tone-update: #a88fc7;
+  --neura-breath-alpha: 0.18;
+  --vein-breath-alpha: 0.10;
+}
+
+/* «Созвездия» — deep cool dark, darker than the Well (§2). Direction values
+ * verbatim: on the darker surfaces every pair only improves; no lilac
+ * surfaces — the «constellations» idea is the static --web-node-alpha web
+ * layer, never wall colour (anti-cliché note, brief §2). */
+[data-theme="sozvezdia"] {
+  --color-well-canvas: #04070c;
+  --color-bg-base: #060a12;
+  --color-bg-well: #0a111c;
+  --color-bg-elevated: #0d1524;
+  --color-bg-overlay: #121b2c;
+  --color-scroll-bg: #081019;
+  --color-scroll-border: #1b2638;
+
+  --color-iris-dim: #0e4a52;
+  --color-iris: #1a8a96;
+  --color-iris-bright: #4fc2ce;
+  --color-iris-glow: #4fc2ce40;
+  --color-iris-solid: #1a8a96;
+  --color-iris-solid-hover: #4fc2ce;
+
+  --color-confidence: #c9933a;
+  --color-confidence-dim: #7a5520;
+
+  --color-success: #3fbf7f;
+  --color-warning: #d9a03f;
+  --color-error: #e0655c;
+  --color-error-text: #f5a29b;
+  --color-info: #4fc2ce;
+
+  --color-text-primary: #e6edf3;
+  --color-text-secondary: #9aa7b4;
+  --color-text-muted: #7c8894;          /* worst-case 5.0:1 on elevated */
+  --color-text-inverse: #0d0f14;
+
+  --color-border-subtle: #182536;
+  --color-border: #5e687e;              /* ≥3.0:1 on every stratum */
+  --color-border-iris: #4fc2ce40;
+
+  --color-focus: #4fc2ce;
+  --myelin-hairline: rgb(230 237 243 / 0.07);
+  --myelin-strong: rgb(230 237 243 / 0.14);
+
+  --strata-memory: rgb(79 194 206 / 0.05);
+  --strata-tasks: rgb(122 138 158 / 0.05);
+  --strata-agents: rgb(201 147 58 / 0.05);
+  --strata-docs: rgb(186 176 158 / 0.05);
+  --strata-system: rgb(122 138 158 / 0.035);
+
+  --synapse-idle: rgb(122 138 158 / 0.35);
+  --synapse-recall: #4fc2ce;
+  --synapse-write: #c9933a;
+  --synapse-error: #e0655c;
+
+  --glow-iris: 0 0 24px rgb(79 194 206 / 0.35);
+  --glow-gold: 0 0 24px rgb(201 147 58 / 0.30);
+  --glow-live: 0 0 16px rgb(63 191 127 / 0.30);
+  --glow-error: 0 0 16px rgb(224 101 92 / 0.30);
+
+  --shadow-well: 0 1px 3px 0 rgb(0 0 0 / 0.4);
+  --shadow-raised: 0 4px 12px 0 rgb(0 0 0 / 0.5);
+  --shadow-float: 0 8px 24px 0 rgb(0 0 0 / 0.6);
+  --shadow-modal: 0 16px 48px 0 rgb(0 0 0 / 0.7);
+  --shadow-iris: 0 0 32px 8px var(--color-iris-glow);
+
+  --hud-veil: rgb(4 7 12 / 0.78);       /* composite = the sozvezdia canvas */
+  --palette-scrim: rgb(4 7 12 / 0.55);
+  --web-tone-update: #a88fc7;
+  --neura-breath-alpha: 0.18;
+  --vein-breath-alpha: 0.10;
+}
+
+/* «Просвет» — warm light, birch-bark brown (§2). Accents reuse the EXISTING
+ * Береста light column verbatim — zero new accent hexes. Deviations:
+ * well #fbf7ef → #fdfaf4, overlay #e6dece → #ece5d7 (one step each) —
+ * badge text on the 15% tints over well 4.49 → 4.61 and confidence/warning
+ * on overlay 4.42 → 4.71. The hero exception stands: [data-well-window]
+ * keeps pinning the canon dark column under this scope. */
+[data-theme="prosvet"] {
+  --color-well-canvas: #e8e2d8;
+  --color-bg-base: #f4efe6;
+  --color-bg-well: #fdfaf4;
+  --color-bg-elevated: #f0e9dc;
+  --color-bg-overlay: #ece5d7;
+  --color-scroll-bg: #faf6ee;
+  --color-scroll-border: #e2d9c6;
+
+  --color-iris-dim: #9dd4db;
+  --color-iris: #1a8a96;
+  --color-iris-bright: #136e79;
+  --color-iris-glow: #1a8a9620;
+  --color-iris-solid: #136e79;
+  --color-iris-solid-hover: #0f5f6a;
+
+  --color-confidence: #8a5a17;
+  --color-confidence-dim: #e8c98a;
+
+  --color-success: #1d6e48;
+  --color-warning: #8a5a17;
+  --color-error: #8a2020;
+  --color-error-text: #8a2020;
+  --color-info: #136e79;
+
+  --color-text-primary: #241e14;
+  --color-text-secondary: #5a5142;
+  --color-text-muted: #6b5f4f;          /* worst-case 5.2:1 on elevated */
+  --color-text-inverse: #f4efe6;
+
+  --color-border-subtle: #e0d6c2;
+  --color-border: #6e6450;              /* ≥4.3:1 non-text on every stratum */
+  --color-border-iris: #1a8a9633;
+
+  --color-focus: #0f5f6a;
+  --myelin-hairline: rgb(36 30 20 / 0.08);
+  --myelin-strong: rgb(36 30 20 / 0.16);
+
+  --strata-memory: rgb(26 138 150 / 0.06);
+  --strata-tasks: rgb(74 82 104 / 0.05);
+  --strata-agents: rgb(138 90 23 / 0.06);
+  --strata-docs: rgb(138 124 96 / 0.06);
+  --strata-system: rgb(74 82 104 / 0.035);
+
+  --synapse-idle: rgb(74 82 104 / 0.35);
+  --synapse-recall: #136e79;
+  --synapse-write: #8a5a17;
+  --synapse-error: #8a2020;
+
+  --glow-iris: 0 0 24px rgb(19 110 121 / 0.25);
+  --glow-gold: 0 0 24px rgb(138 90 23 / 0.22);
+  --glow-live: 0 0 16px rgb(29 110 72 / 0.25);
+  --glow-error: 0 0 16px rgb(138 32 32 / 0.22);
+
+  --shadow-well: 0 1px 3px 0 rgb(0 0 0 / 0.2);
+  --shadow-raised: 0 4px 12px 0 rgb(0 0 0 / 0.25);
+  --shadow-float: 0 8px 24px 0 rgb(0 0 0 / 0.3);
+  --shadow-modal: 0 16px 48px 0 rgb(0 0 0 / 0.35);
+  --shadow-iris: 0 0 32px 8px var(--color-iris-glow);
+
+  --hud-veil: rgb(244 239 230 / 0.85);
+  --palette-scrim: rgb(244 239 230 / 0.6);
+  --web-tone-update: #6e5a94;
+  --neura-breath-alpha: 0.12;
+  --vein-breath-alpha: 0.11;
+}
+
+/* Hero follow-through for DARK presets: [data-well-window] pins the CANON
+ * dark column; under a dark preset the hero's preset-specific surfaces ride
+ * the preset column via these descendant overrides (specificity 0-2-0 beats
+ * the 0-1-0 scope pin). Accents/text beyond the listed values are identical
+ * in the preset and canon dark columns — nothing else to override. LIGHT
+ * presets get NO override: the owner-approved «кора светлая, колодец
+ * глубокий» exception keeps the canon dark hero under Береста/Просвет. */
+[data-theme="zhila"] [data-well-window],
+[data-theme="zhila"] [data-well-legend] {
+  --color-well-canvas: #14100b;
+  --color-bg-elevated: #281f15;
+  --hud-veil: rgb(20 16 11 / 0.78);
+  --palette-scrim: rgb(20 16 11 / 0.55);
+  --color-text-primary: #f0e9de;
+  --color-text-secondary: #c2b4a0;
+  --color-text-muted: #9c8f7c;
+  --color-border-subtle: #3a2e20;
+  --color-border: #8a7a62;
+  --myelin-hairline: rgb(240 233 222 / 0.08);
+  --myelin-strong: rgb(240 233 222 / 0.15);
+}
+[data-theme="sozvezdia"] [data-well-window],
+[data-theme="sozvezdia"] [data-well-legend] {
+  --color-well-canvas: #04070c;
+  --color-bg-elevated: #0d1524;
+  --hud-veil: rgb(4 7 12 / 0.78);
+  --palette-scrim: rgb(4 7 12 / 0.55);
+  --color-border-subtle: #182536;
 }
 
 /* ── Reduced motion: OS + user-level mirror ─────────────────────────── */

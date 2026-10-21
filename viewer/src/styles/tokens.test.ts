@@ -371,9 +371,10 @@ describe("tokens.css inventory (canon v2 — docs/design/02-TOKENS.md §1–§3)
 
   it("keeps the frozen iris seed value in both themes (ADR 0003 / D10)", () => {
     const seeds = tokensCss.match(/--color-iris:\s*#1a8a96/g) ?? [];
-    // 3 declarations: dark :root + light block + the well-window scope
-    // (Phase 1's dark-column pin for the hero — the VALUE stays frozen).
-    expect(seeds).toHaveLength(3);
+    // 6 declarations: dark :root + light block + the well-window scope
+    // (Phase 1's dark-column pin for the hero) + the three preset scopes
+    // (themes-presets-wave1 — accents never move, the VALUE stays frozen).
+    expect(seeds).toHaveLength(6);
   });
 
   it("defines the density regime pair and the user-driven operational tokens", () => {
@@ -520,6 +521,186 @@ describe("Phase 1 value locks (design blueprint v1.1 §5.2 — Кора-орга
     expect(legend.get("--color-warning")).toBe("#d9a03f");
     expect(legend.get("--color-error")).toBe("#e0655c");
     expect(legend.has("--web-tone-update")).toBe(false);
+  });
+});
+
+// ── Appearance presets (themes-presets-wave1 — THEMES-PRESETS-BRIEF §1/§2) ──
+
+const PRESET_SCOPES = {
+  zhila: '[data-theme="zhila"]',
+  sozvezdia: '[data-theme="sozvezdia"]',
+  prosvet: '[data-theme="prosvet"]',
+} as const;
+
+type PresetName = keyof typeof PRESET_SCOPES;
+
+const presetDecls: Record<PresetName, Map<string, string>> = {
+  zhila: themeDecls(tokensCss, PRESET_SCOPES.zhila),
+  sozvezdia: themeDecls(tokensCss, PRESET_SCOPES.sozvezdia),
+  prosvet: themeDecls(tokensCss, PRESET_SCOPES.prosvet),
+};
+
+/**
+ * Accent/semantic names that must NEVER move between presets (brief §1:
+ * «акценты … сохраняют значения во всех пресетах»). Dark presets carry the
+ * canon dark column of these names, light presets the canon light column.
+ */
+const PRESET_INVARIANT_TOKENS = [
+  "--color-iris-dim",
+  "--color-iris",
+  "--color-iris-bright",
+  "--color-iris-glow",
+  "--color-iris-solid",
+  "--color-iris-solid-hover",
+  "--color-confidence",
+  "--color-confidence-dim",
+  "--color-success",
+  "--color-warning",
+  "--color-error",
+  "--color-error-text",
+  "--color-info",
+  "--color-focus",
+  "--color-border-iris",
+  "--web-tone-update",
+  "--strata-memory",
+  "--strata-tasks",
+  "--strata-agents",
+  "--strata-docs",
+  "--strata-system",
+  "--synapse-idle",
+  "--synapse-recall",
+  "--synapse-write",
+  "--synapse-error",
+  "--glow-iris",
+  "--glow-gold",
+  "--glow-live",
+  "--glow-error",
+  "--neura-breath-alpha",
+  "--vein-breath-alpha",
+];
+
+describe("appearance presets — inventory + accent invariance (brief §1/§2)", () => {
+  it("each preset scope is a COMPLETE column (surfaces + accents + neuro layer)", () => {
+    for (const [name, decls] of Object.entries(presetDecls)) {
+      const props = blockProps(decls);
+      for (const token of [
+        ...COLOR_TOKENS,
+        ...NEURO_COLOR_TOKENS,
+        "--color-error-text",
+        "--hud-veil",
+        "--palette-scrim",
+        "--web-tone-update",
+        "--neura-breath-alpha",
+        "--vein-breath-alpha",
+        ...SHADOW_TOKENS,
+      ]) {
+        expect(props, `${token} missing from the ${name} preset column`).toContain(
+          token,
+        );
+      }
+    }
+  });
+
+  it("is a zero-new-names wave: preset scopes define nothing outside the canon inventory", () => {
+    const canonNames = new Set([...darkDecls.keys(), ...lightDecls.keys()]);
+    for (const [name, decls] of Object.entries(presetDecls)) {
+      for (const token of decls.keys()) {
+        expect(
+          canonNames.has(token),
+          `new token name in the ${name} preset scope: ${token}`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it("accents never move: dark presets carry the canon dark column, light the canon light", () => {
+    for (const [name, decls] of Object.entries(presetDecls)) {
+      const canon = name === "prosvet" ? lightDecls : darkDecls;
+      for (const token of PRESET_INVARIANT_TOKENS) {
+        expect(
+          decls.get(token),
+          `${name} ${token} must equal the canon column`,
+        ).toBe(canon.get(token));
+      }
+    }
+  });
+
+  it("pins the «Жила» column (base/overlay one AA step darker than the brief direction)", () => {
+    const z = presetDecls.zhila;
+    expect(z.get("--color-well-canvas")).toBe("#14100b");
+    expect(z.get("--color-bg-base")).toBe("#17110b");
+    expect(z.get("--color-bg-well")).toBe("#221a12");
+    expect(z.get("--color-bg-elevated")).toBe("#281f15");
+    expect(z.get("--color-bg-overlay")).toBe("#2a2016");
+    expect(z.get("--color-scroll-bg")).toBe("#1e1710");
+    expect(z.get("--color-scroll-border")).toBe("#3a2e1f");
+    expect(z.get("--color-text-primary")).toBe("#f0e9de");
+    expect(z.get("--color-text-secondary")).toBe("#c2b4a0");
+    expect(z.get("--color-text-muted")).toBe("#9c8f7c");
+    expect(z.get("--color-border-subtle")).toBe("#3a2e20");
+    expect(z.get("--color-border")).toBe("#8a7a62");
+    expect(z.get("--myelin-hairline")).toBe("rgb(240 233 222 / 0.08)");
+    expect(z.get("--myelin-strong")).toBe("rgb(240 233 222 / 0.15)");
+    expect(z.get("--hud-veil")).toBe("rgb(20 16 11 / 0.78)");
+    expect(z.get("--palette-scrim")).toBe("rgb(20 16 11 / 0.55)");
+  });
+
+  it("pins the «Созвездия» column (brief direction values verbatim)", () => {
+    const s = presetDecls.sozvezdia;
+    expect(s.get("--color-well-canvas")).toBe("#04070c");
+    expect(s.get("--color-bg-base")).toBe("#060a12");
+    expect(s.get("--color-bg-well")).toBe("#0a111c");
+    expect(s.get("--color-bg-elevated")).toBe("#0d1524");
+    expect(s.get("--color-bg-overlay")).toBe("#121b2c");
+    expect(s.get("--color-scroll-bg")).toBe("#081019");
+    expect(s.get("--color-scroll-border")).toBe("#1b2638");
+    expect(s.get("--color-border-subtle")).toBe("#182536");
+    expect(s.get("--hud-veil")).toBe("rgb(4 7 12 / 0.78)");
+    expect(s.get("--palette-scrim")).toBe("rgb(4 7 12 / 0.55)");
+  });
+
+  it("pins the «Просвет» column (well/overlay one AA step lighter than the brief direction)", () => {
+    const p = presetDecls.prosvet;
+    expect(p.get("--color-well-canvas")).toBe("#e8e2d8");
+    expect(p.get("--color-bg-base")).toBe("#f4efe6");
+    expect(p.get("--color-bg-well")).toBe("#fdfaf4");
+    expect(p.get("--color-bg-elevated")).toBe("#f0e9dc");
+    expect(p.get("--color-bg-overlay")).toBe("#ece5d7");
+    expect(p.get("--color-scroll-bg")).toBe("#faf6ee");
+    expect(p.get("--color-scroll-border")).toBe("#e2d9c6");
+    expect(p.get("--color-text-primary")).toBe("#241e14");
+    expect(p.get("--color-text-secondary")).toBe("#5a5142");
+    expect(p.get("--color-text-muted")).toBe("#6b5f4f");
+    expect(p.get("--color-text-inverse")).toBe("#f4efe6");
+    expect(p.get("--color-border-subtle")).toBe("#e0d6c2");
+    expect(p.get("--color-border")).toBe("#6e6450");
+    expect(p.get("--myelin-hairline")).toBe("rgb(36 30 20 / 0.08)");
+    expect(p.get("--myelin-strong")).toBe("rgb(36 30 20 / 0.16)");
+    expect(p.get("--hud-veil")).toBe("rgb(244 239 230 / 0.85)");
+    expect(p.get("--palette-scrim")).toBe("rgb(244 239 230 / 0.6)");
+  });
+
+  it("the hero follows DARK presets through the well-window overrides (values = the preset column)", () => {
+    for (const [name, decls] of [
+      ["zhila", presetDecls.zhila],
+      ["sozvezdia", presetDecls.sozvezdia],
+    ] as const) {
+      const hero = themeDecls(
+        tokensCss,
+        `[data-theme="${name}"] [data-well-window]`,
+      );
+      expect(hero.size, `${name} hero override present`).toBeGreaterThan(0);
+      for (const [token, value] of hero) {
+        expect(
+          decls.get(token),
+          `${name} hero override ${token} must equal the preset column`,
+        ).toBe(value);
+      }
+    }
+    // LIGHT presets get NO hero override: the owner-approved «кора светлая,
+    // колодец глубокий» exception keeps the canon dark hero under them.
+    expect(tokensCss).not.toContain('[data-theme="prosvet"] [data-well-window]');
+    expect(tokensCss).not.toContain('[data-theme="light"] [data-well-window]');
   });
 });
 
@@ -760,6 +941,78 @@ describe("contrast pairs — light theme (02-TOKENS.md §4; activated in И5)", 
   });
 });
 
+describe("contrast pairs — appearance presets (02-TOKENS.md §7; WCAG 2.2 AA, worst-case = elevated)", () => {
+  const textSurfaces = ["--color-bg-base", "--color-bg-well", "--color-bg-elevated"];
+  const presetEntries = Object.entries(presetDecls) as [PresetName, Map<string, string>][];
+  const TEXT_TOKENS = [
+    "--color-text-primary",
+    "--color-text-secondary",
+    "--color-text-muted",
+    "--color-iris-bright",
+    "--color-confidence",
+    "--color-success",
+    "--color-warning",
+    "--color-error",
+    "--color-info",
+    "--web-tone-update",
+  ];
+
+  it.each(presetEntries)("%s: every text token clears AA 4.5:1 on base/well/elevated", (_name, decls) => {
+    for (const token of TEXT_TOKENS) {
+      expectTextOn(decls, token, textSurfaces);
+    }
+  });
+
+  it.each(presetEntries)("%s: statuses clear AA on the overlay stratum too (modals are text-bearing)", (_name, decls) => {
+    expectTextOn(decls, "--color-text-primary", ["--color-bg-overlay"]);
+    expectTextOn(decls, "--color-confidence", ["--color-bg-overlay"]);
+    expectTextOn(decls, "--color-warning", ["--color-bg-overlay"]);
+    expectTextOn(decls, "--color-error", ["--color-bg-overlay"]);
+  });
+
+  it.each(presetEntries)("%s: text-primary clears AA on the canvas floor", (_name, decls) => {
+    expectTextOn(decls, "--color-text-primary", ["--color-well-canvas"]);
+  });
+
+  it("zhila/sozvezdia keep iris text-grade on base (the canon dark allowance)", () => {
+    expectTextOn(presetDecls.zhila, "--color-iris", ["--color-bg-base"]);
+    expectTextOn(presetDecls.sozvezdia, "--color-iris", ["--color-bg-base"]);
+  });
+
+  it.each(presetEntries)("%s: border and focus ring clear 1.4.11 / 2.4.11 3:1 on every surface", (_name, decls) => {
+    expectEdgeOn(decls, "--color-border", textSurfaces);
+    expectEdgeOn(decls, "--color-border", ["--color-bg-overlay"]);
+    expectEdgeOn(decls, "--color-focus", textSurfaces);
+    expectEdgeOn(decls, "--color-focus", ["--color-well-canvas"]);
+  });
+
+  it.each(presetEntries)("%s: inverse text clears AA on both solid iris fills", (_name, decls) => {
+    const inverse = tokenHex(decls, "--color-text-inverse");
+    for (const fill of ["--color-iris-solid", "--color-iris-solid-hover"]) {
+      const ratioValue = contrast(inverse, tokenHex(decls, fill));
+      expect(ratioValue, `${fill}: ${ratioValue.toFixed(2)}`).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  /** U7 badge leg, generalized: 15% status tint over THAT preset's well. */
+  function expectBadgeOn(decls: Map<string, string>, fgTok: string, srcTok: string): void {
+    const composite = tint15(tokenHex(decls, srcTok), tokenHex(decls, "--color-bg-well"));
+    const ratioValue = contrast(tokenHex(decls, fgTok), composite);
+    expect(
+      ratioValue,
+      `${fgTok} on 15% ${srcTok} tint over the preset well: ${ratioValue.toFixed(2)}`,
+    ).toBeGreaterThanOrEqual(4.5);
+  }
+
+  it.each(presetEntries)("%s: badge text clears AA on the 15% tints over its well (U7 leg)", (_name, decls) => {
+    expectBadgeOn(decls, "--color-iris-bright", "--color-iris");
+    expectBadgeOn(decls, "--color-confidence", "--color-confidence");
+    expectBadgeOn(decls, "--color-warning", "--color-warning");
+    expectBadgeOn(decls, "--color-success", "--color-success");
+    expectBadgeOn(decls, "--color-error-text", "--color-error");
+  });
+});
+
 describe("warning badge contrast — /15 tint over the theme well (spec §3.1 ≥4.5)", () => {
   it("light: #8a5a17 on the tint clears AA (the AGW-2 P2-1 regression lock)", () => {
     const well = tokenHex(lightDecls, "--color-bg-well");
@@ -818,31 +1071,53 @@ describe("self-hosted fonts (T4)", () => {
   });
 });
 
-describe("theme bootstrap (design-system.md §9)", () => {
+describe("theme + preset bootstrap (design-system.md §9, presets brief §1)", () => {
   it("resolves the theme before first paint with the provider's contract", () => {
-    // UI-23 migration: the new registry key first, the legacy fallback second.
+    // UI-23 migration: the new registry key first, then BOTH legacy
+    // fallbacks in the documented order (vesma-eyes:theme = rename-wave
+    // defensive read, mnemos-eyes:theme = the REAL pre-rename writer —
+    // the P2-1 split is closed by the boot reading the SAME chain).
     expect(indexHtml).toContain("vesmaro.theme");
+    expect(indexHtml).toContain("vesma-eyes:theme");
     expect(indexHtml).toContain("mnemos-eyes:theme");
     expect(
       indexHtml.indexOf("vesmaro.theme"),
-      "the new key must be consulted before the legacy one",
+      "the new key must be consulted before the legacy ones",
+    ).toBeLessThan(indexHtml.indexOf("vesma-eyes:theme"));
+    expect(
+      indexHtml.indexOf("vesma-eyes:theme"),
+      "the rename-wave key precedes the real pre-rename key",
     ).toBeLessThan(indexHtml.indexOf("mnemos-eyes:theme"));
+    // The bootstrap validates slots by OWN PROPERTY, not truthy lookup
+    // (P3-2: "constructor" must never pass as a preset id).
+    expect(indexHtml).toContain("hasOwnProperty.call(PRESET_BASE");
+    // Presets (themes-presets-wave1): the slot record + per-preset attribute.
+    expect(indexHtml).toContain("vesmaro.appearance");
     expect(indexHtml).toContain("prefers-color-scheme"); // system default
     expect(indexHtml).toContain("dataset.theme"); // [data-theme] switching
   });
 
-  it("carries a theme-color meta whose hexes match the resolved surface tokens", () => {
-    // Blueprint §12.7: the meta follows the RESOLVED theme — the bootstrap
-    // script writes the dark/light --color-bg-base values, the provider
-    // re-reads the live token after mount. The hexes here are the guard
-    // against drift between index.html and tokens.css.
+  it("carries a theme-color meta whose hexes match EVERY preset's --color-bg-base", () => {
+    // Blueprint §12.7: the meta follows the RESOLVED look — the bootstrap
+    // script writes one hex per preset, the provider re-reads the live
+    // token after mount. The hexes here are the guard against drift
+    // between index.html and tokens.css (a preset user must never flash
+    // the canonical family on reload).
     expect(indexHtml).toMatch(/<meta name="theme-color" content="#[0-9a-f]{6}"/);
-    const darkBase = darkDecls.get("--color-bg-base")!;
-    const lightBase = lightDecls.get("--color-bg-base")!;
-    expect(darkBase).toMatch(/^#[0-9a-f]{6}$/);
-    expect(lightBase).toMatch(/^#[0-9a-f]{6}$/);
-    expect(indexHtml).toContain(darkBase);
-    expect(indexHtml).toContain(lightBase);
+    const presetBases: Array<[string, string | undefined]> = [
+      ["well", darkDecls.get("--color-bg-base")],
+      ["light", lightDecls.get("--color-bg-base")],
+      ["zhila", presetDecls.zhila.get("--color-bg-base")],
+      ["sozvezdia", presetDecls.sozvezdia.get("--color-bg-base")],
+      ["prosvet", presetDecls.prosvet.get("--color-bg-base")],
+    ];
+    for (const [preset, base] of presetBases) {
+      expect(base, `${preset} --color-bg-base present`).toMatch(/^#[0-9a-f]{6}$/);
+      expect(
+        indexHtml.includes(base!.toLowerCase()),
+        `bootstrap PRESET_BASE must carry the ${preset} base hex ${base}`,
+      ).toBe(true);
+    }
   });
 });
 

@@ -1,19 +1,24 @@
 #!/usr/bin/env node
 /**
- * U7 light-theme («береста») AA audit — two legs:
+ * Appearance-scope AA audit («береста» U7 + appearance presets
+ * themes-presets-wave1) — two legs:
  *
- * 1. TOKEN TABLE VERIFY: parse both theme columns of src/styles/tokens.css,
- *    recompute the WCAG 2.2 relative-luminance ratios for the documented
- *    pairs and compare against docs/design/02-TOKENS.md §4 (the light column
- *    and the worst-case columns). Finds CODE↔TABLE divergence.
- * 2. DOM PROBE: render the built viewer (dist-smoke) in LIGHT theme on the
- *    wave's key pages and flag any element whose computed foreground is a
- *    DARK-column colour while it sits OUTSIDE the sanctioned well-window
- *    scope (the «unthemed element» bug class — a hardcoded dark value or a
- *    variable that never re-resolves).
+ * 1. TOKEN TABLE VERIFY: parse EVERY theme scope of src/styles/tokens.css
+ *    (dark :root = Колодец, [data-theme="light"] = Береста, and the preset
+ *    scopes [data-theme="zhila"|"sozvezdia"|"prosvet"]), recompute the WCAG
+ *    2.2 relative-luminance ratios for the documented pairs and compare
+ *    against docs/design/02-TOKENS.md §4 (canon) / §7 (presets). Finds
+ *    CODE↔TABLE divergence. Worst-case stratum is asserted per pair
+ *    (elevated for text-muted, overlay for statuses on the presets).
+ * 2. DOM PROBE: render the built viewer (dist-smoke) in each LIGHT-family
+ *    scope (light + prosvet) on the wave's key pages and flag any element
+ *    whose computed foreground is a DARK-column colour while it sits
+ *    OUTSIDE the sanctioned well-window scope (the «unthemed element» bug
+ *    class — a hardcoded dark value or a variable that never re-resolves).
  *
  * Usage (from viewer/): node scripts/u7-light-audit.mjs
- * Exit 1 when a ratio diverges from the doc or a dark leak is found.
+ * Exit 1 when a ratio diverges from the doc, an AA floor is broken, or a
+ * dark leak is found.
  */
 import { readFileSync } from "node:fs";
 import { spawn } from "node:child_process";
@@ -76,94 +81,109 @@ function tintOver(src, surface, alpha = 0.15) {
 }
 
 const css = readFileSync(join(VIEWER_DIR, "src/styles/tokens.css"), "utf8");
-const dark = parseBlock(css, ":root");
-const light = parseBlock(css, '[data-theme="light"]');
+const SCOPES = [
+  ["dark", parseBlock(css, ":root")],
+  ["light", parseBlock(css, '[data-theme="light"]')],
+  ["zhila", parseBlock(css, '[data-theme="zhila"]')],
+  ["sozvezdia", parseBlock(css, '[data-theme="sozvezdia"]')],
+  ["prosvet", parseBlock(css, '[data-theme="prosvet"]')],
+];
 
-/** Get a value: light column first, dark column fallback (:root). */
+/** Get a value: scope column first, dark column fallback (:root). */
 const val = (map, name) => (map.get(name) ?? "").toLowerCase();
 
+/**
+ * Per-scope pair tables: [name, fg token, bg token, doc value, level].
+ * Doc values are the 1-decimal columns of docs/design/02-TOKENS.md §4
+ * (dark/light canon — unchanged by the presets wave) and §7 (the three
+ * preset columns). Tolerance 0.25 absorbs the doc's rounding of values
+ * computed on adjacent strata. `null` doc = not asserted in the doc
+ * (the AA-floor pass below still applies).
+ */
 const PAIRS = [
-  // [name, fg token, bg token, doc dark, doc light(base col), level].
-  // Doc light columns are ordered white/base/elevated (02-TOKENS §4 light
-  // line); the well column is white, base is base. Tolerance 0.25 absorbs
-  // the doc's 1-decimal rounding of values computed on adjacent strata.
-  ["text-primary on base", "--color-text-primary", "--color-bg-base", 16.2, 15.3, "AA+"],
-  ["text-primary on well", "--color-text-primary", "--color-bg-well", 15.0, 16.5, "AA+"],
-  ["text-secondary on base", "--color-text-secondary", "--color-bg-base", 7.8, 7.4, "AA+"],
-  ["text-secondary on well", "--color-text-secondary", "--color-bg-well", 7.4, 7.8, "AA+"],
-  ["text-muted on base", "--color-text-muted", "--color-bg-base", 5.3, 5.0, "AA"],
-  ["text-muted on well", "--color-text-muted", "--color-bg-well", 5.0, 5.4, "AA"],
-  ["text-muted on elevated", "--color-text-muted", "--color-bg-elevated", 4.8, 4.8, "AA worst"],
-  ["iris-bright on base", "--color-iris-bright", "--color-bg-base", 9.1, 5.3, "AA+"],
-  ["iris-bright on well", "--color-iris-bright", "--color-bg-well", 8.6, 5.9, "AA+"],
-  ["confidence on base", "--color-confidence", "--color-bg-base", 7.0, 5.5, "AA+"],
-  ["confidence on well", "--color-confidence", "--color-bg-well", 6.7, 5.9, "AA+"],
-  ["success on well", "--color-success", "--color-bg-well", 7.8, 6.2, "AA+"],
-  ["warning on well", "--color-warning", "--color-bg-well", 7.6, 5.9, "AA+"],
-  ["error on base", "--color-error", "--color-bg-base", 5.6, 8.4, "AA+"],
-  ["error on well", "--color-error", "--color-bg-well", 5.3, 9.1, "AA"],
-  ["border on base (1.4.11)", "--color-border", "--color-bg-base", 3.4, 4.3, "AA non-text"],
-  ["border on well (1.4.11)", "--color-border", "--color-bg-well", 3.2, 4.7, "AA non-text"],
-  ["focus on base (2.4.13)", "--color-focus", "--color-bg-base", 9.1, 6.8, "AA+"],
-  ["focus on well (2.4.13)", "--color-focus", "--color-bg-well", 8.4, 7.3, "AA+"],
-  ["web-tone-update on base", "--web-tone-update", "--color-bg-base", 6.8, 5.5, "AA+"],
-  ["web-tone-update on scroll-bg", "--web-tone-update", "--color-scroll-bg", 6.4, 5.7, "AA+"],
+  // [name, fg token, bg token, {dark, light, zhila, sozvezdia, prosvet}, level].
+  ["text-primary on base", "--color-text-primary", "--color-bg-base", { dark: 16.0, light: 15.3, zhila: 15.5, sozvezdia: 16.8, prosvet: 14.4 }, "AA+"],
+  ["text-primary on well", "--color-text-primary", "--color-bg-well", { dark: 15.0, light: 16.5, zhila: 14.2, sozvezdia: 16.0, prosvet: 15.9 }, "AA+"],
+  ["text-secondary on base", "--color-text-secondary", "--color-bg-base", { dark: 7.7, light: 7.2, zhila: 9.2, sozvezdia: 8.1, prosvet: 6.8 }, "AA+"],
+  ["text-secondary on well", "--color-text-secondary", "--color-bg-well", { dark: 7.2, light: 7.8, zhila: 8.4, sozvezdia: 7.7, prosvet: 7.5 }, "AA+"],
+  ["text-muted on base", "--color-text-muted", "--color-bg-base", { dark: 5.2, light: 5.0, zhila: 5.9, sozvezdia: 5.5, prosvet: 5.4 }, "AA"],
+  ["text-muted on well", "--color-text-muted", "--color-bg-well", { dark: 4.9, light: 5.4, zhila: 5.4, sozvezdia: 5.2, prosvet: 6.0 }, "AA"],
+  ["text-muted on elevated", "--color-text-muted", "--color-bg-elevated", { dark: 4.7, light: 4.8, zhila: 5.1, sozvezdia: 5.0, prosvet: 5.2 }, "AA worst"],
+  ["iris-bright on base", "--color-iris-bright", "--color-bg-base", { dark: 9.0, light: 5.5, zhila: 8.9, sozvezdia: 9.4, prosvet: 5.2 }, "AA+"],
+  ["iris-bright on well", "--color-iris-bright", "--color-bg-well", { dark: 8.4, light: 5.9, zhila: 8.1, sozvezdia: 9.0, prosvet: 5.7 }, "AA+"],
+  ["confidence on well", "--color-confidence", "--color-bg-well", { dark: 6.5, light: 5.9, zhila: 6.3, sozvezdia: 7.0, prosvet: 5.7 }, "AA+"],
+  ["success on well", "--color-success", "--color-bg-well", { dark: 7.6, light: 6.2, zhila: 7.3, sozvezdia: 8.1, prosvet: 6.0 }, "AA+"],
+  ["warning on well", "--color-warning", "--color-bg-well", { dark: 7.6, light: 5.9, zhila: 7.4, sozvezdia: 8.2, prosvet: 5.7 }, "AA+"],
+  ["error on base", "--color-error", "--color-bg-base", { dark: 5.6, light: 8.4, zhila: 5.5, sozvezdia: 5.8, prosvet: 7.9 }, "AA+"],
+  ["error on well", "--color-error", "--color-bg-well", { dark: 5.2, light: 9.1, zhila: 5.1, sozvezdia: 5.6, prosvet: 8.7 }, "AA"],
+  ["error on elevated", "--color-error", "--color-bg-elevated", { dark: 5.0, light: 8.0, zhila: 4.8, sozvezdia: 5.4, prosvet: 7.5 }, "AA"],
+  ["error on overlay", "--color-error", "--color-bg-overlay", { dark: null, light: null, zhila: 4.7, sozvezdia: 5.1, prosvet: 7.3 }, "AA (§7: modals are text-bearing)"],
+  ["iris (text) on base", "--color-iris", "--color-bg-base", { dark: 4.6, light: null, zhila: 4.6, sozvezdia: 4.8, prosvet: null }, "AA text — dark presets only (canon allowance; light uses iris-bright)"],
+  ["border on well (1.4.11)", "--color-border", "--color-bg-well", { dark: 3.2, light: 4.7, zhila: 4.1, sozvezdia: 3.4, prosvet: 5.6 }, "AA non-text"],
+  ["border on elevated (1.4.11)", "--color-border", "--color-bg-elevated", { dark: 3.0, light: 4.2, zhila: 3.9, sozvezdia: 3.3, prosvet: 4.8 }, "AA non-text"],
+  ["focus on canvas (2.4.13)", "--color-focus", "--color-well-canvas", { dark: 9.1, light: 6.1, zhila: 9.0, sozvezdia: 9.6, prosvet: 5.7 }, "AA+"],
+  ["web-tone-update on base", "--web-tone-update", "--color-bg-base", { dark: 6.8, light: 5.5, zhila: 6.6, sozvezdia: 7.0, prosvet: 5.2 }, "AA+"],
+  ["web-tone-update on scroll-bg", "--web-tone-update", "--color-scroll-bg", { dark: 6.4, light: 5.7, zhila: 6.3, sozvezdia: 6.8, prosvet: 5.5 }, "AA+"],
+];
+
+const BADGE_PAIRS = [
+  // [name, fg token, source token, {dark, light, zhila, sozvezdia, prosvet}] —
+  // text on the 15% source tint composited over THAT scope's well (U7 leg 1b,
+  // generalized to every appearance scope).
+  ["iris-text on iris-tint", "--color-iris-bright", "--color-iris", { dark: 7.0, light: 5.0, zhila: 6.9, sozvezdia: 7.7, prosvet: 4.8 }],
+  ["confidence-text on confidence-tint", "--color-confidence", "--color-confidence", { dark: 5.2, light: 4.8, zhila: 4.9, sozvezdia: 5.6, prosvet: 4.6 }],
+  ["warning-text on warning-tint", "--color-warning", "--color-warning", { dark: 5.9, light: 4.8, zhila: 5.6, sozvezdia: 6.5, prosvet: 4.6 }],
+  ["success-text on success-tint", "--color-success", "--color-success", { dark: 5.8, light: 5.0, zhila: 5.7, sozvezdia: 6.4, prosvet: 4.8 }],
+  ["error-text on error-tint (token step)", "--color-error-text", "--color-error", { dark: 7.5, light: 7.0, zhila: 7.0, sozvezdia: 8.0, prosvet: 6.7 }],
 ];
 
 let divergences = 0;
-console.log("== leg 1: token table verify (docs/design/02-TOKENS.md §4) ==");
-for (const [name, fg, bg, docDark, docLight, level] of PAIRS) {
-  const d = ratio(val(dark, fg), val(dark, bg));
-  const l = ratio(val(light, fg) || val(dark, fg), val(light, bg) || val(dark, bg));
-  const bad =
-    (docDark !== null && Math.abs(d - docDark) > 0.25) ||
-    (docLight !== null && Math.abs(l - docLight) > 0.25);
-  if (bad) divergences++;
-  console.log(
-    `  ${bad ? "DIVERGE" : "ok    "} ${name}: dark ${d} (doc ${docDark ?? "—"}) · light ${l} (doc ${docLight ?? "—"}) [${level}]`,
-  );
+console.log("== leg 1: token table verify (02-TOKENS.md §4 canon / §7 presets) ==");
+for (const [name, fg, bg, doc, level] of PAIRS) {
+  const parts = [];
+  for (const [scope, map] of SCOPES) {
+    const r = ratio(val(map, fg), val(map, bg));
+    parts.push(`${scope} ${r}`);
+    if (doc[scope] !== null && doc[scope] !== undefined && Math.abs(r - doc[scope]) > 0.25) {
+      divergences++;
+      parts.push(`DIVERGE (doc ${doc[scope]})`);
+    }
+  }
+  console.log(`  ${name} [${level}]: ${parts.join(" · ")}`);
 }
 // The AA floor itself (any pair below 4.5 text / 3.0 non-text is a fail
-// regardless of the doc).
-for (const [name, fg, bg, , , level] of PAIRS) {
+// regardless of the doc). A `null` doc cell = the pair is NOT part of that
+// scope's documented contract (iris-as-text does not exist in the light
+// family — iris-bright is the text accent there; the canon columns carry no
+// overlay rows) — the floor skips exactly the documented pair set.
+for (const [name, fg, bg, doc, level] of PAIRS) {
   const floor = level.includes("non-text") ? 3.0 : 4.5;
-  for (const [col, map] of [["dark", dark], ["light", light]]) {
-    const r = ratio(val(map, fg) || val(dark, fg), val(map, bg) || val(dark, bg));
+  for (const [scope, map] of SCOPES) {
+    if (doc[scope] === null || doc[scope] === undefined) continue;
+    const r = ratio(val(map, fg), val(map, bg));
     if (r < floor) {
       divergences++;
-      console.log(`  FAIL ${name} on ${col}: ${r} < ${floor}`);
+      console.log(`  FAIL ${name} on ${scope}: ${r} < ${floor}`);
     }
   }
 }
 
-// leg 1b — U7: the badge-tint pairs (15% tints over the badge surface). The
-// error badge was found FAILING on dark (text-error 3.2 — the U3 doc row
-// claimed 4.5 on an arithmetic slip); fixed by --color-error-text. The other
-// four tints verified holding in both themes.
-{
-  const tintPairs = [
-    ["confidence-text on confidence-tint", "--color-confidence", "--color-confidence", 5.2, 4.8],
-    ["error-text on error-tint (token step)", "--color-error-text", "--color-error", 7.5, 7.0],
-    ["success-text on success-tint", "--color-success", "--color-success", 5.8, 5.0],
-    ["warning-text on warning-tint", "--color-warning", "--color-warning", 5.9, 4.8],
-    ["iris-text on iris-tint", "--color-iris-bright", "--color-iris", 7.0, 5.0],
-  ];
-  console.log("== leg 1b: badge-tint composites (15% over well, both themes) ==");
-  for (const [name, fgTok, srcTok, docD, docL] of tintPairs) {
-    for (const [col, map] of [["dark", dark], ["light", light]]) {
-      const surface = val(map, "--color-bg-well") || val(dark, "--color-bg-well");
-      const src = val(map, srcTok) || val(dark, srcTok);
-      const fg = val(map, fgTok) || val(dark, fgTok);
-      const composite = tintOver(src, surface);
-      const r = ratio(fg, composite);
-      const doc = col === "dark" ? docD : docL;
-      const bad = Math.abs(r - doc) > 0.25 || r < 4.5;
-      if (bad) divergences++;
-      console.log(
-        `  ${bad ? "DIVERGE" : "ok    "} ${name} [${col}]: ${fg} on tint ${composite} — ${r} (doc ${doc})`,
-      );
+console.log("== leg 1b: badge-tint composites (15% over the scope well, all scopes) ==");
+for (const [name, fgTok, srcTok, doc] of BADGE_PAIRS) {
+  const parts = [];
+  for (const [scope, map] of SCOPES) {
+    const surface = val(map, "--color-bg-well") || val(SCOPES[0][1], "--color-bg-well");
+    const src = val(map, srcTok) || val(SCOPES[0][1], srcTok);
+    const fg = val(map, fgTok) || val(SCOPES[0][1], fgTok);
+    const composite = tintOver(src, surface);
+    const r = ratio(fg, composite);
+    parts.push(`${scope} ${r}`);
+    if (Math.abs(r - doc[scope]) > 0.25 || r < 4.5) {
+      divergences++;
+      parts.push(`DIVERGE (doc ${doc[scope]})`);
     }
   }
+  console.log(`  ${name}: ${parts.join(" · ")}`);
 }
 
 /* ---------- leg 2: DOM probe ---------- */
@@ -179,6 +199,10 @@ const PAGES = [
 ];
 
 const DARK_ONLY = ["#e6edf3", "#9aa7b4", "#7c8894", "#4fc2ce", "#c9933a"];
+
+/** DOM-probe presets (themes-presets-wave1): the light-family scopes —
+ * dark text colours outside the well window are the leak class there. */
+const PROBE_PRESETS = ["light", "prosvet"];
 
 const PROBE_FN = (darkOnly) => {
   const leaks = [];
@@ -272,36 +296,46 @@ async function main() {
       viewport: { width: 1440, height: 900 },
       deviceScaleFactor: 1,
     });
-    await context.addInitScript(() => {
-      window.localStorage.setItem("vesmaro.theme", "light");
-    });
-    const page = await context.newPage();
-    console.log("\n== leg 2: dark-colour leaks outside the well window (light theme) ==");
-    for (const [name, route] of PAGES) {
-      await page.goto(`${BASE}${route}`, { waitUntil: "load" });
-      await page.evaluate(() => document.fonts.ready);
-      await sleep(1800);
-      const found = await page.evaluate(PROBE_FN, DARK_ONLY);
-      if (found.length) {
-        leaks += found.length;
-        console.log(`  == ${name}: ${found.length} leak(s)`);
-        for (const l of found)
-          console.log(`    [${l.tag} ${l.color}] "${l.text}" :: ${l.cls}`);
-      } else {
-        console.log(`  == ${name}: clean`);
+    for (const preset of PROBE_PRESETS) {
+      // The bootstrap resolves vesmaro.appearance slots FIRST: seed both
+      // the explicit family and the slot so the page boots in the preset.
+      await context.addInitScript((preset) => {
+        window.localStorage.clear();
+        window.localStorage.setItem("vesmaro.theme", preset === "prosvet" ? "light" : preset);
+        window.localStorage.setItem(
+          "vesmaro.appearance",
+          JSON.stringify({ lastDark: "well", lastLight: preset }),
+        );
+      }, preset);
+      const page = await context.newPage();
+      console.log(`\n== leg 2: dark-colour leaks outside the well window (${preset}) ==`);
+      for (const [name, route] of PAGES) {
+        await page.goto(`${BASE}${route}`, { waitUntil: "load" });
+        await page.evaluate(() => document.fonts.ready);
+        await sleep(1800);
+        const found = await page.evaluate(PROBE_FN, DARK_ONLY);
+        if (found.length) {
+          leaks += found.length;
+          console.log(`  == ${name}: ${found.length} leak(s)`);
+          for (const l of found)
+            console.log(`    [${l.tag} ${l.color}] "${l.text}" :: ${l.cls}`);
+        } else {
+          console.log(`  == ${name}: clean`);
+        }
       }
+      await page.close();
     }
     await browser.close();
   } finally {
     preview.kill();
   }
   console.log(
-    `\n[light] ${divergences === 0 && leaks === 0 ? "ALL GREEN" : `${divergences} table divergence(s), ${leaks} dark leak(s)`}`,
+    `\n[scopes] ${divergences === 0 && leaks === 0 ? "ALL GREEN" : `${divergences} table divergence(s), ${leaks} dark leak(s)`}`,
   );
   process.exit(divergences === 0 && leaks === 0 ? 0 : 1);
 }
 
 main().catch((error) => {
-  console.error(`[light] ${error?.message ?? error}`);
+  console.error(`[scopes] ${error?.message ?? error}`);
   process.exit(1);
 });
