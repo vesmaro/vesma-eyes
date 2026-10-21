@@ -157,9 +157,7 @@ export function TaskBoardColumn({
         }
       >
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-foreground-secondary">
-            {label}
-          </h2>
+          <h2 className="text-sm font-semibold text-foreground-secondary">{label}</h2>
           {/* ME-077: whose action moves the card onward — the owner's
            * accept/validate lanes vs the executor's work lanes. */}
           {hint ? (
@@ -196,11 +194,15 @@ export function TaskBoardColumn({
         ref={setNodeRef}
         className={
           "flex-1 p-2 md:overflow-y-auto " +
+          // W-C (D5): in the mobile ONE-lane view the lane's card list
+          // scrolls INTERNALLY (the desktop lanes' own pattern) — a 200+
+          // task lane must not stretch the page back into the tens of
+          // screens the panel verdict measured. Only below md; the desktop
+          // row keeps its own caps below.
+          "max-md:max-h-[60vh] max-md:overflow-y-auto " +
           // Classic columns run taller (CV-5 "во всю высоту" within the
           // document-scrolled shell): the viewport cap keeps the scroll
           // INTERNAL to the column, the page never scrolls under the board.
-          // U7 mobile: no internal cap below md — the honest document flow
-          // scrolls with the page.
           (style === "classic"
             ? compact
               ? "md:max-h-[75vh] "

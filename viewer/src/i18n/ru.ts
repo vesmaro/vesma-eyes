@@ -971,6 +971,11 @@ export const ru = {
   "tasks.board.hiddenColumns": "Скрыто: {{cols}}",
   "tasks.board.expandColumn": "Развернуть пустую колонку «{{col}}»",
   "tasks.board.collapseColumn": "Свернуть пустую колонку «{{col}}»",
+  // W-C (вердикт панели D5, P0): мобильное представление доски — чипы
+  // колонок с живыми счётчиками, свайп как переключатель одной рукой.
+  "tasks.board.mobileChipsLabel": "Колонки доски",
+  "tasks.board.mobileSwipeHint":
+    "Свайп влево или вправо переключает колонку; чипы выше открывают любую колонку одним касанием.",
 
   // ME-071 W3: живой пульт (15-WOW §3.4/§8.5) — фасад «Ждут владельца»,
   // темп решений в шапке колонки, вспышка task.done, кромка блокировки.
@@ -1036,6 +1041,9 @@ export const ru = {
 
   // --- tasks: create dialog (Ф3 — direct POST /api/tasks) ---------------------------
   "tasks.create.label": "Задача",
+  // W-C (D5): below md the bare «Задача» chip is unrecognizable as the
+  // creation entry — the mobile label names the action.
+  "tasks.create.labelMobile": "Новая задача",
   "tasks.create.title": "Новая задача",
   "tasks.create.description":
     "Первая строка — название, остальное — сводка. Задача создаётся сразу на борде в колонке «открыта».",

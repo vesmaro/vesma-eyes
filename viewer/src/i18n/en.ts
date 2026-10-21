@@ -943,6 +943,11 @@ export const en: Record<TranslationKey, string> = {
   "tasks.board.hiddenColumns": "Hidden: {{cols}}",
   "tasks.board.expandColumn": "Expand the empty “{{col}}” column",
   "tasks.board.collapseColumn": "Collapse the empty “{{col}}” column",
+  // W-C (user-panel verdict D5, P0): the mobile board view — column chips
+  // with live counters, swipe as the one-hand column switch.
+  "tasks.board.mobileChipsLabel": "Board columns",
+  "tasks.board.mobileSwipeHint":
+    "Swipe left or right to switch the column; the chips above open any column with one tap.",
 
   // ME-071 W3: the living console (15-WOW §3.4/§8.5) — the waiting facade,
   // the resolution tempo, the task.done flash, the blocked edge.
@@ -1008,6 +1013,8 @@ export const en: Record<TranslationKey, string> = {
 
   // --- tasks: create dialog (Ф3 — direct POST /api/tasks) ---------------------------
   "tasks.create.label": "Task",
+  // W-C (D5): the mobile creation entry names the action.
+  "tasks.create.labelMobile": "New task",
   "tasks.create.title": "New task",
   "tasks.create.description":
     "The first line becomes the title, the rest the summary. The task is created on the board in the “open” column right away.",

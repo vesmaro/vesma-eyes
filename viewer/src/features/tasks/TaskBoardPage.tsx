@@ -50,6 +50,8 @@ import { useDoneTempo, useLatestDoneTransit } from "./doneTransitStore";
 import { BoardStyleToggle } from "./BoardStyleToggle";
 import { useBoardStyle } from "@/lib/boardStyleStore";
 import { pageGridClass } from "@/layout/pageGrid";
+import { TaskBoardMobile } from "./TaskBoardMobile";
+import { useIsDesktopBoard } from "./boardViewport";
 
 /**
  * ME-071 W3 review fix (P1): a given transit announces AT MOST ONCE per page
@@ -131,8 +133,8 @@ function TaskBoardView() {
   const [boardStyle] = useBoardStyle();
   // ME-077: column visibility («5 колонок | все 7») — a persisted board
   // setting; the pre-validation lanes fold by default while empty.
-  const [columnsMode, setColumnsMode] = useState<BoardColumnsMode>(
-    () => loadBoardColumnsMode(),
+  const [columnsMode, setColumnsMode] = useState<BoardColumnsMode>(() =>
+    loadBoardColumnsMode(),
   );
   const changeColumnsMode = (mode: BoardColumnsMode) => {
     setColumnsMode(mode);
@@ -155,6 +157,15 @@ function TaskBoardView() {
   // init only, the param is not written back and the owner's toggle wins.
   const [createOpen, setCreateOpen] = useState(
     () => searchParams.get("wizard") === "1",
+  );
+  // W-C (D5): the MOBILE board's active lane — page-owned so the waiting
+  // facade's one-gesture jump is a plain event in the chip's onClick and
+  // the cold ?waiting=1 deep link rides the initial state (null = auto =
+  // the first visible lane; TaskBoardMobile derives the fallback, no
+  // state-sync effects). Session state by design: a stale stored lane
+  // would fight the filters.
+  const [mobileColumn, setMobileColumn] = useState<string | null>(() =>
+    waitingActive ? "validating" : null,
   );
   const mutations = useTaskMutations();
 
@@ -198,6 +209,10 @@ function TaskBoardView() {
   // ME-072 A: the measured overflow behind the right-edge fade affordance
   // (hook-order stable: runs before the pending/error early returns).
   const { boardRef, boardEl, overflows: boardOverflows } = useBoardOverflows();
+  // W-C (D5): below Tailwind md the board renders the ONE-lane-at-a-time
+  // mobile view (chip rail + swipe); the horizontal row stays md+. The seam
+  // is the Sidebar's useSyncExternalStore contract (SSR/tests → desktop).
+  const isDesktopBoard = useIsDesktopBoard();
 
   // ME-071 W3: the facade's «one gesture» promise (15-WOW §3.4) — when the
   // waiting filter is active the board BRINGS THE DECISION LANE INTO VIEW.
@@ -293,7 +308,14 @@ function TaskBoardView() {
             variant="outline"
             size="sm"
             aria-pressed={waitingActive}
-            onClick={() => patch({ waiting: waitingActive ? undefined : true })}
+            onClick={() => {
+              // W-C (D5): on the mobile board there is no horizontal row to
+              // scroll into view — activating the facade JUMPS the lane to
+              // the decision column instead (one gesture into decision
+              // mode, the mobile equivalent of ME-071 W3's scroll).
+              if (!waitingActive) setMobileColumn("validating");
+              patch({ waiting: waitingActive ? undefined : true });
+            }}
             title={t("tasks.board.waitingChipTitle")}
             className={
               "font-mono tabular-nums " +
@@ -321,9 +343,21 @@ function TaskBoardView() {
           {/* ME-077: column visibility (компакт 5 / все 7), persisted. */}
           <BoardColumnsToggle mode={columnsMode} onChange={changeColumnsMode} />
           {canMutate ? (
-            <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCreateOpen(true)}
+              // W-C (D5): the bare «Задача» chip read as another view
+              // toggle on a phone — below md the label names the ACTION
+              // («Новая задача»); desktop keeps the compact «+ Задача».
+              className="max-md:min-h-12"
+            >
               <Plus className="size-4" aria-hidden="true" />
-              {t("tasks.create.label")}
+              {/* Exactly one of the two labels is rendered per breakpoint
+               * (the hidden span leaves the accessible-name computation),
+               * so no JS breakpoint read is needed for the label itself. */}
+              <span className="max-md:hidden">{t("tasks.create.label")}</span>
+              <span className="md:hidden">{t("tasks.create.labelMobile")}</span>
             </Button>
           ) : null}
         </div>
@@ -336,7 +370,10 @@ function TaskBoardView() {
 
   if (board.isPending) {
     return (
-      <section aria-labelledby="tasks-title" className={pageGridClass("operational", "space-y-4")}>
+      <section
+        aria-labelledby="tasks-title"
+        className={pageGridClass("operational", "space-y-4")}
+      >
         {header}
         <div role="status" aria-label={t("tasks.loading")}>
           <TableRowSkeleton rows={6} columns={6} />
@@ -347,7 +384,10 @@ function TaskBoardView() {
 
   if (board.isError) {
     return (
-      <section aria-labelledby="tasks-title" className={pageGridClass("operational", "space-y-4")}>
+      <section
+        aria-labelledby="tasks-title"
+        className={pageGridClass("operational", "space-y-4")}
+      >
         {header}
         <EmptyState
           variant="error"
@@ -375,7 +415,10 @@ function TaskBoardView() {
     .filter((c) => (wholeBoardCounts[c] ?? 0) > 0);
 
   return (
-    <section aria-labelledby="tasks-title" className={pageGridClass("operational", "space-y-4")}>
+    <section
+      aria-labelledby="tasks-title"
+      className={pageGridClass("operational", "space-y-4")}
+    >
       {header}
 
       {/* Filters — URL state (?project=&agent=&q=), shared dialect with the
@@ -461,66 +504,88 @@ function TaskBoardView() {
             <p className="text-xs text-foreground-muted" role="note">
               {t("tasks.board.hiddenColumns", {
                 cols: hiddenNonEmpty
-                  .map(
-                    (c) =>
-                      `${t(columnLabelKey(c))} (${wholeBoardCounts[c] ?? 0})`,
-                  )
+                  .map((c) => `${t(columnLabelKey(c))} (${wholeBoardCounts[c] ?? 0})`)
                   .join(", "),
               })}
             </p>
           ) : null}
           <DndContext {...dnd.dndContextProps}>
-            {/* ME-072 A: the board row stretches its columns to ONE height
-             * (items-stretch — empty columns no longer collapse) and the
-             * horizontal scroll is an explicit AFFORDANCE: .board-scroll-x
-             * keeps the scrollbar visible where the platform draws classic
-             * ones, tabIndex keeps it keyboard-able (WCAG 2.1.1), and the
-             * measured right-edge fade (below) signals the offscreen columns
-             * on overlay-scroll platforms — at 1440 the 4th column peeks cut
-             * and the cut reads as scrollable, not broken. */}
-            <div className="relative">
-              <div
-                ref={boardRef}
-                aria-label={t("tasks.board.label")}
-                tabIndex={0}
-                className="board-scroll-x flex flex-col items-stretch gap-3 pb-2 md:flex-row md:overflow-x-auto"
-              >
-                {visibleColumns.map((column) => (
-                  <TaskBoardColumn
-                    key={column}
-                    column={column}
-                    tasks={columns.get(column) ?? []}
-                    totalCount={wholeBoardCounts[column] ?? 0}
-                    canDrag={canDrag}
-                    showMenu={canMutate}
-                    reportCounts={reportCounts}
-                    query={state.q}
-                    collapsed={collapsed}
-                    onToggleGroup={toggleGroup}
-                    compact={density === "compact"}
-                    style={boardStyle}
-                    emptyCollapsed={
-                      columnsMode === "all" &&
-                      preValidationLanes.has(column) &&
-                      !unfoldedEmpty.has(column)
-                    }
-                    onToggleEmptyCollapse={() => toggleEmptyCollapse(column)}
-                    tempo={column === "resolved" ? doneTempo : undefined}
-                    waitingFocus={waitingActive}
-                  />
-                ))}
-              </div>
-              {/* The scroll affordance (ME-072 A): only when the board really
-               * overflows — a page-background fade over the clipped last
-               * column. Decorative: aria-hidden + pointer-events-none, the
-               * scroll stays on the row (wheel/keyboard/drag). */}
-              {boardOverflows ? (
-                <div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-background to-transparent"
-                />
-              ) : null}
-            </div>
+            {/* W-C (D5): below md the board is the ONE-lane mobile view —
+             * chip rail + swipe + the active column only. The desktop
+             * horizontal row keeps every behaviour below untouched. */}
+            {isDesktopBoard ? (
+              <>
+                {/* ME-072 A: the board row stretches its columns to ONE height
+                 * (items-stretch — empty columns no longer collapse) and the
+                 * horizontal scroll is an explicit AFFORDANCE: .board-scroll-x
+                 * keeps the scrollbar visible where the platform draws classic
+                 * ones, tabIndex keeps it keyboard-able (WCAG 2.1.1), and the
+                 * measured right-edge fade (below) signals the offscreen columns
+                 * on overlay-scroll platforms — at 1440 the 4th column peeks cut
+                 * and the cut reads as scrollable, not broken. */}
+                <div className="relative">
+                  <div
+                    ref={boardRef}
+                    aria-label={t("tasks.board.label")}
+                    tabIndex={0}
+                    className="board-scroll-x flex flex-col items-stretch gap-3 pb-2 md:flex-row md:overflow-x-auto"
+                  >
+                    {visibleColumns.map((column) => (
+                      <TaskBoardColumn
+                        key={column}
+                        column={column}
+                        tasks={columns.get(column) ?? []}
+                        totalCount={wholeBoardCounts[column] ?? 0}
+                        canDrag={canDrag}
+                        showMenu={canMutate}
+                        reportCounts={reportCounts}
+                        query={state.q}
+                        collapsed={collapsed}
+                        onToggleGroup={toggleGroup}
+                        compact={density === "compact"}
+                        style={boardStyle}
+                        emptyCollapsed={
+                          columnsMode === "all" &&
+                          preValidationLanes.has(column) &&
+                          !unfoldedEmpty.has(column)
+                        }
+                        onToggleEmptyCollapse={() => toggleEmptyCollapse(column)}
+                        tempo={column === "resolved" ? doneTempo : undefined}
+                        waitingFocus={waitingActive}
+                      />
+                    ))}
+                  </div>
+                  {/* The scroll affordance (ME-072 A): only when the board really
+                   * overflows — a page-background fade over the clipped last
+                   * column. Decorative: aria-hidden + pointer-events-none, the
+                   * scroll stays on the row (wheel/keyboard/drag). */}
+                  {boardOverflows ? (
+                    <div
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-background to-transparent"
+                    />
+                  ) : null}
+                </div>
+              </>
+            ) : (
+              <TaskBoardMobile
+                visibleColumns={visibleColumns}
+                activeColumn={mobileColumn}
+                onSelectColumn={setMobileColumn}
+                columns={columns}
+                wholeBoardCounts={wholeBoardCounts}
+                canDrag={canDrag}
+                showMenu={canMutate}
+                reportCounts={reportCounts}
+                query={state.q}
+                collapsed={collapsed}
+                onToggleGroup={toggleGroup}
+                compact={density === "compact"}
+                style={boardStyle}
+                waitingFocus={waitingActive}
+                tempo={doneTempo}
+              />
+            )}
             <DragOverlay dropAnimation={reducedMotion ? null : undefined}>
               {dnd.activeTask ? (
                 <TaskBoardCardGhost
