@@ -1256,7 +1256,6 @@ export const en: Record<TranslationKey, string> = {
   "agents.hosts.recentEmpty": "Quiet. The first events arrive after the first report.",
   "agents.hosts.recentFailed": "Failed to load the feed.",
   "agents.hosts.reconnectAction": "Reconnect",
-  "agents.hosts.harnessesTitle": "Host harnesses",
   // Brain zones Z1 (BRAIN-ZONES-VISUAL-DOC §2-3): host = cortex zone,
   // harness = plexus, specialist = neuron — the owner's same hierarchy,
   // spoken in the lore vocabulary.

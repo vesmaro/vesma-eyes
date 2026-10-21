@@ -12,6 +12,7 @@ import {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { AgentsHostsPage } from "./HostsRosterPage";
+import { HostHarnesses } from "./HostHarnesses";
 import { recordPresenceFlash } from "./presenceLight";
 import { buildRoutes } from "@/app/routes";
 import { MockAdapter } from "@/gateway/MockAdapter";
@@ -544,7 +545,7 @@ describe("the roster sheet (A2 §3.D, <xl)", () => {
 
 describe("the host harnesses (B2 §3.C.3)", () => {
   const harnessRows = (container: HTMLElement): NodeListOf<HTMLButtonElement> =>
-    container.querySelectorAll('[aria-label="Host harnesses"] [aria-expanded]');
+    container.querySelectorAll('[aria-label="Zone plexuses"] [aria-expanded]');
 
   it("one accordion row per member: presence, harness, refusal badge, counters, env slot", async () => {
     const { root, container } = await mountPage({ path: "/agents/hosts/laptop" });
@@ -580,6 +581,53 @@ describe("the host harnesses (B2 §3.C.3)", () => {
     const hermes = [...rows].find((row) => row.textContent?.includes("hermes@laptop"))!;
     expect(hermes.textContent).toContain("disabled");
     expect(hermes.querySelector('[data-slot="execution-env"]')?.textContent).toBe("");
+    await actUnmount(root);
+  });
+
+  it("brain-zones Z1: the zone structure speaks the lore (title, neuron sum, honest empty)", async () => {
+    const { root, container } = await mountPage({ path: "/agents/hosts/laptop" });
+    // The section is the ZONE structure now: «Zone plexuses», and the
+    // neurons counter is the REAL sum of the members' agent-reported
+    // specialists (zcode@laptop 39; hermes reports no inventory → 39 only).
+    const zone = container.querySelector('section[aria-label="Zone plexuses"]')!;
+    expect(zone).not.toBeNull();
+    expect(zone.textContent).toContain("neurons: 39");
+    // hermes-only host mesh-2 reports NO inventory → honest absence, no
+    // fabricated 0.
+    await act(async () => {
+      rowOf(container, "mesh-2").click();
+    });
+    const meshZone = container.querySelector('section[aria-label="Zone plexuses"]')!;
+    expect(meshZone.textContent).not.toContain("neurons:");
+    await actUnmount(root);
+  });
+
+  it("Z1: an empty zone renders the honest line, never an empty block", async () => {
+    // Mounted DIRECTLY (the grouping cannot produce a memberless host —
+    // groups are built FROM members — so this is the component's own
+    // honesty contract, unit-held).
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(
+        <I18nProvider initialLang="en">
+          {/* The section carries the connect Link — it needs a router. */}
+          <MemoryRouter initialEntries={["/agents/hosts/laptop"]}>
+            <HostHarnesses
+              members={[]}
+              meta={undefined}
+              now={Date.now()}
+              koraItems={[]}
+            />
+          </MemoryRouter>
+        </I18nProvider>,
+      );
+    });
+    const zone = container.querySelector('section[aria-label="Zone plexuses"]')!;
+    expect(zone).not.toBeNull();
+    expect(zone.textContent).toContain("No plexuses in this zone yet");
+    expect(zone.querySelector("ul")).toBeNull();
     await actUnmount(root);
   });
 

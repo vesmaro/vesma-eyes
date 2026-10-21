@@ -125,7 +125,7 @@ async function main() {
   /** Expand the FIRST harness accordion row of the field. */
   const expandFirst = async (page) => {
     await page
-      .locator('[aria-label="Харнесы хоста"] button[aria-expanded="false"]')
+      .locator('[aria-label="Сплетения зоны"] button[aria-expanded="false"]')
       .first()
       .click();
     await sleep(500);

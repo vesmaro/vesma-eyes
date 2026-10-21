@@ -27,13 +27,21 @@ import { usePresenceFlashFor } from "./presenceLight";
 import { ExecutorSheetForm } from "./ExecutorSheet";
 
 /**
- * «Харнесы хоста» (agents-redesign B2, blueprint §3.C.3) — the heart of the
- * field: ONE accordion row per executor of the host, and the expansion is
- * the FULL working block IN PLACE — the ExecutorSheet's own form component
- * (link · access · identity · capabilities · inventory · tech · danger),
- * remounted here with the SAME freeze/stamp discipline the sheet uses.
- * Behavior parity is by construction: the sheet and the accordion mount the
- * one form; nothing is re-implemented.
+ * «Сплетения зоны» (agents-redesign B2, blueprint §3.C.3; brain-zones Z1
+ * structural layer, BRAIN-ZONES-VISUAL-DOC §2-3) — the heart of the field:
+ * ONE accordion row per executor of the host, and the expansion is the FULL
+ * working block IN PLACE — the ExecutorSheet's own form component (link ·
+ * access · identity · capabilities · inventory · tech · danger), remounted
+ * here with the SAME freeze/stamp discipline the sheet uses. Behavior
+ * parity is by construction: the sheet and the accordion mount the one
+ * form; nothing is re-implemented.
+ *
+ * Z1 speaks the lore vocabulary over the SAME data (no new endpoint, no
+ * invention): the host is the cortex zone, each harness row is a PLEXUS,
+ * and the zone's neurons are the members' agent-reported specialists (the
+ * ME-064 counters summed — shown only when at least one member reported an
+ * inventory; honest absence otherwise). A zone with no plexuses renders an
+ * honest line, never an empty block.
  *
  * Row facts (one glance): presence word + dot, the name, the harness type,
  * the REFUSAL badge («почему не возьмёт задачу» — registry verdicts only:
@@ -55,32 +63,67 @@ export function HostHarnesses({
   koraItems: readonly KoraSession[];
 }) {
   const t = useT();
+  // The zone's neuron count: the SUM of the members' agent-reported
+  // specialists counters (ME-064, the same typed accessor the row counters
+  // use). null when NO member reported a harness inventory — an honest
+  // absence, never a fabricated 0.
+  const neuronTotal = useMemo(() => {
+    let total = 0;
+    let reported = false;
+    for (const member of members) {
+      const env = member.harness_inventory?.[0];
+      if (!env) continue;
+      reported = true;
+      const specialists = inventoryCategories(env).find(
+        (category) => category.key === "specialists",
+      );
+      total += specialists?.count ?? 0;
+    }
+    return reported ? total : null;
+  }, [members]);
   return (
-    <section aria-label={t("agents.hosts.harnessesTitle")} className="space-y-1">
-      <div className="flex items-center justify-between gap-2">
+    <section
+      aria-label={t("agents.hosts.zoneStructureTitle")}
+      className="space-y-1"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
-          {t("agents.hosts.harnessesTitle")}
+          {t("agents.hosts.zoneStructureTitle")}
         </h3>
-        {/* The contextual conveyor entry (C1: the connect action left the
-         * nav — the field carries it where a harness would be added). */}
-        <Link
-          to="/agents/harnesses?connect=1"
-          className="flex min-h-6 items-center rounded-sm px-1 text-xs text-foreground-secondary underline-offset-2 transition-colors duration-instant hover:text-foreground hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
-        >
-          {t("agents.hosts.actionAddHarness")}
-        </Link>
+        <div className="flex items-center gap-2">
+          {neuronTotal !== null ? (
+            <span className="whitespace-nowrap font-mono text-xs tabular-nums text-foreground-muted">
+              {t("agents.hosts.zoneNeuronsCounter", { n: neuronTotal })}
+            </span>
+          ) : null}
+          {/* The contextual conveyor entry (C1: the connect action left the
+           * nav — the field carries it where a harness would be added). */}
+          <Link
+            to="/agents/harnesses?connect=1"
+            className="flex min-h-6 whitespace-nowrap items-center rounded-sm px-1 text-xs text-foreground-secondary underline-offset-2 transition-colors duration-instant hover:text-foreground hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+          >
+            {t("agents.hosts.actionAddHarness")}
+          </Link>
+        </div>
       </div>
-      <ul className="space-y-1">
-        {members.map((member) => (
-          <HarnessRow
-            key={member.id}
-            member={member}
-            meta={meta}
-            now={now}
-            sessions24={koraSessions24(koraItems, member.id, now)}
-          />
-        ))}
-      </ul>
+      {members.length === 0 ? (
+        // The honest empty zone: a LINE that answers, never an empty block.
+        <p className="px-2.5 py-2 text-sm text-foreground-muted">
+          {t("agents.hosts.zoneEmpty")}
+        </p>
+      ) : (
+        <ul className="space-y-1">
+          {members.map((member) => (
+            <HarnessRow
+              key={member.id}
+              member={member}
+              meta={meta}
+              now={now}
+              sessions24={koraSessions24(koraItems, member.id, now)}
+            />
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

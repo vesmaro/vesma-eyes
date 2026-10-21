@@ -245,7 +245,7 @@ async function main() {
       out.selectedAriaSelected =
         document.querySelector('[role="option"][aria-selected="true"]') !== null;
       // The accordion semantics.
-      const acc = document.querySelector('[aria-label="Host harnesses"] button[aria-expanded]');
+      const acc = document.querySelector('[aria-label="Zone plexuses"] button[aria-expanded]');
       out.accordionExpanded = acc !== null;
       out.accordionControls =
         acc !== null && document.getElementById(acc.getAttribute("aria-controls") ?? "") !== null

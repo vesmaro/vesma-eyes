@@ -1282,7 +1282,6 @@ export const ru = {
   "agents.hosts.recentEmpty": "Тишина. Первые события — после первого доклада.",
   "agents.hosts.recentFailed": "Ленту не удалось загрузить.",
   "agents.hosts.reconnectAction": "Подключить заново",
-  "agents.hosts.harnessesTitle": "Харнесы хоста",
   // Зоны мозга Z1 (BRAIN-ZONES-VISUAL-DOC §2-3): хост = зона коры, харнес =
   // сплетение, специалист = нейрон — та же иерархия владельца, словарь лора.
   "agents.hosts.zoneStructureTitle": "Сплетения зоны",
