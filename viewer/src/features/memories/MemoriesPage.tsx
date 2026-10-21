@@ -1,4 +1,4 @@
-import { useLocation, useSearchParams } from "react-router";
+import { Link, useLocation, useSearchParams } from "react-router";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { MemoryCard } from "@/components/MemoryCard/MemoryCard";
@@ -15,6 +15,7 @@ import {
   parseMemoryListParams,
   toListParams,
 } from "./listParams";
+import { useAgentOptions } from "./useAgentOptions";
 import { useProjectOptions } from "./useProjectOptions";
 import { pageGridClass } from "@/layout/pageGrid";
 
@@ -31,10 +32,18 @@ export function MemoriesPage() {
   const location = useLocation();
   const state = parseMemoryListParams(searchParams);
   const projects = useProjectOptions();
+  const agents = useAgentOptions();
   const list = useMemories(toListParams(state));
 
   const patch = (
-    changes: Partial<{ status: string; project: string; tag: string; limit: number; page: number }>,
+    changes: Partial<{
+      status: string;
+      project: string;
+      agent: string;
+      tag: string;
+      limit: number;
+      page: number;
+    }>,
   ) => {
     setSearchParams(
       (prev) => {
@@ -46,6 +55,8 @@ export function MemoriesPage() {
         else next.delete("status");
         if (merged.project) next.set("project", merged.project);
         else next.delete("project");
+        if (merged.agent) next.set("agent", merged.agent);
+        else next.delete("agent");
         if (merged.tag) next.set("tag", merged.tag);
         else next.delete("tag");
         if (merged.limit !== DEFAULT_PAGE_SIZE) next.set("limit", String(merged.limit));
@@ -67,9 +78,22 @@ export function MemoriesPage() {
 
   return (
     <section aria-labelledby="memories-title" className={pageGridClass("showcase", "space-y-4")}>
-      <h1 id="memories-title" className="text-xl font-semibold">
-        {t("memories.title")}
-      </h1>
+      <div>
+        <h1 id="memories-title" className="text-xl font-semibold">
+          {t("memories.title")}
+        </h1>
+        {/* D7 P5: why this page exists (the archive) and when to use the
+         * pulse instead — the two memory faces answer different questions. */}
+        <p className="mt-1 text-sm text-foreground-secondary">
+          {t("memories.subtitle")}{" "}
+          <Link
+            to="/memory/pulse"
+            className="text-iris-bright underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          >
+            {t("memories.toPulse")}
+          </Link>
+        </p>
+      </div>
 
       {/* Filters (inventory §4: status / project / limit as URL params).
        * Deliberately not role="search" — it filters the list, it does not search. */}
@@ -117,6 +141,27 @@ export function MemoriesPage() {
             {projects.map((project) => (
               <option key={project} value={project}>
                 {project}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          {/* D7: author filter — a native vesma listing filter (`?agent=`),
+           * options aggregated from the rows' own `agent` field. */}
+          <label htmlFor="memories-agent" className="text-xs text-foreground-secondary">
+            {t("memories.agentLabel")}
+          </label>
+          <select
+            id="memories-agent"
+            value={state.agent ?? ""}
+            onChange={(event) => patch({ agent: event.target.value || undefined })}
+            className="h-12 md:h-12 md:h-9 rounded-md border border-border bg-well px-2 text-sm text-foreground focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          >
+            <option value="">{t("memories.allAgents")}</option>
+            {agents.map((agent) => (
+              <option key={agent} value={agent}>
+                {agent}
               </option>
             ))}
           </select>
@@ -187,7 +232,12 @@ export function MemoriesPage() {
               <Button
                 variant="outline"
                 onClick={() =>
-                  patch({ status: undefined, project: undefined, tag: undefined })
+                  patch({
+                    status: undefined,
+                    project: undefined,
+                    agent: undefined,
+                    tag: undefined,
+                  })
                 }
               >
                 {t("memories.clearFilters")}

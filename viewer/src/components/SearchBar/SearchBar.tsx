@@ -27,13 +27,25 @@ const SEARCH_TYPES: {
   value: SearchTypeSetting;
   labelKey: TranslationKey;
   titleKey: TranslationKey;
+  hintKey: TranslationKey;
 }[] = [
-  { value: "auto", labelKey: "search.typeAuto", titleKey: "search.typeAutoTitle" },
-  { value: "fts", labelKey: "search.typeFts", titleKey: "search.typeFtsTitle" },
+  {
+    value: "auto",
+    labelKey: "search.typeAuto",
+    titleKey: "search.typeAutoTitle",
+    hintKey: "search.modeHintAuto",
+  },
+  {
+    value: "fts",
+    labelKey: "search.typeFts",
+    titleKey: "search.typeFtsTitle",
+    hintKey: "search.modeHintFts",
+  },
   {
     value: "semantic",
     labelKey: "search.typeSemantic",
     titleKey: "search.typeSemanticTitle",
+    hintKey: "search.modeHintSemantic",
   },
 ];
 
@@ -108,32 +120,43 @@ export function SearchBar({
       </div>
 
       {onSearchTypeChange ? (
-        <fieldset className="mt-3 flex items-center justify-center gap-1">
-          <legend className="sr-only">{t("search.typeLegend")}</legend>
-          {SEARCH_TYPES.map((option) => (
-            <label
-              key={option.value}
-              title={t(option.titleKey)}
-              className={cn(
-                "cursor-pointer rounded-full border px-3 py-1 text-xs transition-colors duration-instant",
-                "has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-focus",
-                searchType === option.value
-                  ? "border-iris bg-iris-tint text-iris-bright" // AA in both themes
-                  : "border-border-subtle text-foreground-secondary hover:bg-elevated",
-              )}
-            >
-              <input
-                type="radio"
-                name={typeName}
-                value={option.value}
-                checked={searchType === option.value}
-                onChange={() => onSearchTypeChange(option.value)}
-                className="sr-only"
-              />
-              {t(option.labelKey)}
-            </label>
-          ))}
-        </fieldset>
+        <>
+          {/* D7: the modes are words a layperson understands, and the ACTIVE
+           * mode's explanation is a visible line — touch has no hover, so a
+           * title-only explanation was invisible on phones. */}
+          <fieldset className="mt-3 flex items-center justify-center gap-1">
+            <legend className="sr-only">{t("search.typeLegend")}</legend>
+            {SEARCH_TYPES.map((option) => (
+              <label
+                key={option.value}
+                title={t(option.titleKey)}
+                className={cn(
+                  "cursor-pointer rounded-full border px-3 py-1 text-xs transition-colors duration-instant",
+                  "has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-focus",
+                  searchType === option.value
+                    ? "border-iris bg-iris-tint text-iris-bright" // AA in both themes
+                    : "border-border-subtle text-foreground-secondary hover:bg-elevated",
+                )}
+              >
+                <input
+                  type="radio"
+                  name={typeName}
+                  value={option.value}
+                  checked={searchType === option.value}
+                  onChange={() => onSearchTypeChange(option.value)}
+                  className="sr-only"
+                />
+                {t(option.labelKey)}
+              </label>
+            ))}
+          </fieldset>
+          <p role="note" className="mt-1.5 text-center text-xs text-foreground-muted">
+            {t(
+              SEARCH_TYPES.find((option) => option.value === searchType)?.hintKey ??
+                "search.modeHintAuto",
+            )}
+          </p>
+        </>
       ) : null}
     </form>
   );

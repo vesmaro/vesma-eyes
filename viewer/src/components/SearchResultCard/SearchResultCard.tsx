@@ -1,8 +1,9 @@
 import { Link } from "react-router";
 import { TagBadge } from "@/components/TagBadge/TagBadge";
+import { humanMemoryTitle } from "@/components/memory/memoryDisplay";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { useT } from "@/i18n";
+import { useT, type TranslationKey } from "@/i18n";
 import { withReturn } from "@/lib/returnParams";
 import type { SearchResult } from "@/gateway/types";
 import { highlight } from "./highlight";
@@ -34,6 +35,20 @@ const TYPE_VARIANT: Record<
   hybrid: "iris",
 };
 
+/** D7: the badge speaks human words and explains itself; the raw server
+ * score rides the tooltip (title/aria) — the number is an internal scale,
+ * the honest signal for a reader is WHERE the hit landed, not «0.01». */
+const TYPE_LABEL_KEY: Record<SearchResult["search_type"], TranslationKey> = {
+  fts: "search.hitTypeFts",
+  semantic: "search.hitTypeSemantic",
+  hybrid: "search.hitTypeHybrid",
+};
+const TYPE_EXPLAIN_KEY: Record<SearchResult["search_type"], TranslationKey> = {
+  fts: "search.hitTypeExplainFts",
+  semantic: "search.hitTypeExplainSemantic",
+  hybrid: "search.hitTypeExplainHybrid",
+};
+
 export function SearchResultCard({
   result,
   queryTerms = [],
@@ -54,19 +69,19 @@ export function SearchResultCard({
               to={detailHref}
               className="inline-flex min-h-12 md:min-h-6 items-center hover:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
             >
-              {highlight(result.title || result.id, queryTerms)}
+              {/* D7: a bare "User" speaker word never faces the search
+               * results — same mined headline as the list card. */}
+              {highlight(humanMemoryTitle(result) || result.id, queryTerms)}
             </Link>
           </h2>
           <span className="flex shrink-0 items-center gap-1.5">
-            <Badge variant={TYPE_VARIANT[result.search_type]}>
-              {result.search_type}
-            </Badge>
-            <span
-              className="rounded-sm bg-elevated px-2 py-0.5 text-xs font-medium text-iris-bright"
-              title={t("search.relevanceTitle", { value: result.score })}
+            <Badge
+              variant={TYPE_VARIANT[result.search_type]}
+              title={t("search.relevanceTitle", { value: result.score.toFixed(2) })}
+              aria-label={`${t(TYPE_EXPLAIN_KEY[result.search_type])}. ${t("search.relevanceTitle", { value: result.score.toFixed(2) })}`}
             >
-              {result.score.toFixed(2)}
-            </span>
+              {t(TYPE_LABEL_KEY[result.search_type])}
+            </Badge>
           </span>
         </div>
         <p className="line-clamp-2 text-sm leading-relaxed text-foreground-secondary">

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { TagBadge } from "@/components/TagBadge/TagBadge";
 import { TextEngine } from "@/components/TextEngine";
@@ -6,6 +6,7 @@ import {
   formatConfidence,
   formatTimestamp,
   isMonoMemory,
+  memorySearchQuery,
 } from "@/components/memory/memoryDisplay";
 import { statusBadgeVariant, statusLabelKey } from "@/components/memory/memoryBadges";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +49,20 @@ export function MemoryScroll({
   className,
 }: MemoryScrollProps) {
   const t = useT();
+  // D7 P2: the card had zero actions. What the existing APIs honestly allow:
+  // copy the id (clipboard), «find similar» (unified search on the human
+  // title), «records with this tag» (the tags drilldown, real links).
+  // Editing/deleting a memory has NO viewer-side API (vesma is the writer)
+  // — so there is none.
+  const [copyState, setCopyState] = useState<"idle" | "ok" | "failed">("idle");
+  const copyId = async () => {
+    try {
+      await navigator.clipboard.writeText(memory.id ?? "");
+      setCopyState("ok");
+    } catch {
+      setCopyState("failed");
+    }
+  };
   // U4 tonal layer: the organ mounts on this scroll surface only (one
   // implementation per concept — the SAME lazy chunk pattern the well
   // organ rides; loads after first paint, never on the LCP path).
@@ -163,15 +178,54 @@ export function MemoryScroll({
         </div>
       ) : null}
 
-      {/* 4. Tags row */}
+      {/* 4. Tags row — each tag is a real link to the tags drilldown (D7 P2:
+       * «открыть связанные»; shareable hrefs, keyboard + AT named). */}
       {(memory.tags ?? []).length > 0 ? (
         <div className="mt-4 flex flex-wrap gap-1.5">
           <Badge variant="outline">{memory.memory_type}</Badge>
           {memory.tags?.map((tag) => (
-            <TagBadge key={tag} tag={tag} size="md" />
+            <Link
+              key={tag}
+              to={`/memory/tags?tag=${encodeURIComponent(tag)}`}
+              aria-label={t("memory.actionTagRecords", { tag })}
+              className="rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            >
+              <TagBadge tag={tag} size="md" />
+            </Link>
           ))}
         </div>
       ) : null}
+
+      {/* 4b. Actions row (D7 P2): copy id · find similar. Keyboard-reachable
+       * real buttons/links in a labeled group; the copy verdict is announced
+       * via aria-live (colour/state never carries the message alone). */}
+      <div
+        role="group"
+        aria-label={t("memory.actionsLabel")}
+        className="mt-4 flex flex-wrap items-center gap-2"
+      >
+        <Button variant="outline" size="sm" onClick={() => void copyId()}>
+          {copyState === "ok"
+            ? t("memory.actionCopied")
+            : copyState === "failed"
+              ? t("memory.actionCopyFailed")
+              : t("memory.actionCopyId")}
+        </Button>
+        <Button variant="outline" size="sm" asChild>
+          <Link
+            to={`/memory/search?q=${encodeURIComponent(memorySearchQuery(memory))}`}
+          >
+            {t("memory.actionFindSimilar")}
+          </Link>
+        </Button>
+        <span role="status" aria-live="polite" className="sr-only">
+          {copyState === "ok"
+            ? t("memory.actionCopied")
+            : copyState === "failed"
+              ? t("memory.actionCopyFailed")
+              : ""}
+        </span>
+      </div>
 
       {/* Related memories (derived_from) — only rendered when the fixture carries links */}
       {related.length > 0 ? (

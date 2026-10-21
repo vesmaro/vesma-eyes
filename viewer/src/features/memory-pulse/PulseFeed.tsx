@@ -4,7 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TagBadge } from "@/components/TagBadge/TagBadge";
 import { TextEngine } from "@/components/TextEngine";
-import { formatTimestamp } from "@/components/memory/memoryDisplay";
+import {
+  formatTimestamp,
+  memoryHumanFace,
+} from "@/components/memory/memoryDisplay";
 import { statusBadgeVariant, statusLabelKey } from "@/components/memory/memoryBadges";
 import type { MemoryPulseItem, MemoryPulseServerNote } from "@/gateway/boardTypes";
 import { useT } from "@/i18n";
@@ -120,8 +123,14 @@ export function PulseFeed({
           // chrome so the provenance badge hangs from the title line.
           // ME-072 C: a body that merely repeats the title renders nothing —
           // the honest single-line row, not a doubled heading.
-          const body =
-            typeof item.content === "string"
+          // D7: a bare "User" speaker title gets the mined human headline
+          // and the machine-dump head goes under the fold (same rules as the
+          // list/search faces — one headline policy across the domain).
+          const face = memoryHumanFace({ title: item.title, content: item.content ?? "" });
+          const displayTitle = face ? face.headline : item.title;
+          const body = face
+            ? (face.preview ?? "")
+            : typeof item.content === "string"
               ? withoutDuplicatedTitle(item.title, item.content).trim()
               : "";
           const hasContent = body.length > 0;
@@ -129,7 +138,11 @@ export function PulseFeed({
             <li
               key={`${item.server}:${item.id}:${index}`}
               className={cn(
-                "flex min-h-row-airy gap-3 rounded-md border border-border-subtle bg-well px-4 py-2 shadow-well",
+                // D7 responsive: on narrow screens the status badge and the
+                // timestamp wrap under the text instead of squeezing the
+                // content column to a word-per-line sliver. md keeps the
+                // canonical single-line row (flex-basis 0 = the old flex-1).
+                "flex min-h-row-airy flex-wrap gap-3 rounded-md border border-border-subtle bg-well px-4 py-2 shadow-well",
                 hasContent ? "items-start" : "items-center",
               )}
             >
@@ -137,7 +150,7 @@ export function PulseFeed({
               <Badge variant="outline" className="shrink-0 font-mono text-xs">
                 {item.server}
               </Badge>
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-[1_1_14rem] md:flex-[1_1_0%]">
                 <Link
                   to={
                     returnSource
@@ -150,7 +163,7 @@ export function PulseFeed({
                   }
                   className="inline-flex min-h-12 md:min-h-6 items-center font-scroll text-sm font-semibold leading-snug hover:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                 >
-                  {item.title || t("pulse.untitled")}
+                  {displayTitle || t("pulse.untitled")}
                 </Link>
                 {hasContent ? (
                   // UI-27: fragment renders through the TextEngine primitive

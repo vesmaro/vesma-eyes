@@ -127,6 +127,19 @@ describe("MockAdapter.listMemories", () => {
     }
     expect(page2[0].id).toBe(all[5].id);
   });
+
+  it("filters by agent — the native listing filter (D7)", async () => {
+    const adapter = makeAdapter();
+    const zed = await adapter.listMemories({ agent: "zed" });
+    expect(zed.length).toBeGreaterThan(0);
+    expect(zed.every((memory) => memory.agent === "zed")).toBe(true);
+
+    // Combined with a project filter (what the list UI composes).
+    const zedInVesma = await adapter.listMemories({ agent: "zed", project: "vesma" });
+    expect(zedInVesma.every((memory) => memory.agent === "zed" && memory.project === "vesma")).toBe(true);
+
+    await expect(adapter.listMemories({ agent: "nobody" })).resolves.toEqual([]);
+  });
 });
 
 describe("MockAdapter.getMemory", () => {

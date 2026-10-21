@@ -2,8 +2,8 @@ import type { ListMemoriesParams } from "@/gateway/types";
 
 /**
  * URL-param contract for `/memories` (component-inventory §4):
- * `?status=&project=&limit=&page=`. Pure parse/serialize helpers — unit
- * testable, and shared by the filter controls and the pagination footer.
+ * `?status=&project=&agent=&limit=&page=`. Pure parse/serialize helpers —
+ * unit testable, and shared by the filter controls and the pagination footer.
  */
 
 export const MEMORY_STATUSES = [
@@ -20,6 +20,8 @@ export const DEFAULT_PAGE_SIZE = 20;
 export interface MemoryListUrlState {
   status?: string;
   project?: string;
+  /** Author filter (D7 — native vesma listing filter `?agent=`). */
+  agent?: string;
   /** Tag filter (UI-17 §5.6 — «Открыть в Записях» deep-link `/memory?tag=`). */
   tag?: string;
   limit: number;
@@ -34,6 +36,7 @@ export function parseMemoryListParams(params: URLSearchParams): MemoryListUrlSta
     status:
       status && (MEMORY_STATUSES as readonly string[]).includes(status) ? status : undefined,
     project: params.get("project") ?? undefined,
+    agent: params.get("agent") ?? undefined,
     tag: params.get("tag") ?? undefined,
     limit: PAGE_SIZES.includes(rawLimit as (typeof PAGE_SIZES)[number])
       ? rawLimit
@@ -47,6 +50,7 @@ export function toListParams(state: MemoryListUrlState): ListMemoriesParams {
   return {
     status: state.status,
     project: state.project,
+    agent: state.agent,
     tags: state.tag,
     limit: state.limit,
     offset: (state.page - 1) * state.limit,
@@ -55,5 +59,5 @@ export function toListParams(state: MemoryListUrlState): ListMemoriesParams {
 
 /** True when any filter narrows the list (drives the empty-state copy). */
 export function hasActiveFilters(state: MemoryListUrlState): boolean {
-  return Boolean(state.status || state.project || state.tag);
+  return Boolean(state.status || state.project || state.agent || state.tag);
 }

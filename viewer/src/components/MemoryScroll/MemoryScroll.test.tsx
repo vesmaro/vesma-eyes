@@ -82,4 +82,19 @@ describe("MemoryScroll (the scroll)", () => {
     expect(html).toContain("bg-scroll-bg");
     expect(html).toContain("border-scroll-border");
   });
+
+  it("carries the D7 actions row: copy id, find similar, tag drilldowns", () => {
+    const html = render(MOCK_MEMORIES[0]);
+    expect(html).toContain("Record actions");
+    expect(html).toContain("Copy id");
+    expect(html).toContain("Find similar");
+    // «Find similar» searches on the human title's leading words
+    // (punctuation stripped, slashes kept — the FTS ranks on terms).
+    expect(html).toContain(
+      `href="/memory/search?q=${encodeURIComponent("ADR gateway via same origin /api proxy")}"`,
+    );
+    // Every tag opens the tags drilldown for its own tag.
+    expect(html).toContain('href="/memory/tags?tag=');
+    expect(html).not.toContain("Delete"); // honest: no edit/delete API exists
+  });
 });

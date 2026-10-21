@@ -613,6 +613,10 @@ export class BoardAdapter implements BoardGateway {
         limit: params.limit,
         status: params.status,
         project: params.project,
+        // Native vesma listing filter (D7 — «фильтр по агенту»): the board
+        // merged listing passes it through verbatim (server memories_merged
+        // → vesma /memories?agent=).
+        agent: params.agent,
         // UI-17 §5.6: the «Открыть в Записях» path narrows the merged list
         // by tag — a native vesma listing filter, pass-through verbatim.
         tags: params.tags,

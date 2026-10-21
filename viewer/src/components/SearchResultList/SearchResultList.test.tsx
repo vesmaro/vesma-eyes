@@ -25,9 +25,13 @@ describe("SearchResultList (mock fixtures)", () => {
     // Both FTS-tagged fixture memories surface, deep-linked.
     expect(html).toContain('href="/memory/mem-0002"');
     expect(html).toContain('href="/memory/mem-0010"');
-    // Every hit carries a search-type badge (fts / semantic / hybrid)…
-    expect(html).toContain("hybrid");
-    // …and query terms are highlighted with <mark>.
+    // Every hit carries a HUMAN type badge (D7): plain words + the type and
+    // the server score explained in title/aria — the raw wire word is gone.
+    expect(html).toContain("слова + смысл");
+    expect(html).toContain("нашёл комбинированный поиск");
+    expect(html).toContain("оценка сервера");
+    expect(html).not.toContain(">hybrid<");
+    // Query terms are highlighted with <mark>.
     expect(html).toContain("<mark");
   });
 

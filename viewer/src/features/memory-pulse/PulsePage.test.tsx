@@ -44,12 +44,23 @@ describe("PulsePage (mock adapter — capable)", () => {
   it("renders the feed with provenance, the scope switcher and detail links", async () => {
     const html = await renderPulse(new MockAdapter({ latency: false }));
     expect(html).toContain("Memory pulse");
+    // D7 P5: the page says why it exists and hands over to Records.
+    expect(html).toContain("fresh cut across the stores");
+    expect(html).toContain('href="/memory"');
     // Scope switcher: "all stores" option present (URL-driven state).
     expect(html).toContain("all stores");
     expect(html).toContain("Pulse scope");
     // Feed rows carry the mock store provenance and link to the scroll.
     expect(html).toContain("mock-store");
     expect(html).toMatch(/href="\/memory\/[^"]+"/);
+  });
+
+  it("says honestly when the feed went quiet (mock fixtures predate now)", async () => {
+    // The mock corpus is dated 2026-09 — against any later clock the
+    // cadence-derived verdict fires and the honest plate renders.
+    const html = await renderPulse(new MockAdapter({ latency: false }));
+    expect(html).toContain("The pulse has nearly stopped");
+    expect(html).toMatch(/the newest record is \d+ days old/);
   });
 
   it("renders the honest unavailable state on a vesma gateway", async () => {

@@ -153,6 +153,8 @@ function SearchResults({
   const results = type === "auto" ? all : all.filter((hit) => hit.search_type === type);
 
   if (results.length === 0) {
+    // D7: the empty state names the mode in human words, not the raw param.
+    const typeLabel = type === "fts" ? t("search.typeFts") : t("search.typeSemantic");
     return (
       <EmptyState
         variant="empty"
@@ -160,7 +162,7 @@ function SearchResults({
         message={
           type === "auto"
             ? t("search.noMatches", { query })
-            : t("search.noTypedMatches", { type, query })
+            : t("search.noTypedMatches", { type: typeLabel, query })
         }
         detail={type === "auto" ? t("search.noMatchesHint") : undefined}
       />
