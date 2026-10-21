@@ -170,7 +170,7 @@ function DeviceRow({
         "rounded-md border bg-well px-2.5 py-1.5 text-sm shadow-well transition-colors duration-instant " +
         (revoked
           ? "border-border-subtle text-foreground-muted"
-          : "border-border-subtle hover:border-iris-bright/40")
+          : "border-border-subtle hover:border-border-iris")
       }
     >
       <div className="flex flex-wrap items-center gap-2">

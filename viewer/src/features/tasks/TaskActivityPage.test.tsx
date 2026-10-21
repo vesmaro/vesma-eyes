@@ -407,11 +407,11 @@ describe("live merge (§8.6) — prepends, flashes, never shifts or duplicates",
       expect(after[index]).toBe(before[index - 1]); // every old row intact, in order
     }
     // the 2 s flash — and its quiet fade (colour only, rows stay)
-    expect(feedList()?.querySelector("li.bg-iris\\/10")).not.toBeNull();
+    expect(feedList()?.querySelector("li.bg-iris-tint")).not.toBeNull();
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 2100));
     });
-    expect(feedList()?.querySelector("li.bg-iris\\/10")).toBeNull();
+    expect(feedList()?.querySelector("li.bg-iris-tint")).toBeNull();
     expect(feedRows()).toEqual(after);
     await actUnmount(root);
   });

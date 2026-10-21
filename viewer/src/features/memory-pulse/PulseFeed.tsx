@@ -102,7 +102,7 @@ export function PulseFeed({
     <div className={cn("space-y-2", className)}>
       {degraded.length > 0 ? (
         <p
-          className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/10 p-3 text-xs text-foreground-secondary"
+          className="flex items-start gap-2 rounded-md border border-warning-tint bg-warning-tint p-3 text-xs text-foreground-secondary"
           role="status"
         >
           <TriangleAlert

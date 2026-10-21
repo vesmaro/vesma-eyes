@@ -148,7 +148,7 @@ export function Shell() {
              * Its bottom seam is living vein Ж3 (ME-071 W1a). */}
             <div
               data-living-seam="crumbs"
-              className="sticky top-topbar z-20 h-crumbs border-b border-border-subtle bg-background/95 px-4 backdrop-blur-sm md:px-8"
+              className="sticky top-topbar z-20 h-crumbs border-b border-border-subtle bg-background px-4 backdrop-blur-sm md:px-8"
             >
               <Breadcrumbs pathname={location.pathname} search={location.search} />
             </div>

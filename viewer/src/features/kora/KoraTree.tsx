@@ -140,7 +140,7 @@ function HostBranch({
       className={cn(
         "rounded-md transition-opacity duration-fast motion-reduce:transition-none",
         dimmed && "opacity-50",
-        active && "bg-iris/10",
+        active && "bg-iris-tint",
       )}
     >
       <div className="flex min-h-12 md:min-h-6 items-center gap-1">
@@ -260,7 +260,7 @@ function AgentBranch({
                   className={cn(
                     "flex min-h-12 md:min-h-6 items-center gap-1.5 rounded-sm border-l-2 px-1 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
                     selected
-                      ? "border-iris bg-iris/10"
+                      ? "border-iris bg-iris-tint"
                       : "border-transparent hover:bg-elevated",
                   )}
                 >

@@ -259,7 +259,7 @@ describe("ME-071 W3: done-tempo + flash + blocked edge", () => {
     await renderAt("/tasks", [BLOCKED_TASK]);
     await waitFor(() => container!.textContent?.includes(BLOCKED_TASK.title) === true);
     const card = cardOf(BLOCKED_TASK.title);
-    expect(card.className).toContain("before:bg-error/80");
+    expect(card.className).toContain("before:bg-error");
     // U3 supersedes the W3 sr-only generic: the reason is now a VISIBLE
     // human line derived from the task's own data (no agents → no executor
     // assigned), ⟂-marked so the edge is never colour-alone (1.4.1).

@@ -575,7 +575,7 @@ function CreateTaskWizard({
             {t("tasks.create.stepReview")}
           </h2>
           {legFailedTaskId !== null ? (
-            <p role="alert" className="mt-2 rounded-md border border-error/40 bg-well px-2 py-1.5 text-xs text-error">
+            <p role="alert" className="mt-2 rounded-md border border-error-tint bg-well px-2 py-1.5 text-xs text-error">
               {t("tasks.create.assignmentFailed", { id: legFailedTaskId })}
             </p>
           ) : null}

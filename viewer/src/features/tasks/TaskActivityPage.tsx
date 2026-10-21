@@ -658,7 +658,7 @@ function ActivityRow({
     <li
       className={
         "flex flex-wrap items-baseline gap-x-2 gap-y-0.5 rounded-sm border border-transparent px-2 py-1.5 text-sm transition-colors " +
-        (fresh ? "bg-iris/10" : "")
+        (fresh ? "bg-iris-tint" : "")
       }
       style={{ minHeight: "var(--row-h)" }}
     >

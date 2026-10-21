@@ -140,7 +140,7 @@ export function MobileSidebar({
   if (!open) return null;
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-overlay/80" />
+      <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-overlay-scrim" />
       <DialogPrimitive.Content className="fixed inset-y-0 left-0 z-50 flex w-sidebar flex-col border-r border-border-subtle bg-well shadow-float">
         <DialogPrimitive.Title className="sr-only">
           {t("nav.sections")}

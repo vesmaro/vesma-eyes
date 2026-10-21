@@ -90,6 +90,13 @@ export default {
         // 15% error-tint is a text-bearing surface; a full row needs the
         // quieter strata-class wash — same canon token, strata alpha).
         "error-wash": "color-mix(in srgb, var(--color-error) 5%, transparent)",
+        // ux-hygiene wave: the modal scrim — overlay canon at 80% (the
+        // `bg-overlay/80` spelling silently produced NO utility on var()
+        // colours). Same pattern as the -tint entries: a derived utility
+        // composed via color-mix over the EXISTING token — no new token
+        // name in tokens.css.
+        "overlay-scrim":
+          "color-mix(in srgb, var(--color-bg-overlay) 80%, transparent)",
       },
       // Neuro strata washes (canvas/hero surfaces only — never on text cards).
       backgroundImage: {

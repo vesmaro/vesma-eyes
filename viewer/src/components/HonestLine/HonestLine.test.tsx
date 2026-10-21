@@ -51,10 +51,10 @@ describe("HonestLine (UX-overhaul §7.1)", () => {
     const neutral = renderLine("ru");
     // Neutral incompleteness: the quiet border-subtle line.
     expect(neutral).toContain("border-border-subtle");
-    expect(neutral).not.toContain("border-warning/40");
+    expect(neutral).not.toContain("border-warning-tint");
     const warning = renderLine("ru", "warning");
     // Something live but not everything — the EXISTING warning token.
-    expect(warning).toContain("border-warning/40");
+    expect(warning).toContain("border-warning-tint");
     expect(warning).toContain("text-warning");
   });
 

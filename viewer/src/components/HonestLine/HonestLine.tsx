@@ -41,7 +41,7 @@ export function HonestLine({
       role="status"
       className={cn(
         "flex flex-wrap items-baseline gap-2 rounded-md border bg-well px-3 py-2 text-sm shadow-well",
-        tone === "warning" ? "border-warning/40" : "border-border-subtle",
+        tone === "warning" ? "border-warning-tint" : "border-border-subtle",
         className,
       )}
     >
