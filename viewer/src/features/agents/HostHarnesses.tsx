@@ -257,8 +257,12 @@ function HarnessRow({
           className="ml-auto flex shrink-0 items-center gap-1 font-mono text-xs tabular-nums text-foreground-muted"
         >
           <MessageSquareIcon />
+          {/* D12: the same colon form as the aria name — «сессии: 0», never
+           * the count-first «0 сессии» that read as broken prose. */}
+          <span className="hidden lg:inline">
+            {t("agents.hosts.sessions24Short")}:{" "}
+          </span>
           {sessions24}
-          <span className="hidden lg:inline">{t("agents.hosts.sessions24Short")}</span>
         </span>
         {/* The «среда исполнения» slot (B2, filled data-driven by the
          * exec-env wave): the agent's own surface label when reported
@@ -334,6 +338,10 @@ function InventoryCounters({ member }: { member: ExecutorItem }) {
         // role="img" (the glyph+count composite) gives the span a NAMABLE
         // role, so aria-label replaces the touch-unavailable title at EVERY
         // width; the visible ≥lg label is presentational by the img role.
+        // D12 (панель 2026-10-21): the visible ≥lg form is the SAME colon
+        // form as the aria name («специалисты: 39») — the old visible
+        // «39 специалисты» read as broken prose; the colon form is the
+        // counter-is-data convention and never declines.
         <span
           key={key}
           role="img"
@@ -341,8 +349,8 @@ function InventoryCounters({ member }: { member: ExecutorItem }) {
           className="flex items-center gap-0.5 font-mono text-xs tabular-nums"
         >
           {INVENTORY_GLYPHS[key]}
+          <span className="hidden lg:inline">{t(labelKey)}: </span>
           {count}
-          <span className="hidden lg:inline">{t(labelKey)}</span>
         </span>
       ))}
     </span>

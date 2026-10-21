@@ -254,12 +254,13 @@ export const ru = {
   "overview.eventOther": "Событие шины",
   "overview.wellEmpty": "Колодец ждёт первой записи — их пишут агенты.",
   "overview.wellError": "Колодец недоступен — шина не ответила",
-  // UX-overhaul §3/§8 (Ф1): Обзор ведёт в рабочие домены (Задачи/Агенты)
-  // и говорит одной строкой, что ещё не живо (персона-ревью: формулировка).
-  // Review P3-4: Sessions/Traces left the nav in Ф1 — the line tells the
-  // owner where they live (they are reachable, just later).
+  // UX-overhaul §3/§8 (Ф1) + D8 (панель 2026-10-21): строка честности
+  // ОБЗОРА не спорит с экраном и остаётся правдой НА КАЖДОМ адаптере:
+  // хранилища на capable-шлюзах живы карточками прямо выше (строка их не
+  // обещает), сессии — в разделе «Кора»; «позже» — только у
+  // действительно несделанного (трассировки).
   "overview.honestyLater":
-    "Хранилища и метрики — в работе; сессии и трассировки появятся позже",
+    "Сессии живут в разделе «Кора»; трассировки появятся позже",
   "overview.storesLoading": "Загружаем состояние хранилищ",
   "overview.storesError": "Состояние хранилищ недоступно: {{message}}",
   "overview.storeOk": "работает",
@@ -1323,7 +1324,9 @@ export const ru = {
     "В зоне нет сплетений — подключите харнес, и он появится здесь.",
   "agents.hosts.actionAddHarness": "Подключить харнес",
   "palette.hostItem": "Хост {{host}}",
-  "palette.connectHost": "Подключить хост",
+  // D9: одна сущность на экране Подключения — «агент»; «хост» остаётся
+  // только меткой поля машины.
+  "palette.connectHost": "Подключить агента",
   "agents.hosts.refusalDisabled": "отключён",
   "agents.hosts.refusalRevoked": "отозван",
   "agents.hosts.execEnvTooltip": "Среда исполнения (данные агента)",
@@ -1426,7 +1429,7 @@ export const ru = {
   "agents.settings.meshIneligible": "mesh-транспорт — маршрутизация недоступна до R4",
 
   // --- agents domain: registry page /agents/harnesses (AGW-4) ----------------------
-  "nav.agentsHarnesses": "Подключить хост",
+  "nav.agentsHarnesses": "Подключение агентов",
   "agents.registry.title": "Подключение агентов",
   "agents.registry.loading": "Загружаем реестр агентов",
   "agents.registry.failed": "Не удалось загрузить реестр агентов",

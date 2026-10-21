@@ -233,10 +233,10 @@ export const en: Record<TranslationKey, string> = {
   "overview.wellError": "The well is unreachable — the bus did not answer",
   // UX-overhaul §3/§8 (Ф1): the overview leads into the working domains and
   // states what is not live yet in one honest line.
-  // Review P3-4: Sessions/Traces left the nav in Ф1 — the line tells the
-  // owner where they live (they are reachable, just later).
-  "overview.honestyLater":
-    "Stores and metrics are in the works; sessions and traces are coming later",
+  // D8 (panel 2026-10-21): the honesty line must not contradict the screen
+  // and stays true on EVERY adapter — sessions live in Kora; only the
+  // genuinely-missing surface keeps the «later» promise.
+  "overview.honestyLater": "Sessions live in Kora; traces are coming later",
   "overview.storesLoading": "Loading store health",
   "overview.storesError": "Store health unavailable: {{message}}",
   "overview.storeOk": "healthy",
@@ -1295,7 +1295,8 @@ export const en: Record<TranslationKey, string> = {
     "No plexuses in this zone yet — connect a harness and it will appear here.",
   "agents.hosts.actionAddHarness": "Add a harness",
   "palette.hostItem": "Host {{host}}",
-  "palette.connectHost": "Connect a host",
+  // D9: one noun on the Connect screen — "agent".
+  "palette.connectHost": "Connect an agent",
   "agents.hosts.refusalDisabled": "disabled",
   "agents.hosts.refusalRevoked": "revoked",
   "agents.hosts.execEnvTooltip": "Execution environment (agent-reported)",
@@ -1395,7 +1396,7 @@ export const en: Record<TranslationKey, string> = {
   "agents.settings.meshIneligible": "mesh transport — routing unavailable until R4",
 
   // --- agents domain: registry page /agents/harnesses (AGW-4) ----------------------
-  "nav.agentsHarnesses": "Connect a host",
+  "nav.agentsHarnesses": "Agent connection",
   "agents.registry.title": "Agent connections",
   "agents.registry.loading": "Loading the agent registry",
   "agents.registry.failed": "Failed to load the agent registry",

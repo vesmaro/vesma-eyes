@@ -1024,9 +1024,15 @@ function HostField({
                             aria-hidden="true"
                             className="size-2 shrink-0 rounded-full bg-success presence-dot-live"
                           />
-                          <span className="shrink-0 font-mono text-xs text-foreground-secondary">
-                            {session.harness}
-                          </span>
+                          {/* D9: the harness chip shows only when the label
+                           * does not already carry the source prefix — the
+                           * hermes row read «hermes hermes:api_server», the
+                           * same name twice in one line. */}
+                          {label.toLowerCase().startsWith(`${session.harness}:`) ? null : (
+                            <span className="shrink-0 font-mono text-xs text-foreground-secondary">
+                              {session.harness}
+                            </span>
+                          )}
                           <span className="min-w-0 truncate text-foreground-secondary">
                             {/* D9: same-project live sessions are told apart
                              * by the session's own native-id tail — the row

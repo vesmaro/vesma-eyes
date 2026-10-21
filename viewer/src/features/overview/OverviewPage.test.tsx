@@ -118,10 +118,9 @@ describe("OverviewPage (mock gateway — capable)", () => {
     expect(html).not.toContain('href="/memory/search"');
     expect(html).not.toContain('href="/memory/tags"');
     expect(html).not.toContain("Quick links");
-    // The honesty line names the not-yet-live surfaces in one sentence.
-    expect(html).toContain(
-      "Stores and metrics are in the works; sessions and traces are coming later",
-    );
+    // The honesty line matches the SCREEN (D8): sessions live in Kora;
+    // only traces keep the «later» promise.
+    expect(html).toContain("Sessions live in Kora; traces are coming later");
     // Mock adapter: control is available (no auth wall) — the ACTIVE mode
     // line, never the read-only one (fix/login-feedback).
     expect(html).toContain("session active");
@@ -139,11 +138,9 @@ describe("OverviewPage (vesma gateway — capabilities absent)", () => {
     // No agents/tasks capabilities — the busy and waiting blocks stay out.
     expect(html).not.toContain("Who is busy");
     expect(html).not.toContain("Waiting for you");
-    // The honesty line still NAMES the stores domain honestly (it says the
-    // registry is still in the works — that is true on every gateway).
-    expect(html).toContain(
-      "Stores and metrics are in the works; sessions and traces are coming later",
-    );
+    // The honesty line still names where things live (D8 wording) — true
+    // on every gateway.
+    expect(html).toContain("Sessions live in Kora; traces are coming later");
     // The vesma adapter has no mutation surface — the read-only mode line
     // is the honest contract there, even with an mnk_ session (L1 reads).
     expect(html).toContain("read-only");

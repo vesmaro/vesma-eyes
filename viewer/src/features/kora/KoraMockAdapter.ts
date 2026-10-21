@@ -132,7 +132,38 @@ export class KoraMockAdapter implements KoraGateway {
     this.hermesChatLimited =
       typeof location !== "undefined" &&
       new URLSearchParams(location.search).get("hermesChat") === "limited";
-    this.hermesIngested = false;
+    // `?hermesBridge=pulled` (mock builds only): the registry slice starts
+    // ALREADY ingested — visual stands (we-shots) frame the host card's
+    // live-session list without driving the pull UI first. The knob ALSO
+    // injects a SECOND live `hermes:api_server` row under the laptop host
+    // at RUNTIME (fixtures stay untouched): the D9 homonym frame — two
+    // same-project sessions the card must tell apart. The default stays
+    // un-ingested and duplicate-free: the honest «empty until a pull» flow.
+    if (
+      typeof location !== "undefined" &&
+      new URLSearchParams(location.search).get("hermesBridge") === "pulled"
+    ) {
+      this.hermesIngested = true;
+      const main = this.sessions.get("hermes:api-server-main");
+      if (main) {
+        this.sessions.set("hermes:api-63cc1ab78057f124", {
+          ...main,
+          id: "hermes:api-63cc1ab78057f124",
+          executor_id: "exec-laptop-hermes",
+          native_id: "api-63cc1ab78057f124",
+          state: "live",
+          started_at: "2026-09-24T06:15:00Z",
+          last_activity_at: "2026-09-24T09:40:00Z",
+          age_seconds: 4200,
+        });
+        this.sessions.set("hermes:api-server-main", {
+          ...main,
+          executor_id: "exec-laptop-hermes",
+        });
+      }
+    } else {
+      this.hermesIngested = false;
+    }
   }
 
   /** The `?koraAuth=locked` gate: throw before any read answers. */
