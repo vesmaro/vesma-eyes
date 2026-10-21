@@ -16,36 +16,61 @@ Task CRUD, moves, history, task memories and reports, archive, drafts, and memor
 
 Generated from the OpenAPI snapshot v1.59.0 (operations in this section: 18).
 
-### `POST` `/api/task-drafts`
+Request and response examples are synthesized from the snapshot schemas — values are illustrative; the curl host is the compose deploy default (`localhost:8090`).
 
-**Create Task Draft**
-
-Persist the owner's raw thought as a vesma draft note (tags pinned
-to the _draft_tags() contract set) and return the memory coordinates;
-the SPA then files the "Оформить черновик задачи" chore on the board.
-Rate limited per client like board-reflect.
-
-**Request body (required)** — schema `TaskDraftBody`
-
-**Responses**
-
-| Code | Schema | Description |
-|---|---|---|
-| `201` | `TaskDraftOut` | Successful Response |
-| `422` | `HTTPValidationError` | Validation Error |
+## Tasks
 
 ### `POST` `/api/tasks`
 
 **Create Task**
 
-**Request body (required)** — schema `TaskCreate`
+#### Request body (required) — schema `TaskCreate`
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `201` | `TaskOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X POST 'http://localhost:8090/api/tasks'
+  -H 'Content-Type: application/json' \
+  -d '{"title": "string"}'
+```
+
+#### Example response
+
+```json
+{
+  "id": "string",
+  "col": "string",
+  "position": 1,
+  "title": "string",
+  "summary": "string",
+  "spec": "string",
+  "agents": [
+    "string"
+  ],
+  "specialists": [
+    "string"
+  ],
+  "env": "string",
+  "project": "string",
+  "memory_ids": [
+    "string"
+  ],
+  "mnemos_tags": [
+    "string"
+  ],
+  "created_at": "string",
+  "updated_at": "string",
+  "status": "string",
+  "priority": "string"
+}
+```
 
 ### `GET` `/api/tasks/inbox`
 
@@ -62,7 +87,7 @@ AGG-1 inbox: task:queue records mirrored from active memory servers.
   older than 30 min);
 - ``refreshed_at``: timestamp of the last completed scan (board_meta).
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
@@ -70,12 +95,45 @@ AGG-1 inbox: task:queue records mirrored from active memory servers.
 | `project` | query | string | no |  |
 | `include_adopted` | query | boolean | no |  |
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `TaskInboxOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl 'http://localhost:8090/api/tasks/inbox'
+```
+
+#### Example response
+
+```json
+{
+  "items": [
+    {
+      "memory_id": "string",
+      "server": "string",
+      "project": "string",
+      "title": "string",
+      "excerpt": "string",
+      "tags": [
+        "string"
+      ],
+      "priority": "string",
+      "specialist": "string",
+      "created_at": "string",
+      "last_seen": "string",
+      "stale": true,
+      "adopted": true
+    }
+  ],
+  "count": 1,
+  "refreshed_at": "string"
+}
+```
 
 ### `POST` `/api/tasks/inbox/adopt-batch`
 
@@ -88,14 +146,37 @@ conflicts on its second occurrence (409 row, the first wins). HTTP 200
 even with failures — the response body IS the per-record report
 (``adopted`` / ``failed`` counters + rows).
 
-**Request body (required)** — schema `AdoptBatchBody`
+#### Request body (required) — schema `AdoptBatchBody`
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `AdoptBatchOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X POST 'http://localhost:8090/api/tasks/inbox/adopt-batch'
+  -H 'Content-Type: application/json' \
+  -d '{"memory_ids": ["string"]}'
+```
+
+#### Example response
+
+```json
+{
+  "results": [
+    {
+      "memory_id": "string",
+      "ok": true
+    }
+  ],
+  "adopted": 1,
+  "failed": 1
+}
+```
 
 ### `POST` `/api/tasks/inbox/refresh`
 
@@ -106,11 +187,30 @@ round-trips are async, so the event loop never blocks; the request may
 take seconds — that is accepted for an explicit refresh. Rate limited
 per client; a failing server degrades its own slice only.
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `TaskInboxRefreshOut` | Successful Response |
+
+#### Example request
+
+```bash
+curl -X POST 'http://localhost:8090/api/tasks/inbox/refresh'
+```
+
+#### Example response
+
+```json
+{
+  "scanned_servers": 1,
+  "found": 1,
+  "new": 1,
+  "errors": [
+    {}
+  ]
+}
+```
 
 ### `PATCH` `/api/tasks/inbox/{memory_id}`
 
@@ -124,20 +224,49 @@ stay as the source returned them, and GET /api/tasks/inbox projects the
 EFFECTIVE values plus the overlay. 409 once the row is adopted (the
 task exists; edit that instead); 404 unknown; 422 empty/garbage body.
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `memory_id` | path | string | yes |  |
 
-**Request body (required)** — schema `TaskInboxEditSpec`
+#### Request body (required) — schema `TaskInboxEditSpec`
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `TaskInboxItem` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X PATCH 'http://localhost:8090/api/tasks/inbox/memory_id'
+  -H 'Content-Type: application/json' \
+  -d '{"title": "string", "summary": "string", "priority": "string", "project": "string"}'
+```
+
+#### Example response
+
+```json
+{
+  "memory_id": "string",
+  "server": "string",
+  "project": "string",
+  "title": "string",
+  "excerpt": "string",
+  "tags": [
+    "string"
+  ],
+  "priority": "string",
+  "specialist": "string",
+  "created_at": "string",
+  "last_seen": "string",
+  "stale": true,
+  "adopted": true
+}
+```
 
 ### `POST` `/api/tasks/inbox/{memory_id}/adopt`
 
@@ -152,18 +281,55 @@ back to the source store (best-effort; a failed sync is logged and
 notified, never a failed adopt). 409 with the existing ``task_id`` on
 double adoption; 404 when the mirror row is unknown.
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `memory_id` | path | string | yes |  |
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `201` | `TaskOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X POST 'http://localhost:8090/api/tasks/inbox/memory_id/adopt'
+```
+
+#### Example response
+
+```json
+{
+  "id": "string",
+  "col": "string",
+  "position": 1,
+  "title": "string",
+  "summary": "string",
+  "spec": "string",
+  "agents": [
+    "string"
+  ],
+  "specialists": [
+    "string"
+  ],
+  "env": "string",
+  "project": "string",
+  "memory_ids": [
+    "string"
+  ],
+  "mnemos_tags": [
+    "string"
+  ],
+  "created_at": "string",
+  "updated_at": "string",
+  "status": "string",
+  "priority": "string"
+}
+```
 
 ### `GET` `/api/tasks/{task_id}`
 
@@ -181,18 +347,55 @@ are untouched. Registered AFTER ``GET /api/tasks/inbox`` on purpose:
 FastAPI matches routes in registration order and ``{task_id}`` would
 otherwise swallow the static inbox path.
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `task_id` | path | string | yes |  |
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `TaskOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl 'http://localhost:8090/api/tasks/task_id'
+```
+
+#### Example response
+
+```json
+{
+  "id": "string",
+  "col": "string",
+  "position": 1,
+  "title": "string",
+  "summary": "string",
+  "spec": "string",
+  "agents": [
+    "string"
+  ],
+  "specialists": [
+    "string"
+  ],
+  "env": "string",
+  "project": "string",
+  "memory_ids": [
+    "string"
+  ],
+  "mnemos_tags": [
+    "string"
+  ],
+  "created_at": "string",
+  "updated_at": "string",
+  "status": "string",
+  "priority": "string"
+}
+```
 
 ### `PATCH` `/api/tasks/{task_id}`
 
@@ -212,54 +415,121 @@ Task PATCH (BE-12).
 - ``force`` itself is a request mode, never a task column: it is popped
   here and never reaches the update payload.
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `task_id` | path | string | yes |  |
 
-**Request body (required)** — schema `TaskPatch`
+#### Request body (required) — schema `TaskPatch`
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `TaskOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
 
+#### Example request
+
+```bash
+curl -X PATCH 'http://localhost:8090/api/tasks/task_id'
+  -H 'Content-Type: application/json' \
+  -d '{"title": "string", "summary": "string", "spec": "string", "status": "string", "col": "string", "force": false, "priority": "string", "env": "string", "agents": ["string"], "specialists": ["string"], "project": "string", "memory_ids": ["string"], "mnemos_tags": ["string"]}'
+```
+
+#### Example response
+
+```json
+{
+  "id": "string",
+  "col": "string",
+  "position": 1,
+  "title": "string",
+  "summary": "string",
+  "spec": "string",
+  "agents": [
+    "string"
+  ],
+  "specialists": [
+    "string"
+  ],
+  "env": "string",
+  "project": "string",
+  "memory_ids": [
+    "string"
+  ],
+  "mnemos_tags": [
+    "string"
+  ],
+  "created_at": "string",
+  "updated_at": "string",
+  "status": "string",
+  "priority": "string"
+}
+```
+
 ### `DELETE` `/api/tasks/{task_id}`
 
 **Delete Task**
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `task_id` | path | string | yes |  |
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `OkOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X DELETE 'http://localhost:8090/api/tasks/task_id'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true
+}
+```
 
 ### `POST` `/api/tasks/{task_id}/archive`
 
 **Archive Task**
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `task_id` | path | string | yes |  |
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `OkOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X POST 'http://localhost:8090/api/tasks/task_id/archive'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true
+}
+```
 
 ### `GET` `/api/tasks/{task_id}/history`
 
@@ -271,18 +541,42 @@ its linked memory checkpoints (source = resolving server, detail =
 excerpt capped at 200 chars). The SPA merges and sorts both lists by
 ``ts`` desc; the server pre-sorts defensively.
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `task_id` | path | string | yes |  |
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `HistoryOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl 'http://localhost:8090/api/tasks/task_id/history'
+```
+
+#### Example response
+
+```json
+{
+  "events": [
+    {
+      "ts": "string",
+      "title": "string"
+    }
+  ],
+  "memories": [
+    {
+      "title": "string"
+    }
+  ]
+}
+```
 
 ### `GET` `/api/tasks/{task_id}/memories`
 
@@ -290,38 +584,95 @@ excerpt capped at 200 chars). The SPA merges and sorts both lists by
 
 Resolve task memory links against a server, a group, or all servers.
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `task_id` | path | string | yes |  |
 | `scope` | query | string | no |  |
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `TaskMemoriesOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
 
+#### Example request
+
+```bash
+curl 'http://localhost:8090/api/tasks/task_id/memories'
+```
+
+#### Example response
+
+```json
+{
+  "items": {},
+  "unresolved": [
+    {}
+  ],
+  "sources": {}
+}
+```
+
 ### `POST` `/api/tasks/{task_id}/move`
 
 **Move Task**
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `task_id` | path | string | yes |  |
 
-**Request body (required)** — schema `MoveBody`
+#### Request body (required) — schema `MoveBody`
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `TaskOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X POST 'http://localhost:8090/api/tasks/task_id/move'
+  -H 'Content-Type: application/json' \
+  -d '{"col": "string"}'
+```
+
+#### Example response
+
+```json
+{
+  "id": "string",
+  "col": "string",
+  "position": 1,
+  "title": "string",
+  "summary": "string",
+  "spec": "string",
+  "agents": [
+    "string"
+  ],
+  "specialists": [
+    "string"
+  ],
+  "env": "string",
+  "project": "string",
+  "memory_ids": [
+    "string"
+  ],
+  "mnemos_tags": [
+    "string"
+  ],
+  "created_at": "string",
+  "updated_at": "string",
+  "status": "string",
+  "priority": "string"
+}
+```
 
 ### `GET` `/api/tasks/{task_id}/reports`
 
@@ -329,18 +680,45 @@ Resolve task memory links against a server, a group, or all servers.
 
 Chronological report history for a task (oldest first).
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `task_id` | path | string | yes |  |
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `ReportsOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl 'http://localhost:8090/api/tasks/task_id/reports'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "task_id": "string",
+  "count": 1,
+  "items": [
+    {
+      "id": 1,
+      "task_id": "string",
+      "kind": "string",
+      "agent": "string",
+      "body": "string",
+      "superseded": true,
+      "created_at": "string"
+    }
+  ]
+}
+```
 
 ### `POST` `/api/tasks/{task_id}/reports`
 
@@ -362,20 +740,45 @@ executor's registered name nor its harness lands in the audit trail
 flagged ``identity_mismatch`` (Amd 2 §7 spoofing signal — signal, not
 a refusal: the report is still accepted).
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `task_id` | path | string | yes |  |
 
-**Request body (required)** — schema `ReportCreate`
+#### Request body (required) — schema `ReportCreate`
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `201` | `ReportCreatedOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X POST 'http://localhost:8090/api/tasks/task_id/reports'
+  -H 'Content-Type: application/json' \
+  -d '{"body": "string"}'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "report": {
+    "id": 1,
+    "task_id": "string",
+    "kind": "string",
+    "agent": "string",
+    "body": "string",
+    "superseded": true,
+    "created_at": "string"
+  }
+}
+```
 
 ### `GET` `/api/tasks/{task_id}/sessions`
 
@@ -387,18 +790,43 @@ read only (``path`` is a host fact); honest-empty for a task whose
 executor has no agent leg yet — the FE renders the §5 reason, the
 board answers plain facts.
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `task_id` | path | string | yes |  |
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `TaskSessionsOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl 'http://localhost:8090/api/tasks/task_id/sessions'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "task_id": "string",
+  "count": 1,
+  "items": [
+    {
+      "session_id": "string",
+      "executor_id": "string",
+      "native_id": "string",
+      "task_id": "string",
+      "harness": "string"
+    }
+  ]
+}
+```
 
 ### `POST` `/api/tasks/{task_id}/unarchive`
 
@@ -407,18 +835,69 @@ board answers plain facts.
 Restore an archived task to its pre-archive column (BE-11b); rows
 archived before ``archived_from`` existed fall back to ``open``.
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `task_id` | path | string | yes |  |
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `UnarchiveOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X POST 'http://localhost:8090/api/tasks/task_id/unarchive'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true
+}
+```
+
+## Drafts
+
+### `POST` `/api/task-drafts`
+
+**Create Task Draft**
+
+Persist the owner's raw thought as a vesma draft note (tags pinned
+to the _draft_tags() contract set) and return the memory coordinates;
+the SPA then files the "Оформить черновик задачи" chore on the board.
+Rate limited per client like board-reflect.
+
+#### Request body (required) — schema `TaskDraftBody`
+
+#### Responses
+
+| Code | Schema | Description |
+|---|---|---|
+| `201` | `TaskDraftOut` | Successful Response |
+| `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X POST 'http://localhost:8090/api/task-drafts'
+  -H 'Content-Type: application/json' \
+  -d '{"text": "string"}'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "server": "string"
+}
+```
 
 ## Schemas used on this page
 

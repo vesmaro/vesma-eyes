@@ -624,6 +624,19 @@ api_hub:
             generated from.
       - slug: vesmaro-eyes/tasks
         prefixes: [tasks, task-drafts]
+        # docs-api-readability (2026-10-21): h2 subgroup headers for the page
+        # TOC — one entry per path prefix, fail-closed coverage (a prefix
+        # without a subgroup fails the generator). Single-prefix groups stay
+        # flat (an h2 with a single child is noise, not structure).
+        subgroups:
+          - keys: [tasks]
+            title:
+              ru: Задачи
+              en: Tasks
+          - keys: [task-drafts]
+            title:
+              ru: Черновики
+              en: Drafts
         order: 2
         title:
           ru: Задачи и входящие
@@ -640,6 +653,19 @@ api_hub:
         # (/api/mnemos/search), not brand strings; a rebrand here is SPEC
         # DRIFT (the snapshot still says mnemos). Fixed 2026-10-21.
         prefixes: [memories, tags, mnemos]
+        subgroups:
+          - keys: [memories]
+            title:
+              ru: Память
+              en: Memory
+          - keys: [tags]
+            title:
+              ru: Теги
+              en: Tags
+          - keys: [mnemos]
+            title:
+              ru: Поиск vesma
+              en: vesma search
         order: 3
         title:
           ru: Память, теги и поиск vesma
@@ -666,6 +692,23 @@ api_hub:
             completion, failure, cancellation.
       - slug: vesmaro-eyes/executors
         prefixes: [executors, harnesses, agents, specialists]
+        subgroups:
+          - keys: [executors]
+            title:
+              ru: Исполнители
+              en: Executors
+          - keys: [harnesses]
+            title:
+              ru: Харнессы
+              en: Harnesses
+          - keys: [agents]
+            title:
+              ru: Активность агентов
+              en: Agent activity
+          - keys: [specialists]
+            title:
+              ru: Специалисты
+              en: Specialists
         order: 5
         title:
           ru: Исполнители, харнессы, специалисты
@@ -692,6 +735,15 @@ api_hub:
             engine status.
       - slug: vesmaro-eyes/devices
         prefixes: [devices, pairing]
+        subgroups:
+          - keys: [devices]
+            title:
+              ru: Устройства
+              en: Devices
+          - keys: [pairing]
+            title:
+              ru: Пейринг
+              en: Pairing
         order: 7
         title:
           ru: Устройства и пейринг
@@ -737,6 +789,23 @@ api_hub:
             certificate, service unit, script, and checksum.
       - slug: vesmaro-eyes/feed
         prefixes: [notifications, activity, reports, archive]
+        subgroups:
+          - keys: [notifications]
+            title:
+              ru: Уведомления
+              en: Notifications
+          - keys: [activity]
+            title:
+              ru: Активность
+              en: Activity
+          - keys: [reports]
+            title:
+              ru: Отчёты
+              en: Reports
+          - keys: [archive]
+            title:
+              ru: Архив
+              en: Archive
         order: 11
         title:
           ru: Уведомления, активность, отчёты
@@ -750,6 +819,27 @@ api_hub:
             reports and the report feed, archive.
       - slug: vesmaro-eyes/system
         prefixes: [board, board-reflect, health, settings, auth, events]
+        subgroups:
+          - keys: [board, board-reflect]
+            title:
+              ru: Борд и отражение
+              en: Board and reflection
+          - keys: [health]
+            title:
+              ru: Health
+              en: Health
+          - keys: [settings]
+            title:
+              ru: Настройки исполнения
+              en: Execution settings
+          - keys: [auth]
+            title:
+              ru: Аутентификация
+              en: Auth
+          - keys: [events]
+            title:
+              ru: События
+              en: Events
         order: 12
         title:
           ru: Борд и служебные эндпоинты

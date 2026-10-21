@@ -16,6 +16,10 @@ Paired devices, grants, QR pairing: code, exchange, confirmation.
 
 Generated from the OpenAPI snapshot v1.59.0 (operations in this section: 8).
 
+Request and response examples are synthesized from the snapshot schemas — values are illustrative; the curl host is the compose deploy default (`localhost:8090`).
+
+## Devices
+
 ### `GET` `/api/devices`
 
 **List Devices**
@@ -23,11 +27,35 @@ Generated from the OpenAPI snapshot v1.59.0 (operations in this section: 8).
 Device sessions for the owner panel (ui-token; §10.2). Items carry
 NO token material — token_hash stays in the store (hash-only, §5).
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `DevicesOut` | Successful Response |
+
+#### Example request
+
+```bash
+curl 'http://localhost:8090/api/devices'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "count": 1,
+  "items": [
+    {
+      "id": "string",
+      "name": "string",
+      "scope": "string",
+      "state": "string",
+      "created_at": "string"
+    }
+  ]
+}
+```
 
 ### `DELETE` `/api/devices/{device_id}`
 
@@ -37,18 +65,39 @@ Revoke a device session (ui-token; §5). One step, terminal — only a
 new pairing restores access. SSE pairing.revoked carries the device_id;
 the next request with that token gets 401 (scope middleware).
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `device_id` | path | string | yes |  |
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `DeviceRevokedOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X DELETE 'http://localhost:8090/api/devices/device_id'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "device": {
+    "id": "string",
+    "name": "string",
+    "scope": "string",
+    "state": "string",
+    "created_at": "string"
+  }
+}
+```
 
 ### `PUT` `/api/devices/{device_id}/grants`
 
@@ -64,20 +113,45 @@ the device's very next call runs under the new set). 404 unknown
 device; 409 not-active (granting to a dead session is meaningless —
 revoke/re-pair instead); 422 unknown granule names.
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `device_id` | path | string | yes |  |
 
-**Request body (required)** — schema `DeviceGrantsBody`
+#### Request body (required) — schema `DeviceGrantsBody`
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `DeviceGrantsOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X PUT 'http://localhost:8090/api/devices/device_id/grants'
+  -H 'Content-Type: application/json' \
+  -d '{"grants": ["string"]}'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "device": {
+    "id": "string",
+    "name": "string",
+    "scope": "string",
+    "state": "string",
+    "created_at": "string"
+  }
+}
+```
+
+## Pairing
 
 ### `POST` `/api/pairing`
 
@@ -89,14 +163,34 @@ the code appears in exactly one response body, this one. Rate 3 per
 10 min per client (§3.4). Fail-closed 503 while the ui token is not
 configured (no pairing on a tokenless board).
 
-**Request body (required)** — schema `PairingCreateBody`
+#### Request body (required) — schema `PairingCreateBody`
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `201` | `PairingCreatedOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X POST 'http://localhost:8090/api/pairing'
+  -H 'Content-Type: application/json' \
+  -d '{"device_name": ""}'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "pairing_id": "string",
+  "code": "string",
+  "verify": "string",
+  "expires_at": "string"
+}
+```
 
 ### `POST` `/api/pairing/exchange`
 
@@ -119,15 +213,36 @@ Rate: 5 per 10 min keyed on pairing_id AFTER a successful code lookup
 (§3.4 — garbage codes must not grow the limiter's key space), plus a
 global per-IP budget on this endpoint.
 
-**Request body (required)** — schema `PairingExchangeBody`
+#### Request body (required) — schema `PairingExchangeBody`
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `PairingIssuedOut` | Successful Response |
 | `202` | `PairingExchangeAwaitingOut` | Accepted |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X POST 'http://localhost:8090/api/pairing/exchange'
+  -H 'Content-Type: application/json' \
+  -d '{"code": "string"}'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "device_id": "string",
+  "device_token": "string",
+  "scope": "string",
+  "expires_at": "string",
+  "hard_expires_at": "string"
+}
+```
 
 ### `GET` `/api/pairing/{pairing_id}`
 
@@ -138,18 +253,35 @@ the verify digits besides the device's own exchange response (§3.3:
 /api/events is unauthenticated, so the digits never ride SSE or stored
 notifications).
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `pairing_id` | path | string | yes |  |
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `PairingStatusOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl 'http://localhost:8090/api/pairing/pairing_id'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "pairing_id": "string",
+  "state": "string",
+  "verify": "string"
+}
+```
 
 ### `DELETE` `/api/pairing/{pairing_id}`
 
@@ -160,18 +292,35 @@ scanned/confirmed → revoked + SSE pairing.revoked. Already revoked →
 200 idempotent; issued → 409 (the device token EXISTS — revoke the
 device via DELETE /api/devices/{id}); TTL-passed → 410.
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `pairing_id` | path | string | yes |  |
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `PairingConfirmOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X DELETE 'http://localhost:8090/api/pairing/pairing_id'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "pairing_id": "string",
+  "state": "string",
+  "outcome": "string"
+}
+```
 
 ### `POST` `/api/pairing/{pairing_id}/confirm`
 
@@ -183,20 +332,39 @@ allow=true → confirmed (SSE pairing.confirmed); allow=false → revoked
 re-deciding (§4); confirm before any scan → 409; TTL-passed → 410.
 The endpoint never accepts verify digits as input (§3.5, CWE-307).
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `pairing_id` | path | string | yes |  |
 
-**Request body (required)** — schema `PairingConfirmBody`
+#### Request body (required) — schema `PairingConfirmBody`
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `PairingConfirmOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X POST 'http://localhost:8090/api/pairing/pairing_id/confirm'
+  -H 'Content-Type: application/json' \
+  -d '{"allow": true}'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "pairing_id": "string",
+  "state": "string",
+  "outcome": "string"
+}
+```
 
 ## Schemas used on this page
 

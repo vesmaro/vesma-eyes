@@ -16,6 +16,8 @@ spec_version: 1.59.0
 
 Сгенерировано из снимка OpenAPI v1.59.0 (эндпоинтов в разделе: 8).
 
+Примеры запросов и ответов синтезированы из схем снимка — значения иллюстративные; хост в curl — дефолт compose-деплоя (`localhost:8090`).
+
 ### `GET` `/api/assignments`
 
 **List Assignments**
@@ -43,7 +45,7 @@ ARCH-9 additions:
   claim; the annotation is a visibility hint, CAS stays the arbiter.
 - ``topics``: denormalized project/domain tags (metadata tier).
 
-**Параметры**
+#### Параметры
 
 | Параметр | В | Тип | Обяз. | Ограничения |
 |---|---|---|---|---|
@@ -54,12 +56,35 @@ ARCH-9 additions:
 | `executor_version` | запрос | строка | нет | ≤ 60 симв. |
 | `executor_transport` | запрос | строка | нет | ≤ 20 симв. |
 
-**Ответы**
+#### Ответы
 
 | Код | Схема | Описание |
 |---|---|---|
 | `200` | `AssignmentsOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Пример запроса
+
+```bash
+curl 'http://localhost:8090/api/assignments'
+```
+
+#### Пример ответа
+
+```json
+{
+  "ok": true,
+  "count": 1,
+  "items": [
+    {
+      "id": 1,
+      "task_id": "string",
+      "state": "string",
+      "created_at": "string"
+    }
+  ]
+}
+```
 
 ### `POST` `/api/assignments`
 
@@ -73,14 +98,36 @@ store's in-transaction assignment core (wave 3C) — the same gate the
 manual run-now goes through, so no window can mint a nomination on a
 DELETED harness (a zombie queued row launchable by nobody).
 
-**Тело запроса (обязательное)** — схема `AssignmentCreate`
+#### Тело запроса (обязательное) — схема `AssignmentCreate`
 
-**Ответы**
+#### Ответы
 
 | Код | Схема | Описание |
 |---|---|---|
 | `201` | `AssignmentCreatedOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Пример запроса
+
+```bash
+curl -X POST 'http://localhost:8090/api/assignments'
+  -H 'Content-Type: application/json' \
+  -d '{"task_id": "string", "specialist": "string"}'
+```
+
+#### Пример ответа
+
+```json
+{
+  "ok": true,
+  "assignment": {
+    "id": 1,
+    "task_id": "string",
+    "state": "string",
+    "created_at": "string"
+  }
+}
+```
 
 ### `POST` `/api/assignments/{assignment_id}/cancel`
 
@@ -90,20 +137,42 @@ Cancel an assignment (UI-token class — an owner action). Legal from
 queued/claimed/running; the task returns to open when it had moved to
 in-progress. No claim token: the UI token is the auth.
 
-**Параметры**
+#### Параметры
 
 | Параметр | В | Тип | Обяз. | Ограничения |
 |---|---|---|---|---|
 | `assignment_id` | путь | целое | да |  |
 
-**Тело запроса (обязательное)** — схема `AssignmentCancelBody`
+#### Тело запроса (обязательное) — схема `AssignmentCancelBody`
 
-**Ответы**
+#### Ответы
 
 | Код | Схема | Описание |
 |---|---|---|
 | `200` | `AssignmentFinishedOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Пример запроса
+
+```bash
+curl -X POST 'http://localhost:8090/api/assignments/1/cancel'
+  -H 'Content-Type: application/json' \
+  -d '{"reason": ""}'
+```
+
+#### Пример ответа
+
+```json
+{
+  "ok": true,
+  "assignment": {
+    "id": 1,
+    "task_id": "string",
+    "state": "string",
+    "created_at": "string"
+  }
+}
+```
 
 ### `POST` `/api/assignments/{assignment_id}/claim`
 
@@ -125,20 +194,43 @@ executor's token — a plain machine claim is 409, another executor's
 token is 403 (spoofing gate, CWE-290). A claim with an executor token
 records claimed_by_executor from the token identity (authoritative).
 
-**Параметры**
+#### Параметры
 
 | Параметр | В | Тип | Обяз. | Ограничения |
 |---|---|---|---|---|
 | `assignment_id` | путь | целое | да |  |
 
-**Тело запроса (обязательное)** — схема `AssignmentClaimBody`
+#### Тело запроса (обязательное) — схема `AssignmentClaimBody`
 
-**Ответы**
+#### Ответы
 
 | Код | Схема | Описание |
 |---|---|---|
 | `200` | `AssignmentClaimedOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Пример запроса
+
+```bash
+curl -X POST 'http://localhost:8090/api/assignments/1/claim'
+  -H 'Content-Type: application/json' \
+  -d '{"claimed_by": "string"}'
+```
+
+#### Пример ответа
+
+```json
+{
+  "ok": true,
+  "assignment": {
+    "id": 1,
+    "task_id": "string",
+    "state": "string",
+    "created_at": "string"
+  },
+  "claim_token": "string"
+}
+```
 
 ### `POST` `/api/assignments/{assignment_id}/complete`
 
@@ -156,20 +248,42 @@ report's declared agent string (the claim identity) runs through the
 same identity_mismatch check as intermediate reports — from the
 token-BACKED executor identity, not the self-assertion.
 
-**Параметры**
+#### Параметры
 
 | Параметр | В | Тип | Обяз. | Ограничения |
 |---|---|---|---|---|
 | `assignment_id` | путь | целое | да |  |
 
-**Тело запроса (обязательное)** — схема `AssignmentCompleteBody`
+#### Тело запроса (обязательное) — схема `AssignmentCompleteBody`
 
-**Ответы**
+#### Ответы
 
 | Код | Схема | Описание |
 |---|---|---|
 | `200` | `AssignmentFinishedOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Пример запроса
+
+```bash
+curl -X POST 'http://localhost:8090/api/assignments/1/complete'
+  -H 'Content-Type: application/json' \
+  -d '{"claim_token": "string"}'
+```
+
+#### Пример ответа
+
+```json
+{
+  "ok": true,
+  "assignment": {
+    "id": 1,
+    "task_id": "string",
+    "state": "string",
+    "created_at": "string"
+  }
+}
+```
 
 ### `POST` `/api/assignments/{assignment_id}/fail`
 
@@ -184,20 +298,42 @@ outlives the claim_token); OR a claimed_by string match — board-token
 class only (the laptop poller's recovery sweep, board-class trust).
 Task maps in-progress → blocked.
 
-**Параметры**
+#### Параметры
 
 | Параметр | В | Тип | Обяз. | Ограничения |
 |---|---|---|---|---|
 | `assignment_id` | путь | целое | да |  |
 
-**Тело запроса (обязательное)** — схема `AssignmentFailBody`
+#### Тело запроса (обязательное) — схема `AssignmentFailBody`
 
-**Ответы**
+#### Ответы
 
 | Код | Схема | Описание |
 |---|---|---|
 | `200` | `AssignmentFinishedOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Пример запроса
+
+```bash
+curl -X POST 'http://localhost:8090/api/assignments/1/fail'
+  -H 'Content-Type: application/json' \
+  -d '{"reason": "", "claim_token": "", "claimed_by": ""}'
+```
+
+#### Пример ответа
+
+```json
+{
+  "ok": true,
+  "assignment": {
+    "id": 1,
+    "task_id": "string",
+    "state": "string",
+    "created_at": "string"
+  }
+}
+```
 
 ### `POST` `/api/assignments/{assignment_id}/heartbeat`
 
@@ -211,20 +347,42 @@ traffic never touches the shared machine 30/60 s budget. ARCH-9: the
 tick also refreshes the claiming executor's presence clock
 (claimed_by_executor piggyback, store-side).
 
-**Параметры**
+#### Параметры
 
 | Параметр | В | Тип | Обяз. | Ограничения |
 |---|---|---|---|---|
 | `assignment_id` | путь | целое | да |  |
 
-**Тело запроса (обязательное)** — схема `AssignmentHeartbeatBody`
+#### Тело запроса (обязательное) — схема `AssignmentHeartbeatBody`
 
-**Ответы**
+#### Ответы
 
 | Код | Схема | Описание |
 |---|---|---|
 | `200` | `AssignmentStateOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Пример запроса
+
+```bash
+curl -X POST 'http://localhost:8090/api/assignments/1/heartbeat'
+  -H 'Content-Type: application/json' \
+  -d '{"claim_token": "string"}'
+```
+
+#### Пример ответа
+
+```json
+{
+  "ok": true,
+  "assignment": {
+    "id": 1,
+    "task_id": "string",
+    "state": "string",
+    "created_at": "string"
+  }
+}
+```
 
 ### `POST` `/api/assignments/{assignment_id}/start`
 
@@ -232,20 +390,42 @@ tick also refreshes the claiming executor's presence clock
 
 claimed → running (machine class + claim_token).
 
-**Параметры**
+#### Параметры
 
 | Параметр | В | Тип | Обяз. | Ограничения |
 |---|---|---|---|---|
 | `assignment_id` | путь | целое | да |  |
 
-**Тело запроса (обязательное)** — схема `AssignmentTokenBody`
+#### Тело запроса (обязательное) — схема `AssignmentTokenBody`
 
-**Ответы**
+#### Ответы
 
 | Код | Схема | Описание |
 |---|---|---|
 | `200` | `AssignmentStateOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Пример запроса
+
+```bash
+curl -X POST 'http://localhost:8090/api/assignments/1/start'
+  -H 'Content-Type: application/json' \
+  -d '{"claim_token": "string"}'
+```
+
+#### Пример ответа
+
+```json
+{
+  "ok": true,
+  "assignment": {
+    "id": 1,
+    "task_id": "string",
+    "state": "string",
+    "created_at": "string"
+  }
+}
+```
 
 ## Схемы, используемые на странице
 

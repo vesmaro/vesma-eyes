@@ -16,6 +16,8 @@ spec_version: 1.59.0
 
 Сгенерировано из снимка OpenAPI v1.59.0 (эндпоинтов в разделе: 2).
 
+Примеры запросов и ответов синтезированы из схем снимка — значения иллюстративные; хост в curl — дефолт compose-деплоя (`localhost:8090`).
+
 ### `GET` `/api/kora/sessions`
 
 **List Kora Sessions**
@@ -34,7 +36,7 @@ untouched (KoraSessionsOut carries no pagination fields; the client
 derives has_more from count == limit). No limit → the legacy full
 listing, count = all rows (backwards compatible).
 
-**Параметры**
+#### Параметры
 
 | Параметр | В | Тип | Обяз. | Ограничения |
 |---|---|---|---|---|
@@ -43,12 +45,48 @@ listing, count = all rows (backwards compatible).
 | `limit` | запрос | целое \| null | нет |  |
 | `offset` | запрос | целое | нет | ≥ 0 |
 
-**Ответы**
+#### Ответы
 
 | Код | Схема | Описание |
 |---|---|---|
 | `200` | `KoraSessionsOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Пример запроса
+
+```bash
+curl 'http://localhost:8090/api/kora/sessions'
+```
+
+#### Пример ответа
+
+```json
+{
+  "ok": true,
+  "count": 1,
+  "items": [
+    {
+      "id": "string",
+      "executor_id": "string",
+      "native_id": "string",
+      "harness": "string",
+      "state": "string",
+      "origin": "string",
+      "steerable": true,
+      "age_seconds": 1
+    }
+  ],
+  "coverage": {
+    "harnesses": [
+      {}
+    ],
+    "gaps": [
+      "string"
+    ]
+  },
+  "meta": {}
+}
+```
 
 ### `GET` `/api/kora/sessions/{session_id}/transcript`
 
@@ -61,7 +99,7 @@ on every successful read. zcode sessions only — vscode (kind:1
 known gap) and pi (lists-only in slice 2) answer 422 with an honest
 explanation, not a fake empty page.
 
-**Параметры**
+#### Параметры
 
 | Параметр | В | Тип | Обяз. | Ограничения |
 |---|---|---|---|---|
@@ -69,12 +107,18 @@ explanation, not a fake empty page.
 | `after_seq` | запрос | целое | нет | ≥ 0 |
 | `limit` | запрос | целое | нет | ≤ 200; ≥ 1 |
 
-**Ответы**
+#### Ответы
 
 | Код | Схема | Описание |
 |---|---|---|
 | `200` | — | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Пример запроса
+
+```bash
+curl 'http://localhost:8090/api/kora/sessions/session_id/transcript'
+```
 
 ## Схемы, используемые на странице
 

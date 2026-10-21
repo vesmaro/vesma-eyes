@@ -148,9 +148,9 @@ def test_ru_pages_keep_the_original_chrome(board_pages) -> None:
     assert "# Задачи" in tasks["body"]
     assert "CRUD задач." in tasks["body"]
     assert "Сгенерировано из снимка OpenAPI v9.9.9 (эндпоинтов в разделе: 2)." in tasks["body"]
-    assert "**Параметры**" in tasks["body"]
+    assert "#### Параметры" in tasks["body"]
     assert "| Параметр | В | Тип | Обяз. | Ограничения |" in tasks["body"]
-    assert "**Тело запроса (обязательное)** — схема `TaskBody`" in tasks["body"]
+    assert "#### Тело запроса (обязательное) — схема `TaskBody`" in tasks["body"]
     assert "| Код | Схема | Описание |" in tasks["body"]
     assert "## Схемы, используемые на странице" in tasks["body"]
     assert "массив из строк" in tasks["body"]  # render_type via labels
@@ -165,9 +165,9 @@ def test_en_pages_render_en_chrome(board_pages) -> None:
     assert "# Tasks" in tasks["body"]
     assert "Task CRUD." in tasks["body"]
     assert "Generated from the OpenAPI snapshot v9.9.9 (operations in this section: 2)." in tasks["body"]
-    assert "**Parameters**" in tasks["body"]
+    assert "#### Parameters" in tasks["body"]
     assert "| Parameter | In | Type | Required | Constraints |" in tasks["body"]
-    assert "**Request body (required)** — schema `TaskBody`" in tasks["body"]
+    assert "#### Request body (required) — schema `TaskBody`" in tasks["body"]
     assert "| Code | Schema | Description |" in tasks["body"]
     assert "## Schemas used on this page" in tasks["body"]
     assert "array of strings" in tasks["body"]
@@ -215,3 +215,116 @@ def test_plain_string_title_is_shared_by_both_locales(tmp_path, monkeypatch) -> 
     pages, _ = gen_api_ref.build_board_pages(config, PROV)
     titles = {p["locale"]: p["title"] for p in pages if p["path"] == "board/tasks.md"}
     assert titles == {"ru": "Kora", "en": "Kora"}
+
+
+# --- docs-api-readability (2026-10-21): examples + subgroups ---------------
+
+
+def _tasks_page(pages, locale):
+    return next(p for p in pages if p["locale"] == locale and p["path"] == "board/tasks.md")
+
+
+def test_examples_are_synthesized_and_minimal(board_pages) -> None:
+    """Every operation carries a curl request example and — when a 2xx JSON
+    schema exists — a response example; samples are REQUIRED-ONLY (minimal
+    valid), deterministic, and the page carries the honesty note."""
+    for locale, request_label, response_label, note in (
+        ("ru", "#### Пример запроса", "#### Пример ответа", "синтезированы из схем"),
+        ("en", "#### Example request", "#### Example response", "synthesized from the snapshot"),
+    ):
+        tasks = _tasks_page(board_pages[0], locale)
+        body = tasks["body"]
+        assert request_label in body
+        assert response_label in body
+        assert note in body
+    ru = _tasks_page(board_pages[0], "ru")["body"]
+    # path param {id} (string) → the param name; body → required-only JSON
+    assert "curl -X PUT 'http://localhost:8090/api/tasks/id'" in ru
+    assert "-H 'Content-Type: application/json'" in ru
+    assert '-d \'{"title": "string"}\'' in ru
+    # GET without required query params → plain curl, no -X
+    assert "curl 'http://localhost:8090/api/tasks'" in ru
+    # response example is valid JSON with required fields only
+    ru_en = _tasks_page(board_pages[0], "en")["body"]
+    json_part = ru_en.split("#### Example response", 1)[1].split("```json", 1)[1].split("```", 1)[0]
+    parsed = json.loads(json_part)
+    assert parsed == {"title": "string"}  # optional tags/state stay out
+
+
+def test_examples_carry_no_wall_clock(board_pages) -> None:
+    """Determinism: the sample date is a fixed constant, not today."""
+    ru = _tasks_page(board_pages[0], "ru")["body"]
+    assert "2026-10-21" not in ru  # no operation on this fixture has dates,
+    # and nothing else may leak a generation-time value either
+
+
+def test_single_prefix_group_stays_flat(board_pages) -> None:
+    """A single-prefix group emits NO subgroup h2 (an h2 with a single
+    child is noise, not structure); the schemas appendix h2 is unaffected."""
+    ru = _tasks_page(board_pages[0], "ru")["body"]
+    h2_lines = [line for line in ru.splitlines() if line.startswith("## ")]
+    assert h2_lines == ["## Схемы, используемые на странице"]
+
+
+def test_multi_prefix_group_requires_subgroups(tmp_path, monkeypatch) -> None:
+    """Fail-closed: a multi-prefix group without subgroup coverage fails
+    the generator (the overlay-anchor discipline)."""
+    spec = json.loads(json.dumps(SPEC))
+    spec["paths"]["/api/drafts"] = spec["paths"]["/api/tasks"]
+    spec["paths"]["/api/drafts/{id}"] = spec["paths"]["/api/tasks/{id}"]
+    (tmp_path / "spec.json").write_text(json.dumps(spec), encoding="utf-8")
+    monkeypatch.setattr(gen_api_ref, "REPO_ROOT", tmp_path)
+    config = json.loads(json.dumps(BOARD_API))
+    config["groups"][1]["prefixes"] = ["tasks", "drafts"]
+    with pytest.raises(SyncError, match=r"prefixes \['tasks', 'drafts'\] are not"):
+        gen_api_ref.build_board_pages(config, PROV)
+
+
+def test_subgroups_emit_h2_sections_in_config_order(tmp_path, monkeypatch) -> None:
+    spec = json.loads(json.dumps(SPEC))
+    spec["paths"]["/api/drafts"] = spec["paths"]["/api/tasks"]
+    spec["paths"]["/api/drafts/{id}"] = spec["paths"]["/api/tasks/{id}"]
+    (tmp_path / "spec.json").write_text(json.dumps(spec), encoding="utf-8")
+    monkeypatch.setattr(gen_api_ref, "REPO_ROOT", tmp_path)
+    config = json.loads(json.dumps(BOARD_API))
+    config["groups"][1]["prefixes"] = ["tasks", "drafts"]
+    config["groups"][1]["subgroups"] = [
+        {"keys": ["drafts"], "title": {"ru": "Черновики", "en": "Drafts"}},
+        {"keys": ["tasks"], "title": {"ru": "Задачи", "en": "Tasks"}},
+    ]
+    pages, _ = gen_api_ref.build_board_pages(config, PROV)
+    ru = _tasks_page(pages, "ru")["body"]
+    h2_lines = [line for line in ru.splitlines() if line.startswith("## ")]
+    # config order wins (drafts first); the appendix stays last
+    assert h2_lines[:2] == ["## Черновики", "## Задачи"]
+    assert h2_lines[-1] == "## Схемы, используемые на странице"
+    # each endpoint lands under its own subgroup heading
+    assert ru.index("## Черновики") < ru.index("### `PUT` `/api/drafts/{id}`") < ru.index("## Задачи") < ru.index("### `PUT` `/api/tasks/{id}`")
+    en = _tasks_page(pages, "en")["body"]
+    assert "## Drafts" in en and "## Tasks" in en
+
+
+def test_subgroup_keys_must_be_group_prefixes(tmp_path, monkeypatch) -> None:
+    (tmp_path / "spec.json").write_text(json.dumps(SPEC), encoding="utf-8")
+    monkeypatch.setattr(gen_api_ref, "REPO_ROOT", tmp_path)
+    config = json.loads(json.dumps(BOARD_API))
+    config["groups"][1]["prefixes"] = ["tasks", "drafts"]
+    config["groups"][1]["subgroups"] = [
+        {"keys": ["bogus"], "title": {"ru": "X", "en": "X"}},
+        {"keys": ["tasks", "drafts"], "title": {"ru": "Y", "en": "Y"}},
+    ]
+    with pytest.raises(SyncError, match=r"subgroup keys \['bogus'\].*not group prefixes"):
+        gen_api_ref.build_board_pages(config, PROV)
+
+
+def test_subgroup_double_coverage_fails(tmp_path, monkeypatch) -> None:
+    (tmp_path / "spec.json").write_text(json.dumps(SPEC), encoding="utf-8")
+    monkeypatch.setattr(gen_api_ref, "REPO_ROOT", tmp_path)
+    config = json.loads(json.dumps(BOARD_API))
+    config["groups"][1]["prefixes"] = ["tasks", "drafts"]
+    config["groups"][1]["subgroups"] = [
+        {"keys": ["tasks"], "title": {"ru": "X", "en": "X"}},
+        {"keys": ["tasks", "drafts"], "title": {"ru": "Y", "en": "Y"}},
+    ]
+    with pytest.raises(SyncError, match=r"covered by more than one subgroup"):
+        gen_api_ref.build_board_pages(config, PROV)

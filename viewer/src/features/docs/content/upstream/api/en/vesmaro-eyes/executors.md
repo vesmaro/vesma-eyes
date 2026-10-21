@@ -16,26 +16,9 @@ Executor registry and enrollment, the harness dictionary, agent activity, specia
 
 Generated from the OpenAPI snapshot v1.59.0 (operations in this section: 22).
 
-### `GET` `/api/agents/{name}/activity`
+Request and response examples are synthesized from the snapshot schemas — values are illustrative; the curl host is the compose deploy default (`localhost:8090`).
 
-**Agent Activity**
-
-Cross-store agent activity: recent memories per agent (vesma /recall).
-
-**Parameters**
-
-| Parameter | In | Type | Required | Constraints |
-|---|---|---|---|---|
-| `name` | path | string | yes |  |
-| `project` | query | string | no |  |
-| `limit` | query | integer | no |  |
-
-**Responses**
-
-| Code | Schema | Description |
-|---|---|---|
-| `200` | — | Successful Response |
-| `422` | `HTTPValidationError` | Validation Error |
+## Executors
 
 ### `GET` `/api/executors`
 
@@ -57,11 +40,35 @@ UXE-2: every item also carries the honest ``status`` lifecycle object
 / disabled / revoked) with since, report age and next_action; the
 state list rides ``meta.lifecycle.states``.
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `ExecutorListOut` | Successful Response |
+
+#### Example request
+
+```bash
+curl 'http://localhost:8090/api/executors'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "count": 1,
+  "items": [
+    {
+      "id": "string",
+      "name": "string",
+      "harness": "string",
+      "status": {}
+    }
+  ],
+  "meta": {}
+}
+```
 
 ### `POST` `/api/executors`
 
@@ -87,14 +94,39 @@ owner NOTIFICATION fires for the first open pending registration per
 host; later ones from the same host are audit + SSE only (spam guard —
 the audit event is always written).
 
-**Request body (required)** — schema `ExecutorRegister`
+#### Request body (required) — schema `ExecutorRegister`
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `201` | `ExecutorRegisteredOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X POST 'http://localhost:8090/api/executors'
+  -H 'Content-Type: application/json' \
+  -d '{"name": "string", "harness": "string"}'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "executor": {
+    "id": "string",
+    "name": "string",
+    "harness": "string",
+    "status": {
+      "state": "string"
+    }
+  },
+  "executor_secret": "string"
+}
+```
 
 ### `GET` `/api/executors/enrollment`
 
@@ -107,11 +139,31 @@ UXE-2: each item carries the computed ``status`` (07a §4) — a live
 provision job refines the token state into provisioning /
 awaiting-first-report.
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `EnrollmentListOut` | Successful Response |
+
+#### Example request
+
+```bash
+curl 'http://localhost:8090/api/executors/enrollment'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "count": 1,
+  "items": [
+    {
+      "enrollment_id": "string"
+    }
+  ]
+}
+```
 
 ### `POST` `/api/executors/enrollment`
 
@@ -128,14 +180,34 @@ bogus hint would mislead the remote leg). ``ca_fingerprint`` rides
 along (AGW-9): the UI bakes it into the bootstrap command as
 --expect-fp, the installer then fail-closes on a wrong CA.
 
-**Request body (required)** — schema `EnrollmentCreateBody`
+#### Request body (required) — schema `EnrollmentCreateBody`
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `201` | `EnrollmentCreatedOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X POST 'http://localhost:8090/api/executors/enrollment'
+  -H 'Content-Type: application/json' \
+  -d '{"label": "", "harness_hint": "", "name_hint": ""}'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "enrollment": {
+    "enrollment_id": "string"
+  },
+  "token": "string"
+}
+```
 
 ### `DELETE` `/api/executors/enrollment/{enrollment_id}`
 
@@ -146,18 +218,35 @@ Revoke a LIVE enrollment token (ui-token). created → revoked + SSE
 (the executor EXISTS — kill it via the executor registry, never here);
 expired → 409 (the TTL already did the job); unknown → 404.
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `enrollment_id` | path | string | yes |  |
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `EnrollmentRevokedOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X DELETE 'http://localhost:8090/api/executors/enrollment/enrollment_id'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "enrollment": {
+    "enrollment_id": "string"
+  }
+}
+```
 
 ### `POST` `/api/executors/provision`
 
@@ -170,14 +259,32 @@ jobs, one live job per host:port (409), a 90 s per-host cooldown
 (429), and a dedicated 5/60 s rate limit. password auth answers 422
 while the deployment flag is off.
 
-**Request body (required)** — schema `ProvisionBody`
+#### Request body (required) — schema `ProvisionBody`
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `202` | `ProvisionCreatedOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X POST 'http://localhost:8090/api/executors/provision'
+  -H 'Content-Type: application/json' \
+  -d '{"host": "string", "auth": {"kind": "string"}}'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "job_id": "string",
+  "enrollment_id": "string"
+}
+```
 
 ### `POST` `/api/executors/provision/host/{host}/repin`
 
@@ -189,21 +296,37 @@ a deliberate host reinstall — never to silence a mismatch. P2-1: the
 pin identity is (host, port); live jobs of that identity are failed
 (pin.invalidated) — they were authenticating against the old pin.
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `host` | path | string | yes |  |
 | `port` | query | integer | no | ≤ 65535; ≥ 1 |
 
-**Request body (required)** — schema `HostRepinBody`
+#### Request body (required) — schema `HostRepinBody`
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `OkOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X POST 'http://localhost:8090/api/executors/provision/host/host/repin'
+  -H 'Content-Type: application/json' \
+  -d '{"fingerprint": "string"}'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true
+}
+```
 
 ### `GET` `/api/executors/provision/{job_id}`
 
@@ -212,18 +335,34 @@ pin identity is (host, port); live jobs of that identity are failed
 Job progress for the owner UI (ui-token): state, steps, the pinned
 host-key fingerprint and the linked enrollment. No secrets travel.
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `job_id` | path | string | yes |  |
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `ProvisionJobOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl 'http://localhost:8090/api/executors/provision/job_id'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "job": {},
+  "enrollment": {}
+}
+```
 
 ### `GET` `/api/executors/{executor_id}`
 
@@ -238,18 +377,37 @@ Declared AFTER the literal /api/executors/enrollment routes (FastAPI
 matches in declaration order): "enrollment" must keep resolving to the
 token list, never as an executor id.
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `executor_id` | path | string | yes |  |
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `ExecutorOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl 'http://localhost:8090/api/executors/executor_id'
+```
+
+#### Example response
+
+```json
+{
+  "id": "string",
+  "name": "string",
+  "harness": "string",
+  "status": {
+    "state": "string"
+  }
+}
+```
 
 ### `PATCH` `/api/executors/{executor_id}`
 
@@ -262,20 +420,44 @@ old→new lands in the board events (executor.approved / revoked /
 updated); SSE carries executor.updated with the registry
 prev_state→state. Idempotent: a no-op PATCH emits nothing.
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `executor_id` | path | string | yes |  |
 
-**Request body (required)** — schema `ExecutorPatch`
+#### Request body (required) — schema `ExecutorPatch`
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `ExecutorStateChangeOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X PATCH 'http://localhost:8090/api/executors/executor_id'
+  -H 'Content-Type: application/json' \
+  -d '{"name": "string", "state": "string", "capabilities": ["string"], "enabled": true}'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "executor": {
+    "id": "string",
+    "name": "string",
+    "harness": "string",
+    "status": {
+      "state": "string"
+    }
+  }
+}
+```
 
 ### `DELETE` `/api/executors/{executor_id}`
 
@@ -286,18 +468,32 @@ touched: executor pins and claimed_by_executor attribution strings
 stay verbatim — the assignment lifecycle is independent of the
 registry (two-clock discipline, Amd 2 §3).
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `executor_id` | path | string | yes |  |
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `OkOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X DELETE 'http://localhost:8090/api/executors/executor_id'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true
+}
+```
 
 ### `GET` `/api/executors/{executor_id}/discovery`
 
@@ -312,18 +508,34 @@ open ExecutorOut.discovered projection); unknown id → 404, an honest
 verdict instead of the SPA fallback. Advisory data only — never
 routing authority, never capabilities.
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `executor_id` | path | string | yes |  |
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `ExecutorDiscoveryMirrorOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl 'http://localhost:8090/api/executors/executor_id/discovery'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "executor_id": "string",
+  "meta": {}
+}
+```
 
 ### `POST` `/api/executors/{executor_id}/discovery`
 
@@ -354,20 +566,46 @@ ME-062 (spec §6.1): the additive legs stopped being ignored —
 validation (drops audited as sessions.rejected, never 422 — the
 discovery-names grammar).
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `executor_id` | path | string | yes |  |
 
-**Request body (required)** — schema `ExecutorDiscoveryBody`
+#### Request body (required) — schema `ExecutorDiscoveryBody`
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `ExecutorDiscoveryOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X POST 'http://localhost:8090/api/executors/executor_id/discovery'
+  -H 'Content-Type: application/json' \
+  -d '{"harnesses": [], "environments": [], "sessions": []}'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "executor": {
+    "id": "string",
+    "name": "string",
+    "harness": "string",
+    "status": {
+      "state": "string"
+    }
+  },
+  "accepted": 1,
+  "rejected": 1
+}
+```
 
 ### `POST` `/api/executors/{executor_id}/heartbeat`
 
@@ -390,20 +628,44 @@ deployed before ME-015 — leaves the row exactly as it was). Invalid
 transport is an explicit 422; the tick itself is lost with it and the
 agent retries next beat (never fatal, §3.1).
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `executor_id` | path | string | yes |  |
 
-**Request body (optional)**
+#### Request body (optional)
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `ExecutorStateChangeOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X POST 'http://localhost:8090/api/executors/executor_id/heartbeat'
+  -H 'Content-Type: application/json' \
+  -d '{"note": "", "version": "string", "transport": "string"}'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "executor": {
+    "id": "string",
+    "name": "string",
+    "harness": "string",
+    "status": {
+      "state": "string"
+    }
+  }
+}
+```
 
 ### `POST` `/api/executors/{executor_id}/kora-scan`
 
@@ -419,20 +681,41 @@ no longer sees are removed. Presence piggyback: the scan tick IS the
 executor's last_seen (ARCH-9 — the scanner runs on the executor's
 host, so a scan proves liveness as well as a poll would).
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `executor_id` | path | string | yes |  |
 
-**Request body (required)** — schema `KoraScanIn`
+#### Request body (required) — schema `KoraScanIn`
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `KoraScanOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X POST 'http://localhost:8090/api/executors/executor_id/kora-scan'
+  -H 'Content-Type: application/json' \
+  -d '{"sessions": [{"native_id": "string", "harness": "zcode"}]}'
+```
+
+#### Example response
+
+```json
+{
+  "scanned": 1,
+  "upserted": 1,
+  "listed": 1,
+  "dropped": 1
+}
+```
+
+## Harnesses
 
 ### `GET` `/api/harnesses`
 
@@ -443,11 +726,32 @@ size of the boot seed — clients learn the guaranteed minimum and never
 hardcode the set. Alphabetical; ``added_via`` distinguishes ``seed``
 rows from owner-added ones.
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `HarnessListOut` | Successful Response |
+
+#### Example request
+
+```bash
+curl 'http://localhost:8090/api/harnesses'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "count": 1,
+  "items": [
+    {
+      "name": "string"
+    }
+  ],
+  "meta": {}
+}
+```
 
 ### `POST` `/api/harnesses`
 
@@ -458,14 +762,33 @@ Add a harness to the dictionary (ui-token; wave 3C). 201 → row;
 (≤64 — entry validation, not a rate guard); 409 duplicate. Audit
 ``harness.added`` + SSE — the UI select refreshes from the frame.
 
-**Request body (required)** — schema `HarnessCreateBody`
+#### Request body (required) — schema `HarnessCreateBody`
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `201` | `HarnessStateOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X POST 'http://localhost:8090/api/harnesses'
+  -H 'Content-Type: application/json' \
+  -d '{"name": "string"}'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "harness": {
+    "name": "string"
+  }
+}
+```
 
 ### `DELETE` `/api/harnesses/{name}`
 
@@ -479,18 +802,69 @@ block: it is archival and stays verbatim. Audit ``harness.removed`` +
 SSE. Seed rows are deletable like any other (the seed does not
 resurrect across restarts — it fills an EMPTY table only).
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `name` | path | string | yes |  |
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `OkOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X DELETE 'http://localhost:8090/api/harnesses/name'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true
+}
+```
+
+## Agent activity
+
+### `GET` `/api/agents/{name}/activity`
+
+**Agent Activity**
+
+Cross-store agent activity: recent memories per agent (vesma /recall).
+
+#### Parameters
+
+| Parameter | In | Type | Required | Constraints |
+|---|---|---|---|---|
+| `name` | path | string | yes |  |
+| `project` | query | string | no |  |
+| `limit` | query | integer | no |  |
+
+#### Responses
+
+| Code | Schema | Description |
+|---|---|---|
+| `200` | — | Successful Response |
+| `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl 'http://localhost:8090/api/agents/name/activity'
+```
+
+#### Example response
+
+```json
+{}
+```
+
+## Specialists
 
 ### `GET` `/api/specialists/profile`
 
@@ -498,19 +872,37 @@ resurrect across restarts — it fills an EMPTY table only).
 
 Query-param variant (slash-safe for names like SRE/DevOps).
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `name` | query | string | yes |  |
 | `refresh` | query | boolean | no |  |
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `SpecialistProfileOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl 'http://localhost:8090/api/specialists/profile?name=name'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "specialist": "string",
+  "slug": "string",
+  "meta": {},
+  "sections": {}
+}
+```
 
 ### `POST` `/api/specialists/refresh-all`
 
@@ -523,11 +915,26 @@ deterministic scoped builder (idempotent upsert — one stable cache
 row per specialist, repeats never duplicate). Names the builder
 cannot resolve fall back to the legacy memory-server refresh.
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `RefreshAllOut` | Successful Response |
+
+#### Example request
+
+```bash
+curl -X POST 'http://localhost:8090/api/specialists/refresh-all'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "refreshed": 1
+}
+```
 
 ### `GET` `/api/specialists/{name}/profile`
 
@@ -546,19 +953,37 @@ background loop) → deterministic filesystem build from the GCW plugin
 tree → legacy mnemos-index search for names the builder cannot
 resolve. Pass ?refresh=1 to force a rebuild.
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `name` | path | string | yes |  |
 | `refresh` | query | boolean | no |  |
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `SpecialistProfileOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl 'http://localhost:8090/api/specialists/name/profile'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "specialist": "string",
+  "slug": "string",
+  "meta": {},
+  "sections": {}
+}
+```
 
 ## Schemas used on this page
 

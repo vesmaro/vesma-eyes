@@ -16,6 +16,8 @@ Kora session list and transcripts, kora-scan intake.
 
 Generated from the OpenAPI snapshot v1.59.0 (operations in this section: 2).
 
+Request and response examples are synthesized from the snapshot schemas — values are illustrative; the curl host is the compose deploy default (`localhost:8090`).
+
 ### `GET` `/api/kora/sessions`
 
 **List Kora Sessions**
@@ -34,7 +36,7 @@ untouched (KoraSessionsOut carries no pagination fields; the client
 derives has_more from count == limit). No limit → the legacy full
 listing, count = all rows (backwards compatible).
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
@@ -43,12 +45,48 @@ listing, count = all rows (backwards compatible).
 | `limit` | query | integer \| null | no |  |
 | `offset` | query | integer | no | ≥ 0 |
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `KoraSessionsOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl 'http://localhost:8090/api/kora/sessions'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "count": 1,
+  "items": [
+    {
+      "id": "string",
+      "executor_id": "string",
+      "native_id": "string",
+      "harness": "string",
+      "state": "string",
+      "origin": "string",
+      "steerable": true,
+      "age_seconds": 1
+    }
+  ],
+  "coverage": {
+    "harnesses": [
+      {}
+    ],
+    "gaps": [
+      "string"
+    ]
+  },
+  "meta": {}
+}
+```
 
 ### `GET` `/api/kora/sessions/{session_id}/transcript`
 
@@ -61,7 +99,7 @@ on every successful read. zcode sessions only — vscode (kind:1
 known gap) and pi (lists-only in slice 2) answer 422 with an honest
 explanation, not a fake empty page.
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
@@ -69,12 +107,18 @@ explanation, not a fake empty page.
 | `after_seq` | query | integer | no | ≥ 0 |
 | `limit` | query | integer | no | ≤ 200; ≥ 1 |
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | — | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl 'http://localhost:8090/api/kora/sessions/session_id/transcript'
+```
 
 ## Schemas used on this page
 

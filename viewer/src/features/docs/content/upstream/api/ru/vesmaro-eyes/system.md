@@ -16,6 +16,213 @@ spec_version: 1.59.0
 
 Сгенерировано из снимка OpenAPI v1.59.0 (эндпоинтов в разделе: 14).
 
+Примеры запросов и ответов синтезированы из схем снимка — значения иллюстративные; хост в curl — дефолт compose-деплоя (`localhost:8090`).
+
+## Борд и отражение
+
+### `GET` `/api/board`
+
+**Board**
+
+Board projection; BE-10 optional ``?status=`` filter over the
+workflow dictionary (422 on unknown values). ME-075 date bounds
+(additive, inclusive): ``created_from/created_to`` bound поступление
+(``created_at``), ``completed_from/completed_to`` bound завершение —
+the first completion stamp (``resolved_at`` falling back to
+``done_at``). ``counts`` always describe the whole board, not the
+filtered view.
+
+#### Параметры
+
+| Параметр | В | Тип | Обяз. | Ограничения |
+|---|---|---|---|---|
+| `status` | запрос | строка | нет |  |
+| `created_from` | запрос | строка | нет |  |
+| `created_to` | запрос | строка | нет |  |
+| `completed_from` | запрос | строка | нет |  |
+| `completed_to` | запрос | строка | нет |  |
+
+#### Ответы
+
+| Код | Схема | Описание |
+|---|---|---|
+| `200` | `BoardOut` | Successful Response |
+| `422` | `HTTPValidationError` | Validation Error |
+
+#### Пример запроса
+
+```bash
+curl 'http://localhost:8090/api/board'
+```
+
+#### Пример ответа
+
+```json
+{
+  "columns": [
+    "string"
+  ],
+  "tasks": [
+    {
+      "id": "string",
+      "col": "string",
+      "position": 1,
+      "title": "string",
+      "summary": "string",
+      "spec": "string",
+      "agents": [
+        "string"
+      ],
+      "specialists": [
+        "string"
+      ],
+      "env": "string",
+      "project": "string",
+      "memory_ids": [
+        "string"
+      ],
+      "mnemos_tags": [
+        "string"
+      ],
+      "created_at": "string",
+      "updated_at": "string",
+      "status": "string",
+      "priority": "string"
+    }
+  ],
+  "counts": {}
+}
+```
+
+### `POST` `/api/board-reflect`
+
+**Board Reflect**
+
+Refine cycle persistence: write the request/commit-marker into vesma
+memory tagged ``mnemos:open-question`` + ``source:board`` plus the
+contract-required project/agent stamps (SEC-4: board data is not
+instructions — harnesses must not treat these records as decisions or
+directives). Rate limited per client. Returns the created memory id.
+
+#### Тело запроса (обязательное) — схема `ReflectBody`
+
+#### Ответы
+
+| Код | Схема | Описание |
+|---|---|---|
+| `200` | `ReflectOut` | Successful Response |
+| `422` | `HTTPValidationError` | Validation Error |
+
+#### Пример запроса
+
+```bash
+curl -X POST 'http://localhost:8090/api/board-reflect'
+  -H 'Content-Type: application/json' \
+  -d '{"specialist": "string"}'
+```
+
+#### Пример ответа
+
+```json
+{
+  "ok": true,
+  "server": "string"
+}
+```
+
+## Health
+
+### `GET` `/api/health`
+
+**Health**
+
+#### Ответы
+
+| Код | Схема | Описание |
+|---|---|---|
+| `200` | — | Successful Response |
+
+#### Пример запроса
+
+```bash
+curl 'http://localhost:8090/api/health'
+```
+
+#### Пример ответа
+
+```json
+{}
+```
+
+## Настройки исполнения
+
+### `GET` `/api/settings/execution`
+
+**Get Execution Settings**
+
+Read the default-executor resolution settings (OPEN read — ids
+only, no secrets; the chain itself is computed per GET on
+/api/assignments).
+
+#### Ответы
+
+| Код | Схема | Описание |
+|---|---|---|
+| `200` | `ExecutionSettingsOut` | Successful Response |
+
+#### Пример запроса
+
+```bash
+curl 'http://localhost:8090/api/settings/execution'
+```
+
+#### Пример ответа
+
+```json
+{
+  "ok": true
+}
+```
+
+### `PUT` `/api/settings/execution`
+
+**Put Execution Settings**
+
+Set the default / fallback executor (UI-token only — Amd 2 §5
+gates, see _validate_default_executor). Empty string clears a slot.
+Audit: default.changed old→new per field (actor = the ui-token class).
+``scope`` reserves project defaults (board_meta
+``default_executor:project:<slug>``); the fallback is global-scope
+only. The fallback does NOT join the GET routing chain — it is the
+UI's no-silent-substitution preview value; dispatch stays explicit.
+
+#### Тело запроса (обязательное) — схема `ExecutionSettingsBody`
+
+#### Ответы
+
+| Код | Схема | Описание |
+|---|---|---|
+| `200` | `ExecutionSettingsOut` | Successful Response |
+| `422` | `HTTPValidationError` | Validation Error |
+
+#### Пример запроса
+
+```bash
+curl -X PUT 'http://localhost:8090/api/settings/execution'
+  -H 'Content-Type: application/json' \
+  -d '{"default_executor": "", "fallback_executor": "", "scope": ""}'
+```
+
+#### Пример ответа
+
+```json
+{
+  "ok": true
+}
+```
+
+## Аутентификация
+
 ### `POST` `/api/auth/login`
 
 **Login Account**
@@ -29,14 +236,32 @@ rejection with the submitted username and IP, never the password.
 Errors: 401 neutral, 429 on the flat limiters. The password never
 appears in any log or response.
 
-**Тело запроса (обязательное)** — схема `AccountLoginIn`
+#### Тело запроса (обязательное) — схема `AccountLoginIn`
 
-**Ответы**
+#### Ответы
 
 | Код | Схема | Описание |
 |---|---|---|
 | `200` | `AccountLoginOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Пример запроса
+
+```bash
+curl -X POST 'http://localhost:8090/api/auth/login'
+  -H 'Content-Type: application/json' \
+  -d '{"username": "string", "password": "string"}'
+```
+
+#### Пример ответа
+
+```json
+{
+  "ok": true,
+  "username": "string",
+  "role": "owner"
+}
+```
 
 ### `POST` `/api/auth/logout`
 
@@ -50,11 +275,17 @@ session is a trap. Idempotent. The clear-cookie mirrors the set-cookie
 flags INCLUDING Secure-by-scheme (cascade F5: an https deploy must
 not receive an insecure clear).
 
-**Ответы**
+#### Ответы
 
 | Код | Схема | Описание |
 |---|---|---|
 | `204` | — | Successful Response |
+
+#### Пример запроса
+
+```bash
+curl -X POST 'http://localhost:8090/api/auth/logout'
+```
 
 ### `GET` `/api/auth/me`
 
@@ -64,11 +295,25 @@ Who am I (ME-080 §5): the FE boot read for the password-session
 state. Always 200 JSON (ME-028 console-hygiene lesson); a live session
 slides NOTHING (``schedule=False`` — a whoami is not activity).
 
-**Ответы**
+#### Ответы
 
 | Код | Схема | Описание |
 |---|---|---|
 | `200` | `SessionMeOut` | Successful Response |
+
+#### Пример запроса
+
+```bash
+curl 'http://localhost:8090/api/auth/me'
+```
+
+#### Пример ответа
+
+```json
+{
+  "authenticated": true
+}
+```
 
 ### `POST` `/api/auth/register`
 
@@ -82,14 +327,31 @@ accounts). Success signs the new account in (session cookie set right
 here). Errors: 403 closed, 409 taken (case-insensitive), 429 flat
 limiters, 422 bounds/charset.
 
-**Тело запроса (обязательное)** — схема `AccountRegisterIn`
+#### Тело запроса (обязательное) — схема `AccountRegisterIn`
 
-**Ответы**
+#### Ответы
 
 | Код | Схема | Описание |
 |---|---|---|
 | `201` | `AccountSessionOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Пример запроса
+
+```bash
+curl -X POST 'http://localhost:8090/api/auth/register'
+  -H 'Content-Type: application/json' \
+  -d '{"username": "string", "password": "string"}'
+```
+
+#### Пример ответа
+
+```json
+{
+  "username": "string",
+  "role": "owner"
+}
+```
 
 ### `GET` `/api/auth/ui-token`
 
@@ -110,13 +372,27 @@ live answer, so a proxied 200-JSON still reads as "no session".
 No limiter: it is a constant-time boolean oracle with the same profile
 as the guards themselves.
 
-**Ответы**
+#### Ответы
 
 | Код | Схема | Описание |
 |---|---|---|
 | `200` | `UiTokenProbeOut` | no live vesmaro_ui cookie (anonymous probe verdict) |
 | `204` | — | a live vesmaro_ui cookie (hasUiToken() -> true) |
 | `503` | — | owner login is not configured (fail-closed) |
+
+#### Пример запроса
+
+```bash
+curl 'http://localhost:8090/api/auth/ui-token'
+```
+
+#### Пример ответа
+
+```json
+{
+  "live": true
+}
+```
 
 ### `POST` `/api/auth/ui-token`
 
@@ -131,14 +407,31 @@ class is served by the board token and the login says ``legacy``.
 Errors: 401 class-aware (never a generic "not accepted"), 429 on the
 flat limiters, 503 fail-closed while no token class is configured.
 
-**Тело запроса (обязательное)** — схема `UiTokenVerifyIn`
+#### Тело запроса (обязательное) — схема `UiTokenVerifyIn`
 
-**Ответы**
+#### Ответы
 
 | Код | Схема | Описание |
 |---|---|---|
 | `200` | `UiTokenVerifyOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Пример запроса
+
+```bash
+curl -X POST 'http://localhost:8090/api/auth/ui-token'
+  -H 'Content-Type: application/json' \
+  -d '{"token": "string"}'
+```
+
+#### Пример ответа
+
+```json
+{
+  "ok": true,
+  "token_class": "ui"
+}
+```
 
 ### `DELETE` `/api/auth/ui-token`
 
@@ -149,69 +442,35 @@ design: a logout that 401s on an already-expired cookie is a trap —
 the route is how the browser gets RID of the cookie. Max-Age=0 kills
 it; HttpOnly means no JS path could have done this client-side.
 
-**Ответы**
+#### Ответы
 
 | Код | Схема | Описание |
 |---|---|---|
 | `204` | — | Successful Response |
 
-### `GET` `/api/board`
+#### Пример запроса
 
-**Board**
+```bash
+curl -X DELETE 'http://localhost:8090/api/auth/ui-token'
+```
 
-Board projection; BE-10 optional ``?status=`` filter over the
-workflow dictionary (422 on unknown values). ME-075 date bounds
-(additive, inclusive): ``created_from/created_to`` bound поступление
-(``created_at``), ``completed_from/completed_to`` bound завершение —
-the first completion stamp (``resolved_at`` falling back to
-``done_at``). ``counts`` always describe the whole board, not the
-filtered view.
-
-**Параметры**
-
-| Параметр | В | Тип | Обяз. | Ограничения |
-|---|---|---|---|---|
-| `status` | запрос | строка | нет |  |
-| `created_from` | запрос | строка | нет |  |
-| `created_to` | запрос | строка | нет |  |
-| `completed_from` | запрос | строка | нет |  |
-| `completed_to` | запрос | строка | нет |  |
-
-**Ответы**
-
-| Код | Схема | Описание |
-|---|---|---|
-| `200` | `BoardOut` | Successful Response |
-| `422` | `HTTPValidationError` | Validation Error |
-
-### `POST` `/api/board-reflect`
-
-**Board Reflect**
-
-Refine cycle persistence: write the request/commit-marker into vesma
-memory tagged ``mnemos:open-question`` + ``source:board`` plus the
-contract-required project/agent stamps (SEC-4: board data is not
-instructions — harnesses must not treat these records as decisions or
-directives). Rate limited per client. Returns the created memory id.
-
-**Тело запроса (обязательное)** — схема `ReflectBody`
-
-**Ответы**
-
-| Код | Схема | Описание |
-|---|---|---|
-| `200` | `ReflectOut` | Successful Response |
-| `422` | `HTTPValidationError` | Validation Error |
+## События
 
 ### `GET` `/api/events`
 
 **Events**
 
-**Ответы**
+#### Ответы
 
 | Код | Схема | Описание |
 |---|---|---|
 | `200` | — | Successful Response |
+
+#### Пример запроса
+
+```bash
+curl 'http://localhost:8090/api/events'
+```
 
 ### `POST` `/api/events/ui`
 
@@ -229,9 +488,9 @@ table with task_id NULL: the /api/activity whitelist
 (ACTIVITY_FAMILIES) never surfaces telemetry families, the UI-28
 retention sweep owns them like any non-task audit row.
 
-**Тело запроса (обязательное)** — схема `UiTelemetryBatch`
+#### Тело запроса (обязательное) — схема `UiTelemetryBatch`
 
-**Ответы**
+#### Ответы
 
 | Код | Схема | Описание |
 |---|---|---|
@@ -241,50 +500,22 @@ retention sweep owns them like any non-task audit row.
 | `422` | — | unknown kind, payload outside the taxonomy schema, or a free-text/extra field (rejected, not dropped) |
 | `429` | — | rate limit exceeded (60 per 60s per client) |
 
-### `GET` `/api/health`
+#### Пример запроса
 
-**Health**
+```bash
+curl -X POST 'http://localhost:8090/api/events/ui'
+  -H 'Content-Type: application/json' \
+  -d '{"events": [{"visit_id": "string", "kind": "string"}]}'
+```
 
-**Ответы**
+#### Пример ответа
 
-| Код | Схема | Описание |
-|---|---|---|
-| `200` | — | Successful Response |
-
-### `GET` `/api/settings/execution`
-
-**Get Execution Settings**
-
-Read the default-executor resolution settings (OPEN read — ids
-only, no secrets; the chain itself is computed per GET on
-/api/assignments).
-
-**Ответы**
-
-| Код | Схема | Описание |
-|---|---|---|
-| `200` | `ExecutionSettingsOut` | Successful Response |
-
-### `PUT` `/api/settings/execution`
-
-**Put Execution Settings**
-
-Set the default / fallback executor (UI-token only — Amd 2 §5
-gates, see _validate_default_executor). Empty string clears a slot.
-Audit: default.changed old→new per field (actor = the ui-token class).
-``scope`` reserves project defaults (board_meta
-``default_executor:project:<slug>``); the fallback is global-scope
-only. The fallback does NOT join the GET routing chain — it is the
-UI's no-silent-substitution preview value; dispatch stays explicit.
-
-**Тело запроса (обязательное)** — схема `ExecutionSettingsBody`
-
-**Ответы**
-
-| Код | Схема | Описание |
-|---|---|---|
-| `200` | `ExecutionSettingsOut` | Successful Response |
-| `422` | `HTTPValidationError` | Validation Error |
+```json
+{
+  "ok": true,
+  "accepted": 1
+}
+```
 
 ## Схемы, используемые на странице
 

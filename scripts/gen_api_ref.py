@@ -67,6 +67,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -129,14 +130,23 @@ RU_LABELS = {
     "body_optional": "Тело запроса (необязательное)",
     "body_schema_suffix": "— схема `{name}`",
     "responses": "Ответы",
+    # docs-api-readability (2026-10-21): example subsections. Examples are
+    # SYNTHESIZED from the snapshot schemas (the spec carries none) — the
+    # page-level note says so, honestly, once per page.
+    "example_request": "Пример запроса",
+    "example_response": "Пример ответа",
+    "examples_note": (
+        "Примеры запросов и ответов синтезированы из схем снимка — значения "
+        "иллюстративные; хост в curl — дефолт compose-деплоя "
+        "(`localhost:8090`)."
+    ),
     "code": "Код",
     "schema": "Схема",
     "description": "Описание",
     "schemas_appendix": "Схемы, используемые на странице",
     "field": "Поле",
     "default": "Дефолт",
-    "no_content": "—",
-    # type words (render_type)
+    "no_content": "—",    # type words (render_type)
     "type_array": "массив из",
     "type_object": "объект",
     "type_string": "строка",
@@ -183,6 +193,13 @@ EN_LABELS = {
     "body_optional": "Request body (optional)",
     "body_schema_suffix": "— schema `{name}`",
     "responses": "Responses",
+    "example_request": "Example request",
+    "example_response": "Example response",
+    "examples_note": (
+        "Request and response examples are synthesized from the snapshot "
+        "schemas — values are illustrative; the curl host is the compose "
+        "deploy default (`localhost:8090`)."
+    ),
     "code": "Code",
     "schema": "Schema",
     "description": "Description",
@@ -400,10 +417,204 @@ def response_schema_ref(response: dict[str, Any]) -> str | None:
     return None
 
 
+# --------------------------------------------------------------------------
+# example synthesis (docs-api-readability, 2026-10-21)
+#
+# The spec snapshot carries NO examples, so the generator synthesizes a
+# minimal valid sample per operation: request (curl) from path/query/body
+# schemas, response (JSON) from the first 2xx schema. Everything is
+# deterministic (double runs stay byte-identical) and the page carries the
+# «синтезировано из схем — значения иллюстративные» note. If a future spec
+# adds literal `example`/`default` values, they win over the synthesis.
+# --------------------------------------------------------------------------
+
+CURL_HOST = "http://localhost:8090"  # compose.yaml default board mapping
+SYNTH_DEPTH_CAP = 6
+
+_FORMAT_SAMPLES = {
+    "date-time": "2026-10-21T12:00:00Z",
+    "date": "2026-10-21",
+    "uri": "https://example.com",
+    "url": "https://example.com",
+    "uuid": "9f1c3a2e-4b5d-4c6a-8e7f-0a1b2c3d4e5f",
+    "email": "user@example.com",
+}
+
+
+def _merge_alof(node: dict[str, Any], schemas: dict[str, Any]) -> dict[str, Any]:
+    """Flatten allOf (plus one $ref level) into a single synthetic node."""
+    merged = {k: v for k, v in node.items() if k != "allOf"}
+    for part in node.get("allOf") or []:
+        if not isinstance(part, dict):
+            continue
+        part = dict(part)
+        if "$ref" in part:
+            resolved = schemas.get(schema_name(part["$ref"]))
+            part = dict(resolved or {})
+        merged.setdefault("type", part.get("type"))
+        props = merged.setdefault("properties", {})
+        for name, prop in (part.get("properties") or {}).items():
+            props.setdefault(name, prop)
+        required = merged.setdefault("required", [])
+        for name in part.get("required") or []:
+            if name not in required:
+                required.append(name)
+    return merged
+
+
+def synthesize_example(
+    node: Any, schemas: dict[str, Any], depth: int = 0
+) -> Any:
+    """Minimal valid sample from a schema node; None = «nothing honest to
+    show» (the caller drops the property). $ref resolves through `schemas`;
+    cycles and depth-cap exits return None, never a fabricated value."""
+    if depth > SYNTH_DEPTH_CAP or not isinstance(node, dict):
+        return None
+    if "example" in node:
+        return node["example"]
+    if "default" in node:
+        return node["default"]
+    if "$ref" in node:
+        return synthesize_example(schemas.get(schema_name(node["$ref"])), schemas, depth + 1)
+    for combinator in ("anyOf", "oneOf"):
+        if combinator in node and node[combinator]:
+            branches = [
+                b for b in node[combinator]
+                if isinstance(b, dict) and b.get("type") != "null"
+            ] or list(node[combinator])
+            return synthesize_example(branches[0], schemas, depth + 1)
+    if "allOf" in node:
+        return synthesize_example(_merge_alof(node, schemas), schemas, depth + 1)
+    if "enum" in node and node["enum"]:
+        return node["enum"][0]
+    node_type = node.get("type")
+    if node_type == "array":
+        item = synthesize_example(node.get("items") or {}, schemas, depth + 1)
+        return [item] if item is not None else []
+    if node_type == "object":
+        props = node.get("properties") or {}
+        required = node.get("required") or []
+        # Minimal-valid discipline: required fields only; a required-less
+        # object shows all its properties (an empty object teaches nothing).
+        names = [n for n in required if n in props] or list(props)
+        out: dict[str, Any] = {}
+        for name in names:
+            value = synthesize_example(props[name], schemas, depth + 1)
+            if value is not None:
+                out[name] = value
+        return out
+    if node_type == "string":
+        return _FORMAT_SAMPLES.get(node.get("format"), "string")
+    if node_type == "integer":
+        return 1
+    if node_type == "number":
+        return 1.0
+    if node_type == "boolean":
+        return True
+    return None
+
+
+def _scalar_sample(node: Any, fallback: str) -> Any:
+    if isinstance(node, dict):
+        if node.get("enum"):
+            return node["enum"][0]
+        if "default" in node:
+            return node["default"]
+        node_type = node.get("type")
+        if node_type == "integer":
+            return 1
+        if node_type == "boolean":
+            return True
+    return fallback
+
+
+def build_request_path(path: str, params: list[dict[str, Any]]) -> str:
+    """Path template → concrete path: {param} slots get deterministic
+    samples (enum/default first, ints → 1, strings → the param name)."""
+    by_name = {p["name"]: p for p in params if p.get("in") == "path"}
+
+    def slot(match: Any) -> str:
+        name = match.group(1)
+        param = by_name.get(name)
+        schema = (param or {}).get("schema") or {}
+        return str(_scalar_sample(schema, name))
+
+    return re.sub(r"\{([^{}]+)\}", slot, path)
+
+
+def build_query_string(params: list[dict[str, Any]]) -> str:
+    required = [
+        p for p in params if p.get("in") == "query" and p.get("required")
+    ]
+    if not required:
+        return ""
+    pairs = [
+        f"{p['name']}={_scalar_sample(p.get('schema') or {}, p['name'])}"
+        for p in required
+    ]
+    return "?" + "&".join(pairs)
+
+
+def request_body_example(
+    op: dict[str, Any], schemas: dict[str, Any]
+) -> str | None:
+    body = op.get("requestBody") or {}
+    for media in (body.get("content") or {}).values():
+        schema = media.get("schema")
+        if isinstance(schema, dict):
+            example = synthesize_example(schema, schemas)
+            if example is not None:
+                return json.dumps(example, ensure_ascii=False)
+    return None
+
+
+def build_curl_example(
+    method: str, path: str, op: dict[str, Any], schemas: dict[str, Any]
+) -> str:
+    params = op.get("parameters", [])
+    url = CURL_HOST + build_request_path(path, params) + build_query_string(params)
+    upper = method.upper()
+    body_json = request_body_example(op, schemas)
+    lines = []
+    if upper == "GET":
+        lines.append(f"curl '{url}'")
+    else:
+        lines.append(f"curl -X {upper} '{url}'")
+    if body_json is not None:
+        lines.append("  -H 'Content-Type: application/json' \\")
+        lines.append(f"  -d '{body_json}'")
+    return "\n".join(lines)
+
+
+def response_example(op: dict[str, Any], schemas: dict[str, Any]) -> str | None:
+    """First 2xx response with a JSON schema → synthesized JSON text."""
+    for code in sorted(op.get("responses") or {}, key=str):
+        if not str(code).startswith("2"):
+            continue
+        for media in (op["responses"][code].get("content") or {}).values():
+            schema = media.get("schema")
+            if isinstance(schema, dict):
+                example = synthesize_example(schema, schemas)
+                if example is not None:
+                    return json.dumps(example, ensure_ascii=False, indent=2)
+    return None
+
+
 def render_operation(
-    method: str, path: str, op: dict[str, Any], labels: dict[str, Any]
+    method: str,
+    path: str,
+    op: dict[str, Any],
+    labels: dict[str, Any],
+    schemas: dict[str, Any] | None = None,
 ) -> tuple[str, list[str]]:
-    """One operation section + the schema names directly referenced."""
+    """One operation section + the schema names directly referenced.
+
+    docs-api-readability (2026-10-21): subsections are h4 headings (the API
+    presentation styles them as labeled sections; h4 stays out of the h2/h3
+    TOC), and every operation carries a synthesized request (curl) example
+    plus — when a 2xx JSON schema exists — a synthesized response example.
+    """
+    schemas = schemas if schemas is not None else {}
     lines: list[str] = [f"### `{method.upper()}` `{path}`"]
     if op.get("summary"):
         lines.append("")
@@ -425,7 +636,7 @@ def render_operation(
             for p in params
         ]
         lines.append("")
-        lines.append(f"**{labels['params']}**")
+        lines.append(f"#### {labels['params']}")
         lines.append("")
         lines.append(
             md_table(
@@ -448,13 +659,13 @@ def render_operation(
         )
         suffix = str(labels["body_schema_suffix"]).format(name=body_schema) if body_schema else ""
         lines.append("")
-        lines.append(f"**{title}**" + (f" {suffix}" if suffix else ""))
+        lines.append(f"#### {title}" + (f" {suffix}" if suffix else ""))
         if body_schema:
             refs.append(body_schema)
 
     if op.get("responses"):
         lines.append("")
-        lines.append(f"**{labels['responses']}**")
+        lines.append(f"#### {labels['responses']}")
         lines.append("")
         rows = []
         for code in sorted(op["responses"], key=str):
@@ -472,7 +683,31 @@ def render_operation(
         lines.append(
             md_table([labels["code"], labels["schema"], labels["description"]], rows)
         )
+
+    # --- synthesized examples (always for the request; response when a 2xx
+    # JSON schema exists) — the honesty note lives at page level -----------
+    lines.append("")
+    lines.append(f"#### {labels['example_request']}")
+    lines.append("")
+    lines.append("```bash")
+    lines.append(build_curl_example(method, path, op, schemas))
+    lines.append("```")
+
+    response_json = response_example(op, schemas)
+    if response_json is not None:
+        lines.append("")
+        lines.append(f"#### {labels['example_response']}")
+        lines.append("")
+        lines.append("```json")
+        lines.append(response_json)
+        lines.append("```")
     return "\n".join(lines), refs
+
+
+def operation_segment(path: str) -> str:
+    """First path segment after /api/ — the subgroup key (same segment the
+    group prefixes map on)."""
+    return path.strip("/").split("/")[1]
 
 
 def render_group_page(
@@ -483,7 +718,14 @@ def render_group_page(
     spec_meta: dict[str, Any],
     locale: str,
 ) -> str:
-    """The markdown body of one board-API group page (ru or en)."""
+    """The markdown body of one board-API group page (ru or en).
+
+    docs-api-readability (2026-10-21): multi-segment groups carry h2
+    SUBGROUP headers (config `subgroups`, one entry per path prefix —
+    fail-closed coverage), so the page TOC nests endpoints under labeled
+    sections instead of one flat list. Single-segment groups stay flat (an
+    h2 with a single child is noise, not structure).
+    """
     labels = LABELS[locale]
     title = locale_text(group["title"], locale, f"board_api.groups[{group['slug']}].title")
     about = locale_text(group["about"], locale, f"board_api.groups[{group['slug']}].about") if group.get("about") else ""
@@ -493,10 +735,54 @@ def render_group_page(
         lines.append("")
     lines.append(str(labels["generated_from"]).format(version=spec_meta["version"], count=len(operations)))
     lines.append("")
-    for method, path, op in operations:
-        section, refs = render_operation(method, path, op, labels)
+    lines.append(str(labels["examples_note"]))
+    lines.append("")
+
+    def emit_operation(method: str, path: str, op: dict[str, Any]) -> None:
+        section, _refs = render_operation(method, path, op, labels, schemas)
         lines.append(section)
         lines.append("")
+
+    prefixes = list(group.get("prefixes") or [])
+    subgroups = list(group.get("subgroups") or [])
+    if len(prefixes) > 1:
+        covered: set[str] = set()
+        for subgroup in subgroups:
+            keys = list(subgroup.get("keys") or [])
+            if not keys:
+                raise SyncError(
+                    f"board_api.groups[{group['slug']}]: a subgroups entry has no `keys` — fix the config"
+                )
+            where = f"board_api.groups[{group['slug']}].subgroups[{keys[0]}].title"
+            subtitle = locale_text(subgroup["title"], locale, where)
+            unknown = [key for key in keys if key not in prefixes]
+            if unknown:
+                raise SyncError(
+                    f"board_api.groups[{group['slug']}]: subgroup keys {unknown} "
+                    f"are not group prefixes — SPEC DRIFT guard, fix the config"
+                )
+            duplicates = covered.intersection(keys)
+            if duplicates:
+                raise SyncError(
+                    f"board_api.groups[{group['slug']}]: prefixes {sorted(duplicates)} "
+                    f"covered by more than one subgroup — fix the config"
+                )
+            covered.update(keys)
+            lines.append(f"## {subtitle}")
+            lines.append("")
+            for method, path, op in operations:
+                if operation_segment(path) in keys:
+                    emit_operation(method, path, op)
+        missing = [prefix for prefix in prefixes if prefix not in covered]
+        if missing:
+            raise SyncError(
+                f"board_api.groups[{group['slug']}]: prefixes {missing} are not "
+                f"covered by `subgroups` — fail-closed, add them to the config"
+            )
+    else:
+        for method, path, op in operations:
+            emit_operation(method, path, op)
+
     referenced = sorted(
         {
             ref

@@ -16,28 +16,67 @@ Observed vesma-mesh nodes: add, edit, delete, list.
 
 Generated from the OpenAPI snapshot v1.59.0 (operations in this section: 4).
 
+Request and response examples are synthesized from the snapshot schemas — values are illustrative; the curl host is the compose deploy default (`localhost:8090`).
+
 ### `GET` `/api/mesh/nodes`
 
 **Mesh Nodes**
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `MeshNodesOut` | Successful Response |
 
+#### Example request
+
+```bash
+curl 'http://localhost:8090/api/mesh/nodes'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true,
+  "nodes": [
+    {
+      "name": "string",
+      "base_url": "string"
+    }
+  ]
+}
+```
+
 ### `POST` `/api/mesh/nodes`
 
 **Add Mesh Node**
 
-**Request body (required)** — schema `MeshNodeSpec`
+#### Request body (required) — schema `MeshNodeSpec`
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `201` | `MeshNodeOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X POST 'http://localhost:8090/api/mesh/nodes'
+  -H 'Content-Type: application/json' \
+  -d '{"name": "string", "base_url": "string"}'
+```
+
+#### Example response
+
+```json
+{
+  "name": "string",
+  "base_url": "string"
+}
+```
 
 ### `PATCH` `/api/mesh/nodes/{name}`
 
@@ -47,20 +86,37 @@ Full-spec update (create body semantics, memory-server PATCH
 pattern). ``enabled`` rides here — nodes deliberately have no action
 endpoint; node management is API-only, the UI is read-only.
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `name` | path | string | yes |  |
 
-**Request body (required)** — schema `MeshNodeSpec`
+#### Request body (required) — schema `MeshNodeSpec`
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `MeshNodeOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X PATCH 'http://localhost:8090/api/mesh/nodes/name'
+  -H 'Content-Type: application/json' \
+  -d '{"name": "string", "base_url": "string"}'
+```
+
+#### Example response
+
+```json
+{
+  "name": "string",
+  "base_url": "string"
+}
+```
 
 ### `DELETE` `/api/mesh/nodes/{name}`
 
@@ -68,18 +124,32 @@ endpoint; node management is API-only, the UI is read-only.
 
 Remove from the board registry. The mesh node itself is untouched.
 
-**Parameters**
+#### Parameters
 
 | Parameter | In | Type | Required | Constraints |
 |---|---|---|---|---|
 | `name` | path | string | yes |  |
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | `OkNoteOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Example request
+
+```bash
+curl -X DELETE 'http://localhost:8090/api/mesh/nodes/name'
+```
+
+#### Example response
+
+```json
+{
+  "ok": true
+}
+```
 
 ## Schemas used on this page
 

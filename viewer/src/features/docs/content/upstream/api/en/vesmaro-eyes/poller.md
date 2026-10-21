@@ -16,6 +16,8 @@ The assignment-poller bootstrap script and its artifacts: the CA certificate, se
 
 Generated from the OpenAPI snapshot v1.59.0 (operations in this section: 5).
 
+Request and response examples are synthesized from the snapshot schemas — values are illustrative; the curl host is the compose deploy default (`localhost:8090`).
+
 ### `GET` `/api/poller/artifacts/bootstrap.sh.sha256`
 
 **Poller Bootstrap Script Sha256**
@@ -27,11 +29,17 @@ order as /api/poller/bootstrap.sh — the hash can never describe a
 different file than the one downloadable next to it. Open read: a
 digest of a secret-free script is not secret material.
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | — | Successful Response |
+
+#### Example request
+
+```bash
+curl 'http://localhost:8090/api/poller/artifacts/bootstrap.sh.sha256'
+```
 
 ### `GET` `/api/poller/artifacts/ca.crt`
 
@@ -42,11 +50,17 @@ material). 503 while the CA file is not mounted: the chart ships the
 optional mount (values `pollerBootstrap.caFile`); the honest refusal
 names the fix instead of serving a guess.
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | — | Successful Response |
+
+#### Example request
+
+```bash
+curl 'http://localhost:8090/api/poller/artifacts/ca.crt'
+```
 
 ### `GET` `/api/poller/artifacts/poller.py`
 
@@ -55,11 +69,17 @@ names the fix instead of serving a guess.
 The poller itself, always fresh from the RUNNING board — installer
 re-run doubles as upgrade (no version skew between board and poller).
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | — | Successful Response |
+
+#### Example request
+
+```bash
+curl 'http://localhost:8090/api/poller/artifacts/poller.py'
+```
 
 ### `GET` `/api/poller/artifacts/vesmaro-assignment-poller.service`
 
@@ -68,11 +88,17 @@ re-run doubles as upgrade (no version skew between board and poller).
 The systemd system unit (the bootstrap adapts User/config paths to
 the target machine with sed — the artifact stays verbatim in the repo).
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | — | Successful Response |
+
+#### Example request
+
+```bash
+curl 'http://localhost:8090/api/poller/artifacts/vesmaro-assignment-poller.service'
+```
 
 ### `GET` `/api/poller/bootstrap.sh`
 
@@ -82,8 +108,14 @@ The one-command installer (open read). Served from the packaged
 file — the script carries NO secrets: the enrollment token arrives as
 a CLI argument on the VPS, everything else rides pinned TLS.
 
-**Responses**
+#### Responses
 
 | Code | Schema | Description |
 |---|---|---|
 | `200` | — | Successful Response |
+
+#### Example request
+
+```bash
+curl 'http://localhost:8090/api/poller/bootstrap.sh'
+```

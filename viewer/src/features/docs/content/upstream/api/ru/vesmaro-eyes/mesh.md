@@ -16,28 +16,67 @@ spec_version: 1.59.0
 
 Сгенерировано из снимка OpenAPI v1.59.0 (эндпоинтов в разделе: 4).
 
+Примеры запросов и ответов синтезированы из схем снимка — значения иллюстративные; хост в curl — дефолт compose-деплоя (`localhost:8090`).
+
 ### `GET` `/api/mesh/nodes`
 
 **Mesh Nodes**
 
-**Ответы**
+#### Ответы
 
 | Код | Схема | Описание |
 |---|---|---|
 | `200` | `MeshNodesOut` | Successful Response |
 
+#### Пример запроса
+
+```bash
+curl 'http://localhost:8090/api/mesh/nodes'
+```
+
+#### Пример ответа
+
+```json
+{
+  "ok": true,
+  "nodes": [
+    {
+      "name": "string",
+      "base_url": "string"
+    }
+  ]
+}
+```
+
 ### `POST` `/api/mesh/nodes`
 
 **Add Mesh Node**
 
-**Тело запроса (обязательное)** — схема `MeshNodeSpec`
+#### Тело запроса (обязательное) — схема `MeshNodeSpec`
 
-**Ответы**
+#### Ответы
 
 | Код | Схема | Описание |
 |---|---|---|
 | `201` | `MeshNodeOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Пример запроса
+
+```bash
+curl -X POST 'http://localhost:8090/api/mesh/nodes'
+  -H 'Content-Type: application/json' \
+  -d '{"name": "string", "base_url": "string"}'
+```
+
+#### Пример ответа
+
+```json
+{
+  "name": "string",
+  "base_url": "string"
+}
+```
 
 ### `PATCH` `/api/mesh/nodes/{name}`
 
@@ -47,20 +86,37 @@ Full-spec update (create body semantics, memory-server PATCH
 pattern). ``enabled`` rides here — nodes deliberately have no action
 endpoint; node management is API-only, the UI is read-only.
 
-**Параметры**
+#### Параметры
 
 | Параметр | В | Тип | Обяз. | Ограничения |
 |---|---|---|---|---|
 | `name` | путь | строка | да |  |
 
-**Тело запроса (обязательное)** — схема `MeshNodeSpec`
+#### Тело запроса (обязательное) — схема `MeshNodeSpec`
 
-**Ответы**
+#### Ответы
 
 | Код | Схема | Описание |
 |---|---|---|
 | `200` | `MeshNodeOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Пример запроса
+
+```bash
+curl -X PATCH 'http://localhost:8090/api/mesh/nodes/name'
+  -H 'Content-Type: application/json' \
+  -d '{"name": "string", "base_url": "string"}'
+```
+
+#### Пример ответа
+
+```json
+{
+  "name": "string",
+  "base_url": "string"
+}
+```
 
 ### `DELETE` `/api/mesh/nodes/{name}`
 
@@ -68,18 +124,32 @@ endpoint; node management is API-only, the UI is read-only.
 
 Remove from the board registry. The mesh node itself is untouched.
 
-**Параметры**
+#### Параметры
 
 | Параметр | В | Тип | Обяз. | Ограничения |
 |---|---|---|---|---|
 | `name` | путь | строка | да |  |
 
-**Ответы**
+#### Ответы
 
 | Код | Схема | Описание |
 |---|---|---|
 | `200` | `OkNoteOut` | Successful Response |
 | `422` | `HTTPValidationError` | Validation Error |
+
+#### Пример запроса
+
+```bash
+curl -X DELETE 'http://localhost:8090/api/mesh/nodes/name'
+```
+
+#### Пример ответа
+
+```json
+{
+  "ok": true
+}
+```
 
 ## Схемы, используемые на странице
 
