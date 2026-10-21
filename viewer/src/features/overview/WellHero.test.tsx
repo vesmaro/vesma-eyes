@@ -362,7 +362,7 @@ describe("WellHero — the waiting chip (one read with the cockpit)", () => {
       await seedWaitingSources(client, gateway);
     });
     // ME-072 C: the hero chip is the TOTAL readout («ждут всего»).
-    expect(html).toMatch(/Waiting in total: \d+/);
+    expect(html).toMatch(/Waiting for the owner: \d+/);
     expect(html).toMatch(/href="\/(tasks\/inbox|tasks|agents\/execution)"/);
   });
 });

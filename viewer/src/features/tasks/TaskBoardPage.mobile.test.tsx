@@ -268,7 +268,7 @@ describe("TaskBoardPage — the mobile (below-md) board", () => {
       const facadeChip = container!.querySelector<HTMLButtonElement>(
         'button[aria-pressed="false"][title]',
       );
-      expect(facadeChip?.textContent).toContain("Ждут владельца");
+      expect(facadeChip?.textContent).toContain("На проверке");
       await act(async () => {
         facadeChip!.click();
       });

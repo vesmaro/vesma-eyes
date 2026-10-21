@@ -159,7 +159,10 @@ export const ru = {
   "cockpit.busyAll": "Все агенты",
   "cockpit.busyOnline": "исполнителей на связи: {{online}} из {{total}}",
   "cockpit.busyWorking": "задач в работе: {{count}}",
-  "cockpit.busyQueued": "в очереди: {{count}}",
+  // W-A (D1): «в очереди» остаётся словарём ЗАДАЧ (колонка канбана);
+  // очереди поручений исполняет своё слово — иначе один ярлык читал
+  // два разных счётчика (1 на Обзоре против 213 на канбане).
+  "cockpit.busyQueued": "поручений в очереди: {{count}}",
   "cockpit.agentsNone": "Агентов пока нет — подключите первого",
   "cockpit.agentsNoneAction": "Подключить агента",
   "cockpit.busyError": "Не удалось получить занятость",
@@ -167,10 +170,13 @@ export const ru = {
   // ME-072 C: the chip renders the number and this LABEL side by side —
   // the count lives only in the numeral (no «3 … ждут вас: 3» double).
   "cockpit.waitingSummaryLabel": "Ждут владельца",
+  // W-A (D1): расшифровка формулы общего счётчика (тултип чипа Обзора и
+  // блока «Что ждёт меня») — «чей счёт» отвечают слова, не догадка.
+  "cockpit.waitingFormula": "входящие + на проверке + поручения в очереди",
   "cockpit.waitingSummaryTitle": "Открыть самое срочное",
   "cockpit.waitingInbox": "Входящие: {{count}}",
   "cockpit.waitingReview": "На проверке: {{count}}",
-  "cockpit.waitingQueued": "В очереди: {{count}}",
+  "cockpit.waitingQueued": "Поручений в очереди: {{count}}",
   "cockpit.waitingError": "Не удалось посчитать, что ждёт",
   "cockpit.memoryTitle": "Что в памяти",
   "cockpit.retry": "Повторить",
@@ -201,7 +207,10 @@ export const ru = {
   "overview.legendNote":
     "На колодце — {{shown}} свежайших записей и их связи. Связи показаны только между отображёнными записями.",
   "overview.heroTags": "тегов — {{count}}",
-  "overview.waitingChip": "Ждут всего: {{count}}",
+  // W-A (D1): чип колодца и блок «Что ждёт меня» читают ОДНУ формулу
+  // (useWaitingSummary.total) — слова теперь тоже одни («Ждут владельца»),
+  // расшифровка формулы — общий ключ cockpit.waitingFormula (тултип).
+  "overview.waitingChip": "Ждут владельца: {{count}}",
   // U2 «Обзор-колодец» (2026-10-08): HUD + шинный тикер. Один родительский
   // слот «Поделиться»; витальный кластер — только из ответивших проводов;
   // тикер — одна строка реальных событий /api/events (словарь по смыслу,
@@ -1001,9 +1010,11 @@ export const ru = {
 
   // ME-071 W3: живой пульт (15-WOW §3.4/§8.5) — фасад «Ждут владельца»,
   // темп решений в шапке колонки, вспышка task.done, кромка блокировки.
-  "tasks.board.waitingChip": "Ждут владельца: {{count}}",
+  // W-A (D1): чип считает ТОЛЬКО колонку «На проверке» — и теперь называется
+  // её словом; «Ждут владельца» осталось именем общей формулы Обзора.
+  "tasks.board.waitingChip": "На проверке: {{count}}",
   "tasks.board.waitingChipTitle":
-    "Показать задачи, ждущие решения владельца (на проверке)",
+    "Показать задачи в колонке «На проверке» — они ждут вашего решения",
   "tasks.board.doneTempoUnit": "/ч",
   "tasks.board.doneTempoAria": "решений за последний час: {{count}}",
   "tasks.board.resolvedToast": "Задача «{{title}}» решена",
@@ -2415,7 +2426,9 @@ export const ru = {
   "kora.pult.hint": "Выберите сессию — её разбор появится здесь",
   "kora.pult.digestEmpty": "Разбор сессии собирается автоматически — появится позже",
   "kora.pult.readTranscript": "Читать транскрипт",
-  "kora.pult.waiting": "ждут владельца: {{n}}",
+  // W-A (D1): пультовский счётчик = ТОЛЬКО входящие (GET /tasks/inbox) —
+  // называем его словарём источника («Входящие»), как в блоке Обзора.
+  "kora.pult.waiting": "Входящие: {{n}}",
   "kora.pult.waitingHint": "Задачи, которые ждут вашего решения",
   "kora.pult.expand": "Развернуть",
   "kora.pult.collapse": "Свернуть",

@@ -137,7 +137,9 @@ export const en: Record<TranslationKey, string> = {
   "cockpit.busyAll": "All agents",
   "cockpit.busyOnline": "executors connected: {{online}} of {{total}}",
   "cockpit.busyWorking": "tasks in progress: {{count}}",
-  "cockpit.busyQueued": "queued: {{count}}",
+  // W-A (D1): "queued" stays the TASK column's word (the board); the
+  // assignments queue gets its own words — one label, one counter.
+  "cockpit.busyQueued": "queued assignments: {{count}}",
   "cockpit.agentsNone": "No agents yet — connect the first one",
   "cockpit.agentsNoneAction": "Connect an agent",
   "cockpit.busyError": "Could not load who is busy",
@@ -145,10 +147,13 @@ export const en: Record<TranslationKey, string> = {
   // ME-072 C: the chip renders the number and this LABEL side by side —
   // the count lives only in the numeral (no «3 … waiting for you: 3» double).
   "cockpit.waitingSummaryLabel": "Waiting for the owner",
+  // W-A (D1): the shared counter's formula spelled out (tooltip on the
+  // Overview chip and the cockpit block).
+  "cockpit.waitingFormula": "inbox + in review + queued assignments",
   "cockpit.waitingSummaryTitle": "Open the most urgent",
   "cockpit.waitingInbox": "Inbox: {{count}}",
   "cockpit.waitingReview": "In review: {{count}}",
-  "cockpit.waitingQueued": "Queued: {{count}}",
+  "cockpit.waitingQueued": "Queued assignments: {{count}}",
   "cockpit.waitingError": "Could not count what is waiting",
   "cockpit.memoryTitle": "In memory",
   "cockpit.retry": "Retry",
@@ -179,7 +184,9 @@ export const en: Record<TranslationKey, string> = {
   "overview.legendNote":
     "The well shows {{shown}} most recent records and their links. Links appear only between displayed records.",
   "overview.heroTags": "tags — {{count}}",
-  "overview.waitingChip": "Waiting in total: {{count}}",
+  // W-A (D1): the well chip and the cockpit block read ONE formula
+  // (useWaitingSummary.total) — the words now match too.
+  "overview.waitingChip": "Waiting for the owner: {{count}}",
   // U2 «Overview well» (2026-10-08): HUD + the bus ticker. One parent
   // action «Share»; the vital cluster renders only from answered wires;
   // the ticker is ONE line of real /api/events frames (meaning-mapped —
@@ -973,9 +980,11 @@ export const en: Record<TranslationKey, string> = {
 
   // ME-071 W3: the living console (15-WOW §3.4/§8.5) — the waiting facade,
   // the resolution tempo, the task.done flash, the blocked edge.
-  "tasks.board.waitingChip": "Waiting for the owner: {{count}}",
+  // W-A (D1): the chip counts ONLY the review column — it now uses the
+  // column's own word; "Waiting for the owner" stays the Overview total.
+  "tasks.board.waitingChip": "In review: {{count}}",
   "tasks.board.waitingChipTitle":
-    "Show tasks waiting for the owner's decision (on review)",
+    "Show tasks in the “In review” column — they await your decision",
   "tasks.board.doneTempoUnit": "/h",
   "tasks.board.doneTempoAria": "resolutions in the last hour: {{count}}",
   "tasks.board.resolvedToast": "Task “{{title}}” resolved",
@@ -2373,7 +2382,9 @@ export const en: Record<TranslationKey, string> = {
   "kora.pult.digestEmpty":
     "The session digest is built automatically — it will arrive later",
   "kora.pult.readTranscript": "Read the transcript",
-  "kora.pult.waiting": "awaiting owner: {{n}}",
+  // W-A (D1): the pult counter = the inbox only (GET /tasks/inbox) — it
+  // uses the source's word, same as the Overview block.
+  "kora.pult.waiting": "Inbox: {{n}}",
   "kora.pult.waitingHint": "Tasks waiting for your decision",
   "kora.pult.expand": "Expand",
   "kora.pult.collapse": "Collapse",
