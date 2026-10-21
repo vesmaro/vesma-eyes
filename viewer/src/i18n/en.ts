@@ -870,10 +870,12 @@ export const en: Record<TranslationKey, string> = {
   "tasks.inboxStaleLabel": "Disappeared records",
   "tasks.inboxSource": "server: {{server}}",
   "tasks.inboxAdoptedLink": "adopted → {{id}}",
-  // W-B (D6): the card answers «who asks».
-  "tasks.inboxAskedBy": "assignment from {{who}}",
-  "tasks.inboxNoAuthor": "no author",
-  "tasks.inboxNoSpecialist": "not set",
+  // W-B (D6, review P1): specialist comes from the record's owner: tag and
+  // feeds task.specialists on adopt — it names the DOER (assigned to), not
+  // the asker. The empty case shares one word with the details dl.
+  "tasks.inboxAssignee": "assignment for {{who}}",
+  "tasks.inboxNoAssignee": "no specialist assigned",
+  "tasks.inboxNoSpecialist": "not assigned",
   // UI-25: key:value chips + expand/edit
   "tasks.inboxProjectChip": "project: {{value}}",
   "tasks.inboxPriorityChip": "priority: {{value}}",

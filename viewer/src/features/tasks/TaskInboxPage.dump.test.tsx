@@ -20,7 +20,9 @@ import type { Memory } from "@/gateway/types";
  * W-B (D6, user-panel verdict): the inbox card is a human assignment —
  * the raw `id: … owner: … gates: …` field dump NEVER renders on the card
  * face (it lives under the «Raw record from memory» spoiler), free-form
- * excerpts stay visible, and the author line answers «кто просит».
+ * excerpts stay visible, and the assignee line names to whom the work is
+ * assigned (the specialist tag feeds task.specialists on adopt — review
+ * P1: the DOER, never «the asker»).
  */
 
 /** The corpus dump shape (prod task:queue records open like this). */
@@ -166,9 +168,10 @@ describe("TaskInboxPage — D6 human assignment card", () => {
     expect(html).toContain("Дизайн-департамент · Design Lead + 3D Artist");
   });
 
-  it("the author line answers who asks; the scan hint rides the button", async () => {
+  it("the assignee line names who the work is FOR; the scan hint rides the button", async () => {
     const html = await renderSsr(new DumpInboxGateway({ latency: false }));
-    expect(html).toContain("assignment from @GCW: Agent Architect");
+    expect(html).toContain("assignment for @GCW: Agent Architect");
+    expect(html).not.toContain("assignment from");
     expect(html).toContain("records tagged task:queue land in the inbox");
   });
 

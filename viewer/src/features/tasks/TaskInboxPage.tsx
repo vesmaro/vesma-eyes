@@ -47,9 +47,11 @@ import { pageGridClass } from "@/layout/pageGrid";
  * борд» then adopts the edited version and the server syncs the edit back
  * to vesma as a superseding revision record.
  *
- * W-B (D6, user-panel verdict): the card reads as a human ASSIGNMENT — who
- * asks («от @GCW: …»), what happened (the title), what to decide (the
- * actions). Many queue records OPEN their content with the raw
+ * W-B (D6, user-panel verdict): the card reads as a human ASSIGNMENT — to
+ * whom it is assigned («поручение для @GCW: …» — the specialist tag feeds
+ * task.specialists on adopt, so it names the DOER, review P1), what
+ * happened (the title), what to decide (the actions). Many queue records
+ * OPEN their content with the raw
  * `id: … title: … owner: …` field dump; that dump never renders on the
  * card face — it lives under the spoiler («Сырая запись»), next to the
  * details. Free-form excerpts (no dump shape) stay on the face: hiding
@@ -375,8 +377,8 @@ function InboxCard({
       <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-foreground-muted">
           {item.specialist
-            ? t("tasks.inboxAskedBy", { who: item.specialist })
-            : t("tasks.inboxNoAuthor")}
+            ? t("tasks.inboxAssignee", { who: item.specialist })
+            : t("tasks.inboxNoAssignee")}
         </p>
         <div className="flex items-center gap-1.5">
           {editable ? (

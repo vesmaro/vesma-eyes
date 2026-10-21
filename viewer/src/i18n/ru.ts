@@ -897,11 +897,13 @@ export const ru = {
   "tasks.inboxStaleLabel": "Исчезнувшие записи",
   "tasks.inboxSource": "сервер: {{server}}",
   "tasks.inboxAdoptedLink": "принята → {{id}}",
-  // W-B (D6): карточка-поручение отвечает «кто просит» (значение —
-  // каноничное «@GCW: …», поэтому без второго двоеточия в приставке).
-  "tasks.inboxAskedBy": "поручение от {{who}}",
-  "tasks.inboxNoAuthor": "автор не указан",
-  "tasks.inboxNoSpecialist": "не указан",
+  // W-B (D6, ревью P1): specialist приходит из тега owner: записи и при
+  // принятии уходит в task.specialists — это «КОМУ поручено» (делающий),
+  // не «от кого просят». Значение — каноничное «@GCW: …», приставка без
+  // второго двоеточия. Пустота — одним словом с деталями («специалист»).
+  "tasks.inboxAssignee": "поручение для {{who}}",
+  "tasks.inboxNoAssignee": "специалист не назначен",
+  "tasks.inboxNoSpecialist": "не назначен",
   // UI-25: key:value chips + expand/edit
   "tasks.inboxProjectChip": "проект: {{value}}",
   "tasks.inboxPriorityChip": "приоритет: {{value}}",
