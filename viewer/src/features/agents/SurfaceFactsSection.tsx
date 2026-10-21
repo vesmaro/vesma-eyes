@@ -48,9 +48,12 @@ export function SurfaceFactsSection({ executor }: { executor: ExecutorItem }) {
             {t("agents.card.surfaceContainers")}
           </p>
           <ul className="flex flex-col gap-0.5">
-            {facts.containers.map((container) => (
+            {facts.containers.map((container, index) => (
               <li
-                key={container.name}
+                // Duplicate names recur in the server corpus (the same
+                // container probed twice) — compose the key with the index
+                // so React stops warning (ux-hygiene-followups-20261020).
+                key={`${container.name}-${index}`}
                 className="break-all font-mono text-xs text-foreground-secondary"
               >
                 {container.name}
@@ -74,9 +77,9 @@ export function SurfaceFactsSection({ executor }: { executor: ExecutorItem }) {
             {t("agents.card.surfaceNodes")}
           </p>
           <ul className="flex flex-col gap-0.5">
-            {facts.nodes.map((node) => (
+            {facts.nodes.map((node, index) => (
               <li
-                key={node.name}
+                key={`${node.name}-${index}`}
                 className="break-all font-mono text-xs text-foreground-secondary"
               >
                 {node.name}
@@ -108,9 +111,9 @@ export function SurfaceFactsSection({ executor }: { executor: ExecutorItem }) {
             {t("agents.card.surfacePods")}
           </p>
           <ul className="flex flex-col gap-0.5">
-            {facts.pods.map((pod) => (
+            {facts.pods.map((pod, index) => (
               <li
-                key={pod.name}
+                key={`${pod.name}-${index}`}
                 className="break-all font-mono text-xs text-foreground-secondary"
               >
                 {pod.execEnv ?? pod.name}
@@ -133,9 +136,9 @@ export function SurfaceFactsSection({ executor }: { executor: ExecutorItem }) {
             {t("agents.card.surfaceVerdicts")}
           </p>
           <ul className="flex flex-col gap-0.5">
-            {facts.verdicts.map(([key, value]) => (
+            {facts.verdicts.map(([key, value], index) => (
               <li
-                key={key}
+                key={`${key}-${index}`}
                 className="break-all font-mono text-xs text-foreground-secondary"
               >
                 {key}: {value}
