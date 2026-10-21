@@ -1400,6 +1400,24 @@ export const en: Record<TranslationKey, string> = {
   "agents.settings.defaultLabel": "Default executor",
   "agents.settings.fallbackLabel": "Fallback executor",
   "agents.settings.none": "— none —",
+  // W-A (D11-UI): the saved default/fallback pair is checked against the
+  // same rules as the save gate; a broken pair warns HERE — tasks could sit
+  // unpicked for weeks while the setting stayed silent.
+  "agents.settings.warnNone":
+    "No default executor is set — new tasks will not be picked up.",
+  "agents.settings.warnMissing":
+    "The selected executor “{{name}}” is gone from the registry — tasks will not be picked up until another one is chosen.",
+  "agents.settings.warnPending":
+    "The selected executor “{{name}}” is not approved yet — tasks will not be picked up.",
+  "agents.settings.warnRevoked":
+    "The selected executor “{{name}}” is revoked — tasks will not be picked up until another one is chosen.",
+  "agents.settings.warnDisabled":
+    "The selected executor “{{name}}” is disabled — tasks will not be picked up.",
+  "agents.settings.warnOffline":
+    "The selected executor “{{name}}” is not answering — tasks will wait until it responds.",
+  "agents.settings.warnFallbackNone":
+    "No fallback executor is set — if the first one fails, tasks have nowhere to go.",
+  "agents.settings.warnAction": "Open executors",
   "agents.settings.save": "Save",
   "agents.settings.saving": "Saving…",
   "agents.settings.saved": "Execution settings saved",

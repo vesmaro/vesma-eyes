@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router";
-import { Search, WifiOff } from "lucide-react";
+import { Search, WifiOff, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState/EmptyState";
+import { HonestLine } from "@/components/HonestLine/HonestLine";
 import { TableRowSkeleton } from "@/components/skeletons/Skeletons";
 import type { AssignmentItem, AssignmentLifecycleState, BoardTask } from "@/gateway/boardTypes";
 import { isAgentsSource } from "@/gateway/capabilities";
@@ -29,6 +30,7 @@ import {
 } from "./executionPrefs";
 import { useAssignments, useExecutors } from "./useAgents";
 import { useAssignmentMutations } from "./useAssignmentMutations";
+import { useExecutionWarning } from "./useExecutionWarning";
 import { pageGridClass } from "@/layout/pageGrid";
 
 /**
@@ -54,6 +56,9 @@ export function ExecutionPage() {
   const executors = useExecutors();
   const board = useBoardTasks();
   const mutations = useAssignmentMutations();
+  // W-A (D11-UI): the saved routing pair vs the save gate's rules — the
+  // same verdict the settings section shows (one hook, one truth).
+  const executionWarning = useExecutionWarning();
 
   // UX-overhaul §4.3 (Ф1, review P2-1): the ExecutorSheet's «Все задачи»
   // deep-links here as /agents/execution?executor=<id> — the param seeds
@@ -272,6 +277,33 @@ export function ExecutionPage() {
         loading={executors.isPending}
         error={executors.isError}
       />
+
+      {/* W-A (D11-UI): the saved routing pair cannot pick work up — this
+       * page is where «задачи не забираются» is OBSERVED, so the reason
+       * lives here too (same verdict as Настройки › Исполнение). */}
+      {executionWarning.warning ? (
+        <HonestLine
+          tone="warning"
+          action={
+            <Link
+              to="/system/settings"
+              className="inline-flex min-h-12 md:min-h-6 items-center gap-1 text-sm font-medium text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            >
+              {t("nav.systemSettings")}
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </Link>
+          }
+        >
+          <span className="block">
+            {t(executionWarning.warning.key, executionWarning.warning.values)}
+          </span>
+          {executionWarning.fallbackEmpty ? (
+            <span className="mt-0.5 block text-xs text-foreground-muted">
+              {t("agents.settings.warnFallbackNone")}
+            </span>
+          ) : null}
+        </HonestLine>
+      ) : null}
 
       {/* AGW-4 onboarding: «Как это работает» — collapsed row above the
        * filters, auto-expanded ONCE (the first collapse persists). */}
