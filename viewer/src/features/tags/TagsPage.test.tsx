@@ -88,11 +88,11 @@ describe("TagsPage — вид «частоты» on the 611-tag corpus", () => {
     expect(html).toContain("Frequent · 100–999");
     expect(html).toContain("Middle · 10–99");
     expect(html).toContain("Rare · 1–9");
-    expect(html).toContain("611 tags");
+    expect(html).toContain("tags: 611");
     expect(html).toContain("mnemos:checkpoint");
     // Section counters are the real populations (§3.2: живые из данных).
-    expect(html).toContain("19 tags");
-    expect(html).toContain("513 tags");
+    expect(html).toContain("tags: 19");
+    expect(html).toContain("tags: 513");
   });
 
   it("keeps the initial render inside the ~110 interactive-node budget (§11.1)", async () => {
@@ -167,7 +167,7 @@ describe("TagsPage — state matrix (§6)", () => {
       prefetchMerged: false,
     });
     expect(html).toContain('role="status"');
-    expect(html).not.toContain("611 tags");
+    expect(html).not.toContain("tags: 611");
   });
 });
 

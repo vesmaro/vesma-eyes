@@ -303,7 +303,9 @@ function FooterRow({
         <>
           <span className="min-w-0 flex-1 truncate text-left">{label}</span>
           {hint ? (
-            <span className="shrink-0 font-mono text-caps tracking-caps text-foreground-muted">
+            // D12: key hints only where a keyboard exists — hidden on
+            // touch-only surfaces (styles/global.css .kbd-hint).
+            <span className="kbd-hint shrink-0 font-mono text-caps tracking-caps text-foreground-muted">
               {hint}
             </span>
           ) : null}

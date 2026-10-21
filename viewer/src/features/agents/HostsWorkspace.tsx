@@ -886,7 +886,10 @@ function HostField({
             {t(lifecycleNextKey(state), nextVars)}
           </p>
         ) : null}
-        <p className="font-mono text-xs tabular-nums text-foreground-muted">
+        <p
+          className="font-mono text-xs tabular-nums text-foreground-muted"
+          title={t("agents.hosts.harnessHint")}
+        >
           {t("agents.hosts.onlineCounter", {
             online: group.online,
             total: group.members.length,
@@ -1426,7 +1429,10 @@ function HostRow({
         ) : null}
       </span>
       <span className="flex w-full items-center gap-1.5 text-xs">
-        <span className="shrink-0 font-mono tabular-nums text-foreground-muted">
+        <span
+          className="shrink-0 font-mono tabular-nums text-foreground-muted"
+          title={t("agents.hosts.harnessHint")}
+        >
           {t("agents.hosts.onlineCounter", {
             online: group.online,
             total: group.members.length,

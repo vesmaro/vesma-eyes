@@ -692,3 +692,19 @@ html[data-vesma-pad] {
     min-height: 48px;
   }
 }
+
+/* D12 (панель 2026-10-21): «Ctrl K» на телефоне — ложная подсказка.
+ * Клавиатурные брифы живут только там, где есть клавиатура: на
+ * coarse-pointer/hover-none поверхностях (тач) класс .kbd-hint скрывается,
+ * а .kbd-alt-label (текстовая альтернатива) наоборот показывается.
+ * Правила стоят ПОСЛЕ @tailwind utilities — при равной специфичности
+ * побеждает порядок каскада. */
+@media ((hover: none) or (pointer: coarse)) {
+  .kbd-hint {
+    display: none;
+  }
+
+  span.kbd-alt-label {
+    display: inline;
+  }
+}

@@ -315,11 +315,18 @@ export function updateTagsUrl(
 
 // --- misc -----------------------------------------------------------------------
 
-/** «данные на {{time}}» — HH:MM in the local zone, zero-padded, no Intl drift. */
+/**
+ * «данные на {{time}}» — a FULL local stamp `dd.MM HH:MM` (D12, panel
+ * 2026-10-21: bare HH:MM read fresh even days later — the date part makes
+ * staleness visible at a glance). Local zone, zero-padded, no Intl drift.
+ */
 export function formatStatsTime(epochMs: number): string {
   const date = new Date(epochMs);
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return (
+    `${pad(date.getDate())}.${pad(date.getMonth() + 1)} ` +
+    `${pad(date.getHours())}:${pad(date.getMinutes())}`
+  );
 }
 
 /** Splits `tag` around the first case-insensitive match of `query` for the weight-medium highlight. */

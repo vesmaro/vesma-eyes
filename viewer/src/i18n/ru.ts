@@ -93,7 +93,10 @@ export const ru = {
   // mirrors the hub's livingFull label (review round: the raw "live" was an
   // EN leak on every RU first screen).
   "topbar.liveLayerAria": "Живой слой: {{state}}. Нажмите, чтобы сменить режим.",
-  "topbar.liveLayerTitle": "Живой слой: live → пауза → выкл",
+  // D12: заголовок был «Живой слой: live → …» — EN-вкрапление и непонятная
+  // кнопка. Теперь: текущий режим словами + что делает клик.
+  "topbar.liveLayerTitle":
+    "Живой слой: {{state}}. Каждый клик переключает режим: полный → пауза → выкл",
   "topbar.liveLive": "полный",
   "topbar.liveCalm": "пауза",
   "topbar.liveOff": "выкл",
@@ -399,7 +402,6 @@ export const ru = {
   "auth.route.backToPassword": "← Вернуться к входу по логину и паролю",
   "auth.route.roleOwner": "владелец",
   "auth.route.roleMember": "участник",
-  "auth.route.back": "← На борт",
   // U1 (07h §12): заметная кнопка возврата у центрального блока /auth и /pair —
   // иконка-стрелка + чистый лейбл (глиф «←» из строки выше в кнопку не тащим).
   "auth.route.backLabel": "На борт",
@@ -455,7 +457,7 @@ export const ru = {
   "search.noTypedMatches":
     "Попаданий типа {{type}} по запросу «{{query}}» нет. Возможно, конвейер ранжирует этот запрос иначе.",
   "search.noMatchesHint":
-    "Попробуйте меньше или другие слова — колодец глубок, но буквален.",
+    "Попробуйте меньше или другие слова — колодец (так устроена память: всё, что в неё попадает, остаётся) глубок, но буквален.",
   "search.hitsCount": "Найдено {{count}} по запросу «{{query}}»",
   "search.hitsTypedSuffix": " (клиентский фильтр по типу)",
   "search.hitTypeFts": "по словам",
@@ -547,12 +549,12 @@ export const ru = {
   "tags.nothingCarries": "Под этим тегом ничего нет",
   "tags.nothingCarriesMessage": "Сейчас нет воспоминаний с тегом {{tag}}.",
   // --- tags cloud (UI-17, spec 2026-09-21 §9; owner-approved copy) -----------
-  "tags.statsLine": "{{count}} тегов · данные на {{time}}",
+  "tags.statsLine": "тегов: {{count}} · данные на {{time}}",
   "tags.partialData": "Данные от {{answered}} из {{total}} хранилищ",
   "tags.partialStores": "Не ответили хранилища: {{servers}}",
   "tags.family.all": "Все семейства",
   "tags.family.bare": "без префикса",
-  "tags.family.tags": "{{count}} тегов",
+  "tags.family.tags": "тегов: {{count}}",
   "tags.band.core": "Ядро · 1000+",
   "tags.band.frequent": "Частые · 100–999",
   "tags.band.middle": "Средние · 10–99",
@@ -1279,6 +1281,10 @@ export const ru = {
   "agents.hosts.filter.archive": "Архив",
   "agents.hosts.filterEmpty": "Под фильтр не попал ни один хост.",
   "agents.hosts.onlineCounter": "{{online}}/{{total}} харнесов онлайн",
+  // D12: готовое определение из словаря (глоссарий, docs/glossary.md) —
+  // тултип при ПЕРВОМ употреблении лор-слова.
+  "agents.hosts.harnessHint":
+    "Харнес — среда исполнения агента (например, zcode или hermes).",
   "agents.hosts.connectAction": "Подключить хост",
   // UX-AUDIT A5: короткая подпись тихой кнопки в шапке ростера (глиф «+»
   // несёт иконка; полный CTA пустого состояния/панели остаётся «хост»).
@@ -2008,7 +2014,7 @@ export const ru = {
   "automation.form.removeClause": "Убрать условие {{clause}}",
   "automation.form.noValueEnum":
     "У этого поля нет закрытого набора значений — условие недоступно в v1.",
-  "automation.form.onLabel": "Событие (on)",
+  "automation.form.onLabel": "Событие (когда запускать)",
   "automation.form.actionLabel": "Действие",
   "automation.form.create": "Создать",
   "automation.field.taskCol": "колонка задачи",
@@ -2370,8 +2376,11 @@ export const ru = {
   "kora.list.emptyAction": "Подключить агента",
   "kora.list.emptyStatusLink": "Открыть статус системы",
   "kora.session.steerable": "можно рулить",
-  "kora.session.origin.relay": "реле",
+  "kora.session.origin.relay": "через релей",
+  // D12 (панель 2026-10-21): «реле»-чип без расшифровки. Ярлык читается словами, тултип — готовая формулировка контракта сессий (relay = через релей Коры).
+  "kora.session.origin.relayHint": "Сессия началась через релей Коры",
   "kora.session.origin.local": "локальная",
+  "kora.session.origin.localHint": "Сессия началась вне Коры, на самой машине",
   "kora.session.state.live": "живая",
   "kora.session.state.idle": "ожидает",
   "kora.session.state.dead": "процесс мёртв",

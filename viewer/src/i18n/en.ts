@@ -73,7 +73,10 @@ export const en: Record<TranslationKey, string> = {
   "topbar.themeDark": "Dark theme",
   // В1 live-layer indicator (blueprint §6.6, canon v11 §4).
   "topbar.liveLayerAria": "Living layer: {{state}}. Click to change.",
-  "topbar.liveLayerTitle": "Living layer: live → paused → off",
+  // D12: the title was an EN-styled cryptic chain; now the current state in
+  // words + what a click does.
+  "topbar.liveLayerTitle":
+    "Living layer: {{state}}. Each click cycles the mode: full → paused → off",
   "topbar.liveLive": "live",
   "topbar.liveCalm": "paused",
   "topbar.liveOff": "off",
@@ -326,7 +329,6 @@ export const en: Record<TranslationKey, string> = {
   "auth.gate.previewCaption":
     "A sketch of the section — its contents open after you sign in",
   "auth.gate.checkingSession": "Checking your session…",
-  "auth.route.back": "← Back to the board",
   // U1 (07h §12): the noticeable return button by the central card on /auth
   // and /pair — icon arrow + clean label (the «←» glyph above stays put).
   "auth.route.backLabel": "Back to the board",
@@ -435,7 +437,7 @@ export const en: Record<TranslationKey, string> = {
   "search.noTypedMatches":
     "No {{type}} hits for “{{query}}”. The pipeline may rank this query differently.",
   "search.noMatchesHint":
-    "Try fewer or different words — the well is deep but literal.",
+    "Try fewer or different words — the well (that is how the memory is built: everything that falls in, stays) is deep but literal.",
   "search.hitsCount": "{{count}} found for “{{query}}”",
   "search.hitsTypedSuffix": " (client-side filter of server-ranked hits)",
   "search.hitTypeFts": "by words",
@@ -527,12 +529,12 @@ export const en: Record<TranslationKey, string> = {
   "tags.nothingCarries": "Nothing carries this tag",
   "tags.nothingCarriesMessage": "No memory is tagged {{tag}} right now.",
   // --- tags cloud (UI-17, spec 2026-09-21 §9; owner-approved copy) -----------
-  "tags.statsLine": "{{count}} tags · as of {{time}}",
+  "tags.statsLine": "tags: {{count}} · as of {{time}}",
   "tags.partialData": "Data from {{answered}} of {{total}} stores",
   "tags.partialStores": "Stores unreachable: {{servers}}",
   "tags.family.all": "All families",
   "tags.family.bare": "no prefix",
-  "tags.family.tags": "{{count}} tags",
+  "tags.family.tags": "tags: {{count}}",
   "tags.band.core": "Core · 1000+",
   "tags.band.frequent": "Frequent · 100–999",
   "tags.band.middle": "Middle · 10–99",
@@ -1252,6 +1254,9 @@ export const en: Record<TranslationKey, string> = {
   "agents.hosts.filter.archive": "Archive",
   "agents.hosts.filterEmpty": "No hosts match the filter.",
   "agents.hosts.onlineCounter": "{{online}}/{{total}} harnesses online",
+  // D12: the glossary definition at the lore word's first use.
+  "agents.hosts.harnessHint":
+    "A harness is the agent's runtime environment (for example, zcode or hermes).",
   "agents.hosts.connectAction": "Connect a host",
   // UX-AUDIT A5: the roster header's quiet button label (the «+» rides the
   // icon glyph; the panel/empty-state CTA keeps the full "a host" wording).
@@ -1966,7 +1971,7 @@ export const en: Record<TranslationKey, string> = {
   "automation.form.removeClause": "Remove condition {{clause}}",
   "automation.form.noValueEnum":
     "This field has no closed value set — the condition is unavailable in v1.",
-  "automation.form.onLabel": "Event (on)",
+  "automation.form.onLabel": "Event (when to run)",
   "automation.form.actionLabel": "Action",
   "automation.form.create": "Create",
   "automation.field.taskCol": "task column",
@@ -2325,8 +2330,11 @@ export const en: Record<TranslationKey, string> = {
   "kora.list.emptyAction": "Connect an agent",
   "kora.list.emptyStatusLink": "Open system status",
   "kora.session.steerable": "steerable",
-  "kora.session.origin.relay": "relay",
+  "kora.session.origin.relay": "via relay",
+  // D12: the relay chip reads as words; the tooltip is the session contract wording.
+  "kora.session.origin.relayHint": "The session started through the Kora relay",
   "kora.session.origin.local": "local",
+  "kora.session.origin.localHint": "The session started outside Kora, on the machine itself",
   "kora.session.state.live": "live",
   "kora.session.state.idle": "idle",
   "kora.session.state.dead": "process dead",
