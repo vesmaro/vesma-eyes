@@ -164,10 +164,14 @@ export function AuthRoutePage() {
 
   // Recovery step 1 → 2 (fix/recovery-ux): the token verify at the door
   // flipped `tokenPresent` — the set-password step takes the card. The
-  // redirect above stays fenced while the walk is on.
-  useEffect(() => {
+  // redirect above stays fenced while the walk is on. Render-time
+  // adjustment keyed on the pair (the React docs pattern) — no effect
+  // needed for a pure local transition (lint: set-state-in-effect).
+  const [walkSeen, setWalkSeen] = useState({ recovery, tokenPresent });
+  if (walkSeen.recovery !== recovery || walkSeen.tokenPresent !== tokenPresent) {
+    setWalkSeen({ recovery, tokenPresent });
     if (recovery === "token" && tokenPresent) setRecovery("password");
-  }, [recovery, tokenPresent]);
+  }
 
   // Recovery landing (fix/recovery-ux): the success toast is up and the
   // token session teardown (logout — DELETE first, the cookie leg is
@@ -177,6 +181,11 @@ export function AuthRoutePage() {
   // honest «не вышло выйти» toast covers it; the user leaves via
   // «Назад ко входу» — the walk then unblocks through the honest
   // already-signed-in redirect, the visitor IS signed in).
+  // The landing REACTS to an external system: UiTokenProvider.logout() is
+  // fire-and-forget (no promise to await), so the walk exits when the
+  // gate's `present` flips. The scoped set-state-in-effect exception for
+  // this file lives in eslint.config.js (the compiler-generation rule
+  // ignores inline disable comments).
   useEffect(() => {
     if (!recoveryDone || present) return;
     setRecoveryDone(false);

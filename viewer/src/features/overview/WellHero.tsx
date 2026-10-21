@@ -339,8 +339,8 @@ export function WellHero() {
           <g className="well-substrate" aria-hidden="true">
             {substrate.strands.map((strand, i) => (
               <line
-                // Deterministic build — index keys are stable across renders.
-                // eslint-disable-next-line react/no-array-index-key
+                // Deterministic build — index keys are stable across renders
+                // (the substrate is regenerated once per mount, never sorted).
                 key={`s${i}`}
                 x1={strand.a.x}
                 y1={strand.a.y}
@@ -351,7 +351,6 @@ export function WellHero() {
             ))}
             {substrate.points.map((point, i) => (
               <circle
-                // eslint-disable-next-line react/no-array-index-key
                 key={`p${i}`}
                 cx={point.x}
                 cy={point.y}

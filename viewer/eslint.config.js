@@ -50,6 +50,20 @@ export default tseslint.config(
     },
   },
   {
+    // ux-hygiene-followups-20261020: the /auth recovery-walk landing
+    // REACTS to an external system — UiTokenProvider.logout() is
+    // fire-and-forget (no promise to await), so the walk exits when the
+    // gate's `present` flips. Clearing local walk state + navigating in
+    // that effect is the documented external-system use of an effect.
+    // The compiler-generation rule ignores inline eslint-disable comments
+    // (verified empirically with a minimal probe), so the exception lives
+    // here — scoped to this one file, not a global relaxation.
+    files: ["src/features/ui-token/AuthRoutePage.tsx"],
+    rules: {
+      "react-hooks/set-state-in-effect": "off",
+    },
+  },
+  {
     // АРХКОМ-8 verdict: dangerouslySetInnerHTML is banned EVERYWHERE ("запре-
     // щён всюду"), not only in the docs feature — docs is the one sanctioned
     // HTML-injection surface and its escape hatches must not normalize else-
