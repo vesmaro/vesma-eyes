@@ -297,6 +297,9 @@ export const ru = {
   "pulse.feedLabel": "Лента записей пульса",
   "pulse.untitled": "без заголовка",
   "pulse.degradedStores": "Часть хранилищ не ответила: {{servers}}",
+  // W-A (D2): плашка-тупик получает выход — ссылка на состояние хранилищ
+  // (/system/status#stores, тот же health-провод, что читает Обзор).
+  "pulse.degradedStoresAction": "открыть состояние хранилищ",
   "pulse.unavailableTitle": "Пульс недоступен в vesma-режиме",
   "pulse.unavailableMessage":
     "Пульс собирает записи со всех подключённых бордов. Сейчас приложение связано с vesma напрямую, поэтому ленте пока неоткуда взяться — подключите борд, и записи появятся.",
@@ -591,6 +594,11 @@ export const ru = {
   "status.retryMetrics": "Повторить метрики",
   "status.refreshHealth": "Обновить состояние",
   "status.apiStatus": "Состояние API",
+  // W-A (D2b): Статус показывает ХРАНИЛИЩА теми же карточками, что и Обзор
+  // (один health-провод GET /api/health) — «работает» больше не противоречит
+  // плашке «laptop не отвечает».
+  "status.storesTitle": "Хранилища",
+  "status.storesHint": "тот же опрос, что читает Обзор",
   "status.memoriesStat": "Воспоминания",
   "status.publishedDetail": "{{count}} опубликовано",
   "status.avgLatency": "Средняя задержка поиска",

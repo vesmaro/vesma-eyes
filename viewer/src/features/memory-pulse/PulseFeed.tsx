@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { TriangleAlert } from "lucide-react";
+import { ArrowRight, TriangleAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TagBadge } from "@/components/TagBadge/TagBadge";
@@ -104,17 +104,30 @@ export function PulseFeed({
   return (
     <div className={cn("space-y-2", className)}>
       {degraded.length > 0 ? (
+        // W-A (D2): the alarm is no longer a dead end — it names the exit.
+        // The whole strip stays the status announcement; the link inside
+        // leads to /system/status#stores (the same health wire this feed's
+        // per-server notes come from), where each store's state is laid out.
         <p
-          className="flex items-start gap-2 rounded-md border border-warning-tint bg-warning-tint p-3 text-xs text-foreground-secondary"
+          className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md border border-warning-tint bg-warning-tint p-3 text-xs text-foreground-secondary"
           role="status"
         >
           <TriangleAlert
-            className="mt-0.5 size-3.5 shrink-0 text-warning"
+            className="size-3.5 shrink-0 text-warning"
             aria-hidden="true"
           />
-          {t("pulse.degradedStores", {
-            servers: degraded.map((note) => note.server).join(", "),
-          })}
+          <span className="min-w-0">
+            {t("pulse.degradedStores", {
+              servers: degraded.map((note) => note.server).join(", "),
+            })}
+          </span>
+          <Link
+            to="/system/status#stores"
+            className="inline-flex min-h-12 md:min-h-6 items-center gap-1 font-medium text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          >
+            {t("pulse.degradedStoresAction")}
+            <ArrowRight className="size-3.5" aria-hidden="true" />
+          </Link>
         </p>
       ) : null}
       <ul className="list-none space-y-list-gap" aria-label={t("pulse.feedLabel")}>

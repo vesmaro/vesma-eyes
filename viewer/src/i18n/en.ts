@@ -273,6 +273,9 @@ export const en: Record<TranslationKey, string> = {
   "pulse.feedLabel": "Pulse feed",
   "pulse.untitled": "untitled",
   "pulse.degradedStores": "Some stores did not answer: {{servers}}",
+  // W-A (D2): the dead-end strip gains an exit — a link to the store
+  // status (/system/status#stores, the same health wire the Overview reads).
+  "pulse.degradedStoresAction": "open store status",
   "pulse.unavailableTitle": "Pulse is unavailable in vesma mode",
   "pulse.unavailableMessage":
     "The pulse collects entries from every connected board. The app is currently talking to vesma directly, so the feed has nowhere to come from yet — connect a board and the entries will appear.",
@@ -570,6 +573,11 @@ export const en: Record<TranslationKey, string> = {
   "status.retryMetrics": "Retry metrics",
   "status.refreshHealth": "Refresh health",
   "status.apiStatus": "API status",
+  // W-A (D2b): Status shows the STORES with the same cards as the Overview
+  // (one health wire, GET /api/health) — "ok" no longer contradicts the
+  // "laptop unreachable" alarm.
+  "status.storesTitle": "Stores",
+  "status.storesHint": "the same probe the Overview reads",
   "status.memoriesStat": "Memories",
   "status.publishedDetail": "{{count}} published",
   "status.avgLatency": "Avg search latency",
