@@ -1839,7 +1839,10 @@ export const ru = {
   "automation.banner.engineOff": "Движок не включён",
   "automation.banner.engineOffNote":
     "Работают только ручные запуски: расписания не тикают сами, «Запустить сейчас» — рука владельца.",
+  // W-B (D10): значение выключателя — по-русски, не «on/off» (D12-класс).
   "automation.banner.killSwitch": "глобальный выключатель",
+  "automation.banner.switchOn": "вкл.",
+  "automation.banner.switchOff": "выкл.",
   "automation.banner.cap": "лимит в день",
   "automation.banner.usedToday": "авто-запусков сегодня",
   "automation.banner.rules": "правил",
@@ -1848,8 +1851,10 @@ export const ru = {
   // UI-21 settings hub: the kill-switch/cap form (server contract §2).
   "automation.settings.title": "Автоматизация",
   "automation.settings.enabledLabel": "Автоматизация включена",
+  // W-B (D10): одно согласованное состояние — движок не работает, поэтому
+  // переключатель недоступен; без внутреннего кода этапа («S1») в тексте.
   "automation.settings.engineOffNote":
-    "Движок пока не работает (S1): настройка сохранит решение и заработает вместе с движком.",
+    "Движок автоматики ещё не включён на этом борде — переключатель станет доступным, когда движок заработает. Сохранённое решение и лимит применяются, как прежде.",
   "automation.settings.capLabel": "Лимит авто-запусков в день",
   "automation.settings.capHint":
     "От 1 до 1000; сегодня использовано {{used}} из {{cap}}.",
@@ -2003,7 +2008,7 @@ export const ru = {
     "Создаётся выключенным — включение отдельным шагом; тик — только после включения движка",
   "automation.schedule.empty": "Расписаний нет",
   "automation.schedule.emptyHint":
-    "Создайте расписание — ручной запуск работает сразу, автоматический ждёт движок (S2).",
+    "Создайте расписание — ручной запуск работает сразу, автоматический заработает вместе с движком.",
   "automation.hook.create": "Новое правило",
   "automation.hook.title": "Новое правило-хук",
   "automation.hook.subtitle":

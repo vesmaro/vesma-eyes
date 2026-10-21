@@ -1805,6 +1805,8 @@ export const en: Record<TranslationKey, string> = {
   "automation.banner.engineOffNote":
     "Manual runs only: schedules do not tick on their own — «run now» is the owner's hand.",
   "automation.banner.killSwitch": "global kill-switch",
+  "automation.banner.switchOn": "on",
+  "automation.banner.switchOff": "off",
   "automation.banner.cap": "daily cap",
   "automation.banner.usedToday": "auto-launches today",
   "automation.banner.rules": "rules",
@@ -1813,8 +1815,10 @@ export const en: Record<TranslationKey, string> = {
   // UI-21 settings hub: the kill-switch/cap form (server contract §2).
   "automation.settings.title": "Automation",
   "automation.settings.enabledLabel": "Automation enabled",
+  // W-B (D10): one coherent state — the engine is down, so the switch is
+  // locked; no internal milestone code in the copy.
   "automation.settings.engineOffNote":
-    "The engine is not running yet (S1): this preference is stored now and takes effect when the engine ships.",
+    "The automation engine is not enabled on this board yet — the switch unlocks when the engine ships. The stored preference and the cap still apply as saved.",
   "automation.settings.capLabel": "Daily auto-launch cap",
   "automation.settings.capHint": "1–1000; {{used}} of {{cap}} used today.",
   "automation.settings.capError": "Enter a whole number from 1 to 1000.",
@@ -1959,10 +1963,10 @@ export const en: Record<TranslationKey, string> = {
   "automation.schedule.create": "New schedule",
   "automation.schedule.title": "New schedule",
   "automation.schedule.subtitle":
-    "Created disabled — enablement is a separate step; ticks only start with the engine (S2)",
+    "Created disabled — enablement is a separate step; ticks only start with the engine",
   "automation.schedule.empty": "No schedules",
   "automation.schedule.emptyHint":
-    "Create a schedule — manual runs work right away, automatic ones await the engine (S2).",
+    "Create a schedule — manual runs work right away, automatic ones start working with the engine.",
   "automation.hook.create": "New rule",
   "automation.hook.title": "New hook rule",
   "automation.hook.subtitle": "Event (on) + conditions + action; created disabled",

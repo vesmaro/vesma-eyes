@@ -149,11 +149,14 @@ export function AutomationPage() {
           ) : null}
           {/* Read-only kill-switch + cap (v1: NO toggle) + honest counters.
            * The toggle itself lives in the settings hub (UI-21, spec §1.2
-           * ADR 0013 §8 UI-frame amendment) — the banner links there. */}
+           * ADR 0013 §8 UI-frame amendment) — the banner links there.
+           * D10: the switch value speaks the page language, not «on/off». */}
           <p className="flex flex-wrap gap-x-4 gap-y-1 font-mono text-xs text-foreground-muted">
             <span>
               {t("automation.banner.killSwitch")}:{" "}
-              {status.data?.global_kill_switch ? "on" : "off"}
+              {status.data?.global_kill_switch
+                ? t("automation.banner.switchOn")
+                : t("automation.banner.switchOff")}
             </span>
             <span>
               {t("automation.banner.cap")}: {status.data?.daily_cap ?? 0}
