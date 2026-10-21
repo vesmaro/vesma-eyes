@@ -81,6 +81,10 @@ describe("PulseFeed", () => {
     );
     expect(degraded).toContain("Some stores did not answer");
     expect(degraded).toContain("store-b");
+    // W-A D2 (+review F5): the plaque is not a dead end — it links to the
+    // store status where each store's state is laid out.
+    expect(degraded).toContain('href="/system/status#stores"');
+    expect(degraded).toContain("open store status");
   });
 
   it("compact cut drops the tag row (Overview strip)", () => {

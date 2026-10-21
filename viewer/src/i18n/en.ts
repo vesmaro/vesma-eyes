@@ -1415,6 +1415,8 @@ export const en: Record<TranslationKey, string> = {
     "The selected executor “{{name}}” is disabled — tasks will not be picked up.",
   "agents.settings.warnOffline":
     "The selected executor “{{name}}” is not answering — tasks will wait until it responds.",
+  "agents.settings.warnMesh":
+    "The selected executor “{{name}}” travels via mesh — the poller does not pick tasks up (routing unavailable until R4).",
   "agents.settings.warnFallbackNone":
     "No fallback executor is set — if the first one fails, tasks have nowhere to go.",
   "agents.settings.warnAction": "Open executors",

@@ -27,9 +27,10 @@ import { useValidationNow } from "@/features/tasks/useValidationClock";
  *
  * W-A (D11-UI, user-panel verdict 2026-10-21): a SAVED pair that cannot
  * route anything warns right here (the shared `useExecutionWarning` — the
- * same verdict the /agents/execution page shows). The check runs on the
- * LOADED values while the form is untouched (editing suppresses the line;
- * the ineligible rows already carry their reasons in the selects).
+ * same verdict the /agents/execution page shows). The line shows while the
+ * SHOWN pair matches the LOADED one (editing suppresses it; after a save
+ * the refetch re-arms it — review F3); the ineligible rows already carry
+ * their reasons in the selects.
  */
 
 /** The whole «Исполнение» well — the settings hub reuses it verbatim. */
@@ -45,12 +46,28 @@ export function ExecutionSettingsSection({ anchorId }: { anchorId?: string }) {
   const [fallbackId, setFallbackId] = useState<string>("");
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  // W-A (D11-UI) + review F1: the shared verdict hook sits with the OTHER
+  // hooks, BEFORE the early `!capable` return — Rules of Hooks (a hook
+  // called after a conditional return crashes when `capable` flips).
+  const { warning, fallbackEmpty } = useExecutionWarning();
   // Derived-value adoption (no setState-in-render): before the first edit
   // the selects show the loaded pair; the first change pins the local copy.
   const loaded = settings.data;
   const defaultIdShown = dirty || defaultId !== "" ? defaultId : (loaded?.default_executor ?? "");
   const fallbackIdShown =
     dirty || fallbackId !== "" ? fallbackId : (loaded?.fallback_executor ?? "");
+
+  // Review F3: suppression compares the SHOWN pair with the LOADED one,
+  // not the dirty flag alone — `dirty` never resets, so after any save the
+  // warning used to stay muted until a remount even when the saved pair
+  // was still broken. With the comparison, the post-save refetch lands a
+  // fresh `loaded` that matches the pinned selects again and a STILL-broken
+  // pair warns immediately (a genuinely-edited form stays suppressed).
+  const formMatchesLoaded =
+    loaded !== undefined &&
+    defaultIdShown === (loaded.default_executor ?? "") &&
+    fallbackIdShown === (loaded.fallback_executor ?? "");
+  const showWarning = (!dirty || formMatchesLoaded) && warning !== null;
 
   if (!capable) {
     // Hub posture (UI-21 §3): the SECTION degenerates, the page stays —
@@ -124,13 +141,6 @@ export function ExecutionSettingsSection({ anchorId }: { anchorId?: string }) {
     });
     setDirty(true);
   };
-
-  // W-A (D11-UI): the shared verdict (same rules as the save gate, same
-  // line as the /agents/execution page), suppressed while the form is
-  // dirty — the owner is already fixing it. The save refetches the
-  // settings key, so a revisit re-evaluates against the fresh pair.
-  const { warning, fallbackEmpty } = useExecutionWarning();
-  const showWarning = !dirty && warning !== null;
 
   return (
     <section

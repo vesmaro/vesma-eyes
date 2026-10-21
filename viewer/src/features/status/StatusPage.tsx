@@ -80,9 +80,11 @@ export function StatusPage() {
 
           {/* W-A (D2b): the stores speak here with the same cards and the
            * same honest states as the Overview (pending → skeleton, failed
-           * wire → its line with a retry, empty registry → nothing — a block
-           * with nothing to say does not render). */}
-          {storesCapable ? (
+           * wire → its line with a retry). An ANSWERED-empty registry
+           * renders no section frame — a block with nothing to say does not
+           * render (the same rule as the Overview's showStores). */}
+          {storesCapable &&
+          !(stores.isSuccess && stores.data.servers.length === 0) ? (
             <section aria-labelledby="status-stores-title" id="stores" className="space-y-3">
               <div className="flex items-baseline justify-between gap-4">
                 <h2 id="status-stores-title" className="text-lg font-semibold text-foreground">
@@ -112,7 +114,7 @@ export function StatusPage() {
                 >
                   {t("overview.storesError", { message: stores.error.message })}
                 </HonestLine>
-              ) : stores.data.servers.length === 0 ? null : (
+              ) : (
                 <ul className="grid gap-4 sm:grid-cols-2">
                   {stores.data.servers.map((server) => (
                     <li key={server.name}>

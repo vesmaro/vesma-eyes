@@ -20,7 +20,7 @@ import { keys } from "@/lib/queryKeys";
  * Both query states are seeded into the cache so renderToString renders the
  * resolved branches synchronously; ru copy is the no-provider default.
  */
-function renderStatus(adapterMode: AdapterKind): string {
+function renderStatus(adapterMode: AdapterKind, stores?: unknown): string {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -62,6 +62,27 @@ function renderStatus(adapterMode: AdapterKind): string {
     retryOnMount: false,
     retry: false,
   });
+  // W-A D2b (+review F5): optionally seed the shared per-store wire
+  // (GET /api/health through useBoardHealth) — the same cache the
+  // Overview's store cards read.
+  if (stores !== undefined) {
+    const storesEntry = queryClient
+      .getQueryCache()
+      .build(queryClient, {
+        queryKey: keys.status.boardHealth(),
+        queryFn: () => Promise.resolve(null as unknown),
+      });
+    storesEntry.setState({
+      status: "success",
+      fetchStatus: "idle",
+      data: stores,
+      dataUpdatedAt: Date.now(),
+    });
+    queryClient.setQueryDefaults(keys.status.boardHealth(), {
+      retryOnMount: false,
+      retry: false,
+    });
+  }
 
   return renderToString(
     <GatewayContext.Provider value={new MockAdapter({ latency: false })}>
@@ -97,5 +118,57 @@ describe("status board-mode 501 (metrics)", () => {
     const html = renderStatus("vesma");
     expect(html).toContain("Со здоровьем порядок, с метриками — нет");
     expect(html).not.toContain("Метрики недоступны в board-режиме");
+  });
+});
+
+describe("status stores section (W-A D2b + review F5)", () => {
+  it("renders the stores from the same health wire, anchored #stores", () => {
+    const html = renderStatus("board", {
+      ok: true,
+      service: "vesma-eyes",
+      servers: [
+        {
+          name: "cluster",
+          group_name: "default",
+          enabled: true,
+          state: "idle",
+          description: "",
+          ok: true,
+          latency_ms: 12,
+          error: null,
+          memories_total: 3,
+        },
+        {
+          name: "laptop",
+          group_name: "default",
+          enabled: true,
+          state: "idle",
+          description: "",
+          ok: false,
+          latency_ms: null,
+          error: "laptop: unreachable (ConnectError)",
+          memories_total: 0,
+        },
+      ],
+    });
+    // The anchor the Overview's degraded-stores plaque deep-links to.
+    expect(html).toContain('id="stores"');
+    expect(html).toContain("Хранилища");
+    // The same cards as the Overview: a failed store names its failure —
+    // «Состояние API: работает» can no longer contradict the Overview.
+    expect(html).toContain("cluster");
+    expect(html).toContain("laptop");
+    expect(html).toContain("laptop: unreachable (ConnectError)");
+  });
+
+  it("renders no stores section when the wire answered empty", () => {
+    const html = renderStatus("board", {
+      ok: true,
+      service: "vesma-eyes",
+      servers: [],
+    });
+    // A block with nothing to say does not render (anti-dashification).
+    expect(html).not.toContain('id="stores"');
+    expect(html).not.toContain("Хранилища");
   });
 });
