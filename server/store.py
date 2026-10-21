@@ -4529,7 +4529,7 @@ class Store:
             # Nothing this report claims about surfaces — the mirror is
             # left exactly as it was (the no-wipe rule; also covers old
             # agents that post neither field).
-            return self._executor_by_id(executor_id)
+            return self.get_executor(executor_id)
         with self._lock, self._conn() as db:
             row = db.execute(
                 "SELECT * FROM executors WHERE id=?", (executor_id,)).fetchone()
@@ -4549,12 +4549,6 @@ class Store:
                 self._log(db, "exec_env.reported", None, {
                     "executor_id": executor_id,
                     "sections": sorted(next_inv.keys())})
-            return self._executor(db, executor_id)
-
-    def _executor_by_id(self, executor_id: str) -> dict[str, Any] | None:
-        """Row read without a write lock (the no-op leg of the surface
-        ingest — same shape as report_executor_inventory's return)."""
-        with self._lock, self._conn() as db:
             return self._executor(db, executor_id)
 
 
