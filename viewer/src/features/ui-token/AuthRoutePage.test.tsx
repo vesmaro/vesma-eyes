@@ -511,6 +511,12 @@ describe("the token admin view (?tab=token, legacy/machines)", () => {
     expect(document.querySelector('[data-testid="auth-token-mode-link"]')?.textContent).toContain(
       "Back to the username and password sign-in",
     );
+    // D12 (panel 2026-10-21): ONE «На борт» road — the BackToBoardLink
+    // above the card; the form renders no duplicate secondary.
+    const backRoads = Array.from(
+      container.querySelectorAll("a, button"),
+    ).filter((el) => (el.textContent ?? "").includes("Back to the board"));
+    expect(backRoads).toHaveLength(1);
   });
 
   it("a refused token (verify 401) shows the inline error, and the route stays put", { timeout: 20000 }, async () => {
