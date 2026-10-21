@@ -9295,17 +9295,33 @@ def _board_index_response() -> FileResponse:
     )
 
 
-def _board_file_response(path: str) -> FileResponse | None:
+def _is_versioned(request: Request) -> bool:
+    """True when the request pins a cache-bust version (?v=... —
+    scripts/sync-version.sh rewrites every web/index.html asset URL to
+    ?v=X.Y.Z on each release). The version lives IN the URL, so such a
+    response is safe to cache forever; the bare URL must not be."""
+    return "v" in request.query_params
+
+
+def _board_file_response(path: str, versioned: bool = False) -> FileResponse | None:
     """A real file under VESMARO_WEB, or None when there is none (missing,
     a directory, or a traversal attempt — security verdict §5.4 applies
-    to the board tree exactly as it does to VESMARO_APP_DIR)."""
+    to the board tree exactly as it does to VESMARO_APP_DIR).
+
+    Cache contract: a ?v=-pinned URL is content-pinned by the release
+    scheme → immutable; everything else (bare /js/app.js, the fonts the
+    stylesheets reference without a query, favicon) gets no-cache so a
+    release can never leave a stale heuristically-cached file behind —
+    the FileResponse ETag keeps the revalidation a cheap 304."""
     root = STATIC_DIR.resolve()
     candidate = (root / path).resolve()
     if candidate != root and root not in candidate.parents:
         return None
     if not candidate.is_file():
         return None
-    return FileResponse(candidate)
+    cache = ("public, max-age=31536000, immutable"
+             if versioned else "no-cache")
+    return FileResponse(candidate, headers={"Cache-Control": cache})
 
 
 @app.get("/", include_in_schema=False)
@@ -9331,10 +9347,10 @@ async def board_index() -> FileResponse:
 
 
 @app.get("/board/{path:path}", include_in_schema=False)
-async def board_asset(path: str) -> FileResponse:
+async def board_asset(path: str, request: Request) -> FileResponse:
     if ROOT_APP != "app":
         raise HTTPException(404)
-    response = _board_file_response(path)
+    response = _board_file_response(path, versioned=_is_versioned(request))
     if response is None:
         raise HTTPException(404, f"no such board asset: /board/{path}")
     return response
@@ -9426,8 +9442,8 @@ async def app_spa(path: str, request: Request):
 # directories); in app mode unknown paths fall back to the viewer index —
 # history-API routing for deep links like /tasks/42 at the root.
 @app.get("/{path:path}", include_in_schema=False)
-async def root_catch_all(path: str) -> FileResponse:
-    board_file = _board_file_response(path)
+async def root_catch_all(path: str, request: Request) -> FileResponse:
+    board_file = _board_file_response(path, versioned=_is_versioned(request))
     if board_file is not None:
         return board_file
     if ROOT_APP == "app":
