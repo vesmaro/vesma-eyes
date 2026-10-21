@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import { TagBadge } from "@/components/TagBadge/TagBadge";
+import { humanMemoryTitle } from "@/components/memory/memoryDisplay";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useT } from "@/i18n";
@@ -54,7 +55,9 @@ export function SearchResultCard({
               to={detailHref}
               className="inline-flex min-h-12 md:min-h-6 items-center hover:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
             >
-              {highlight(result.title || result.id, queryTerms)}
+              {/* D7: a bare "User" speaker word never faces the search
+               * results — same mined headline as the list card. */}
+              {highlight(humanMemoryTitle(result) || result.id, queryTerms)}
             </Link>
           </h2>
           <span className="flex shrink-0 items-center gap-1.5">

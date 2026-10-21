@@ -4,8 +4,8 @@ import { TextEngine } from "@/components/TextEngine";
 import {
   formatConfidence,
   formatTimestamp,
-  memoryEffectiveContent,
-  memoryTitle,
+  humanMemoryTitle,
+  memoryCardPreview,
 } from "@/components/memory/memoryDisplay";
 import { statusBadgeVariant, statusLabelKey } from "@/components/memory/memoryBadges";
 import { Badge } from "@/components/ui/badge";
@@ -46,7 +46,10 @@ export function MemoryCard({ memory, className, returnSource }: MemoryCardProps)
               to={detailHref}
               className="inline-flex min-h-12 md:min-h-6 items-center hover:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
             >
-              {memoryTitle(memory)}
+              {/* D7: a bare "User" speaker word never faces the list — a human
+               * headline is mined from the body (the author + date meta line
+               * below completes the signature). */}
+              {humanMemoryTitle(memory)}
             </Link>
           </h2>
           <Badge variant={statusBadgeVariant(memory.status)}>
@@ -65,9 +68,11 @@ export function MemoryCard({ memory, className, returnSource }: MemoryCardProps)
          * 3-line card rhythm. Full content instead of the 120-char cut:
          * the line clamp owns the preview height, the title link opens the
          * detail scroll (no in-card expand button — one link action per
-         * card, component-inventory §4). */}
+         * card, component-inventory §4). D7: for "User"-class titles the
+         * machine-dump head stays under the fold — the detail scroll (and
+         * its raw toggle) owns the full body. */}
         <TextEngine
-          text={memoryEffectiveContent(memory)}
+          text={memoryCardPreview(memory)}
           variant="compact"
           className="line-clamp-3 font-scroll text-sm leading-relaxed text-foreground"
         />
