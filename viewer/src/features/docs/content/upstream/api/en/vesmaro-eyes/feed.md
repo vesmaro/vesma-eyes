@@ -318,7 +318,11 @@ curl 'http://localhost:8090/api/archive'
       "priority": "string"
     }
   ],
-  "projects": {}
+  "projects": {
+    "string": [
+      {}
+    ]
+  }
 }
 ```
 

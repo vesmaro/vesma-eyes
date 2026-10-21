@@ -612,7 +612,9 @@ curl 'http://localhost:8090/api/tasks/task_id/memories'
   "unresolved": [
     {}
   ],
-  "sources": {}
+  "sources": {
+    "string": "string"
+  }
 }
 ```
 

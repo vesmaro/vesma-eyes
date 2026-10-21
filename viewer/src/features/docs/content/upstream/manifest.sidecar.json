@@ -321,8 +321,8 @@
     {
       "slug": "api/vesmaro-eyes/memories",
       "titles": {
-        "en": "Memory, tags, and vesma search",
-        "ru": "Память, теги и поиск vesma"
+        "en": "Memory, tags, and mnemos search",
+        "ru": "Память, теги и поиск mnemos"
       },
       "category": "api-board",
       "order": 3,

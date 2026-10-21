@@ -561,7 +561,11 @@ curl 'http://localhost:8090/api/automation/status'
   "daily_cap": 1,
   "daily_used": 1,
   "condition_meta": {},
-  "rules": {}
+  "rules": {
+    "string": {
+      "string": 1
+    }
+  }
 }
 ```
 

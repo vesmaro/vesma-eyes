@@ -21,7 +21,7 @@ repository at an exact pin.
 
 | Section | What the API is | How it is produced |
 |---|---|---|
-| [Board API](api/vesma-eyes/index) | the board's own HTTP API: tasks, memory, assignments, executors, automation, devices | generated from the OpenAPI snapshot (`scripts/gen_api_ref.py`), RU v1 |
+| [Board API](api/vesmaro-eyes/index) | the board's own HTTP API: tasks, memory, assignments, executors, automation, devices | generated from the OpenAPI snapshot (`scripts/gen_api_ref.py`), RU v1 |
 | [vesma HTTP API](api/mnemos/http-api) | the memory server surface: entry CRUD, search, pipeline, DLQ, traces; the A2A sessions contract | a curated map + the page from the vesma repository at a pin |
 | [vesmaro-agent](api/vesmaro-agent/protocol) | the agent wire protocol (registration, claims, reports, discovery) and the service charter v2 digest | the protocol body from the repository at a pin + a curated digest |
 | [vesma-mesh](api/mnemos-mesh/index) | no public HTTP API — an internal protocol | an honest note verified against the repository pin |

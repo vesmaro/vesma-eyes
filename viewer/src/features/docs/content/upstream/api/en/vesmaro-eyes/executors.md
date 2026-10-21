@@ -900,7 +900,20 @@ curl 'http://localhost:8090/api/specialists/profile?name=name'
   "specialist": "string",
   "slug": "string",
   "meta": {},
-  "sections": {}
+  "sections": {
+    "string": [
+      {
+        "title": "",
+        "source_url": "",
+        "excerpt": "",
+        "path": "",
+        "kind": "",
+        "scope": "",
+        "source": "",
+        "also_in": []
+      }
+    ]
+  }
 }
 ```
 
@@ -981,7 +994,20 @@ curl 'http://localhost:8090/api/specialists/name/profile'
   "specialist": "string",
   "slug": "string",
   "meta": {},
-  "sections": {}
+  "sections": {
+    "string": [
+      {
+        "title": "",
+        "source_url": "",
+        "excerpt": "",
+        "path": "",
+        "kind": "",
+        "scope": "",
+        "source": "",
+        "also_in": []
+      }
+    ]
+  }
 }
 ```
 

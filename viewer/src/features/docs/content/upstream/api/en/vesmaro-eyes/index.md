@@ -12,20 +12,20 @@ spec_version: 1.59.0
 
 # Board API overview
 
-A map of the vesma-eyes board HTTP API: every endpoint group, operation counts, and the OpenAPI snapshot the reference is generated from.
+A map of the vesmaro-eyes board HTTP API: every endpoint group, operation counts, and the OpenAPI snapshot the reference is generated from.
 
 OpenAPI snapshot: **vesma-eyes v1.59.0**, 119 operations, 162 schemas. Reference sections:
 
 | Section | Operations | Coverage |
 |---|---|---|
 | [Tasks and intake](api/vesmaro-eyes/tasks) | 18 | Task CRUD, moves, history, task memories and reports, archive, drafts, and memory inbox intake. |
-| [Memory, tags, and vesma search](api/vesmaro-eyes/memories) | 20 | Memory servers and their settings, memory groups, heartbeat and stats, records, tags, and vesma semantic search. |
+| [Memory, tags, and mnemos search](api/vesmaro-eyes/memories) | 20 | Memory servers and their settings, memory groups, heartbeat and stats, records, tags, and mnemos semantic search. |
 | [Executor assignments](api/vesmaro-eyes/assignments) | 8 | The assignment lifecycle: creation, claim, start, heartbeat, completion, failure, cancellation. |
 | [Executors, harnesses, specialists](api/vesmaro-eyes/executors) | 22 | Executor registry and enrollment, the harness dictionary, agent activity, specialist profiles, and provision jobs. |
 | [Automation](api/vesmaro-eyes/automation) | 13 | Rule hooks, schedules and their runs, automation settings, and engine status. |
 | [Devices and pairing](api/vesmaro-eyes/devices) | 8 | Paired devices, grants, QR pairing: code, exchange, confirmation. |
 | [Kora sessions](api/vesmaro-eyes/kora) | 2 | Kora session list and transcripts, kora-scan intake. |
-| [Mesh nodes](api/vesmaro-eyes/mesh) | 4 | Observed vesma-mesh nodes: add, edit, delete, list. |
+| [Mesh nodes](api/vesmaro-eyes/mesh) | 4 | Observed mnemos-mesh nodes: add, edit, delete, list. |
 | [Poller artifacts](api/vesmaro-eyes/poller) | 5 | The assignment-poller bootstrap script and its artifacts: the CA certificate, service unit, script, and checksum. |
 | [Notifications, activity, reports](api/vesmaro-eyes/feed) | 5 | The board feed: notifications and read marking, activity, task reports and the report feed, archive. |
 | [Board and service endpoints](api/vesmaro-eyes/system) | 14 | The whole board and its memory reflection, health, execution settings, UI-token auth, the event stream. |

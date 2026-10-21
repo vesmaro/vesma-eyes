@@ -231,7 +231,7 @@ acceptance rationale, read ADR-0016.
 
 ## See also
 
-- [ADR-0016 — federation threat model](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/project/adr/0016-federation-threat-model.md) (vesma repo)
+- [ADR-0016 — federation threat model](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/project/adr/0016-federation-threat-model.md) (mnemos repo)
 - [Architecture](https://github.com/vesmaro/vesma-mesh/blob/b428ea9b7ec9731fe4d53478702d0667cf3f53de/docs/architecture.md) — trust boundaries, key management, data flow
 - [Configuration reference](mnemos-mesh/user/configuration) — `mesh.yaml` fields
 - [Getting started](mnemos-mesh/user/getting-started) — mTLS material generation

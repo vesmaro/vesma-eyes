@@ -90,7 +90,9 @@ curl 'http://localhost:8090/api/board'
       "priority": "string"
     }
   ],
-  "counts": {}
+  "counts": {
+    "string": 1
+  }
 }
 ```
 

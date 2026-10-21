@@ -84,7 +84,9 @@ curl 'http://localhost:8090/api/kora/sessions'
       "string"
     ]
   },
-  "meta": {}
+  "meta": {
+    "string": "string"
+  }
 }
 ```
 
