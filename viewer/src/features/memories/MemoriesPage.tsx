@@ -1,4 +1,4 @@
-import { useLocation, useSearchParams } from "react-router";
+import { Link, useLocation, useSearchParams } from "react-router";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { MemoryCard } from "@/components/MemoryCard/MemoryCard";
@@ -78,9 +78,22 @@ export function MemoriesPage() {
 
   return (
     <section aria-labelledby="memories-title" className={pageGridClass("showcase", "space-y-4")}>
-      <h1 id="memories-title" className="text-xl font-semibold">
-        {t("memories.title")}
-      </h1>
+      <div>
+        <h1 id="memories-title" className="text-xl font-semibold">
+          {t("memories.title")}
+        </h1>
+        {/* D7 P5: why this page exists (the archive) and when to use the
+         * pulse instead — the two memory faces answer different questions. */}
+        <p className="mt-1 text-sm text-foreground-secondary">
+          {t("memories.subtitle")}{" "}
+          <Link
+            to="/memory/pulse"
+            className="text-iris-bright underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          >
+            {t("memories.toPulse")}
+          </Link>
+        </p>
+      </div>
 
       {/* Filters (inventory §4: status / project / limit as URL params).
        * Deliberately not role="search" — it filters the list, it does not search. */}

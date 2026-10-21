@@ -254,13 +254,16 @@ export const en: Record<TranslationKey, string> = {
 
   // --- memory pulse (Ф1) ---------------------------------------------------------
   "pulse.title": "Memory pulse",
+  "pulse.subtitle": "What landed last — a fresh cut across the stores. Filters, authors and topics live in Records.",
+  "pulse.toRecords": "Open Records",
+  "pulse.stalled": "The pulse has nearly stopped: the newest record is {{days}} days old ({{date}}). Nothing fresh in this scope.",
   "pulse.loading": "Loading the pulse",
-  "pulse.loadFailed": "Failed to load the pulse",
-  "pulse.emptyTitle": "Quiet so far",
-  "pulse.emptyMessage": "No recent memories in the selected stores.",
+  "pulse.loadFailed": "Could not load the pulse",
+  "pulse.emptyTitle": "All quiet",
+  "pulse.emptyMessage": "No new records in the selected stores.",
   "pulse.scopeLabel": "Pulse scope",
   "pulse.scopeAll": "all stores",
-  "pulse.feedLabel": "Pulse memory feed",
+  "pulse.feedLabel": "Pulse feed",
   "pulse.untitled": "untitled",
   "pulse.degradedStores": "Some stores did not answer: {{servers}}",
   "pulse.unavailableTitle": "Pulse is unavailable in vesma mode",
@@ -449,6 +452,8 @@ export const en: Record<TranslationKey, string> = {
 
   // --- memories ---------------------------------------------------------------
   "memories.title": "Records",
+  "memories.subtitle": "The full memory archive: filter by status, project, author and tag. The fresh cut lives in Pulse.",
+  "memories.toPulse": "Open Pulse",
   "memories.filterLabel": "Filter memories",
   "memories.statusLabel": "Status",
   "memories.projectLabel": "Project",
