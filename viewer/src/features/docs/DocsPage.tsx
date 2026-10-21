@@ -20,6 +20,7 @@ import {
   type DocProvenance,
 } from "./manifest";
 import { Markdown } from "./Markdown";
+import { ApiDocsBody, ApiTocDetails, ApiTocRail } from "./apiPresentation";
 import { DocsSearch } from "./DocsSearch";
 import { DocsNotFound } from "./DocsRedirects";
 import { formatSyncDate } from "./sidecar";
@@ -473,6 +474,10 @@ function ArticleView({ slug, page }: { slug: string; page: DocPage }) {
   const toc = useMemo(() => (body === null ? [] : extractHeadings(body)), [body]);
   const activeId = useScrollSpy(toc.map((item) => item.id));
   const category = docCategory(page.category);
+  // The generated board reference gets the API presentation: endpoint
+  // cards, method chips, labeled subsections, nested TOC (docs-api-
+  // readability). Every other page keeps the default article typography.
+  const apiBoard = page.category === "api-board";
   // Locale policy (contract §6, spec §7.1): the page renders in its
   // EFFECTIVE locale. With the switch present the reader controls the
   // locale explicitly (the segment is the verdict); the «на языке
@@ -537,21 +542,33 @@ function ArticleView({ slug, page }: { slug: string; page: DocPage }) {
             )
           ) : (
             <>
-              <TocDetails items={toc} activeId={activeId} />
+              {apiBoard ? (
+                <ApiTocDetails items={toc} activeId={activeId} />
+              ) : (
+                <TocDetails items={toc} activeId={activeId} />
+              )}
               {/* h1 rides the READING locale — the title language always
                   matches the body language (spec §7.1). */}
               <h1 className="mt-4 text-xl font-semibold leading-tight text-foreground">
                 {titleFor(page, readingLocale)}
               </h1>
               <RenderBoundary>
-                <Markdown source={body} pageSlug={slug} />
+                {apiBoard ? (
+                  <ApiDocsBody body={body} pageSlug={slug} />
+                ) : (
+                  <Markdown source={body} pageSlug={slug} />
+                )}
               </RenderBoundary>
             </>
           )}
 
           <PrevNext slug={slug} />
         </article>
-        <TocRail items={toc} activeId={activeId} />
+        {apiBoard ? (
+          <ApiTocRail items={toc} activeId={activeId} />
+        ) : (
+          <TocRail items={toc} activeId={activeId} />
+        )}
       </div>
     </div>
   );

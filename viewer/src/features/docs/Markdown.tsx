@@ -1,7 +1,6 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Check, Copy } from "lucide-react";
-import { Link } from "react-router";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 // The curated pipeline (rehype-raw → dropSubtrees → sanitize) comes from the
@@ -22,31 +21,30 @@ import { sanitizeSchema } from "./sanitizeSchema";
 
 /**
  * The curated docs renderer — a THIN wrapper over text-engine/core (ADR 0020
- * Ф2): the pipeline is assembled by `buildCorpusPipeline`, the typography is
- * the core factory's `article` branch, and this file keeps only what is
- * docs-OWNED capability — the sanitize CALL-SITE (the drop list + schema
- * config below), the corpus link policy, the asset resolution, the copy
+ * Ф2): the pipeline is assembled HERE (the one permitted pipeline.corpus
+ * import site), the typography is the core factory's `article` branch, and
+ * this file keeps only what is docs-OWNED capability — the sanitize
+ * call-site (the drop list + schema config below; the schema itself lives in
+ * sanitizeSchema.ts), the corpus link policy, the asset resolution, the copy
  * chrome and the mermaid lazy-chunk hook. Zero DOM drift is the gate: the
  * golden files pin every byte (F2 must be a ZERO diff, like F1).
  *
  * SECURITY (АРХКОМ-8): raw HTML IS rendered, but only after `rehype-raw` →
  * `rehype-sanitize(sanitizeSchema)` IN THAT ORDER — that order is pinned once
  * in core/pipeline.corpus.ts; the SCHEMA is the security boundary and its
- * construction + governance stay here, in the docs feature (one schema,
- * governance-PR only). dangerouslySetInnerHTML stays banned
- * (ESLint enforces; the sanitizer is the only HTML path).
- * GitHub parity: GFM tables, details/summary, kbd/sub/sup, task lists;
- * hostile content dies in the schema, not in the DOM. Element classes come
- * from the core theme factory's article branch — no class strings here. In-
- * body images resolve through docsAssets.ts (the one asset glob); absolute
- * http(s) srcs and unknown paths render as-is (CSP bounds the rest).
- * Links: /docs* stay SPA Links, anchors stay plain, and corpus-internal
- * references (our `slug.md`, upstream board slugs like `mnemos/user/sync`)
- * resolve through the manifest into project-scoped URLs (W1c — дефект из W2).
- * Leading provenance banners are cut at the MANIFEST BUILD (loadDocBody)
- * since Ф2 — the render path no longer strips (ADR 0020: «срез баннеров — в
- * сборку манифеста»); the sanitizer still drops any comment that slips
- * through as a second line of defence.
+ * construction + governance stay in sanitizeSchema.ts (one schema,
+ * governance-PR only). dangerouslySetInnerHTML stays banned (ESLint
+ * enforces; the sanitizer is the only HTML path). GitHub parity: GFM tables,
+ * details/summary, kbd/sub/sup, task lists; hostile content dies in the
+ * schema, not in the DOM.
+ *
+ * docs-api-readability (2026-10-21): CorpusMarkdown is the SINGLE
+ * react-markdown render site for the whole docs feature (architecture.test
+ * pins the import site; the api-board presentation renders its body chunks
+ * through it). Leading provenance banners are cut at the MANIFEST BUILD
+ * (loadDocBody) since Ф2 — the render path no longer strips (ADR 0020:
+ * «срез баннеров — в сборку манифеста»); the sanitizer still drops any
+ * comment that slips through as a second line of defence.
  */
 
 /**
@@ -67,8 +65,10 @@ const CORPUS_RAW_HTML = {
 
 // The curated pipeline, built once at module scope: stable plugin-list
 // identities for the lifetime of the chunk (same discipline as MarkdownView's
-// escape-only pipeline).
-const PIPELINE = buildCorpusPipeline(CORPUS_RAW_HTML);
+// escape-only pipeline). Exported for the api-board presentation
+// (apiPresentation.tsx — same feature folder, SAME pipeline instance, never
+// a second rehype-raw/rehype-sanitize assembly).
+export const PIPELINE = buildCorpusPipeline(CORPUS_RAW_HTML);
 
 /** Unresolvable .md reference — visibly broken, never a crash (W1c gate). */
 const BROKEN_LINK_CLASS =
@@ -152,9 +152,10 @@ function CodeBlock({
  * The docs-owned hooks of the article theme: corpus link policy (below), the
  * asset glob, the mermaid lazy chunk and the copy chrome. The typography
  * itself comes from core (articleComponents) — class drift is impossible by
- * construction.
+ * construction. Exported for the api-board presentation (apiPresentation.tsx),
+ * which must share ONE slugger across its body chunks.
  */
-function buildArticleHooks(pageSlug: string | undefined) {
+export function buildArticleHooks(pageSlug: string | undefined) {
   // A fresh slug counter per pass keeps h2/h3 anchors deterministic (same
   // heading order → same ids) while restarting per document by construction.
   const slug = createHeadingSlugger();
@@ -165,9 +166,9 @@ function buildArticleHooks(pageSlug: string | undefined) {
       // Internal docs links stay in-app (no full reload); anchors are plain.
       if (href.startsWith("/docs")) {
         return (
-          <Link to={href} className={LINK_CLASS}>
+          <a href={href} className={LINK_CLASS}>
             {children}
-          </Link>
+          </a>
         );
       }
       if (href.startsWith("#"))
@@ -181,9 +182,9 @@ function buildArticleHooks(pageSlug: string | undefined) {
       const resolution = resolveDocLink(href, pageSlug);
       if (resolution.kind === "internal") {
         return (
-          <Link to={resolution.to} className={LINK_CLASS}>
+          <a href={resolution.to} className={LINK_CLASS}>
             {children}
-          </Link>
+          </a>
         );
       }
       if (resolution.kind === "broken") {
@@ -223,6 +224,34 @@ export interface MarkdownProps {
   pageSlug?: string;
 }
 
+/** The docs-feature component-map shape (the article factory's product). */
+export type ArticleComponents = ReturnType<typeof articleComponents>;
+
+/**
+ * The SINGLE react-markdown render site of the docs feature (architecture
+ * invariant, architecture.test.ts): one module owns the import, one pipeline
+ * instance, one sanitize call-site. The api-board presentation
+ * (apiPresentation.tsx) renders its body chunks THROUGH this component —
+ * never through a second ReactMarkdown import.
+ */
+export function CorpusMarkdown({
+  source,
+  components,
+}: {
+  source: string;
+  components: ArticleComponents;
+}) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={PIPELINE.remarkPlugins}
+      rehypePlugins={PIPELINE.rehypePlugins}
+      components={components}
+    >
+      {source}
+    </ReactMarkdown>
+  );
+}
+
 export function Markdown({ source, className, pageSlug }: MarkdownProps) {
   // Built per render: a fresh object of closures is cheap (and required —
   // the slugger restarts per document); the TYPOGRAPHY is the factory's,
@@ -230,13 +259,7 @@ export function Markdown({ source, className, pageSlug }: MarkdownProps) {
   const components = articleComponents(buildArticleHooks(pageSlug));
   return (
     <div className={cn("text-base leading-relaxed text-foreground", className)}>
-      <ReactMarkdown
-        remarkPlugins={PIPELINE.remarkPlugins}
-        rehypePlugins={PIPELINE.rehypePlugins}
-        components={components}
-      >
-        {source}
-      </ReactMarkdown>
+      <CorpusMarkdown source={source} components={components} />
     </div>
   );
 }

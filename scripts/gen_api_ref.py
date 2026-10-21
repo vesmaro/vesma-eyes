@@ -502,6 +502,14 @@ def synthesize_example(
             value = synthesize_example(props[name], schemas, depth + 1)
             if value is not None:
                 out[name] = value
+        if not out:
+            # Property-less map schema: sample one additionalProperties
+            # entry ({"string": …}); a free-form object stays honest {}.
+            ap = node.get("additionalProperties")
+            if isinstance(ap, dict):
+                value = synthesize_example(ap, schemas, depth + 1)
+                if value is not None:
+                    return {"string": value}
         return out
     if node_type == "string":
         return _FORMAT_SAMPLES.get(node.get("format"), "string")
