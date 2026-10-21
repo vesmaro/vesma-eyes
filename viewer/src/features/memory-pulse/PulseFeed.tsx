@@ -138,7 +138,11 @@ export function PulseFeed({
             <li
               key={`${item.server}:${item.id}:${index}`}
               className={cn(
-                "flex min-h-row-airy gap-3 rounded-md border border-border-subtle bg-well px-4 py-2 shadow-well",
+                // D7 responsive: on narrow screens the status badge and the
+                // timestamp wrap under the text instead of squeezing the
+                // content column to a word-per-line sliver. md keeps the
+                // canonical single-line row (flex-basis 0 = the old flex-1).
+                "flex min-h-row-airy flex-wrap gap-3 rounded-md border border-border-subtle bg-well px-4 py-2 shadow-well",
                 hasContent ? "items-start" : "items-center",
               )}
             >
@@ -146,7 +150,7 @@ export function PulseFeed({
               <Badge variant="outline" className="shrink-0 font-mono text-xs">
                 {item.server}
               </Badge>
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-[1_1_14rem] md:flex-[1_1_0%]">
                 <Link
                   to={
                     returnSource
