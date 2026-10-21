@@ -1,89 +1,78 @@
 #!/usr/bin/env node
 /**
- * The 5-second HONESTY GATE (wave U2; SPEC-2026-10-07 «Глубокая проработка
- * v12 до прода» п.6 + the U2 card's red line): any motion on the Overview
- * page must be caused by a REAL bus event — «первое дыхание из шины; шина
- * молчит — экран стоит». The gate loads the built viewer (mock adapter —
- * the mock bus is SILENT by default, which IS the premise), lets the page
- * settle, takes two full-page screenshots ≥5s apart and demands
- * PIXEL-IDENTICAL frames. Phantom motion (timers/cycles without an event)
- * fails here, not in review.
+ * The HONESTY GATE — reformed by D1b-ambient (2026-10-21; owner verdict
+ * «не вижу дышащего интерфейса» — the fork resolved FOR the living web).
+ * The doctrine it enforces, in its own words:
  *
- * U3 extends the gate to the TASKS console (/tasks; the U3 card's red line:
- * «тихая шина → кадры через 5+сек попиксельно идентичны; позитивный
- * контроль = реальное task.done событие двигает страницу»):
+ *   «Тихая шина = ноль СОБЫТИЙНОГО движения; амбиент-дыхание живёт в
+ *   капах; ?quiet=1 и prefers-reduced-motion = строгая статика».
  *
- * Scenarios:
- *   1. silent       — default mock bus on /: two shots ≥5s apart MUST be
- *                     identical.
+ * The AMBIENT layers — the Shell vein canvas ([data-living-canvas]) and
+ * the well's CSS breath (drift/substrate under html[data-ambient]) —
+ * undulate quietly in the «Полный» layer within the W1a caps (amplitude
+ * ≤0.08, period 8–12s), freeze on any input, and never move on a muted or
+ * reduced page. EVERY other pixel is event-caused or data-caused: phantom
+ * timers/cycles without an event fail HERE, not in review.
+ *
+ * What each silent-bus scenario now proves (the ISOLATION formulation):
+ * the gate suppresses the two ambient layers IN THE PAGE ITSELF
+ * (visibility:hidden on the canvas + animation:none everywhere), takes
+ * two full-page shots ≥5s apart and demands the REST of the DOM pixel-
+ * still. A differ outside the ambient layers is motion without a source.
+ * The Overview scenario additionally proves the ambient is ALIVE: with
+ * nothing suppressed, two shots ≥5s apart MUST differ — the gate must not
+ * pass because nothing can ever move.
+ *
+ * ?quiet=1 stays BYTE-STRICT (no suppression needed): the mute gate pins
+ * the whole layer including the ambient — zero motion, noise-tolerant
+ * raster jitter only.
+ *
+ * The positive controls are untouched: a REAL event must move the page.
+ * (The gate deliberately does NOT demand identity over a SPEAKING bus:
+ * the HUD ticker is data, not decor — it updates in every regime, §13.3.)
+ *
+ * Scenarios (15):
+ *   1. silent+breath — Overview on the default mock bus (SILENT by
+ *                     premise): (a) isolation pair ≥5s apart identical —
+ *                     nothing outside the ambient layers moves; (b) breath
+ *                     pair (nothing suppressed) ≥5s apart DIFFERS — the
+ *                     caps-bounded undulation is alive.
  *   2. muted        — ?quiet=1 (the anti-fake gate pinned) over the same
  *                     silent bus: two shots ≥5s apart MUST be identical —
- *                     the mute gate never ADDS motion. (The gate deliberately
- *                     does NOT demand identity over a SPEAKING bus: the HUD
- *                     ticker is data, not decor — it updates in every
- *                     regime, §13.3.)
+ *                     the mute gate never ADDS motion, ambient included.
  *   3. bus=demo     — positive control: the bounded demo bus SPEAKS, the
- *                     page moves: two shots ~1.4s apart must DIFFER (guards
- *                     against «passed because nothing can ever move»).
- *   4. tasks-silent — /tasks on the silent bus: two shots ≥5s apart MUST be
- *                     identical — the living console stands when the bus is
- *                     quiet (the dosage law: only task.done + couriers).
- *                     DATA aging (the WF-1 validating clock's minute field)
- *                     is not motion; a minute-boundary rollover between the
- *                     frames triggers exactly ONE honest recheck (a fresh
- *                     pair), a persistent differ still fails.
+ *                     page moves: two shots ~1.4s apart must DIFFER.
+ *   4. tasks-silent — /tasks, isolation pair ≥5s apart identical — the
+ *                     console stands when the bus is quiet (the dosage
+ *                     law: only task.done + couriers). DATA aging (the
+ *                     WF-1 validating clock's minute field) is not motion;
+ *                     a minute-boundary rollover between the frames
+ *                     triggers exactly ONE honest recheck, a persistent
+ *                     differ still fails.
  *   5. tasks-done   — positive control: a REAL terminal transition emitted
  *                     through the window.VesmaMockBus handle (the same
- *                     wire frame the server sends) must move the page:
- *                     the card flies, the gold flash plays, the toast and
- *                     the tempo chip land (the U3 спектакль answers to it).
- *   6. memory-silent (U4) — /memory on the silent bus: two shots ≥5s apart
- *                     MUST be identical — the scroll domain stands when the
- *                     bus is quiet (the memory dose = recall + tones, and
- *                     silence carries neither).
+ *                     wire frame the server sends) must move the page.
+ *   6. memory-silent (U4) — /memory, isolation pair identical.
  *   7. memory-recall (U4) — positive control: a REAL recall-class event
- *                     (notification — the bus's recall-family carrier)
- *                     through the VesmaMockBus handle must move the page:
- *                     the vein bead + the tone shift on the Shell canvas.
- *   8. kora-silent (U5) — /kora on the silent bus: two shots ≥5s apart MUST
- *                     be identical — the frame stands when the bus is quiet
- *                     (the dose = Эфир flashes only, and silence carries
- *                     none: the ether card honestly reads «Событий пока
- *                     нет» and NOTHING moves).
+ *                     moves the page (the vein bead + the tone shift).
+ *   8. kora-silent (U5) — /kora, isolation pair identical.
  *   9. kora-ether (U5) — positive control: a REAL presence transition
- *                     (executor.online — the bus's session-class carrier)
- *                     through the VesmaMockBus handle must move the page:
- *                     the ether row lands on the scene card with its iris
- *                     arrival flash.
- *  10. agents-silent (U6) — /agents/hosts on the silent bus: two shots ≥5s
- *                     apart MUST be identical — the domain stands when the
- *                     bus is quiet (the dose = присутствие-свет only, and
- *                     silence carries no transitions; the ticking last_seen
- *                     age is DATA — a minute-field rollover triggers exactly
- *                     ONE honest recheck, a persistent differ still fails).
- *  11. agents-presence (U6) — positive control: a REAL presence transition
- *                     (executor.online through the VesmaMockBus handle, a
- *                     fixture executor id) must move the page: the host
- *                     card flares once (success tint) — never background.
- *  12. docs-silent (U6) — /docs/vesma-eyes on the silent bus: two shots
- *                     ≥5s apart MUST be identical — Доки carry NO living
- *                     layer (the spec verdict): hub cards, statistics and
- *                     search are data, pinned still forever.
- *  14. connect-silent (U8) — /agents/harnesses?connect=1 (the v12
- *                     «Подключить машину» conveyor OPEN on a silent bus):
- *                     two shots ≥5s apart MUST be identical — the rail and
- *                     the connect card carry NO timer-driven progress; the
- *                     rail's steps move on REAL provision-job states only.
- *  15. wizard-silent (U8) — /tasks/list?wizard=1 (the v12 task-formation
- *                     wizard open on a silent bus): two shots ≥5s apart
- *                     MUST be identical — the wizard has no decorative
- *                     progress (the same ONE-honest-recheck rule as
- *                     tasks-silent: a minute-field rollover behind the
- *                     dialog is data aging, not motion).
- *  13. system-silent (U6) — /system/settings on the silent bus: two shots
- *                     ≥5s apart MUST be identical — Система carries NO
- *                     living layer: the «Зеркало» is a live DATA preview,
- *                     not an animation; its frames do not move.
+ *                     lands an ether row with its iris arrival flash.
+ *  10. agents-silent (U6) — /agents/hosts, isolation pair identical (the
+ *                     ticking last_seen age is DATA — the ONE-honest-
+ *                     recheck rule applies).
+ *  11. agents-presence (U6) — positive control: a REAL presence
+ *                     transition flares the host card once.
+ *  12. docs-silent (U6) — /docs/vesma-eyes, isolation pair identical —
+ *                     Доки carry NO living layer, pinned still forever.
+ *  14. connect-silent (U8) — /agents/harnesses?connect=1, isolation pair
+ *                     identical — no decorative progress anywhere.
+ *  15. wizard-silent (U8) — /tasks/list?wizard=1, isolation pair
+ *                     identical — the wizard has no decorative progress
+ *                     (the ONE-honest-recheck rule applies).
+ *  13. system-silent (U6) — /system/settings, isolation pair identical —
+ *                     the «Зеркало» is a live DATA preview, not an
+ *                     animation.
  *
  * Local gate, same discipline as smoke-render.mjs (build dist-smoke with
  * the mock adapter, serve via vite preview, drive real chromium). Browser
@@ -113,7 +102,10 @@ const argValue = (flag, fallback) =>
 
 const VIEWER_DIR = resolve(import.meta.dirname, "..");
 const DIST_SMOKE = join(VIEWER_DIR, "dist-smoke");
-const PORT = 4174;
+// Parallel waves run their own previews/gates — the port is overridable so a
+// concurrent run never drives a FOREIGN server (a stale listener on the
+// default port once served another build and failed the breath pair).
+const PORT = Number.parseInt(process.env.VESMARO_HONESTY_PORT ?? "", 10) || 4174;
 const BASE = `http://localhost:${PORT}/app/`;
 const OUT_DIR = resolve(argValue("--out", join(VIEWER_DIR, "honesty-shots")));
 const QUIET_GAP_MS = 5600; // ≥5s demanded by the gate
@@ -206,9 +198,21 @@ async function startPreview() {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function settledShot(context, url, name) {
+// --- the ambient suppression (D1b-ambient, 2026-10-21) ----------------------
+// The ISOLATION formulation: the gate itself pins the two AMBIENT layers in
+// the page — the Shell vein canvas and every CSS animation (the well's
+// drift/substrate breath ride animations gated by html[data-ambient]) — and
+// then demands the rest of the DOM stand still. Injected AFTER load, so both
+// frames of a pair are taken under the same regime; the one-time settle of
+// the removed animations happens before the first shot (SETTLE_MS).
+const AMBIENT_OFF_CSS =
+  "[data-living-canvas]{visibility:hidden!important}" +
+  "*,*::before,*::after{animation:none!important}";
+
+async function settledShot(context, url, name, isolate = false) {
   const page = await context.newPage();
   await page.goto(url, { waitUntil: "load" });
+  if (isolate) await page.addStyleTag({ content: AMBIENT_OFF_CSS });
   await page.evaluate(() => document.fonts.ready);
   await sleep(SETTLE_MS);
   const shot = await page.screenshot({ fullPage: true });
@@ -328,29 +332,41 @@ async function main() {
   };
 
   try {
-    // 1. SILENT — the gate itself: a silent bus means a standing screen.
+    // 1. SILENT — the reformed gate: a silent bus breathes ONLY through the
+    //    ambient layers. Two pairs over the same silent Overview:
+    //    (a) ISOLATION pair — ambient suppressed: the DOM stands ≥5s.
+    //    (b) BREATH pair — nothing suppressed: the caps-bounded undulation
+    //        is alive (the frames MUST differ).
     {
       const context = await browser.newContext({
         viewport: { width: 1440, height: 900 },
         deviceScaleFactor: 1,
       });
-      const a = await settledShot(context, BASE, "u2-honesty-silent-t0.png");
+      const a = await settledShot(context, BASE, "u2-honesty-silent-t0.png", true);
       console.log("[honesty] silent: waiting 5.6s of real time…");
       await sleep(QUIET_GAP_MS);
-      const b = await settledShot(context, `${BASE}`, "u2-honesty-silent-t5.png");
+      const b = await settledShot(context, BASE, "u2-honesty-silent-t5.png", true);
       // Same context → the SECOND page loads caches but the sessionStorage
       // awakening flag is per-TAB: no events fired, so the flag was never
-      // written; the well must stand identically anyway.
-      const identical = await framesStand(browser, a, b);
+      // written; the suppressed DOM must stand identically anyway.
+      const stands = await framesStand(browser, a, b);
+      let details = stands ? "" : "isolation pair differs — motion outside the ambient layers";
+      const c = await settledShot(context, BASE, "u2-honesty-breath-t0.png", false);
+      await sleep(QUIET_GAP_MS);
+      const d = await settledShot(context, BASE, "u2-honesty-breath-t5.png", false);
+      const breathes = !c.equals(d);
+      if (!breathes)
+        details += `${details ? "; " : ""}breath pair identical — the ambient layer is dead`;
       check(
-        identical,
-        "silent bus: two frames ≥5s apart are pixel-identical",
-        identical ? "" : `bytes ${a.length} vs ${b.length}`,
+        stands && breathes,
+        "silent bus: ambient layers breathe in caps; the suppressed DOM stands ≥5s",
+        details,
       );
       await context.close();
     }
 
-    // 2. MUTED — the anti-fake gate (?quiet=1) beats even a speaking bus.
+    // 2. MUTED — the anti-fake gate (?quiet=1) beats even a speaking bus —
+    //    and kills the ambient too: byte-strict stillness, no suppression.
     {
       const context = await browser.newContext({
         viewport: { width: 1440, height: 900 },
@@ -367,7 +383,7 @@ async function main() {
       const identical = await framesStand(browser, a, b);
       check(
         identical,
-        "muted (?quiet=1, silent bus): frames identical — mute adds no motion",
+        "muted (?quiet=1, silent bus): frames identical — mute adds no motion, ambient included",
         identical ? "" : `bytes ${a.length} vs ${b.length}`,
       );
       await context.close();
@@ -410,13 +426,14 @@ async function main() {
       // (data aging, not motion) — a minute boundary landing between the two
       // frames is a rollover, not a phantom. A persistent differ fails.
       for (let attempt = 1; attempt <= 2 && !identical; attempt += 1) {
-        const a = await settledShot(context, `${BASE}tasks`, "u3-honesty-tasks-silent-t0.png");
+        const a = await settledShot(context, `${BASE}tasks`, "u3-honesty-tasks-silent-t0.png", true);
         console.log("[honesty] tasks-silent: waiting 5.6s of real time…");
         await sleep(QUIET_GAP_MS);
         const b = await settledShot(
           context,
           `${BASE}tasks`,
           `u3-honesty-tasks-silent-t5.png`,
+          true,
         );
         identical = await framesStand(browser, a, b);
         bytes = `bytes ${a.length} vs ${b.length}`;
@@ -426,7 +443,7 @@ async function main() {
       }
       check(
         identical,
-        "tasks: silent bus — two frames ≥5s apart are pixel-identical",
+        "tasks: silent bus (ambient suppressed) — the DOM stands ≥5s pixel-still",
         identical ? "" : bytes,
       );
       await context.close();
@@ -492,24 +509,27 @@ async function main() {
       await context.close();
     }
 
-    // 6. MEMORY SILENT (U4) — the scroll domain stands on a quiet bus.
+    // 6. MEMORY SILENT (U4) — the scroll domain stands on a quiet bus
+    // (ambient suppressed; the memory dose = recall + tones, and silence
+    // carries neither).
     {
       const context = await browser.newContext({
         viewport: { width: 1440, height: 900 },
         deviceScaleFactor: 1,
       });
-      const a = await settledShot(context, `${BASE}memory`, "u4-honesty-memory-silent-t0.png");
+      const a = await settledShot(context, `${BASE}memory`, "u4-honesty-memory-silent-t0.png", true);
       console.log("[honesty] memory-silent: waiting 5.6s of real time…");
       await sleep(QUIET_GAP_MS);
       const b = await settledShot(
         context,
         `${BASE}memory`,
         "u4-honesty-memory-silent-t5.png",
+        true,
       );
       const identical = await framesStand(browser, a, b);
       check(
         identical,
-        "memory: silent bus — two frames ≥5s apart are pixel-identical",
+        "memory: silent bus (ambient suppressed) — the DOM stands ≥5s pixel-still",
         identical ? "" : `bytes ${a.length} vs ${b.length}`,
       );
       await context.close();
@@ -554,24 +574,26 @@ async function main() {
       );
       await context.close();
     }
-    // 8. KORA SILENT (U5) — the frame stands on a quiet bus.
+    // 8. KORA SILENT (U5) — the frame stands on a quiet bus (ambient
+    // suppressed; the ether card honestly reads «Событий пока нет»).
     {
       const context = await browser.newContext({
         viewport: { width: 1440, height: 900 },
         deviceScaleFactor: 1,
       });
-      const a = await settledShot(context, `${BASE}kora`, "u5-honesty-kora-silent-t0.png");
+      const a = await settledShot(context, `${BASE}kora`, "u5-honesty-kora-silent-t0.png", true);
       console.log("[honesty] kora-silent: waiting 5.6s of real time…");
       await sleep(QUIET_GAP_MS);
       const b = await settledShot(
         context,
         `${BASE}kora`,
         "u5-honesty-kora-silent-t5.png",
+        true,
       );
       const identical = await framesStand(browser, a, b);
       check(
         identical,
-        "kora: silent bus — two frames ≥5s apart are pixel-identical",
+        "kora: silent bus (ambient suppressed) — the DOM stands ≥5s pixel-still",
         identical ? "" : `bytes ${a.length} vs ${b.length}`,
       );
       await context.close();
@@ -638,6 +660,7 @@ async function main() {
           context,
           `${BASE}agents/hosts`,
           "u6-honesty-agents-silent-t0.png",
+          true,
         );
         console.log("[honesty] agents-silent: waiting 5.6s of real time…");
         await sleep(QUIET_GAP_MS);
@@ -645,6 +668,7 @@ async function main() {
           context,
           `${BASE}agents/hosts`,
           "u6-honesty-agents-silent-t5.png",
+          true,
         );
         identical = await framesStand(browser, a, b);
         bytes = `bytes ${a.length} vs ${b.length}`;
@@ -656,7 +680,7 @@ async function main() {
       }
       check(
         identical,
-        "agents: silent bus — two frames ≥5s apart are pixel-identical",
+        "agents: silent bus (ambient suppressed) — the DOM stands ≥5s pixel-still",
         identical ? "" : bytes,
       );
       await context.close();
@@ -714,18 +738,19 @@ async function main() {
         viewport: { width: 1440, height: 900 },
         deviceScaleFactor: 1,
       });
-      const a = await settledShot(context, `${BASE}docs/vesma-eyes`, "u6-honesty-docs-silent-t0.png");
+      const a = await settledShot(context, `${BASE}docs/vesma-eyes`, "u6-honesty-docs-silent-t0.png", true);
       console.log("[honesty] docs-silent: waiting 5.6s of real time…");
       await sleep(QUIET_GAP_MS);
       const b = await settledShot(
         context,
         `${BASE}docs/vesma-eyes`,
         "u6-honesty-docs-silent-t5.png",
+        true,
       );
       const identical = await framesStand(browser, a, b);
       check(
         identical,
-        "docs: silent bus — two frames ≥5s apart are pixel-identical (no living layer, pinned)",
+        "docs: silent bus (ambient suppressed) — pixel-still (no living layer, pinned)",
         identical ? "" : `bytes ${a.length} vs ${b.length}`,
       );
       await context.close();
@@ -743,6 +768,7 @@ async function main() {
         context,
         `${BASE}system/settings`,
         "u6-honesty-system-silent-t0.png",
+        true,
       );
       console.log("[honesty] system-silent: waiting 5.6s of real time…");
       await sleep(QUIET_GAP_MS);
@@ -750,11 +776,12 @@ async function main() {
         context,
         `${BASE}system/settings`,
         "u6-honesty-system-silent-t5.png",
+        true,
       );
       const identical = await framesStand(browser, a, b);
       check(
         identical,
-        "system: silent bus — two frames ≥5s apart are pixel-identical (no living layer, pinned)",
+        "system: silent bus (ambient suppressed) — pixel-still (no living layer, pinned)",
         identical ? "" : `bytes ${a.length} vs ${b.length}`,
       );
       await context.close();
@@ -772,6 +799,7 @@ async function main() {
         context,
         `${BASE}agents/harnesses?connect=1`,
         "u8-honesty-connect-silent-t0.png",
+        true,
       );
       console.log("[honesty] connect-silent: waiting 5.6s of real time…");
       await sleep(QUIET_GAP_MS);
@@ -779,11 +807,12 @@ async function main() {
         context,
         `${BASE}agents/harnesses?connect=1`,
         "u8-honesty-connect-silent-t5.png",
+        true,
       );
       const identical = await framesStand(browser, a, b);
       check(
         identical,
-        "connect conveyor: silent bus — two frames ≥5s apart are pixel-identical (no decorative progress)",
+        "connect conveyor: silent bus (ambient suppressed) — pixel-still (no decorative progress)",
         identical ? "" : `bytes ${a.length} vs ${b.length}`,
       );
       await context.close();
@@ -805,6 +834,7 @@ async function main() {
           context,
           `${BASE}tasks/list?wizard=1`,
           "u8-honesty-wizard-silent-t0.png",
+          true,
         );
         console.log("[honesty] wizard-silent: waiting 5.6s of real time…");
         await sleep(QUIET_GAP_MS);
@@ -812,6 +842,7 @@ async function main() {
           context,
           `${BASE}tasks/list?wizard=1`,
           "u8-honesty-wizard-silent-t5.png",
+          true,
         );
         identical = await framesStand(browser, a, b);
         bytes = `bytes ${a.length} vs ${b.length}`;
@@ -821,7 +852,7 @@ async function main() {
       }
       check(
         identical,
-        "task wizard: silent bus — two frames ≥5s apart are pixel-identical (no decorative progress)",
+        "task wizard: silent bus (ambient suppressed) — pixel-still (no decorative progress)",
         identical ? "" : bytes,
       );
       await context.close();
