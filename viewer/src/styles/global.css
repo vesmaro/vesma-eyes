@@ -699,7 +699,7 @@ html[data-vesma-pad] {
  * а .kbd-alt-label (текстовая альтернатива) наоборот показывается.
  * Правила стоят ПОСЛЕ @tailwind utilities — при равной специфичности
  * побеждает порядок каскада. */
-@media ((hover: none) or (pointer: coarse)) {
+@media (hover: none), (pointer: coarse) {
   .kbd-hint {
     display: none;
   }

@@ -210,6 +210,12 @@ function HarnessRow({
           }
         >
           {t(presenceLabelKey(presenceKey))}
+          {/* P3-4 (W-E review): the unknown verdict carries its two-clock
+           * hint beyond the hover-only title — an sr-only continuation
+           * reaches screen readers, the title stays for sighted hover. */}
+          {presenceKey === "unknown" ? (
+            <span className="sr-only"> — {t("agents.presence.unknownHint")}</span>
+          ) : null}
         </span>
         <span className="min-w-0 truncate font-medium">{member.name}</span>
         <span className="shrink-0 font-mono text-xs text-foreground-muted">

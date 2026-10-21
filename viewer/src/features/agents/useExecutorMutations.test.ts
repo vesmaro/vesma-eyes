@@ -109,7 +109,7 @@ describe("approveExecutor (the page's main action)", () => {
     expect(h.toasts[0]).toMatchObject({
       kind: "ok",
       title: "copilot@new-host: approved",
-      detail: "enable the executor — routing picks only enabled ones",
+      detail: "enable the agent — routing picks only enabled ones",
     });
     const row = await registryRow(h, PENDING.id);
     expect(row?.state).toBe("approved");

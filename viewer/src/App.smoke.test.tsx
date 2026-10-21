@@ -16,8 +16,8 @@ import { I18nProvider } from "@/i18n";
  * Ф1 smoke: the converged route tree (the very same buildRoutes() the
  * production data router mounts) renders against the MockAdapter (`latency:
  * false`, queries suppressed — renderToString runs no effects) and emits the
- * domain sidebar (Обзор + 5 domains incl. honest "soon" slots), the top-bar
- * global search, and the eager search page under the memory domain.
+ * domain sidebar (7 live domains — D8 removed the placeholder slots), the
+ * top-bar global search, and the eager search page under the memory domain.
  *
  * Test-env note: the project runs vitest in the node environment and adds no
  * DOM/testing-library dependencies, so mounting uses `renderToString` with a

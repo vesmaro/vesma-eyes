@@ -437,7 +437,7 @@ export const en: Record<TranslationKey, string> = {
   "search.noTypedMatches":
     "No {{type}} hits for “{{query}}”. The pipeline may rank this query differently.",
   "search.noMatchesHint":
-    "Try fewer or different words — the well (that is how the memory is built: everything that falls in, stays) is deep but literal.",
+    "Try fewer or different words — the well is deep but literal.",
   "search.hitsCount": "{{count}} found for “{{query}}”",
   "search.hitsTypedSuffix": " (client-side filter of server-ranked hits)",
   "search.hitTypeFts": "by words",
@@ -1257,7 +1257,10 @@ export const en: Record<TranslationKey, string> = {
   // D12: the glossary definition at the lore word's first use.
   "agents.hosts.harnessHint":
     "A harness is the agent's runtime environment (for example, zcode or hermes).",
-  "agents.hosts.connectAction": "Connect a host",
+  // P2-1 (W-E review): one road — one name. The CTA lands on the agent
+  // connection page; the flow onboards an AGENT (the host name arrives
+  // from its report); "host" stays the machine field's noun.
+  "agents.hosts.connectAction": "Connect an agent",
   // UX-AUDIT A5: the roster header's quiet button label (the «+» rides the
   // icon glyph; the panel/empty-state CTA keeps the full "a host" wording).
   "agents.hosts.connectShort": "Connect",
@@ -1459,7 +1462,7 @@ export const en: Record<TranslationKey, string> = {
   "agents.executors.actionFailed": "Failed to update the agent",
   "agents.executors.approved": "{{name}}: approved",
   "agents.executors.approvedDetail":
-    "enable the executor — routing picks only enabled ones",
+    "enable the agent — routing picks only enabled ones",
   "agents.executors.enabled": "{{name}}: enabled",
   "agents.executors.disabled": "{{name}}: disabled",
   "agents.executors.revokeConfirm":
@@ -1588,7 +1591,7 @@ export const en: Record<TranslationKey, string> = {
   "agents.registry.viaMachine": "origin: machine token",
   "agents.enrollment.title": "Add agent",
   "agents.enrollment.description":
-    "Minting a one-time connection token for a remote executor",
+    "Minting a one-time connection token for a remote agent",
   "agents.enrollment.formHint":
     "Fill in the card — you get ONE command for the external machine. The agent installs itself and appears here for approval.",
   "agents.enrollment.label": "Label (for you)",

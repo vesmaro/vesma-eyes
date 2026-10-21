@@ -315,13 +315,6 @@ function FooterRow({
   );
 }
 
-/**
- * The honest slot badge (ME-072 A) was retired with the slots themselves
- * (UX panel D8, 2026-10-21): placeholder rows left the daily navigation —
- * not-yet-shipped surfaces have no nav row, and the roadmap lives in
- * Документация. Live rows only below.
- */
-
 /** Strata wash class per domain (03 §3 «активное состояние» + 02-TOKENS):
  * keyed by the domain root path; leaf domains carry no wash. */
 const STRATA_CLASS: Partial<Record<string, string>> = {
@@ -333,9 +326,9 @@ const STRATA_CLASS: Partial<Record<string, string>> = {
 };
 
 /**
- * One domain row: a plain LINK for leaf domains (Обзор, Кора, docs), a
- * GROUP TOGGLE (chevron, aria-expanded) for domains with sections, and the
- * honest disabled slot for phase-2+ domains (soonKey). The active domain
+ * One domain row: a plain LINK for leaf domains (Обзор, Кора, docs) or a
+ * GROUP TOGGLE (chevron, aria-expanded) for domains with sections — every
+ * nav row is live (D8). The active domain
  * carries the 2px iris strip + its strata wash; the rail keeps icons only.
  *
  * Gates v6 (ME-043, 07k §2.2): for an anonymous visitor a GATED domain row
@@ -380,10 +373,6 @@ function DomainRow({
   // one sentence, nothing invented.
   const hint = domain.hintKey ? t(domain.hintKey) : null;
   const rowLabel = locked ? `${label} — ${t("auth.lock.why")}` : hint ? `${label} — ${hint}` : label;
-
-  // Honest disabled slot (Phase 2+): RETIRED (UX panel D8, 2026-10-21) —
-  // placeholder rows left the daily navigation entirely; every nav row is a
-  // live link or a live group toggle.
 
   const counterIds = domain.aggregateCounters ? domainCounterIds(domain) : [];
   const hasSections = (domain.sections?.length ?? 0) > 0;
@@ -530,8 +519,6 @@ function SectionLink({
 }) {
   const t = useT();
   const label = t(section.key);
-  // Honest disabled slots retired (UX panel D8, 2026-10-21): every section
-  // row is a live link — placeholder surfaces have no nav row at all.
   // ME-028: master-detail lists own their detail routes; sibling exact roots
   // stay exclusive to their own rows (sectionActive).
   const active = sectionActive(pathname, section, siblings);
