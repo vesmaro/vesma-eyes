@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildVeins, mountLivingLayer, type SeamRect } from "./engine";
 import { DEFAULT_LIVE_LAYER, setLiveLayer } from "@/lib/liveLayerStore";
-import { feedLivingEvent } from "@/lib/livingFeed";
+import { feedLivingEvent, muteLiving } from "@/lib/livingFeed";
 
 /** A recording 2d-context stub — the engine talks to it, tests count calls. */
 function fakeCtx() {
@@ -166,10 +166,20 @@ describe("engine lifecycle — one RAF, honest pauses, clean destructor", () => 
     vi.unstubAllGlobals();
   });
 
-  it("U2 honesty: a SILENT bus draws static once and schedules no RAF", () => {
+  it("D1b ambient: a silent bus in «Полный» keeps exactly ONE ambient RAF", () => {
     const { destroy, calls } = mount();
-    expect(raf.count).toBe(0); // nothing moves without a real event
-    expect(calls.stroke).toBeGreaterThan(0); // the static rest frame
+    expect(raf.count).toBe(1); // the quiet undulation is alive (W1a caps)
+    expect(document.documentElement.dataset.ambient).toBe("true");
+    raf.tick(16);
+    expect(calls.stroke).toBeGreaterThan(0); // the sheen draws
+    destroy();
+  });
+
+  it("«Спокойный»: a silent bus still stands — the ambient is «Полный»-only", () => {
+    setLiveLayer("calm");
+    const { destroy } = mount();
+    expect(raf.count).toBe(0);
+    expect(document.documentElement.dataset.ambient).toBe("false");
     destroy();
   });
 
@@ -194,46 +204,35 @@ describe("engine lifecycle — one RAF, honest pauses, clean destructor", () => 
     destroy();
   });
 
-  it("an event opens the window; when it closes the engine rests static", () => {
+  it("an event opens the window; when it closes the ambient continues (Полный)", () => {
     setLiveLayer("live");
-    const { destroy, calls } = mount();
+    const { destroy } = mount();
+    expect(raf.count).toBe(1); // the ambient is already alive
     feedLivingEvent("task.created");
-    expect(raf.count).toBe(1);
-    raf.tick(16);
-    const duringCalls = calls.stroke;
-    expect(duringCalls).toBeGreaterThan(0);
-    // The window (3500ms) expires; the event's bead trail (life ≤1600ms +
-    // decay 1500ms) may OUTLIVE the window — the chain ends only when the
-    // trail has decayed and the next frame finds nothing alive.
+    expect(document.documentElement.dataset.breath).toBe("true"); // the window
+    // The window (3500ms) expires; the event's bead trail decays on its own —
+    // the RAF chain no longer ends with it: the AMBIENT carries the loop on.
     vi.advanceTimersByTime(3500);
-    expect(raf.count).toBe(1); // trail still decaying, honestly
-    raf.tick(5200); // past life + trail: draw() retires the dead bead…
-    raf.tick(5216); // …the NEXT frame finds nothing alive and ends the chain
-    expect(raf.count).toBe(0);
-    const afterClose = calls.stroke;
-    expect(afterClose).toBeGreaterThanOrEqual(duringCalls);
+    expect(document.documentElement.dataset.breath).toBe("false");
+    expect(raf.count).toBe(1); // D1b: the quiet undulation never dropped
+    raf.tick(16);
     destroy();
   });
 
-  it("duty: an event inside the rest window refreshes tones, not motion", () => {
+  it("duty: an event inside the rest window re-opens no window (tones flow regardless)", () => {
     setLiveLayer("live");
     const { destroy } = mount();
     feedLivingEvent("task.created");
-    expect(raf.count).toBe(1);
-    vi.advanceTimersByTime(3500); // window over — but the bead trail lives
-    raf.tick(5200); // the trail decays; the next frame ends the chain
-    raf.tick(5216);
-    expect(raf.count).toBe(0);
+    expect(document.documentElement.dataset.breath).toBe("true");
+    vi.advanceTimersByTime(3500); // window over — rest begins
+    expect(document.documentElement.dataset.breath).toBe("false");
     feedLivingEvent("task.updated"); // within the 10.5s rest
-    // The AMBIENT window stays shut (duty), but the event's own bead is
-    // event-caused motion — separately budgeted (≤2 alive, coalesced).
-    expect(raf.count).toBe(1);
-    raf.tick(6700); // the bead was born at t≈3500 — life past 1600+1500
-    raf.tick(6716); // the next frame finds nothing alive: the chain ends
-    expect(raf.count).toBe(0);
+    // The AMBIENT window stays shut (duty law); the event still tones and may
+    // bead — separately budgeted (≤2 alive, coalesced).
+    expect(document.documentElement.dataset.breath).toBe("false");
     vi.advanceTimersByTime(10_500); // rest over
     feedLivingEvent("report");
-    expect(raf.count).toBe(1); // the window opens again on a real event
+    expect(document.documentElement.dataset.breath).toBe("true"); // opens again
     destroy();
   });
 
@@ -245,7 +244,43 @@ describe("engine lifecycle — one RAF, honest pauses, clean destructor", () => 
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "x", bubbles: true }));
     vi.advanceTimersByTime(0); // flush the close timer
     expect(raf.count).toBe(0);
+    expect(document.documentElement.dataset.ambient).toBe("false"); // ≤80ms law
     destroy();
+  });
+
+  it("input freezes the ambient; one wake resumes it after --duration-breath-rest", () => {
+    setLiveLayer("live");
+    const { destroy } = mount();
+    expect(raf.count).toBe(1);
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "x", bubbles: true }));
+    vi.advanceTimersByTime(0);
+    expect(raf.count).toBe(0);
+    expect(document.documentElement.dataset.ambient).toBe("false");
+    vi.advanceTimersByTime(10_499); // still inside the hold
+    expect(raf.count).toBe(0);
+    vi.advanceTimersByTime(1); // the hold is over — the wake restarts the breath
+    expect(raf.count).toBe(1);
+    expect(document.documentElement.dataset.ambient).toBe("true");
+    destroy();
+  });
+
+  it("«Выключен» stops the ambient and clears the carrier attribute", () => {
+    setLiveLayer("live");
+    const { destroy } = mount();
+    expect(raf.count).toBe(1);
+    setLiveLayer("off");
+    expect(raf.count).toBe(0);
+    expect(document.documentElement.dataset.ambient).toBe("false");
+    destroy();
+  });
+
+  it("the ambient wake timer does not outlive the destructor", () => {
+    setLiveLayer("live");
+    const { destroy } = mount();
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "x", bubbles: true }));
+    destroy();
+    vi.advanceTimersByTime(20_000);
+    expect(raf.count).toBe(0);
   });
 
   it("document.hidden pauses the loop (the RAF chain ends)", () => {
@@ -295,5 +330,17 @@ describe("engine lifecycle — one RAF, honest pauses, clean destructor", () => 
     a.destroy();
     b.destroy();
     expect(raf.count).toBe(0);
+  });
+
+  // LAST: muteLiving() has no reverse — the module flag would kill the
+  // ambient for every test declared after this one.
+  it("muted (?quiet=1): the ambient never starts — strict static", () => {
+    muteLiving(); // the anti-fake gate (?quiet=1 pins it at load)
+    setLiveLayer("live");
+    const { destroy } = mount();
+    feedLivingEvent("task.created"); // the feed drops muted input anyway
+    expect(raf.count).toBe(0);
+    expect(document.documentElement.dataset.ambient).toBe("false");
+    destroy();
   });
 });
