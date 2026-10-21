@@ -864,11 +864,16 @@ export const en: Record<TranslationKey, string> = {
   "tasks.inboxEmpty": "Scan finished — no new tasks found",
   "tasks.inboxEmptyHint": "New tasks appear after a store scan (the “Scan” button).",
   "tasks.inboxLabel": "Inbox task list",
-  "tasks.inboxStaleNote": "Disappeared from the source (cannot be adopted):",
+  // W-B (D6): the stale note names the reason in words.
+  "tasks.inboxStaleNote":
+    "Vanished from their memory store — a record that is gone cannot be adopted:",
   "tasks.inboxStaleLabel": "Disappeared records",
   "tasks.inboxSource": "server: {{server}}",
   "tasks.inboxAdoptedLink": "adopted → {{id}}",
-  "tasks.inboxNoSpecialist": "no specialist",
+  // W-B (D6): the card answers «who asks».
+  "tasks.inboxAskedBy": "assignment from {{who}}",
+  "tasks.inboxNoAuthor": "no author",
+  "tasks.inboxNoSpecialist": "not set",
   // UI-25: key:value chips + expand/edit
   "tasks.inboxProjectChip": "project: {{value}}",
   "tasks.inboxPriorityChip": "priority: {{value}}",
@@ -879,7 +884,8 @@ export const en: Record<TranslationKey, string> = {
   "tasks.inboxDetailsSpecialist": "specialist: {{value}}",
   "tasks.inboxDetailsCreated": "created at source: {{value}}",
   "tasks.inboxDetailsMemoryId": "memory: {{value}}",
-  "tasks.inboxFullTextLabel": "Record text from memory",
+  // W-B (D6): the raw field dump lives under the spoiler — named honestly.
+  "tasks.inboxFullTextLabel": "Raw record from memory",
   "tasks.inboxFullTextFailed": "Could not load the record from memory",
   "tasks.inboxEditLabel": "Edit",
   "tasks.inboxEditTitle": "Edit the record before adopting it to the board",
@@ -891,6 +897,9 @@ export const en: Record<TranslationKey, string> = {
   "tasks.inboxEdit.save": "Save edits",
   "tasks.inboxEdit.cancel": "Cancel",
   "tasks.scanLabel": "Scan stores",
+  // W-B (D6): one visible context line for the button.
+  "tasks.scanHint":
+    "A scan re-reads the memory stores and refreshes the list: records tagged task:queue land in the inbox.",
   "tasks.scanBusy": "Scanning…",
   "tasks.adoptLabel": "Adopt to board",
   "tasks.adoptAllLabel": "Accept all",

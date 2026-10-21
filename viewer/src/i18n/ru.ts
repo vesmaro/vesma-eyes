@@ -891,11 +891,17 @@ export const ru = {
   "tasks.inboxEmptyHint":
     "Новые задачи появятся после сканирования хранилищ (кнопка «Сканировать»).",
   "tasks.inboxLabel": "Список входящих задач",
-  "tasks.inboxStaleNote": "Исчезли из источника (примятие невозможно):",
+  // W-B (D6): «примятие невозможно» → человеческая причина.
+  "tasks.inboxStaleNote":
+    "Исчезли из памяти-источника — пока записи нет на месте, принять её в борд нельзя:",
   "tasks.inboxStaleLabel": "Исчезнувшие записи",
   "tasks.inboxSource": "сервер: {{server}}",
   "tasks.inboxAdoptedLink": "принята → {{id}}",
-  "tasks.inboxNoSpecialist": "специалист не указан",
+  // W-B (D6): карточка-поручение отвечает «кто просит» (значение —
+  // каноничное «@GCW: …», поэтому без второго двоеточия в приставке).
+  "tasks.inboxAskedBy": "поручение от {{who}}",
+  "tasks.inboxNoAuthor": "автор не указан",
+  "tasks.inboxNoSpecialist": "не указан",
   // UI-25: key:value chips + expand/edit
   "tasks.inboxProjectChip": "проект: {{value}}",
   "tasks.inboxPriorityChip": "приоритет: {{value}}",
@@ -906,7 +912,8 @@ export const ru = {
   "tasks.inboxDetailsSpecialist": "специалист: {{value}}",
   "tasks.inboxDetailsCreated": "создана в источнике: {{value}}",
   "tasks.inboxDetailsMemoryId": "память: {{value}}",
-  "tasks.inboxFullTextLabel": "Текст записи из памяти",
+  // W-B (D6): сырой дамп полей живёт под катом — и называется честно.
+  "tasks.inboxFullTextLabel": "Сырая запись из памяти",
   "tasks.inboxFullTextFailed": "Не удалось загрузить запись из памяти",
   "tasks.inboxEditLabel": "Править",
   "tasks.inboxEditTitle": "Правка записи до принятия в борд",
@@ -919,6 +926,9 @@ export const ru = {
   "tasks.inboxEdit.save": "Сохранить правку",
   "tasks.inboxEdit.cancel": "Отмена",
   "tasks.scanLabel": "Сканировать хранилища",
+  // W-B (D6): одна строка контекста к кнопке (вердикт: «без контекста»).
+  "tasks.scanHint":
+    "Скан заново читает хранилища памяти и обновляет список: во Входящие попадают записи с меткой task:queue.",
   "tasks.scanBusy": "Сканируем…",
   "tasks.adoptLabel": "Принять в борд",
   "tasks.adoptAllLabel": "Принять все",
