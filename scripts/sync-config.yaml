@@ -255,7 +255,12 @@ projects:
       # Демо-правила W1a (механика якорных замен; тело апстрима не
       # редактируется вне этого механизма — контракт §2).
       - file: en/architecture/overview.md
-        find: "A Web UI is planned as a separate project\n(vesma-eyes)."
+        # find MUST match the PIN's bytes (the pin predates the vesma
+        # rebrand — its text still says mnemos-eyes); the replace carries
+        # the reader-facing wording. Rebranding a find without bumping the
+        # pin is a DRIFT self-inflicted wound (b349c8a collateral, fixed
+        # 2026-10-21 docs-api-readability wave).
+        find: "A Web UI is planned as a separate project\n(mnemos-eyes)."
         replace: >-
           The Web UI for Vesma is **vesma-eyes** — the board that serves
           this documentation.
@@ -263,7 +268,9 @@ projects:
           адаптация контекста: читателю указывают на живой борд вместо
           «запланирован» (решение АРХКОМ-7 о трёхпроектных доках)
       - file: ru/architecture/overview.md
-        find: "Web UI запланирован как отдельный\nпроект (vesma-eyes)."
+        # find = pin's bytes (см. заметку выше); replace — читательское
+        # словесное оформление.
+        find: "Web UI запланирован как отдельный\nпроект (mnemos-eyes)."
         replace: >-
           Web UI для Vesma — это **vesma-eyes**, борд, на котором вы
           читаете эту документацию.
@@ -439,7 +446,10 @@ projects:
       # GitHub vesma @ пина, чтобы в борде не было битого относительного
       # href (контракт §6.1).
       - file: en/admin/security.md
-        find: "- [ADR-0016 — federation threat model](../../../../mnemos/docs/project/adr/0016-federation-threat-model.md) (vesma repo)"
+        # find = pin's bytes («mnemos repo» — the mesh pin predates the
+        # rebrand; rebranding a find against an unpinned-source string is
+        # self-inflicted DRIFT, b349c8a collateral fixed 2026-10-21).
+        find: "- [ADR-0016 — federation threat model](../../../../mnemos/docs/project/adr/0016-federation-threat-model.md) (mnemos repo)"
         replace: "- [ADR-0016 — federation threat model](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/project/adr/0016-federation-threat-model.md) (vesma repo)"
         reason: >-
           cross-clone ссылка (mesh → vesma project/adr): относительный путь
@@ -566,7 +576,12 @@ api_hub:
             executor'а, клеймы назначений, отчёты, discovery v3, native
             intake; текст апстрима (EN), статус v0.1-draft.
 
-    vesma-mesh:
+    # KEY = the provenance-record namespace (provenance.json
+    # projects.api_hub.sources, sidecar source_shas `api/<key>`): mirrors the
+    # published slug namespace (mnemos-mesh), not the brand — same discipline
+    # as projects.mnemos-mesh (33af843); rebranding it rewrites provenance
+    # records on the next sync (b349c8a collateral, fixed 2026-10-21).
+    mnemos-mesh:
       repo: ../vesma-mesh
       # Пин для ПРОВЕРКИ кураторской заметки (само тело из curated-слоя).
       ref: b428ea9b7ec9731fe4d53478702d0667cf3f53de
@@ -588,12 +603,12 @@ api_hub:
   board_api:
     spec: viewer/board-openapi-snapshot.json
     category: api-board
-    index_slug: vesma-eyes/index
+    index_slug: vesmaro-eyes/index
     # Группировка по первому сегменту пути после /api/. Несмапленный
     # префикс = DRIFT-FAIL генератора (новый эндпоинт требует осознанного
     # решения — та же дисциплина, что у overlay-якорей sync_docs).
     groups:
-      - slug: vesma-eyes/index
+      - slug: vesmaro-eyes/index
         prefixes: []
         order: 1
         title:
@@ -607,7 +622,7 @@ api_hub:
             A map of the vesma-eyes board HTTP API: every endpoint group,
             operation counts, and the OpenAPI snapshot the reference is
             generated from.
-      - slug: vesma-eyes/tasks
+      - slug: vesmaro-eyes/tasks
         prefixes: [tasks, task-drafts]
         order: 2
         title:
@@ -620,8 +635,11 @@ api_hub:
           en: >-
             Task CRUD, moves, history, task memories and reports, archive,
             drafts, and memory inbox intake.
-      - slug: vesma-eyes/memories
-        prefixes: [memories, tags, vesma]
+      - slug: vesmaro-eyes/memories
+        # prefixes are API PATH segments — the spec's wire contract
+        # (/api/mnemos/search), not brand strings; a rebrand here is SPEC
+        # DRIFT (the snapshot still says mnemos). Fixed 2026-10-21.
+        prefixes: [memories, tags, mnemos]
         order: 3
         title:
           ru: Память, теги и поиск vesma
@@ -633,7 +651,7 @@ api_hub:
           en: >-
             Memory servers and their settings, memory groups, heartbeat and
             stats, records, tags, and vesma semantic search.
-      - slug: vesma-eyes/assignments
+      - slug: vesmaro-eyes/assignments
         prefixes: [assignments]
         order: 4
         title:
@@ -646,7 +664,7 @@ api_hub:
           en: >-
             The assignment lifecycle: creation, claim, start, heartbeat,
             completion, failure, cancellation.
-      - slug: vesma-eyes/executors
+      - slug: vesmaro-eyes/executors
         prefixes: [executors, harnesses, agents, specialists]
         order: 5
         title:
@@ -659,7 +677,7 @@ api_hub:
           en: >-
             Executor registry and enrollment, the harness dictionary, agent
             activity, specialist profiles, and provision jobs.
-      - slug: vesma-eyes/automation
+      - slug: vesmaro-eyes/automation
         prefixes: [automation]
         order: 6
         title:
@@ -672,7 +690,7 @@ api_hub:
           en: >-
             Rule hooks, schedules and their runs, automation settings, and
             engine status.
-      - slug: vesma-eyes/devices
+      - slug: vesmaro-eyes/devices
         prefixes: [devices, pairing]
         order: 7
         title:
@@ -683,7 +701,7 @@ api_hub:
             Спаренные устройства, гранты, QR-пейринг: код, обмен, подтверждение.
           en: >-
             Paired devices, grants, QR pairing: code, exchange, confirmation.
-      - slug: vesma-eyes/kora
+      - slug: vesmaro-eyes/kora
         prefixes: [kora]
         order: 8
         title:
@@ -692,7 +710,7 @@ api_hub:
         about:
           ru: Список сессий Kora и транскрипты, приём kora-scan.
           en: Kora session list and transcripts, kora-scan intake.
-      - slug: vesma-eyes/mesh
+      - slug: vesmaro-eyes/mesh
         prefixes: [mesh]
         order: 9
         title:
@@ -704,7 +722,7 @@ api_hub:
             список.
           en: >-
             Observed vesma-mesh nodes: add, edit, delete, list.
-      - slug: vesma-eyes/poller
+      - slug: vesmaro-eyes/poller
         prefixes: [poller]
         order: 10
         title:
@@ -717,7 +735,7 @@ api_hub:
           en: >-
             The assignment-poller bootstrap script and its artifacts: the CA
             certificate, service unit, script, and checksum.
-      - slug: vesma-eyes/feed
+      - slug: vesmaro-eyes/feed
         prefixes: [notifications, activity, reports, archive]
         order: 11
         title:
@@ -730,7 +748,7 @@ api_hub:
           en: >-
             The board feed: notifications and read marking, activity, task
             reports and the report feed, archive.
-      - slug: vesma-eyes/system
+      - slug: vesmaro-eyes/system
         prefixes: [board, board-reflect, health, settings, auth, events]
         order: 12
         title:
@@ -755,7 +773,10 @@ api_hub:
       category: api-mnemos
       order: 1
       verified_against:
-        source: vesma
+        # source = the api_hub.sources KEY; the rebranded `vesma` key
+        # silently degraded this page's provenance to the hub-internal
+        # fallback (b349c8a collateral, fixed 2026-10-21).
+        source: mnemos
         path: docs/en/user/http-api.md
         sha: pin
     - slug: vesmaro-agent/charter
@@ -769,7 +790,9 @@ api_hub:
       category: api-mesh
       order: 1
       verified_against:
-        source: vesma-mesh
+        # KEY namespace mirrors projects.mnemos-mesh above: URL/slug
+        # contract, not the brand (33af843 discipline).
+        source: mnemos-mesh
         path: proto/federation.proto
         sha: pin
 
