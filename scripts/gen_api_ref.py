@@ -260,7 +260,7 @@ def pin_source(name: str, source: dict[str, Any]) -> dict[str, Any]:
     """Resolve an api_hub source pin. Bodies are read from git OBJECTS of
     the pinned commit (`git show sha:path`), never from the clone's working
     tree — one clone may legitimately sit checked out at ANOTHER pin (the
-    sync_docs projects share ../mnemos with a different ref), so the
+    sync_docs projects share ../vesma with a different ref), so the
     checkout state must not leak into api-hub content. No pristine check:
     dirty worktrees cannot affect object reads. ME-046: the pin must
     resolve (fetch-completeness) — an object the clone never fetched fails
@@ -1101,7 +1101,7 @@ def sync(config: dict[str, Any], hub: dict[str, Any]) -> dict[str, Any]:
 def check_drift(hub: dict[str, Any]) -> None:
     """Report-only. NOTE: api-hub bodies are read from git OBJECTS of the
     pin (see pin_source), so a differing clone HEAD is INFORMATIONAL — the
-    ../mnemos and ../mnemos-mesh clones are SHARED with the sync_docs
+    ../vesma and ../vesma-mesh clones are SHARED with the sync_docs
     projects, whose pins legitimately own the checkout state."""
     for name, source in sorted(hub["sources"].items()):
         repo = (REPO_ROOT / source["repo"]).resolve()
