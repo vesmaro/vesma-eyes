@@ -184,9 +184,7 @@ function cardOf(taskId: string): HTMLLIElement {
 
 /** The ⋯ trigger inside a card. */
 function menuTriggerOf(card: HTMLLIElement): HTMLButtonElement {
-  const trigger = card.querySelector<HTMLButtonElement>(
-    'button[aria-haspopup="menu"]',
-  );
+  const trigger = card.querySelector<HTMLButtonElement>('button[aria-haspopup="menu"]');
   expect(trigger).toBeDefined();
   return trigger as HTMLButtonElement;
 }
@@ -247,6 +245,11 @@ afterEach(async () => {
   queryClient = null;
 });
 
+// Menu mount point: the fixed placements (cursor + the W-C mobile trigger
+// anchor) PORTAL to document.body — the card's `content-visibility: auto`
+// paint containment would clip an in-card fixed popup — while the desktop
+// absolute placement stays in-place. The menu queries below are therefore
+// document-wide; the behavioural assertions are untouched.
 describe("kanban card context menu (fix/kanban-context-menu)", () => {
   it("⋯ opens the list-grade menu; Esc closes and returns focus to the trigger", async () => {
     await mountBoard(makeFetchStub());
@@ -257,7 +260,7 @@ describe("kanban card context menu (fix/kanban-context-menu)", () => {
       trigger.click();
     });
 
-    const menu = container!.querySelector('[role="menu"]');
+    const menu = document.querySelector('[role="menu"]');
     expect(menu).toBeDefined();
     expect(menuItemLabels(menu!)).toEqual(MENU_ROOT_ITEMS);
 
@@ -267,7 +270,7 @@ describe("kanban card context menu (fix/kanban-context-menu)", () => {
         new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
       );
     });
-    expect(container!.querySelector('[role="menu"]')).toBeNull();
+    expect(document.querySelector('[role="menu"]')).toBeNull();
     expect(document.activeElement).toBe(trigger);
   });
 
@@ -286,7 +289,7 @@ describe("kanban card context menu (fix/kanban-context-menu)", () => {
     });
     expect(event.defaultPrevented).toBe(true);
 
-    const menu = container!.querySelector('[role="menu"]') as HTMLElement;
+    const menu = document.querySelector('[role="menu"]') as HTMLElement;
     expect(menu).toBeDefined();
     expect(menuItemLabels(menu)).toEqual(MENU_ROOT_ITEMS);
     // Cursor placement: fixed + clamped inline coords (happy-dom 1024×768).
@@ -296,17 +299,15 @@ describe("kanban card context menu (fix/kanban-context-menu)", () => {
 
     // A press outside the popup dismisses it and refocuses the trigger.
     await act(async () => {
-      document.body.dispatchEvent(
-        new PointerEvent("pointerdown", { bubbles: true }),
-      );
+      document.body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
     });
-    expect(container!.querySelector('[role="menu"]')).toBeNull();
+    expect(document.querySelector('[role="menu"]')).toBeNull();
 
     // The next ⋯ open anchors to the button again (cursor coords cleared).
     await act(async () => {
       menuTriggerOf(card).click();
     });
-    const anchored = container!.querySelector('[role="menu"]') as HTMLElement;
+    const anchored = document.querySelector('[role="menu"]') as HTMLElement;
     expect(anchored.className).toContain("absolute");
     expect(anchored.style.left).toBe("");
   });
@@ -340,19 +341,17 @@ describe("kanban card context menu (fix/kanban-context-menu)", () => {
       "Готово",
     ]);
     // The task's own column is the disabled one.
-    expect(
-      moveItems.find((item) => item.textContent === "В очереди")!.disabled,
-    ).toBe(true);
+    expect(moveItems.find((item) => item.textContent === "В очереди")!.disabled).toBe(
+      true,
+    );
 
     // Gateless pick: the menu closes, the login window opens (Radix portal
     // into document.body), and NO wire move was requested.
     await act(async () => {
-      moveItems
-        .find((item) => item.textContent === "В работе")!
-        .click();
+      moveItems.find((item) => item.textContent === "В работе")!.click();
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
-    expect(container!.querySelector('[role="menu"]')).toBeNull();
+    expect(document.querySelector('[role="menu"]')).toBeNull();
     expect(document.querySelector('[data-testid="login-dialog"]')).not.toBeNull();
     expect(fetchStub.moveCalls.length).toBe(0);
   });
@@ -374,7 +373,7 @@ describe("kanban card context menu (fix/kanban-context-menu)", () => {
         }),
       );
     });
-    const menu = container!.querySelector('[role="menu"]');
+    const menu = document.querySelector('[role="menu"]');
     expect(menu).toBeDefined();
     expect(menuItemLabels(menu!)).toEqual(MENU_ROOT_ITEMS);
   });
