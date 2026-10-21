@@ -908,11 +908,19 @@ export const ru = {
   "tasks.inboxEmptyHint":
     "Новые задачи появятся после сканирования хранилищ (кнопка «Сканировать»).",
   "tasks.inboxLabel": "Список входящих задач",
-  "tasks.inboxStaleNote": "Исчезли из источника (примятие невозможно):",
+  // W-B (D6): «примятие невозможно» → человеческая причина.
+  "tasks.inboxStaleNote":
+    "Исчезли из памяти-источника — пока записи нет на месте, принять её в борд нельзя:",
   "tasks.inboxStaleLabel": "Исчезнувшие записи",
   "tasks.inboxSource": "сервер: {{server}}",
   "tasks.inboxAdoptedLink": "принята → {{id}}",
-  "tasks.inboxNoSpecialist": "специалист не указан",
+  // W-B (D6, ревью P1): specialist приходит из тега owner: записи и при
+  // принятии уходит в task.specialists — это «КОМУ поручено» (делающий),
+  // не «от кого просят». Значение — каноничное «@GCW: …», приставка без
+  // второго двоеточия. Пустота — одним словом с деталями («специалист»).
+  "tasks.inboxAssignee": "поручение для {{who}}",
+  "tasks.inboxNoAssignee": "специалист не назначен",
+  "tasks.inboxNoSpecialist": "не назначен",
   // UI-25: key:value chips + expand/edit
   "tasks.inboxProjectChip": "проект: {{value}}",
   "tasks.inboxPriorityChip": "приоритет: {{value}}",
@@ -923,7 +931,8 @@ export const ru = {
   "tasks.inboxDetailsSpecialist": "специалист: {{value}}",
   "tasks.inboxDetailsCreated": "создана в источнике: {{value}}",
   "tasks.inboxDetailsMemoryId": "память: {{value}}",
-  "tasks.inboxFullTextLabel": "Текст записи из памяти",
+  // W-B (D6): сырой дамп полей живёт под катом — и называется честно.
+  "tasks.inboxFullTextLabel": "Сырая запись из памяти",
   "tasks.inboxFullTextFailed": "Не удалось загрузить запись из памяти",
   "tasks.inboxEditLabel": "Править",
   "tasks.inboxEditTitle": "Правка записи до принятия в борд",
@@ -936,6 +945,9 @@ export const ru = {
   "tasks.inboxEdit.save": "Сохранить правку",
   "tasks.inboxEdit.cancel": "Отмена",
   "tasks.scanLabel": "Сканировать хранилища",
+  // W-B (D6): одна строка контекста к кнопке (вердикт: «без контекста»).
+  "tasks.scanHint":
+    "Скан заново читает хранилища памяти и обновляет список: во Входящие попадают записи с меткой task:queue.",
   "tasks.scanBusy": "Сканируем…",
   "tasks.adoptLabel": "Принять в борд",
   "tasks.adoptAllLabel": "Принять все",
@@ -969,13 +981,28 @@ export const ru = {
   // «колонка: …» / «… → …» embedding reads list-like after a colon).
   // ME-077: owner-facing renames («Открыто»→«В очереди»,
   // «Решено»→«Ждёт проверки») — the WIRE column ids never change.
+  // W-B (D4): «Ждёт проверки» → «На проверке» — слово колонки, чипа
+  // счётчика и Обзора снова одно (W-A переименовала чип — колонка
+  // догоняет, а не наоборот).
   "tasks.column.backlog": "Бэклог",
   "tasks.column.validating": "На валидации",
   "tasks.column.open": "В очереди",
   "tasks.column.in-progress": "В работе",
   "tasks.column.blocked": "Блокировано",
-  "tasks.column.resolved": "Ждёт проверки",
+  "tasks.column.resolved": "На проверке",
   "tasks.column.done": "Готово",
+
+  // --- W-B (D4): карта соответствий «статус → колонка» -----------------------------
+  // Статус (слово чипов списка) и колонка (слово доски) — один смысл с
+  // разными словами; тултип чипа статуса называет колонку, чтобы владелец
+  // не переводил словари в голове.
+  "tasks.statusColumn.open":
+    "задача в начале пути: колонки «Бэклог», «На валидации» или «В очереди»",
+  "tasks.statusColumn.in-progress": "колонка «В работе»",
+  "tasks.statusColumn.blocked": "колонка «Блокировано»",
+  "tasks.statusColumn.resolved": "колонка «На проверке» — задача ждёт вашего решения",
+  "tasks.statusColumn.done": "колонка «Готово»",
+  "tasks.statusColumn.withdrawn": "колонки на доске нет — задача отозвана",
 
   // --- ME-077: column hints (whose action moves the card onward) -------------------
   "tasks.columnHint.backlog": "переход: владелец — поставить в работу",
@@ -1086,8 +1113,10 @@ export const ru = {
   // creation entry — the mobile label names the action.
   "tasks.create.labelMobile": "Новая задача",
   "tasks.create.title": "Новая задача",
+  // W-B (D4): «в колонке «открыта»» называло несуществующую колонку —
+  // «открыта» это слово СТАТУСА; задача приземляется в колонку «В очереди».
   "tasks.create.description":
-    "Первая строка — название, остальное — сводка. Задача создаётся сразу на борде в колонке «открыта».",
+    "Первая строка — название, остальное — сводка. Задача создаётся сразу на борде в колонке «В очереди».",
   "tasks.create.textLabel": "Сырой текст",
   "tasks.create.textPlaceholder":
     "Название задачи с первой строки…\nДальше — сводка и контекст.",
@@ -1206,6 +1235,19 @@ export const ru = {
   "agents.state.failed": "провал",
   "agents.state.cancelled": "отменено",
   "agents.state.expired": "истекло",
+  // W-B (D4): тултипы-карта состояний ПОРУЧЕНИЙ — вторая ось (попытки
+  // исполнения), не колонки доски; слова частично сталкиваются («в очереди»),
+  // поэтому каждый чип состояния объясняет себя словами.
+  "agents.stateHint.queued": "поручение создано и ждёт, пока исполнитель его заберёт",
+  "agents.stateHint.claimed": "исполнитель забрал поручение и готовится начать",
+  "agents.stateHint.running": "исполнитель работает над поручением сейчас",
+  "agents.stateHint.done": "исполнение дошло до конца — отчёт в карточке задачи",
+  "agents.stateHint.failed": "исполнение не удалось — задача, скорее всего, заблокирована",
+  "agents.stateHint.cancelled": "исполнение отменено вручную",
+  "agents.stateHint.expired": "у поручения истёк срок — задача, скорее всего, заблокирована",
+  // W-B (D4): одна строка осям — чипы ниже про поручения, не про колонки.
+  "agents.statesAxisNote":
+    "Фильтры ниже — про поручения (попытки исполнения задач), а не про колонки канбана.",
   "agents.age.queued": "в очереди {{age}}",
   "agents.age.claimed": "взято {{age}} назад",
   "agents.age.running": "пульс {{age}} назад",
@@ -1838,7 +1880,10 @@ export const ru = {
   "automation.banner.engineOff": "Движок не включён",
   "automation.banner.engineOffNote":
     "Работают только ручные запуски: расписания не тикают сами, «Запустить сейчас» — рука владельца.",
+  // W-B (D10): значение выключателя — по-русски, не «on/off» (D12-класс).
   "automation.banner.killSwitch": "глобальный выключатель",
+  "automation.banner.switchOn": "вкл.",
+  "automation.banner.switchOff": "выкл.",
   "automation.banner.cap": "лимит в день",
   "automation.banner.usedToday": "авто-запусков сегодня",
   "automation.banner.rules": "правил",
@@ -1847,8 +1892,10 @@ export const ru = {
   // UI-21 settings hub: the kill-switch/cap form (server contract §2).
   "automation.settings.title": "Автоматизация",
   "automation.settings.enabledLabel": "Автоматизация включена",
+  // W-B (D10): одно согласованное состояние — движок не работает, поэтому
+  // переключатель недоступен; без внутреннего кода этапа («S1») в тексте.
   "automation.settings.engineOffNote":
-    "Движок пока не работает (S1): настройка сохранит решение и заработает вместе с движком.",
+    "Движок автоматики ещё не включён на этом борде — переключатель станет доступным, когда движок заработает. Сохранённое решение и лимит применяются, как прежде.",
   "automation.settings.capLabel": "Лимит авто-запусков в день",
   "automation.settings.capHint":
     "От 1 до 1000; сегодня использовано {{used}} из {{cap}}.",
@@ -2002,7 +2049,7 @@ export const ru = {
     "Создаётся выключенным — включение отдельным шагом; тик — только после включения движка",
   "automation.schedule.empty": "Расписаний нет",
   "automation.schedule.emptyHint":
-    "Создайте расписание — ручной запуск работает сразу, автоматический ждёт движок (S2).",
+    "Создайте расписание — ручной запуск работает сразу, автоматический заработает вместе с движком.",
   "automation.hook.create": "Новое правило",
   "automation.hook.title": "Новое правило-хук",
   "automation.hook.subtitle":

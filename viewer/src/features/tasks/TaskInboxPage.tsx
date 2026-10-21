@@ -46,7 +46,30 @@ import { pageGridClass } from "@/layout/pageGrid";
  * priority / project) is stored via PATCH before adoption — «Принять в
  * борд» then adopts the edited version and the server syncs the edit back
  * to vesma as a superseding revision record.
+ *
+ * W-B (D6, user-panel verdict): the card reads as a human ASSIGNMENT — to
+ * whom it is assigned («поручение для @GCW: …» — the specialist tag feeds
+ * task.specialists on adopt, so it names the DOER, review P1), what
+ * happened (the title), what to decide (the actions). Many queue records
+ * OPEN their content with the raw
+ * `id: … title: … owner: …` field dump; that dump never renders on the
+ * card face — it lives under the spoiler («Сырая запись»), next to the
+ * details. Free-form excerpts (no dump shape) stay on the face: hiding
+ * human context would be its own regression.
  */
+
+/**
+ * True when the excerpt is the machine field-dump shape (`id: … title: …
+ * owner: …` opening line plus a second known `key:` field) — the D6 signal
+ * to keep it OFF the card face. Conservative by design: anything not
+ * clearly a dump is human text and stays visible.
+ */
+export function isRawFieldDump(excerpt: string): boolean {
+  if (!/^\s*id:\s/.test(excerpt)) return false;
+  return /\b(?:title|owner|gates|priority|status|size|created_at|updated_at|depends_on|blocked_by)\s*:/.test(
+    excerpt.slice(excerpt.indexOf(":") + 1),
+  );
+}
 export function TaskInboxPage() {
   const t = useT();
   const { lang } = useI18n();
@@ -250,7 +273,8 @@ function AdoptAllButton() {
  * «Сканировать хранилища» — POST /api/tasks/inbox/refresh (Ф3). The spinner
  * spans click → toast, or click → token panel when the gate defers the run
  * (`onSettled` fires either way — refreshInbox's contract); `aria-busy`
- * carries the state to screen readers.
+ * carries the state to screen readers. D6: one visible context line under
+ * the button — the verdict's «без контекста» complaint.
  */
 function ScanButton({
   scanning,
@@ -267,6 +291,7 @@ function ScanButton({
         variant="outline"
         size="sm"
         disabled={scanning}
+        title={t("tasks.scanHint")}
         onClick={() => {
           onSetScanning(true);
           refreshInbox(() => onSetScanning(false));
@@ -275,6 +300,7 @@ function ScanButton({
         <ScanSearch className={"size-4" + (scanning ? " animate-spin" : "")} aria-hidden="true" />
         {scanning ? t("tasks.scanBusy") : t("tasks.scanLabel")}
       </Button>
+      <p className="w-full text-xs text-foreground-muted">{t("tasks.scanHint")}</p>
     </div>
   );
 }
@@ -343,12 +369,16 @@ function InboxCard({
         </span>
       </div>
       <h2 className="mt-1 font-medium">{item.title}</h2>
-      {item.excerpt ? (
+      {/* D6: the human context line — free-form excerpts stay on the face;
+       * the raw `id: … owner: …` dump hides (it lives under the spoiler). */}
+      {item.excerpt && !isRawFieldDump(item.excerpt) ? (
         <p className="mt-0.5 line-clamp-2 text-xs text-foreground-secondary">{item.excerpt}</p>
       ) : null}
       <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-foreground-muted">
-          {item.specialist || t("tasks.inboxNoSpecialist")}
+          {item.specialist
+            ? t("tasks.inboxAssignee", { who: item.specialist })
+            : t("tasks.inboxNoAssignee")}
         </p>
         <div className="flex items-center gap-1.5">
           {editable ? (
@@ -429,15 +459,26 @@ function InboxExpandedDetails({ item }: { item: TaskInboxEntry }) {
         </div>
       ) : null}
       <div>
+        {/* D6: the raw layer has a name — everything machine-shaped lives
+         * here, under the spoiler, never on the card face. */}
         <h4 className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
           {t("tasks.inboxFullTextLabel")}
         </h4>
         {memory.isPending ? (
           <MemoryCardSkeleton count={1} />
         ) : memory.isError ? (
-          <p role="alert" className="text-xs text-error">
-            {t("tasks.inboxFullTextFailed")}
-          </p>
+          <>
+            <p role="alert" className="text-xs text-error">
+              {t("tasks.inboxFullTextFailed")}
+            </p>
+            {/* The mirror excerpt is local (SEC-4) — when the full record
+             * fails to load it is the honest fallback, dump or not. */}
+            {item.excerpt ? (
+              <pre className="mt-1 overflow-x-auto whitespace-pre-wrap font-mono text-xs text-foreground-secondary">
+                {item.excerpt}
+              </pre>
+            ) : null}
+          </>
         ) : (
           /* UI-27: the source record text renders through the TextEngine
            * primitive — the owner's raw `##`/`**` complaint surface. Plain

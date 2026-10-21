@@ -18,6 +18,7 @@ import {
   priorityBadgeVariant,
   priorityLabelKey,
   statusBadgeVariant,
+  statusColumnHintKey,
   statusLabelKey,
 } from "./taskStatus";
 import {
@@ -462,6 +463,8 @@ function TaskTableRow({
   // UI-18 pair 2: the list URL (filters + grouping-independent state) rides
   // as `return=` — row click and title link lead home from the detail page.
   const location = useLocation();
+  // W-B (D4): status → column(s) correspondence for the chip tooltip.
+  const statusHint = statusColumnHintKey(task.status);
   const detailHref = withReturn(
     `/tasks/${encodeURIComponent(task.id)}`,
     location.pathname,
@@ -510,7 +513,12 @@ function TaskTableRow({
         </Badge>
       </td>
       <td className="px-2">
-        <Badge variant={statusBadgeVariant(task.status)}>
+        {/* W-B (D4): the chip's tooltip names the column(s) behind the
+         * workflow status — the two words stop being a translation exercise. */}
+        <Badge
+          variant={statusBadgeVariant(task.status)}
+          title={statusHint ? t(statusHint) : undefined}
+        >
           {t(statusLabelKey(task.status))}
         </Badge>
         {/* U3: the blocked reason under the status badge — visible, human,
@@ -586,6 +594,8 @@ function TaskCardRow({
   const t = useT();
   // UI-18 pair 2: same `return=` contract as the desktop rows.
   const location = useLocation();
+  // W-B (D4): status → column(s) correspondence for the chip tooltip.
+  const statusHint = statusColumnHintKey(task.status);
   return (
     <div className="relative flex min-h-row items-start gap-2">
       <div className="relative flex min-h-row flex-1 flex-col gap-1 rounded-md border border-border-subtle bg-well px-3 py-2 text-sm shadow-well transition-colors duration-instant hover:border-iris-bright focus-within:border-iris-bright cursor-pointer">
@@ -593,7 +603,10 @@ function TaskCardRow({
           <Badge variant={priorityBadgeVariant(task.priority)}>
             {t(priorityLabelKey(task.priority))}
           </Badge>
-          <Badge variant={statusBadgeVariant(task.status)}>
+          <Badge
+            variant={statusBadgeVariant(task.status)}
+            title={statusHint ? t(statusHint) : undefined}
+          >
             {t(statusLabelKey(task.status))}
           </Badge>
           <span className="relative z-10">

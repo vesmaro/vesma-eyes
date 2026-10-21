@@ -96,7 +96,7 @@ describe("TaskInboxPage (mock adapter)", () => {
 
   it("moves stale records into a dimmed, labelled section", async () => {
     const html = await renderInbox(new MockAdapter({ latency: false }));
-    expect(html).toContain("Disappeared from the source");
+    expect(html).toContain("Vanished from their memory store");
     expect(html).toContain("Устранить дрейф FTS5");
     // Active records render above the stale section.
     const activeAt = html.indexOf("Снять corpus с живого борда");

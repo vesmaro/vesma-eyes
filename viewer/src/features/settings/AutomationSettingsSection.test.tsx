@@ -127,19 +127,27 @@ describe("AutomationSettingsSection — «Автоматизация» (UI-21)",
     await actUnmount(root);
   });
 
-  it("the engine-off stanza shows while engine=false and leaves when true", async () => {
+  // D10 (user-panel verdict): the engine-off world says ONE thing — the
+  // badge AND a disabled switch with the reason beside it.
+  it("engine=false: the badge shows and the switch is locked with its reason", async () => {
     const off = await mountSection(new MockAdapter({ latency: false }));
     expect(off.container.textContent).toContain("Engine not enabled");
-    expect(off.container.textContent).toContain("this preference is stored now");
+    const script = off.container.querySelector<HTMLInputElement>("#automation-enabled")!;
+    expect(script.disabled).toBe(true);
+    expect(off.container.textContent).toContain("the switch unlocks when the engine ships");
+    expect(script.getAttribute("aria-describedby")).toBe("automation-enabled-note");
     await actUnmount(off.root);
 
     const on = await mountSection(new EngineOnGateway({ latency: false }));
     expect(on.container.textContent).not.toContain("Engine not enabled");
+    expect(
+      on.container.querySelector<HTMLInputElement>("#automation-enabled")!.disabled,
+    ).toBe(false);
     await actUnmount(on.root);
   });
 
-  it("saving sends BOTH fields through the wire and lands the ok toast", async () => {
-    const gateway = new MockAdapter({ latency: false });
+  it("S2 world: saving sends BOTH fields through the wire and lands the ok toast", async () => {
+    const gateway = new EngineOnGateway({ latency: false });
     const putSpy = vi.spyOn(gateway, "putAutomationSettings");
     const { root, container } = await mountSection(gateway);
 
@@ -158,6 +166,31 @@ describe("AutomationSettingsSection — «Автоматизация» (UI-21)",
     expect(putSpy).toHaveBeenCalledWith({ enabled: true, cap_global_per_day: 25 });
     const stored = await gateway.getAutomationSettings();
     expect(stored.enabled).toBe(true);
+    expect(stored.cap_global_per_day).toBe(25);
+    await actUnmount(root);
+  });
+
+  // D10: the lock is presentation only — the saved intent and the cap
+  // still travel together on save (the PUT is partial over BOTH fields).
+  it("S1 world: locked switch, live cap — save sends the LOADED intent + edited cap", async () => {
+    const gateway = new MockAdapter({ latency: false });
+    const putSpy = vi.spyOn(gateway, "putAutomationSettings");
+    const { root, container } = await mountSection(gateway);
+
+    const script = container.querySelector<HTMLInputElement>("#automation-enabled")!;
+    expect(script.disabled).toBe(true);
+    expect(script.checked).toBe(false);
+    await typeValue(capInput(container), "25");
+    await act(async () => {
+      saveButton(container).click();
+    });
+
+    await actWaitUntil(() =>
+      expect(document.body.textContent).toContain("Automation settings saved"),
+    );
+    expect(putSpy).toHaveBeenCalledWith({ enabled: false, cap_global_per_day: 25 });
+    const stored = await gateway.getAutomationSettings();
+    expect(stored.enabled).toBe(false);
     expect(stored.cap_global_per_day).toBe(25);
     await actUnmount(root);
   });

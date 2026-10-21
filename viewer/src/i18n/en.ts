@@ -879,11 +879,18 @@ export const en: Record<TranslationKey, string> = {
   "tasks.inboxEmpty": "Scan finished — no new tasks found",
   "tasks.inboxEmptyHint": "New tasks appear after a store scan (the “Scan” button).",
   "tasks.inboxLabel": "Inbox task list",
-  "tasks.inboxStaleNote": "Disappeared from the source (cannot be adopted):",
+  // W-B (D6): the stale note names the reason in words.
+  "tasks.inboxStaleNote":
+    "Vanished from their memory store — a record that is gone cannot be adopted:",
   "tasks.inboxStaleLabel": "Disappeared records",
   "tasks.inboxSource": "server: {{server}}",
   "tasks.inboxAdoptedLink": "adopted → {{id}}",
-  "tasks.inboxNoSpecialist": "no specialist",
+  // W-B (D6, review P1): specialist comes from the record's owner: tag and
+  // feeds task.specialists on adopt — it names the DOER (assigned to), not
+  // the asker. The empty case shares one word with the details dl.
+  "tasks.inboxAssignee": "assignment for {{who}}",
+  "tasks.inboxNoAssignee": "no specialist assigned",
+  "tasks.inboxNoSpecialist": "not assigned",
   // UI-25: key:value chips + expand/edit
   "tasks.inboxProjectChip": "project: {{value}}",
   "tasks.inboxPriorityChip": "priority: {{value}}",
@@ -894,7 +901,8 @@ export const en: Record<TranslationKey, string> = {
   "tasks.inboxDetailsSpecialist": "specialist: {{value}}",
   "tasks.inboxDetailsCreated": "created at source: {{value}}",
   "tasks.inboxDetailsMemoryId": "memory: {{value}}",
-  "tasks.inboxFullTextLabel": "Record text from memory",
+  // W-B (D6): the raw field dump lives under the spoiler — named honestly.
+  "tasks.inboxFullTextLabel": "Raw record from memory",
   "tasks.inboxFullTextFailed": "Could not load the record from memory",
   "tasks.inboxEditLabel": "Edit",
   "tasks.inboxEditTitle": "Edit the record before adopting it to the board",
@@ -906,6 +914,9 @@ export const en: Record<TranslationKey, string> = {
   "tasks.inboxEdit.save": "Save edits",
   "tasks.inboxEdit.cancel": "Cancel",
   "tasks.scanLabel": "Scan stores",
+  // W-B (D6): one visible context line for the button.
+  "tasks.scanHint":
+    "A scan re-reads the memory stores and refreshes the list: records tagged task:queue land in the inbox.",
   "tasks.scanBusy": "Scanning…",
   "tasks.adoptLabel": "Adopt to board",
   "tasks.adoptAllLabel": "Accept all",
@@ -946,6 +957,18 @@ export const en: Record<TranslationKey, string> = {
   "tasks.column.blocked": "Blocked",
   "tasks.column.resolved": "Awaiting review",
   "tasks.column.done": "Done",
+
+  // --- W-B (D4): the status → column correspondence map ----------------------------
+  // A workflow status (list-chip word) and its column (board word) name one
+  // thing with two words; the chip tooltip names the column so nobody
+  // translates dictionaries in their head.
+  "tasks.statusColumn.open":
+    "early lanes: the Backlog, Validating or Queued column",
+  "tasks.statusColumn.in-progress": "the In progress column",
+  "tasks.statusColumn.blocked": "the Blocked column",
+  "tasks.statusColumn.resolved": "the Awaiting review column — waiting for your call",
+  "tasks.statusColumn.done": "the Done column",
+  "tasks.statusColumn.withdrawn": "no board column — the task was withdrawn",
 
   // --- ME-077: column hints (whose action moves the card onward) -------------------
   "tasks.columnHint.backlog": "moves: owner — queue for work",
@@ -1055,8 +1078,9 @@ export const en: Record<TranslationKey, string> = {
   // W-C (D5): the mobile creation entry names the action.
   "tasks.create.labelMobile": "New task",
   "tasks.create.title": "New task",
+  // W-B (D4): the “open” column never existed — a new task lands in Queued.
   "tasks.create.description":
-    "The first line becomes the title, the rest the summary. The task is created on the board in the “open” column right away.",
+    "The first line becomes the title, the rest the summary. The task is created on the board in the Queued column right away.",
   "tasks.create.textLabel": "Raw text",
   "tasks.create.textPlaceholder":
     "Task title on the first line…\nThen the summary and context.",
@@ -1176,6 +1200,20 @@ export const en: Record<TranslationKey, string> = {
   "agents.state.failed": "failed",
   "agents.state.cancelled": "cancelled",
   "agents.state.expired": "expired",
+  // W-B (D4): assignment-state tooltips — the EXECUTION axis (attempts at a
+  // task), not board columns; the words partly collide («queued»), so every
+  // state chip explains itself in one line.
+  "agents.stateHint.queued": "the assignment waits for an executor to pick it up",
+  "agents.stateHint.claimed": "an executor took the assignment and is about to start",
+  "agents.stateHint.running": "an executor is working on the assignment right now",
+  "agents.stateHint.done": "the attempt finished — see the task's report",
+  "agents.stateHint.failed": "the attempt failed — the task is likely blocked now",
+  "agents.stateHint.cancelled": "the attempt was cancelled manually",
+  "agents.stateHint.expired": "the assignment ran out of time — the task is likely blocked now",
+  // W-B (D4): one line for the two axes — the chips below filter
+  // assignments, not kanban columns.
+  "agents.statesAxisNote":
+    "The filters below are about assignments (attempts at tasks), not kanban columns.",
   "agents.age.queued": "queued {{age}}",
   "agents.age.claimed": "taken {{age}} ago",
   "agents.age.running": "pulse {{age}} ago",
@@ -1806,6 +1844,8 @@ export const en: Record<TranslationKey, string> = {
   "automation.banner.engineOffNote":
     "Manual runs only: schedules do not tick on their own — «run now» is the owner's hand.",
   "automation.banner.killSwitch": "global kill-switch",
+  "automation.banner.switchOn": "on",
+  "automation.banner.switchOff": "off",
   "automation.banner.cap": "daily cap",
   "automation.banner.usedToday": "auto-launches today",
   "automation.banner.rules": "rules",
@@ -1814,8 +1854,10 @@ export const en: Record<TranslationKey, string> = {
   // UI-21 settings hub: the kill-switch/cap form (server contract §2).
   "automation.settings.title": "Automation",
   "automation.settings.enabledLabel": "Automation enabled",
+  // W-B (D10): one coherent state — the engine is down, so the switch is
+  // locked; no internal milestone code in the copy.
   "automation.settings.engineOffNote":
-    "The engine is not running yet (S1): this preference is stored now and takes effect when the engine ships.",
+    "The automation engine is not enabled on this board yet — the switch unlocks when the engine ships. The stored preference and the cap still apply as saved.",
   "automation.settings.capLabel": "Daily auto-launch cap",
   "automation.settings.capHint": "1–1000; {{used}} of {{cap}} used today.",
   "automation.settings.capError": "Enter a whole number from 1 to 1000.",
@@ -1960,10 +2002,10 @@ export const en: Record<TranslationKey, string> = {
   "automation.schedule.create": "New schedule",
   "automation.schedule.title": "New schedule",
   "automation.schedule.subtitle":
-    "Created disabled — enablement is a separate step; ticks only start with the engine (S2)",
+    "Created disabled — enablement is a separate step; ticks only start with the engine",
   "automation.schedule.empty": "No schedules",
   "automation.schedule.emptyHint":
-    "Create a schedule — manual runs work right away, automatic ones await the engine (S2).",
+    "Create a schedule — manual runs work right away, automatic ones start working with the engine.",
   "automation.hook.create": "New rule",
   "automation.hook.title": "New hook rule",
   "automation.hook.subtitle": "Event (on) + conditions + action; created disabled",

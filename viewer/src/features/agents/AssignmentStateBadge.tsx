@@ -1,13 +1,16 @@
 import { Badge } from "@/components/ui/badge";
 import { useT } from "@/i18n";
 import type { AssignmentLifecycleState } from "@/gateway/boardTypes";
-import { assignmentStateStyle } from "./assignmentStatus";
+import { assignmentStateHintKey, assignmentStateStyle } from "./assignmentStatus";
 
 /**
  * The 7-state assignment badge (spec §3.1): colour + text + SHAPE — never
  * colour alone (WCAG 1.4.1). Shape markers are aria-hidden dots: hollow
  * (queued — nothing taken it yet), filled (claimed), solid (running),
  * square (terminal states). The text label stays the primary signal for SRs.
+ * W-B (D4): the badge carries a one-line tooltip saying what the state
+ * means — assignment states are the EXECUTION axis, not board columns, and
+ * the words partly collide («в очереди» / «завершено»).
  */
 
 /** Shape marker classes per shape kind (aria-hidden decoration). */
@@ -37,7 +40,7 @@ export function AssignmentStateBadge({
   const t = useT();
   const style = assignmentStateStyle(state);
   return (
-    <Badge variant={style.variant} className={className}>
+    <Badge variant={style.variant} className={className} title={t(assignmentStateHintKey(state))}>
       <span aria-hidden="true" className={`mr-1 inline-block ${SHAPE_CLASS[style.shape]}`} />
       {t(style.labelKey)}
     </Badge>

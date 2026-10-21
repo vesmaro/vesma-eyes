@@ -337,7 +337,7 @@ describe("kanban card context menu (fix/kanban-context-menu)", () => {
       "В очереди",
       "В работе",
       "Блокировано",
-      "Ждёт проверки",
+      "На проверке", // W-B (D4): the column follows W-A's chip word
       "Готово",
     ]);
     // The task's own column is the disabled one.

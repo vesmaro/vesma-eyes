@@ -16,13 +16,15 @@ import {
  * «Автоматизация» section of the settings hub (UI-21, spec 2026-09-23 §2):
  * the kill-switch + daily-cap form over `GET/PUT /api/automation/settings`
  * — the server PUT is partial, the form sends BOTH fields (audited only on
- * effective change, store.py ADR 0013 §6). Honesty S1: the «движок не
- * включён» stanza renders while `status.engine === false` (P2-3 pattern) —
- * the switch stores the owner's INTENT, it does not arm an engine that
- * does not exist yet. Without a session the section stays fully readable,
- * «Сохранить» disabled, one honest disabledNote line (ADR 0013 §8/0014);
- * a 422 answers with the server text verbatim and the form returns to the
- * LOADED values (P3-6b).
+ * effective change, store.py ADR 0013 §6). Honesty S1 + D10 (user-panel
+ * verdict): while `status.engine === false` (P2-3 pattern) the section says
+ * ONE coherent thing — the «движок не включён» badge AND a disabled
+ * enabled-switch with the reason next to it; the switch stores the owner's
+ * INTENT and the save still carries BOTH fields, the cap stays editable.
+ * When S2 ships the engine, the switch unlocks without a UI change. Without
+ * a session the section stays fully readable, «Сохранить» disabled, one
+ * honest disabledNote line (ADR 0013 §8/0014); a 422 answers with the
+ * server text verbatim and the form returns to the LOADED values (P3-6b).
  */
 export function AutomationSettingsSection({ anchorId }: { anchorId?: string }) {
   const t = useT();
@@ -41,6 +43,15 @@ export function AutomationSettingsSection({ anchorId }: { anchorId?: string }) {
   const [localEnabled, setLocalEnabled] = useState<boolean | null>(null);
   const [localCap, setLocalCap] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // D10 (user-panel verdict): one coherent state. While the engine is
+  // KNOWN to be off (S1, P2-3 gating), the enabled switch is disabled —
+  // the banner says the engine is down, so a live switch next to it read
+  // as a contradiction. The stored intent still renders and still travels
+  // with the save (the PUT is partial over BOTH fields); the cap stays
+  // editable either way. When S2 ships the engine, the switch unlocks
+  // without a UI change.
+  const engineOff = status.data !== undefined && !status.data.engine;
 
   // No automation capability → the SECTION degenerates to a note (UI-21 §3);
   // «Интерфейс» stays — the chrome exists in every mode.
@@ -102,13 +113,11 @@ export function AutomationSettingsSection({ anchorId }: { anchorId?: string }) {
       </div>
 
       {/* S1 honesty: only when the status is KNOWN to be off (P2-3) — when
-       * S2 ships the loop, the stanza disappears without a UI change. */}
+       * S2 ships the loop, the stanza disappears without a UI change.
+       * D10: the explanatory line lives by the SWITCH it explains. */}
       {status.data && !status.data.engine ? (
-        <div className="space-y-1">
+        <div>
           <Badge variant="warning">{t("automation.banner.engineOff")}</Badge>
-          <p className="text-xs text-foreground-secondary">
-            {t("automation.settings.engineOffNote")}
-          </p>
         </div>
       ) : null}
 
@@ -135,10 +144,14 @@ export function AutomationSettingsSection({ anchorId }: { anchorId?: string }) {
               type="checkbox"
               role="switch"
               checked={enabledShown}
+              disabled={engineOff}
+              aria-describedby={
+                engineOff ? "automation-enabled-note" : undefined
+              }
               onChange={(event) => {
                 setLocalEnabled(event.target.checked);
               }}
-              className="size-6 accent-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+              className="size-6 accent-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright disabled:opacity-50"
             />
             <label htmlFor="automation-enabled" className="text-sm font-medium">
               {t("automation.settings.enabledLabel")}
@@ -150,6 +163,17 @@ export function AutomationSettingsSection({ anchorId }: { anchorId?: string }) {
                 : t("automation.rule.disabled")}
             </span>
           </div>
+          {/* D10: the why — the engine is down, the switch unlocks when it
+           * ships; the stored intent and the cap stay savable. */}
+          {engineOff ? (
+            <p
+              id="automation-enabled-note"
+              role="note"
+              className="text-xs text-foreground-secondary"
+            >
+              {t("automation.settings.engineOffNote")}
+            </p>
+          ) : null}
 
           <div>
             <label htmlFor="automation-cap" className="mb-1 block text-sm font-medium">
