@@ -254,6 +254,41 @@ def _ui_headers(app_module) -> dict:
     return {"Authorization": f"Bearer {effective}"}
 
 
+class TestMessagesPreviewPlural:
+    """D12 (user panel 2026-10-21): the title-less session preview reads
+    «N сообщений» with correct Russian declension — «1 сообщений» was a
+    broken plural on the Kora list."""
+
+    def _preview(self, msg_count):
+        from server.hermes_client import session_row_from_api
+
+        row = session_row_from_api({
+            "id": "api-test",
+            "source": "api_server",
+            "message_count": msg_count,
+        })
+        return row["preview"]
+
+    def test_one_message_singular(self):
+        assert self._preview(1) == "1 сообщение"
+
+    def test_two_to_four_plural_few(self):
+        assert self._preview(2) == "2 сообщения"
+        assert self._preview(4) == "4 сообщения"
+        assert self._preview(21) == "21 сообщение"
+        assert self._preview(22) == "22 сообщения"
+
+    def test_five_plus_genitive(self):
+        assert self._preview(5) == "5 сообщений"
+        assert self._preview(11) == "11 сообщений"
+        assert self._preview(12) == "12 сообщений"
+        assert self._preview(39) == "39 сообщений"
+
+    def test_zero_and_missing_count_stay_empty(self):
+        assert self._preview(0) == ""
+        assert self._preview(None) == ""
+
+
 # ------------------------------------------------------ 1. client contract
 
 class TestClientContract:

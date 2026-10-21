@@ -303,28 +303,15 @@ function FooterRow({
         <>
           <span className="min-w-0 flex-1 truncate text-left">{label}</span>
           {hint ? (
-            <span className="shrink-0 font-mono text-caps tracking-caps text-foreground-muted">
+            // D12: key hints only where a keyboard exists — hidden on
+            // touch-only surfaces (styles/global.css .kbd-hint).
+            <span className="kbd-hint shrink-0 font-mono text-caps tracking-caps text-foreground-muted">
               {hint}
             </span>
           ) : null}
         </>
       ) : null}
     </button>
-  );
-}
-
-/**
- * The honest slot badge (ME-072 A): ONE component for every not-navigable
- * sidebar row. The label is passed by the caller — «скоро» for a surface
- * that does not exist yet (the phase-4 domains), «позже» for a live route
- * the menu keeps as a slot (System Sessions/Traces) — one look, one place,
- * never a bare colour.
- */
-function SlotBadge({ label }: { label: string }) {
-  return (
-    <span className="shrink-0 rounded-sm border border-border-subtle px-1 text-caps tracking-caps text-foreground-muted">
-      {label}
-    </span>
   );
 }
 
@@ -339,9 +326,9 @@ const STRATA_CLASS: Partial<Record<string, string>> = {
 };
 
 /**
- * One domain row: a plain LINK for leaf domains (Обзор, Кора, docs), a
- * GROUP TOGGLE (chevron, aria-expanded) for domains with sections, and the
- * honest disabled slot for phase-2+ domains (soonKey). The active domain
+ * One domain row: a plain LINK for leaf domains (Обзор, Кора, docs) or a
+ * GROUP TOGGLE (chevron, aria-expanded) for domains with sections — every
+ * nav row is live (D8). The active domain
  * carries the 2px iris strip + its strata wash; the rail keeps icons only.
  *
  * Gates v6 (ME-043, 07k §2.2): for an anonymous visitor a GATED domain row
@@ -381,37 +368,11 @@ function DomainRow({
   const hideCounters = gated && status !== "user";
   const Icon = domain.icon;
   const label = t(domain.key);
-  const rowLabel = locked ? `${label} — ${t("auth.lock.why")}` : label;
-
-  // Honest disabled slot (Phase 2+): visible, explained, inert. The row
-  // shares the LIVE row geometry — same px-3 gutter, same icon column, the
-  // label on the same flex-1 axis (text-left kills the UA button centering
-  // that used to shove slot labels off the icon column) — and the badge is
-  // the shared SlotBadge at the row's trailing edge, like the counters and
-  // chevrons of live rows (ME-072 A: one row axis, one badge).
-  if (domain.soonKey) {
-    const hint = t(domain.soonKey);
-    return (
-      <button
-        type="button"
-        disabled
-        title={`${label} — ${hint}`}
-        className={cn(
-          "flex h-12 md:h-10 w-full min-w-0 cursor-not-allowed items-center rounded-md px-3 text-left text-sm",
-          "text-foreground-muted opacity-70",
-          expanded ? "gap-3" : "justify-center px-0",
-        )}
-      >
-        <Icon className="size-5 shrink-0" aria-hidden="true" />
-        {expanded ? (
-          <>
-            <span className={cn("flex-1", hideLabels)}>{label}</span>
-            <SlotBadge label={t("nav.soon")} />
-          </>
-        ) : null}
-      </button>
-    );
-  }
+  // D12: a domain-level dictionary hint (navItems hintKey) rides the row's
+  // title/aria — the ready docs wording at the label's first use. One row,
+  // one sentence, nothing invented.
+  const hint = domain.hintKey ? t(domain.hintKey) : null;
+  const rowLabel = locked ? `${label} — ${t("auth.lock.why")}` : hint ? `${label} — ${hint}` : label;
 
   const counterIds = domain.aggregateCounters ? domainCounterIds(domain) : [];
   const hasSections = (domain.sections?.length ?? 0) > 0;
@@ -558,26 +519,6 @@ function SectionLink({
 }) {
   const t = useT();
   const label = t(section.key);
-  // Honest disabled slot (UX-overhaul §6/§9.4 Ф1): visible, explained,
-  // inert; the route behind it stays alive for bookmarks. ME-072 A: the
-  // badge is HONEST about the blockage — a section whose ROUTE answers
-  // (Sessions/Traces) reads «позже», while the shared look comes from the
-  // one SlotBadge; the label sits on the same flex-1 axis as live rows
-  // (text-left kills the UA button centering here too).
-  if (section.soonKey || section.laterKey) {
-    const hint = t((section.laterKey ?? section.soonKey)!);
-    return (
-      <button
-        type="button"
-        disabled
-        title={`${label} — ${hint}`}
-        className="flex h-12 md:h-9 w-full min-w-0 cursor-not-allowed items-center gap-3 rounded-md px-3 text-left text-sm text-foreground-muted opacity-70"
-      >
-        <span className={cn("flex-1", hideLabels)}>{label}</span>
-        <SlotBadge label={t(section.laterKey ? "nav.later" : "nav.soon")} />
-      </button>
-    );
-  }
   // ME-028: master-detail lists own their detail routes; sibling exact roots
   // stay exclusive to their own rows (sectionActive).
   const active = sectionActive(pathname, section, siblings);

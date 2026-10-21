@@ -18,16 +18,13 @@ export const ru = {
   "nav.tasks": "Задачи",
   "nav.agents": "Агенты",
   "nav.kora": "Кора",
-  "nav.stores": "Хранилища",
   "nav.system": "Система",
-  "nav.soon": "скоро",
-  // ME-072 A: честный бейдж заблокированного, но СУЩЕСТВУЮЩЕГО раздела
-  // (Сессии/Трассировки отвечают роутами) — «позже», не «скоро».
-  "nav.later": "позже",
-  "nav.soonAgents": "домен «Агенты» появится в Фазе 4",
-  "nav.soonStores": "домен «Хранилища» появится в Фазе 4",
-  // UX-overhaul §6/§8: Сессии/Трассировки сняты с навигации в disabled-слоты —
-  // тултип слота обещает ровно «появятся позже», ничего больше.
+  // D8 (вердикт панели 2026-10-21): мёртвые пункты («Хранилища — скоро»,
+  // «Сессии — позже», «Трассировки — позже») ушли из ежедневной навигации;
+  // слот-механика снята вместе с ними (nav.soon/nav.later/soonStores).
+  // Роуты-заглушки живы по прямым URL, их честные строки остались ключами
+  // страниц (ниже); живые темы живут по одному месту: сессии — Кора,
+  // память — Память, дорожная карта — Документация.
   "nav.soonSessions": "Сессии появятся позже",
   "nav.soonTraces": "Трассировки появятся позже",
   // Section labels (level 2 pages).
@@ -96,7 +93,10 @@ export const ru = {
   // mirrors the hub's livingFull label (review round: the raw "live" was an
   // EN leak on every RU first screen).
   "topbar.liveLayerAria": "Живой слой: {{state}}. Нажмите, чтобы сменить режим.",
-  "topbar.liveLayerTitle": "Живой слой: live → пауза → выкл",
+  // D12: заголовок был «Живой слой: live → …» — EN-вкрапление и непонятная
+  // кнопка. Теперь: текущий режим словами + что делает клик.
+  "topbar.liveLayerTitle":
+    "Живой слой: {{state}}. Каждый клик переключает режим: полный → пауза → выкл",
   "topbar.liveLive": "полный",
   "topbar.liveCalm": "пауза",
   "topbar.liveOff": "выкл",
@@ -263,12 +263,13 @@ export const ru = {
   "overview.eventOther": "Событие шины",
   "overview.wellEmpty": "Колодец ждёт первой записи — их пишут агенты.",
   "overview.wellError": "Колодец недоступен — шина не ответила",
-  // UX-overhaul §3/§8 (Ф1): Обзор ведёт в рабочие домены (Задачи/Агенты)
-  // и говорит одной строкой, что ещё не живо (персона-ревью: формулировка).
-  // Review P3-4: Sessions/Traces left the nav in Ф1 — the line tells the
-  // owner where they live (they are reachable, just later).
+  // UX-overhaul §3/§8 (Ф1) + D8 (панель 2026-10-21): строка честности
+  // ОБЗОРА не спорит с экраном и остаётся правдой НА КАЖДОМ адаптере:
+  // хранилища на capable-шлюзах живы карточками прямо выше (строка их не
+  // обещает), сессии — в разделе «Кора»; «позже» — только у
+  // действительно несделанного (трассировки).
   "overview.honestyLater":
-    "Хранилища и метрики — в работе; сессии и трассировки появятся позже",
+    "Сессии живут в разделе «Кора»; трассировки появятся позже",
   "overview.storesLoading": "Загружаем состояние хранилищ",
   "overview.storesError": "Состояние хранилищ недоступно: {{message}}",
   "overview.storeOk": "работает",
@@ -414,7 +415,6 @@ export const ru = {
   "auth.route.backToPassword": "← Вернуться к входу по логину и паролю",
   "auth.route.roleOwner": "владелец",
   "auth.route.roleMember": "участник",
-  "auth.route.back": "← На борт",
   // U1 (07h §12): заметная кнопка возврата у центрального блока /auth и /pair —
   // иконка-стрелка + чистый лейбл (глиф «←» из строки выше в кнопку не тащим).
   "auth.route.backLabel": "На борт",
@@ -562,12 +562,12 @@ export const ru = {
   "tags.nothingCarries": "Под этим тегом ничего нет",
   "tags.nothingCarriesMessage": "Сейчас нет воспоминаний с тегом {{tag}}.",
   // --- tags cloud (UI-17, spec 2026-09-21 §9; owner-approved copy) -----------
-  "tags.statsLine": "{{count}} тегов · данные на {{time}}",
+  "tags.statsLine": "тегов: {{count}} · данные на {{time}}",
   "tags.partialData": "Данные от {{answered}} из {{total}} хранилищ",
   "tags.partialStores": "Не ответили хранилища: {{servers}}",
   "tags.family.all": "Все семейства",
   "tags.family.bare": "без префикса",
-  "tags.family.tags": "{{count}} тегов",
+  "tags.family.tags": "тегов: {{count}}",
   "tags.band.core": "Ядро · 1000+",
   "tags.band.frequent": "Частые · 100–999",
   "tags.band.middle": "Средние · 10–99",
@@ -1343,7 +1343,15 @@ export const ru = {
   "agents.hosts.filter.archive": "Архив",
   "agents.hosts.filterEmpty": "Под фильтр не попал ни один хост.",
   "agents.hosts.onlineCounter": "{{online}}/{{total}} харнесов онлайн",
-  "agents.hosts.connectAction": "Подключить хост",
+  // D12: готовое определение из словаря (глоссарий, docs/glossary.md) —
+  // тултип при ПЕРВОМ употреблении лор-слова.
+  "agents.hosts.harnessHint":
+    "Харнес — среда исполнения агента (например, zcode или hermes).",
+  // P2-1 (ревью волны W-E): одна дорога — одно имя. CTA ведёт на
+  // «Подключение агентов», палитра говорит «Подключить агента», и по факту
+  // дорога заводит АГЕНТА (имя хоста приходит из его отчёта); «хост»
+  // остаётся существительным поля машины и счётчика ростера.
+  "agents.hosts.connectAction": "Подключить агента",
   // UX-AUDIT A5: короткая подпись тихой кнопки в шапке ростера (глиф «+»
   // несёт иконка; полный CTA пустого состояния/панели остаётся «хост»).
   "agents.hosts.connectShort": "Подключить",
@@ -1381,7 +1389,9 @@ export const ru = {
     "В зоне нет сплетений — подключите харнес, и он появится здесь.",
   "agents.hosts.actionAddHarness": "Подключить харнес",
   "palette.hostItem": "Хост {{host}}",
-  "palette.connectHost": "Подключить хост",
+  // D9: одна сущность на экране Подключения — «агент»; «хост» остаётся
+  // только меткой поля машины.
+  "palette.connectHost": "Подключить агента",
   "agents.hosts.refusalDisabled": "отключён",
   "agents.hosts.refusalRevoked": "отозван",
   "agents.hosts.execEnvTooltip": "Среда исполнения (данные агента)",
@@ -1422,6 +1432,12 @@ export const ru = {
   "agents.presence.stale": "пульс пропущен",
   "agents.presence.offline": "не на связи",
   "agents.presence.unknown": "присутствие неизвестно",
+  // D9 (панель 2026-10-21): «присутствие неизвестно · отключён» рядом с
+  // живыми сессиями хоста читалось как противоречие. Подсказка объясняет
+  // ДВУХ-ЧАСОВОЕ правило (§2.1): присутствие и живость сессий — независимые
+  // факты; данные не выдумываются.
+  "agents.presence.unknownHint":
+    "Пульса от этой строки нет, поэтому присутствие неизвестно — это не поломка. Живые сессии хоста — отдельный факт: они приходят из журнала сессий и от пульса не зависят.",
   "agents.group.active": "активные",
   "agents.group.queued": "очередь",
   "agents.group.terminal": "терминальные за сегодня",
@@ -1498,26 +1514,26 @@ export const ru = {
   "agents.settings.meshIneligible": "mesh-транспорт — маршрутизация недоступна до R4",
 
   // --- agents domain: registry page /agents/harnesses (AGW-4) ----------------------
-  "nav.agentsHarnesses": "Подключить хост",
+  "nav.agentsHarnesses": "Подключение агентов",
   "agents.registry.title": "Подключение агентов",
-  "agents.registry.loading": "Загружаем реестр исполнителей",
-  "agents.registry.failed": "Не удалось загрузить реестр исполнителей",
+  "agents.registry.loading": "Загружаем реестр агентов",
+  "agents.registry.failed": "Не удалось загрузить реестр агентов",
   "agents.registry.band.pending": "Ожидают подтверждения",
   "agents.registry.band.active": "Подключённые",
   "agents.registry.band.revoked": "Отозванные",
   "agents.registry.approve": "Одобрить",
   "agents.registry.approveHint":
-    "после одобрения включите исполнителя — маршрутизация берёт только включённых",
+    "после одобрения включите агента — маршрутизация берёт только включённых",
   "agents.registry.enable": "Включить",
   "agents.registry.disable": "Отключить",
   "agents.registry.revoke": "Отозвать",
   "agents.registry.remove": "Удалить",
   "agents.registry.capabilitiesLabel": "Умения",
   "agents.registry.capabilitiesHint":
-    "Умения — что хосту можно запускать. Назначьте — и задачи смогут его находить.",
+    "Умения — что этому агенту можно поручать. Назначьте первое в его карточке — задачи смогут его находить.",
   "agents.registry.hostLabel": "хост",
   "agents.registry.revokedHint":
-    "доверие не восстанавливается — зарегистрируйте исполнителя заново",
+    "доверие не восстанавливается — зарегистрируйте агента заново",
 
   // UXE-2: the connection lifecycle pills (07a dictionary §4) — the state
   // LIST is server-owned (meta.lifecycle.states), the HUMAN wording lives
@@ -1546,7 +1562,7 @@ export const ru = {
 
   "agents.connect.label": "Как подключить внешнего агента",
   "agents.connect.step1":
-    "Нажмите «Добавить исполнителя», заполните имя и харнес — свой харнес можно добавить прямо в списке.",
+    "Нажмите «Добавить агента», заполните имя и харнес — свой харнес можно добавить прямо в списке.",
   "agents.connect.step2": "Создайте токен и скопируйте ОДНУ команду с экрана.",
   "agents.connect.step3":
     "Выполните её на внешней машине (VPS) — она сама установит зависимости, агента и службу.",
@@ -1558,10 +1574,10 @@ export const ru = {
     "Команда скачивает установщик с борда (текст установщика публичный), дальнейшее — по защищённому каналу с проверкой сертификата. Токен одноразовый, живёт 15 минут.",
   "agents.connect.manual":
     "Ручной путь — deploy/poller/REMOTE-EXECUTOR.md («Путь 2 — руками», для диагностики и изолированных сетей).",
-  "agents.executors.actionFailed": "Не удалось изменить исполнителя",
+  "agents.executors.actionFailed": "Не удалось изменить агента",
   "agents.executors.approved": "{{name}}: одобрен",
   "agents.executors.approvedDetail":
-    "включите исполнителя — маршрутизация берёт только включённых",
+    "включите агента — маршрутизация берёт только включённых",
   "agents.executors.enabled": "{{name}}: включён",
   "agents.executors.disabled": "{{name}}: отключён",
   "agents.executors.revokeConfirm":
@@ -1691,15 +1707,15 @@ export const ru = {
     "Секрет не показывается никогда: он виден один раз при регистрации. Потеряли — отзовите исполнителя и зарегистрируйте заново.",
   "agents.registry.viaEnrollment": "происхождение: enrollment-токен",
   "agents.registry.viaMachine": "происхождение: машина-токен",
-  "agents.enrollment.title": "Добавить исполнителя",
+  "agents.enrollment.title": "Добавить агента",
   "agents.enrollment.description":
-    "Создание одноразового токена подключения для удалённого исполнителя",
+    "Создание одноразового токена подключения для удалённого агента",
   "agents.enrollment.formHint":
     "Заполните карточку — получите одну команду для внешней машины. Агент установится сам и появится здесь на одобрение.",
   "agents.enrollment.label": "Название (для себя)",
   "agents.enrollment.labelPlaceholder": "например, vps-1",
   "agents.enrollment.harness": "Харнес (подсказка для команд)",
-  "agents.enrollment.nameHint": "Имя исполнителя (необязательно)",
+  "agents.enrollment.nameHint": "Имя агента (необязательно)",
   "agents.enrollment.create": "Создать токен",
   "agents.enrollment.creating": "Создаём…",
   "agents.enrollment.createFailed": "Не удалось создать токен",
@@ -1752,7 +1768,7 @@ export const ru = {
     "строчные латиница/цифры/дефисы и точки — IP или FQDN без слэшей",
   "agents.provision.port": "SSH-порт",
   "agents.provision.portError": "порт — число от 1 до 65535",
-  "agents.provision.name": "Имя исполнителя (необязательно)",
+  "agents.provision.name": "Имя агента (необязательно)",
   "agents.provision.nameError":
     "начинается с буквы/цифры; буквы, цифры, точка, «_», «-» до 120 знаков",
   "agents.provision.authLegend": "Способ входа",
@@ -2091,7 +2107,7 @@ export const ru = {
   "automation.form.removeClause": "Убрать условие {{clause}}",
   "automation.form.noValueEnum":
     "У этого поля нет закрытого набора значений — условие недоступно в v1.",
-  "automation.form.onLabel": "Событие (on)",
+  "automation.form.onLabel": "Событие (когда запускать)",
   "automation.form.actionLabel": "Действие",
   "automation.form.create": "Создать",
   "automation.field.taskCol": "колонка задачи",
@@ -2453,8 +2469,11 @@ export const ru = {
   "kora.list.emptyAction": "Подключить агента",
   "kora.list.emptyStatusLink": "Открыть статус системы",
   "kora.session.steerable": "можно рулить",
-  "kora.session.origin.relay": "реле",
+  "kora.session.origin.relay": "через релей",
+  // D12 (панель 2026-10-21): «реле»-чип без расшифровки. Ярлык читается словами, тултип — готовая формулировка контракта сессий (relay = через релей Коры).
+  "kora.session.origin.relayHint": "Сессия началась через релей Коры",
   "kora.session.origin.local": "локальная",
+  "kora.session.origin.localHint": "Сессия началась вне Коры, на самой машине",
   "kora.session.state.live": "живая",
   "kora.session.state.idle": "ожидает",
   "kora.session.state.dead": "процесс мёртв",

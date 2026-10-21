@@ -257,7 +257,7 @@ describe("ProvisionCard — the feed", () => {
     await type(inputByLabel("Board address"), "https://b.example");
     // The owner named the machine — the retry must not lose it (the wire
     // job row never echoes the name; it rides the active-job record).
-    await type(inputByLabel("Executor name"), "gpu-box");
+    await type(inputByLabel("Agent name"), "gpu-box");
     await act(async () => {
       button("Connect").click();
     });
@@ -274,7 +274,7 @@ describe("ProvisionCard — the feed", () => {
     // The active job detached — the feed is gone.
     expect(sessionStorage.getItem("vesmaro.provision.active")).toBeNull();
     // P3-2: the re-seeded form carries the submitted executor name.
-    expect((inputByLabel("Executor name") as HTMLInputElement).value).toBe(
+    expect((inputByLabel("Agent name") as HTMLInputElement).value).toBe(
       "gpu-box",
     );
     await actUnmount(root);
@@ -323,7 +323,7 @@ describe("ProvisionCard — the conveyor (U8)", () => {
   it("the form draft persists SAFE fields only — the private key never lands in storage", async () => {
     const { root } = await mountCard();
     await type(inputByLabel("Machine address"), "vps-draft-1");
-    await type(inputByLabel("Executor name"), "gpu-draft");
+    await type(inputByLabel("Agent name"), "gpu-draft");
     await type(inputByLabel("Private key"), "-----BEGIN OPENSSH SECRET-----");
     const raw = localStorage.getItem("vesmaro.flow.provision") ?? "";
     expect(raw).toContain("vps-draft-1");

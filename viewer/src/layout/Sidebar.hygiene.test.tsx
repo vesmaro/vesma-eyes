@@ -44,36 +44,34 @@ function renderSidebar(path: string, collapsed: boolean, lang: "ru" | "en" = "ru
   );
 }
 
-describe("Sidebar section disabled-slots (UX-overhaul §6, Ф1 + ME-072 A)", () => {
-  it("renders Sessions/Traces as inert slots with an honest «later» badge — never links", () => {
-    // On the System domain page the sections render; the two blocked items
-    // are disabled slots: inert buttons with the «позже» badge + tooltip.
+describe("Sidebar placeholder-free navigation (UX panel D8, 2026-10-21)", () => {
+  it("renders NO placeholder rows: no disabled slots, no «скоро»/«позже» badges", () => {
+    // D8: the placeholder rows left the daily navigation entirely — the
+    // menu carries live surfaces only; the roadmap lives in Документация.
     const html = renderSidebar("/system/status", false);
-    expect(html).toContain("Сессии появятся позже"); // tooltip promise
-    expect(html).toContain("Трассировки появятся позже");
-    expect(html).toContain("cursor-not-allowed");
-    // The slot is NOT a link — no href to the placeholder route.
+    expect(html).not.toContain("Сессии появятся позже");
+    expect(html).not.toContain("Трассировки появятся позже");
+    expect(html).not.toContain("cursor-not-allowed");
+    expect(html).not.toContain(">скоро<");
+    expect(html).not.toContain(">позже<");
+    // The placeholder ROUTES are not menu links either — the row is gone,
+    // not demoted.
     expect(html).not.toContain('href="/system/sessions"');
     expect(html).not.toContain('href="/system/traces"');
-    // The badge reads «позже» in words (ME-072 A: the ROUTES answer — the
-    // slot is honest about the blockage, never colour-only, WCAG 1.4.1).
-    expect(html).toContain(">позже<");
-    // (The /stores DOMAIN slot still reads «скоро» — it renders on every
-    // page; its honesty is covered by the dedicated test below.)
+    expect(html).not.toContain('href="/stores"');
   });
 
-  it("keeps «скоро» for the never-built /stores domain slot (ME-072 A)", () => {
-    // The stores DOMAIN has no route at all — its badge stays «скоро».
-    const html = renderSidebar("/", false);
-    expect(html).toContain(">скоро<");
-    expect(html).toContain("cursor-not-allowed");
-  });
-
-  it("keeps the LIVE System sections as links next to the slots", () => {
+  it("keeps the LIVE System sections as links", () => {
     const html = renderSidebar("/system/status", false);
     expect(html).toContain('href="/system/status"');
     expect(html).toContain('href="/system/settings"');
     expect(html).toContain('href="/system/devices"');
+  });
+
+  it("D12: the Kora row's accessible name carries the dictionary hint", () => {
+    const html = renderSidebar("/", false);
+    // The ready docs wording (kora.workspace.hint) rides the row title/aria.
+    expect(html).toContain("Кора — журнал сессий всех хостов");
   });
 });
 

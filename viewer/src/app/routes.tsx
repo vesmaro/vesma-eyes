@@ -164,8 +164,11 @@ const DocsCategoryLegacyRedirect = lazy(() =>
  * the Ф2+ system pages arrive). Routes are FINAL for the convergence waves
  * (QA verdict §3): old paths answer with replace redirects so bookmarks
  * survive. `/clusters` stays unregistered (ADR 0003 D12 — L2); `/tasks`
- * lands its Ф2 reading pages below; `/agents`, `/stores` are sidebar slots
- * only until their phases land.
+ * lands its Ф2 reading pages below. D8 (panel 2026-10-21): the sidebar
+ * carries live surfaces only — the never-built `/stores` has no route and
+ * no nav row; the placeholder ROUTES `/system/sessions` + `/system/traces`
+ * stay registered for bookmarks/legacy redirects (their pages are honest
+ * stubs without working controls).
  */
 export function buildRoutes(): RouteObject[] {
   return [

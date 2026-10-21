@@ -602,8 +602,9 @@ export function AuthRoutePage() {
                   verifyPending={verifyPending}
                   rejectKind={submitted ? rejectKind : undefined}
                   rejectDetail={submitted ? rejectDetail : undefined}
-                  secondaryLabel={t("auth.route.back")}
-                  onSecondary={() => navigate(returnTarget, { replace: true })}
+                  /* D12 (panel 2026-10-21): the ONE «На борт» road is the
+                   * BackToBoardLink above the card — the form's secondary
+                   * duplicated it verbatim. */
                 />
               </div>
             )}

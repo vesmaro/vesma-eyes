@@ -27,9 +27,12 @@ export interface UiTokenLoginFormProps {
   /** Server-provided detail for the rejected case (optional). */
   rejectDetail?: string;
   /** The secondary action beside the submit — «continue read-only» in the
-   * dialog, «back to the board» on the /auth route. */
-  secondaryLabel: string;
-  onSecondary: () => void;
+   * dialog, «exit the recovery walk» on its step. Optional since the D12
+   * panel pass: the /auth route renders its ONE «На борт» road ABOVE the
+   * card (BackToBoardLink) — a second identical road inside the form was
+   * the audit's duplicate. Absent props = no secondary button. */
+  secondaryLabel?: string;
+  onSecondary?: () => void;
 }
 
 export function UiTokenLoginForm({
@@ -54,7 +57,7 @@ export function UiTokenLoginForm({
   // through an effect: a half-typed secret never survives the surface
   // either way. A verify in flight owns the surface (no dismissal).
   const secondary = () => {
-    if (verifyPending) return;
+    if (verifyPending || !onSecondary) return;
     onSecondary();
     setValue("");
     setReveal(false);
@@ -149,9 +152,17 @@ export function UiTokenLoginForm({
         </details>
 
         <div className="flex flex-wrap justify-end gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={secondary} disabled={verifyPending}>
-            {secondaryLabel}
-          </Button>
+          {secondaryLabel && onSecondary ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={secondary}
+              disabled={verifyPending}
+            >
+              {secondaryLabel}
+            </Button>
+          ) : null}
           <Button
             type="submit"
             size="sm"

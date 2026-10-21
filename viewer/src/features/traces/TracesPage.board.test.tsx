@@ -65,14 +65,18 @@ describe("traces board-mode 501", () => {
         "BoardAdapter.listTraces: the board merge-API does not expose the vesma /traces view (ADR 0011 §6).",
       ),
     );
-    // UX-overhaul §6 (Ф1, П1): the 501 is ONE HonestLine matching the nav
-    // disabled slot — the filter input stays, the dead-end screen is gone.
+    // D8 (panel verdict 2026-10-21): the placeholder is the WHOLE page —
+    // title + ONE HonestLine, and NO working controls (a filter on a page
+    // that can't list promised work it can't do).
     expect(html).toContain("Трассировки появятся позже");
     expect(html).not.toContain("Трассировки недоступны в board-режиме");
     expect(html).toContain('role="status"');
     expect(html).not.toContain('role="alert"');
     // П4: the raw 501 wire text is gone from open copy.
     expect(html).not.toContain("501");
+    // The filter (label + input) must not render on the placeholder.
+    expect(html).not.toContain("Фильтр по метке задачи");
+    expect(html).not.toContain("trace-filter");
   });
 
   it("keeps the plain error state on the vesma adapter (501 there is an anomaly)", () => {

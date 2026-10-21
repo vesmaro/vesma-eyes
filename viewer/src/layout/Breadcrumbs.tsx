@@ -96,7 +96,10 @@ export function Breadcrumbs({ pathname, search }: { pathname: string; search: st
       </nav>
       <span className="flex-1" aria-hidden="true" />
       {/* The crumbs-row palette affordance (stand 03 §2): kbd + label, the
-       * canonical ⌘K/Ctrl+K hint — the same openPalette engine as everywhere. */}
+       * canonical ⌘K/Ctrl+K hint — the same openPalette engine as everywhere.
+       * D12: on touch-only surfaces the tap still OPENS the palette (the
+       * function stays), but the keyboard chips hide and the text label
+       * replaces them — «Ctrl K» on a phone is a lie. */}
       <Button
         variant="ghost"
         size="sm"
@@ -105,13 +108,15 @@ export function Breadcrumbs({ pathname, search }: { pathname: string; search: st
         aria-haspopup="dialog"
         className="h-12 md:h-7 shrink-0 gap-1.5 px-2 text-xs"
       >
-        <kbd className="rounded-sm border border-border-subtle border-b-2 bg-elevated px-1 font-mono text-caps text-foreground-secondary">
+        <kbd className="kbd-hint rounded-sm border border-border-subtle border-b-2 bg-elevated px-1 font-mono text-caps text-foreground-secondary">
           Ctrl
         </kbd>
-        <kbd className="rounded-sm border border-border-subtle border-b-2 bg-elevated px-1 font-mono text-caps text-foreground-secondary">
+        <kbd className="kbd-hint rounded-sm border border-border-subtle border-b-2 bg-elevated px-1 font-mono text-caps text-foreground-secondary">
           K
         </kbd>
-        <span className="hidden sm:inline">{t("nav.palette")}</span>
+        <span className="kbd-alt-label hidden sm:inline">
+          {t("nav.palette")}
+        </span>
       </Button>
     </div>
   );

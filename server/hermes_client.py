@@ -156,6 +156,26 @@ def _ts_to_iso(value: Any) -> str:
     return ""
 
 
+def _ru_messages_label(count: Any) -> str:
+    """Fallback session preview when hermes reports no title: the message
+    count in correct Russian (D12, user panel 2026-10-21: «1 сообщений» was
+    a broken declension on the Kora list). Russian noun rules: 1/21 →
+    «сообщение», 2–4 (not 12–14) → «сообщения», else «сообщений». A
+    non-integer count degrades to the genitive form — an honest formatting
+    choice, not a guessed number."""
+    try:
+        n = int(count)
+    except (TypeError, ValueError):
+        return "сообщений"
+    ones = n % 10
+    tens = n % 100
+    if ones == 1 and tens != 11:
+        return f"{n} сообщение"
+    if 2 <= ones <= 4 and not 12 <= tens <= 14:
+        return f"{n} сообщения"
+    return f"{n} сообщений"
+
+
 def session_row_from_api(raw: dict[str, Any]) -> dict[str, Any]:
     """One hermes session dict → a Kora-registry ingest row.
 
@@ -182,7 +202,7 @@ def session_row_from_api(raw: dict[str, Any]) -> dict[str, Any]:
     title = str(raw.get("title") or "").strip()
     source = str(raw.get("source") or "api_server").strip()
     msg_count = raw.get("message_count")
-    preview_base = title or (f"{msg_count} сообщений" if msg_count else "")
+    preview_base = title or (_ru_messages_label(msg_count) if msg_count else "")
     return {
         "native_id": native_id,
         "harness": "hermes",

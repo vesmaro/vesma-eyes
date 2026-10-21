@@ -134,11 +134,10 @@ function PaletteBody() {
 
   const now = useValidationNow();
   const items = useMemo<PaletteItem[]>(() => {
-    // Navigation index — the live routes only (soon-slots stay out: the
-    // palette never offers a dead surface).
+    // Navigation index — the live routes only (D8: placeholder rows left the
+    // nav entirely, so every NAV_DOMAINS row here is a live surface).
     const nav: PaletteItem[] = [];
     for (const domain of NAV_DOMAINS) {
-      if (domain.soonKey !== undefined) continue;
       const to = domain.linkTo ?? domain.to;
       nav.push({
         id: `nav:d${domain.to}`,
@@ -148,7 +147,6 @@ function PaletteBody() {
         to,
       });
       for (const section of domain.sections ?? []) {
-        if (section.soonKey !== undefined) continue;
         nav.push({
           id: `nav:s${section.to}`,
           group: "nav",

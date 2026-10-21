@@ -869,7 +869,7 @@ describe("the roster panel (the inversion: compact rows, not cards)", () => {
       'a[href="/agents/harnesses?connect=1"]',
     );
     expect(action).not.toBeNull();
-    expect(action!.textContent).toContain("Connect a host");
+    expect(action!.textContent).toContain("Connect an agent");
     // UX-AUDIT A5: the page header carries the PERMANENT quiet entry —
     // the SAME route (one action, not a second implementation), visible
     // on a filled roster where the contextual CTAs are out of sight.
@@ -896,7 +896,7 @@ describe("the roster panel (the inversion: compact rows, not cards)", () => {
     // never a replacement: same route everywhere, one action.
     const emptyCta = [...container.querySelectorAll<HTMLAnchorElement>(
       "a[href='/agents/harnesses?connect=1']",
-    )].find((link) => link.textContent === "Connect a host");
+    )].find((link) => link.textContent === "Connect an agent");
     expect(emptyCta).not.toBeNull();
     await actUnmount(root);
   });
@@ -1052,7 +1052,7 @@ describe("the empty roster", () => {
     // by its wording, not by DOM order.
     const cta = [...container.querySelectorAll<HTMLAnchorElement>(
       'a[href="/agents/harnesses?connect=1"]',
-    )].find((link) => link.textContent === "Connect a host");
+    )].find((link) => link.textContent === "Connect an agent");
     expect(cta).not.toBeNull();
     // No rows, no redirect target — the URL keeps its place.
     expect(rows(container).length).toBe(0);

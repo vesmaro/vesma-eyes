@@ -104,7 +104,18 @@ function SessionRow({
            * both themes; tokens only, no new colour vocabulary. */}
           {context.kind === "all" ? <SourceBadge harness={session.harness} /> : null}
           <span>{session.executor_id}</span>
-          <Badge variant="outline">{t(`kora.session.origin.${session.origin}`)}</Badge>
+          {/* D12: the origin chip reads as words («через релей», not «реле»)
+           * and carries the contract wording as its tooltip. */}
+          <Badge
+            variant="outline"
+            title={t(
+              session.origin === "relay"
+                ? "kora.session.origin.relayHint"
+                : "kora.session.origin.localHint",
+            )}
+          >
+            {t(`kora.session.origin.${session.origin}`)}
+          </Badge>
           {session.steerable ? (
             <Badge variant="outline" className="gap-1">
               <Radio aria-hidden className="size-3" />

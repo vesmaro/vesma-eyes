@@ -14,6 +14,7 @@ import {
   hostRoutable,
   hostRevoked,
   hostRouteId,
+  hostSessionDisplayLabels,
 } from "./rosterModel";
 
 /**
@@ -503,5 +504,48 @@ describe("groupExecutorsByHost — the archive filter", () => {
     const legacy = { ...dead, archived: undefined } as ExecutorItem;
     const groups = groupExecutorsByHost([legacy], META, NOW);
     expect(groups.map((g) => g.host)).toEqual(["core-51"]);
+  });
+});
+
+describe("hostSessionDisplayLabels — D9 homonym rows get their own id tail", () => {
+  it("leaves unique labels untouched", () => {
+    const labels = hostSessionDisplayLabels([
+      { native_id: "api-44aae84f29068793", project: "hermes:api_server" },
+      { native_id: "20261018_155058", project: "hermes:telegram" },
+    ]);
+    expect(labels).toEqual(["hermes:api_server", "hermes:telegram"]);
+  });
+
+  it("suffixes every row of a COLLIDING label with the native-id tail", () => {
+    // The panel's frame: two live «hermes:api_server» sessions, no visible
+    // difference. The suffix is the session's OWN registry identity.
+    const labels = hostSessionDisplayLabels([
+      { native_id: "api-44aae84f29068793", project: "hermes:api_server" },
+      { native_id: "api-63cc1ab78057f124", project: "hermes:api_server" },
+      { native_id: "20261018_155058", project: "hermes:telegram" },
+    ]);
+    expect(labels).toEqual([
+      "hermes:api_server · …068793",
+      "hermes:api_server · …57f124",
+      "hermes:telegram",
+    ]);
+  });
+
+  it("falls back to the full native id when project is absent and colliding", () => {
+    const labels = hostSessionDisplayLabels([
+      { native_id: "sess_aaaa" },
+      { native_id: "sess_bbbb" },
+    ]);
+    // No project: the base label IS the native id — already unique, no
+    // suffix needed (a suffix onto itself would add nothing).
+    expect(labels).toEqual(["sess_aaaa", "sess_bbbb"]);
+  });
+
+  it("handles the degenerate single-character id without an empty tail", () => {
+    const labels = hostSessionDisplayLabels([
+      { native_id: "x", project: "same" },
+      { native_id: "y", project: "same" },
+    ]);
+    expect(labels).toEqual(["x", "y"]);
   });
 });

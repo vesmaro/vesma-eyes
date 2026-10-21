@@ -489,11 +489,13 @@ function ExecutorRow({
             </span>
           ))
         ) : (
-          <span
-            className="text-xs text-foreground-muted"
-            title={t("agents.registry.capabilitiesHint")}
-          >
-            {t("agents.executor.noCapabilities")}
+          // D9 (panel 2026-10-21): the empty answer carries its hint as a
+          // VISIBLE one-liner — a title-only hint is dead on touch, and
+          // «пока не назначены» alone answered nothing. One line, i18n, no
+          // invented assignments.
+          <span className="min-w-0 text-xs text-foreground-muted">
+            {t("agents.executor.noCapabilities")} ·{" "}
+            {t("agents.registry.capabilitiesHint")}
           </span>
         )}
       </div>

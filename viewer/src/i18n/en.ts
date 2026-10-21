@@ -16,15 +16,11 @@ export const en: Record<TranslationKey, string> = {
   "nav.tasks": "Tasks",
   "nav.agents": "Agents",
   "nav.kora": "Kora",
-  "nav.stores": "Stores",
   "nav.system": "System",
-  "nav.soon": "soon",
-  // ME-072 A: honest badge for a blocked-but-EXISTING section (its route
-  // answers) — «later», not «soon».
-  "nav.later": "later",
-  "nav.soonAgents": "the Agents domain arrives in Phase 4",
-  "nav.soonStores": "the Stores domain arrives in Phase 4",
-  // UX-overhaul §6/§8 (Ф1): Sessions/Traces leave the nav as disabled slots.
+  // D8 (user-panel verdict 2026-10-21): the dead menu rows (Stores — soon /
+  // Sessions / Traces — later) left the daily navigation; the slot machinery
+  // (nav.soon / nav.later / soonStores) went with them. The placeholder
+  // ROUTES stay alive for direct URLs — their honest lines keep these keys.
   "nav.soonSessions": "Sessions coming later",
   "nav.soonTraces": "Traces coming later",
   // Section labels (level 2 pages).
@@ -77,7 +73,10 @@ export const en: Record<TranslationKey, string> = {
   "topbar.themeDark": "Dark theme",
   // В1 live-layer indicator (blueprint §6.6, canon v11 §4).
   "topbar.liveLayerAria": "Living layer: {{state}}. Click to change.",
-  "topbar.liveLayerTitle": "Living layer: live → paused → off",
+  // D12: the title was an EN-styled cryptic chain; now the current state in
+  // words + what a click does.
+  "topbar.liveLayerTitle":
+    "Living layer: {{state}}. Each click cycles the mode: full → paused → off",
   "topbar.liveLive": "live",
   "topbar.liveCalm": "paused",
   "topbar.liveOff": "off",
@@ -241,10 +240,10 @@ export const en: Record<TranslationKey, string> = {
   "overview.wellError": "The well is unreachable — the bus did not answer",
   // UX-overhaul §3/§8 (Ф1): the overview leads into the working domains and
   // states what is not live yet in one honest line.
-  // Review P3-4: Sessions/Traces left the nav in Ф1 — the line tells the
-  // owner where they live (they are reachable, just later).
-  "overview.honestyLater":
-    "Stores and metrics are in the works; sessions and traces are coming later",
+  // D8 (panel 2026-10-21): the honesty line must not contradict the screen
+  // and stays true on EVERY adapter — sessions live in Kora; only the
+  // genuinely-missing surface keeps the «later» promise.
+  "overview.honestyLater": "Sessions live in Kora; traces are coming later",
   "overview.storesLoading": "Loading store health",
   "overview.storesError": "Store health unavailable: {{message}}",
   "overview.storeOk": "healthy",
@@ -340,7 +339,6 @@ export const en: Record<TranslationKey, string> = {
   "auth.gate.previewCaption":
     "A sketch of the section — its contents open after you sign in",
   "auth.gate.checkingSession": "Checking your session…",
-  "auth.route.back": "← Back to the board",
   // U1 (07h §12): the noticeable return button by the central card on /auth
   // and /pair — icon arrow + clean label (the «←» glyph above stays put).
   "auth.route.backLabel": "Back to the board",
@@ -541,12 +539,12 @@ export const en: Record<TranslationKey, string> = {
   "tags.nothingCarries": "Nothing carries this tag",
   "tags.nothingCarriesMessage": "No memory is tagged {{tag}} right now.",
   // --- tags cloud (UI-17, spec 2026-09-21 §9; owner-approved copy) -----------
-  "tags.statsLine": "{{count}} tags · as of {{time}}",
+  "tags.statsLine": "tags: {{count}} · as of {{time}}",
   "tags.partialData": "Data from {{answered}} of {{total}} stores",
   "tags.partialStores": "Stores unreachable: {{servers}}",
   "tags.family.all": "All families",
   "tags.family.bare": "no prefix",
-  "tags.family.tags": "{{count}} tags",
+  "tags.family.tags": "tags: {{count}}",
   "tags.band.core": "Core · 1000+",
   "tags.band.frequent": "Frequent · 100–999",
   "tags.band.middle": "Middle · 10–99",
@@ -1311,7 +1309,13 @@ export const en: Record<TranslationKey, string> = {
   "agents.hosts.filter.archive": "Archive",
   "agents.hosts.filterEmpty": "No hosts match the filter.",
   "agents.hosts.onlineCounter": "{{online}}/{{total}} harnesses online",
-  "agents.hosts.connectAction": "Connect a host",
+  // D12: the glossary definition at the lore word's first use.
+  "agents.hosts.harnessHint":
+    "A harness is the agent's runtime environment (for example, zcode or hermes).",
+  // P2-1 (W-E review): one road — one name. The CTA lands on the agent
+  // connection page; the flow onboards an AGENT (the host name arrives
+  // from its report); "host" stays the machine field's noun.
+  "agents.hosts.connectAction": "Connect an agent",
   // UX-AUDIT A5: the roster header's quiet button label (the «+» rides the
   // icon glyph; the panel/empty-state CTA keeps the full "a host" wording).
   "agents.hosts.connectShort": "Connect",
@@ -1349,7 +1353,8 @@ export const en: Record<TranslationKey, string> = {
     "No plexuses in this zone yet — connect a harness and it will appear here.",
   "agents.hosts.actionAddHarness": "Add a harness",
   "palette.hostItem": "Host {{host}}",
-  "palette.connectHost": "Connect a host",
+  // D9: one noun on the Connect screen — "agent".
+  "palette.connectHost": "Connect an agent",
   "agents.hosts.refusalDisabled": "disabled",
   "agents.hosts.refusalRevoked": "revoked",
   "agents.hosts.execEnvTooltip": "Execution environment (agent-reported)",
@@ -1390,6 +1395,9 @@ export const en: Record<TranslationKey, string> = {
   "agents.presence.stale": "pulse missed",
   "agents.presence.offline": "offline",
   "agents.presence.unknown": "presence unknown",
+  // D9 (user panel 2026-10-21): "presence unknown · disabled" next to LIVE host sessions read as a contradiction. The hint carries the documented two-clock rule (§2.1); no data invented.
+  "agents.presence.unknownHint":
+    "This row sends no pulse, so its presence is unknown — not a malfunction. The host's live sessions are a separate fact: they come from the session journal and do not depend on the pulse.",
   "agents.group.active": "active",
   "agents.group.queued": "queue",
   "agents.group.terminal": "terminal today",
@@ -1466,25 +1474,25 @@ export const en: Record<TranslationKey, string> = {
   "agents.settings.meshIneligible": "mesh transport — routing unavailable until R4",
 
   // --- agents domain: registry page /agents/harnesses (AGW-4) ----------------------
-  "nav.agentsHarnesses": "Connect a host",
+  "nav.agentsHarnesses": "Agent connection",
   "agents.registry.title": "Agent connections",
-  "agents.registry.loading": "Loading the executor registry",
-  "agents.registry.failed": "Failed to load the executor registry",
+  "agents.registry.loading": "Loading the agent registry",
+  "agents.registry.failed": "Failed to load the agent registry",
   "agents.registry.band.pending": "Awaiting approval",
   "agents.registry.band.active": "Connected",
   "agents.registry.band.revoked": "Revoked",
   "agents.registry.approve": "Approve",
   "agents.registry.approveHint":
-    "after approving, enable the executor — routing picks only enabled ones",
+    "after approving, enable the agent — routing picks only enabled ones",
   "agents.registry.enable": "Enable",
   "agents.registry.disable": "Disable",
   "agents.registry.revoke": "Revoke",
   "agents.registry.remove": "Delete",
   "agents.registry.capabilitiesLabel": "Skills",
   "agents.registry.capabilitiesHint":
-    "Skills are what the host may run. Assign some — and tasks will be able to find it.",
+    "Skills are what this agent may be assigned. Assign the first one in its card — then tasks will be able to find it.",
   "agents.registry.hostLabel": "host",
-  "agents.registry.revokedHint": "trust is not restorable — re-register the executor",
+  "agents.registry.revokedHint": "trust is not restorable — re-register the agent",
 
   // UXE-2: the connection lifecycle pills (07a dictionary §4) — the state
   // LIST is server-owned (meta.lifecycle.states), the human wording lives
@@ -1514,7 +1522,7 @@ export const en: Record<TranslationKey, string> = {
 
   "agents.connect.label": "How to connect an external agent",
   "agents.connect.step1":
-    "Press «Add executor», fill in the name and the harness — you can add your own harness right in the list.",
+    "Press «Add agent», fill in the name and the harness — you can add your own harness right in the list.",
   "agents.connect.step2": "Create a token and copy the ONE command from the screen.",
   "agents.connect.step3":
     "Run it on the external machine (VPS) — it installs the dependencies, the agent and the service on its own.",
@@ -1526,10 +1534,10 @@ export const en: Record<TranslationKey, string> = {
     "The command downloads the installer from the board (the installer text is public); everything after rides a secured channel with certificate verification. The token is one-time and lives for 15 minutes.",
   "agents.connect.manual":
     "The manual path — deploy/poller/REMOTE-EXECUTOR.md («Путь 2 — руками», for diagnostics and isolated networks).",
-  "agents.executors.actionFailed": "Failed to update the executor",
+  "agents.executors.actionFailed": "Failed to update the agent",
   "agents.executors.approved": "{{name}}: approved",
   "agents.executors.approvedDetail":
-    "enable the executor — routing picks only enabled ones",
+    "enable the agent — routing picks only enabled ones",
   "agents.executors.enabled": "{{name}}: enabled",
   "agents.executors.disabled": "{{name}}: disabled",
   "agents.executors.revokeConfirm":
@@ -1656,15 +1664,15 @@ export const en: Record<TranslationKey, string> = {
     "The secret is never shown: it appears exactly once, at registration. Lost it — revoke the executor and register again.",
   "agents.registry.viaEnrollment": "origin: enrollment token",
   "agents.registry.viaMachine": "origin: machine token",
-  "agents.enrollment.title": "Add executor",
+  "agents.enrollment.title": "Add agent",
   "agents.enrollment.description":
-    "Minting a one-time connection token for a remote executor",
+    "Minting a one-time connection token for a remote agent",
   "agents.enrollment.formHint":
     "Fill in the card — you get ONE command for the external machine. The agent installs itself and appears here for approval.",
   "agents.enrollment.label": "Label (for you)",
   "agents.enrollment.labelPlaceholder": "e.g. vps-1",
   "agents.enrollment.harness": "Harness (hint for the commands)",
-  "agents.enrollment.nameHint": "Executor name (optional)",
+  "agents.enrollment.nameHint": "Agent name (optional)",
   "agents.enrollment.create": "Create token",
   "agents.enrollment.creating": "Creating…",
   "agents.enrollment.createFailed": "Failed to create the token",
@@ -1715,7 +1723,7 @@ export const en: Record<TranslationKey, string> = {
     "lowercase letters/digits/hyphens and dots — an IP or FQDN, no slashes",
   "agents.provision.port": "SSH port",
   "agents.provision.portError": "port is a number from 1 to 65535",
-  "agents.provision.name": "Executor name (optional)",
+  "agents.provision.name": "Agent name (optional)",
   "agents.provision.nameError":
     "starts with a letter/digit; letters, digits, dot, '_', '-' up to 120 chars",
   "agents.provision.authLegend": "How to log in",
@@ -2046,7 +2054,7 @@ export const en: Record<TranslationKey, string> = {
   "automation.form.removeClause": "Remove condition {{clause}}",
   "automation.form.noValueEnum":
     "This field has no closed value set — the condition is unavailable in v1.",
-  "automation.form.onLabel": "Event (on)",
+  "automation.form.onLabel": "Event (when to run)",
   "automation.form.actionLabel": "Action",
   "automation.form.create": "Create",
   "automation.field.taskCol": "task column",
@@ -2405,8 +2413,11 @@ export const en: Record<TranslationKey, string> = {
   "kora.list.emptyAction": "Connect an agent",
   "kora.list.emptyStatusLink": "Open system status",
   "kora.session.steerable": "steerable",
-  "kora.session.origin.relay": "relay",
+  "kora.session.origin.relay": "via relay",
+  // D12: the relay chip reads as words; the tooltip is the session contract wording.
+  "kora.session.origin.relayHint": "The session started through the Kora relay",
   "kora.session.origin.local": "local",
+  "kora.session.origin.localHint": "The session started outside Kora, on the machine itself",
   "kora.session.state.live": "live",
   "kora.session.state.idle": "idle",
   "kora.session.state.dead": "process dead",

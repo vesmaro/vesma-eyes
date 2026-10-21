@@ -18,6 +18,7 @@ the page with the details.
 | --- | --- |
 | board | vesma-eyes as a whole: the working desktop with tasks, agents and automation on top of vesma memory |
 | entry | one unit of vesma memory: text, raw source, tags, project, agent, source and processing status |
+| the well | how the interface names vesma memory: entries pile into a shared depth — hence the search hint "the well is deep but literal" ([What is vesma](what-is-mnemos.md)) |
 | store | one vesma server connected to the board; there can be several — for example `cluster` and `laptop` |
 | store group | several stores joined into one pulse-and-search scope |
 | vesma-mesh | the federation of stores: a transport linking store nodes to each other; the nodes are visible in the Mesh nodes section |

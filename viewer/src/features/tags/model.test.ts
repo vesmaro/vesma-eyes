@@ -289,13 +289,15 @@ describe("URL state (состояние списка в URL)", () => {
 });
 
 describe("formatStatsTime (§2.1 stats line)", () => {
-  it("formats a local HH:MM without Intl drift", () => {
+  it("formats a FULL local dd.MM HH:MM stamp without Intl drift (D12)", () => {
     const epoch = Date.UTC(2026, 8, 21, 11, 2, 0); // 14:02 in UTC+3
     const date = new Date(epoch);
-    const expected = `${String(date.getHours()).padStart(2, "0")}:${String(
-      date.getMinutes(),
-    ).padStart(2, "0")}`;
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const expected = `${pad(date.getDate())}.${pad(date.getMonth() + 1)} ${pad(
+      date.getHours(),
+    )}:${pad(date.getMinutes())}`;
     expect(formatStatsTime(epoch)).toBe(expected);
-    expect(formatStatsTime(epoch)).toMatch(/^\d{2}:\d{2}$/);
+    // The date part is present — a bare HH:MM read fresh days later (D12).
+    expect(formatStatsTime(epoch)).toMatch(/^\d{2}\.\d{2} \d{2}:\d{2}$/);
   });
 });
