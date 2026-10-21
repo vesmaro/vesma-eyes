@@ -103,6 +103,33 @@ export function executorFoundTrail(member: ExecutorItem): readonly string[] {
   return row ? narrowTrail(row["found_at"]) : [];
 }
 
+// -- harness-labels wave (2026-10-21): the «Обнаружено на хосте» row
+// -- distinguisher. A host can carry REAL duplicate installations of one
+// -- harness (box-home vs host-home) — the inventory rows are told apart
+// -- by each row's OWN surface label + dedupe trail, never by invention.
+
+/**
+ * The inventory row's own surface label — the same narrowing as the
+ * roster badge (60 chars, trimmed). null when the agent did not badge
+ * THIS row (pre-v0.9 or unbadged) — honest absence, never a fabricated
+ * "metal".
+ */
+export function inventoryRowExecEnv(
+  env: HarnessInventoryEnvironment,
+): string | null {
+  return narrowSurface(env.exec_env);
+}
+
+/**
+ * The inventory row's own dedupe trail — the same 8 × 200 narrowing as
+ * the roster tooltip. [] when the agent sent none.
+ */
+export function inventoryRowFoundTrail(
+  env: HarnessInventoryEnvironment,
+): readonly string[] {
+  return narrowTrail(env["found_at"]);
+}
+
 // -- AGW-23/24: the surface-facts mirror (the card's k8s/distrobox view) --
 
 /** A bounded row shown for one cluster node. */

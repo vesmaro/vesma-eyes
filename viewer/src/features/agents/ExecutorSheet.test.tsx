@@ -485,6 +485,28 @@ describe("ExecutorSheet — ME-064 «Detected on the host» inventory dropdowns"
     await actUnmount(mount.root);
   });
 
+  it("duplicate installations are told apart by their own surface badges (harness-labels wave)", async () => {
+    // The fixture host now carries REAL duplicates (box-home vs host-home):
+    // copilot · cli ×2 and zcode · cli ×2 with DIFFERENT exec_env each.
+    const mount = await mountCard("exec-laptop-zcode");
+    const text = mount.text();
+    expect(text).toContain("zcode · cli");
+    expect(text).toContain("copilot · cli");
+    // Every badged row wears the SAME slot the roster badge uses, and the
+    // duplicate pairs carry DIFFERENT labels.
+    const badges = mount.query<HTMLElement>('[data-slot="execution-env"]');
+    expect(badges).toHaveLength(4);
+    const labels = badges.map((badge) => badge.textContent);
+    expect(labels.filter((label) => label === "distrobox:ubuntu")).toHaveLength(2);
+    expect(labels.filter((label) => label === "metal")).toHaveLength(2);
+    // The dedupe trail rides the badge tooltip (found_at paths of THAT row).
+    const badged = badges.find(
+      (badge) => badge.getAttribute("title")?.includes("/home/u/.copilot"),
+    );
+    expect(badged?.getAttribute("title")).toContain("found at");
+    await actUnmount(mount.root);
+  });
+
   it("a host without an inventory (the poller case, Э3) renders «No data», never a skeleton", async () => {
     // exec-laptop-hermes: fixture row with NO harness_inventory field.
     const mount = await mountCard("exec-laptop-hermes");

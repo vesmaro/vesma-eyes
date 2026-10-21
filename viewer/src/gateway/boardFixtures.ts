@@ -760,6 +760,55 @@ export const MOCK_EXECUTORS: ExecutorItem[] = [
           notes: { agents_md: true, gcw_managed: true },
         },
       },
+      // The harness-labels wave (2026-10-21): REAL duplicate installations
+      // (the owner's prod case — box-home vs host-home on one host), same
+      // name+kind, DIFFERENT exec_env. The inventory rows must be told
+      // apart by the surface badge + the found_at dedupe trail.
+      {
+        name: "copilot",
+        kind: "cli",
+        home_path: "/home/u/.copilot",
+        exec_env: "distrobox:ubuntu",
+        found_at: ["/home/u/.copilot", "/var/home/abyss/.copilot"],
+        capabilities: {
+          specialists: ["gcw-senior-frontend-developer"],
+          specialists_count: 7,
+          skills: ["a11y-audit"],
+          skills_count: 7,
+          plugins: [],
+          instructions: [],
+        },
+      },
+      {
+        name: "copilot",
+        kind: "cli",
+        home_path: "/var/home/abyss/.copilot",
+        exec_env: "metal",
+        found_at: ["/var/home/abyss/.copilot", "/home/u/.copilot"],
+        capabilities: {
+          specialists: ["gcw-tech-lead"],
+          specialists_count: 5,
+          skills: [],
+          plugins: [],
+          instructions: ["architectural-committee.md"],
+          instructions_count: 1,
+        },
+      },
+      {
+        name: "zcode",
+        kind: "cli",
+        home_path: "/var/home/abyss/.zcode",
+        exec_env: "distrobox:ubuntu",
+        found_at: ["/var/home/abyss/.zcode", "/home/u/.zcode"],
+        capabilities: {
+          specialists: ["gcw-senior-frontend-developer"],
+          specialists_count: 12,
+          skills: ["design-tokens"],
+          skills_count: 30,
+          plugins: [],
+          instructions: [],
+        },
+      },
     ],
   },
   {
