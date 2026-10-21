@@ -565,6 +565,15 @@ describe("the host harnesses (B2 §3.C.3)", () => {
     // The four inventory counters (the ME-064 fixture counts).
     expect(zcode.textContent).toContain("39");
     expect(zcode.textContent).toContain("121");
+    // UX-AUDIT A6: the counters announce meaningfully WITHOUT title (dead
+    // on touch) — role="img" + aria-label at EVERY width; the visible ≥lg
+    // word rides CSS only (happy-dom has no breakpoints).
+    const counter = zcode.querySelector<HTMLSpanElement>(
+      '[role="img"][aria-label="specialists: 39"]',
+    );
+    expect(counter).not.toBeNull();
+    expect(counter!.getAttribute("title")).toBeNull();
+    expect(zcode.querySelector('[role="img"][aria-label="plugins: 0"]')).not.toBeNull();
     // hermes: owner-disabled → the refusal badge rides the row; and with
     // no surface facts reported the reserved slot stays honestly empty
     // (the hidden geometry, never a fabricated label).
@@ -762,6 +771,34 @@ describe("the roster panel (the inversion: compact rows, not cards)", () => {
     );
     expect(action).not.toBeNull();
     expect(action!.textContent).toContain("Connect a host");
+    // UX-AUDIT A5: the page header carries the PERMANENT quiet entry —
+    // the SAME route (one action, not a second implementation), visible
+    // on a filled roster where the contextual CTAs are out of sight.
+    const headerAction = container.querySelector<HTMLAnchorElement>(
+      "header a[href='/agents/harnesses?connect=1']",
+    );
+    expect(headerAction).not.toBeNull();
+    expect(headerAction!.textContent).toBe("Connect");
+    await actUnmount(root);
+  });
+
+  it("the header connect action stays on an EMPTY roster (UX-AUDIT A5)", async () => {
+    const { root, container } = await mountPage({
+      path: "/agents/hosts",
+      executors: () => [],
+      assignments: () => [],
+    });
+    const headerAction = container.querySelector<HTMLAnchorElement>(
+      "header a[href='/agents/harnesses?connect=1']",
+    );
+    expect(headerAction).not.toBeNull();
+    // The empty state keeps its own full CTA (the panel's pinned action is
+    // pre-existing too) — the header button is the permanent affordance,
+    // never a replacement: same route everywhere, one action.
+    const emptyCta = [...container.querySelectorAll<HTMLAnchorElement>(
+      "a[href='/agents/harnesses?connect=1']",
+    )].find((link) => link.textContent === "Connect a host");
+    expect(emptyCta).not.toBeNull();
     await actUnmount(root);
   });
 });
@@ -911,11 +948,13 @@ describe("the empty roster", () => {
       assignments: () => [],
     });
     expect(container.textContent).toContain("No agents yet");
-    const cta = container.querySelector<HTMLAnchorElement>(
+    // UX-AUDIT A5: the connect links now include the header's permanent
+    // quiet entry (short label) — the empty state's FULL CTA is asserted
+    // by its wording, not by DOM order.
+    const cta = [...container.querySelectorAll<HTMLAnchorElement>(
       'a[href="/agents/harnesses?connect=1"]',
-    );
+    )].find((link) => link.textContent === "Connect a host");
     expect(cta).not.toBeNull();
-    expect(cta!.textContent).toContain("Connect a host");
     // No rows, no redirect target — the URL keeps its place.
     expect(rows(container).length).toBe(0);
     await actUnmount(root);
