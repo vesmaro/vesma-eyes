@@ -4,8 +4,10 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { DndContext } from "@dnd-kit/core";
 
 import { TaskBoardPage } from "@/features/tasks/TaskBoardPage";
+import { TaskBoardMobile } from "@/features/tasks/TaskBoardMobile";
 import { BOARD_DESKTOP_QUERY } from "@/features/tasks/boardViewport";
 import { BoardAdapter } from "@/gateway/BoardAdapter";
 import { GatewayContext } from "@/gateway/GatewayContext";
@@ -367,5 +369,130 @@ describe("TaskBoardPage — the desktop (md+) board stays the full row", () => {
     expect(actions!.querySelector<HTMLElement>(".max-md\\:hidden")?.textContent).toBe(
       "Задача",
     );
+  });
+});
+
+/**
+ * Review-P1/P3 pin: the swipe WIRING on the lane wrapper. A horizontal
+ * flick switches the lane; a vertical scroll and an in-flight kanban drag
+ * (`dragActive`) change nothing. Rendered directly (DndContext wrapped —
+ * the column's droppable hooks require it) so the callback can be probed
+ * without driving dnd-kit's pointer sensor.
+ */
+describe("TaskBoardMobile — the swipe seam", () => {
+  const COLUMNS = [
+    "backlog",
+    "validating",
+    "open",
+    "in-progress",
+    "blocked",
+    "resolved",
+    "done",
+  ];
+
+  function touchOf(x: number, y: number): Touch {
+    return { clientX: x, clientY: y } as Touch;
+  }
+
+  function touchEvent(
+    type: "touchstart" | "touchend",
+    x: number,
+    y: number,
+  ): TouchEvent {
+    return new TouchEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      ...(type === "touchstart"
+        ? { touches: [touchOf(x, y)], changedTouches: [touchOf(x, y)] }
+        : { touches: [], changedTouches: [touchOf(x, y)] }),
+    });
+  }
+
+  async function mountMobile(dragActive: boolean): Promise<string[]> {
+    const selections: string[] = [];
+    const columns = new Map<string, readonly BoardTask[]>([
+      ["backlog", [makeTask("B-1", "backlog", "Backlog task")]],
+      ["validating", [makeTask("V-1", "validating", "Validating task")]],
+    ]);
+    const counts = Object.fromEntries(
+      COLUMNS.map((column) => [column, column === "backlog" ? 1 : 0]),
+    );
+    // The card body's ActiveAssignmentBadge reads the gateway + react-query
+    // cache — the direct render still walks the standard providers.
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const gateway = new BoardAdapter({ fetchImpl: makeFetchStub(), baseUrl: "/api" });
+    await act(async () => {
+      root!.render(
+        <GatewayContext.Provider value={gateway}>
+          <QueryClientProvider client={queryClient}>
+            <I18nProvider initialLang="ru">
+              <MemoryRouter initialEntries={["/tasks"]}>
+                <DndContext>
+                  <TaskBoardMobile
+                    visibleColumns={COLUMNS}
+                    activeColumn={null}
+                    onSelectColumn={(column) => selections.push(column)}
+                    columns={columns}
+                    wholeBoardCounts={counts}
+                    canDrag={false}
+                    showMenu={false}
+                    reportCounts={{}}
+                    collapsed={new Set()}
+                    onToggleGroup={() => {}}
+                    compact={false}
+                    style="groups"
+                    waitingFocus={false}
+                    dragActive={dragActive}
+                  />
+                </DndContext>
+              </MemoryRouter>
+            </I18nProvider>
+          </QueryClientProvider>
+        </GatewayContext.Provider>,
+      );
+    });
+    return selections;
+  }
+
+  function laneWrapper(): HTMLElement {
+    const section = container!.querySelector("section[data-column]");
+    expect(section).toBeDefined();
+    return section!.parentElement as HTMLElement;
+  }
+
+  beforeEach(() => {
+    matchMediaMock = stubMatchMedia(false);
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+  });
+
+  it("a horizontal flick switches to the next lane", async () => {
+    const selections = await mountMobile(false);
+    await act(async () => {
+      laneWrapper().dispatchEvent(touchEvent("touchstart", 300, 400));
+      laneWrapper().dispatchEvent(touchEvent("touchend", 180, 400));
+    });
+    expect(selections).toEqual(["validating"]);
+  });
+
+  it("a vertical scroll gesture changes nothing", async () => {
+    const selections = await mountMobile(false);
+    await act(async () => {
+      laneWrapper().dispatchEvent(touchEvent("touchstart", 300, 200));
+      laneWrapper().dispatchEvent(touchEvent("touchend", 300, 500));
+    });
+    expect(selections).toEqual([]);
+  });
+
+  it("an in-flight kanban drag stands the swipe down (review P1)", async () => {
+    const selections = await mountMobile(true);
+    await act(async () => {
+      laneWrapper().dispatchEvent(touchEvent("touchstart", 300, 400));
+      laneWrapper().dispatchEvent(touchEvent("touchend", 180, 440));
+    });
+    expect(selections).toEqual([]);
   });
 });

@@ -584,6 +584,10 @@ function TaskBoardView() {
                 style={boardStyle}
                 waitingFocus={waitingActive}
                 tempo={doneTempo}
+                // Review P1: while a kanban drag is in flight the page-owned
+                // overlay ghost is active — the mobile swipe seam stands
+                // down (a flick would otherwise reorder AND flip the lane).
+                dragActive={dnd.activeTask != null}
               />
             )}
             <DragOverlay dropAnimation={reducedMotion ? null : undefined}>

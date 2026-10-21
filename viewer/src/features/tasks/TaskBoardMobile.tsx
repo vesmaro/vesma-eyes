@@ -60,6 +60,10 @@ export interface TaskBoardMobileProps {
   waitingFocus: boolean;
   /** The resolved column's done-tempo (rides its header, desktop parity). */
   tempo?: number;
+  /** A kanban drag is in flight (the page owns dnd.activeTask) — the swipe
+   * seam MUST stand down: without this, a diagonal flick would lift the
+   * card into a pointer drag AND flip the column (double response). */
+  dragActive: boolean;
 }
 
 export function TaskBoardMobile({
@@ -78,6 +82,7 @@ export function TaskBoardMobile({
   style,
   waitingFocus,
   tempo,
+  dragActive,
 }: TaskBoardMobileProps) {
   const t = useT();
   // Derived clamp: a stale selection (lane hidden by a columnsMode switch)
@@ -99,8 +104,12 @@ export function TaskBoardMobile({
   );
 
   // The swipe seam: only the START/END points matter (a flick), the pure
-  // classifier does the geometry — vertical scrolls, taps and reorder
-  // drags all fail its thresholds and change nothing.
+  // classifier does the geometry — vertical scrolls and taps fail its
+  // thresholds. An in-flight kanban DRAG owns the gesture instead: the
+  // dnd-kit pointer sensor arms at 5px on the same card, so a horizontal
+  // flick both lifts the card AND satisfies the classifier — while the
+  // drag is active the swipe stands down (review P1: otherwise a diagonal
+  // flick reorders within the lane AND flips the column).
   const touchStart = useRef<SwipePoint | null>(null);
   const onTouchStart = useCallback((event: React.TouchEvent) => {
     const touch = event.touches[0];
@@ -110,15 +119,16 @@ export function TaskBoardMobile({
     (event: React.TouchEvent) => {
       const start = touchStart.current;
       touchStart.current = null;
-      if (!start) return;
+      if (dragActive || !start) return;
       const end = event.changedTouches[0];
+      if (!end) return;
       const intent = swipeColumnIntent(start, {
         x: end.clientX,
         y: end.clientY,
       });
       if (intent) stepColumn(intent);
     },
-    [stepColumn],
+    [stepColumn, dragActive],
   );
 
   if (!effectiveColumn) return null;
@@ -146,7 +156,10 @@ export function TaskBoardMobile({
               className={
                 "inline-flex min-h-12 shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors duration-instant focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright " +
                 (pressed
-                  ? "border-iris-bright/60 bg-iris-tint text-iris-bright"
+                  ? // Full-strength border: an alpha modifier on a var-based
+                    // token silently no-ops in Tailwind 3 (the accepted
+                    // facade-chip pair, TaskBoardPage header).
+                    "border-iris-bright bg-iris-tint text-iris-bright"
                   : "border-border text-foreground-secondary hover:text-foreground")
               }
             >
@@ -159,9 +172,13 @@ export function TaskBoardMobile({
         })}
       </div>
       {/* The swipe hint is screen-reader-only: the visual affordance is the
-       * chip rail itself; swipe is the one-hand accelerator. */}
+       * chip rail itself; swipe is the one-hand accelerator. No touch-action
+       * override here: pan-y would forbid pinch-zoom over the work surface
+       * (WCAG 1.4.4 smell), and the swipe needs no help — horizontal pans
+       * have nothing to scroll beneath the lane, and the vertical axis is
+       * already cut off by the classifier's 2:1 dominance rule. */}
       <p className="sr-only">{t("tasks.board.mobileSwipeHint")}</p>
-      <div className="touch-pan-y" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         <TaskBoardColumn
           column={effectiveColumn}
           tasks={tasks}
