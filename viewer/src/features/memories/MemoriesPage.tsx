@@ -15,6 +15,7 @@ import {
   parseMemoryListParams,
   toListParams,
 } from "./listParams";
+import { useAgentOptions } from "./useAgentOptions";
 import { useProjectOptions } from "./useProjectOptions";
 import { pageGridClass } from "@/layout/pageGrid";
 
@@ -31,10 +32,18 @@ export function MemoriesPage() {
   const location = useLocation();
   const state = parseMemoryListParams(searchParams);
   const projects = useProjectOptions();
+  const agents = useAgentOptions();
   const list = useMemories(toListParams(state));
 
   const patch = (
-    changes: Partial<{ status: string; project: string; tag: string; limit: number; page: number }>,
+    changes: Partial<{
+      status: string;
+      project: string;
+      agent: string;
+      tag: string;
+      limit: number;
+      page: number;
+    }>,
   ) => {
     setSearchParams(
       (prev) => {
@@ -46,6 +55,8 @@ export function MemoriesPage() {
         else next.delete("status");
         if (merged.project) next.set("project", merged.project);
         else next.delete("project");
+        if (merged.agent) next.set("agent", merged.agent);
+        else next.delete("agent");
         if (merged.tag) next.set("tag", merged.tag);
         else next.delete("tag");
         if (merged.limit !== DEFAULT_PAGE_SIZE) next.set("limit", String(merged.limit));
@@ -122,6 +133,27 @@ export function MemoriesPage() {
           </select>
         </div>
 
+        <div className="flex flex-col gap-1">
+          {/* D7: author filter — a native vesma listing filter (`?agent=`),
+           * options aggregated from the rows' own `agent` field. */}
+          <label htmlFor="memories-agent" className="text-xs text-foreground-secondary">
+            {t("memories.agentLabel")}
+          </label>
+          <select
+            id="memories-agent"
+            value={state.agent ?? ""}
+            onChange={(event) => patch({ agent: event.target.value || undefined })}
+            className="h-12 md:h-12 md:h-9 rounded-md border border-border bg-well px-2 text-sm text-foreground focus-visible:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          >
+            <option value="">{t("memories.allAgents")}</option>
+            {agents.map((agent) => (
+              <option key={agent} value={agent}>
+                {agent}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {state.tag ? (
           <div className="flex flex-col gap-1">
             {/* UI-17 §5.6: an «Открыть в Записях» arrival shows the tag it
@@ -187,7 +219,12 @@ export function MemoriesPage() {
               <Button
                 variant="outline"
                 onClick={() =>
-                  patch({ status: undefined, project: undefined, tag: undefined })
+                  patch({
+                    status: undefined,
+                    project: undefined,
+                    agent: undefined,
+                    tag: undefined,
+                  })
                 }
               >
                 {t("memories.clearFilters")}

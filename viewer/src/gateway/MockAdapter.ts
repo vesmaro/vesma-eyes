@@ -579,6 +579,8 @@ export class MockAdapter implements MemoryGateway {
       (memory) =>
         (params.status === undefined || memory.status === params.status) &&
         (params.project === undefined || memory.project === params.project) &&
+        // Native listing filter (D7): exact author match, wire semantics.
+        (params.agent === undefined || memory.agent === params.agent) &&
         wantedTags.every((tag) => (memory.tags ?? []).includes(tag)),
     ).sort(byCreatedDesc);
     const offset = params.offset ?? 0;

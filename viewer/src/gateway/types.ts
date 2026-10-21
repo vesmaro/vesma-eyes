@@ -87,6 +87,13 @@ export interface SearchResult {
 export interface ListMemoriesParams {
   status?: string;
   project?: string;
+  /**
+   * Author filter — native vesma listing filter (`?agent=`, wire contract
+   * D7/ux-wd-human-memory): the Memory rows carry `agent`, the listing
+   * narrows server-side. The viewer only *opens* the param; vesma keeps
+   * owning the semantics.
+   */
+  agent?: string;
   /** Comma-separated tag filter (native listing filter, UI-17 spec §5.6). */
   tags?: string;
   limit?: number;

@@ -205,6 +205,20 @@ describe("BoardAdapter wire contract", () => {
     });
   });
 
+  it("listMemories: the agent filter passes through to the merged endpoint (D7)", async () => {
+    const fetchMock = respondingFetch({ items: [], next_cursor: null, truncated: false, errors: [] });
+    const adapter = new BoardAdapter({
+      fetchImpl: fetchMock as unknown as typeof fetch,
+    });
+
+    await adapter.listMemories({ agent: "hermes-default" });
+
+    expect((fetchMock.mock.calls[0] as [string])[0]).toContain("agent=hermes-default");
+    // Absent filter stays off the wire (no agent= noise on plain lists).
+    await adapter.listMemories({ limit: 5 });
+    expect((fetchMock.mock.calls[1] as [string])[0]).not.toContain("agent=");
+  });
+
   it("getMemory: maps the ok-envelope from the first resolving server", async () => {
     const fetchMock = respondingFetch({
       ok: true,

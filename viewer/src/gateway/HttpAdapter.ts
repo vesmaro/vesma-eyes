@@ -90,6 +90,8 @@ export class HttpAdapter implements MemoryGateway {
         query: {
           status: params.status,
           project: params.project,
+          // Native vesma listing filter (D7 — «фильтр по агенту»).
+          agent: params.agent,
           // Native vesma listing filter (UI-17 §5.6 «Открыть в Записях»).
           tags: params.tags,
           limit: params.limit,

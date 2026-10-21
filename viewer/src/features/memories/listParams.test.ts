@@ -8,7 +8,13 @@ import {
 describe("memory list URL params", () => {
   it("falls back to defaults for missing or invalid values", () => {
     const state = parseMemoryListParams(new URLSearchParams(""));
-    expect(state).toEqual({ status: undefined, project: undefined, limit: 20, page: 1 });
+    expect(state).toEqual({
+      status: undefined,
+      project: undefined,
+      agent: undefined,
+      limit: 20,
+      page: 1,
+    });
 
     const invalid = parseMemoryListParams(
       new URLSearchParams("limit=7&page=-2&status=nope"),
@@ -28,8 +34,15 @@ describe("memory list URL params", () => {
     });
   });
 
+  it("carries the agent filter into the gateway params (D7)", () => {
+    const state = parseMemoryListParams(new URLSearchParams("agent=zed&tag=mnemos:decision"));
+    expect(state.agent).toBe("zed");
+    expect(toListParams(state)).toMatchObject({ agent: "zed", tags: "mnemos:decision" });
+  });
+
   it("detects active filters for the empty-state copy", () => {
     expect(hasActiveFilters(parseMemoryListParams(new URLSearchParams("project=x")))).toBe(true);
+    expect(hasActiveFilters(parseMemoryListParams(new URLSearchParams("agent=zed")))).toBe(true);
     expect(hasActiveFilters(parseMemoryListParams(new URLSearchParams("")))).toBe(false);
   });
 });
