@@ -155,13 +155,13 @@ export function DocsCategoryPage() {
     docCategoriesForProject(projectMeta.slug).some((entry) => entry.slug === category.slug);
   if (!owned || !category) {
     return (
-      <div className={pageGridClass("operational")}>
+      <div className={pageGridClass("reading")}>
         <DocsNotFound />
       </div>
     );
   }
   return (
-    <div className={pageGridClass("operational")}>
+    <div className={pageGridClass("reading")}>
       <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="flex min-w-0 items-start gap-3">
           <category.icon

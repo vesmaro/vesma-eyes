@@ -23,7 +23,7 @@ vesma, к которым борд ходит по HTTP со своим токе�
 - Кластер Kubernetes/K3s с Helm 3 и работающим ingress-контроллером
   (в K3s это traefik). Примеры используют namespace `kube-agents`.
 - Токен сервера памяти vesma с `totp_required=0` (значение вида
-  `mnk_…`). Его выдаёт mnemos.
+  `mnk_…`). Его выдаёт vesma.
 - Сам vesma к этому моменту уже работает. Если это ещё не так —
   установка описана в импортированном ранбуке апстрима:
   [установка vesma](/docs/mnemos/admin/runbooks/install).

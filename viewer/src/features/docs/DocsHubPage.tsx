@@ -375,7 +375,7 @@ function HubCover({ project }: { project: DocProject }) {
   const manifestFailed = useDocsManifestFailed();
   const pages = manifest?.pages.filter((page) => page.project === project.slug);
   return (
-    <div className={pageGridClass("operational")}>
+    <div className={pageGridClass("reading")}>
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="flex min-w-0 items-start gap-3">
           <Icon
@@ -431,7 +431,7 @@ export function DocsHubPage() {
   const target = legacyDocsTarget(`/docs/${project}`);
   if (target !== null) return <Navigate to={target} replace />;
   return (
-    <div className={pageGridClass("operational")}>
+    <div className={pageGridClass("reading")}>
       <DocsNotFound />
     </div>
   );
