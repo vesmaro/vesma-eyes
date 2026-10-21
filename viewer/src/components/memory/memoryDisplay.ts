@@ -43,7 +43,12 @@ export function isGenericMemoryTitle(title: string | null | undefined): boolean 
 }
 
 const MD_PREFIX = /^[#>*|•–-]+\s*/; // markdown structure tokens
-const ROLE_PREFIX = /^(user|assistant|system|human|ai|me)\s+/i; // transcript speaker labels
+/** A transcript speaker label is stripped ONLY when it stands alone: the
+ * whole line, or a «метка:» / «метка —» prefix. A bare word+space at the
+ * start of a sentence is real prose — «User research показал…», «AI помог
+ * с…» must survive intact (P3-1 review on the D7 headline miner). */
+const LABEL_LINE = /^(user|assistant|system|human|ai|me)[\s:—–]*$/i;
+const LABEL_PREFIX = /^(user|assistant|system|human|ai|me)\s*[:—–]\s*/i;
 const DUMP_PREFIX = /^(\/|~\/|https?:\/\/|\{|\[|"|'|`{3}|\d{4}-\d{2}-\d{2})/; // paths/URLs/JSON/logs
 const MIN_HEADLINE_CHARS = 12;
 const MAX_HEADLINE_CHARS = 60;
@@ -51,7 +56,9 @@ const MAX_HEADLINE_CHARS = 60;
 const MIN_LETTER_RATIO = 0.45;
 
 function meaningfulHeadline(rawLine: string): string | null {
-  let line = rawLine.trim().replace(MD_PREFIX, "").replace(ROLE_PREFIX, "").trim();
+  let line = rawLine.trim().replace(MD_PREFIX, "").trim();
+  if (LABEL_LINE.test(line)) return null; // a bare speaker label carries no content
+  line = line.replace(LABEL_PREFIX, "").trim();
   if (line.length < MIN_HEADLINE_CHARS) return null;
   if (DUMP_PREFIX.test(line)) return null;
   const letters = (line.match(/\p{L}/gu) ?? []).length;

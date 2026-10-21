@@ -30,19 +30,58 @@ describe("memoryHumanFace (D7 — «десяток записей с загол�
     ).toBeNull();
   });
 
-  it("mines the headline from a transcript line under a role marker", () => {
+  it("strips a STANDALONE speaker label — «метка:» prefix (P3-1)", () => {
+    const face = memoryHumanFace({
+      title: "User",
+      content: "## User: Да, если что — инициация со телефона.\nОтвет агента.",
+    });
+    expect(face?.headline).toBe("Да, если что — инициация со телефона.");
+    expect(face?.preview).toBe("Ответ агента.");
+  });
+
+  it("strips a STANDALONE speaker label — «метка —» prefix (P3-1)", () => {
+    const face = memoryHumanFace({
+      title: "User",
+      content: "## User — Да, если что — инициация со телефона.",
+    });
+    expect(face?.headline).toBe("Да, если что — инициация со телефона.");
+  });
+
+  it("skips a bare speaker-label line and mines further down", () => {
+    const face = memoryHumanFace({
+      title: "User",
+      content: "## User\n\nДа, если что — инициация со телефона.",
+    });
+    expect(face?.headline).toBe("Да, если что — инициация со телефона.");
+    expect(face?.preview).toBeNull();
+  });
+
+  it("never eats the first word of prose (P3-1: «User research…» stays whole)", () => {
+    const face = memoryHumanFace({
+      title: "User",
+      content: "User research показал спрос на оффлайн-режим.\nДальше — больше.",
+    });
+    expect(face?.headline).toBe("User research показал спрос на оффлайн-режим.");
+
+    const ai = memoryHumanFace({
+      title: "user",
+      content: "AI помог с миграцией схемы, миграция заняла два часа.",
+    });
+    expect(ai?.headline).toBe("AI помог с миграцией схемы, миграция заняла два часа.");
+  });
+
+  it("keeps a transcript line WITHOUT a separator label intact (the label word stays)", () => {
     const face = memoryHumanFace({
       title: "User",
       content: "## User Да, если что — инициация со телефона.\nОтвет агента.",
     });
-    expect(face).not.toBeNull();
-    expect(face?.headline).toBe("Да, если что — инициация со телефона.");
+    expect(face?.headline).toBe("User Да, если что — инициация со телефона.");
     expect(face?.preview).toBe("Ответ агента.");
   });
 
   it("clips a long headline to 60 chars with an ellipsis", () => {
     const line = "Да, если что — инициация звонка идёт с телефона, а не с ноутбука, честно.";
-    const face = memoryHumanFace({ title: "User", content: `## User ${line}` });
+    const face = memoryHumanFace({ title: "User", content: `## User: ${line}` });
     expect(face?.headline).toBe(`${line.slice(0, 60).trimEnd()}…`);
   });
 
@@ -129,7 +168,7 @@ describe("memorySearchQuery («Найти похожее»)", () => {
   });
 
   it("uses the mined headline for generically-titled records", () => {
-    expect(memorySearchQuery({ title: "User", content: "## User Звуковая версия проходит." })).toBe(
+    expect(memorySearchQuery({ title: "User", content: "## User: Звуковая версия проходит." })).toBe(
       "Звуковая версия проходит",
     );
   });
