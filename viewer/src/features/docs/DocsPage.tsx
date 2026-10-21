@@ -341,7 +341,7 @@ export function DocsPage() {
     // A project namespace miss IS the redirect-map miss (design spec §8):
     // honest not-found with the CTA into the section root.
     return (
-      <div className={pageGridClass("operational")}>
+      <div className={pageGridClass("reading")}>
         {manifest ? (
           <DocsNotFound />
         ) : (
@@ -481,7 +481,7 @@ function ArticleView({ slug, page }: { slug: string; page: DocPage }) {
   const localeOriginal = !bilingual && lang !== engineLocale;
 
   return (
-    <div className={pageGridClass("operational")}>
+    <div className={pageGridClass("reading")}>
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_16rem]">
         <article className="min-w-0 max-w-scroll">
           {/* Meta row: category chip → version badge → provenance badge →
