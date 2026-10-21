@@ -62,7 +62,13 @@ export function CommandPalette() {
   return (
     <DialogPrimitive.Root open={open} onOpenChange={setPaletteOpen}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-overlay-scrim" />
+        {/* v12 skin (D1): the palette backdrop finally consumes its own token —
+         * `--palette-scrim` existed in all five theme presets since Phase 1
+         * with no consumer (the palette rode the generic overlay scrim). The
+         * blur is the «pupil» from the v12 stand (palette.css: blur 4px — the
+         * system's only blur, functional focus-keeper, not decoration). It is
+         * a static filter behind the panel — motion settings do not apply. */}
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-palette-scrim backdrop-blur-sm" />
         <DialogPrimitive.Content
           aria-describedby={undefined}
           className={
