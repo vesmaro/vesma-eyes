@@ -602,6 +602,57 @@ describe("the host harnesses (B2 §3.C.3)", () => {
     await actUnmount(root);
   });
 
+  it("Z1 a11y follow-up: the sessions counter and the refusal badge announce WITHOUT title", async () => {
+    const { root, container } = await mountPage({
+      path: "/agents/hosts/laptop",
+      koraSeed: (base) => ({
+        ok: true as const,
+        count: 1,
+        items: [
+          {
+            id: "ex-1:sess_42",
+            executor_id: "ex-1",
+            native_id: "sess_42",
+            harness: "vscode",
+            project: "vesma-eyes",
+            cwd: null,
+            state: "live",
+            origin: "relay",
+            steerable: true,
+            started_at: ago(base, 300),
+            last_activity_at: ago(base, 30),
+            age_seconds: 30,
+            last_line_preview: "работает",
+          },
+        ],
+        coverage: { harnesses: [], gaps: [] },
+        meta: { generated_at: ago(base, 10) },
+      }),
+    });
+    const zcode = [...harnessRows(container)].find((row) =>
+      row.textContent?.includes("zcode@laptop"),
+    )!;
+    // The sessions counter: role="img" + aria-label (the SAME A6 fix as
+    // the inventory counters), no touch-dead title anywhere.
+    const sessions = zcode.querySelector<HTMLSpanElement>(
+      '[role="img"][aria-label="Sessions in 24h: 1"]',
+    );
+    expect(sessions).not.toBeNull();
+    expect(sessions!.getAttribute("title")).toBeNull();
+    // hermes: the owner-disabled refusal badge — the visible word stays,
+    // the REASON becomes the accessible name («word: reason»).
+    const hermes = [...harnessRows(container)].find((row) =>
+      row.textContent?.includes("hermes@laptop"),
+    )!;
+    const badge = hermes.querySelector<HTMLSpanElement>(
+      '[role="img"][aria-label="disabled: disabled by the owner"]',
+    );
+    expect(badge).not.toBeNull();
+    expect(badge!.getAttribute("title")).toBeNull();
+    expect(badge!.textContent).toBe("disabled");
+    await actUnmount(root);
+  });
+
   it("Z1: an empty zone renders the honest line, never an empty block", async () => {
     // Mounted DIRECTLY (the grouping cannot produce a memberless host —
     // groups are built FROM members — so this is the component's own

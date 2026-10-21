@@ -215,7 +215,8 @@ function HarnessRow({
         {member.state === "pending" ? (
           <Badge
             variant="outline"
-            title={t("agents.executor.pendingReason")}
+            role="img"
+            aria-label={`${t("agents.hosts.pendingPill")}: ${t("agents.executor.pendingReason")}`}
             className="shrink-0 whitespace-nowrap font-normal"
           >
             {t("agents.hosts.pendingPill")}
@@ -224,7 +225,8 @@ function HarnessRow({
         {member.state === "approved" && !member.enabled ? (
           <Badge
             variant="outline"
-            title={t("agents.executor.disabledReason")}
+            role="img"
+            aria-label={`${t("agents.hosts.refusalDisabled")}: ${t("agents.executor.disabledReason")}`}
             className="shrink-0 whitespace-nowrap font-normal"
           >
             {t("agents.hosts.refusalDisabled")}
@@ -233,19 +235,27 @@ function HarnessRow({
         {member.state === "revoked" ? (
           <Badge
             variant="outline"
-            title={t("agents.registry.revokedHint")}
+            role="img"
+            aria-label={`${t("agents.hosts.refusalRevoked")}: ${t("agents.registry.revokedHint")}`}
             className="shrink-0 whitespace-nowrap font-normal"
           >
             {t("agents.hosts.refusalRevoked")}
           </Badge>
         ) : null}
         <InventoryCounters member={member} />
+        {/* UX-AUDIT A6 follow-up (Z1 wave, 2026-10-21): the sessions count
+         * used to ride `title` only — dead on touch and unnamed for AT. The
+         * SAME fix as the inventory counters: role="img" + aria-label (the
+         * width-independent name) + the visible ≥lg word (presentational by
+         * the img role). */}
         <span
+          role="img"
+          aria-label={`${t("agents.hosts.sessions24Tooltip")}: ${sessions24}`}
           className="ml-auto flex shrink-0 items-center gap-1 font-mono text-xs tabular-nums text-foreground-muted"
-          title={t("agents.hosts.sessions24Tooltip")}
         >
           <MessageSquareIcon />
           {sessions24}
+          <span className="hidden lg:inline">{t("agents.hosts.sessions24Short")}</span>
         </span>
         {/* The «среда исполнения» slot (B2, filled data-driven by the
          * exec-env wave): the agent's own surface label when reported
