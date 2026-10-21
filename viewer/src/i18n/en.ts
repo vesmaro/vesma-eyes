@@ -137,7 +137,9 @@ export const en: Record<TranslationKey, string> = {
   "cockpit.busyAll": "All agents",
   "cockpit.busyOnline": "executors connected: {{online}} of {{total}}",
   "cockpit.busyWorking": "tasks in progress: {{count}}",
-  "cockpit.busyQueued": "queued: {{count}}",
+  // W-A (D1): "queued" stays the TASK column's word (the board); the
+  // assignments queue gets its own words — one label, one counter.
+  "cockpit.busyQueued": "queued assignments: {{count}}",
   "cockpit.agentsNone": "No agents yet — connect the first one",
   "cockpit.agentsNoneAction": "Connect an agent",
   "cockpit.busyError": "Could not load who is busy",
@@ -145,10 +147,13 @@ export const en: Record<TranslationKey, string> = {
   // ME-072 C: the chip renders the number and this LABEL side by side —
   // the count lives only in the numeral (no «3 … waiting for you: 3» double).
   "cockpit.waitingSummaryLabel": "Waiting for the owner",
+  // W-A (D1): the shared counter's formula spelled out (tooltip on the
+  // Overview chip and the cockpit block).
+  "cockpit.waitingFormula": "inbox + in review + queued assignments",
   "cockpit.waitingSummaryTitle": "Open the most urgent",
   "cockpit.waitingInbox": "Inbox: {{count}}",
   "cockpit.waitingReview": "In review: {{count}}",
-  "cockpit.waitingQueued": "Queued: {{count}}",
+  "cockpit.waitingQueued": "Queued assignments: {{count}}",
   "cockpit.waitingError": "Could not count what is waiting",
   "cockpit.memoryTitle": "In memory",
   "cockpit.retry": "Retry",
@@ -179,7 +184,9 @@ export const en: Record<TranslationKey, string> = {
   "overview.legendNote":
     "The well shows {{shown}} most recent records and their links. Links appear only between displayed records.",
   "overview.heroTags": "tags — {{count}}",
-  "overview.waitingChip": "Waiting in total: {{count}}",
+  // W-A (D1): the well chip and the cockpit block read ONE formula
+  // (useWaitingSummary.total) — the words now match too.
+  "overview.waitingChip": "Waiting for the owner: {{count}}",
   // U2 «Overview well» (2026-10-08): HUD + the bus ticker. One parent
   // action «Share»; the vital cluster renders only from answered wires;
   // the ticker is ONE line of real /api/events frames (meaning-mapped —
@@ -266,6 +273,9 @@ export const en: Record<TranslationKey, string> = {
   "pulse.feedLabel": "Pulse feed",
   "pulse.untitled": "untitled",
   "pulse.degradedStores": "Some stores did not answer: {{servers}}",
+  // W-A (D2): the dead-end strip gains an exit — a link to the store
+  // status (/system/status#stores, the same health wire the Overview reads).
+  "pulse.degradedStoresAction": "open store status",
   "pulse.unavailableTitle": "Pulse is unavailable in vesma mode",
   "pulse.unavailableMessage":
     "The pulse collects entries from every connected board. The app is currently talking to vesma directly, so the feed has nowhere to come from yet — connect a board and the entries will appear.",
@@ -563,6 +573,11 @@ export const en: Record<TranslationKey, string> = {
   "status.retryMetrics": "Retry metrics",
   "status.refreshHealth": "Refresh health",
   "status.apiStatus": "API status",
+  // W-A (D2b): Status shows the STORES with the same cards as the Overview
+  // (one health wire, GET /api/health) — "ok" no longer contradicts the
+  // "laptop unreachable" alarm.
+  "status.storesTitle": "Stores",
+  "status.storesHint": "the same probe the Overview reads",
   "status.memoriesStat": "Memories",
   "status.publishedDetail": "{{count}} published",
   "status.avgLatency": "Avg search latency",
@@ -973,9 +988,11 @@ export const en: Record<TranslationKey, string> = {
 
   // ME-071 W3: the living console (15-WOW §3.4/§8.5) — the waiting facade,
   // the resolution tempo, the task.done flash, the blocked edge.
-  "tasks.board.waitingChip": "Waiting for the owner: {{count}}",
+  // W-A (D1): the chip counts ONLY the review column — it now uses the
+  // column's own word; "Waiting for the owner" stays the Overview total.
+  "tasks.board.waitingChip": "In review: {{count}}",
   "tasks.board.waitingChipTitle":
-    "Show tasks waiting for the owner's decision (on review)",
+    "Show tasks in the “In review” column — they await your decision",
   "tasks.board.doneTempoUnit": "/h",
   "tasks.board.doneTempoAria": "resolutions in the last hour: {{count}}",
   "tasks.board.resolvedToast": "Task “{{title}}” resolved",
@@ -1383,6 +1400,26 @@ export const en: Record<TranslationKey, string> = {
   "agents.settings.defaultLabel": "Default executor",
   "agents.settings.fallbackLabel": "Fallback executor",
   "agents.settings.none": "— none —",
+  // W-A (D11-UI): the saved default/fallback pair is checked against the
+  // same rules as the save gate; a broken pair warns HERE — tasks could sit
+  // unpicked for weeks while the setting stayed silent.
+  "agents.settings.warnNone":
+    "No default executor is set — new tasks will not be picked up.",
+  "agents.settings.warnMissing":
+    "The selected executor “{{name}}” is gone from the registry — tasks will not be picked up until another one is chosen.",
+  "agents.settings.warnPending":
+    "The selected executor “{{name}}” is not approved yet — tasks will not be picked up.",
+  "agents.settings.warnRevoked":
+    "The selected executor “{{name}}” is revoked — tasks will not be picked up until another one is chosen.",
+  "agents.settings.warnDisabled":
+    "The selected executor “{{name}}” is disabled — tasks will not be picked up.",
+  "agents.settings.warnOffline":
+    "The selected executor “{{name}}” is not answering — tasks will wait until it responds.",
+  "agents.settings.warnMesh":
+    "The selected executor “{{name}}” travels via mesh — the poller does not pick tasks up (routing unavailable until R4).",
+  "agents.settings.warnFallbackNone":
+    "No fallback executor is set — if the first one fails, tasks have nowhere to go.",
+  "agents.settings.warnAction": "Open executors",
   "agents.settings.save": "Save",
   "agents.settings.saving": "Saving…",
   "agents.settings.saved": "Execution settings saved",
@@ -2373,7 +2410,9 @@ export const en: Record<TranslationKey, string> = {
   "kora.pult.digestEmpty":
     "The session digest is built automatically — it will arrive later",
   "kora.pult.readTranscript": "Read the transcript",
-  "kora.pult.waiting": "awaiting owner: {{n}}",
+  // W-A (D1): the pult counter = the inbox only (GET /tasks/inbox) — it
+  // uses the source's word, same as the Overview block.
+  "kora.pult.waiting": "Inbox: {{n}}",
   "kora.pult.waitingHint": "Tasks waiting for your decision",
   "kora.pult.expand": "Expand",
   "kora.pult.collapse": "Collapse",

@@ -169,7 +169,7 @@ afterEach(async () => {
 const VALIDATING_TITLE = "Валидация фазы Ф2: чтение домена «Задачи» без рефетчей";
 const LIVE_TITLE_SNIPPET = "Достроить борд v0.3";
 
-describe("ME-071 W3: «Ждут владельца» facade chip", () => {
+describe("ME-071 W3 facade chip (W-A D1: named by the validating column)", () => {
   it("renders the golden chip with the whole-board validating count", async () => {
     // The expected count comes from the SAME mock projection the page reads
     // (never a hardcoded guess): whole-board validating rows.
@@ -179,10 +179,10 @@ describe("ME-071 W3: «Ждут владельца» facade chip", () => {
     await renderAt("/tasks");
     await waitFor(() => container!.querySelector('a[href^="/tasks/TB-1?"]') !== null);
     const chip = Array.from(container!.querySelectorAll("button")).find(
-      (b) => b.textContent?.includes("Waiting for the owner:"),
+      (b) => b.textContent?.includes("In review:"),
     );
     expect(chip).toBeDefined();
-    expect(chip!.textContent).toContain(`Waiting for the owner: ${expected}`);
+    expect(chip!.textContent).toContain(`In review: ${expected}`);
     expect(chip!.getAttribute("aria-pressed")).toBe("false");
   });
 
@@ -190,7 +190,7 @@ describe("ME-071 W3: «Ждут владельца» facade chip", () => {
     await renderAt("/tasks");
     await waitFor(() => container!.querySelector('a[href^="/tasks/TB-1?"]') !== null);
     const chip = Array.from(container!.querySelectorAll("button")).find(
-      (b) => b.textContent?.includes("Waiting for the owner:"),
+      (b) => b.textContent?.includes("In review:"),
     )!;
     await act(async () => {
       chip.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));

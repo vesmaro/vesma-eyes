@@ -84,7 +84,7 @@ export function CockpitWaiting() {
       </h2>
       <Link
         to={waiting.urgentTo}
-        title={t("cockpit.waitingSummaryTitle")}
+        title={`${t("cockpit.waitingSummaryTitle")}: ${t("cockpit.waitingFormula")}`}
         className="inline-flex min-h-row-airy items-center gap-2 rounded-md border border-border-subtle bg-well px-4 shadow-well transition-colors duration-instant hover:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       >
         <span className="font-mono text-2xl font-semibold text-iris-bright">

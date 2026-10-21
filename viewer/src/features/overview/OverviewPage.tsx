@@ -1,11 +1,9 @@
 import { Link } from "react-router";
 import { ArrowRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { HonestLine } from "@/components/HonestLine/HonestLine";
+import { StoreHealthCard } from "@/components/StoreHealthCard/StoreHealthCard";
 import { isBoardHealthSource, isPulseSource } from "@/gateway/capabilities";
-import type { BoardHealthServer } from "@/gateway/boardTypes";
 import { useGateway } from "@/gateway/GatewayContext";
 import { usePulse, useBoardHealth } from "@/hooks/usePulse";
 import { PulseFeed } from "@/features/memory-pulse/PulseFeed";
@@ -19,14 +17,16 @@ import {
 import { useT } from "@/i18n";
 
 /**
- * `/` — «Обзор» (SPEC-2026-10-07 «Обзор», v12 §3.1): the page opens with
- * the WELL — one dark FULL-BLEED hero canvas (`WellHero`, the whole
- * working-zone width; the page's single bold element), the awakening
- * rides the first real bus frame and the rest is working quiet. Below the
- * fold the cockpit blocks keep their J1 order on the showcase measure —
- * «кто занят → что ждёт меня → что в памяти → строка честности». Anti-
- * dashification rules apply unchanged: a block with nothing to say does
- * not render, and every figure LEADS somewhere.
+ * `/` — «Обзор» (SPEC-2026-10-07 «Обзор», v12 §3.1, amended by W-A D3 —
+ * user-panel verdict 2026-10-21): the page still OPENS with the WELL in the
+ * DOM (the h1 and the page's single bold element), but the PARK STATUS now
+ * stands visually FIRST — «кто занят → что ждёт меня» occupy the first
+ * screen and the well canvas follows (flex `order`, not DOM order, so the
+ * heading structure and the reading order keep h1 → blocks → memory). The
+ * owner's first glance answers «кто занят / что ждёт меня / что сломано»,
+ * the contemplative canvas stays (owner-approved imagery, kept intact).
+ * Anti-dashification rules apply unchanged: a block with nothing to say
+ * does not render, and every figure LEADS somewhere.
  */
 export function OverviewPage() {
   const t = useT();
@@ -48,11 +48,16 @@ export function OverviewPage() {
   return (
     // Full-bleed root (U2): the hero spans the whole working zone; the
     // cockpit column re-applies the showcase measure itself, so every H1/H2
-    // keeps the page-grid x while the canvas breaks out of it.
-    <section aria-labelledby="well-hero-title" className="w-full space-y-8">
-      <WellHero />
+    // keeps the page-grid x while the canvas breaks out of it. W-A D3:
+    // `gap-8` + explicit `order` (not space-y) — flex gap follows the
+    // VISUAL order, so the reordered blocks keep their breathing room.
+    <section
+      aria-labelledby="well-hero-title"
+      className="flex w-full flex-col gap-8"
+    >
+      <WellHero className="order-2" />
 
-      <div className="mx-auto w-full max-w-4xl space-y-8">
+      <div className="mx-auto order-1 w-full max-w-4xl space-y-8">
         {/* КТО ЗАНЯТ (§3.1): executors' presence + the work counts, leading to
          * the agents/tasks surfaces. Renders its own honest states (zero
          * agents → the connect line; errors → HonestLine + retry). */}
@@ -62,7 +67,9 @@ export function OverviewPage() {
          * the click leads to the most urgent list; quiet source rows under it.
          * Renders nothing while nothing waits. */}
         <CockpitWaiting />
+      </div>
 
+      <div className="mx-auto order-3 w-full max-w-4xl space-y-8">
         {/* ЧТО В ПАМЯТИ (§3.1): the store cards + the fresh-pulse strip — the
          * same live data as before, now under one cockpit title. */}
         {showMemory ? (
@@ -87,7 +94,7 @@ export function OverviewPage() {
                 <ul className="grid gap-list-gap sm:grid-cols-2">
                   {health.data.servers.map((server) => (
                     <li key={server.name}>
-                      <StoreCard server={server} />
+                      <StoreHealthCard server={server} />
                     </li>
                   ))}
                 </ul>
@@ -145,51 +152,5 @@ export function OverviewPage() {
         </p>
       </div>
     </section>
-  );
-}
-
-/**
- * One store health card — the ui-contract §7 dot rule: green only for a
- * healthy probe, never for "merely slow"; a failed probe shows its reason;
- * a disabled store says so in words (colour never carries the meaning
- * alone — WCAG 1.4.1).
- */
-function StoreCard({ server }: { server: BoardHealthServer }) {
-  const t = useT();
-  const disabled = server.enabled === false;
-  return (
-    <Card>
-      <CardHeader className="gap-1">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="font-mono text-sm font-semibold">{server.name}</h3>
-          {disabled ? (
-            <Badge variant="outline">{t("overview.storeDisabled")}</Badge>
-          ) : server.ok ? (
-            <Badge variant="success">{t("overview.storeOk")}</Badge>
-          ) : (
-            <Badge variant="error">{t("overview.storeFail")}</Badge>
-          )}
-        </div>
-        <p className="text-xs text-foreground-secondary">
-          {server.group_name} ·{" "}
-          {t("overview.storeMemories", { count: server.memories_total ?? 0 })}
-        </p>
-      </CardHeader>
-      <CardContent>
-        {disabled ? (
-          <p className="text-xs text-foreground-muted">
-            {t("overview.storeDisabledNote")}
-          </p>
-        ) : server.ok ? (
-          <p className="font-mono text-xs text-foreground-secondary">
-            {t("overview.storeLatency", { ms: server.latency_ms ?? 0 })}
-          </p>
-        ) : (
-          <p className="text-xs text-error">
-            {server.error ?? t("overview.storeFail")}
-          </p>
-        )}
-      </CardContent>
-    </Card>
   );
 }

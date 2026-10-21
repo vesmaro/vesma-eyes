@@ -88,7 +88,7 @@ describe("OverviewPage (mock gateway — capable)", () => {
     expect(html).toContain("Who is busy");
     expect(html).toContain("executors connected: 2 of 4");
     expect(html).toContain("tasks in progress: 2");
-    expect(html).toContain("queued: 4");
+    expect(html).toContain("queued assignments: 4");
     expect(html).toContain('href="/agents/hosts"');
     expect(html).toContain('href="/agents/execution"');
     expect(html).toContain('href="/tasks"');
@@ -101,11 +101,13 @@ describe("OverviewPage (mock gateway — capable)", () => {
     // «Что ждёт меня»: one summary number-action; the fixtures have inbox
     // items — the urgent target is the inbox; the source rows are links.
     expect(html).toContain("Waiting for you");
-    // ME-072 C: the cockpit chip = numeral + label (no repeated count);
-    // the hero chip carries the «waiting in total» wording.
-    expect(html).toContain("Waiting for the owner");
-    expect(html).not.toContain("Waiting for the owner:");
-    expect(html).toContain("Waiting in total:");
+    // ME-072 C: the cockpit chip = numeral + label (no repeated count in
+    // ONE widget). W-A D1: the hero chip and the cockpit block share the
+    // SAME words («Waiting for the owner») — the «label: N» form on the
+    // page is the hero chip's, and it matches the block's formula.
+    expect(html).toContain(">9</span>");
+    expect(html).toContain("Waiting for the owner</span>");
+    expect(html).toContain("Waiting for the owner:");
     expect(html).toContain('href="/tasks/inbox"');
     expect(html).toContain("In review:"); // «на проверке», never "validating"
     expect(html).not.toContain("validating");

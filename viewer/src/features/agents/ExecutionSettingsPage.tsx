@@ -1,6 +1,9 @@
 import { useState } from "react";
+import { Link } from "react-router";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState/EmptyState";
+import { HonestLine } from "@/components/HonestLine/HonestLine";
 import type { ExecutionSettingsInput } from "@/gateway/boardTypes";
 import { isAgentsSource } from "@/gateway/capabilities";
 import { useGateway } from "@/gateway/GatewayContext";
@@ -8,6 +11,7 @@ import { useT } from "@/i18n";
 import { AgentsUnsupported } from "./AgentsUnsupported";
 import { useExecutors, useExecutionSettings } from "./useAgents";
 import { useAssignmentMutations } from "./useAssignmentMutations";
+import { useExecutionWarning } from "./useExecutionWarning";
 import { formatPulseAge, lastSeenAgeS, presenceFromLastSeen } from "./presence";
 import { useValidationNow } from "@/features/tasks/useValidationClock";
 
@@ -20,6 +24,13 @@ import { useValidationNow } from "@/features/tasks/useValidationClock";
  * disabled with their reason (§2.3); the save runs through the ui-token
  * gate, 422 gate texts come verbatim from the API (the mock raises the
  * same Amd 2 §5 gates).
+ *
+ * W-A (D11-UI, user-panel verdict 2026-10-21): a SAVED pair that cannot
+ * route anything warns right here (the shared `useExecutionWarning` — the
+ * same verdict the /agents/execution page shows). The line shows while the
+ * SHOWN pair matches the LOADED one (editing suppresses it; after a save
+ * the refetch re-arms it — review F3); the ineligible rows already carry
+ * their reasons in the selects.
  */
 
 /** The whole «Исполнение» well — the settings hub reuses it verbatim. */
@@ -35,12 +46,28 @@ export function ExecutionSettingsSection({ anchorId }: { anchorId?: string }) {
   const [fallbackId, setFallbackId] = useState<string>("");
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  // W-A (D11-UI) + review F1: the shared verdict hook sits with the OTHER
+  // hooks, BEFORE the early `!capable` return — Rules of Hooks (a hook
+  // called after a conditional return crashes when `capable` flips).
+  const { warning, fallbackEmpty } = useExecutionWarning();
   // Derived-value adoption (no setState-in-render): before the first edit
   // the selects show the loaded pair; the first change pins the local copy.
   const loaded = settings.data;
   const defaultIdShown = dirty || defaultId !== "" ? defaultId : (loaded?.default_executor ?? "");
   const fallbackIdShown =
     dirty || fallbackId !== "" ? fallbackId : (loaded?.fallback_executor ?? "");
+
+  // Review F3: suppression compares the SHOWN pair with the LOADED one,
+  // not the dirty flag alone — `dirty` never resets, so after any save the
+  // warning used to stay muted until a remount even when the saved pair
+  // was still broken. With the comparison, the post-save refetch lands a
+  // fresh `loaded` that matches the pinned selects again and a STILL-broken
+  // pair warns immediately (a genuinely-edited form stays suppressed).
+  const formMatchesLoaded =
+    loaded !== undefined &&
+    defaultIdShown === (loaded.default_executor ?? "") &&
+    fallbackIdShown === (loaded.fallback_executor ?? "");
+  const showWarning = (!dirty || formMatchesLoaded) && warning !== null;
 
   if (!capable) {
     // Hub posture (UI-21 §3): the SECTION degenerates, the page stays —
@@ -142,30 +169,58 @@ export function ExecutionSettingsSection({ anchorId }: { anchorId?: string }) {
           }
         />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <SettingsSelect
-            id="execution-default"
-            label={t("agents.settings.defaultLabel")}
-            value={defaultIdShown}
-            items={items}
-            disabledReason={selectableReason}
-            onChange={(value) => {
-              setDefaultId(value);
-              setDirty(true);
-            }}
-          />
-          <SettingsSelect
-            id="execution-fallback"
-            label={t("agents.settings.fallbackLabel")}
-            value={fallbackIdShown}
-            items={items}
-            disabledReason={selectableReason}
-            onChange={(value) => {
-              setFallbackId(value);
-              setDirty(true);
-            }}
-          />
-        </div>
+        <>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SettingsSelect
+              id="execution-default"
+              label={t("agents.settings.defaultLabel")}
+              value={defaultIdShown}
+              items={items}
+              disabledReason={selectableReason}
+              onChange={(value) => {
+                setDefaultId(value);
+                setDirty(true);
+              }}
+            />
+            <SettingsSelect
+              id="execution-fallback"
+              label={t("agents.settings.fallbackLabel")}
+              value={fallbackIdShown}
+              items={items}
+              disabledReason={selectableReason}
+              onChange={(value) => {
+                setFallbackId(value);
+                setDirty(true);
+              }}
+            />
+          </div>
+          {/* W-A (D11-UI): the saved pair cannot route anything — the owner
+           * hears it HERE, in the setting itself, not weeks later in the
+           * queue. The empty-fallback note rides along as a second line. */}
+          {showWarning && warning ? (
+            <HonestLine
+              tone="warning"
+              action={
+                <Link
+                  to="/agents/hosts"
+                  className="inline-flex min-h-12 md:min-h-6 items-center gap-1 text-sm font-medium text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                >
+                  {t("agents.settings.warnAction")}
+                  <ArrowRight className="size-4" aria-hidden="true" />
+                </Link>
+              }
+            >
+              <span className="block">
+                {t(warning.key, warning.values)}
+              </span>
+              {fallbackEmpty ? (
+                <span className="mt-0.5 block text-xs text-foreground-muted">
+                  {t("agents.settings.warnFallbackNone")}
+                </span>
+              ) : null}
+            </HonestLine>
+          ) : null}
+        </>
       )}
 
       <div className="flex items-center justify-end gap-2">

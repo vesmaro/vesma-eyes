@@ -15,6 +15,7 @@ import { useTags } from "@/hooks/useTags";
 import { useExecutors } from "@/features/agents/useAgents";
 import { useI18n, useT } from "@/i18n";
 import { isReducedMotion } from "@/living/tones";
+import { cn } from "@/lib/utils";
 import { useWaitingSummary } from "./useWaitingSummary";
 import { useBusTicker } from "./busTicker";
 import {
@@ -79,7 +80,7 @@ const SURFACE_MARKS = [
   { token: "--web-tone-update", key: "overview.legendUpdate" },
 ] as const;
 
-export function WellHero() {
+export function WellHero({ className }: { className?: string }) {
   const t = useT();
   const { lang } = useI18n();
   const liveLayer = useLiveLayer();
@@ -255,7 +256,10 @@ export function WellHero() {
     .join(" · ");
 
   return (
-    <section aria-labelledby="well-hero-title" className="w-full space-y-4">
+    <section
+      aria-labelledby="well-hero-title"
+      className={cn("w-full space-y-4", className)}
+    >
       {/* Hero text elements 1–2 + «Поделиться»: the display headline, the
        * honesty counter and the share action on the page-measure column
        * (the H1 x stays on the page grid while the canvas goes full-bleed).
@@ -431,6 +435,7 @@ export function WellHero() {
             waiting.total > 0 ? (
               <Link
                 to={waiting.urgentTo}
+                title={`${t("cockpit.waitingSummaryTitle")}: ${t("cockpit.waitingFormula")}`}
                 className="inline-flex min-h-12 md:min-h-6 shrink-0 items-center gap-1.5 rounded-sm border border-border bg-canvas px-2 text-sm text-foreground transition-colors duration-instant hover:border-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
               >
                 <span aria-hidden="true" className="text-confidence">

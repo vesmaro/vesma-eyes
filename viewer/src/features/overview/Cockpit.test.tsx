@@ -152,7 +152,7 @@ describe("CockpitBusy (§9.1 matrix)", () => {
     expect(html).toContain("Who is busy");
     expect(html).toContain("executors connected: 2 of 4");
     expect(html).toContain("tasks in progress: 2");
-    expect(html).toContain("queued: 4");
+    expect(html).toContain("queued assignments: 4");
     // The block leads — the roster, the execution feed and the tasks board.
     expect(html).toContain('href="/agents/hosts"');
     expect(html).toContain('href="/agents/execution"');
@@ -276,7 +276,7 @@ describe("CockpitWaiting (§3.1 + persona round 1)", () => {
     // The source rows are quiet links with the owner's wording.
     expect(html).toContain("Inbox: 3");
     expect(html).toContain("In review: 2");
-    expect(html).toContain("Queued: 4");
+    expect(html).toContain("Queued assignments: 4");
     // «на проверке», never the internal "validating" (persona round 1).
     expect(html).not.toContain("validating");
   });

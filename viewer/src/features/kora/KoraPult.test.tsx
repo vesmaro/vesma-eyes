@@ -104,14 +104,14 @@ describe("KoraPult — the collapsed strip (the honest default)", () => {
     const { container } = mountPult({ inboxCount: 2 });
     const badge = container.querySelector<HTMLAnchorElement>('a[href="/tasks/inbox"]');
     expect(badge).not.toBeNull();
-    expect(badge?.textContent).toContain("ждут владельца: 2");
+    expect(badge?.textContent).toContain("Входящие: 2");
     expect(badge?.className).not.toContain("text-foreground-muted");
 
     const zero = mountPult({ inboxCount: 0 });
     const zeroBadge = zero.container.querySelector<HTMLAnchorElement>(
       'a[href="/tasks/inbox"]',
     );
-    expect(zeroBadge?.textContent).toContain("ждут владельца: 0");
+    expect(zeroBadge?.textContent).toContain("Входящие: 0");
     expect(zeroBadge?.className).toContain("text-foreground-muted"); // 0 — muted
   });
 
