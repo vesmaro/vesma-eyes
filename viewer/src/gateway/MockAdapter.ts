@@ -193,6 +193,14 @@ export interface MockAdapterOptions {
    * from the answering corpus).
    */
   tagStoreErrors?: readonly { readonly server?: string; readonly status?: number }[];
+  /**
+   * W-A trust-wa stand scenario (user-panel verdict 2026-10-21): replays the
+   * prod snapshot the panel reviewed — one unreachable store («laptop»),
+   * the default executor disabled with no fallback. Dev/mock only (the
+   * screenshot stand sets VITE_MOCK_SCENARIO=trust-wa); the default mock
+   * fixtures stay untouched for the whole test suite.
+   */
+  scenario?: "trust-wa";
 }
 
 /**
@@ -269,6 +277,8 @@ export class MockAdapter implements MemoryGateway {
     readonly server?: string;
     readonly status?: number;
   }[];
+  /** W-A stand scenario (see MockAdapterOptions.scenario). */
+  private readonly scenario: "trust-wa" | undefined;
 
   // --- Ф3 mutable task state (cloned per instance; fixtures stay pristine) ----
   private tasks: BoardTask[];
@@ -332,6 +342,7 @@ export class MockAdapter implements MemoryGateway {
     this.now = options.now ?? (() => Date.now());
     this.tagCorpus = options.tagCorpus;
     this.tagStoreErrors = options.tagStoreErrors ?? [];
+    this.scenario = options.scenario;
     this.tasks = MOCK_TASKS.map((task) => ({ ...task }));
     this.archivedTasks = [{ ...MOCK_ARCHIVED_TASK }];
     this.inboxItems = MOCK_INBOX.items.map((item) => ({ ...item }));
@@ -339,6 +350,22 @@ export class MockAdapter implements MemoryGateway {
     this.executors = MOCK_EXECUTORS.map((executor) => ({ ...executor }));
     this.harnesses = MOCK_HARNESSES.map((harness) => ({ ...harness }));
     this.executionSettings = { ...MOCK_EXECUTION_SETTINGS };
+    if (options.scenario === "trust-wa") {
+      // The verdict's prod snapshot: the default executor is disabled by the
+      // owner and no fallback is set — the state the panel caught silently
+      // stalling the queue (D11).
+      this.executionSettings = {
+        ok: true,
+        default_executor: "exec-laptop-zcode",
+        fallback_executor: "",
+        scope: "",
+      };
+      this.executors = this.executors.map((executor) =>
+        executor.id === "exec-laptop-zcode"
+          ? { ...executor, enabled: false }
+          : executor,
+      );
+    }
     this.schedules = MOCK_SCHEDULES.map((rule) => ({ ...rule }));
     this.hooks = MOCK_HOOKS.map((rule) => ({ ...rule }));
     this.launches = MOCK_LAUNCHES.map((row) => ({ ...row }));
@@ -750,6 +777,40 @@ export class MockAdapter implements MemoryGateway {
    */
   async boardHealth(signal?: AbortSignal): Promise<BoardHealthDetail> {
     await this.delay(signal);
+    // W-A trust-wa stand: the verdict's prod snapshot — cluster answers,
+    // laptop is unreachable (the alarm the panel caught as a dead end).
+    if (this.scenario === "trust-wa") {
+      return {
+        ok: true,
+        service: "vesma-eyes",
+        board_tasks: MOCK_TRACES.length,
+        app_version: null,
+        servers: [
+          {
+            name: "cluster",
+            group_name: "default",
+            enabled: true,
+            state: "idle",
+            description: "answering store",
+            ok: true,
+            latency_ms: 112,
+            error: null,
+            memories_total: MOCK_MEMORIES.length,
+          },
+          {
+            name: "laptop",
+            group_name: "default",
+            enabled: true,
+            state: "idle",
+            description: "unreachable store",
+            ok: false,
+            latency_ms: null,
+            error: "laptop: unreachable (ConnectError)",
+            memories_total: 0,
+          },
+        ],
+      };
+    }
     return {
       ok: true,
       service: "vesma-eyes",
@@ -833,6 +894,19 @@ export class MockAdapter implements MemoryGateway {
           items: items.length,
           detail: null,
         },
+        // W-A trust-wa stand: the unreachable laptop rides the merged feed's
+        // notes even though it contributed no rows — the degraded-store
+        // alarm must have its source (the panel's dead-end plaque case).
+        ...(this.scenario === "trust-wa" && !scope
+          ? [
+              {
+                server: "laptop",
+                ok: false,
+                items: 0,
+                detail: null,
+              },
+            ]
+          : []),
       ],
     };
   }

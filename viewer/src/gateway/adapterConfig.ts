@@ -80,7 +80,13 @@ export async function createGateway(): Promise<MemoryGateway> {
   switch (ADAPTER) {
     case "mock": {
       const { MockAdapter } = await import("./MockAdapter");
-      return new MockAdapter();
+      // W-A stand knob: VITE_MOCK_SCENARIO=trust-wa replays the user-panel
+      // verdict's prod snapshot (unreachable store, disabled default
+      // executor). Dev-only — prod builds never boot the mock adapter.
+      const scenario = import.meta.env.VITE_MOCK_SCENARIO;
+      return new MockAdapter(
+        scenario === "trust-wa" ? { scenario: "trust-wa" } : {},
+      );
     }
     case "board":
       // Security audit point Ф0 (ADR 0011 §7, security verdict §5.3): the
