@@ -21,8 +21,11 @@
       // canonical family either. Mirrors src/components/theme-provider.tsx —
       // keep the storage keys and resolution order in sync (guarded by
       // src/styles/tokens.test.ts):
-      // - vesmaro.theme: "dark"/"light" = explicit family (UI-23; legacy
-      //   mnemos-eyes:theme read-only fallback), absent = «Системная» (OS).
+      // - vesmaro.theme: "dark"/"light" = explicit family (UI-23); absent =
+      //   «Системная» (OS). Legacy fallbacks are BOTH read, in order:
+      //   vesma-eyes:theme (rename-wave defensive read) then mnemos-eyes:theme
+      //   (the REAL pre-rename writer — the pre-migration cohort's only
+      //   record). Never written; «Системная» clears all three in the app.
       // - vesmaro.appearance: {"lastDark","lastLight"} preset slots; the
       //   resolved preset = slots[family]; Колодец = NO data-theme attribute
       //   (dark :root), every other preset sets its [data-theme] scope.
@@ -36,6 +39,14 @@
           light: "#f5f6f8",
           prosvet: "#f4efe6"
         };
+        // Own-property lookup ONLY — a truthy prototype read ("constructor")
+        // must never pass as a preset id (P3-2 review hardening).
+        function ownsPreset(key) {
+          return (
+            typeof key === "string" &&
+            Object.prototype.hasOwnProperty.call(PRESET_BASE, key)
+          );
+        }
         var slots = { lastDark: "well", lastLight: "light" };
         try {
           var storedSlots = JSON.parse(
@@ -43,8 +54,8 @@
           );
           if (
             storedSlots &&
-            PRESET_BASE[storedSlots.lastDark] &&
-            PRESET_BASE[storedSlots.lastLight]
+            ownsPreset(storedSlots.lastDark) &&
+            ownsPreset(storedSlots.lastLight)
           ) {
             slots = storedSlots;
           }
@@ -52,6 +63,9 @@
           /* Corrupt slots record: canonical defaults. */
         }
         var stored = localStorage.getItem("vesmaro.theme");
+        if (stored !== "light" && stored !== "dark") {
+          stored = localStorage.getItem("vesma-eyes:theme");
+        }
         if (stored !== "light" && stored !== "dark") {
           stored = localStorage.getItem("mnemos-eyes:theme");
         }

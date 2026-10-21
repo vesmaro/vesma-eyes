@@ -5,6 +5,7 @@ import { createRoot, type Root } from "react-dom/client";
 
 import {
   APPEARANCE_STORAGE_KEY,
+  LEGACY_MNEMOS_THEME_STORAGE_KEY,
   LEGACY_THEME_STORAGE_KEY,
   THEME_STORAGE_KEY,
   PRESET_ATTR,
@@ -149,9 +150,10 @@ describe("theme provider — «Системная» mode on top (UI-23 §2.1 sem
     await actUnmount(root);
   });
 
-  it("«Системная» removes BOTH theme records, keeps the preset slots, follows the OS live (§8.2)", async () => {
+  it("«Системная» removes the record AND BOTH legacy records, keeps the preset slots, follows the OS live (§8.2)", async () => {
     localStorage.setItem(THEME_STORAGE_KEY, "light");
     localStorage.setItem(LEGACY_THEME_STORAGE_KEY, "light");
+    localStorage.setItem(LEGACY_MNEMOS_THEME_STORAGE_KEY, "light");
     localStorage.setItem(
       APPEARANCE_STORAGE_KEY,
       JSON.stringify({ lastDark: "sozvezdia", lastLight: "prosvet" }),
@@ -162,6 +164,8 @@ describe("theme provider — «Системная» mode on top (UI-23 §2.1 sem
     click(container, "set-system");
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
     expect(localStorage.getItem(LEGACY_THEME_STORAGE_KEY)).toBeNull();
+    // Both legacy records die — a surviving one would resurrect the choice.
+    expect(localStorage.getItem(LEGACY_MNEMOS_THEME_STORAGE_KEY)).toBeNull();
     // The slots SURVIVE the mode switch (toggle must land back on them).
     expect(JSON.parse(localStorage.getItem(APPEARANCE_STORAGE_KEY)!)).toEqual({
       lastDark: "sozvezdia",
@@ -239,11 +243,21 @@ describe("theme provider — preset slots vs family (brief §1: the toggle never
 });
 
 describe("theme migration (spec §4.2 / acceptance §8.3 — storage compat intact)", () => {
-  it("reads the legacy key when the new one is absent", async () => {
-    localStorage.setItem(LEGACY_THEME_STORAGE_KEY, "light");
+  it("reads the REAL pre-rename legacy key mnemos-eyes:theme (the P2-1 split — closed)", async () => {
+    // The pre-migration cohort's ONLY record: the bootstrap has always read
+    // this key; the provider must see the same value (no boot flash/flip).
+    localStorage.setItem(LEGACY_MNEMOS_THEME_STORAGE_KEY, "light");
     const { root, container } = await mountTheme();
     expect(probe(container).dataset.theme).toBe("light");
     expect(probe(container).dataset.preset).toBe("light"); // Береста, not moved
+    await actUnmount(root);
+  });
+
+  it("reads the rename-wave legacy key vesma-eyes:theme as a defensive fallback", async () => {
+    localStorage.setItem(LEGACY_THEME_STORAGE_KEY, "dark");
+    const { root, container } = await mountTheme();
+    expect(probe(container).dataset.theme).toBe("dark");
+    expect(probe(container).dataset.preset).toBe("well");
     await actUnmount(root);
   });
 
@@ -258,8 +272,9 @@ describe("theme migration (spec §4.2 / acceptance §8.3 — storage compat inta
     await actUnmount(root);
   });
 
-  it("the new key wins over the legacy one", async () => {
+  it("the new key wins over BOTH legacy ones (documented order)", async () => {
     localStorage.setItem(LEGACY_THEME_STORAGE_KEY, "light");
+    localStorage.setItem(LEGACY_MNEMOS_THEME_STORAGE_KEY, "light");
     localStorage.setItem(THEME_STORAGE_KEY, "dark");
     const { root, container } = await mountTheme();
     expect(probe(container).dataset.theme).toBe("dark");
@@ -268,6 +283,13 @@ describe("theme migration (spec §4.2 / acceptance §8.3 — storage compat inta
 
   it("a corrupt legacy value falls back to system (no complaints)", async () => {
     localStorage.setItem(LEGACY_THEME_STORAGE_KEY, "sepia");
+    const { root, container } = await mountTheme();
+    expect(probe(container).dataset.choice).toBe("system");
+    await actUnmount(root);
+  });
+
+  it("a corrupt value in the REAL legacy key falls back to system too", async () => {
+    localStorage.setItem(LEGACY_MNEMOS_THEME_STORAGE_KEY, "sepia");
     const { root, container } = await mountTheme();
     expect(probe(container).dataset.choice).toBe("system");
     await actUnmount(root);

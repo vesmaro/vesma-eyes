@@ -1778,7 +1778,7 @@ export const en: Record<TranslationKey, string> = {
   // Presets brief §1 (themes-presets-wave1): ONE «Оформление» control —
   // «Системная» + five lore-named presets. The topbar toggle keeps its
   // family-level aria (topbar.themeToLight/themeToDark).
-  "settings.hub.themeLabel": "Theme",
+  "settings.hub.themeLabel": "Appearance",
   "settings.hub.themeSystem": "System",
   "settings.hub.presetWell": "Well",
   "settings.hub.presetZhila": "Vein",

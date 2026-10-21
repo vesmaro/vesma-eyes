@@ -55,11 +55,19 @@ export const SETTINGS_REGISTRY = [
   {
     key: "vesmaro.theme",
     kind: "enum",
-    values: ["system", "light", "dark"],
-    default: "system",
+    values: ["dark", "light"],
+    default: "dark",
     scope: "global",
     owner: "src/components/theme-provider.tsx",
-    note: "v2 migration: legacy read fallback vesma-eyes:theme (light|dark); writes go to the new key only; «system» removes both records.",
+    note: "Only \"dark\"|\"light\" are ever WRITTEN — the explicit family lock (presets brief §1). The effective default is «Системная»: an ABSENT record follows the OS, and the hub's «Системная» mode REMOVES the record instead of writing a value. Legacy read-only fallbacks, in order: vesma-eyes:theme then mnemos-eyes:theme (the REAL pre-rename writer); «Системная» clears all three.",
+  },
+  {
+    key: "vesmaro.appearance",
+    kind: "flag",
+    default: '{"lastDark":"well","lastLight":"light"}',
+    scope: "global",
+    owner: "src/components/theme-provider.tsx",
+    note: "NEW presets brief §1: a JSON document {lastDark,lastLight} — the last chosen preset PER FAMILY (dark: well|zhila|sozvezdia, light: light|prosvet). Written on every preset change INCLUDING in «Системная» mode, so the top-bar family toggle lands back on the last preset; read with slot-by-slot whitelist validation. The resolved look = slots[family].",
   },
   {
     key: "vesmaro.motion",

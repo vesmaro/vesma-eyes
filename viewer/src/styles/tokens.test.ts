@@ -1073,13 +1073,24 @@ describe("self-hosted fonts (T4)", () => {
 
 describe("theme + preset bootstrap (design-system.md §9, presets brief §1)", () => {
   it("resolves the theme before first paint with the provider's contract", () => {
-    // UI-23 migration: the new registry key first, the legacy fallback second.
+    // UI-23 migration: the new registry key first, then BOTH legacy
+    // fallbacks in the documented order (vesma-eyes:theme = rename-wave
+    // defensive read, mnemos-eyes:theme = the REAL pre-rename writer —
+    // the P2-1 split is closed by the boot reading the SAME chain).
     expect(indexHtml).toContain("vesmaro.theme");
+    expect(indexHtml).toContain("vesma-eyes:theme");
     expect(indexHtml).toContain("mnemos-eyes:theme");
     expect(
       indexHtml.indexOf("vesmaro.theme"),
-      "the new key must be consulted before the legacy one",
+      "the new key must be consulted before the legacy ones",
+    ).toBeLessThan(indexHtml.indexOf("vesma-eyes:theme"));
+    expect(
+      indexHtml.indexOf("vesma-eyes:theme"),
+      "the rename-wave key precedes the real pre-rename key",
     ).toBeLessThan(indexHtml.indexOf("mnemos-eyes:theme"));
+    // The bootstrap validates slots by OWN PROPERTY, not truthy lookup
+    // (P3-2: "constructor" must never pass as a preset id).
+    expect(indexHtml).toContain("hasOwnProperty.call(PRESET_BASE");
     // Presets (themes-presets-wave1): the slot record + per-preset attribute.
     expect(indexHtml).toContain("vesmaro.appearance");
     expect(indexHtml).toContain("prefers-color-scheme"); // system default

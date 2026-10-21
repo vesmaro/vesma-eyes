@@ -10,7 +10,12 @@ import { MockAdapter } from "@/gateway/MockAdapter";
 import { GatewayContext } from "@/gateway/GatewayContext";
 import { keys } from "@/lib/queryKeys";
 import { I18nProvider } from "@/i18n";
-import { ThemeProvider, THEME_STORAGE_KEY, LEGACY_THEME_STORAGE_KEY } from "@/components/theme-provider";
+import {
+  ThemeProvider,
+  THEME_STORAGE_KEY,
+  LEGACY_THEME_STORAGE_KEY,
+  LEGACY_MNEMOS_THEME_STORAGE_KEY,
+} from "@/components/theme-provider";
 import { DensityProvider, DENSITY_STORAGE_KEY } from "@/components/density-provider";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
 import { UiTokenProvider } from "@/features/ui-token/UiTokenProvider";
@@ -241,11 +246,14 @@ describe("Appearance — the preset registry is one control and live (presets br
 
   it("«System» removes the theme records AND keeps the preset slots (fallback must not resurrect)", async () => {
     localStorage.setItem(LEGACY_THEME_STORAGE_KEY, "light");
+    localStorage.setItem(LEGACY_MNEMOS_THEME_STORAGE_KEY, "light");
     const { root, container } = await mountHub();
     press(container, "appearance", "Glimmer"); // explicit write first
     press(container, "appearance", "System");
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
     expect(localStorage.getItem(LEGACY_THEME_STORAGE_KEY)).toBeNull();
+    // BOTH legacy records die — a surviving one would resurrect the choice.
+    expect(localStorage.getItem(LEGACY_MNEMOS_THEME_STORAGE_KEY)).toBeNull();
     // The slots survive: the topbar toggle lands back on «Просвет».
     expect(JSON.parse(localStorage.getItem("vesmaro.appearance")!)).toEqual({
       lastDark: "well",

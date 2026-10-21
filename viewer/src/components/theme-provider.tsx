@@ -93,7 +93,8 @@ export function attrIsLightFamily(attr: string | null): boolean {
  * - `vesmaro.theme` (registry key, UI-23): "dark" | "light" = the EXPLICIT
  *   family lock; absent = «Системная» (follow the OS). Semantics unchanged —
  *   an older build's tab reading only this key keeps dark/light. The legacy
- *   `vesma-eyes:theme` stays a read-only fallback, never written.
+ *   keys (`vesma-eyes:theme`, `mnemos-eyes:theme`) stay read-only fallbacks,
+ *   never written.
  * - `vesmaro.appearance` (NEW this wave): JSON
  *   `{"lastDark":"well","lastLight":"light"}` — the LAST CHOSEN PRESET PER
  *   FAMILY. Written on every preset change INCLUDING in «Системная» mode, so
@@ -106,7 +107,24 @@ export function attrIsLightFamily(attr: string | null): boolean {
  */
 export const APPEARANCE_STORAGE_KEY = "vesmaro.appearance";
 export const THEME_STORAGE_KEY = "vesmaro.theme";
+/**
+ * Legacy theme keys — READ-ONLY, never written, both cleared by «Системная».
+ * Resolution order (must match the index.html bootstrap byte-for-byte in
+ * BEHAVIOUR, pinned by tokens.test.ts):
+ *   vesmaro.theme → vesma-eyes:theme → mnemos-eyes:theme → null (= system).
+ * `vesma-eyes:theme` is the rename-wave defensive fallback (the exported
+ * LEGACY_THEME_STORAGE_KEY, guarded by tests); `mnemos-eyes:theme` is the
+ * REAL pre-rename writer — the pre-migration cohort's only record. The P2-1
+ * review finding: the bootstrap read mnemos-eyes while the provider read
+ * vesma-eyes, so that cohort got a first paint in their theme and a silent
+ * flip after mount. Reading BOTH closes the split; the first hit wins.
+ */
 export const LEGACY_THEME_STORAGE_KEY = "vesma-eyes:theme";
+export const LEGACY_MNEMOS_THEME_STORAGE_KEY = "mnemos-eyes:theme";
+export const LEGACY_THEME_STORAGE_KEYS = [
+  LEGACY_THEME_STORAGE_KEY,
+  LEGACY_MNEMOS_THEME_STORAGE_KEY,
+] as const;
 
 export interface PresetSlots {
   lastDark: DarkPresetId;
@@ -129,9 +147,10 @@ function getSystemTheme(): Theme {
 }
 
 /**
- * Read the persisted explicit family: new key → legacy key → null
- * (= «Системная»). Guarded try/catch — private mode falls back to the
- * system default silently (spec §4.1 storage conventions).
+ * Read the persisted explicit family: new key → BOTH legacy keys (in the
+ * documented order, see LEGACY_THEME_STORAGE_KEYS) → null (= «Системная»).
+ * Guarded try/catch — private mode falls back to the system default
+ * silently (spec §4.1 storage conventions).
  */
 export function readStoredExplicitFamily(): Theme | null {
   try {
@@ -141,11 +160,14 @@ export function readStoredExplicitFamily(): Theme | null {
     return null; // storage unavailable — system default
   }
   try {
-    const legacy = window.localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
-    return legacy === "light" || legacy === "dark" ? legacy : null;
+    for (const legacyKey of LEGACY_THEME_STORAGE_KEYS) {
+      const legacy = window.localStorage.getItem(legacyKey);
+      if (legacy === "light" || legacy === "dark") return legacy;
+    }
   } catch {
     return null;
   }
+  return null;
 }
 
 /**
@@ -249,7 +271,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       if (choice === "system") {
         try {
           window.localStorage.removeItem(THEME_STORAGE_KEY);
-          window.localStorage.removeItem(LEGACY_THEME_STORAGE_KEY);
+          // BOTH legacy records die here — otherwise a surviving one would
+          // resurrect the pre-migration choice on the next boot.
+          for (const legacyKey of LEGACY_THEME_STORAGE_KEYS) {
+            window.localStorage.removeItem(legacyKey);
+          }
         } catch {
           // Non-fatal: the mode still applies for this session.
         }
