@@ -110,13 +110,14 @@ afterEach(() => {
 });
 
 function probeRow(): HTMLTableRowElement {
-  const row = container!
-    .querySelector(`a[href^="/tasks/RM-1?"]`)
-    ?.closest("tr");
+  const row = container!.querySelector(`a[href^="/tasks/RM-1?"]`)?.closest("tr");
   expect(row).toBeDefined();
   return row as HTMLTableRowElement;
 }
 
+// The fixed right-click placement portals to document.body (one clipping
+// rule for every fixed popup, wherever the row lives) — queries are
+// document-wide; behavioural assertions untouched.
 describe("list-row right-click (fix/list-row-context-menu)", () => {
   it("right-click opens the row menu at the cursor; Esc closes", async () => {
     await mountList();
@@ -131,10 +132,11 @@ describe("list-row right-click (fix/list-row-context-menu)", () => {
         }),
       );
     });
-    const menu = container!.querySelector('[role="menu"]');
+    const menu = document.querySelector('[role="menu"]');
     expect(menu).not.toBeNull();
-    // RU locale of the shared row menu — same entries as the kanban cards.
-    expect(container!.textContent).toContain("Переместить…");
+    // RU locale of the shared row menu — same entries as the kanban cards
+    // (the popup text lives in the portal node, outside the app container).
+    expect(menu!.textContent).toContain("Переместить…");
     await act(async () => {
       row.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     });
@@ -143,6 +145,6 @@ describe("list-row right-click (fix/list-row-context-menu)", () => {
     await act(async () => {
       document.body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
     });
-    expect(container!.querySelector('[role="menu"]')).toBeNull();
+    expect(document.querySelector('[role="menu"]')).toBeNull();
   });
 });
