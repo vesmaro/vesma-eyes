@@ -118,7 +118,7 @@ data. Restoring data is always putting a file back from a copy.
 
 The same order, different database owners:
 
-- The cluster mnemos: copy `vesma.db` and `vectors.db` from the backup
+- The cluster vesma: copy `vesma.db` and `vectors.db` from the backup
   onto its PVC with the vesma pod stopped, then start it and check
   `integrity_check`. Do not touch the vesma Helm release during this
   window.

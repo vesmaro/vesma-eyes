@@ -2156,7 +2156,7 @@ export const ru = {
     "Безопасность, федерация и операционные ранбуки для администратора vesma.",
   "docs.cat.mnemosArchitecture": "Архитектура",
   "docs.catDesc.mnemosArchitecture":
-    "Обзор устройства mnemos: гибридная память и поверхности управления.",
+    "Обзор устройства vesma: гибридная память и поверхности управления.",
   "docs.cat.meshUser": "Пользователю",
   "docs.catDesc.meshUser": "Запуск узла vesma-mesh и настройка федерации.",
   "docs.cat.meshAdmin": "Администратору",

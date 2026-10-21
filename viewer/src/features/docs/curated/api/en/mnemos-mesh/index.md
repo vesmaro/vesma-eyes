@@ -7,7 +7,7 @@ title: vesma-mesh — no public HTTP API
 vesma-mesh has no public HTTP API — inventing a reference here would be
 dishonest. The mesh is designed as a “dumb transport”: nodes exchange
 already-processed records over internal contracts; moderation and storage
-stay in mnemos.
+stay in vesma.
 
 ## What exists instead of a public API
 

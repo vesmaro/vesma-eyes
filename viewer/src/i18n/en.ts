@@ -2302,7 +2302,7 @@ export const en: Record<TranslationKey, string> = {
   "pairing.devices.grantsFailed": "Could not update the grants",
   "pairing.unsupportedTitle": "Pairing is unavailable in this mode",
   "pairing.unsupportedMessage":
-    "The devices domain speaks the board merge-API; the direct-mnemos mode has no such page.",
+    "The devices domain speaks the board merge-API; the direct-vesma mode has no such page.",
 
   // The device page (/pair, §2.3 — no authentication).
   "pair.title": "Connect this device",
