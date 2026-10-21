@@ -53,7 +53,7 @@ describe("ConnectGuide (AGW-4 + connect hotfix)", () => {
     const steps = container.querySelectorAll("ol li");
     expect(steps).toHaveLength(5);
     // Step 1 — open the dialog, fill name + harness (own harness allowed).
-    expect(steps[0]!.textContent).toContain("Add executor");
+    expect(steps[0]!.textContent).toContain("Add agent");
     expect(steps[0]!.textContent).toContain("harness");
     // Step 2 — the ONE command comes from the token screen.
     expect(steps[1]!.textContent).toContain("ONE command");

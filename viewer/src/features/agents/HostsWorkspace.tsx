@@ -64,6 +64,7 @@ import {
   hostRevoked,
   hostRoutable,
   hostRouteId,
+  hostSessionDisplayLabels,
   groupExecutorsByHost,
   type HostGroup,
 } from "./rosterModel";
@@ -1008,33 +1009,39 @@ function HostField({
                 </p>
               ) : (
                 <ul className="space-y-0.5">
-                  {liveSessions.map((session) => (
-                    <li key={session.id}>
-                      <Link
-                        to={`/kora/${encodeURIComponent(session.id)}`}
-                        className="flex min-h-9 items-center gap-1.5 rounded-sm px-1 text-sm transition-colors duration-instant hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
-                      >
-                        <span
-                          aria-hidden="true"
-                          className="size-2 shrink-0 rounded-full bg-success presence-dot-live"
-                        />
-                        <span className="shrink-0 font-mono text-xs text-foreground-secondary">
-                          {session.harness}
-                        </span>
-                        <span className="min-w-0 truncate text-foreground-secondary">
-                          {session.project ?? session.native_id}
-                        </span>
-                        {sessionSupport(session) === "lists-only" ? (
-                          <Badge
-                            variant="outline"
-                            className="shrink-0 whitespace-nowrap font-normal"
-                          >
-                            {t("kora.coverage.support.lists-only")}
-                          </Badge>
-                        ) : null}
-                      </Link>
-                    </li>
-                  ))}
+                  {hostSessionDisplayLabels(liveSessions).map((label, index) => {
+                    const session = liveSessions[index]!;
+                    return (
+                      <li key={session.id}>
+                        <Link
+                          to={`/kora/${encodeURIComponent(session.id)}`}
+                          className="flex min-h-9 items-center gap-1.5 rounded-sm px-1 text-sm transition-colors duration-instant hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+                        >
+                          <span
+                            aria-hidden="true"
+                            className="size-2 shrink-0 rounded-full bg-success presence-dot-live"
+                          />
+                          <span className="shrink-0 font-mono text-xs text-foreground-secondary">
+                            {session.harness}
+                          </span>
+                          <span className="min-w-0 truncate text-foreground-secondary">
+                            {/* D9: same-project live sessions are told apart
+                             * by the session's own native-id tail — the row
+                             * never renders two identical names. */}
+                            {label}
+                          </span>
+                          {sessionSupport(session) === "lists-only" ? (
+                            <Badge
+                              variant="outline"
+                              className="shrink-0 whitespace-nowrap font-normal"
+                            >
+                              {t("kora.coverage.support.lists-only")}
+                            </Badge>
+                          ) : null}
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>

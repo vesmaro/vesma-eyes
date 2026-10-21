@@ -121,7 +121,7 @@ describe("approveExecutor (the page's main action)", () => {
     h.mutations.approveExecutor({ ...PENDING, id: "exec-copilot-revoked", name: "copilot@old-host", state: "revoked" });
     await vi.waitFor(() => expect(h.toasts).toHaveLength(1));
     expect(h.toasts[0].kind).toBe("error");
-    expect(h.toasts[0].title).toBe("Failed to update the executor");
+    expect(h.toasts[0].title).toBe("Failed to update the agent");
     expect(h.toasts[0].detail).toContain("terminal state");
   });
 });

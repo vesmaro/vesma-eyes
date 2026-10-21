@@ -205,6 +205,9 @@ function HarnessRow({
             "shrink-0 text-xs",
             PRESENCE_TEXT[presenceKey] ?? PRESENCE_TEXT.unknown,
           )}
+          title={
+            presenceKey === "unknown" ? t("agents.presence.unknownHint") : undefined
+          }
         >
           {t(presenceLabelKey(presenceKey))}
         </span>

@@ -1358,6 +1358,12 @@ export const ru = {
   "agents.presence.stale": "пульс пропущен",
   "agents.presence.offline": "не на связи",
   "agents.presence.unknown": "присутствие неизвестно",
+  // D9 (панель 2026-10-21): «присутствие неизвестно · отключён» рядом с
+  // живыми сессиями хоста читалось как противоречие. Подсказка объясняет
+  // ДВУХ-ЧАСОВОЕ правило (§2.1): присутствие и живость сессий — независимые
+  // факты; данные не выдумываются.
+  "agents.presence.unknownHint":
+    "Пульса от этой строки нет, поэтому присутствие неизвестно — это не поломка. Живые сессии хоста — отдельный факт: они приходят из журнала сессий и от пульса не зависят.",
   "agents.group.active": "активные",
   "agents.group.queued": "очередь",
   "agents.group.terminal": "терминальные за сегодня",
@@ -1416,24 +1422,24 @@ export const ru = {
   // --- agents domain: registry page /agents/harnesses (AGW-4) ----------------------
   "nav.agentsHarnesses": "Подключить хост",
   "agents.registry.title": "Подключение агентов",
-  "agents.registry.loading": "Загружаем реестр исполнителей",
-  "agents.registry.failed": "Не удалось загрузить реестр исполнителей",
+  "agents.registry.loading": "Загружаем реестр агентов",
+  "agents.registry.failed": "Не удалось загрузить реестр агентов",
   "agents.registry.band.pending": "Ожидают подтверждения",
   "agents.registry.band.active": "Подключённые",
   "agents.registry.band.revoked": "Отозванные",
   "agents.registry.approve": "Одобрить",
   "agents.registry.approveHint":
-    "после одобрения включите исполнителя — маршрутизация берёт только включённых",
+    "после одобрения включите агента — маршрутизация берёт только включённых",
   "agents.registry.enable": "Включить",
   "agents.registry.disable": "Отключить",
   "agents.registry.revoke": "Отозвать",
   "agents.registry.remove": "Удалить",
   "agents.registry.capabilitiesLabel": "Умения",
   "agents.registry.capabilitiesHint":
-    "Умения — что хосту можно запускать. Назначьте — и задачи смогут его находить.",
+    "Умения — что этому агенту можно поручать. Назначьте первое в его карточке — задачи смогут его находить.",
   "agents.registry.hostLabel": "хост",
   "agents.registry.revokedHint":
-    "доверие не восстанавливается — зарегистрируйте исполнителя заново",
+    "доверие не восстанавливается — зарегистрируйте агента заново",
 
   // UXE-2: the connection lifecycle pills (07a dictionary §4) — the state
   // LIST is server-owned (meta.lifecycle.states), the HUMAN wording lives
@@ -1462,7 +1468,7 @@ export const ru = {
 
   "agents.connect.label": "Как подключить внешнего агента",
   "agents.connect.step1":
-    "Нажмите «Добавить исполнителя», заполните имя и харнес — свой харнес можно добавить прямо в списке.",
+    "Нажмите «Добавить агента», заполните имя и харнес — свой харнес можно добавить прямо в списке.",
   "agents.connect.step2": "Создайте токен и скопируйте ОДНУ команду с экрана.",
   "agents.connect.step3":
     "Выполните её на внешней машине (VPS) — она сама установит зависимости, агента и службу.",
@@ -1474,7 +1480,7 @@ export const ru = {
     "Команда скачивает установщик с борда (текст установщика публичный), дальнейшее — по защищённому каналу с проверкой сертификата. Токен одноразовый, живёт 15 минут.",
   "agents.connect.manual":
     "Ручной путь — deploy/poller/REMOTE-EXECUTOR.md («Путь 2 — руками», для диагностики и изолированных сетей).",
-  "agents.executors.actionFailed": "Не удалось изменить исполнителя",
+  "agents.executors.actionFailed": "Не удалось изменить агента",
   "agents.executors.approved": "{{name}}: одобрен",
   "agents.executors.approvedDetail":
     "включите исполнителя — маршрутизация берёт только включённых",
@@ -1607,7 +1613,7 @@ export const ru = {
     "Секрет не показывается никогда: он виден один раз при регистрации. Потеряли — отзовите исполнителя и зарегистрируйте заново.",
   "agents.registry.viaEnrollment": "происхождение: enrollment-токен",
   "agents.registry.viaMachine": "происхождение: машина-токен",
-  "agents.enrollment.title": "Добавить исполнителя",
+  "agents.enrollment.title": "Добавить агента",
   "agents.enrollment.description":
     "Создание одноразового токена подключения для удалённого исполнителя",
   "agents.enrollment.formHint":
@@ -1615,7 +1621,7 @@ export const ru = {
   "agents.enrollment.label": "Название (для себя)",
   "agents.enrollment.labelPlaceholder": "например, vps-1",
   "agents.enrollment.harness": "Харнес (подсказка для команд)",
-  "agents.enrollment.nameHint": "Имя исполнителя (необязательно)",
+  "agents.enrollment.nameHint": "Имя агента (необязательно)",
   "agents.enrollment.create": "Создать токен",
   "agents.enrollment.creating": "Создаём…",
   "agents.enrollment.createFailed": "Не удалось создать токен",
@@ -1668,7 +1674,7 @@ export const ru = {
     "строчные латиница/цифры/дефисы и точки — IP или FQDN без слэшей",
   "agents.provision.port": "SSH-порт",
   "agents.provision.portError": "порт — число от 1 до 65535",
-  "agents.provision.name": "Имя исполнителя (необязательно)",
+  "agents.provision.name": "Имя агента (необязательно)",
   "agents.provision.nameError":
     "начинается с буквы/цифры; буквы, цифры, точка, «_», «-» до 120 знаков",
   "agents.provision.authLegend": "Способ входа",

@@ -306,3 +306,40 @@ export function activeAssignmentsForHost(
       b.created_at.localeCompare(a.created_at),
   );
 }
+
+/**
+ * D9 (user-panel 2026-10-21): the host card's live-session rows read
+ * «hermes:api_server» TWICE — the harness reports the project, not the
+ * session, so two same-project sessions render indistinguishable rows.
+ * The disambiguator is the session's OWN identity tail: when a displayed
+ * label occurs more than once in the rendered list, every row of that
+ * label gains the mono tail of its native id (the registry PK part 2 —
+ * always present, never invented). Unique labels stay untouched — the
+ * suffix appears only where it disambiguates.
+ */
+export function hostSessionDisplayLabels(
+  sessions: readonly {
+    native_id: string;
+    project?: string | null;
+  }[],
+): string[] {
+  const baseLabel = (session: {
+    native_id: string;
+    project?: string | null;
+  }): string =>
+    typeof session.project === "string" && session.project.length > 0
+      ? session.project
+      : session.native_id;
+  const counts = new Map<string, number>();
+  for (const session of sessions) {
+    const label = baseLabel(session);
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
+  return sessions.map((session) => {
+    const label = baseLabel(session);
+    if ((counts.get(label) ?? 0) <= 1) return label;
+    const native = session.native_id;
+    const tail = native.slice(-6);
+    return tail.length > 0 && tail !== native ? `${label} · …${tail}` : native;
+  });
+}
