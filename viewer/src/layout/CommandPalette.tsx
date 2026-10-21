@@ -2,6 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Search } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  COLUMN_STATUS_MAP,
+  isTaskColumn,
+  statusBadgeVariant,
+  statusLabelKey,
+} from "@/features/tasks/taskStatus";
 import { useT } from "@/i18n";
 import { withReturn } from "@/lib/returnParams";
 import { usePaletteOpen, setPaletteOpen } from "@/lib/paletteState";
@@ -385,6 +392,13 @@ function optionDomId(itemId: string): string {
   return `cmdk-option-${itemId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
 }
 
+/** Task chip vocabulary: the board column → workflow status (taskStatus.ts
+ * mirrors the wire dictionaries; unknown values fall through to the honest
+ * «unknown» label with the neutral badge). */
+function taskChipStatus(col: string): string {
+  return isTaskColumn(col) ? COLUMN_STATUS_MAP[col] : col;
+}
+
 function PaletteGroupBlock({
   entry,
   offset,
@@ -400,6 +414,7 @@ function PaletteGroupBlock({
   onChoose: (item: PaletteItem, via: "enter" | "click") => void;
   onHover: (index: number) => void;
 }) {
+  const t = useT();
   const labelId = `${LISTBOX_ID}-label-${entry.group}`;
   return (
     <div role="group" aria-labelledby={labelId} className="mb-1 last:mb-0">
@@ -412,13 +427,33 @@ function PaletteGroupBlock({
       <ul>
         {entry.items.map((item, position) => {
           const isActive = item.id === activeId;
+          // The li's aria-label overrides the row content for the screen
+          // reader — the second story (snippet / chip + agents) must ride it,
+          // or the v12 preview richness would be silent to SR users.
+          const secondStoryText =
+            item.group === "memory"
+              ? item.preview
+              : item.group === "tasks"
+                ? [
+                    item.status !== undefined
+                      ? t(statusLabelKey(taskChipStatus(item.status)))
+                      : "",
+                    (item.taskAgents ?? []).join(", "),
+                  ]
+                    .filter(Boolean)
+                    .join(" ")
+                : undefined;
           return (
             <li
               key={item.id}
               id={optionDomId(item.id)}
               role="option"
               aria-selected={isActive}
-              aria-label={`${label}: ${item.label}`}
+              aria-label={
+                secondStoryText
+                  ? `${label}: ${item.label} — ${secondStoryText}${item.hint ? ` (${item.hint})` : ""}`
+                  : `${label}: ${item.label}`
+              }
             >
               <button
                 type="button"
@@ -429,13 +464,44 @@ function PaletteGroupBlock({
                 // a one-step action.
                 onMouseMove={() => onHover(offset + position)}
                 className={
-                  "flex w-full items-baseline gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors duration-instant " +
+                  "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors duration-instant " +
                   (isActive
                     ? "bg-well text-foreground"
                     : "text-foreground-secondary hover:bg-well hover:text-foreground")
                 }
               >
-                <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                {/* v12 skin (D1): the two-story preview row (stand palette.css
+                 * `.pal-main`) — story 1 is the label, story 2 is the row's own
+                 * wire data. Memory: the record's content snippet; tasks: the
+                 * status chip (the list-page badge vocabulary) + the assigned
+                 * agents. Nothing invented: sections whose wire data has no
+                 * second story (agents, nav) stay single-story. */}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate">{item.label}</span>
+                  {item.group === "memory" && item.preview ? (
+                    <span className="block truncate text-xs text-foreground-muted">
+                      {item.preview}
+                    </span>
+                  ) : null}
+                  {item.group === "tasks" &&
+                  (item.status !== undefined || (item.taskAgents ?? []).length > 0) ? (
+                    <span className="mt-0.5 flex min-w-0 items-center gap-1.5">
+                      {item.status !== undefined ? (
+                        <Badge
+                          variant={statusBadgeVariant(taskChipStatus(item.status))}
+                          className="px-1.5 py-0 text-caps uppercase tracking-caps"
+                        >
+                          {t(statusLabelKey(taskChipStatus(item.status)))}
+                        </Badge>
+                      ) : null}
+                      {(item.taskAgents ?? []).length > 0 ? (
+                        <span className="min-w-0 truncate text-xs text-foreground-secondary">
+                          {item.taskAgents!.join(", ")}
+                        </span>
+                      ) : null}
+                    </span>
+                  ) : null}
+                </span>
                 {item.hint ? (
                   <span className="max-w-[45%] shrink-0 truncate font-mono text-xs text-foreground-muted">
                     {item.hint}

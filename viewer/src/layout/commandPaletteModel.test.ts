@@ -22,7 +22,7 @@ import {
  */
 
 const TASKS: BoardTask[] = [
-  { id: "TB-1", title: "Снять corpus", col: "in-progress" },
+  { id: "TB-1", title: "Снять corpus", col: "in-progress", agents: ["zcode", "claude"] },
   { id: "TB-3", title: "Review UI palette", col: "validating" },
   { id: "TB-5", title: "Deploy board", col: "queued" },
 ].map((partial) => partial as BoardTask);
@@ -63,6 +63,15 @@ describe("filterTaskItems", () => {
     expect(items).toHaveLength(2);
     expect(items[0]).toMatchObject({ group: "tasks", label: "Снять corpus", hint: "TB-1" });
     expect(items[0].to).toBe("/tasks/TB-1");
+  });
+
+  it("carries the second-story wire data: the column for the status chip and the assigned agents (v12 D1)", () => {
+    const items = filterTaskItems(TASKS, "tb", (id) => `/tasks/${id}`);
+    expect(items[0].status).toBe("in-progress");
+    expect(items[0].taskAgents).toEqual(["zcode", "claude"]);
+    // Missing wire agents stay honestly empty — the renderer shows the chip
+    // alone (honest absence, no invented «no assignee» line).
+    expect(items[1].taskAgents).toEqual([]);
   });
 
   it("falls back to the id when the title is empty", () => {
@@ -111,6 +120,14 @@ describe("memoryHitItems", () => {
     const items = memoryHitItems(HITS, (id) => `/memory/${id}`);
     expect(items[0].hint).toBe("mnemos-main");
     expect(items[0].to).toBe("/memory/mem-1");
+  });
+
+  it("carries the record's own content as the second-story preview (v12 D1)", () => {
+    const hits: SearchResult[] = [
+      { ...HITS[0], content: "WAL checkpoints starve under long readers" },
+    ];
+    const items = memoryHitItems(hits, (id) => `/memory/${id}`);
+    expect(items[0].preview).toBe("WAL checkpoints starve under long readers");
   });
 
   it("keeps the hint empty when the adapter serves no store name (honest absence)", () => {

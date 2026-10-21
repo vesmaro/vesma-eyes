@@ -306,8 +306,15 @@ describe("CommandPalette (Ф2, UX-overhaul §7.3)", () => {
     // The hit's hint is WHERE IT LIES (the store name) — provenance, Ф2.
     expect(document.body.textContent).toContain("Снять corpus с живого борда для Ф2");
     expect(document.body.textContent).toContain("laptop");
-    // Task rows match id and title, the hint carries the id.
+    // v12 two-story: the memory row's second story is the record's own
+    // content (the scroll line under the title).
+    expect(document.body.textContent).toContain("recorded corpus");
+    // Task rows match id and title, the hint carries the id; the second
+    // story is the status chip (list-page vocabulary) + the assigned agents.
     expect(options().some((option) => option.textContent?.includes("TB-1"))).toBe(true);
+    const taskRow = options().find((option) => option.textContent?.includes("TB-1"));
+    expect(taskRow!.textContent).toContain("in progress");
+    expect(taskRow!.textContent).toContain("zcode");
   });
 
   it("the registry section lists APPROVED agents only (pending/revoked never surface)", async () => {
