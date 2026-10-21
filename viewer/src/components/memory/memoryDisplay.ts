@@ -123,7 +123,7 @@ export function memoryCardPreview(memory: HumanFaceSource): string {
 export function memorySearchQuery(memory: HumanFaceSource, maxChars = 80): string {
   const raw = humanMemoryTitle(memory);
   const words = raw
-    .replace(/["'`«»„“”()\[\]{}.,!?;:—–-]+/g, " ")
+    .replace(/["'`«»„“”()[\]{}.,!?;:—–-]+/g, " ")
     .split(/\s+/)
     .filter(Boolean);
   let query = "";
