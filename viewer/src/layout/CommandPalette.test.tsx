@@ -317,6 +317,36 @@ describe("CommandPalette (Ф2, UX-overhaul §7.3)", () => {
     expect(taskRow!.textContent).toContain("zcode");
   });
 
+  it("v12: the iris hit-flare rides the memory rows only (U4 recall idiom, mount-keyed)", async () => {
+    await mount(async (client, mock) => {
+      await seedPaletteData(client, mock);
+      mock.search = vi.fn(async () => PROVENANCE_HITS);
+    });
+    await pressKey({ key: "k", metaKey: true });
+    await waitFor("palette dialog", () => dialog() !== null);
+    // No memory section at open (empty query) — nothing carries the flare.
+    expect(
+      options().some((option) => option.className.includes("search-result-recall")),
+    ).toBe(false);
+    await type("TB");
+    await waitFor(
+      "memory+tasks sections",
+      () => groupLabels().join("|") === "Memory|Tasks",
+      3000,
+    );
+    // The first memory hits latch the flare — every memory row carries the
+    // recall edge; no other section does.
+    const memoryRows = options().filter((option) => option.id.includes("memory"));
+    expect(memoryRows.length).toBeGreaterThan(0);
+    expect(
+      memoryRows.every((option) =>
+        option.className.includes("search-result-recall"),
+      ),
+    ).toBe(true);
+    const taskRow = options().find((option) => option.id.includes("tasks"));
+    expect(taskRow!.className.includes("search-result-recall")).toBe(false);
+  });
+
   it("the registry section lists APPROVED agents only (pending/revoked never surface)", async () => {
     await mount(async (client, mock) => {
       await seedPaletteData(client, mock);

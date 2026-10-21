@@ -21,11 +21,18 @@ import {
  * selection walk.
  */
 
+// Partial fixtures by design (the palette reads id/title/col/agents only);
+// the double cast states that honestly — full TaskOut shapes are not built.
 const TASKS: BoardTask[] = [
-  { id: "TB-1", title: "Снять corpus", col: "in-progress", agents: ["zcode", "claude"] },
-  { id: "TB-3", title: "Review UI palette", col: "validating" },
-  { id: "TB-5", title: "Deploy board", col: "queued" },
-].map((partial) => partial as BoardTask);
+  {
+    id: "TB-1",
+    title: "Снять corpus",
+    col: "in-progress",
+    agents: ["zcode", "claude"],
+  },
+  { id: "TB-3", title: "Review UI palette", col: "validating", agents: [] },
+  { id: "TB-5", title: "Deploy board", col: "queued", agents: [] },
+].map((partial) => partial as unknown as BoardTask);
 
 const EXECUTORS: ExecutorItem[] = [
   { id: "exec-a", name: "zcode@laptop", host: "laptop", harness: "zcode", state: "approved" },

@@ -708,3 +708,42 @@ html[data-vesma-pad] {
     display: inline;
   }
 }
+
+/* ── v12 palette skin (D1, design/stand-v12 palette.css measured): the ⌘K
+ * open/close window. «Магия = скорость, НЕ анимация»: opacity-only on the
+ * overlay, opacity + scale(0.98→1) on the panel, transform-origin top center
+ * (the stand §13.7.4). --duration-instant (80ms) holds the ≤120ms budget;
+ * the close leg is Radix's instant unmount (0ms — the fresh-open state
+ * contract forbids forceMount). The `scale` property composes with the
+ * panel's -translate-x-1/2 centering (individual transform properties ride
+ * BEFORE transform, so the centered layout does not jump). */
+@keyframes cmdk-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes cmdk-panel-in {
+  from { opacity: 0; scale: 0.98; }
+  to { opacity: 1; scale: 1; }
+}
+
+.cmdk-overlay[data-state="open"] {
+  animation: cmdk-overlay-in var(--duration-instant) var(--ease-enter);
+}
+.cmdk-panel[data-state="open"] {
+  transform-origin: top center;
+  animation: cmdk-panel-in var(--duration-instant) var(--ease-enter);
+}
+
+/* Reduced mirror (task D1: reduced = мгновенно): the scale leg is motion —
+ * both animations drop entirely, the palette just is. Both selectors, the
+ * OS media query and the app-level [data-motion] mirror (house pattern). */
+@media (prefers-reduced-motion: reduce) {
+  .cmdk-overlay[data-state="open"],
+  .cmdk-panel[data-state="open"] {
+    animation: none;
+  }
+}
+[data-motion="reduced"] .cmdk-overlay[data-state="open"],
+[data-motion="reduced"] .cmdk-panel[data-state="open"] {
+  animation: none;
+}

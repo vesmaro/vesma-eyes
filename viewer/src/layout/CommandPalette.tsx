@@ -33,6 +33,11 @@ import {
   type PaletteGroupId,
   type PaletteItem,
 } from "./commandPaletteModel";
+// v12 D1: the iris hit-flare reuses the house U4 recall-edge implementation
+// (one implementation per concept). The class lives in that component's css
+// file, which route-splitting keeps out of the entry chunk — the palette is
+// mounted on every page, so it carries the import itself (idempotent).
+import "@/components/SearchResultList/SearchResultList.css";
 
 /**
  * The command palette (UX-overhaul §7.3, Ф2): ONE search input answering in
@@ -75,11 +80,11 @@ export function CommandPalette() {
          * blur is the «pupil» from the v12 stand (palette.css: blur 4px — the
          * system's only blur, functional focus-keeper, not decoration). It is
          * a static filter behind the panel — motion settings do not apply. */}
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-palette-scrim backdrop-blur-sm" />
+        <DialogPrimitive.Overlay className="cmdk-overlay fixed inset-0 z-50 bg-palette-scrim backdrop-blur-sm" />
         <DialogPrimitive.Content
           aria-describedby={undefined}
           className={
-            "fixed z-50 flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-elevated shadow-float " +
+            "cmdk-panel fixed z-50 flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-elevated shadow-float " +
             "inset-x-2 top-2 max-h-[85dvh] " +
             "sm:inset-x-auto sm:left-1/2 sm:right-auto sm:top-[10vh] sm:w-full sm:max-w-xl sm:-translate-x-1/2"
           }
@@ -449,6 +454,19 @@ function PaletteGroupBlock({
               id={optionDomId(item.id)}
               role="option"
               aria-selected={isActive}
+              // v12 D1 — the iris hit-flare rides the ROW MOUNT (stand
+              // §13.7.3 «попадание в память»), reusing the house U4 recall
+              // edge: one implementation per concept, and the same mount-keyed
+              // grammar as the memory page («played once per list mount; a
+              // refetch of the SAME query does not replay»). A flare is a
+              // response to hits arriving — never spontaneous light; a row
+              // that stays mounted under query edits does not re-flash.
+              // fill-mode `both` keeps the edge at its transparent end state
+              // after the decay — nothing lingers; reduced contexts ride the
+              // house reduced mirror (static tint release).
+              className={
+                item.group === "memory" ? "search-result-recall" : undefined
+              }
               aria-label={
                 secondStoryText
                   ? `${label}: ${item.label} — ${secondStoryText}${item.hint ? ` (${item.hint})` : ""}`
