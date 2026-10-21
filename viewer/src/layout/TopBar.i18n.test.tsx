@@ -57,8 +57,8 @@ describe("TopBar i18n (ru default, en switch)", () => {
     expect(html).toContain("Переключить плотность на компактную");
     // Union И1: the global search is a REAL input (stand 03 §4) — a labelled
     // search box with the `/` hint, not the palette-trigger oval.
-    expect(html).toContain('aria-label="Глобальный поиск по памяти и задачам"');
-    expect(html).toContain('placeholder="Поиск по памяти и задачам…"');
+    expect(html).toContain('aria-label="Глобальный поиск по памяти"');
+    expect(html).toContain('placeholder="Поиск по памяти…"');
     expect(html).toContain('id="global-search-input"');
     // The brand rides the bar now (03 §2) — mark + wordmark link to the root.
     expect(html).toContain('href="/"');
@@ -73,8 +73,8 @@ describe("TopBar i18n (ru default, en switch)", () => {
     const html = renderTopBar("en");
     expect(html).toContain("Interface language");
     expect(html).toContain('aria-label="Switch to light theme"');
-    expect(html).toContain('aria-label="Global search across memory and tasks"');
-    expect(html).toContain('placeholder="Search memory and tasks…"');
+    expect(html).toContain('aria-label="Global search across memory"');
+    expect(html).toContain('placeholder="Search memory…"');
     expect(html).toContain("Switch density to compact");
     expect(html).toMatch(/aria-pressed="false"[^>]*>ru</);
     expect(html).toMatch(/aria-pressed="true"[^>]*>en</);

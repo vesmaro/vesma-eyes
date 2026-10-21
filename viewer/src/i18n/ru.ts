@@ -103,8 +103,8 @@ export const ru = {
   "topbar.langLabel": "Язык интерфейса",
   // Union И1 (stand 03 §4): the topbar global search — a REAL input now;
   // Enter carries the query to /memory/search, `/` focuses the field.
-  "topbar.searchPlaceholder": "Поиск по памяти и задачам…",
-  "topbar.searchLabel": "Глобальный поиск по памяти и задачам",
+  "topbar.searchPlaceholder": "Поиск по памяти…",
+  "topbar.searchLabel": "Глобальный поиск по памяти",
   "topbar.openSidebar": "Открыть разделы",
   "topbar.densityToCompact": "Переключить плотность на компактную",
   "topbar.densityToComfortable": "Переключить плотность на комфортную",

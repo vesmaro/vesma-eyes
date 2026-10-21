@@ -82,9 +82,9 @@ describe("App (smoke)", () => {
     const html = renderAppAt("/");
     // Union И1 (stand 03 §4): the topbar carries a REAL search input (Enter
     // → /memory/search, `/` focuses) plus the mobile palette icon button.
-    expect(html).toContain('aria-label="Global search across memory and tasks"');
+    expect(html).toContain('aria-label="Global search across memory"');
     expect(html).toContain('id="global-search-input"');
-    expect(html).toContain('placeholder="Search memory and tasks…"');
+    expect(html).toContain('placeholder="Search memory…"');
     // The `/` key hint rides the field (the hotkey exists — Hotkeys.test.ts).
     expect(html).toContain("<kbd");
     expect(html).toContain('aria-label="Open search"'); // mobile palette icon
