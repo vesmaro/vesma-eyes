@@ -7,15 +7,17 @@
  * - `vesmaro.koraRightW`  — the meta panel width, 240..420 px (def 320);
  * - `vesmaro.koraLeftW`   — the navigation panel width, 220..380 px
  *   (def 280; kora-rethink blueprint §4 — KW1 «Три колонки»);
+ * - `vesmaro.koraMovesH`  — the «Все ходы» zone FIXED height, 160..420 px
+ *   (the key's ABSENCE = the auto mode ≤280; kora-rethink blueprint §4 —
+ *   KW2 «Живой чат»; the height hardware lives in useKoraBandHeight);
  * - `vesmaro.koraDraft:{sessionId}` — the composer draft, one key per
  *   session (the v9-аддендум key naming), survives reloads.
  *
- * RETIRED IN KW2 (the Пульт is dissolved by KW1 — kora-rethink blueprint
- * §6): `vesmaro.koraPultH` (the height mechanics move to the «Все ходы»
- * zone, which persists `vesmaro.koraMovesH`) and `vesmaro.koraEtherW` (the
- * Эфир wing column is gone — Эфир lives in the meta panel). Nothing in the
- * frame reads or writes them anymore; the readers/writers stay exported
- * until KW2 lands the zone and the keys are dropped for real.
+ * RETIRED IN KW2 (the Пульт dissolved by KW1 — kora-rethink blueprint §6;
+ * the keepers and their tests are gone with the last reader):
+ * `vesmaro.koraPultH` superseded by `vesmaro.koraMovesH` (the height
+ * mechanics moved to the «Все ходы» zone), `vesmaro.koraEtherW` (the Эфир
+ * wing column is gone — Эфир lives in the meta panel).
  *
  * Guards (07l §5.2 «безопасные геттеры»): every read/write is try/catch —
  * private mode, disabled storage and SSR all degrade to the in-memory
@@ -25,10 +27,8 @@
 
 const RIGHT_W_KEY = "vesmaro.koraRightW";
 const LEFT_W_KEY = "vesmaro.koraLeftW";
-/** retired in KW2 (see the module doc) — kept until the zone lands. */
-const PULT_H_KEY = "vesmaro.koraPultH";
-/** retired in KW2 (see the module doc) — kept until the zone lands. */
-const ETHER_W_KEY = "vesmaro.koraEtherW";
+/** The «Все ходы» fixed height (KW2; absent = the auto mode). */
+const MOVES_H_KEY = "vesmaro.koraMovesH";
 export const DRAFT_PREFIX = "vesmaro.koraDraft:";
 
 /** v7 §3.1 ranges: the two panel widths. */
@@ -39,21 +39,14 @@ export const KORA_SIDE_DEFAULT = 320;
 export const KORA_NAV_MIN = 220;
 export const KORA_NAV_MAX = 380;
 export const KORA_NAV_DEFAULT = 280;
-/** The band hardware ranges (07l §3.1) — the height mechanics live in
- * useKoraBandHeight and land on the «Все ходы» zone in KW2. */
+/** The band hardware ranges (07l §3.1) — the «Все ходы» height mechanics
+ * live in useKoraBandHeight and mount on the zone in KW2. */
 export const KORA_BAND_MIN = 160;
 export const KORA_BAND_MAX = 420;
 /** Drag/keyboard below this line means «свернуть» (07l §3.2 гистерезис). */
 export const KORA_BAND_COLLAPSE_AT = 120;
 /** The auto mode's content ceiling (07l §3.2: авто по контенту ≤280). */
 export const KORA_BAND_AUTO_MAX = 280;
-// retired in KW2 — the Пульт-era names of the band constants above.
-export const KORA_PULT_MIN = KORA_BAND_MIN;
-export const KORA_PULT_MAX = KORA_BAND_MAX;
-export const KORA_PULT_COLLAPSE_AT = KORA_BAND_COLLAPSE_AT;
-export const KORA_ETHER_MIN = 280;
-export const KORA_ETHER_MAX = 480;
-export const KORA_ETHER_DEFAULT = 320;
 
 function safeLocalStorage(): Storage | undefined {
   try {
@@ -112,20 +105,14 @@ export const readKoraLeftW = (): number =>
 export const writeKoraLeftW = (w: number): void =>
   writeFrameValue(LEFT_W_KEY, String(w));
 
-// retired in KW2 — the Пульт-era key keepers; nothing mounts them (KW1),
-// the band hook takes its readers as parameters so KW2 wires koraMovesH.
+// --- the «Все ходы» fixed height (KW2; the Пульт mechanics moved here) -------
 
-/** The Пульт fixed height; 0 = auto mode (the key stays absent, v7 §3.2). */
-export const readKoraPultH = (): number =>
-  readFrameInt(PULT_H_KEY, 0, KORA_PULT_MIN, KORA_PULT_MAX);
-export const writeKoraPultH = (h: number): void =>
-  writeFrameValue(PULT_H_KEY, String(h));
-export const clearKoraPultH = (): void => removeFrameValue(PULT_H_KEY);
-
-export const readKoraEtherW = (): number =>
-  readFrameInt(ETHER_W_KEY, KORA_ETHER_DEFAULT, KORA_ETHER_MIN, KORA_ETHER_MAX);
-export const writeKoraEtherW = (w: number): void =>
-  writeFrameValue(ETHER_W_KEY, String(w));
+/** The zone's fixed height; 0 = auto mode (the key stays absent, 07l §3.2). */
+export const readKoraMovesH = (): number =>
+  readFrameInt(MOVES_H_KEY, 0, KORA_BAND_MIN, KORA_BAND_MAX);
+export const writeKoraMovesH = (h: number): void =>
+  writeFrameValue(MOVES_H_KEY, String(h));
+export const clearKoraMovesH = (): void => removeFrameValue(MOVES_H_KEY);
 
 // --- the composer draft (v9-аддендум: vesmaro.koraDraft:{sessionId}) -----------
 

@@ -92,6 +92,15 @@ export interface HermesBridgeStatus {
   mode: "off" | "ok";
   registry_sessions: number;
   detail: string | null;
+  /**
+   * KW2 «Живой чат»: the STATIC verified chat model roster + its default
+   * (server/app.py serves hermes_client.HERMES_MODELS in BOTH modes — an
+   * off bridge still names the roster so the select degrades honestly).
+   * An empty array means the field did not arrive (an older board) — the
+   * select falls back to the FE's single default constant.
+   */
+  models?: string[];
+  default_model?: string;
 }
 
 /**
