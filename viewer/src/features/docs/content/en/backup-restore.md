@@ -21,7 +21,7 @@ back.
 | --- | --- | --- |
 | `board.db` | the board's PVC in the cluster + a local copy on a work machine | tasks, history, assignments, the store registry |
 | `vesma.db` + `vectors.db` (cluster) | the vesma PVC | the cluster's memory |
-| `vesma.db` + `vectors.db` (laptop) | `~/.mnemos/data` | the local memory |
+| `vesma.db` + `vectors.db` (laptop) | `~/.vesma/data` | the local memory |
 
 Copy all of it at once: the ready-made script does it in one command.
 
@@ -123,7 +123,7 @@ The same order, different database owners:
   `integrity_check`. Do not touch the vesma Helm release during this
   window.
 - The laptop one: stop the local vesma, put the files back into
-  `~/.mnemos/data`, start it.
+  `~/.vesma/data`, start it.
 
 Deeper into the vesma databases themselves — the imported upstream
 runbook: [vesma backup and

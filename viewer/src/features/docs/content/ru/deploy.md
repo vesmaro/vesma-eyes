@@ -67,7 +67,7 @@ rootApp: app                    # значение по умолчанию в ч
 
 mnemos:
   cluster:
-    url: http://mnemos.memory.svc:8787   # сервисный адрес vesma внутри кластера
+    url: http://agentsnode-mnemos:8787   # сервисный адрес vesma внутри кластера
   laptop:
     enabled: false              # второе (LAN) хранилище: включить + секрет
 
@@ -84,7 +84,7 @@ persistence:
 
 # SEC-1: белый список хостов, куда борду разрешено ходить за памятью.
 # Расширяйте при подключении новых хранилищ.
-memoryHostsAllowlist: "mnemos.memory.svc,localhost,127.0.0.1"
+memoryHostsAllowlist: "agentsnode-mnemos,localhost,127.0.0.1"
 
 # Одноразовый посев реестра хранилищ при первом старте. Дальше реестр
 # живёт в базе борда и правится через API.
@@ -94,7 +94,7 @@ memoryRegistry:
     content:
       servers:
         - name: main
-          url: http://mnemos.memory.svc:8787
+          url: http://agentsnode-mnemos:8787
           token_env: MNEMOS_TOKEN
           primary: true
 
@@ -182,7 +182,7 @@ curl -sS -o /dev/null -w '%{http_code}\n' \
 
 ```bash
 git clone https://github.com/vesmaro/vesma-eyes.git && cd vesma-eyes
-export MNEMOS_URL=http://your-mnemos-host:8787
+export MNEMOS_URL=http://your-vesma-host:8787
 export MNEMOS_TOKEN=mnk_…
 docker compose up -d
 # → http://localhost:8090

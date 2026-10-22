@@ -1,6 +1,6 @@
 # Decisions log
 
-ADR-style records of significant decisions for `mnemos-eyes`. Each file is
+ADR-style records of significant decisions for `vesma-eyes`. Each file is
 one decision. The authoritative summary lives in [`../CHARTER.md`](../CHARTER.md)
 §3; these files capture the _context and consequences_ behind each call.
 

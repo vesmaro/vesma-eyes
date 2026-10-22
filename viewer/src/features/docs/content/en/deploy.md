@@ -68,7 +68,7 @@ rootApp: app                    # the chart default is board (the legacy board)
 
 mnemos:
   cluster:
-    url: http://mnemos.memory.svc:8787   # the in-cluster vesma service address
+    url: http://agentsnode-mnemos:8787   # the in-cluster vesma service address
   laptop:
     enabled: false              # the second (LAN) store: enable + secret
 
@@ -85,7 +85,7 @@ persistence:
 
 # SEC-1: the allow-list of hosts the board may reach for memory.
 # Extend it when you connect new stores.
-memoryHostsAllowlist: "mnemos.memory.svc,localhost,127.0.0.1"
+memoryHostsAllowlist: "agentsnode-mnemos,localhost,127.0.0.1"
 
 # One-time seeding of the store registry on first start. Afterwards the
 # registry lives in the board's database and is edited through the API.
@@ -95,7 +95,7 @@ memoryRegistry:
     content:
       servers:
         - name: main
-          url: http://mnemos.memory.svc:8787
+          url: http://agentsnode-mnemos:8787
           token_env: MNEMOS_TOKEN
           primary: true
 
@@ -185,7 +185,7 @@ For a try-out on one machine Docker is enough:
 
 ```bash
 git clone https://github.com/vesmaro/vesma-eyes.git && cd vesma-eyes
-export MNEMOS_URL=http://your-mnemos-host:8787
+export MNEMOS_URL=http://your-vesma-host:8787
 export MNEMOS_TOKEN=mnk_…
 docker compose up -d
 # → http://localhost:8090
