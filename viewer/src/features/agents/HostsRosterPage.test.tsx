@@ -12,7 +12,7 @@ import {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { AgentsHostsPage } from "./HostsRosterPage";
-import { HostHarnesses } from "./HostHarnesses";
+import { HarnessChipStrip } from "./HarnessChipStrip";
 import { recordPresenceFlash } from "./presenceLight";
 import { buildRoutes } from "@/app/routes";
 import { MockAdapter } from "@/gateway/MockAdapter";
@@ -543,117 +543,61 @@ describe("the roster sheet (A2 §3.D, <xl)", () => {
   });
 });
 
-describe("the host harnesses (B2 §3.C.3)", () => {
-  const harnessRows = (container: HTMLElement): NodeListOf<HTMLButtonElement> =>
-    container.querySelectorAll('[aria-label="Zone plexuses"] [aria-expanded]');
+describe("the harness chip strip (agents-workspace-ide W1)", () => {
+  const strip = (container: HTMLElement): HTMLElement =>
+    container.querySelector('section[aria-label="Harnesses"]')!;
 
-  it("one accordion row per member: presence, harness, refusal badge, counters, env slot", async () => {
+  /** The chip BODY buttons (the ⋯ menu triggers excluded). */
+  const chips = (container: HTMLElement): HTMLButtonElement[] =>
+    [...strip(container).querySelectorAll("button")].filter(
+      (button) => button.getAttribute("aria-haspopup") !== "menu",
+    );
+
+  it("one compact chip per member: presence, name, harness type, env slot, refusal badge", async () => {
     const { root, container } = await mountPage({ path: "/agents/hosts/laptop" });
-    const rows = harnessRows(container);
-    expect(rows.length).toBe(2);
-    const zcode = [...rows].find((row) => row.textContent?.includes("zcode@laptop"))!;
-    // Presence + harness type + the «среда исполнения» slot (AGW-23: the
-    // agent's own surface label rides the badge when reported).
-    expect(zcode.textContent).toContain("online");
-    expect(zcode.textContent).toContain("zcode");
+    const chipList = chips(container);
+    expect(chipList.length).toBe(2);
+    const zcode = chipList.find((chip) => chip.textContent?.includes("zcode@laptop"))!;
+    // The presence word is the dot's SR text (the dot is aria-hidden) —
+    // meaning never rides colour alone.
+    expect(zcode.querySelector("span.sr-only")?.textContent).toContain("online");
+    // The «среда исполнения» slot (AGW-23): the agent's own surface label
+    // rides the badge, the found_at dedupe trail the badge tooltip.
     const envSlot = zcode.querySelector('[data-slot="execution-env"]');
     expect(envSlot).not.toBeNull();
     expect(envSlot?.textContent).toBe("metal");
-    // The found_at dedupe trail rides the badge tooltip (AGW-23), not the
-    // row body — the B2 row geometry stays reserved.
     expect(envSlot?.getAttribute("title")).toContain("/home/u/.zcode");
     expect(envSlot?.getAttribute("title")).toContain("/box/home/u/.zcode");
-    // The four inventory counters (the ME-064 fixture counts).
-    expect(zcode.textContent).toContain("39");
-    expect(zcode.textContent).toContain("121");
-    // UX-AUDIT A6: the counters announce meaningfully WITHOUT title (dead
-    // on touch) — role="img" + aria-label at EVERY width; the visible ≥lg
-    // word rides CSS only (happy-dom has no breakpoints).
-    const counter = zcode.querySelector<HTMLSpanElement>(
-      '[role="img"][aria-label="specialists: 39"]',
-    );
-    expect(counter).not.toBeNull();
-    expect(counter!.getAttribute("title")).toBeNull();
-    expect(zcode.querySelector('[role="img"][aria-label="plugins: 0"]')).not.toBeNull();
-    // hermes: owner-disabled → the refusal badge rides the row; and with
-    // no surface facts reported the reserved slot stays honestly empty
-    // (the hidden geometry, never a fabricated label).
-    const hermes = [...rows].find((row) => row.textContent?.includes("hermes@laptop"))!;
+    // hermes: owner-disabled → the refusal badge rides the chip; with no
+    // surface facts reported the reserved slot stays honestly empty (the
+    // hidden geometry, never a fabricated label).
+    const hermes = chipList.find((chip) => chip.textContent?.includes("hermes@laptop"))!;
     expect(hermes.textContent).toContain("disabled");
     expect(hermes.querySelector('[data-slot="execution-env"]')?.textContent).toBe("");
     await actUnmount(root);
   });
 
-  it("brain-zones Z1: the zone structure speaks the lore (title, neuron sum, honest empty)", async () => {
+  it("lore clean-up: the zone title and the counters render NOWHERE; the ONE caps accent carries the dictionary tooltip", async () => {
     const { root, container } = await mountPage({ path: "/agents/hosts/laptop" });
-    // The section is the ZONE structure now: «Zone plexuses», and the
-    // neurons counter is the REAL sum of the members' agent-reported
-    // specialists (zcode@laptop 39; hermes reports no inventory → 39 only).
-    const zone = container.querySelector('section[aria-label="Zone plexuses"]')!;
-    expect(zone).not.toBeNull();
-    expect(zone.textContent).toContain("neurons: 39");
-    // hermes-only host mesh-2 reports NO inventory → honest absence, no
-    // fabricated 0.
-    await act(async () => {
-      rowOf(container, "mesh-2").click();
-    });
-    const meshZone = container.querySelector('section[aria-label="Zone plexuses"]')!;
-    expect(meshZone.textContent).not.toContain("neurons:");
+    // W1 acceptance (blueprint §8.1): the lore section title renders
+    // nowhere; «plexus»/«neuron» leave the structural labels — the counters
+    // live inside the sheet now, not in the strip.
+    expect(container.textContent).not.toContain("Zone plexuses");
+    expect(container.textContent).not.toContain("neurons:");
+    expect(
+      strip(container).querySelector('[role="img"][aria-label="specialists: 39"]'),
+    ).toBeNull();
+    // The ONE lore accent: the caps «cortex zone» above the host name, the
+    // dictionary in ITS tooltip only.
+    const accents = [...container.querySelectorAll("p")].filter(
+      (p) => p.textContent === "cortex zone",
+    );
+    expect(accents).toHaveLength(1);
+    expect(accents[0]!.getAttribute("title")).toContain("plexus");
     await actUnmount(root);
   });
 
-  it("Z1 a11y follow-up: the sessions counter and the refusal badge announce WITHOUT title", async () => {
-    const { root, container } = await mountPage({
-      path: "/agents/hosts/laptop",
-      koraSeed: (base) => ({
-        ok: true as const,
-        count: 1,
-        items: [
-          {
-            id: "ex-1:sess_42",
-            executor_id: "ex-1",
-            native_id: "sess_42",
-            harness: "vscode",
-            project: "vesma-eyes",
-            cwd: null,
-            state: "live",
-            origin: "relay",
-            steerable: true,
-            started_at: ago(base, 300),
-            last_activity_at: ago(base, 30),
-            age_seconds: 30,
-            last_line_preview: "работает",
-          },
-        ],
-        coverage: { harnesses: [], gaps: [] },
-        meta: { generated_at: ago(base, 10) },
-      }),
-    });
-    const zcode = [...harnessRows(container)].find((row) =>
-      row.textContent?.includes("zcode@laptop"),
-    )!;
-    // The sessions counter: role="img" + aria-label (the SAME A6 fix as
-    // the inventory counters), no touch-dead title anywhere.
-    const sessions = zcode.querySelector<HTMLSpanElement>(
-      '[role="img"][aria-label="Sessions in 24h: 1"]',
-    );
-    expect(sessions).not.toBeNull();
-    expect(sessions!.getAttribute("title")).toBeNull();
-    // hermes: the owner-disabled refusal badge — the visible word stays,
-    // the REASON becomes the accessible name («word: reason»).
-    const hermes = [...harnessRows(container)].find((row) =>
-      row.textContent?.includes("hermes@laptop"),
-    )!;
-    const badge = hermes.querySelector<HTMLSpanElement>(
-      '[role="img"][aria-label="disabled: disabled by the owner"]',
-    );
-    expect(badge).not.toBeNull();
-    expect(badge!.getAttribute("title")).toBeNull();
-    expect(badge!.textContent).toBe("disabled");
-    await actUnmount(root);
-  });
-
-  it("Z1: an empty zone renders the honest line, never an empty block", async () => {
+  it("an empty strip renders the honest line, never an empty block", async () => {
     // Mounted DIRECTLY (the grouping cannot produce a memberless host —
     // groups are built FROM members — so this is the component's own
     // honesty contract, unit-held).
@@ -663,123 +607,130 @@ describe("the host harnesses (B2 §3.C.3)", () => {
     await act(async () => {
       root.render(
         <I18nProvider initialLang="en">
-          {/* The section carries the connect Link — it needs a router. */}
+          {/* The strip carries the connect Link — it needs a router. */}
           <MemoryRouter initialEntries={["/agents/hosts/laptop"]}>
-            <HostHarnesses
-              members={[]}
-              meta={undefined}
-              now={Date.now()}
-              koraItems={[]}
-            />
+            <HarnessChipStrip members={[]} meta={undefined} now={Date.now()} />
           </MemoryRouter>
         </I18nProvider>,
       );
     });
-    const zone = container.querySelector('section[aria-label="Zone plexuses"]')!;
+    const zone = container.querySelector('section[aria-label="Harnesses"]')!;
     expect(zone).not.toBeNull();
-    expect(zone.textContent).toContain("No plexuses in this zone yet");
+    expect(zone.textContent).toContain("No harnesses on this host yet");
     expect(zone.querySelector("ul")).toBeNull();
     await actUnmount(root);
   });
 
-  it("the sessions-in-24h counter joins the kora registry by executor_id", async () => {
-    const { root, container } = await mountPage({
-      path: "/agents/hosts/laptop",
-      koraSeed: (base) => ({
-        ok: true as const,
-        count: 1,
-        items: [
-          {
-            id: "ex-1:sess_42",
-            executor_id: "ex-1",
-            native_id: "sess_42",
-            harness: "vscode",
-            project: "vesma-eyes",
-            cwd: null,
-            state: "live",
-            origin: "relay",
-            steerable: true,
-            started_at: ago(base, 300),
-            last_activity_at: ago(base, 30),
-            age_seconds: 30,
-            last_line_preview: "работает",
-          },
-        ],
-        coverage: { harnesses: [], gaps: [] },
-        meta: { generated_at: ago(base, 10) },
-      }),
-    });
-    const zcode = [...harnessRows(container)].find((row) =>
-      row.textContent?.includes("zcode@laptop"),
+  it("the refusal badge announces WITHOUT title (the A6 pattern survives on chips)", async () => {
+    const { root, container } = await mountPage({ path: "/agents/hosts/laptop" });
+    const hermes = chips(container).find((chip) =>
+      chip.textContent?.includes("hermes@laptop"),
     )!;
-    expect(zcode.textContent).toContain("1");
+    // The visible word stays, the REASON becomes the accessible name
+    // («word: reason»), no touch-dead title anywhere.
+    const badge = hermes.querySelector<HTMLSpanElement>(
+      '[role="img"][aria-label="disabled: disabled by the owner"]',
+    );
+    expect(badge).not.toBeNull();
+    expect(badge!.getAttribute("title")).toBeNull();
+    expect(badge!.textContent).toBe("disabled");
     await actUnmount(root);
   });
 
-  it("expansion mounts the FULL sheet workbench in place (all sections)", async () => {
+  it("chip click opens the ExecutorSheet drawer with the FULL workbench (parity by construction)", async () => {
     const { root, container } = await mountPage({ path: "/agents/hosts/laptop" });
-    const zcode = [...harnessRows(container)].find((row) =>
-      row.textContent?.includes("zcode@laptop"),
+    const zcode = chips(container).find((chip) =>
+      chip.textContent?.includes("zcode@laptop"),
     )!;
     await act(async () => {
       zcode.click();
     });
-    const body = container.querySelector("#harness-body-ex-1")!;
-    expect(body).not.toBeNull();
-    // The ExecutorSheet's own sections (behavior parity by construction).
+    const dialog = document.body.querySelector("[role='dialog']")!;
+    expect(dialog).not.toBeNull();
+    // The ExecutorSheet's own sections — the SAME drawer /agents/harnesses
+    // opens, so the freeze/stamp remount discipline rides the one
+    // component (blueprint §5 reuse map).
     for (const section of ["Link", "Access", "Identity", "Capabilities (declared)", "Danger zone"]) {
-      expect(body.querySelector(`section[aria-label="${section}"]`)).not.toBeNull();
+      expect(dialog.querySelector(`section[aria-label="${section}"]`)).not.toBeNull();
     }
-    expect(body.textContent).toContain("Detected on the host");
+    expect(dialog.textContent).toContain("Detected on the host");
     // The secret clause: explained, never rendered.
-    expect(body.textContent).toContain("secret");
+    expect(dialog.textContent).toContain("secret");
     await actUnmount(root);
   });
 
-  it("the mutation checklist is reachable within two clicks (expand → action)", async () => {
+  it("every mutation stays ≤2 interactions from the center (chip click → sheet actions)", async () => {
+    // The pending host: chip click (1) → the sheet's Approve (2).
     const { root, container } = await mountPage({ path: "/agents/hosts/new-host" });
-    // approve: expand the pending member → the Approve button.
-    const pending = [...harnessRows(container)].find((row) =>
-      row.textContent?.includes("copilot@new-host"),
+    const pending = chips(container).find((chip) =>
+      chip.textContent?.includes("copilot@new-host"),
     )!;
     await act(async () => {
       pending.click();
     });
-    const pendingBody = container.querySelector("#harness-body-ex-4")!;
+    const pendingDialog = document.body.querySelector("[role='dialog']")!;
     expect(
-      [...pendingBody.querySelectorAll("button")].some((b) =>
+      [...pendingDialog.querySelectorAll("button")].some((b) =>
         b.textContent?.includes("Approve"),
       ),
     ).toBe(true);
     await actUnmount(root);
 
-    // enabled kill-switch + name + caps + link-check: expand the live member.
+    // The live member: the enabled kill-switch + name + caps + link verdict
+    // + the danger zone — the SAME form the registry sheet mounts.
     const { root: root2, container: container2 } = await mountPage({
       path: "/agents/hosts/laptop",
     });
-    const zcode = [...harnessRows(container2)].find((row) =>
-      row.textContent?.includes("zcode@laptop"),
+    const zcode = chips(container2).find((chip) =>
+      chip.textContent?.includes("zcode@laptop"),
     )!;
     await act(async () => {
       zcode.click();
     });
-    const body2 = container2.querySelector("#harness-body-ex-1")!;
-    const labels = [...body2.querySelectorAll("label, button")].map((el) => el.textContent ?? "");
+    const dialog = document.body.querySelector("[role='dialog']")!;
+    const labels = [...dialog.querySelectorAll("label, button")].map((el) => el.textContent ?? "");
     expect(labels.join("|")).toContain("Enabled for dispatch");
-    expect(body2.querySelector('input[type="checkbox"]')).not.toBeNull();
-    expect(body2.querySelector("input")).not.toBeNull(); // the name field
+    expect(dialog.querySelector('input[type="checkbox"]')).not.toBeNull();
+    expect(dialog.querySelector("input")).not.toBeNull(); // the name field
     expect(
-      [...body2.querySelectorAll("button")].some((b) => b.textContent?.includes("Revoke")),
+      [...dialog.querySelectorAll("button")].some((b) => b.textContent?.includes("Revoke")),
     ).toBe(true);
     expect(
-      [...body2.querySelectorAll("button")].some((b) => b.textContent?.includes("Delete")),
+      [...dialog.querySelectorAll("button")].some((b) => b.textContent?.includes("Delete")),
     ).toBe(true);
     expect(
-      [...body2.querySelectorAll("button")].some((b) =>
+      [...dialog.querySelectorAll("button")].some((b) =>
         b.textContent?.includes("Refresh pulse"),
       ),
     ).toBe(true);
     await actUnmount(root2);
+  });
+
+  it("the ⋯ trigger opens the controlled ExecutorMenu (the keyboard path to the quick ops)", async () => {
+    const { root, container } = await mountPage({ path: "/agents/hosts/laptop" });
+    // One labelled trigger per chip; the member order belongs to the
+    // grouping sort — select BY NAME, not by DOM position.
+    const triggers = [
+      ...strip(container).querySelectorAll<HTMLButtonElement>(
+        'button[aria-haspopup="menu"]',
+      ),
+    ];
+    expect(triggers).toHaveLength(2);
+    const trigger = triggers.find((button) =>
+      button.getAttribute("aria-label")?.includes("zcode@laptop"),
+    )!;
+    expect(trigger).not.toBeNull();
+    await act(async () => {
+      trigger.click();
+    });
+    // The items mount ONLY while open; the actions are the SAME gated
+    // useExecutorMutations checklist the registry menu carries.
+    const menu = container.querySelector('[role="menu"]')!;
+    expect(menu).not.toBeNull();
+    expect(
+      menu.querySelectorAll("[role='menuitem']").length,
+    ).toBeGreaterThanOrEqual(3);
+    await actUnmount(root);
   });
 });
 
@@ -1096,10 +1047,10 @@ describe("presence age ticks from the server meta TTLs", () => {
   });
 });
 
-describe("the roster surface is mutation-free", () => {
-  it("renders NO registry buttons and NO context-menu triggers", async () => {
+describe("mutation surfaces after W1 (the field carries them, the roster stays quiet)", () => {
+  it("the roster panel keeps NO registry buttons; the chip strip owns the ⋯ triggers", async () => {
     const { root, container } = await mountPage({ path: "/agents/hosts/laptop" });
-    const text = container.textContent ?? "";
+    const panelText = panel(container).textContent ?? "";
     for (const forbidden of [
       "Approve",
       "Revoke",
@@ -1108,11 +1059,16 @@ describe("the roster surface is mutation-free", () => {
       "Delete",
       "Save",
     ]) {
-      expect(text).not.toContain(forbidden);
+      expect(panelText).not.toContain(forbidden);
     }
     expect(
-      container.querySelector('button[aria-label^="Actions for executor"]'),
+      panel(container).querySelector('button[aria-label^="Actions for executor"]'),
     ).toBeNull();
+    // W1: the FIELD is the mutation surface — one labelled ⋯ trigger per
+    // chip; the CLOSED menu mounts no items anywhere.
+    expect(
+      mainField(container).querySelectorAll('button[aria-haspopup="menu"]'),
+    ).toHaveLength(2);
     expect(container.querySelectorAll("[role='menuitem']")).toHaveLength(0);
     await actUnmount(root);
   });
