@@ -1404,6 +1404,10 @@ export const ru = {
   "agents.lore.zone": "зона коры",
   "agents.lore.zoneTooltip":
     "словарь: сплетение — харнес · нейрон — специалист · ядро — команда · путь — миссия",
+  // «Сплетение»/«нейрон» — dictionary reserve (Z2/Z3), no renderer by
+  // design: лор-подписи и счётчик «нейронов: N» ушли в ретир вместе с
+  // аккордеоном W1; ключи остаются словарным каноном (гейт i18n,
+  // BRAIN-ZONES-VISUAL-DOC §2) наравне с «ядром»/«путём» ниже.
   "agents.lore.plexus": "сплетение",
   "agents.lore.neuron": "нейрон",
   "agents.lore.core": "ядро",

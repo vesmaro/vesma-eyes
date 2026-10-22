@@ -24,9 +24,10 @@ import { ExecutorSheet } from "./ExecutorSheet";
  * presence dot + name + harness type + the «среда исполнения» badge
  * (AGW-23) + the refusal badge (pending / owner-disabled / revoked) — the
  * GLANCE facts only. The lore structural labels are GONE (the «нейронов: N»
- * counter dies with the accordion; the inventory and sessions-24h counters
- * live inside the sheet's own sections); the strip's heading is the plain
- * «Харнесы» noun.
+ * counter dies with the accordion); the inventory counters live inside the
+ * sheet's inventory section, while the sessions-24h glance counter retires
+ * WITH the accordion — no renderer anywhere (blueprint §2 dissolve map).
+ * The strip's heading is the plain «Харнесы» noun.
  *
  * Operations (blueprint §5 reuse map — nothing re-implemented):
  * - chip CLICK = the ExecutorSheet DRAWER over the field — the same

@@ -1367,6 +1367,10 @@ export const en: Record<TranslationKey, string> = {
   "agents.lore.zone": "cortex zone",
   "agents.lore.zoneTooltip":
     "dictionary: plexus — harness · neuron — specialist · core — team · path — mission",
+  // «Plexus»/«neuron» — dictionary reserve (Z2/Z3), no renderer by design:
+  // the lore labels and the «neurons: N» counter retired with the W1
+  // accordion; the keys stay as the lore canon (the i18n gate,
+  // BRAIN-ZONES-VISUAL-DOC §2) alongside «core»/«path» below.
   "agents.lore.plexus": "plexus",
   "agents.lore.neuron": "neuron",
   "agents.lore.core": "core",
