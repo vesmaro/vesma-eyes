@@ -114,7 +114,7 @@ uiToken:
 а чарт переиспользует свои секреты между обновлениями.
 
 ```bash
-helm install vesma-eyes deploy/chart/vesma-eyes \
+helm install vesma-eyes deploy/chart/vesmaro-eyes \
   -n kube-agents -f my-values.yaml
 
 kubectl -n kube-agents rollout status deployment/vesma-eyes --timeout=300s

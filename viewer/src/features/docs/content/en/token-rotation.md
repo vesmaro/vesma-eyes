@@ -45,7 +45,7 @@ down to changing the secret.
    recreation):
 
    ```bash
-   helm upgrade vesma-eyes deploy/chart/vesma-eyes -n kube-agents \
+   helm upgrade vesma-eyes deploy/chart/vesmaro-eyes -n kube-agents \
      -f my-values.yaml --set image.tag=<current version>
    kubectl -n kube-agents rollout status deployment/vesma-eyes
    ```

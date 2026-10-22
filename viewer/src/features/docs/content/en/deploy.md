@@ -115,7 +115,7 @@ Do not rename the `vesma-eyes` release: resource names depend on it,
 and the chart reuses its secrets between upgrades.
 
 ```bash
-helm install vesma-eyes deploy/chart/vesma-eyes \
+helm install vesma-eyes deploy/chart/vesmaro-eyes \
   -n kube-agents -f my-values.yaml
 
 kubectl -n kube-agents rollout status deployment/vesma-eyes --timeout=300s
