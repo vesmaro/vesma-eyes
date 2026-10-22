@@ -213,11 +213,11 @@ describe("Kora workspace (union И1 — 07j §6 / 07l §7)", () => {
     );
   }
 
-  it("exposes the named regions: work zone, side panel, console (1.3.1)", () => {
+  it("exposes the named regions: work zone, navigation, meta panel (1.3.1)", () => {
     const html = renderKoraSession();
     expect(html).toContain('aria-label="Session run"');
-    expect(html).toContain('aria-label="Hosts and sessions"');
-    expect(html).toContain('aria-label="Console"');
+    expect(html).toContain('aria-label="Navigation"');
+    expect(html).toContain('aria-label="Meta panel"');
     expect(html).toContain('aria-label="Hosts and agents"');
   });
 
@@ -229,15 +229,15 @@ describe("Kora workspace (union И1 — 07j §6 / 07l §7)", () => {
     expect(html).toMatch(/<a[^>]*min-h-6/);
   });
 
-  it("the console exposes its seams as separators and its toggle as a disclosure (4.1.2)", () => {
-    // U5: the tabs are superseded by the two wings (15-WOW §3.2) — the
-    // console's a11y contract is now the resize seams (honest separators)
-    // + the expand disclosure.
+  it("the frame exposes its seams as separators and the meta blocks as disclosures (4.1.2)", () => {
+    // KW1 (kora-rethink): the Пульт is dissolved — the a11y contract moved
+    // to the three-column frame: the nav/meta seams are honest separators,
+    // the meta panel's blocks are disclosures with the full wiring.
     const html = renderKoraSession();
     expect(html).not.toContain('role="tablist"');
     expect(html).toMatch(/role="separator"[^>]*aria-valuenow/);
     expect(html).toMatch(/aria-expanded="(true|false)"/);
-    expect(html).toContain('aria-controls="kora-pult-body"');
+    expect(html).toContain('aria-controls="kora-meta-about-body"');
   });
 
   it("session state is dot + text, never colour alone (1.4.1)", () => {

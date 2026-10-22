@@ -5,6 +5,9 @@ import {
   KORA_ETHER_DEFAULT,
   KORA_ETHER_MAX,
   KORA_ETHER_MIN,
+  KORA_NAV_DEFAULT,
+  KORA_NAV_MAX,
+  KORA_NAV_MIN,
   KORA_PULT_MAX,
   KORA_PULT_MIN,
   KORA_SIDE_DEFAULT,
@@ -15,10 +18,12 @@ import {
   readFrameInt,
   readKoraDraft,
   readKoraEtherW,
+  readKoraLeftW,
   readKoraPultH,
   readKoraSideW,
   writeKoraDraft,
   writeKoraEtherW,
+  writeKoraLeftW,
   writeKoraPultH,
   writeKoraSideW,
 } from "./koraFrameStorage";
@@ -27,7 +32,9 @@ import {
  * The v7 frame storage (07l §5.2 «безопасные геттеры»): garbage resets,
  * out-of-range clamps, absent keys mean the documented default (the Пульт
  * auto mode = the key's ABSENCE), storage failures never throw, and the
- * draft round-trips under its per-session key.
+ * draft round-trips under its per-session key. The Пульт-era keepers are
+ * RETIRED IN KW2 (the module doc) — their contract is still pinned here
+ * until the keys are dropped for real.
  */
 
 afterEach(() => {
@@ -58,6 +65,17 @@ describe("the named frame keys (v7 §3.1 ranges)", () => {
     writeKoraSideW(352);
     expect(readKoraSideW()).toBe(352);
     expect(KORA_SIDE_DEFAULT).toBe(320);
+  });
+
+  it("nav width (KW1): default 280, clamped to 220..380, round-trips", () => {
+    expect(readKoraLeftW()).toBe(KORA_NAV_DEFAULT);
+    writeKoraLeftW(500);
+    expect(readKoraLeftW()).toBe(KORA_NAV_MAX);
+    writeKoraLeftW(10);
+    expect(readKoraLeftW()).toBe(KORA_NAV_MIN);
+    writeKoraLeftW(336);
+    expect(readKoraLeftW()).toBe(336);
+    expect(KORA_NAV_DEFAULT).toBe(280);
   });
 
   it("Пульт height: the key's ABSENCE = auto (0), values clamp to 160..420", () => {

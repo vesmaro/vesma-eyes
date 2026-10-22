@@ -2363,7 +2363,6 @@ export const en: Record<TranslationKey, string> = {
   "kora.summary.day": "in 24h: {{n}}",
   "kora.filter.label": "Filter by host",
   "kora.filter.all": "All hosts",
-  "kora.side.region": "Hosts and sessions",
   "kora.tree.title": "Hosts and agents",
   "kora.tree.explain":
     "Agents are the programs work runs through on a machine: for example, zcode",
@@ -2460,31 +2459,33 @@ export const en: Record<TranslationKey, string> = {
   "kora.workzone.searchLabel": "Find in this session",
   "kora.workzone.searchPlaceholder": "Find in this session…",
   "kora.workzone.matches": "matches: {{n}}",
-  "kora.pult.title": "Console",
-  "kora.pult.explain": "The console — the session digest and the Ether",
-  "kora.pult.digest": "Digest",
-  "kora.pult.ether": "Ether",
-  "kora.pult.hint": "Pick a session — its digest will appear here",
-  "kora.pult.digestEmpty":
+  // The Пульт is dissolved (KW1 «three columns», kora-rethink blueprint
+  // §6): the strip left the structure, the wings moved into the meta
+  // panel, the badge moved into the header. The height mechanics wait for
+  // KW2 (the «Все ходы» zone) — its seam keys return with it.
+  "kora.meta.digest": "Digest",
+  "kora.meta.ether": "Ether",
+  "kora.meta.digestHint": "Pick a session — its digest will appear here",
+  "kora.meta.digestEmpty":
     "The session digest is built automatically — it will arrive later",
-  "kora.pult.readTranscript": "Read the transcript",
-  // W-A (D1): the pult counter = the inbox only (GET /tasks/inbox) — it
-  // uses the source's word, same as the Overview block.
-  "kora.pult.waiting": "Inbox: {{n}}",
-  "kora.pult.waitingHint": "Tasks waiting for your decision",
-  "kora.pult.expand": "Expand",
-  "kora.pult.collapse": "Collapse",
-  // Resize seams (U5, 07l §3 — the finale blocker): surface names, tooltips
-  // and honest separator aria values.
-  "kora.resize.side.label": "Hosts and sessions panel width",
+  "kora.meta.readTranscript": "Read the transcript",
+  "kora.meta.region": "Meta panel",
+  "kora.meta.aboutNoSession": "No session selected — its details will appear here",
+  // The «waiting for the owner» header badge (moved from the Пульт): the
+  // REAL UI-30 inbox counter, the source's word, hidden while unknown.
+  "kora.header.waiting": "Inbox: {{n}}",
+  "kora.header.waitingHint": "Tasks waiting for your decision",
+  // The LEFT navigation panel (KW1): the tree + the context sessions + the
+  // pinned cluster-chat entry (leads to the current hermes mode for now;
+  // the /kora/hermes route is KW2).
+  "kora.nav.region": "Navigation",
+  "kora.nav.clusterChat": "Chat with the cluster",
+  "kora.nav.clusterChatHint": "Open the Hermes cluster chat",
+  // Resize seams (U5, 07l §3; KW1 added the left seam): surface names,
+  // tooltips and honest separator aria values.
+  "kora.resize.side.label": "Meta panel width",
   "kora.resize.side.tooltip": "Drag to resize. Double-click to restore",
-  "kora.resize.pult.label": "Console height",
-  "kora.resize.pult.tooltip": "Drag to resize the height. Double-click to restore",
-  "kora.resize.ether.label": "Ether width",
-  "kora.resize.ether.tooltip": "Drag to resize. Double-click to restore",
-  "kora.resize.valueCollapsed": "collapsed, {{n}} px",
-  "kora.resize.valueAuto": "auto",
-  "kora.resize.valueAutoPx": "auto, {{n}} px",
+  "kora.resize.nav.label": "Navigation panel width",
   // The Ether (U5, 15-WOW §3.2): a live feed from REAL bus events only;
   // a silent bus = the honest empty and zero movement.
   "kora.ether.caps": "Ether — everything happening in the sessions right now",

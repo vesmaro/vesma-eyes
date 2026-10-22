@@ -5,11 +5,9 @@ import { HonestLine } from "@/components/HonestLine/HonestLine";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { KoraComposer } from "./KoraComposer";
-import { KoraEther } from "./KoraEther";
 import { KoraTranscript } from "./KoraTranscript";
 import { KoraHermesChat } from "./KoraHermesChat";
 import { HermesTranscript } from "./KoraHermesSource";
-import type { KoraEtherRow } from "./koraEtherStore";
 import type { KoraIntentEventPoints } from "./koraIntentEvents";
 import type { KoraCoverage, KoraSession } from "./koraTypes";
 import {
@@ -22,18 +20,20 @@ import type { KoraHermesTranscriptPages, KoraTranscriptPages } from "./useKora";
 /**
  * The central work zone (07j §3.1, union И1): ALWAYS deployed — selecting a
  * session never re-assembles the page, only the center's content changes
- * with the route. No session → the honest invitation (no Эфир: the event
- * feed has no source until И4 — a fixture feed would be fake life); an
- * EMPTY registry → the §9.3 honest variants (A: connect an agent; B: the
- * scanner wait) so the center explains WHY there is nothing to select.
- * A session → the transcript scroll canon (Lora ≤72ch, mono tnum times,
- * load-more, follow-tail as scroll pinning) + the composer (07j §4.6).
+ * with the route. No session → the honest invitation; an EMPTY registry →
+ * the §9.3 honest variants (A: connect an agent; B: the scanner wait) so
+ * the center explains WHY there is nothing to select. A session → the
+ * transcript scroll canon (Lora ≤72ch, mono tnum times, load-more,
+ * follow-tail as scroll pinning) + the composer (07j §4.6).
  *
  * T004 slice 3 (hermes-bridge): the hermes SOURCE context with no session
  * selected turns the center into the cluster CHAT (history = the last
  * active api_server session); a hermes SESSION selected → its transcript,
  * READ-ONLY (the composer is a zcode-session affordance — the hermes chat
  * lives one click back, in the source view).
+ *
+ * KW1 (kora-rethink): the empty scene's Эфир card left — the ring's single
+ * mount is the RIGHT meta panel's Эфир block now (states.md K-EMPTY).
  */
 
 /** The §9.3 registry-empty branch: A = zero executors, B = scanner wait. */
@@ -47,8 +47,6 @@ export function KoraWorkzone({
   hermesTranscript = null,
   hermesChat = null,
   intentEvents,
-  etherRows,
-  hostFilter = null,
 }: {
   session: KoraSession | null;
   registryEmpty: KoraRegistryEmpty;
@@ -61,10 +59,6 @@ export function KoraWorkzone({
    * null for the honest clean-slate chat). */
   hermesChat?: { session: KoraSession | null } | null;
   intentEvents: KoraIntentEventPoints;
-  /** The real-bus Эфир ring — the empty scene's card (07j §3.1 А). */
-  etherRows: readonly KoraEtherRow[];
-  /** The page's ONE host filter (07j §3.2) — the ether follows it. */
-  hostFilter?: string | null;
 }) {
   const t = useT();
 
@@ -75,9 +69,9 @@ export function KoraWorkzone({
       return <KoraHermesChat session={hermesChat.session} />;
     }
     return (
-      /* The scene in the v7 frame (07j §3.1 А): the invitation + the Эфир
-       * card own the free space; inside the frame the card scrolls its ring
-       * (≤6), on narrow screens it simply grows. */
+      /* The scene in the v7 frame (07j §3.1 А): the honest invitation; the
+       * Эфир moved to the meta panel (KW1), the scene keeps the center's
+       * free space for the invitation + the honest empties. */
       <section
         aria-label={t("kora.transcript.region")}
         className="flex min-h-0 min-w-0 flex-1 flex-col px-6 py-5"
@@ -110,15 +104,6 @@ export function KoraWorkzone({
             </HonestLine>
           </div>
         ) : null}
-        {/* One лента, два места посадки (07j §4.2): the same ring the Пульт
-         * wing renders — the store is the single source, mounts never dupe. */}
-        <div className="mt-4 min-h-0 flex-1">
-          <KoraEther
-            rows={etherRows}
-            hostFilter={hostFilter}
-            className="flex h-full min-h-0 flex-col"
-          />
-        </div>
       </section>
     );
   }

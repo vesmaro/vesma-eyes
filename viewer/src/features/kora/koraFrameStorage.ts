@@ -4,13 +4,18 @@
  * reserved this namespace («localStorage … for the И3 frame hardware») —
  * this module IS that hardware's key keeper:
  *
- * - `vesmaro.koraRightW`  — the right panel width, 240..420 px (def 320);
- * - `vesmaro.koraPultH`   — the Пульт fixed height, 160..420 px; the key's
- *   ABSENCE means the auto mode (height by content, ≤280 px) — v7 §3.2;
- * - `vesmaro.koraEtherW`  — the Эфир wing width inside the Пульт,
- *   280..480 px (def 320; 15-WOW §3.2 «Эфир-колонка ≥280px»);
+ * - `vesmaro.koraRightW`  — the meta panel width, 240..420 px (def 320);
+ * - `vesmaro.koraLeftW`   — the navigation panel width, 220..380 px
+ *   (def 280; kora-rethink blueprint §4 — KW1 «Три колонки»);
  * - `vesmaro.koraDraft:{sessionId}` — the composer draft, one key per
  *   session (the v9-аддендум key naming), survives reloads.
+ *
+ * RETIRED IN KW2 (the Пульт is dissolved by KW1 — kora-rethink blueprint
+ * §6): `vesmaro.koraPultH` (the height mechanics move to the «Все ходы»
+ * zone, which persists `vesmaro.koraMovesH`) and `vesmaro.koraEtherW` (the
+ * Эфир wing column is gone — Эфир lives in the meta panel). Nothing in the
+ * frame reads or writes them anymore; the readers/writers stay exported
+ * until KW2 lands the zone and the keys are dropped for real.
  *
  * Guards (07l §5.2 «безопасные геттеры»): every read/write is try/catch —
  * private mode, disabled storage and SSR all degrade to the in-memory
@@ -19,18 +24,33 @@
  */
 
 const RIGHT_W_KEY = "vesmaro.koraRightW";
+const LEFT_W_KEY = "vesmaro.koraLeftW";
+/** retired in KW2 (see the module doc) — kept until the zone lands. */
 const PULT_H_KEY = "vesmaro.koraPultH";
+/** retired in KW2 (see the module doc) — kept until the zone lands. */
 const ETHER_W_KEY = "vesmaro.koraEtherW";
 export const DRAFT_PREFIX = "vesmaro.koraDraft:";
 
-/** v7 §3.1 ranges: panel width / Пульт height / Эфир wing width. */
+/** v7 §3.1 ranges: the two panel widths. */
 export const KORA_SIDE_MIN = 240;
 export const KORA_SIDE_MAX = 420;
 export const KORA_SIDE_DEFAULT = 320;
-export const KORA_PULT_MIN = 160;
-export const KORA_PULT_MAX = 420;
+/** kora-rethink blueprint §4: nav panel 220–380, default 280. */
+export const KORA_NAV_MIN = 220;
+export const KORA_NAV_MAX = 380;
+export const KORA_NAV_DEFAULT = 280;
+/** The band hardware ranges (07l §3.1) — the height mechanics live in
+ * useKoraBandHeight and land on the «Все ходы» zone in KW2. */
+export const KORA_BAND_MIN = 160;
+export const KORA_BAND_MAX = 420;
 /** Drag/keyboard below this line means «свернуть» (07l §3.2 гистерезис). */
-export const KORA_PULT_COLLAPSE_AT = 120;
+export const KORA_BAND_COLLAPSE_AT = 120;
+/** The auto mode's content ceiling (07l §3.2: авто по контенту ≤280). */
+export const KORA_BAND_AUTO_MAX = 280;
+// retired in KW2 — the Пульт-era names of the band constants above.
+export const KORA_PULT_MIN = KORA_BAND_MIN;
+export const KORA_PULT_MAX = KORA_BAND_MAX;
+export const KORA_PULT_COLLAPSE_AT = KORA_BAND_COLLAPSE_AT;
 export const KORA_ETHER_MIN = 280;
 export const KORA_ETHER_MAX = 480;
 export const KORA_ETHER_DEFAULT = 320;
@@ -85,6 +105,15 @@ export const readKoraSideW = (): number =>
   readFrameInt(RIGHT_W_KEY, KORA_SIDE_DEFAULT, KORA_SIDE_MIN, KORA_SIDE_MAX);
 export const writeKoraSideW = (w: number): void =>
   writeFrameValue(RIGHT_W_KEY, String(w));
+
+/** The nav panel width (kora-rethink blueprint §4, KW1). */
+export const readKoraLeftW = (): number =>
+  readFrameInt(LEFT_W_KEY, KORA_NAV_DEFAULT, KORA_NAV_MIN, KORA_NAV_MAX);
+export const writeKoraLeftW = (w: number): void =>
+  writeFrameValue(LEFT_W_KEY, String(w));
+
+// retired in KW2 — the Пульт-era key keepers; nothing mounts them (KW1),
+// the band hook takes its readers as parameters so KW2 wires koraMovesH.
 
 /** The Пульт fixed height; 0 = auto mode (the key stays absent, v7 §3.2). */
 export const readKoraPultH = (): number =>
