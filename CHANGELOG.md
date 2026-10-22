@@ -10,6 +10,12 @@ workflow — this file is the repo-side trail).
 
 ## [Unreleased]
 
+## [1.83.1] — 2026-10-22
+
+### Fixed
+
+- docs: the TOC rail now follows the reader for the whole page depth (the rail slot stretches; regression of the 1.83.0 group-centered layout, found in prod acceptance).
+
 ## [1.83.0] — 2026-10-22
 
 ### Added
