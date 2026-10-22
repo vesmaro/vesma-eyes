@@ -14,14 +14,19 @@
  *    EXACTLY «METHOD /path»:
  *      - METHOD ∈ get|put|post|patch|delete (case-insensitive; the chip
  *        renders the lowercase form — the accessible name keeps the full
- *        heading text, colour is never the sole carrier);
+ *        heading text INCLUDING the enumeration prefix, colour is never
+ *        the sole carrier);
  *      - path is a single token starting with "/" (no spaces — a trailing
  *        prose word kills the match: «GET /etc/hosts back» stays plain);
  *      - ONE tolerated prefix: an enumeration marker «N.» / «N) » (the
  *        mnemos A2A mirror numbers its endpoints: «1. POST /v1/sessions»).
  *    Corpus calibration: every one of the 272 h2/h3 headings matching this
  *    shape across the whole corpus lives in upstream API mirrors; the
- *    curated en/ru corpus has zero matches.
+ *    curated en/ru corpus has zero matches. ATX only: `extractHeadings`
+ *    and the card split parse «#» headings; a setext endpoint heading
+ *    (underlined with ===/---) would still chip via the rendered-heading
+ *    branch but get NO TOC entry and NO card — a theoretical class with
+ *    zero occurrences in the corpus, left honestly unstyled.
  *
  * 2. PARAMETER SECTION HEADINGS (h4) — `isParameterSectionHeading`: a
  *    FIXED vocabulary of reference-section labels (Параметры/Parameters,
@@ -93,23 +98,35 @@ export function inlineMarkdownToText(line: string): string {
     codes.push(code);
     return `${CODE_MASK}${codes.length - 1}${CODE_MASK}`;
   });
-  return masked
-    .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
-    .replace(/\*\*([^*]+)\*\*/g, "$1")
-    .replace(/\*([^*]+)\*/g, "$1")
-    // Underscore emphasis ONLY at word boundaries — CommonMark forbids
-    // intraword `_` emphasis, so `session_id`, `{rule_id}` paths survive
-    // verbatim. (The old blanket `[*_]` sweep mangled every snake_case
-    // token, in rendered heading text twice over.) A leftover stray
-    // marker is tolerated — a visible asterisk beats a broken API path.
-    .replace(/(^|\W)_([^_]+)_(?=\W|$)/g, "$1$2")
-    .replace(CODE_MASK_RE, (_match, index: string) => codes[Number(index)] ?? "")
-    .trim();
+  return (
+    masked
+      .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+      .replace(/\*\*([^*]+)\*\*/g, "$1")
+      .replace(/\*([^*]+)\*/g, "$1")
+      // Underscore emphasis ONLY at word boundaries — CommonMark forbids
+      // intraword `_` emphasis, so `session_id`, `{rule_id}` paths survive
+      // verbatim. (The old blanket `[*_]` sweep mangled every snake_case
+      // token, in rendered heading text twice over.) A leftover stray
+      // marker is tolerated — a visible asterisk beats a broken API path.
+      .replace(/(^|\W)_([^_]+)_(?=\W|$)/g, "$1$2")
+      .replace(CODE_MASK_RE, (_match, index: string) => codes[Number(index)] ?? "")
+      .trim()
+  );
 }
 
 /** "GET /api/memories" → { get, /api/memories }; anything else → null. */
 const ENDPOINT_RE = /^(?:\d+[.)]\s+)?([A-Za-z]+)\s+(\/\S+)\s*$/;
+
+/**
+ * The enumeration marker of an endpoint heading, verbatim ("1. ") — the
+ * chip heading renders it BEFORE the chip so the accessible name keeps the
+ * full heading text (review P3: the prefix is part of the mirror's heading,
+ * dropping it changed the accessible name). Single source with ENDPOINT_RE.
+ */
+export function enumerationPrefix(text: string): string {
+  return /^(?:\d+[.)]\s+)?/.exec(inlineMarkdownToText(text))?.[0] ?? "";
+}
 
 /** See module docstring rule 1. Raw heading text in (inline md allowed). */
 export function parseEndpointHeading(text: string): ApiEndpointHeading | null {
@@ -183,9 +200,7 @@ export interface ConventionSection {
  * Fence-aware split into convention sections — rule 3. Null when the body
  * has NO endpoint sections (the caller keeps the single-pass render).
  */
-export function splitConventionSections(
-  body: string,
-): ConventionSection[] | null {
+export function splitConventionSections(body: string): ConventionSection[] | null {
   const sections: ConventionSection[] = [];
   let lines: string[] = [];
   let endpoint: ApiEndpointHeading | null = null;

@@ -13,9 +13,11 @@ import type { ApiEndpointHeading } from "./apiConvention";
  * implementation, zero drift. Own file because react-refresh wants
  * component-only export surfaces.
  *
- * The chip + path KEEP the heading text content, so the accessible name and
- * the TOC anchor text never change; colour is never the sole carrier (the
- * method word stays visible, WCAG 1.4.1).
+ * The chip + path KEEP the heading text content — the accessible name is
+ * the heading's, with the method word lowercased (the established board
+ * form) and any enumeration prefix rendered verbatim before the chip
+ * (review P3); colour is never the sole carrier (the method word stays
+ * visible, WCAG 1.4.1).
  */
 export function EndpointChip({ endpoint }: { endpoint: ApiEndpointHeading }) {
   return (

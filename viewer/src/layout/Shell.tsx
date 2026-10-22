@@ -12,6 +12,7 @@ import {
   useSidebarCollapsedEffective,
 } from "@/lib/sidebarState";
 import { setSidebarOverlayOpen } from "@/lib/sidebarOverlayState";
+import { scrollRestorationKey } from "@/lib/scrollRestorationKey";
 import { LivingBridge } from "@/lib/livingBridge";
 import { LivingLayer } from "./LivingLayer";
 import { VesmaLayer } from "./VesmaLayer";
@@ -177,10 +178,7 @@ export function Shell() {
                    * gated domain — an anonymous visitor gets the honest gate
                    * screen instead of the page; the gated component never
                    * mounts (no closed-content flash, URL-first). */}
-                  <GatedOutlet
-                    pathname={location.pathname}
-                    search={location.search}
-                  >
+                  <GatedOutlet pathname={location.pathname} search={location.search}>
                     <Outlet />
                   </GatedOutlet>
                 </Suspense>
@@ -190,21 +188,21 @@ export function Shell() {
         </div>
       </div>
       {/* Restore window scroll on BACK/FORWARD (ARCHCOM-3 verdict §2: use the
-       * router's ScrollRestoration, never a hand-rolled cache). The
-       * hash-aware getKey closes the fragment-navigation defect class
-       * (owner directive 2026-10-22, D2): a same-document fragment entry
-       * carries history.state = null, so the router keys it "default" —
+       * router's ScrollRestoration, never a hand-rolled cache). The key
+       * contract (scrollRestorationKey, review P1): fragment locations get
+       * their own pathname+search+hash slot — closing the fragment-
+       * navigation defect class (owner directive 2026-10-22, D2: a fragment
+       * entry carries history.state = null, the router keys it "default" —
        * the SAME key the page itself was loaded under — and Scroll-
        * Restoration "restores" the just-saved scrollY over the browser's
-       * fragment scroll (reproduced: click 1 on a TOC/anchor link →
-       * window.scrollTo(0, 0); click 2 finally jumps). Keying by
-       * pathname+search+hash gives every fragment entry its own slot, the
-       * restore lookup misses, and the router's own hash branch
-       * (getElementById → scrollIntoView) runs instead. Hashless
-       * navigations keep exactly the default keys they always had. */}
-      <ScrollRestoration
-        getKey={(location) => `${location.pathname}${location.search}${location.hash}`}
-      />
+       * fragment scroll; reproduced: click 1 on a TOC/anchor link →
+       * window.scrollTo(0, 0), click 2 finally jumps). PLAIN locations keep
+       * the router's entry key: a PUSH to a visited page gets a fresh key,
+       * the restore misses and the page lands on TOP; a POP restores by the
+       * same key it left with. Keying plain locations by pathname+search
+       * (the first attempt) broke the PUSH case — a revisit inherited the
+       * stale offset. */}
+      <ScrollRestoration getKey={scrollRestorationKey} />
       <FocusMain pathname={location.pathname} />
       {/* The command palette (UX-overhaul §7.3 Ф2) — mounted inside the
        * data router so its rows navigate with router context; the open

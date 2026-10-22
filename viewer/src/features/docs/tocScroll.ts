@@ -1,24 +1,34 @@
 /**
- * TOC anchor navigation (owner directive 2026-10-22, slice D2).
+ * TOC anchor navigation (owner directive 2026-10-22, slice D2; review P2).
  *
  * The page scrolls in the WINDOW (Shell.tsx «The page itself still scrolls
  * in the WINDOW on purpose»); the article headings carry `scroll-mt-24`
  * (96px) so a landing position clears the sticky top bar + crumbs row.
  *
- * Why clicks are handled PROGRAMMATICALLY instead of relying on the native
- * fragment jump — the reproduced root cause (traced on the stand): a
- * same-document fragment navigation creates a history entry whose
- * history.state is NULL, and react-router keys POP locations from
- * history.state.key — null → the shared "default" key, the SAME key the
- * page itself was loaded under. ScrollRestoration then treats the fragment
- * click as a re-visit of the page: it «restores» the position just saved
- * for the current entry (scrollY at click time) and calls
- * window.scrollTo(0, that) — cancelling the native fragment scroll (trace:
- `scrollTo(0, 0)` from the ScrollRestoration layout effect; the second
- * click on the same hash — another "default" entry — finally jumped).
- * Shell.tsx additionally passes a hash-aware ScrollRestoration getKey so
- * the whole defect CLASS dies for every hash link; this handler keeps the
- * TOC itself instant, sticky-offset aware and repeat-click safe.
+ * WHY THE CLICK IS HANDLED PROGRAMMATICALLY — the reproduced root cause
+ * (traced on the stand): a same-document fragment entry carries
+ * history.state = null, and react-router keys POP locations from
+ * history.state.key — null resolves to the shared "default" key, the SAME
+ * key the page itself was loaded under. ScrollRestoration then treats the
+ * fragment click as a re-visit of the page and «restores» the position
+ * just saved for the current entry over the browser's fragment scroll
+ * (trace: `window.scrollTo(0, 0)` from the ScrollRestoration layout
+ * effect; the second click on the same hash — another "default" entry —
+ * finally jumped). Shell's scrollRestorationKey closes that defect class
+ * for the router's OWN hash navigations.
+ *
+ * REVIEW P2 (2026-10-22): the first fix updated the URL with a raw
+ * history.pushState copying the current router state — DIAGNOSED AND
+ * DROPPED. A pushState entry is invisible to the router's save
+ * bookkeeping: the router still believes it is on the hashless entry, so
+ * on BACK it saved the CURRENT (anchor) scrollY under the page's key and
+ * «restored» it — BACK stayed on the section. No history-state payload
+ * can fix that at our layer; the entry must be ROUTER-OWNED. So the click
+ * scrolls instantly (deterministic landing, sticky offsets) and the URL
+ * update goes through router.navigate() — a real fragment navigation the
+ * router keys by pathname+search+hash (own slot, restore misses, nothing
+ * re-anchors the reader; BACK/FORWARD restore faithfully through the
+ * router's own bookkeeping).
  */
 
 /** The `scroll-mt-24` the article headings carry — the sticky-chrome offset. */
@@ -40,17 +50,19 @@ export function scrollToHeading(id: string): boolean {
   if (typeof document === "undefined") return false;
   const element = document.getElementById(id);
   if (element === null) return false;
-  const top = element.getBoundingClientRect().top + window.scrollY - HEADING_SCROLL_MARGIN;
+  const top =
+    element.getBoundingClientRect().top + window.scrollY - HEADING_SCROLL_MARGIN;
   window.scrollTo({ top: Math.max(0, top), behavior: "instant" as ScrollBehavior });
   return true;
 }
 
 /**
  * Shared onClick for TOC anchors (regular + api rails and the narrow
- * <details> variant): plain unmodified left-clicks scroll programmatically;
- * modifier clicks (new tab/window, download…) and non-left buttons keep
- * the browser defaults. A missing target falls through to the native
- * behavior instead of dead-clicking.
+ * <details> variant): plain unmodified left-clicks scroll programmatically
+ * and sync the URL through the ROUTER (`navigate("#id")` — a router-owned
+ * fragment entry); modifier clicks (new tab/window, download…) and
+ * non-left buttons keep the browser defaults. A missing target falls
+ * through to the native behavior instead of dead-clicking.
  */
 export function handleTocClick(
   event: {
@@ -63,6 +75,7 @@ export function handleTocClick(
     preventDefault(): void;
   },
   id: string,
+  navigate: (to: string) => void,
 ): void {
   if (
     event.defaultPrevented ||
@@ -76,8 +89,5 @@ export function handleTocClick(
   }
   if (!scrollToHeading(id)) return; // not rendered yet — native fallback
   event.preventDefault();
-  // Silent URL sync (copy/paste, history depth): pushState does not emit
-  // popstate, so the router and its ScrollRestoration never see it —
-  // nothing re-anchors the page out from under the reader.
-  window.history.pushState(window.history.state, "", `#${id}`);
+  navigate(`#${id}`);
 }

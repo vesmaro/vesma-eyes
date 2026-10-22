@@ -13,6 +13,7 @@ import {
   ENDPOINT_CARD_CLASS,
   splitConventionSections,
 } from "@/components/TextEngine/core/apiConvention";
+import { EndpointSectionContext } from "@/components/TextEngine/core/endpointContext";
 // ME-013 (ADR 0020 Amendment 1): the diagram component is an ENGINE
 // capability now — TextEngine/core/Mermaid.tsx is the single mermaid import
 // site and serves both trust profiles; the curated profile mounts it with
@@ -122,13 +123,7 @@ function CopyButton({ code }: { code: string }) {
 }
 
 /** Fenced block chrome (docs-owned): language label + copy + EXACT code. */
-function CodeBlock({
-  code,
-  language,
-}: {
-  code: string;
-  language: string | undefined;
-}) {
+function CodeBlock({ code, language }: { code: string; language: string | undefined }) {
   return (
     <div className="relative my-4">
       {language ? (
@@ -272,30 +267,29 @@ export function Markdown({ source, className, pageSlug }: MarkdownProps) {
   const sections = useMemo(() => splitConventionSections(source), [source]);
   return (
     <div className={cn("text-base leading-relaxed text-foreground", className)}>
-      {sections === null
-        ? (
-          <CorpusMarkdown source={source} components={components} />
+      {sections === null ? (
+        <CorpusMarkdown source={source} components={components} />
+      ) : (
+        sections.map((section, index) =>
+          section.endpoint !== null ? (
+            // The card chunk mounts the endpoint-section context: the
+            // theme's vocabulary h4 label style applies HERE (review P2
+            // — an h4 «Configuration» on an ordinary page keeps the
+            // factory look; apiConvention's docstring promise).
+            <EndpointSectionContext.Provider key={index} value={true}>
+              <section className={ENDPOINT_CARD_CLASS}>
+                <CorpusMarkdown source={section.markdown} components={components} />
+              </section>
+            </EndpointSectionContext.Provider>
+          ) : (
+            <CorpusMarkdown
+              key={index}
+              source={section.markdown}
+              components={components}
+            />
+          ),
         )
-        : (
-          sections.map((section, index) =>
-            section.endpoint !== null
-              ? (
-                <section key={index} className={ENDPOINT_CARD_CLASS}>
-                  <CorpusMarkdown
-                    source={section.markdown}
-                    components={components}
-                  />
-                </section>
-              )
-              : (
-                <CorpusMarkdown
-                  key={index}
-                  source={section.markdown}
-                  components={components}
-                />
-              )
-          )
-        )}
+      )}
     </div>
   );
 }

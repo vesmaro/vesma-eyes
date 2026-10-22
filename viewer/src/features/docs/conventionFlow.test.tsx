@@ -81,10 +81,30 @@ describe("convention flow rendering (Markdown, default docs path)", () => {
 
   it("KEEPS THE ANCHOR CONTRACT: rendered ids equal extractHeadings ids", () => {
     const dom = parseHtml(render(ENDPOINT_BODY));
-    const rendered = [...dom.querySelectorAll("h2[id], h3[id]")].map(
-      (node) => node.id,
-    );
+    const rendered = [...dom.querySelectorAll("h2[id], h3[id]")].map((node) => node.id);
     expect(rendered).toEqual(extractHeadings(ENDPOINT_BODY).map((item) => item.id));
+  });
+
+  it("vocabulary h4 OUTSIDE an endpoint section stays factory (review P2)", () => {
+    // The mnemos architecture-overview case: «Configuration/Конфигурация»
+    // h4s on an ordinary guide page carry no API semantics — the label
+    // style is gated by the endpoint-section context, not page-wide.
+    const body = [
+      "## Overview",
+      "",
+      "#### Configuration",
+      "",
+      "Ordinary guide subsection — factory typography.",
+      "",
+      "#### Параметры",
+      "",
+      "Also factory: vocabulary alone is not API context.",
+    ].join("\n");
+    const dom = parseHtml(render(body));
+    for (const h4 of [...dom.querySelectorAll("h4")]) {
+      expect(h4.className).not.toContain("uppercase");
+      expect(h4.className).toContain("text-base");
+    }
   });
 
   it("renders enumerated h2 endpoints (mirror form) as cards with chips", () => {
@@ -103,6 +123,9 @@ describe("convention flow rendering (Markdown, default docs path)", () => {
     const chip = card!.querySelector("h2 span");
     expect(chip?.textContent).toBe("post");
     expect(chip?.className).toContain("border-success");
+    // review P3: the enumeration prefix stays in the accessible name
+    const h2 = card!.querySelector("h2");
+    expect(h2?.textContent).toBe("1. post /v1/sessions");
   });
 
   it("endpoint-free bodies render single-pass: no card wrapper", () => {

@@ -1,5 +1,5 @@
 import { Component, useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import {
   ArrowLeft,
   ArrowRight,
@@ -94,6 +94,7 @@ function PageSkeleton() {
  *  Clicks scroll programmatically (tocScroll.ts): the first click lands,
  *  a repeat click re-lands, the URL stays shareable. */
 function TocList({ items, activeId }: { items: TocItem[]; activeId: string | null }) {
+  const navigate = useNavigate();
   return (
     <ul>
       {items.map((item) => {
@@ -104,7 +105,7 @@ function TocList({ items, activeId }: { items: TocItem[]; activeId: string | nul
               href={`#${item.id}`}
               title={item.text}
               aria-current={active ? "location" : undefined}
-              onClick={(event) => handleTocClick(event, item.id)}
+              onClick={(event) => handleTocClick(event, item.id, navigate)}
               className={cn(
                 "block truncate border-l-2 py-1.5 pl-3 pr-1 text-sm transition-colors duration-instant",
                 item.depth === 3 && "pl-7",

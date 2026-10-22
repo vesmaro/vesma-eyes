@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useNavigate } from "react-router";
 import { ChevronDown } from "lucide-react";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
@@ -86,7 +87,10 @@ function buildApiComponents(pageSlug: string | undefined): ArticleComponents {
         // Schema appendix (and any non-endpoint h3): factory look, minus
         // the top margin — it is always the first child of its card.
         return (
-          <h3 id={id} className="mb-4 mt-0 scroll-mt-24 text-base font-semibold text-foreground">
+          <h3
+            id={id}
+            className="mb-4 mt-0 scroll-mt-24 text-base font-semibold text-foreground"
+          >
             {children}
           </h3>
         );
@@ -138,11 +142,7 @@ export function ApiDocsBody({ body, pageSlug }: { body: string; pageSlug: string
             <CorpusMarkdown source={chunk.markdown} components={components} />
           </section>
         ) : (
-          <CorpusMarkdown
-            key={index}
-            source={chunk.markdown}
-            components={components}
-          />
+          <CorpusMarkdown key={index} source={chunk.markdown} components={components} />
         ),
       )}
     </div>
@@ -151,7 +151,8 @@ export function ApiDocsBody({ body, pageSlug }: { body: string; pageSlug: string
 
 /** TOC list with method dots (colour reinforces the method TEXT, 1.4.1).
  *  Clicks scroll programmatically — same handler as the plain TocList
- *  (tocScroll.ts; first-click/repeat-click discipline, D2 2026-10-22). */
+ *  (tocScroll.ts; first-click/repeat-click discipline, D2 2026-10-22;
+ *  review P2: the URL update goes through router.navigate). */
 function TocMethodList({
   items,
   activeId,
@@ -159,6 +160,7 @@ function TocMethodList({
   items: TocItem[];
   activeId: string | null;
 }) {
+  const navigate = useNavigate();
   return (
     <ul>
       {items.map((item) => {
@@ -170,7 +172,7 @@ function TocMethodList({
               href={`#${item.id}`}
               title={item.text}
               aria-current={active ? "location" : undefined}
-              onClick={(event) => handleTocClick(event, item.id)}
+              onClick={(event) => handleTocClick(event, item.id, navigate)}
               className={cn(
                 "block truncate border-l-2 py-1.5 pl-3 pr-1 text-sm transition-colors duration-instant",
                 item.depth === 3 && "pl-7",

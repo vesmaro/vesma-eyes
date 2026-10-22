@@ -13,10 +13,11 @@ import {
 import { MermaidDiagram } from "./Mermaid";
 import { fenceExceedsSizeCap } from "./mermaidCaps";
 import {
-  isParameterSectionHeading,
+  enumerationPrefix,
   parseEndpointHeading,
 } from "./apiConvention";
 import { EndpointChip } from "./EndpointChip";
+import { ArticleH4 } from "./ArticleH4";
 
 /**
  * Typography themes of the unified text engine (ADR 0020, layer 2 — «одна
@@ -143,6 +144,7 @@ export interface ArticleThemeHooks {
  * The search-hit mark class lives in ./constants (single home; re-exported
  * by the barrel for renderer consumers).
  */
+
 export function articleComponents(hooks: ArticleThemeHooks): Components {
   return {
     h1: ({ node, children }) => (
@@ -161,7 +163,8 @@ export function articleComponents(hooks: ArticleThemeHooks): Components {
       // Convention branch (D3): an h2 that IS an endpoint («1. `POST
       // /v1/sessions`» in the upstream mirrors) renders as a chip heading.
       // It is always the first child of its convention card → mt-0. The
-      // slug comes from the RAW text, so ids match extractHeadings exactly.
+      // slug comes from the RAW text, so ids match extractHeadings exactly;
+      // the enumeration prefix stays in the accessible name (review P3).
       const endpoint = parseEndpointHeading(text);
       if (endpoint !== null) {
         return (
@@ -169,6 +172,7 @@ export function articleComponents(hooks: ArticleThemeHooks): Components {
             id={id}
             className="mb-4 mt-0 flex flex-wrap items-center gap-x-2 gap-y-1 scroll-mt-24 text-lg font-semibold text-foreground"
           >
+            {enumerationPrefix(text)}
             <EndpointChip endpoint={endpoint} />
           </h2>
         );
@@ -195,6 +199,7 @@ export function articleComponents(hooks: ArticleThemeHooks): Components {
             id={id}
             className="mb-4 mt-0 flex flex-wrap items-center gap-x-2 gap-y-1 scroll-mt-24 text-base font-semibold text-foreground"
           >
+            {enumerationPrefix(text)}
             <EndpointChip endpoint={endpoint} />
           </h3>
         );
@@ -208,23 +213,7 @@ export function articleComponents(hooks: ArticleThemeHooks): Components {
         </h3>
       );
     },
-    h4: ({ node, children }) => {
-      // Convention branch (D3): reference-section labels (Параметры /
-      // Пример запроса / Ответы / Request body…) render as small-caps
-      // section labels with a static marker bar — same look as the
-      // api-board presentation. Vocabulary-gated (apiConvention.ts — an
-      // unstyled h4 is preferred over a false positive); every other h4
-      // keeps the factory look.
-      if (isParameterSectionHeading(nodeText(asHast(node)))) {
-        return (
-          <h4 className="mt-7 mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-foreground-secondary">
-            <span aria-hidden="true" className="h-4 w-1 shrink-0 rounded-full bg-iris" />
-            {children}
-          </h4>
-        );
-      }
-      return <h4 className="text-base font-medium text-foreground">{children}</h4>;
-    },
+    h4: ArticleH4,
     // Upstream typography (design spec §9.2): h5–h6 share one honest look —
     // text-sm/medium. Order stays visible; TOC remains h2/h3 only.
     h5: ({ children }) => (
@@ -249,9 +238,7 @@ export function articleComponents(hooks: ArticleThemeHooks): Components {
     li: ({ children }) => (
       <li className="text-base leading-relaxed text-foreground">{children}</li>
     ),
-    a: ({ href, children }) => (
-      <>{hooks.link(href, children)}</>
-    ),
+    a: ({ href, children }) => <>{hooks.link(href, children)}</>,
     blockquote: ({ children }) => (
       <blockquote className="mb-4 border-l-2 border-iris-dim pl-4 text-foreground-secondary">
         {children}
