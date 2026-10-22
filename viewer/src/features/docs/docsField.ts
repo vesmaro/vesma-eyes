@@ -39,9 +39,19 @@ export function docsFieldClass(): string {
  * other — gap-8 keeps today's density at 1280, gap-16 (64px, the
  * industry-standard 40-96px band) from 2xl up — and justify-center centers
  * the whole group, so the slack splits into equal outer margins.
+ *
+ * NO `items-start` here (regression fix, prod 1.83.0 acceptance): flex
+ * default `stretch` is LOAD-BEARING — it pulls the rail's aside to the
+ * full row (= article) height, and the aside's inner `sticky top-28`
+ * block then has a range covering the whole article. With items-start the
+ * aside shrank to its content (~600-870px), the sticky range ended after
+ * the first screenful and the «На этой странице» rail scrolled away for
+ * the rest of a 20k-px page (measured: sticky top −4055 at scrollY 4167).
+ * Stretch does not stretch the visible sticky block — only its scroll
+ * range.
  */
 export const DOCS_GROUP_ROW =
-  "lg:flex lg:items-start lg:justify-center lg:gap-8 2xl:gap-16";
+  "lg:flex lg:justify-center lg:gap-8 2xl:gap-16";
 
 /** The centered reading column — 72ch, the same measure on every surface. */
 export const DOCS_COLUMN = "mx-auto w-full max-w-scroll";
