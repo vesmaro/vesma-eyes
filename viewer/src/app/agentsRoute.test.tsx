@@ -44,8 +44,15 @@ describe("routes — /agents single object with an index redirect (P3-7, ME-014)
       ?.filter((child) => !child.index)
       .map((child) => child.path);
     // agents-redesign A1: the hosts view carries the OPTIONAL :host param —
-    // ONE frame element, the selection never re-assembles it.
-    expect(paths).toEqual(["hosts/:host?", "execution", "harnesses"]);
+    // ONE frame element, the selection never re-assembles it. W3 adds the
+    // session segment (states.md §3) on the SAME element — the route count
+    // grows by one, the three live views keep their paths.
+    expect(paths).toEqual([
+      "hosts/:host?",
+      "hosts/:host/sessions/:sessionId",
+      "execution",
+      "harnesses",
+    ]);
   });
 
   it("the alias lands on /agents/hosts — the ME-014 roster (structural)", () => {

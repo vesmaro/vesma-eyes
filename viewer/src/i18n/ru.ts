@@ -1377,6 +1377,22 @@ export const ru = {
   "agents.hosts.nowNoSessions":
     "Живых сессий нет — появятся, когда харнес начнёт работу.",
   "agents.hosts.sessionsFailed": "Сессии недоступны.",
+  // W3 «Сессия в центре» (states.md §1 S-SESSION): READ-ONLY превью
+  // транскрипта выбранной сессии; чат живёт ТОЛЬКО в Корe (blueprint §9) —
+  // ключи переиспользуют словарь «О сессии» Коры (kora.about.*).
+  "agents.hosts.session.label": "Сессия",
+  "agents.hosts.session.openInKora": "Открыть в Корe",
+  "agents.hosts.session.closeAria": "Закрыть просмотр сессии",
+  "agents.hosts.session.menuLabel": "Операции сессии",
+  "agents.hosts.session.menuTriggerAria": "Операции сессии {{name}}",
+  "agents.hosts.session.readonlyNote":
+    "Просмотр только для чтения — чат живёт в Корe",
+  "agents.hosts.session.notFound":
+    "Этой сессии нет среди живых сессий хоста",
+  "agents.hosts.session.notFoundHint":
+    "Возможно, она завершилась, ушла из живых или ссылка устарела.",
+  "agents.hosts.session.backToHost": "Вернуться к хосту",
+  "agents.hosts.session.transcriptLabel": "Транскрипт сессии",
   // W2 «Мета-панель» (states.md §2): блоки правой панели; «Недавно» поля
   // переехало в блок «Пульс» (ключи pulse* — те же честные состояния).
   "agents.hosts.panelRegion": "Панель хостов",

@@ -1340,6 +1340,23 @@ export const en: Record<TranslationKey, string> = {
   "agents.hosts.nowNoSessions":
     "No live sessions — they appear when a harness starts working.",
   "agents.hosts.sessionsFailed": "Sessions unavailable.",
+  // W3 "Session in the center" (states.md §1 S-SESSION): the READ-ONLY
+  // transcript preview of the selected session; the chat lives ONLY in
+  // Kora (blueprint §9) — the keys reuse Kora's «О сессии» dictionary
+  // (kora.about.*).
+  "agents.hosts.session.label": "Session",
+  "agents.hosts.session.openInKora": "Open in Kora",
+  "agents.hosts.session.closeAria": "Close the session preview",
+  "agents.hosts.session.menuLabel": "Session operations",
+  "agents.hosts.session.menuTriggerAria": "Session {{name}} operations",
+  "agents.hosts.session.readonlyNote":
+    "Read-only preview — the chat lives in Kora",
+  "agents.hosts.session.notFound":
+    "This session is not among the host's live sessions",
+  "agents.hosts.session.notFoundHint":
+    "It may have finished, gone idle, or the link is stale.",
+  "agents.hosts.session.backToHost": "Back to the host",
+  "agents.hosts.session.transcriptLabel": "Session transcript",
   // W2 "Meta-panel" (states.md §2): the right panel blocks; the field's
   // «Недавно» moved into the «Пульс» block (the pulse* keys — the same
   // honest states).
