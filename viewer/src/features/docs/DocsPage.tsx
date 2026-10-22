@@ -39,6 +39,15 @@ import { pageGridClass } from "@/layout/pageGrid";
  * at the 72ch reading measure, TOC rail (sticky, scroll-spy) on the right
  * from lg up, native <details> TOC above the h1 on narrow screens, prev/next
  * at the end confined to the page's OWN project (spec §9.7).
+ *
+ * Layout balance (owner directive 2026-10-22): the classic docs scheme —
+ * [article 72ch] [flexing gutter] [TOC 256px] as a justified flex row over
+ * the FULL central field, not a centered group. Centering the article+TOC
+ * pair (the previous max-w-5xl wrapper) pushed both to the middle of wide
+ * windows: a dead field on the left and the TOC torn away from the right
+ * edge. With justify-between the article starts at the field's left edge
+ * and the rail hugs the right edge at every lg+ width; below lg the 5xl
+ * centered reading column is kept (a lone column should not left-hang).
  */
 
 function ArticleSkeleton() {
@@ -146,12 +155,14 @@ function useScrollSpy(ids: string[]): string | null {
   return activeId;
 }
 
-/** TOC rail — hidden below lg (the <details> variant covers narrow widths). */
+/** TOC rail — hidden below lg (the <details> variant covers narrow widths).
+ *  w-64 shrink-0 pins the rail column in the page's justified flex row
+ *  (owner directive 2026-10-22) — the flex neighbour is the article. */
 function TocRail({ items, activeId }: { items: TocItem[]; activeId: string | null }) {
   const t = useT();
   if (items.length < 2) return null; // empty TOC is noise — spec §5.3
   return (
-    <aside className="hidden lg:block">
+    <aside className="hidden w-64 shrink-0 lg:block">
       <div className="sticky top-28 max-h-[calc(100dvh-8rem)] overflow-y-auto">
         <p className="mb-3 text-xs font-medium text-foreground-secondary">
           {t("docs.toc.title")}
@@ -486,8 +497,14 @@ function ArticleView({ slug, page }: { slug: string; page: DocPage }) {
   const localeOriginal = !bilingual && lang !== engineLocale;
 
   return (
-    <div className={pageGridClass("reading")}>
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_16rem]">
+    <div className={cn(pageGridClass("reading"), "lg:max-w-none")}>
+      {/* Balanced two-column field (owner directive 2026-10-22): the article
+       * keeps its 72ch measure at the field's LEFT edge, the rail hugs the
+       * RIGHT edge, the slack becomes the gutter between them (justify-
+       * between). Below lg the 5xl centered column comes back (lone reading
+       * column, no rail) — and `lg:max-w-none` disables the wrapper cap that
+       * would otherwise re-center the pair on wide windows. */}
+      <div className="lg:flex lg:items-start lg:justify-between lg:gap-8">
         <article className="min-w-0 max-w-scroll">
           {/* Meta row: category chip → version badge → provenance badge →
               locale badge, RUS/ORIG + search right (design spec §6.1). */}

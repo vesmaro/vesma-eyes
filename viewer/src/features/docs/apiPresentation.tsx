@@ -258,7 +258,9 @@ export function ApiTocTree({
   );
 }
 
-/** TOC rail for api-board pages (lg+): sticky, grouped, method dots. */
+/** TOC rail for api-board pages (lg+): sticky, grouped, method dots.
+ *  w-64 shrink-0 pins the rail column in the page's justified flex row
+ *  (owner directive 2026-10-22) — same geometry as TocRail. */
 export function ApiTocRail({
   items,
   activeId,
@@ -269,7 +271,7 @@ export function ApiTocRail({
   const t = useT();
   if (items.length < 2) return null;
   return (
-    <aside className="hidden lg:block">
+    <aside className="hidden w-64 shrink-0 lg:block">
       <div className="sticky top-28 max-h-[calc(100dvh-8rem)] overflow-y-auto">
         <p className="mb-3 text-xs font-medium text-foreground-secondary">
           {t("docs.toc.title")}
