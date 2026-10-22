@@ -370,6 +370,12 @@ export interface HarnessInventoryEnvironment {
   readonly kind?: string;
   readonly home_path?: string;
   /**
+   * The environment's own version stamp (agent-reported, advisory — the
+   * mirror stores it verbatim-but-bounded). OPTIONAL: older agents omit
+   * it — honest absence, never a fabricated default.
+   */
+  readonly version?: string;
+  /**
    * AGW-23: the execution surface the fact came from — "metal" (the
    * agent's own-namespace scan) or "distrobox:<name>" (a probe inside
    * that container). OPTIONAL: pre-v0.9 agents omit it — absence is an

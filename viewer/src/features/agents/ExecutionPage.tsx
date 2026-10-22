@@ -75,7 +75,13 @@ export function ExecutionPage() {
   });
   const [stateFilter, setStateFilter] = useState<AssignmentLifecycleState | null>(null);
   const [query, setQuery] = useState("");
-  const [specialistQuery, setSpecialistQuery] = useState("");
+  // specialists-interactive-cards (owner directive 2026-10-21): the
+  // inventory record card deep-links /agents/execution?specialist=<name> —
+  // the SAME reading-init contract as ?executor= above (seed once on
+  // mount, never written back; the input stays the live filter UI).
+  const [specialistQuery, setSpecialistQuery] = useState(
+    () => searchParams.get("specialist") ?? "",
+  );
   const [terminalCollapsed, setTerminalCollapsed] = useState(loadTerminalCollapsed);
   const [drawerRow, setDrawerRow] = useState<AssignmentItem | null>(null);
   // Retry source (failed/expired row) → opens the task's sheet pre-filled.
