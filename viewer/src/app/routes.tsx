@@ -106,6 +106,13 @@ const KoraSessionPage = lazy(() =>
     default: m.KoraSessionPage,
   })),
 );
+// KW2 «Живой чат» (kora-rethink blueprint §5): the RESERVED cluster-chat
+// segment — /kora/hermes.
+const KoraHermesChatPage = lazy(() =>
+  import("@/features/kora/KoraHermesChatPage").then((m) => ({
+    default: m.KoraHermesChatPage,
+  })),
+);
 // Settings hub (UI-21): the /system/settings route composes «Исполнение»
 // (the AGW-3 section, reused verbatim) + «Автоматизация» + «Интерфейс»
 // cross-links. The legacy single-section shell (ExecutionSettingsPage)
@@ -323,6 +330,23 @@ export function buildRoutes(): RouteObject[] {
                 <Page>
                   <KoraGatewayContext.Provider value={makeKoraGateway()}>
                     <KoraPage />
+                  </KoraGatewayContext.Provider>
+                </Page>
+              ),
+            },
+            {
+              // KW2 (kora-rethink blueprint §5): the RESERVED cluster-chat
+              // segment. Declared BEFORE /kora/:sessionId for readability —
+              // react-router ranks STATIC segments above dynamic ones
+              // regardless of order, so /kora/hermes can never resolve into
+              // a session lookup (and a registry id is never the bare
+              // "hermes": ids are executor:native). Deep-linkable; the
+              // pinned nav entry «Чат с кластером» lands here.
+              path: "/kora/hermes",
+              element: (
+                <Page>
+                  <KoraGatewayContext.Provider value={makeKoraGateway()}>
+                    <KoraHermesChatPage />
                   </KoraGatewayContext.Provider>
                 </Page>
               ),

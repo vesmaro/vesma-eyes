@@ -34,13 +34,16 @@ import { I18nProvider } from "@/i18n";
  *   re-renders with them — never an auto-pull;
  * - the off mode (`?hermesBridge=off`) renders the honest off-slot with the
  *   human reason, and the pull throws the typed hermes_off error;
- * - a hermes session opens its LIVE transcript through the seq cursor,
- *   READ-ONLY (roles/tool names/redaction render; the composer is absent);
- * - the hermes context with no session opens the source CHAT anchored to
+ * - KW2: a hermes session opens the SPLIT — the REAL chat (switcher,
+ *   model select, the non-persistence note) + the «Все ходы» zone (the
+ *   collapsed strip is the default; expanding deploys the SAME transcript
+ *   grammar: roles/tool names/redaction, the seq-cursor load-more);
+ * - KW2: the cluster route (/kora/hermes) opens the chat anchored to
  *   the last active api_server session: a REAL send (the reply carries the
  *   server's «hermes · real-time» marker), the composition contract
- *   (tool turns filtered, the new text last), the limiter/off verdicts in
- *   the server's own voice with the draft kept.
+ *   (tool turns filtered, the new text last), the limiter/off/model-404
+ *   verdicts in the server's own voice with the draft and the user's
+ *   model choice kept.
  */
 
 interface MountOptions {
@@ -48,6 +51,14 @@ interface MountOptions {
   hermesOff?: boolean;
   /** `?hermesChat=limited` — the chat limiter demo knob. */
   hermesLimited?: boolean;
+  /** `?hermesChat=badmodel` — the model-rejection demo knob (MODEL-404). */
+  hermesBadModel?: boolean;
+  /** Mount the RESERVED /kora/hermes cluster-chat route (KW2) instead of
+   * the bare /kora workspace. */
+  cluster?: boolean;
+  /** Prefill the registry cache WITHOUT the hermes rows — the honest
+   * pre-pull board (the adapter serves none until a pull anyway). */
+  noHermesRows?: boolean;
 }
 
 function mountWorkspace(options: MountOptions = {}): {
@@ -58,14 +69,19 @@ function mountWorkspace(options: MountOptions = {}): {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  // Prefill the paged registry cache WITHOUT hermes rows (the mock filters
-  // them until the pull anyway; the point is a pending-free render).
+  // Prefill the paged registry cache (the mock filters hermes rows until
+  // the pull anyway; the point is a pending-free render). noHermesRows
+  // models the honest pre-pull board instead.
   queryClient.setQueryData(koraKeys.sessionsPaged(50), {
     pages: [
       {
         ok: true as const,
         count: KORA_FIXTURE_SESSIONS.length,
-        items: [...KORA_FIXTURE_SESSIONS],
+        items: [
+          ...(options.noHermesRows
+            ? KORA_FIXTURE_SESSIONS.filter((s) => s.harness !== "hermes")
+            : KORA_FIXTURE_SESSIONS),
+        ],
         coverage: KORA_FIXTURE_COVERAGE,
         meta: { generated_at: "2026-09-24T11:45:00Z" },
       },
@@ -81,7 +97,13 @@ function mountWorkspace(options: MountOptions = {}): {
   history.replaceState(
     null,
     "",
-    options.hermesOff ? "/?hermesBridge=off" : options.hermesLimited ? "/?hermesChat=limited" : "/",
+    options.hermesOff
+      ? "/?hermesBridge=off"
+      : options.hermesLimited
+        ? "/?hermesChat=limited"
+        : options.hermesBadModel
+          ? "/?hermesChat=badmodel"
+          : "/",
   );
   const search = options.hermesOff ? "?hermesBridge=off" : "";
   act(() => {
@@ -91,7 +113,7 @@ function mountWorkspace(options: MountOptions = {}): {
           <QueryClientProvider client={queryClient}>
             <I18nProvider initialLang="ru">
               <MemoryRouter initialEntries={[`/kora${search}`]}>
-                <KoraWorkspace />
+                {options.cluster ? <KoraWorkspace cluster /> : <KoraWorkspace />}
               </MemoryRouter>
             </I18nProvider>
           </QueryClientProvider>
@@ -263,7 +285,7 @@ describe("Kora hermes bridge (T004 slice 2)", () => {
     history.replaceState(null, "", "/");
   });
 
-  it("a clicked hermes session renders its LIVE transcript, read-only", async () => {
+  it("a clicked hermes session opens the SPLIT: real chat + «Все ходы» with today's grammar", async () => {
     const { container, root, queryClient } = mountWorkspace();
     await settle();
     await selectHermes(container);
@@ -287,7 +309,34 @@ describe("Kora hermes bridge (T004 slice 2)", () => {
       );
     });
     await settle();
-    // The transcript scroll: role chips distinguish user/assistant/tool…
+    // The chat half: the header carries the switcher + the model select +
+    // the source badge (DATA), and the REAL composer with BOTH honest notes.
+    expect(container.textContent).toContain("Чат с hermes");
+    expect(container.textContent).toContain("hermes · real-time");
+    expect(
+      container.querySelector<HTMLSelectElement>("#kora-hermes-chat-session"),
+    ).not.toBeNull();
+    expect(
+      container.querySelector<HTMLSelectElement>("#kora-hermes-chat-model"),
+    ).not.toBeNull();
+    expect(container.textContent).toContain("Ответы чата не записываются");
+    expect(container.textContent).toContain("лимит чата — 12 сообщений в минуту");
+    // The «Все ходы» strip: collapsed by default, honest count (the live
+    // cursor beyond the loaded page is a «+», never an invented total).
+    const strip = container.querySelector<HTMLButtonElement>(
+      'button[aria-controls="kora-moves-body"]',
+    );
+    expect(strip).not.toBeNull();
+    expect(strip?.getAttribute("aria-expanded")).toBe("false");
+    await waitText(container, "Все ходы · 50+");
+    // The transcript body is NOT mounted while folded (the canon: folds stay
+    // folded; the zone deploys on demand).
+    expect(container.querySelector("#kora-moves-body")).toBeNull();
+    await act(async () => {
+      strip?.click();
+      await Promise.resolve();
+    });
+    // The deployed zone renders TODAY'S grammar unchanged: role chips…
     await waitText(container, "Разведай Hysteria прокси");
     expect(container.textContent).toContain("tool_result");
     // …the hermes passthrough renders honestly (reasoning collapsed, tool
@@ -297,17 +346,16 @@ describe("Kora hermes bridge (T004 slice 2)", () => {
       "Вызовы инструментов: 2: hysteria_status, journal_tail",
     );
     expect(container.textContent).toContain("auth token: [REDACTED]");
-    // …the cursor's honest end invites one more page (63 rows > 50)…
-    expect(container.textContent).toContain("Показать ещё");
-    // …the view is READ-ONLY: the tools exist, the composer does not —
-    // the read-only beat names why.
-    expect(container.textContent).toContain("Следить за хвостом");
-    expect(container.textContent).toContain("Транскрипт только для чтения");
-    expect(container.textContent).not.toContain("Написать агенту");
-    expect(container.textContent).not.toContain("Отправка появится позже");
+    // …the zone carries its OWN reading tools (the separate follow-tail)…
+    const zone = container.querySelector("#kora-moves-body");
+    expect(zone).not.toBeNull();
+    expect(zone?.textContent).toContain("Следить за хвостом");
+    // …and the old read-only beat is GONE — the composer here is real, the
+    // non-persistence note names what a send does and does not touch.
+    expect(container.textContent).not.toContain("Транскрипт только для чтения");
   });
 
-  it("load-more appends the cursor's remaining rows", async () => {
+  it("load-more appends the cursor's remaining rows (the zone's own button)", async () => {
     const { container, root, queryClient } = mountWorkspace();
     await settle();
     await selectHermes(container);
@@ -329,10 +377,20 @@ describe("Kora hermes bridge (T004 slice 2)", () => {
       );
     });
     await settle();
+    // Deploy the zone FIRST: the strip hides the body while folded.
+    const strip = container.querySelector<HTMLButtonElement>(
+      'button[aria-controls="kora-moves-body"]',
+    );
+    await act(async () => {
+      strip?.click();
+      await Promise.resolve();
+    });
+    await waitText(container, "Разведай Hysteria прокси");
     // Page 1 = 50 rows: the LAST fixture row (mesh-25) is not in yet…
-    await waitText(container, "Показать ещё");
     expect(container.textContent).not.toContain("mesh-25: зелёный");
-    const loadMore = [...container.querySelectorAll("button")].find((el) =>
+    const zone = container.querySelector("#kora-moves-body");
+    if (zone === null) throw new Error("moves zone body not rendered");
+    const loadMore = [...zone.querySelectorAll("button")].find((el) =>
       el.textContent?.includes("Показать ещё"),
     );
     expect(loadMore).toBeDefined();
@@ -342,66 +400,64 @@ describe("Kora hermes bridge (T004 slice 2)", () => {
     });
     // …and the honest end: the full cursor served, no further invite.
     await waitText(container, "mesh-25: зелёный");
-    expect(container.textContent).not.toContain("Показать ещё");
+    expect(zone.textContent).not.toContain("Показать ещё");
   });
 
-  it("the hermes context without a session opens the source chat", async () => {
+  it("the hermes filter keeps the invitation; the CLUSTER route opens the chat", async () => {
+    // KW2 (blueprint §5): the chat mode is ROUTE-driven — the hermes filter
+    // with no session no longer turns the center into the chat.
     const { container } = mountWorkspace();
     await settle();
     await selectHermes(container);
     await settle();
-    // The chat owns the center: title + honest no-anchor state pre-pull…
-    expect(container.textContent).toContain("Чат с hermes");
-    expect(container.textContent).toContain(
+    expect(container.textContent).toContain("Сессии · Hermes (кластер)");
+    // The pinned «Чат с кластером» entry rides the nav; the click WRITES
+    // /kora/hermes (asserted in the cluster cases below).
+    expect(container.textContent).toContain("Чат с кластером");
+    // No chat in the center — the honest invitation instead.
+    expect(
+      container.querySelector("#kora-hermes-chat-input"),
+    ).toBeNull();
+
+    // The reserved /kora/hermes route IS the cluster chat.
+    const cluster = mountWorkspace({ cluster: true });
+    await settle();
+    expect(cluster.container.textContent).toContain("Чат с hermes");
+    expect(cluster.container.textContent).toContain("hermes · real-time");
+    // Honest no-anchor state PRE-PULL (a registry without hermes rows yet —
+    // the clean-slate chat, not a skeleton).
+    const prePull = mountWorkspace({ cluster: true, noHermesRows: true });
+    await settle();
+    expect(prePull.container.textContent).toContain(
       "сессий api_server источника в реестре нет",
     );
-    expect(container.textContent).toContain("Пока пусто");
+    expect(prePull.container.textContent).toContain("Пока пусто");
     // …and a REAL send affordance (the chat leg is live, unlike the
     // zcode composer whose send is honestly deferred).
-    const input = container.querySelector<HTMLTextAreaElement>(
-      "#kora-hermes-chat-input",
-    );
-    expect(input).not.toBeNull();
     expect(
-      [...container.querySelectorAll("button")].some((el) =>
+      cluster.container.querySelector("#kora-hermes-chat-input"),
+    ).not.toBeNull();
+    expect(
+      [...cluster.container.querySelectorAll("button")].some((el) =>
         el.textContent?.includes("Отправить"),
       ),
     ).toBe(true);
+    // The «Все ходы» zone rides below the chat in the same split.
+    expect(
+      cluster.container.querySelector('button[aria-controls="kora-moves-body"]'),
+    ).not.toBeNull();
   });
 
-  it("one send appends the exchange with the server's real-time marker", async () => {
-    const { container, root, queryClient } = mountWorkspace();
+  it("one send appends the exchange with the server's real-time marker (cluster route)", async () => {
+    // KW2: the chat lives on the RESERVED /kora/hermes route; the pull
+    // fills the registry, the anchor resolves, the conversation continues.
+    const { container } = mountWorkspace({ cluster: true });
     await settle();
     await selectHermes(container);
     await clickRefresh(container);
-    await settle();
-    // Re-mount with no selected session — the hermes context is the chat.
-    await act(async () => {
-      root.render(
-        <GatewayContext.Provider value={new MockAdapter({ latency: false })}>
-          <KoraGatewayContext.Provider value={new KoraMockAdapter({ latency: false })}>
-            <QueryClientProvider client={queryClient}>
-              <I18nProvider initialLang="ru">
-                <MemoryRouter initialEntries={["/kora"]}>
-                  <KoraWorkspace />
-                </MemoryRouter>
-              </I18nProvider>
-            </QueryClientProvider>
-          </KoraGatewayContext.Provider>
-        </GatewayContext.Provider>,
-      );
-    });
-    await act(async () => {
-      const select = container.querySelector<HTMLSelectElement>("#kora-host-filter");
-      const set = Object.getOwnPropertyDescriptor(
-        HTMLSelectElement.prototype,
-        "value",
-      )?.set;
-      set?.call(select, "hermes");
-      select?.dispatchEvent(new Event("change", { bubbles: true }));
-    });
-    await settle();
-    expect(container.textContent).toContain("продолжение сессии hermes:api-server-main");
+    // The pull→upsert→refetch chain rides macrotasks (the waitText canon —
+    // a microtask-only settle is a RACE); poll for the anchor instead.
+    await waitText(container, "продолжение сессии hermes:api-server-main");
     const input = container.querySelector<HTMLTextAreaElement>(
       "#kora-hermes-chat-input",
     );
@@ -479,35 +535,10 @@ describe("Kora hermes bridge (T004 slice 2)", () => {
   it("the limiter knob answers the bare verdict with the draft kept", async () => {
     // The knob rides the mount helper (it points location.search at the
     // demo param before any adapter exists — the hermesBridge=off pattern).
-    const { container, root, queryClient } = mountWorkspace({ hermesLimited: true });
+    const { container } = mountWorkspace({ hermesLimited: true, cluster: true });
     await settle();
     await selectHermes(container);
     await clickRefresh(container);
-    await settle();
-    await act(async () => {
-      root.render(
-        <GatewayContext.Provider value={new MockAdapter({ latency: false })}>
-          <KoraGatewayContext.Provider value={new KoraMockAdapter({ latency: false })}>
-            <QueryClientProvider client={queryClient}>
-              <I18nProvider initialLang="ru">
-                <MemoryRouter initialEntries={["/kora"]}>
-                  <KoraWorkspace />
-                </MemoryRouter>
-              </I18nProvider>
-            </QueryClientProvider>
-          </KoraGatewayContext.Provider>
-        </GatewayContext.Provider>,
-      );
-    });
-    await act(async () => {
-      const select = container.querySelector<HTMLSelectElement>("#kora-host-filter");
-      const set = Object.getOwnPropertyDescriptor(
-        HTMLSelectElement.prototype,
-        "value",
-      )?.set;
-      set?.call(select, "hermes");
-      select?.dispatchEvent(new Event("change", { bubbles: true }));
-    });
     await settle();
     const input = container.querySelector<HTMLTextAreaElement>(
       "#kora-hermes-chat-input",
@@ -538,7 +569,7 @@ describe("Kora hermes bridge (T004 slice 2)", () => {
   });
 
   it("the off mode's chat send answers the typed hermes_off reason", async () => {
-    const { container } = mountWorkspace({ hermesOff: true });
+    const { container } = mountWorkspace({ hermesOff: true, cluster: true });
     await settle();
     await selectHermes(container);
     await settle();
