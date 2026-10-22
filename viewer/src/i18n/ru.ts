@@ -1490,6 +1490,10 @@ export const ru = {
   "agents.feed.cancelled": "отменено",
   "agents.feed.expired": "истекло",
   "agents.feed.report": "отчёт",
+  // Честный дефолт пульса хостов (ревью W2-2): union kinds шире словаря
+  // (task.moved/updated/archived/unarchived, assignment.created) — родное
+  // слово вместо чужого «поручение создано».
+  "agents.feed.event": "событие",
   "agents.stream.stale": "данные на {{time}}",
   "agents.settings.title": "Настройки",
   "agents.settings.executionTitle": "Исполнение",

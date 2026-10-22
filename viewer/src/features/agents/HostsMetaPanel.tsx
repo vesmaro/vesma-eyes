@@ -96,16 +96,23 @@ export function HostsPresenceBlock({
  * Mounted TWICE by design (the ≥xl panel + the md..xl section under the
  * field, blueprint §6): the copies share ONE react-query key per host —
  * one wire read, no second stream; the hidden copy is display:none for
- * assistive tech.
+ * assistive tech. The body id is CALLER-SCOPED (the required `id` prop —
+ * review W2-1): two mounted copies must never share one DOM id, or the
+ * visible toggle's aria-controls would resolve into the hidden copy.
  */
-export function HostsPulseBlock({ group, now }: { group: HostGroup | null; now: number }) {
+export function HostsPulseBlock({
+  id,
+  group,
+  now,
+}: {
+  /** The body element id — unique per mount (e.g. `…-panel` / `…-field`). */
+  id: string;
+  group: HostGroup | null;
+  now: number;
+}) {
   const t = useT();
   return (
-    <MetaBlock
-      id="hosts-meta-pulse-body"
-      title={t("agents.hosts.pulseTitle")}
-      defaultOpen
-    >
+    <MetaBlock id={id} title={t("agents.hosts.pulseTitle")} defaultOpen>
       {group === null ? (
         <p className="text-xs text-foreground-muted">
           {t("agents.hosts.pulseNoHost")}
@@ -278,7 +285,11 @@ function QuietHubLink({
 
 /** The activity kind → the agents feed dictionary (the SAME keys the
  * execution feed speaks — one vocabulary per fact). Moved with the feed
- * from HostsWorkspace (W2 «Мета-панель»). */
+ * from HostsWorkspace (W2 «Мета-панель»). The default is the NEUTRAL
+ * «событие» (review W2-2): the wire's kind union is wider than the pulse's
+ * dictionary (task.moved/updated/archived/unarchived, assignment.created)
+ * — an unmapped kind must not borrow «поручение создано», which says
+ * something that did not happen. */
 function activityKindKey(kind: ActivityKind): TranslationKey {
   switch (kind) {
     case "task.created":
@@ -298,6 +309,6 @@ function activityKindKey(kind: ActivityKind): TranslationKey {
     case "report":
       return "agents.feed.report";
     default:
-      return "agents.feed.created";
+      return "agents.feed.event";
   }
 }

@@ -457,8 +457,15 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
                 </HostsPresenceBlock>
                 {/* «Пульс»: the selected host's 24h strip + fresh events
                  * (host-scoped, states.md §2); the honest no-host line
-                 * while the URL names nothing the roster can resolve. */}
-                <HostsPulseBlock group={selected} now={now} />
+                 * while the URL names nothing the roster can resolve. The
+                 * body id is panel-scoped — the field copy below carries
+                 * its own (review W2-1: no shared DOM ids across the two
+                 * mounted copies). */}
+                <HostsPulseBlock
+                  id="hosts-meta-pulse-body-panel"
+                  group={selected}
+                  now={now}
+                />
                 {/* «Настройки»: the routing verdict + quiet hub links,
                  * collapsed by default (states.md §2). */}
                 <HostsSettingsBlock />
@@ -481,7 +488,11 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
        * panel (one react-query key per host — one wire read). */}
       {!executors.isPending && selected !== null ? (
         <div className="xl:hidden">
-          <HostsPulseBlock group={selected} now={now} />
+          <HostsPulseBlock
+            id="hosts-meta-pulse-body-field"
+            group={selected}
+            now={now}
+          />
         </div>
       ) : null}
 

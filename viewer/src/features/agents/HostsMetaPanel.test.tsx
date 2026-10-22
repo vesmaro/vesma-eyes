@@ -222,7 +222,13 @@ describe("«Пульс» (the ex-«Недавно» of the field, states.md §2)
         [activityItem(base, {})],
         [{ ts: new Date(base).toISOString(), total: 3, by_type: { task: 1, assignment: 1, report: 1 } }],
       ),
-      ui: (group, now) => <HostsPulseBlock group={group} now={now} />,
+      ui: (group, now) => (
+        <HostsPulseBlock
+          id="hosts-meta-pulse-body-panel"
+          group={group}
+          now={now}
+        />
+      ),
     });
     const header = blockHeader(container, "Pulse");
     expect(header.getAttribute("aria-expanded")).toBe("true");
@@ -238,13 +244,19 @@ describe("«Пульс» (the ex-«Недавно» of the field, states.md §2)
     const base = Date.now();
     const { root, container } = await mountBlocks({
       seed: seedPulse("laptop", [activityItem(base, {})], []),
-      ui: (group, now) => <HostsPulseBlock group={group} now={now} />,
+      ui: (group, now) => (
+        <HostsPulseBlock
+          id="hosts-meta-pulse-body-panel"
+          group={group}
+          now={now}
+        />
+      ),
     });
     await act(async () => {
       blockHeader(container, "Pulse").click();
     });
     expect(container.textContent).not.toContain("the pulse fixture task");
-    expect(document.getElementById("hosts-meta-pulse-body")).toBeNull();
+    expect(document.getElementById("hosts-meta-pulse-body-panel")).toBeNull();
     await actUnmount(root);
   });
 
@@ -254,7 +266,13 @@ describe("«Пульс» (the ex-«Недавно» of the field, states.md §2)
       seed: seedPulse("laptop", [], [
         { ts: new Date(base).toISOString(), total: 0, by_type: { task: 0, assignment: 0, report: 0 } },
       ]),
-      ui: (group, now) => <HostsPulseBlock group={group} now={now} />,
+      ui: (group, now) => (
+        <HostsPulseBlock
+          id="hosts-meta-pulse-body-panel"
+          group={group}
+          now={now}
+        />
+      ),
     });
     expect(container.textContent).toContain(
       "Quiet. The first events arrive after the first report.",
@@ -264,10 +282,43 @@ describe("«Пульс» (the ex-«Недавно» of the field, states.md §2)
 
   it("no host selected → the honest line, never a guessed feed", async () => {
     const { root, container } = await mountBlocks({
-      ui: (_group, now) => <HostsPulseBlock group={null} now={now} />,
+      ui: (_group, now) => (
+        <HostsPulseBlock
+          id="hosts-meta-pulse-body-panel"
+          group={null}
+          now={now}
+        />
+      ),
     });
     expect(container.textContent).toContain("Pick a host");
     expect(container.querySelector('div[aria-hidden="true"].h-12')).toBeNull();
+    await actUnmount(root);
+  });
+
+  it("kinds outside the pulse dictionary say the honest «event», never a fabricated «assignment created» (review W2-2)", async () => {
+    const base = Date.now();
+    const { root, container } = await mountBlocks({
+      seed: seedPulse(
+        "laptop",
+        [
+          // Both ride the wire union but NOT the switch's dictionary legs:
+          // the old default borrowed «assignment created» — a fact that
+          // never happened for these rows.
+          activityItem(base, { id: "a-9", kind: "assignment.created" }),
+          activityItem(base, { id: "a-10", kind: "task.moved" }),
+        ],
+        [{ ts: new Date(base).toISOString(), total: 2, by_type: { task: 1, assignment: 1, report: 0 } }],
+      ),
+      ui: (group, now) => (
+        <HostsPulseBlock
+          id="hosts-meta-pulse-body-panel"
+          group={group}
+          now={now}
+        />
+      ),
+    });
+    expect(container.textContent).toContain("event");
+    expect(container.textContent).not.toContain("assignment created");
     await actUnmount(root);
   });
 });
@@ -324,6 +375,51 @@ describe("«Настройки» (the first line, states.md §2)", () => {
       ui: (_group, now) => <HostsSettingsBlock key={now} />,
     });
     expect(container.textContent).not.toContain("will not be picked up");
+    await actUnmount(root);
+  });
+});
+
+// The double-mount guard (review W2-1): the panel (≥xl) and the field
+// (<xl) copies of «Пульс» are mounted SIMULTANEOUSLY (CSS hides one) —
+// a shared body id would resolve the visible toggle's aria-controls into
+// the HIDDEN copy. One grammar violation class, one test: every
+// aria-controls on the page must resolve to an EXISTING element, and the
+// document must carry no duplicate ids at all.
+describe("the double-mount id guard (review W2-1)", () => {
+  it("two mounted pulse copies scope their body ids: aria-controls resolves, ids are unique", async () => {
+    const { root, container } = await mountBlocks({
+      ui: (group, now) => (
+        <>
+          <HostsPulseBlock
+            id="hosts-meta-pulse-body-panel"
+            group={group}
+            now={now}
+          />
+          <HostsPulseBlock
+            id="hosts-meta-pulse-body-field"
+            group={group}
+            now={now}
+          />
+        </>
+      ),
+    });
+    // Both bodies actually rendered (the defect needs two live copies).
+    expect(
+      document.getElementById("hosts-meta-pulse-body-panel"),
+    ).not.toBeNull();
+    expect(
+      document.getElementById("hosts-meta-pulse-body-field"),
+    ).not.toBeNull();
+    for (const trigger of container.querySelectorAll("[aria-controls]")) {
+      const target = trigger.getAttribute("aria-controls") ?? "";
+      expect(
+        document.getElementById(target),
+        `aria-controls must resolve: #${target}`,
+      ).not.toBeNull();
+    }
+    const ids = [...container.querySelectorAll("[id]")].map((el) => el.id);
+    expect(ids.length).toBeGreaterThan(1);
+    expect(new Set(ids).size).toBe(ids.length);
     await actUnmount(root);
   });
 });

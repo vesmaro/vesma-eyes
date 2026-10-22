@@ -1450,6 +1450,11 @@ export const en: Record<TranslationKey, string> = {
   "agents.feed.cancelled": "cancelled",
   "agents.feed.expired": "expired",
   "agents.feed.report": "report",
+  // The hosts pulse's honest default (review W2-2): the wire's kind union
+  // is wider than the dictionary (task.moved/updated/archived/unarchived,
+  // assignment.created) — its own word, never a borrowed "assignment
+  // created".
+  "agents.feed.event": "event",
   "agents.stream.stale": "data as of {{time}}",
   "agents.settings.title": "Settings",
   "agents.settings.executionTitle": "Execution",
