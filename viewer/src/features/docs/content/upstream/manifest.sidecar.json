@@ -89,7 +89,7 @@
       },
       "category": "api-overview",
       "order": 1,
-      "lastVerified": "2026-10-02",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -97,8 +97,8 @@
       "provenance": {
         "repo": "vesma-eyes",
         "source_path": "curated/api/{ru,en}/overview.md",
-        "sha": "7e877e16f2345b23e0dfe255a64b635a0cb3d11d",
-        "commit_date": "2026-10-02T16:40:16+03:00"
+        "sha": "c8dac3260cc4091676ff5d8c0cfa0a1d58e1b07a",
+        "commit_date": "2026-10-22T02:02:58+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -166,7 +166,7 @@
       "provenance": {
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "1363a135aaa3ad7d82106147335dc0d2c6cfd74e",
+        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
         "commit_date": "2026-10-03T12:50:41+03:00"
       },
       "contentClass": {
@@ -190,7 +190,7 @@
       "provenance": {
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "1363a135aaa3ad7d82106147335dc0d2c6cfd74e",
+        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
         "commit_date": "2026-10-03T12:50:41+03:00"
       },
       "contentClass": {
@@ -214,7 +214,7 @@
       "provenance": {
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "1363a135aaa3ad7d82106147335dc0d2c6cfd74e",
+        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
         "commit_date": "2026-10-03T12:50:41+03:00"
       },
       "contentClass": {
@@ -238,7 +238,7 @@
       "provenance": {
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "1363a135aaa3ad7d82106147335dc0d2c6cfd74e",
+        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
         "commit_date": "2026-10-03T12:50:41+03:00"
       },
       "contentClass": {
@@ -262,7 +262,7 @@
       "provenance": {
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "1363a135aaa3ad7d82106147335dc0d2c6cfd74e",
+        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
         "commit_date": "2026-10-03T12:50:41+03:00"
       },
       "contentClass": {
@@ -286,7 +286,7 @@
       "provenance": {
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "1363a135aaa3ad7d82106147335dc0d2c6cfd74e",
+        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
         "commit_date": "2026-10-03T12:50:41+03:00"
       },
       "contentClass": {
@@ -310,7 +310,7 @@
       "provenance": {
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "1363a135aaa3ad7d82106147335dc0d2c6cfd74e",
+        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
         "commit_date": "2026-10-03T12:50:41+03:00"
       },
       "contentClass": {
@@ -334,7 +334,7 @@
       "provenance": {
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "1363a135aaa3ad7d82106147335dc0d2c6cfd74e",
+        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
         "commit_date": "2026-10-03T12:50:41+03:00"
       },
       "contentClass": {
@@ -358,7 +358,7 @@
       "provenance": {
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "1363a135aaa3ad7d82106147335dc0d2c6cfd74e",
+        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
         "commit_date": "2026-10-03T12:50:41+03:00"
       },
       "contentClass": {
@@ -382,7 +382,7 @@
       "provenance": {
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "1363a135aaa3ad7d82106147335dc0d2c6cfd74e",
+        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
         "commit_date": "2026-10-03T12:50:41+03:00"
       },
       "contentClass": {
@@ -406,7 +406,7 @@
       "provenance": {
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "1363a135aaa3ad7d82106147335dc0d2c6cfd74e",
+        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
         "commit_date": "2026-10-03T12:50:41+03:00"
       },
       "contentClass": {
@@ -430,7 +430,7 @@
       "provenance": {
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "1363a135aaa3ad7d82106147335dc0d2c6cfd74e",
+        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
         "commit_date": "2026-10-03T12:50:41+03:00"
       },
       "contentClass": {

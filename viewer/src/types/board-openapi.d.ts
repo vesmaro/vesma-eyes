@@ -1374,6 +1374,110 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/api/kora/hermes/status": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Kora Hermes Status
+         * @description Bridge leg status (owner-ui read). Honest mode reporting: 'off'
+         *     (no API key), 'ok' (last live listing roundtrip is not attempted
+         *     HERE — this route is cheap and deterministic), registry row count.
+         *     No Authorization leg exists for devices by design (see module doc):
+         *     a device asking gets the same owner-session wall as any write.
+         */
+        readonly get: operations["kora_hermes_status_api_kora_hermes_status_get"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/kora/hermes/sessions": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Kora Hermes Live Sessions
+         * @description ONE live pull: hermes listing → registry upsert → the SAME frozen
+         *     KoraSessionsOut shape the scanner feed serves (the unified session
+         *     leg; the FE needs no second viewer). ui-class only (owner session —
+         *     header or cookie): a device triggering a live OUTBOUND pull + a
+         *     registry mutation is out of its metadata tier. Errors: 503 off /
+         *     unreachable (typed reason), 502 hermes refused — the KoraErrorOut
+         *     envelope, never a bare 500.
+         */
+        readonly get: operations["kora_hermes_live_sessions_api_kora_hermes_sessions_get"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/kora/hermes/sessions/{session_id}/messages": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Kora Hermes Session Messages
+         * @description Live hermes transcript through the frozen Kora transcript form
+         *     (seq cursor: items with seq > after_seq, next_after_seq / has_more).
+         *     ui-only (the explanatory mnd_ wall), redaction choke-point on every
+         *     content byte, session.transcript_viewed audit on every successful
+         *     read — the zcode-transcript discipline. The handle is the native
+         *     hermes id or the listing's canonical 'hermes:<native_id>'. NO
+         *     registry re-validation by design: hermes IS the authority for a live
+         *     bridge (the registry is a derived cache) — unknown ids answer
+         *     hermes' own 404 as code session_not_found.
+         */
+        readonly get: operations["kora_hermes_session_messages_api_kora_hermes_sessions__session_id__messages_get"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/kora/hermes/chat": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Kora Hermes Chat
+         * @description ONE non-stream chat call to hermes (OpenAI-compatible). ui-only;
+         *     rate budget 12/60s per client (the Kora precedent number, its OWN
+         *     limiter — a generation is a different cost class from the cheap
+         *     pulls). Errors: 503 hermes_off / transport failure, 502 hermes
+         *     refused — the frozen KoraErrorOut envelope, never a bare 500. The
+         *     answer rides VERBATIM under ``completion`` with the honest source
+         *     marker «hermes · real-time».
+         */
+        readonly post: operations["kora_hermes_chat_api_kora_hermes_chat_post"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/api/harnesses": {
         readonly parameters: {
             readonly query?: never;
@@ -2150,8 +2254,10 @@ export interface paths {
          *     is unchanged (constant-time boolean; token entropy is the defence) and
          *     so is the anti-spoof rule: the viewer's raw fetch pins 204 as the ONLY
          *     live answer, so a proxied 200-JSON still reads as "no session".
-         *     No limiter: it is a constant-time boolean oracle with the same profile
-         *     as the guards themselves.
+         *     SEC-2 (ME-030): the oracle is budgeted like the verify leg (flat
+         *     per-IP + global, wider — it rides every page load; see the limiter
+         *     block above). The viewer degrades a 429 to the honest "no session"
+         *     (any non-204 does — BoardAdapter.probeUiSession).
          */
         readonly get: operations["probe_ui_session_api_auth_ui_token_get"];
         readonly put?: never;
@@ -2164,7 +2270,9 @@ export interface paths {
          *     is honest about legacy mode: with no dedicated VESMARO_UI_TOKEN the ui
          *     class is served by the board token and the login says ``legacy``.
          *     Errors: 401 class-aware (never a generic "not accepted"), 429 on the
-         *     flat limiters, 503 fail-closed while no token class is configured.
+         *     flat limiters each counting down and carrying its ``Retry-After``
+         *     hint (F4, ME-090 — the device-mutation/telemetry limiter pattern),
+         *     503 fail-closed while no token class is configured.
          */
         readonly post: operations["verify_ui_token_api_auth_ui_token_post"];
         /**
@@ -2175,6 +2283,161 @@ export interface paths {
          *     it; HttpOnly means no JS path could have done this client-side.
          */
         readonly delete: operations["logout_ui_token_api_auth_ui_token_delete"];
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/auth/register": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Register Account
+         * @description Create an account (ME-080 §3.3). OPEN only while the accounts table
+         *     is empty — that first account becomes the board owner (owner verdict
+         *     07k §10-аддендум); afterwards registration is CLOSED (403) unless the
+         *     deploy flag ``VESMARO_ALLOW_REGISTRATION=1`` opens it (member
+         *     accounts). Success signs the new account in (session cookie set right
+         *     here). Errors: 403 closed, 409 taken (case-insensitive), 429 flat
+         *     limiters, 422 bounds/charset.
+         */
+        readonly post: operations["register_account_api_auth_register_post"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/auth/login": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Login Account
+         * @description Password login (ME-080 §4): verifies at the door and opens the
+         *     ``vesmaro_auth`` session. The 401 is NEUTRAL by contract — unknown
+         *     username and wrong password are indistinguishable in status, detail
+         *     AND timing (the dummy-scrypt equalizer) — while the AUDIT trail
+         *     (server_log auth.login.failed, cascade F2) records every credential
+         *     rejection with the submitted username and IP, never the password.
+         *     Errors: 401 neutral, 429 on the flat limiters. The password never
+         *     appears in any log or response.
+         */
+        readonly post: operations["login_account_api_auth_login_post"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/auth/logout": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Logout Account
+         * @description Server-side logout (ME-080 §4): the session ROW is deleted — a
+         *     stolen cookie dies with it (the revocation the stateless vesmaro_ui
+         *     cookie cannot do). NO guard by design, same rationale as
+         *     DELETE /api/auth/ui-token: a logout that 401s on an already-expired
+         *     session is a trap. Idempotent. The clear-cookie mirrors the set-cookie
+         *     flags INCLUDING Secure-by-scheme (cascade F5: an https deploy must
+         *     not receive an insecure clear).
+         */
+        readonly post: operations["logout_account_api_auth_logout_post"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/auth/me": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Me Account
+         * @description Who am I (ME-080 §5): the FE boot read for the password-session
+         *     state. Always 200 JSON (ME-028 console-hygiene lesson); a live session
+         *     slides NOTHING (``schedule=False`` — a whoami is not activity).
+         */
+        readonly get: operations["me_account_api_auth_me_get"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/auth/password": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Change Account Password
+         * @description Change a password (ME-080 follow-up — the recovery gap: an account
+         *     whose password is lost had NO reset path). Two admission legs, picked
+         *     by the ADR 0014 Ф2 determinism rule — NO fallbacks: a header present
+         *     → the header leg ONLY (a non-ui bearer is a 401 even beside a live
+         *     cookie); header absent → cookie legs, the owner ``vesmaro_ui`` cookie
+         *     FIRST (recovery dominates — one browser may hold both).
+         *
+         *     Leg (1) — ``vesmaro_auth`` session (the normal signed-in change):
+         *     changes the session's OWN account, ``current_password`` is REQUIRED
+         *     and is verified FIRST, ALWAYS with exactly one scrypt verify (the
+         *     login's dummy-equalizer discipline — credential-bearing outcomes are
+         *     time-indistinguishable); a foreign ``username`` is a 403 AFTER the
+         *     credential check (wrong-current + foreign name answers 401, not 403 —
+         *     deterministic order: request shape 422 → credential 401 →
+         *     authorization 403).
+         *
+         *     Leg (2) — ``vesmaro_ui`` cookie/Bearer, the owner plumbing (ADR 0009
+         *     A1): recovery — sets a NEW password on a role=owner account WITHOUT
+         *     the current password (on the owner's own account too — the locked-out
+         *     owner path). The role gate is EXISTENCE-NEUTRAL: a missing name and a
+         *     member name land on the SAME 403 detail (no username oracle); a
+         *     supplied ``current_password`` is ignored here — the owner token IS
+         *     the proof. On a deployment with no ui token class configured this leg
+         *     is unreachable by construction (nothing verifies against '') — no
+         *     fail-closed 503 exists for the pair, the own-password leg needs no
+         *     token config.
+         *
+         *     Hygiene: flat limiters per-IP + global (429 carries Retry-After, F4);
+         *     the persistent auth audit rides server_log ONLY (never the open SSE
+         *     feed) — 'auth.password.changed' / 'auth.password.recovery' with
+         *     username+IP, and 'auth.password.failed' for a wrong current password
+         *     (cascade F2); no password VALUE ever reaches a log or a response
+         *     (the global 422 handler strips field echoes). Success is a bare 204 —
+         *     the parallel FE password dialog keys on it. Existing sessions are NOT
+         *     revoked by a change (no server-side session sweep in this slice).
+         */
+        readonly post: operations["change_account_password_api_auth_password_post"];
+        readonly delete?: never;
         readonly options?: never;
         readonly head?: never;
         readonly patch?: never;
@@ -2415,6 +2678,75 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AccountLoginIn
+         * @description Login body: bounds only (no pattern on username — an unknown name
+         *     must reach the SAME neutral 401 as a wrong password, not a 422).
+         */
+        readonly AccountLoginIn: {
+            /** Username */
+            readonly username: string;
+            /** Password */
+            readonly password: string;
+        };
+        /** AccountLoginOut */
+        readonly AccountLoginOut: {
+            /** Ok */
+            readonly ok: boolean;
+            /** Username */
+            readonly username: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            readonly role: "owner" | "member";
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /**
+         * AccountPasswordIn
+         * @description POST /api/auth/password body (ME-080 follow-up). ``username`` is
+         *     OPTIONAL and only ever NAMES the target: on the own-password leg it
+         *     must resolve to the session's own account (omitted = self); the
+         *     recovery leg REQUIRES it — the ui token carries no account identity
+         *     to default to. Bounds only, NO charset pattern (the AccountLoginIn
+         *     rule): a foreign or unknown name must reach the SAME neutral
+         *     401/403 verdicts, not a 422. new_password 8..512 per NIST SP
+         *     800-63B — length only, no composition rules, identical to register.
+         *     BE-15: unknown keys are an honest 422.
+         */
+        readonly AccountPasswordIn: {
+            /** Username */
+            readonly username?: string | null;
+            /** New Password */
+            readonly new_password: string;
+            /** Current Password */
+            readonly current_password?: string | null;
+        };
+        /**
+         * AccountRegisterIn
+         * @description Registration body (BE-15: unknown keys are an honest 422). Username
+         *     3..32, ``[a-z0-9_-]``, stored lowercase; password 8..512 per NIST
+         *     SP 800-63B — length only, no composition rules, never truncated.
+         */
+        readonly AccountRegisterIn: {
+            /** Username */
+            readonly username: string;
+            /** Password */
+            readonly password: string;
+        };
+        /** AccountSessionOut */
+        readonly AccountSessionOut: {
+            /** Username */
+            readonly username: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            readonly role: "owner" | "member";
+        } & {
+            readonly [key: string]: unknown;
+        };
         /** ActivityBucketOut */
         readonly ActivityBucketOut: {
             /** Ts */
@@ -3157,6 +3489,15 @@ export interface components {
          *     are validated and STORED board-side (spec §6.1: the BE slice turns
          *     accept-and-ignore into store-and-serve); old agents that post neither
          *     leave both mirrors untouched.
+         *
+         *     AGW-23/24 (agent v0.9.0, exec-env binding + k8s mirror): the SURFACE
+         *     facts stop being silently dropped too. ``runtime`` (the honest
+         *     where-does-this-process-run verdict), ``distrobox_containers`` (the
+         *     per-container honest verdicts), and the k8s leg lists
+         *     (``k8s_nodes``/``k8s_pods``/``k8s_verdicts``, content-free) land in
+         *     the additive ``exec_env_inventory`` snapshot. ``None`` default =
+         *     ABSENT (the leg did not report) — an explicit ``[]`` is a real
+         *     zero-and-ran fact; the distinction drives the no-wipe semantics.
          */
         readonly ExecutorDiscoveryBody: {
             /**
@@ -3176,6 +3517,26 @@ export interface components {
              * @default []
              */
             readonly sessions: readonly components["schemas"]["SessionFactIn"][];
+            /** Runtime */
+            readonly runtime?: {
+                readonly [key: string]: unknown;
+            } | null;
+            /** Distrobox Containers */
+            readonly distrobox_containers?: readonly {
+                readonly [key: string]: unknown;
+            }[] | null;
+            /** K8S Nodes */
+            readonly k8s_nodes?: readonly {
+                readonly [key: string]: unknown;
+            }[] | null;
+            /** K8S Pods */
+            readonly k8s_pods?: readonly {
+                readonly [key: string]: unknown;
+            }[] | null;
+            /** K8S Verdicts */
+            readonly k8s_verdicts?: {
+                readonly [key: string]: unknown;
+            } | null;
         };
         /**
          * ExecutorDiscoveryMirrorOut
@@ -3309,6 +3670,13 @@ export interface components {
                 readonly [key: string]: unknown;
             }[];
             /**
+             * Exec Env Inventory
+             * @default {}
+             */
+            readonly exec_env_inventory: {
+                readonly [key: string]: unknown;
+            };
+            /**
              * Enabled
              * @default false
              */
@@ -3318,6 +3686,11 @@ export interface components {
              * @default pending
              */
             readonly state: string;
+            /**
+             * Archived
+             * @default false
+             */
+            readonly archived: boolean;
             /**
              * Last Seen
              * @default
@@ -3540,6 +3913,38 @@ export interface components {
             readonly harness: components["schemas"]["HarnessOut"];
         } & {
             readonly [key: string]: unknown;
+        };
+        /**
+         * HermesChatIn
+         * @description Chat request. Caps are entry validation (the body cap discipline),
+         *     not a rate guard: ≤20 turns × ≤8000 chars per turn. ``model``
+         *     omitted → the live-verified default (one named constant; if hermes
+         *     retires the model it answers honestly and the route maps it to 502).
+         */
+        readonly HermesChatIn: {
+            /** Messages */
+            readonly messages: readonly components["schemas"]["HermesChatMessageIn"][];
+            /**
+             * Model
+             * @default
+             */
+            readonly model: string;
+        };
+        /**
+         * HermesChatMessageIn
+         * @description One chat turn. ``extra='forbid'``: tool-result turns are NOT
+         *     accepted (the v1 chat leg is a conversation with the agent, not a
+         *     tool replay — hermes answers an unmatched tool turn with a 4xx we
+         *     would have to explain away).
+         */
+        readonly HermesChatMessageIn: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            readonly role: "system" | "user" | "assistant";
+            /** Content */
+            readonly content: string;
         };
         /** HistoryOut */
         readonly HistoryOut: {
@@ -3802,7 +4207,7 @@ export interface components {
              * Harness
              * @enum {string}
              */
-            readonly harness: "zcode" | "vscode" | "pi";
+            readonly harness: "zcode" | "vscode" | "pi" | "hermes";
             /**
              * Project
              * @default
@@ -4999,6 +5404,21 @@ export interface components {
              * @default
              */
             readonly parent_native_id: string;
+        };
+        /**
+         * SessionMeOut
+         * @description GET /api/auth/me: always a 200 JSON (the FE calls it once at boot;
+         *     a 401 would paint the console red — the ME-028 probe lesson).
+         */
+        readonly SessionMeOut: {
+            /** Authenticated */
+            readonly authenticated: boolean;
+            /** Username */
+            readonly username?: string | null;
+            /** Role */
+            readonly role?: ("owner" | "member") | null;
+        } & {
+            readonly [key: string]: unknown;
         };
         /** SpecialistProfileOut */
         readonly SpecialistProfileOut: {
@@ -7711,6 +8131,125 @@ export interface operations {
             };
         };
     };
+    readonly kora_hermes_status_api_kora_hermes_status_get: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": unknown;
+                };
+            };
+        };
+    };
+    readonly kora_hermes_live_sessions_api_kora_hermes_sessions_get: {
+        readonly parameters: {
+            readonly query?: {
+                readonly limit?: number | null;
+                readonly offset?: number;
+            };
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly kora_hermes_session_messages_api_kora_hermes_sessions__session_id__messages_get: {
+        readonly parameters: {
+            readonly query?: {
+                readonly after_seq?: number;
+                readonly limit?: number;
+            };
+            readonly header?: never;
+            readonly path: {
+                readonly session_id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly kora_hermes_chat_api_kora_hermes_chat_post: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["HermesChatIn"];
+            };
+        };
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     readonly list_harnesses_api_harnesses_get: {
         readonly parameters: {
             readonly query?: never;
@@ -8759,6 +9298,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description probe rate limit exceeded (SEC-2, ME-030: 30/60s per client + 180/60s board-wide) */
+            readonly 429: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description owner login is not configured (fail-closed) */
             readonly 503: {
                 headers: {
@@ -8812,6 +9358,160 @@ export interface operations {
         readonly responses: {
             /** @description Successful Response */
             readonly 204: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    readonly register_account_api_auth_register_post: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["AccountRegisterIn"];
+            };
+        };
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 201: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["AccountSessionOut"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly login_account_api_auth_login_post: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["AccountLoginIn"];
+            };
+        };
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["AccountLoginOut"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly logout_account_api_auth_logout_post: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 204: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    readonly me_account_api_auth_me_get: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["SessionMeOut"];
+                };
+            };
+        };
+    };
+    readonly change_account_password_api_auth_password_post: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["AccountPasswordIn"];
+            };
+        };
+        readonly responses: {
+            /** @description password set (changed or recovered); no body */
+            readonly 204: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description no live admission (neither a password session nor the owner ui token), a non-ui bearer on the header leg, or a wrong current password on the own-password leg */
+            readonly 401: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description target refused — existence-neutral: a missing name and a non-qualifying name carry the SAME detail (no username oracle) */
+            readonly 403: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description body outside the contract (new_password 8..512, missing current_password on the own-password leg, missing username on the recovery leg, unknown keys) */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description rate limit exceeded (10/60s per client + 60/60s board-wide; Retry-After set) */
+            readonly 429: {
                 headers: {
                     readonly [name: string]: unknown;
                 };
