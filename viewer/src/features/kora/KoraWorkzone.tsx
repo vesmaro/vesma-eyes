@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { ArrowDownToLine, Search } from "lucide-react";
 import { HonestLine } from "@/components/HonestLine/HonestLine";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { KoraComposer } from "./KoraComposer";
 import { KoraTranscript } from "./KoraTranscript";
 import { KoraHermesChat } from "./KoraHermesChat";
-import { HermesTranscript } from "./KoraHermesSource";
+import { KoraMovesZone } from "./KoraMovesZone";
+import { KoraReadingTools } from "./KoraReadingTools";
 import type { KoraIntentEventPoints } from "./koraIntentEvents";
 import type { KoraCoverage, KoraSession } from "./koraTypes";
 import {
@@ -15,107 +15,155 @@ import {
   koraSessionName,
   sessionCoverageSupport,
 } from "./koraWorkspaceModel";
-import type { KoraHermesTranscriptPages, KoraTranscriptPages } from "./useKora";
+import type { KoraTranscriptPages } from "./useKora";
 
 /**
- * The central work zone (07j §3.1, union И1): ALWAYS deployed — selecting a
- * session never re-assembles the page, only the center's content changes
- * with the route. No session → the honest invitation; an EMPTY registry →
- * the §9.3 honest variants (A: connect an agent; B: the scanner wait) so
- * the center explains WHY there is nothing to select. A session → the
- * transcript scroll canon (Lora ≤72ch, mono tnum times, load-more,
- * follow-tail as scroll pinning) + the composer (07j §4.6).
+ * The central work zone (07j §3.1; the KW2 SPLIT per kora-rethink
+ * blueprint §2–4): ALWAYS deployed — selecting a session never
+ * re-assembles the page, only the center's content changes with the route.
  *
- * T004 slice 3 (hermes-bridge): the hermes SOURCE context with no session
- * selected turns the center into the cluster CHAT (history = the last
- * active api_server session); a hermes SESSION selected → its transcript,
- * READ-ONLY (the composer is a zcode-session affordance — the hermes chat
- * lives one click back, in the source view).
- *
- * KW1 (kora-rethink): the empty scene's Эфир card left — the ring's single
- * mount is the RIGHT meta panel's Эфир block now (states.md K-EMPTY).
+ * Modes (states.md §2):
+ * - K-EMPTY: no session, not the hermes mode → the honest invitation (Эфир
+ *   lives in the meta panel).
+ * - K-HERMES-LIVE / K-CLUSTER: the hermes SPLIT — the chat on top (the
+ *   header with the session switcher + the model select, the history, the
+ *   REAL composer), the «Все ходы» zone below the row-resize seam (the
+ *   collapsed 40px strip is the default). The chat is REAL in BOTH: POST
+ *   /chat is stateless, so even a selected hermes session stays honest —
+ *   the non-persistence note names what a send does and does not touch.
+ * - K-ZCODE / K-ZCODE-DEAD: a zcode/vscode/pi session → the FULL-PAGE
+ *   transcript, NO split (its content IS the main zone) + the composer
+ *   with the honestly deferred send (07a §1 canon — unchanged in KW2).
  */
 
 /** The §9.3 registry-empty branch: A = zero executors, B = scanner wait. */
 export type KoraRegistryEmpty = "no-executors" | "no-sessions" | null;
+
+/** The hermes split contract (KW2): everything the two zones need, hoisted
+ * at the workspace so the messages cursor is read ONCE per session. */
+export interface KoraHermesSplit {
+  /** The chat anchor (null = the honest clean slate); the moves zone reads
+   * the same session's transcript. */
+  session: KoraSession | null;
+  /** The ONE hoisted messages read (the chat filters user/assistant out of
+   * it; the zone shows the full grammar). */
+  pages: import("./useKora").KoraHermesTranscriptPages;
+  /** The verified model roster + default from /status (empty = fallback). */
+  models: readonly string[];
+  defaultModel: string | null;
+  /** The context sessions for the chat's switcher. */
+  sessions: readonly KoraSession[];
+  /** The session the route carries; null = the cluster option is active. */
+  activeSessionId: string | null;
+  /** The route seam: null → /kora/hermes, an id → /kora/:sessionId. */
+  onNavigateSession: (sessionId: string | null) => void;
+}
 
 export function KoraWorkzone({
   session,
   registryEmpty,
   coverage,
   transcript,
-  hermesTranscript = null,
-  hermesChat = null,
+  hermes = null,
   intentEvents,
 }: {
   session: KoraSession | null;
   registryEmpty: KoraRegistryEmpty;
   coverage: KoraCoverage | null | undefined;
   transcript: KoraTranscriptPages;
-  /** The LIVE hermes transcript — non-null iff a hermes session is selected. */
-  hermesTranscript?: KoraHermesTranscriptPages | null;
-  /** The hermes source chat surface — non-null iff the hermes context is
-   * active with no session selected ({session} = the api_server anchor or
-   * null for the honest clean-slate chat). */
-  hermesChat?: { session: KoraSession | null } | null;
+  /** Non-null iff the hermes mode is on stage (the cluster route or a
+   * selected hermes session) — the split center. */
+  hermes?: KoraHermesSplit | null;
   intentEvents: KoraIntentEventPoints;
 }) {
   const t = useT();
 
-  if (session === null) {
-    // T004 slice 3: the hermes context's center IS the cluster chat — the
-    // conversation continues the api_server session of the source.
-    if (hermesChat !== null) {
-      return <KoraHermesChat session={hermesChat.session} />;
+  if (session !== null) {
+    if (session.harness === "hermes") {
+      // K-HERMES-LIVE: the selected hermes session is a CHAT + the moves
+      // zone (the read-only full-page transcript left with KW1's shape —
+      // the composer here is real, the note names its statelessness).
+      return <KoraHermesSplitView split={hermes} />;
     }
+    // Mode B (zcode/vscode/pi): the full-page transcript, NO split.
     return (
-      /* The scene in the v7 frame (07j §3.1 А): the honest invitation; the
-       * Эфир moved to the meta panel (KW1), the scene keeps the center's
-       * free space for the invitation + the honest empties. */
-      <section
-        aria-label={t("kora.transcript.region")}
-        className="flex min-h-0 min-w-0 flex-1 flex-col px-6 py-5"
-      >
-        <p className="text-sm text-foreground-secondary">{t("kora.workzone.invite")}</p>
-        {registryEmpty !== null ? (
-          <div className="mt-3">
-            <HonestLine
-              action={
-                registryEmpty === "no-executors" ? (
-                  <Link
-                    to="/agents/harnesses"
-                    className="inline-flex min-h-12 md:min-h-6 items-center text-sm text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
-                  >
-                    {t("kora.list.emptyAction")}
-                  </Link>
-                ) : (
-                  <Link
-                    to="/system/status"
-                    className="inline-flex min-h-12 md:min-h-6 items-center text-sm text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
-                  >
-                    {t("kora.list.emptyStatusLink")}
-                  </Link>
-                )
-              }
-            >
-              {registryEmpty === "no-executors"
-                ? t("kora.list.emptyNoExecutors")
-                : t("kora.list.emptyNoSessions")}
-            </HonestLine>
-          </div>
-        ) : null}
-      </section>
+      <SessionView
+        session={session}
+        coverage={coverage}
+        transcript={transcript}
+        intentEvents={intentEvents}
+      />
     );
   }
 
+  if (hermes !== null) {
+    // K-CLUSTER (/kora/hermes): the same split, the anchor = the last
+    // active api_server session or the honest clean slate.
+    return <KoraHermesSplitView split={hermes} />;
+  }
+
   return (
-    <SessionView
-      session={session}
-      coverage={coverage}
-      transcript={transcript}
-      hermesTranscript={hermesTranscript}
-      intentEvents={intentEvents}
-    />
+    /* The scene in the v7 frame (07j §3.1 А): the honest invitation; the
+     * Эфир lives in the meta panel (KW1), the scene keeps the center's
+     * free space for the invitation + the honest empties. */
+    <section
+      aria-label={t("kora.transcript.region")}
+      className="flex min-h-0 min-w-0 flex-1 flex-col px-6 py-5"
+    >
+      <p className="text-sm text-foreground-secondary">{t("kora.workzone.invite")}</p>
+      {registryEmpty !== null ? (
+        <div className="mt-3">
+          <HonestLine
+            action={
+              registryEmpty === "no-executors" ? (
+                <Link
+                  to="/agents/harnesses"
+                  className="inline-flex min-h-12 md:min-h-6 items-center text-sm text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+                >
+                  {t("kora.list.emptyAction")}
+                </Link>
+              ) : (
+                <Link
+                  to="/system/status"
+                  className="inline-flex min-h-12 md:min-h-6 items-center text-sm text-iris-bright hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+                >
+                  {t("kora.list.emptyStatusLink")}
+                </Link>
+              )
+            }
+          >
+            {registryEmpty === "no-executors"
+              ? t("kora.list.emptyNoExecutors")
+              : t("kora.list.emptyNoSessions")}
+          </HonestLine>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+/** The hermes split (states.md K-HERMES-LIVE / K-CLUSTER): the chat zone
+ * (flex) + the «Все ходы» zone (the seam + the 40px strip / the deployed
+ * body). The zones NEVER share scroll state — two follow-tails by design
+ * (kora-rethink blueprint §8). */
+function KoraHermesSplitView({ split }: { split: KoraHermesSplit | null }) {
+  if (split === null) return null;
+  return (
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <KoraHermesChat
+        session={split.session}
+        pages={split.pages}
+        models={split.models}
+        defaultModel={split.defaultModel}
+        sessions={split.sessions}
+        activeSessionId={split.activeSessionId}
+        onNavigateSession={split.onNavigateSession}
+      />
+      <KoraMovesZone
+        sessionId={split.session?.id ?? null}
+        pages={split.pages}
+      />
+    </div>
   );
 }
 
@@ -123,13 +171,11 @@ function SessionView({
   session,
   coverage,
   transcript,
-  hermesTranscript,
   intentEvents,
 }: {
   session: KoraSession;
   coverage: KoraCoverage | null | undefined;
   transcript: KoraTranscriptPages;
-  hermesTranscript: KoraHermesTranscriptPages | null;
   intentEvents: KoraIntentEventPoints;
 }) {
   const t = useT();
@@ -138,18 +184,18 @@ function SessionView({
   const support = sessionCoverageSupport(coverage, session.harness);
   const { unit, n } = koraAgeUnit(session.age_seconds);
   const age = t(`kora.age.${unit}`, { n });
-  const isHermes = session.harness === "hermes";
-  // The hermes transcript rides its OWN pages (the live messages route) —
-  // the search count reads whichever scroll is on stage.
-  const scrollItems = isHermes ? (hermesTranscript?.items ?? []) : transcript.items;
   const needle = query.trim().toLowerCase();
   const matchCount =
     needle === ""
       ? null
-      : scrollItems.filter((item) => item.content.toLowerCase().includes(needle))
+      : transcript.items.filter((item) => item.content.toLowerCase().includes(needle))
           .length;
-  const head = (
-    <>
+  return (
+    <section
+      id="kora-workzone"
+      aria-label={t("kora.transcript.region")}
+      className="flex min-h-0 min-w-0 flex-1 flex-col"
+    >
       {/* 4.1.3: the opened session is announced politely (07j §6.1). */}
       <p role="status" aria-live="polite" className="sr-only">
         {t("kora.workzone.openedAnnounce", { name: koraSessionName(session) })}
@@ -184,60 +230,8 @@ function SessionView({
           <span className="normal-case">{t("kora.sessionCov.unknown")}</span>
         )}
       </p>
-    </>
-  );
 
-  // T004 slice 3 — a hermes session shows its LIVE transcript through the
-  // same scroll canon, READ-ONLY: the composer is a zcode-session
-  // affordance; the conversation with the source lives in the cluster chat
-  // (one click back — the hermes context without a selected session).
-  if (isHermes) {
-    return (
-      <section
-        id="kora-workzone"
-        aria-label={t("kora.transcript.region")}
-        className="flex min-h-0 min-w-0 flex-1 flex-col"
-      >
-        {head}
-        <ReadingTools
-          follow={follow}
-          onFollow={() => setFollow((value) => !value)}
-          query={query}
-          onQuery={setQuery}
-          matchCount={matchCount}
-        />
-        <div className="kora-scroll mt-3 min-h-0 flex-1 overflow-y-auto px-4 pb-4">
-          {hermesTranscript !== null ? (
-            <HermesTranscript
-              sessionId={session.id}
-              pages={hermesTranscript}
-              follow={follow}
-              query={query}
-            />
-          ) : null}
-        </div>
-        {/* The read-only beat replaces the composer (07j §4.6 honesty: the
-         * absent sender says WHY it is absent, visibly, not by silence). */}
-        <p className="border-t border-myelin bg-well px-4 py-3 text-xs text-foreground-muted">
-          {t("kora.hermes.transcriptReadonly")}
-        </p>
-      </section>
-    );
-  }
-
-  return (
-    /* The scene column of the v7 frame (07l §4): the session head + tools
-     * stay pinned, the scroll (свиток) owns the free height, the composer
-     * docks at the bottom — nothing re-assembles on scroll. Outside the
-     * frame (<lg, no height lock) flex-1 is a no-op: the page scrolls. */
-    <section
-      id="kora-workzone"
-      aria-label={t("kora.transcript.region")}
-      className="flex min-h-0 min-w-0 flex-1 flex-col"
-    >
-      {head}
-
-      <ReadingTools
+      <KoraReadingTools
         follow={follow}
         onFollow={() => setFollow((value) => !value)}
         query={query}
@@ -260,61 +254,5 @@ function SessionView({
        * session (07j §4.6 — never hidden behind a disclosure). */}
       <KoraComposer key={session.id} session={session} intentEvents={intentEvents} />
     </section>
-  );
-}
-
-/** The reading tools (07j §3 / 07i §4) — follow-tail + search-in-session
- * with the honest match count; ONE toolbar for both transcript sources. */
-function ReadingTools({
-  follow,
-  onFollow,
-  query,
-  onQuery,
-  matchCount,
-}: {
-  follow: boolean;
-  onFollow: () => void;
-  query: string;
-  onQuery: (value: string) => void;
-  matchCount: number | null;
-}) {
-  const t = useT();
-  return (
-    <div className="mt-2 flex flex-wrap items-center gap-2 px-4">
-      <button
-        type="button"
-        aria-pressed={follow}
-        onClick={onFollow}
-        className="inline-flex min-h-12 md:min-h-6 items-center gap-1.5 rounded-sm px-2 text-xs text-foreground-secondary transition-colors duration-instant hover:text-foreground aria-pressed:text-iris-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
-      >
-        <ArrowDownToLine aria-hidden className="size-3.5" />
-        {t("kora.workzone.followTail")}
-      </button>
-      <div className="relative min-w-0 flex-1 sm:max-w-72">
-        <label className="sr-only" htmlFor="kora-session-search">
-          {t("kora.workzone.searchLabel")}
-        </label>
-        <Search
-          aria-hidden
-          className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-foreground-muted"
-        />
-        <input
-          id="kora-session-search"
-          type="search"
-          value={query}
-          placeholder={t("kora.workzone.searchPlaceholder")}
-          onChange={(event) => onQuery(event.target.value)}
-          className="h-7 w-full rounded-md border border-border-subtle bg-background pl-7 pr-2 text-xs text-foreground placeholder:text-foreground-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
-        />
-      </div>
-      {matchCount !== null ? (
-        <span
-          role="status"
-          className="font-mono text-xs tabular-nums text-foreground-muted"
-        >
-          {t("kora.workzone.matches", { n: matchCount })}
-        </span>
-      ) : null}
-    </div>
   );
 }

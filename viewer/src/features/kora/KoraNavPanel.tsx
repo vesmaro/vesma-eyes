@@ -17,9 +17,9 @@ import type {
  * «Хосты и агенты» (the KoraTree, as is) → «Сессии · контекст» (the
  * KoraSessionList) → the pinned «Чат с кластером» entry (hermes context
  * only) → the hermes source line (hermes context only). ONE panel scroll.
- * The pinned entry is VISUAL in KW1 — the /kora/hermes route is KW2; the
- * click leads to the current hermes mode (the cluster chat surface the
- * hermes context already shows with no session selected).
+ * KW2: the pinned entry WRITES the reserved /kora/hermes route (the click
+ * handler rides from the workspace); «current» is ROUTE-driven — the
+ * clusterActive flag mirrors /kora/hermes, not the filter context.
  */
 
 export function KoraNavPanel({
@@ -41,6 +41,7 @@ export function KoraNavPanel({
   hermesStatusPending,
   hermesStatusError,
   hermesPullError,
+  clusterActive,
   onClusterChat,
 }: {
   model: KoraWorkspaceModel;
@@ -63,14 +64,13 @@ export function KoraNavPanel({
   hermesStatusPending: boolean;
   hermesStatusError: boolean;
   hermesPullError: Error | null;
-  /** The pinned entry's click — leads to the current hermes chat surface. */
+  /** The reserved /kora/hermes route is ON STAGE (the entry reads current). */
+  clusterActive: boolean;
+  /** The pinned entry's click — writes /kora/hermes (the workspace owns it). */
   onClusterChat: () => void;
 }) {
   const t = useT();
   const isHermesContext = context.kind === "hermes";
-  // The pinned entry reads as «current» when the center IS the cluster chat
-  // (the hermes context with no session selected).
-  const clusterChatActive = isHermesContext && sessionId === null;
 
   return (
     <div className="space-y-4 px-3 py-3">
@@ -114,18 +114,17 @@ export function KoraNavPanel({
         hermesRefresh={hermesRefresh}
       />
 
-      {/* The pinned «Чат с кластером» entry (blueprint §4) — hermes context
-       * only; the /kora/hermes ROUTE is KW2, the click leads to the current
-       * hermes chat surface (the context's no-session state). */}
+      {/* The pinned «Чат с кластером» entry (blueprint §4–5) — hermes
+       * context only; the click writes the RESERVED /kora/hermes route. */}
       {isHermesContext ? (
         <button
           type="button"
           onClick={onClusterChat}
-          aria-current={clusterChatActive ? "page" : undefined}
+          aria-current={clusterActive ? "page" : undefined}
           title={t("kora.nav.clusterChatHint")}
           className={cn(
             "flex min-h-12 md:min-h-6 w-full items-center gap-2 rounded-md border-l-2 px-2 py-1.5 text-left text-sm transition-colors duration-instant hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
-            clusterChatActive
+            clusterActive
               ? "border-iris bg-iris-tint text-foreground"
               : "border-transparent text-foreground-secondary",
           )}
