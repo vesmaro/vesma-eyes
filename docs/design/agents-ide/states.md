@@ -11,7 +11,7 @@
 | S-HOST-DEAD | off/disabled/provisioning/revoked | header + lifecycle state block (+ reconnect CTA on revoked) | «Дать задачу» disabled with reason |
 | S-HOST-IDLE | host selected, no live sessions | header + harness chips + «Сейчас» + honest idle lines | select session → S-HOST-LIVE path |
 | S-HOST-LIVE | live sessions exist, none selected | + live session list (dot, harness, label) | click row → S-SESSION |
-| S-SESSION | host + session selected | KoraTranscript + chat pult; session op menu; «открыть в Коре» | Esc/close → S-HOST-LIVE |
+| S-SESSION | host + session selected | readonly transcript preview + mini-meta (chat lives only in Kora — kora blueprint §9); [Открыть в Корe]; session op menu | Esc/close → S-HOST-LIVE |
 | S-OP-* | any overlay | ExecutorMenu / ExecutorSheet drawer / CreateTaskDialog / ExecutorLinkCheck — Radix owns focus | Esc closes the top overlay |
 
 ## 2. Right meta-panel blocks (≥xl)
@@ -45,7 +45,7 @@
 | ----- | --- | ------ |
 | W1 «Распустить сплетения» | Убрать аккордеон-секцию; чипы харнесов в центре; операции через ExecutorMenu; полная работа — шторка ExecutorSheet; i18n-чистка лора (ru/en) | M |
 | W2 «Мета-панель» | Правая панель: Присутствие + Пульс (перенос «Недавно») + Настройки первой линии; сворачиваемые блоки; md..xl пере-лестница | M |
-| W3 «Сессия в центре» | Роут sessions/:sessionId; ленивые KoraTranscript+пульт в поле; контекст-меню операций сессии; deep-link синхронизация с /kora | L |
+| W3 «Сессия в центре» | Роут sessions/:sessionId; ленивый READ-ONLY превью транскрипта + мини-мета + [Открыть в Корe] (чат только в Корe — координация §9 blueprint); контекст-меню операций сессии; deep-link синхронизация с /kora. Идёт ПОСЛЕ Kora KW1 | L |
 
 Порядок W1→W2→W3. Решения по открытым вопросам blueprint (приняты ТЛ по рекомендациям Design Lead, докладываются владельцу):
 1. Фильтры ростера в «Присутствии» остаются как есть (рабочие инструменты диспетчера); блоки панели сворачиваемые, дефолт: Присутствие и Пульс развёрнуты, Настройки свёрнут.

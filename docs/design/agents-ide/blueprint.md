@@ -64,8 +64,9 @@ Frame discipline (07l): 100vh, no page scroll ≥xl, internal scrolls only,
 │ ─ Харнесы: ◉ api_server (distrobox) ⋯  ◉ …     │ ─ Пульс                   │
 │   chips: dot·name·env·refusal; ⋯ = menu,       │   24h strip + fresh feed  │
 │   click = settings drawer (ExecutorSheet)      │   (host-scoped)           │
-│ ─ Сессии/Чат: live sessions → selected =       │ ─ Настройки (свёрнут)     │
-│   KoraTranscript + chat pult, op context menu  │   routing verdict + links │
+│ ─ Сессии: live sessions → selected =           │ ─ Настройки (свёрнут)     │
+│   readonly transcript preview + mini-meta      │   routing verdict + links │
+│   [Открыть в Корe] · session op context menu   │                           │
 │ ─ Сейчас: active assignments (compact rows)    │ ← KoraResizeHandle seam → │
 └───────────────────────────────────────────────┴──────────────────────────┘
 ```
@@ -74,7 +75,8 @@ Frame discipline (07l): 100vh, no page scroll ≥xl, internal scrolls only,
 
 - ExecutorMenu (context menu, controlled + trigger modes) — chip operations.
 - ExecutorSheet / ExecutorSheetForm — the harness drawer (same freeze/stamp).
-- KoraTranscript + KoraPult + useTranscriptWires — the embedded session/chat.
+- KoraTranscript + useTranscriptWires — the embedded session preview, READ-ONLY
+  (the chat surface lives ONLY in Kora — coordination §9, docs/design/kora/blueprint.md).
 - CreateTaskDialog — «Дать задачу» wizard (pre-pointed at primary executor).
 - ExecutorLinkCheck — the link verdict action.
 - useActivityFeed/useActivityBuckets/buildPulseAxis — the Пульс block.
@@ -116,3 +118,15 @@ Frame discipline (07l): 100vh, no page scroll ≥xl, internal scrolls only,
 5. No ambient motion in the center; reduced-motion honoured; glow budget kept.
 6. Kora stream mounted only with a selected session; no per-frame allocations
    beyond the existing ticker pattern.
+
+## 9. Coordination with kora-rethink (2026-10-22, binding)
+
+The chat surface lives ONLY in Kora (docs/design/kora/blueprint.md §9).
+W3 «Session in the center» is a READ-ONLY preview: transcript + mini-meta +
+[Открыть в Корe] primary CTA; no composer, no pult, no model picker in the
+Agents field — ever, regardless of wave order. W3 runs AFTER Kora KW1
+(the «Открыть в Корe» target is the new three-zone Kora frame). Shared
+components: KoraTranscript/HermesTranscript, useTranscriptWires,
+KoraResizeHandle, koraFrameStorage, KoraGatewayContext, EmptyState/HonestLine.
+Routes /kora/:sessionId and /agents/hosts/:host/sessions/:sessionId coexist,
+both deep-linkable; Kora is canonical for chat.
