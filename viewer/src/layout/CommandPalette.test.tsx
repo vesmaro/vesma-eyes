@@ -234,6 +234,14 @@ describe("CommandPalette (Ф2, UX-overhaul §7.3)", () => {
     expect(input!.getAttribute("placeholder")).toBe(
       "Memory, tasks, agents, navigation — start typing",
     );
+    // Review P3-1: the v12 skin classes are consumption-pinned — the overlay
+    // carries the palette scrim token (`--palette-scrim`'s dead-CSS lesson,
+    // 1.77: a token without a pinned consumer dies silently) and the panel
+    // carries the skin class.
+    const overlay = document.querySelector<HTMLElement>(".cmdk-overlay");
+    expect(overlay).not.toBeNull();
+    expect(overlay!.className).toContain("bg-palette-scrim");
+    expect(dialog()!.className).toContain("cmdk-panel");
 
     await pressInInput("Escape");
     await waitFor("palette closed", () => dialog() === null);
@@ -315,6 +323,13 @@ describe("CommandPalette (Ф2, UX-overhaul §7.3)", () => {
     const taskRow = options().find((option) => option.textContent?.includes("TB-1"));
     expect(taskRow!.textContent).toContain("in progress");
     expect(taskRow!.textContent).toContain("zcode");
+    // Review P3-2: the second story is not only visible — it rides the SR
+    // path too: the row's aria-label carries the memory snippet / the status
+    // and the agents (the v12 preview richness must be spoken, not shown).
+    const memoryRow = options().find((option) => option.id.includes("memory"));
+    expect(memoryRow!.getAttribute("aria-label")).toContain("recorded corpus");
+    expect(taskRow!.getAttribute("aria-label")).toContain("in progress");
+    expect(taskRow!.getAttribute("aria-label")).toContain("zcode");
   });
 
   it("v12: the iris hit-flare rides the memory rows only (U4 recall idiom, mount-keyed)", async () => {
