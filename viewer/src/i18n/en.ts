@@ -1344,13 +1344,12 @@ export const en: Record<TranslationKey, string> = {
   "agents.hosts.recentEmpty": "Quiet. The first events arrive after the first report.",
   "agents.hosts.recentFailed": "Failed to load the feed.",
   "agents.hosts.reconnectAction": "Reconnect",
-  // Brain zones Z1 (BRAIN-ZONES-VISUAL-DOC §2-3): host = cortex zone,
-  // harness = plexus, specialist = neuron — the owner's same hierarchy,
-  // spoken in the lore vocabulary.
-  "agents.hosts.zoneStructureTitle": "Zone plexuses",
-  "agents.hosts.zoneNeuronsCounter": "neurons: {{n}}",
+  // The host's harnesses (agents-workspace-ide W1 "untangle the weave"):
+  // a compact chip strip instead of the «Zone plexuses» accordion; the lore
+  // leaves the structural labels (see the agents.lore block below).
+  "agents.hosts.harnessStripLabel": "Harnesses",
   "agents.hosts.zoneEmpty":
-    "No plexuses in this zone yet — connect a harness and it will appear here.",
+    "No harnesses on this host yet — connect one and it will appear here.",
   "agents.hosts.actionAddHarness": "Add a harness",
   "palette.hostItem": "Host {{host}}",
   // D9: one noun on the Connect screen — "agent".
@@ -1359,13 +1358,15 @@ export const en: Record<TranslationKey, string> = {
   "agents.hosts.refusalRevoked": "revoked",
   "agents.hosts.execEnvTooltip": "Execution environment (agent-reported)",
   "agents.hosts.foundAtTooltip": "The same installation was also found at",
-  "agents.hosts.sessions24Tooltip": "Sessions in 24h",
-  "agents.hosts.sessions24Short": "sessions",
   // Zone lore vocabulary (BRAIN-ZONES-VISUAL-DOC §2, i18n gate): zone /
-  // plexus / neuron / core / path. «Core» (a team) and «path» (a mission)
-  // are Z2/Z3 groundwork: NOT rendered in the roster yet, the hints say
-  // so honestly.
+  // plexus / neuron / core / path. W1 (agents-workspace-ide): the lore
+  // leaves the structural labels — exactly ONE caps accent («cortex zone»)
+  // renders above the host name, the dictionary lives in ITS tooltip.
+  // «Core» (a team) and «path» (a mission) are Z2/Z3 groundwork: NOT
+  // rendered.
   "agents.lore.zone": "cortex zone",
+  "agents.lore.zoneTooltip":
+    "dictionary: plexus — harness · neuron — specialist · core — team · path — mission",
   "agents.lore.plexus": "plexus",
   "agents.lore.neuron": "neuron",
   "agents.lore.core": "core",

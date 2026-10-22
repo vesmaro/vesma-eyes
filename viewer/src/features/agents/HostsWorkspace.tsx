@@ -37,7 +37,7 @@ import { AgentsUnsupported } from "./AgentsUnsupported";
 import { AssignmentStateBadge } from "./AssignmentStateBadge";
 import { CreateTaskDialog } from "@/features/tasks/CreateTaskDialog";
 import { ExecutorLinkCheck } from "./ExecutorLinkCheck";
-import { HostHarnesses } from "./HostHarnesses";
+import { HarnessChipStrip } from "./HarnessChipStrip";
 import {
   formatReportAge,
   isLifecycle,
@@ -840,11 +840,15 @@ function HostField({
   return (
     <div className="flex min-h-0 min-w-0 flex-col">
       <header className="space-y-1.5 px-6 pb-3 pt-5">
-        {/* Brain-zones Z1 (BRAIN-ZONES-VISUAL-DOC §2-3): the field names its
-         * entity — the host IS a cortex zone. A vocabulary label, not data:
-         * the lore term sits above the name, the facts stay in the stats
-         * line below. */}
-        <p className="text-xs font-medium uppercase tracking-wide text-foreground-secondary">
+        {/* THE ONE lore accent of the surface (agents-workspace-ide W1,
+         * blueprint §8.1): the caps «cortex zone» above the host name. The
+         * rest of the lore vocabulary left the structure (the «Сплетения
+         * зоны» accordion dissolved) — the dictionary survives in THIS
+         * tooltip only. */}
+        <p
+          className="text-xs font-medium uppercase tracking-wide text-foreground-secondary"
+          title={t("agents.lore.zoneTooltip")}
+        >
           {t("agents.lore.zone")}
         </p>
         <div className="flex flex-wrap items-center gap-2">
@@ -963,6 +967,14 @@ function HostField({
         </div>
       ) : null}
 
+      {/* Харнесы (agents-workspace-ide W1 «Распустить сплетения»): the
+       * compact chip strip UNDER THE HEADER (blueprint §3: header → chips →
+       * the working content) — glance facts only; the full workbench is the
+       * ExecutorSheet drawer OVER the field (parity with /agents/harnesses
+       * by construction). «Сейчас»/«Недавно» keep their center places until
+       * W2 moves «Недавно» to the meta-panel. */}
+      <HarnessChipStrip members={group.members} meta={meta} now={now} />
+
       {/* «Сейчас»: the host's active work — assignments (→ the task's live
        * execution feed) and live harness sessions (→ the Kora transcript;
        * lists-only harnesses wear the honest badge, never a dead link). */}
@@ -1057,16 +1069,6 @@ function HostField({
           </div>
         )}
       </section>
-
-      {/* «Сплетения зоны» (B2 §3.C.3; brain-zones Z1): one accordion per
-       * executor — the expansion is the ExecutorSheet's own workbench IN
-       * PLACE (behavior parity by construction). */}
-      <HostHarnesses
-        members={group.members}
-        meta={meta}
-        now={now}
-        koraItems={kora.items}
-      />
 
       {/* «Недавно»: the host-scoped activity — the 24h hourly strip + the
        * freshest rows; the honest quiet line when the host never spoke. */}
