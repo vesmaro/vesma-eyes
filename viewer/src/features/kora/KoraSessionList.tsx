@@ -1,17 +1,15 @@
-import { useState } from "react";
 import { Link } from "react-router";
-import { Check, ChevronRight, Copy, Radio, RefreshCw } from "lucide-react";
+import { ChevronRight, Radio, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { HonestLine } from "@/components/HonestLine/HonestLine";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
-import type { KoraCoverage, KoraSession } from "./koraTypes";
+import type { KoraSession } from "./koraTypes";
 import {
   koraAgeUnit,
   koraSessionName,
   quickFilterMatches,
-  sessionCoverageSupport,
   sortKoraSessions,
   type KoraQuickFilter,
 } from "./koraWorkspaceModel";
@@ -21,8 +19,8 @@ import {
  * the current context (all / host / agent — set by the header filter and
  * the tree clicks), sorted live-on-top, always filtered by the ONE page
  * host filter; each row carries its state as dot + TEXT with a mono age.
- * The «О сессии» disclosure rides the top of the block only while a
- * session is selected — details never replace content.
+ * KW1 (kora-rethink): the block lives in the LEFT navigation panel; the
+ * «О сессии» block moved to the RIGHT meta panel (KoraMetaPanel).
  */
 
 /** The Блок 2 context: all sessions, one host, one agent, or the hermes
@@ -133,112 +131,8 @@ function SessionRow({
   );
 }
 
-/** «О сессии» (07j §3.4): real registry fields only — full name, preview,
- * exact times in the tooltip, the coverage wording, the ONE session link. */
-function AboutSession({
-  session,
-  coverage,
-}: {
-  session: KoraSession;
-  coverage: KoraCoverage | null | undefined;
-}) {
-  const t = useT();
-  const [expanded, setExpanded] = useState(false);
-  const [copyState, setCopyState] = useState<"idle" | "ok" | "failed">("idle");
-  const support = sessionCoverageSupport(coverage, session.harness);
-  const started = session.started_at ?? null;
-  const lastActivity = session.last_activity_at ?? null;
-
-  const copyLink = async () => {
-    const url = `${window.location.origin}/kora/${encodeURIComponent(session.id)}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopyState("ok");
-    } catch {
-      setCopyState("failed");
-    }
-  };
-
-  return (
-    <div className="rounded-md border border-border-subtle">
-      <button
-        type="button"
-        aria-expanded={expanded}
-        aria-controls="kora-about-body"
-        onClick={() => setExpanded((value) => !value)}
-        className="flex min-h-8 w-full items-center gap-1.5 rounded-md px-2 text-left text-sm font-medium text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
-      >
-        <ChevronRight
-          aria-hidden
-          className={cn(
-            "size-4 transition-transform duration-instant",
-            expanded && "rotate-90",
-          )}
-        />
-        {t("kora.about.title")}
-      </button>
-      {expanded ? (
-        <div
-          id="kora-about-body"
-          className="space-y-2 border-t border-border-subtle px-3 py-2 text-sm"
-        >
-          <p className="break-words font-medium">{koraSessionName(session)}</p>
-          {session.last_line_preview ? (
-            <p className="text-xs text-foreground-secondary">
-              {session.last_line_preview}
-            </p>
-          ) : null}
-          <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-3 gap-y-1 text-xs">
-            <dt className="text-foreground-secondary">{t("kora.about.started")}</dt>
-            <dd title={started ?? undefined} className="font-mono tabular-nums">
-              {started ?? "—"}
-            </dd>
-            <dt className="text-foreground-secondary">
-              {t("kora.about.lastActivity")}
-            </dt>
-            <dd title={lastActivity ?? undefined} className="font-mono tabular-nums">
-              {lastActivity ?? "—"}
-            </dd>
-            <dt className="text-foreground-secondary">{t("kora.about.coverage")}</dt>
-            <dd>
-              {support !== null ? (
-                t(`kora.sessionCov.${support === "lists-only" ? "partial" : support}`)
-              ) : (
-                <span className="text-foreground-muted">
-                  {t("kora.sessionCov.unknown")}
-                </span>
-              )}
-            </dd>
-            <dt className="text-foreground-secondary">{t("kora.about.harness")}</dt>
-            <dd className="font-mono">
-              {session.harness} · {session.executor_id} · {session.native_id}
-            </dd>
-          </dl>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => void copyLink()}>
-              <Copy aria-hidden className="size-3.5" />
-              {t("kora.about.copyLink")}
-            </Button>
-            {copyState !== "idle" ? (
-              <span
-                role="status"
-                className={cn(
-                  "inline-flex items-center gap-1 text-xs",
-                  copyState === "ok" ? "text-success" : "text-error",
-                )}
-              >
-                {copyState === "ok" ? <Check aria-hidden className="size-3.5" /> : null}
-                {copyState === "ok"
-                  ? t("kora.about.copied")
-                  : t("kora.about.copyFailed")}
-              </span>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
+/** «О сессии» left with KW1 — the block now lives in the RIGHT meta panel
+ * (KoraMetaPanel); the list keeps the rows, filters and honest empties. */
 
 export function KoraSessionList({
   context,
@@ -246,7 +140,6 @@ export function KoraSessionList({
   quickFilter,
   onQuickFilter,
   selectedId,
-  coverage,
   noExecutors,
   sessionsEmpty,
   hermesRefresh = null,
@@ -257,7 +150,6 @@ export function KoraSessionList({
   quickFilter: KoraQuickFilter | null;
   onQuickFilter: (filter: KoraQuickFilter | null) => void;
   selectedId: string | null;
-  coverage: KoraCoverage | null | undefined;
   /** Executor registry is a FACT zero (drives the variant-A empty state). */
   noExecutors: boolean;
   /** The WHOLE registry is empty (drives the variant-B empty state). */
@@ -274,7 +166,6 @@ export function KoraSessionList({
   const rows = sortKoraSessions(
     sessions.filter((session) => quickFilterMatches(session, quickFilter)),
   );
-  const selected = sessions.find((session) => session.id === selectedId) ?? null;
 
   const title =
     context.kind === "all"
@@ -343,12 +234,6 @@ export function KoraSessionList({
           {t("kora.block2.qfDay")}
         </button>
       </div>
-
-      {selected ? (
-        <div className="mt-2">
-          <AboutSession session={selected} coverage={coverage} />
-        </div>
-      ) : null}
 
       <div className="mt-2">
         {sessionsEmpty && context.kind === "all" ? (

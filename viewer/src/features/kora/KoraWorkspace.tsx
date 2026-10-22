@@ -1,29 +1,34 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { useExecutors } from "@/features/agents/useAgents";
+import { useTaskInbox } from "@/features/tasks/useTasks";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { isKoraUnauthorized } from "./koraGateway";
 import { KoraSignInCta } from "./KoraSignInCta";
-import { KoraTree } from "./KoraTree";
-import { KoraSessionList, type KoraBlock2Context } from "./KoraSessionList";
+import { KoraNavPanel } from "./KoraNavPanel";
+import { KoraMetaPanel } from "./KoraMetaPanel";
+import { type KoraBlock2Context } from "./KoraSessionList";
 import { KoraWorkzone, type KoraRegistryEmpty } from "./KoraWorkzone";
-import { KoraPult } from "./KoraPult";
 import { KoraResizeHandle, seamPx } from "./KoraResizeHandle";
 import { useKoraEtherBridge, useKoraEtherRows } from "./useKoraEther";
 import {
+  KORA_NAV_DEFAULT,
+  KORA_NAV_MAX,
+  KORA_NAV_MIN,
   KORA_SIDE_DEFAULT,
   KORA_SIDE_MAX,
   KORA_SIDE_MIN,
+  readKoraLeftW,
   readKoraSideW,
+  writeKoraLeftW,
   writeKoraSideW,
 } from "./koraFrameStorage";
 import { NOOP_KORA_INTENT_EVENTS } from "./koraIntentEvents";
-import type { KoraCoverage } from "./koraTypes";
 import { buildKoraTree, koraSummary, type KoraQuickFilter } from "./koraWorkspaceModel";
 import {
   useKoraSessionPages,
@@ -32,33 +37,38 @@ import {
   useKoraHermesPull,
   useKoraHermesTranscriptPages,
 } from "./useKora";
-import { HermesSourceLine } from "./KoraHermesSource";
 import { pageGridClass } from "@/layout/pageGrid";
 import { useKoraEntered } from "@/telemetry/useKoraEntered"; // ME-041: kora.entered
 
 /**
- * The Kora workspace — the v7 FRAME (U5; 07l via the v12 stand, SPEC
- * verdict «каркас v7: сцена, дерево, два крыла, композер»): from ≥lg the
- * page is a 100vh app frame — NO page scroll, every surface scrolls inside
- * itself (07l §1.2). Geometry: the 40px-style header row, then ONE grid —
- * the central column (the scene + the Пульт, ONE contour with a myelin
- * seam, «стык без зазора» 07l §2) and the right panel (Блок 1 tree, Блок 2,
- * the coverage legend, ONE panel scroll 07l §4). The panel width is a REAL
- * seam (07l §3: pointer drag + full keyboard path + `vesmaro.koraRightW`
- * persist) — the wave's FINALE BLOCKER. Below lg the frame reflows honestly
- * (07l §1.5): the seams leave, the page scrolls as before (the drawer/
- * mobile pass is U7).
+ * The Kora workspace — the v7 frame in its KW1 «ТРИ КОЛОНКИ» cut
+ * (kora-rethink blueprint §3–4): from ≥lg the page is a 100vh app frame —
+ * NO page scroll, every surface scrolls inside itself (07l §1.2). Geometry:
+ * the 40px-style header row (now carrying the real «ждут владельца» badge —
+ * the ex-Пульт UI-30 counter), then ONE grid with THREE columns — the LEFT
+ * navigation panel (Блок 1 tree + Блок 2 sessions + the pinned cluster-chat
+ * entry + the hermes source line, `vesmaro.koraLeftW`), the central column
+ * (the work zone as it stands — the chat split is KW2) and the RIGHT meta
+ * panel (О СЕССИИ / ДАЙДЖЕСТ / ЭФИР / ПОКРЫТИЕ, one scroll, states.md §5
+ * defaults). Both widths are REAL seams (07l §3: pointer drag + full
+ * keyboard path + persist on commit). Below lg the frame reflows honestly
+ * (07l §1.5): the seams leave, the page scrolls (nav → center → meta —
+ * the ladder tuning is KW3).
+ *
+ * The ПУЛЬТ is dissolved (blueprint §6): the strip leaves the structure,
+ * the Дайджест/Эфир wings moved into the meta panel, the badge moved into
+ * the header; the height hardware survives in useKoraBandHeight for KW2's
+ * «Все ходы» zone. The Эфир ring now has ONE mount (the meta block).
  *
  * Selection stays a ROUTE (/kora/:sessionId) — the frame never re-assembles,
  * the center's content changes. The 401 gate / error / not-found states
  * keep the document flow (they are not the frame).
  *
- * И1 honest cuts kept: no fake counters, the Пульт starts collapsed, the
- * composer's send is deferred; the Эфир feeds ONLY from the real bus (one
- * stream per workspace, the ring lives in koraEtherStore). Everything
- * data-shaped reads the EXISTING slice 1–2 seams (the paged session
- * registry, the paged transcript cursor, the executors registry, the UI-30
- * inbox).
+ * И1 honest cuts kept: no fake counters, the composer's send is deferred;
+ * the Эфир feeds ONLY from the real bus (one stream per workspace, the ring
+ * lives in koraEtherStore). Everything data-shaped reads the EXISTING slice
+ * 1–2 seams (the paged session registry, the paged transcript cursor, the
+ * executors registry, the UI-30 inbox).
  */
 
 const PAGE_SIZE = 50;
@@ -70,6 +80,7 @@ const HERMES_SOURCE = "hermes";
 
 export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null }) {
   const t = useT();
+  const navigate = useNavigate();
   const sessions = useKoraSessionPages(PAGE_SIZE);
   // T004 slice 3 — ONE transcript leg per source: the canonical
   // «hermes:<native>» deep link rides the LIVE hermes messages route, the
@@ -92,12 +103,13 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
   );
   const executors = useExecutors();
 
-  // The Эфир: ONE stream for the workspace; both mounts (the empty-scene
-  // card, the Пульт wing) read the same ring (koraEtherStore).
+  // The Эфир: ONE stream for the workspace; since KW1 the ring has ONE
+  // mount — the meta panel's Эфир block (the scene card left with the
+  // Пульт; koraEtherStore stays the single source).
   useKoraEtherBridge();
   const etherRows = useKoraEtherRows();
 
-  // The right-panel seam (07l §3.1): width state + persist on commit.
+  // The right-panel (meta) seam (07l §3.1): width state + persist on commit.
   const [sideW, setSideW] = useState<number>(readKoraSideW);
   const onSideValue = useCallback((next: number): void => setSideW(next), []);
   const onSideCommit = useCallback((): void => {
@@ -106,6 +118,18 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
   const onSideReset = useCallback((): void => {
     setSideW(KORA_SIDE_DEFAULT);
     writeKoraSideW(KORA_SIDE_DEFAULT);
+  }, []);
+
+  // The LEFT navigation seam (kora-rethink blueprint §4, KW1): same seam
+  // hardware, `vesmaro.koraLeftW` (220–380, def 280).
+  const [leftW, setLeftW] = useState<number>(readKoraLeftW);
+  const onLeftValue = useCallback((next: number): void => setLeftW(next), []);
+  const onLeftCommit = useCallback((): void => {
+    writeKoraLeftW(leftW);
+  }, [leftW]);
+  const onLeftReset = useCallback((): void => {
+    setLeftW(KORA_NAV_DEFAULT);
+    writeKoraLeftW(KORA_NAV_DEFAULT);
   }, []);
 
   // §9.3 honest-empty branching: the connect CTA only shows when the
@@ -250,6 +274,16 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
     // one source into two filter targets.
     .filter((host) => host.length > 0 && host !== HERMES_SOURCE);
 
+  // The pinned «Чат с кластером» entry (blueprint §4): KW1 leads to the
+  // CURRENT hermes chat surface — the hermes context with no session
+  // selected. The dedicated /kora/hermes route is KW2; the entry exists so
+  // the nav grammar is in place (and the click is honest, not a dead stub).
+  // KEPT ABOVE THE EARLY RETURNS: hooks never ride a render branch.
+  const onClusterChat = useCallback((): void => {
+    setContext({ kind: "hermes" });
+    if (sessionId !== null) navigate("/kora");
+  }, [navigate, sessionId]);
+
   // ── The 401 gate: the CTA replaces every data-shaped surface (the old
   // hotfix contract, kept verbatim through the rework). ──
   if (unauthorized) {
@@ -358,7 +392,7 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
      * the shell chrome (topbar 48 + crumbs 40 + main's p-6 ×2 — and the
      * Vesma nest pad when on; the arithmetic lives in --kora-frame-h,
      * global.css) — no page scroll; below lg it degrades to the stacked
-     * document flow. */
+     * document flow (nav → center → meta). */
     <section
       aria-labelledby="kora-title"
       className={cn(
@@ -378,12 +412,80 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
       </div>
 
       <div
-        className="relative grid min-h-0 min-w-0 flex-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_var(--kora-right-w)] lg:items-stretch lg:gap-0"
-        style={{ "--kora-right-w": `${sideW}px` } as React.CSSProperties}
+        className="relative grid min-h-0 min-w-0 flex-1 items-start gap-6 lg:grid-cols-[var(--kora-left-w)_minmax(0,1fr)_var(--kora-right-w)] lg:items-stretch lg:gap-0"
+        style={
+          {
+            "--kora-left-w": `${leftW}px`,
+            "--kora-right-w": `${sideW}px`,
+          } as React.CSSProperties
+        }
       >
-        {/* Central column: the scene + the Пульт, ONE contour with a myelin
-         * seam (07l §2 — стык без зазора). Flush inside the frame (§1.2:
-         * no outer radii on the frame blocks), a card below lg. */}
+        {/* LEFT: the navigation panel (kora-rethink blueprint §4) — tree →
+         * sessions → the pinned cluster-chat entry → the hermes source
+         * line, ONE panel scroll. Flush inside the frame (§1.2), a card
+         * below lg. */}
+        <aside
+          aria-label={t("kora.nav.region")}
+          className="kora-scroll min-h-0 min-w-0 overflow-y-auto rounded-md border border-myelin bg-well lg:rounded-none lg:border-0"
+        >
+          <KoraNavPanel
+            model={model}
+            treeReady={treeReady}
+            context={context}
+            contextSessions={contextSessions}
+            quickFilter={quickFilter}
+            onQuickFilter={setQuickFilter}
+            sessionId={sessionId}
+            selectedSessionId={sessionId}
+            noExecutors={noExecutors}
+            sessionsEmpty={registryEmpty !== null}
+            activeHost={contextHost ?? ""}
+            onSelectHostContext={selectHost}
+            onSelectAgentContext={(agent) =>
+              selectAgent(
+                agent.executorId,
+                agent.harness,
+                agent.executor?.host ?? null,
+              )
+            }
+            hermesRefresh={
+              context.kind === "hermes"
+                ? {
+                    onRefresh: () => void hermesPull.mutate(),
+                    pending: hermesPull.isPending,
+                  }
+                : null
+            }
+            hermesStatus={hermesStatus.data ?? null}
+            hermesStatusPending={hermesStatus.isPending}
+            hermesStatusError={hermesStatus.isError}
+            hermesPullError={hermesPull.error}
+            onClusterChat={onClusterChat}
+          />
+        </aside>
+
+        {/* The LEFT SEAM (07l §3 anatomy, blueprint §4): col-resize on the
+         * nav panel's right edge — pointer drag + full keyboard path +
+         * dblclick reset, persist on commit. Grows RIGHTWARD (dragSign -1).
+         * Lives only inside the frame (≥lg). */}
+        <KoraResizeHandle
+          orientation="vertical"
+          label={t("kora.resize.nav.label")}
+          tooltip={t("kora.resize.side.tooltip")}
+          min={KORA_NAV_MIN}
+          max={KORA_NAV_MAX}
+          value={leftW}
+          valueText={seamPx(leftW)}
+          dragSign={-1}
+          onValue={onLeftValue}
+          onCommit={onLeftCommit}
+          onReset={onLeftReset}
+          className="absolute inset-y-0 left-[var(--kora-left-w)] hidden -translate-x-1/2 lg:flex"
+        />
+
+        {/* CENTRAL column: the work zone as it stands (the chat split and
+         * the «Все ходы» zone are KW2). Flush inside the frame, a card
+         * below lg. The Пульт is gone (KW1): no strip, no wings here. */}
         <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-md border border-myelin bg-well lg:rounded-none lg:border-0">
           {sessions.isPending || resolvingDeepLink ? (
             <div
@@ -409,20 +511,13 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
                   : null
               }
               intentEvents={NOOP_KORA_INTENT_EVENTS}
-              etherRows={etherRows}
-              hostFilter={contextHost}
             />
           )}
-          <KoraPult
-            hasSession={session !== null}
-            etherRows={etherRows}
-            hostFilter={contextHost}
-          />
         </div>
 
-        {/* The RIGHT SEAM (07l §3): the finale blocker — pointer drag with
-         * capture, the full keyboard path (arrows/Home/End/Esc), dblclick
-         * reset, persist on commit. Lives only inside the frame (≥lg). */}
+        {/* The RIGHT SEAM (07l §3): pointer drag with capture, the full
+         * keyboard path (arrows/Home/End/Esc), dblclick reset, persist on
+         * commit. Lives only inside the frame (≥lg). */}
         <KoraResizeHandle
           orientation="vertical"
           label={t("kora.resize.side.label")}
@@ -438,92 +533,39 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
           className="absolute inset-y-0 left-[calc(100%-var(--kora-right-w))] hidden -translate-x-1/2 lg:flex"
         />
 
-        {/* Right panel: Блок 1 → Блок 2 → the coverage legend (07j §3.3–3.5),
-         * ONE panel scroll inside the frame (07l §4). */}
+        {/* RIGHT: the meta panel (kora-rethink blueprint §4) — О СЕССИИ /
+         * ДАЙДЖЕСТ / ЭФИР / ПОКРЫТИЕ, ONE panel scroll, the states.md §5
+         * defaults (about+ether open, digest+coverage folded). */}
         <aside
-          aria-label={t("kora.side.region")}
+          aria-label={t("kora.meta.region")}
           className="kora-scroll min-h-0 min-w-0 overflow-y-auto rounded-md border border-myelin bg-well lg:rounded-none lg:border-0"
         >
-          <div className="space-y-4 px-3 py-3">
-            <section aria-label={t("kora.tree.title")}>
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
-                {t("kora.tree.title")}
-              </h2>
-              <p className="mt-1 text-xs text-foreground-muted">
-                {t("kora.tree.explain")}
-              </p>
-              <div className="mt-2">
-                {!treeReady ? (
-                  <div
-                    role="status"
-                    aria-label={t("kora.list.loading")}
-                    className="space-y-2"
-                  >
-                    <Skeleton className="h-5 w-3/4" />
-                    <Skeleton className="h-5 w-1/2" />
-                  </div>
-                ) : (
-                  <KoraTree
-                    model={model}
-                    selectedId={sessionId}
-                    activeHost={contextHost ?? ""}
-                    onHostContext={selectHost}
-                    onAgentContext={(agent) =>
-                      selectAgent(
-                        agent.executorId,
-                        agent.harness,
-                        agent.executor?.host ?? null,
-                      )
-                    }
-                  />
-                )}
-              </div>
-            </section>
-
-            <KoraSessionList
-              context={context}
-              sessions={contextSessions}
-              quickFilter={quickFilter}
-              onQuickFilter={setQuickFilter}
-              selectedId={sessionId}
-              coverage={sessions.coverage}
-              noExecutors={noExecutors}
-              sessionsEmpty={registryEmpty !== null}
-              hermesRefresh={
-                context.kind === "hermes"
-                  ? {
-                      onRefresh: () => void hermesPull.mutate(),
-                      pending: hermesPull.isPending,
-                    }
-                  : null
-              }
-            />
-
-            {/* T004 slice 2 — the source status line: DATA from
-             * /api/kora/hermes/status (mode ok/off + the human reason).
-             * Shown only in the hermes context; the honest-off branch is a
-             * quiet slot, never an error wall. */}
-            {context.kind === "hermes" ? (
-              <HermesSourceLine
-                status={hermesStatus.data ?? null}
-                isPending={hermesStatus.isPending}
-                isError={hermesStatus.isError}
-                pullError={hermesPull.error}
-              />
-            ) : null}
-
-            <CoverageLegend coverage={sessions.coverage} />
-          </div>
+          <KoraMetaPanel
+            session={session}
+            coverage={sessions.coverage}
+            etherRows={etherRows}
+            hostFilter={contextHost}
+          />
         </aside>
       </div>
     </section>
   );
 }
 
+/** The real UI-30 counter (ex-Пульт badge, kora-rethink blueprint §4):
+ * null while unknown (hidden badge), 0 = muted. */
+function useWaitingCount(): number | null {
+  const inbox = useTaskInbox();
+  if (inbox.isPending || inbox.isError) return null;
+  return inbox.data?.count ?? null;
+}
+
 /** The 40px-style header row (07l §1.3, И1 in-flow form): H1 with the
  * «Кора» name explanation in its tooltip, the derived summary numbers
- * (mono; «идущие»/«за 24 ч» click into the Блок 2 quick filters), the ONE
- * host filter. No numbers while data is pending — no fake counters. */
+ * (mono; «идущие»/«за 24 ч» click into the Блок 2 quick filters), the
+ * «ждут владельца» badge (the REAL UI-30 inbox counter — moved here from
+ * the dissolved Пульт; hidden while the count is unknown, a fake 0 would
+ * lie) and the ONE host filter. No numbers while data is pending. */
 function Header({
   summary,
   hostOptions,
@@ -541,6 +583,7 @@ function Header({
   onQuickFilter: (filter: KoraQuickFilter | null) => void;
 }) {
   const t = useT();
+  const waiting = useWaitingCount();
   const contextHost =
     context.kind === "host"
       ? context.host
@@ -575,6 +618,20 @@ function Header({
         </p>
       ) : null}
       <div className="ml-auto flex items-center gap-2">
+        {waiting !== null ? (
+          <Link
+            to="/tasks/inbox"
+            title={t("kora.header.waitingHint")}
+            className={cn(
+              "inline-flex min-h-12 md:min-h-6 shrink-0 items-center rounded-full border border-border-subtle px-2 font-mono text-xs tabular-nums focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
+              waiting === 0
+                ? "text-foreground-muted"
+                : "border-border-iris text-iris-bright",
+            )}
+          >
+            {t("kora.header.waiting", { n: waiting })}
+          </Link>
+        ) : null}
         <label className="sr-only" htmlFor="kora-host-filter">
           {t("kora.filter.label")}
         </label>
@@ -615,54 +672,5 @@ function SummaryChip({
     >
       {label}
     </button>
-  );
-}
-
-/** «Что мы видим с ваших машин» (07j §3.5): the registry's real coverage —
- * per-harness visibility + the explicit gaps — folded below the data. */
-function CoverageLegend({ coverage }: { coverage: KoraCoverage | null | undefined }) {
-  const t = useT();
-  const [expanded, setExpanded] = useState(false);
-  if (coverage === null || coverage === undefined) return null;
-  return (
-    <section aria-label={t("kora.legend.title")}>
-      <button
-        type="button"
-        aria-expanded={expanded}
-        aria-controls="kora-legend-body"
-        onClick={() => setExpanded((value) => !value)}
-        className="flex min-h-12 md:min-h-6 w-full items-center gap-1.5 rounded-sm text-left text-xs font-semibold uppercase tracking-wide text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
-      >
-        {expanded ? "▾" : "▸"} {t("kora.legend.title")}
-      </button>
-      {expanded ? (
-        <div id="kora-legend-body" className="mt-2 space-y-1.5 text-xs">
-          {coverage.harnesses.map((row) => (
-            <p key={row.harness} className="flex flex-wrap items-baseline gap-x-2">
-              <span className="font-mono text-foreground-secondary">{row.harness}</span>
-              <span className="text-foreground-secondary">
-                {t(`kora.coverage.support.${row.support}`)}
-              </span>
-              {row.note ? (
-                <span className="basis-full text-foreground-muted">{row.note}</span>
-              ) : null}
-            </p>
-          ))}
-          {coverage.gaps.length > 0 ? (
-            <div>
-              <p className="font-medium text-foreground-secondary">
-                {t("kora.coverage.gaps")}
-              </p>
-              <ul className="mt-1 list-inside list-disc space-y-0.5 text-foreground-muted">
-                {coverage.gaps.map((gap) => (
-                  <li key={gap}>{gap}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          <p className="text-foreground-muted">{t("kora.legend.growNote")}</p>
-        </div>
-      ) : null}
-    </section>
   );
 }

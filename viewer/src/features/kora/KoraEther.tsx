@@ -6,9 +6,10 @@ import type { KoraEtherRow } from "./koraEtherStore";
 
 /**
  * The Эфир лента (U5; 15-WOW §3.2 — «справа — постоянный Эфир, живой поток
- * всех сессий»): ONE component, TWO mount points (the empty-scene card and
- * the Пульт wing — 07j §4.2, one feed, no duplicates; the ring lives in
- * koraEtherStore, both mounts render the same rows).
+ * всех сессий»): ONE component, ONE mount since KW1 — the meta panel's
+ * Эфир block (kora-rethink blueprint §6: the Пульт dissolved, the
+ * empty-scene card left with it; the ring lives in koraEtherStore —
+ * one лента, одна посадка).
  *
  * Motion dose: the ONLY living beat in Кора is the arrival flash — the
  * newest row flares once (`kora-ether-flash`: impulse 240ms + decay

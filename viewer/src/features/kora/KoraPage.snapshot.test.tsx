@@ -112,52 +112,57 @@ async function renderKoraPage(lang: Lang, path = "/kora"): Promise<string> {
   );
 }
 
-describe("Kora workspace snapshots (union И1 → U5 v7 frame)", () => {
-  it("pins the frame: header + summary + tree + Блок 2 + collapsed Пульт (ru)", async () => {
+describe("Kora workspace snapshots (KW1 «Три колонки» → nav | center | meta)", () => {
+  it("pins the three-column frame: header + nav panel + center + meta panel (ru)", async () => {
     const html = await renderKoraPage("ru");
     // The header: H1 with the name explanation in the tooltip, the
-    // DERIVED summary numbers, the one host filter.
+    // DERIVED summary numbers, the one host filter. The badge is hidden —
+    // no inbox prefill ⇒ the counter is unknown (no fake 0).
     expect(html).toContain("Кора · сессии хостов");
     expect(html).toContain('title="Кора — журнал сессий всех хостов');
     expect(html).toContain("хостов: 2");
     expect(html).toContain("идёт сессий: 1");
     expect(html).toContain("за 24 ч: 2"); // 8940 s + 64920 s, the 47 h one is out
     expect(html).toContain("Все хосты");
-    // The tree: hosts from the executors registry, agents, live-first.
+    expect(html).not.toContain("Входящие:");
+    // The LEFT navigation panel: the tree (hosts → agents), Блок 2 with
+    // state pills (dot + text, never colour alone), the steerable badge.
+    expect(html).toContain('aria-label="Навигация"');
     expect(html).toContain("Хосты и агенты");
     expect(html).toContain("abyss-laptop");
     expect(html).toContain("pi-edge");
-    // Блок 2 in the «все» context with state pills (dot + text, never
-    // colour alone) and the steerable relay badge.
     expect(html).toContain("Сессии · все хосты");
     expect(html).toContain("идущие");
     expect(html).toContain("за 24 ч"); // the quick filter chip
     expect(html).toContain("можно рулить");
     expect(html).toContain("реле");
     expect(html).toContain("процесс мёртв"); // the dead pi row, honest state
-    // The coverage legend, folded at the bottom of the panel.
-    expect(html).toContain("Что мы видим с ваших машин");
-    // The scene invitation + the honest Эфир card on the empty scene
-    // (U5: the empty scene carries the ring card; a silent bus = the
-    // honest empty line).
+    // The scene invitation; the Эфир card LEFT the empty scene (KW1).
     expect(html).toContain("Выберите сессию — здесь откроется её ход");
-    expect(html).toContain("Событий пока нет");
-    // The Пульт strip: collapsed by default (U5 — the honest cut stands),
-    // the wings deploy together; the tabs are gone (15-WOW §3.2).
-    expect(html).toContain("Пульт");
-    expect(html).toContain("Развернуть");
+    // The RIGHT meta panel: the states.md §5 defaults — О СЕССИИ collapsed
+    // with the honest line (no session), ЭФИР expanded (the ring's ONE
+    // mount; a silent bus = the honest empty), ДАЙДЖЕСТ + ПОКРЫТИЕ folded.
+    expect(html).toContain('aria-label="Мета-панель"');
+    expect(html).toContain("О сессии");
+    expect(html).toContain("Сессия не выбрана — свойства появятся здесь");
+    expect(html).toContain("Дайджест");
     expect(html).not.toContain("Выберите сессию — её разбор появится здесь");
+    expect(html).toContain("Эфир");
+    expect(html).toContain("Событий пока нет");
+    expect(html).toContain("Что мы видим с ваших машин");
+    // The Пульт is dissolved (KW1): no strip, no expand button, no tabs.
+    expect(html).not.toContain("Пульт");
+    expect(html).not.toContain("Развернуть");
     expect(html).not.toContain('role="tab"');
-    // The v7 seams (U5, 07l §3): the right panel width + the Пульт height
-    // are honest separators with the full aria geometry.
+    // The v7 seams (07l §3): BOTH panel widths are honest separators with
+    // the full aria geometry (the Пульт height seam left with the Пульт).
     expect(html).toContain('role="separator"');
-    expect(html).toContain("Ширина панели хостов и сессий");
-    expect(html).toContain("Высота Пульта");
+    expect(html).toContain("Ширина панели навигации");
+    expect(html).toContain("Ширина мета-панели");
     // The mock-era furniture is gone: no demo chip, no chat panel.
     expect(html).not.toContain("Демо-данные");
-    expect(html).not.toContain("Чат");
     expect(html).not.toContain("PIN");
-    // Data before the folded legend (П2).
+    // The nav panel precedes the meta panel's folded legend (П2).
     expect(html.indexOf("Сессии · все хосты")).toBeLessThan(
       html.indexOf("Что мы видим с ваших машин"),
     );
@@ -172,7 +177,9 @@ describe("Kora workspace snapshots (union И1 → U5 v7 frame)", () => {
     expect(html).toContain("in 24h: 2");
     expect(html).toContain("Hosts and agents");
     expect(html).toContain("Sessions · all hosts");
-    expect(html).toContain("Console");
+    expect(html).toContain('aria-label="Navigation"');
+    expect(html).toContain('aria-label="Meta panel"');
+    expect(html).toContain("Ether");
     expect(html).not.toContain("Demo data");
     expect(html).toMatchSnapshot();
   });

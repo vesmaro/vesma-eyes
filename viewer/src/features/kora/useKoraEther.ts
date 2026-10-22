@@ -16,8 +16,9 @@ import {
  *
  * TWO hooks on purpose: the bridge is called ONCE in KoraWorkspace (a
  * second EventSource per mounted component would be a transport leak),
- * while the empty-scene card and the Пульт wing both read the same ring —
- * one лента, два места посадки, ноль дублей (07j §4.2).
+ * while the reader feeds the ring's ONE mount — the meta panel's Эфир
+ * block (KW1: the empty-scene card and the Пульт wing left; one лента,
+ * одна посадка, ноль дублей).
  *
  * Capability-gated: a gateway without events() (vesma mode) never
  * subscribes — the ether honestly shows its empty state.
