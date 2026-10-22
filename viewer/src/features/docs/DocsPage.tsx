@@ -33,23 +33,31 @@ import { formatSyncDate } from "./sidecar";
 import { docSlugForPath } from "./docsNav";
 import { handleTocClick } from "./tocScroll";
 import { DEFAULT_PROJECT, docUrl, projectOfDocSlug, categoryUrl } from "./projects";
-import { pageGridClass } from "@/layout/pageGrid";
+import { DOCS_COLUMN, DOCS_GROUP_ROW, docsFieldClass } from "./docsField";
 
 /**
  * `/docs/:project/*` (design spec §5/§6/§7/§9): category chip → version
  * badge → provenance badge (imported pages) → locale badge → h1 → article
- * at the 72ch reading measure, TOC rail (sticky, scroll-spy) on the right
- * from lg up, native <details> TOC above the h1 on narrow screens, prev/next
- * at the end confined to the page's OWN project (spec §9.7).
+ * at the 72ch reading measure, TOC rail (sticky, scroll-spy) NEXT to the
+ * article from lg up, native <details> TOC above the h1 on narrow screens,
+ * prev/next at the end confined to the page's OWN project (spec §9.7).
  *
- * Layout balance (owner directive 2026-10-22, corrected the same day): the
- * article column is CENTERED in the space between the sidebar and the TOC
- * rail — [article wrapper flex-1 → article mx-auto] [TOC 256px fixed]. It
- * must not stick to either the sidebar or the rail: on wide windows the
- * slack splits into equal fields left and right of the 72ch measure
- * (~350px each at 2000px); at 1280 the fields compress to zero and the
- * article simply fills the available space. Below lg the centered 5xl
- * reading column is kept as it was (a lone column, no rail).
+ * Layout (owner directive 2026-10-22 + the group-centered revision of the
+ * same day — the FINAL scheme, history below so the next iteration does
+ * not relitigate it):
+ *
+ *   v1 (morning)  [article+TOC] centered as a GROUP (max-w-5xl) — rejected:
+ *                 on wide windows the TOC sat mid-window, torn from the edge;
+ *   v2 (noon)     article pinned left, rail on the right edge, slack as the
+ *                 gutter — rejected: the article stuck to the sidebar;
+ *   v3 (evening)  article centered BETWEEN sidebar and rail — rejected: the
+ *                 rail sat at the window edge, torn from the article;
+ *   FINAL         the GROUP [article 72ch | gap 32→64px | TOC 256px] is
+ *                 centered in the field; the slack becomes equal OUTER
+ *                 margins (industry convention — Stripe/MDN/Next.js: the
+ *                 rail sits NEXT to the content). Schema + rationale in
+ *                 docsField.ts; rail-less docs surfaces center the same
+ *                 72ch column via the same helpers.
  */
 
 function ArticleSkeleton() {
@@ -364,10 +372,13 @@ export function DocsPage() {
 
   if (slug === null || page === null) {
     // A project namespace miss IS the redirect-map miss (design spec §8):
-    // honest not-found with the CTA into the section root.
+    // honest not-found with the CTA into the section root — in the SAME
+    // centered 72ch column as every other docs surface.
     return (
-      <div className={pageGridClass("reading")}>
-        {manifest ? <DocsNotFound /> : <PageSkeleton />}
+      <div className={docsFieldClass()}>
+        <div className={DOCS_COLUMN}>
+          {manifest ? <DocsNotFound /> : <PageSkeleton />}
+        </div>
       </div>
     );
   }
@@ -506,96 +517,101 @@ function ArticleView({ slug, page }: { slug: string; page: DocPage }) {
   const localeOriginal = !bilingual && lang !== engineLocale;
 
   return (
-    <div className={cn(pageGridClass("reading"), "lg:max-w-none")}>
-      {/* Balanced two-column field (owner directive 2026-10-22, corrected the
-       * same day): [article wrapper flex-1 → article mx-auto] [TOC 256px].
-       * The article CENTERES in the space between the sidebar and the rail —
-       * equal slack fields left and right on wide windows, nothing sticks to
-       * either edge. At 1280 the fields compress and the article fills the
-       * available space. Below lg the 5xl centered column comes back (lone
-       * reading column, no rail) — `lg:max-w-none` disables the wrapper cap
-       * that would otherwise cap the flex field on wide windows. */}
-      <div className="lg:flex lg:items-start lg:gap-8">
-        <div className="min-w-0 lg:flex-1">
-          <article className="min-w-0 max-w-scroll lg:mx-auto">
-            {/* Meta row: category chip → version badge → provenance badge →
+    <div className={docsFieldClass()}>
+      {/* The docs field (owner directive 2026-10-22 + group-centered revision
+       * of the same day — the FINAL scheme, do not relitigate without the
+       * owner): [ article 72ch | gap 32→64px | TOC 256px ], the GROUP
+       * centered in the field (docsField.ts for the schema and rationale).
+       * The TOC sits NEXT to the article — the industry convention
+       * (Stripe/MDN/Next.js); the slack becomes equal OUTER margins
+       * (~335px each side at 2000px). At 1280 the group fills the field
+       * exactly (gap-8 keeps the density). Below lg: the centered 5xl
+       * reading column, no rail. Rail-less docs surfaces (hub, category,
+       * not-found) center the same 72ch column through the same helpers. */}
+      <div className={DOCS_GROUP_ROW}>
+        {/* NO mx-auto here: the article is a flex ITEM of the centered group
+         * — auto margins would absorb the group's slack and defeat
+         * justify-center (measured: the rail jumped back to the window
+         * edge). Centering is the ROW's job; mx-auto is for rail-less
+         * pages' block columns (DOCS_COLUMN). */}
+        <article className="min-w-0 max-w-scroll">
+          {/* Meta row: category chip → version badge → provenance badge →
               locale badge, RUS/ORIG + search right (design spec §6.1). */}
-            <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="flex flex-wrap items-center gap-2">
-                {category ? (
-                  <Link
-                    to={categoryUrl(page.project, category.slug)}
-                    aria-label={t(category.titleKey)}
-                    className={cn(
-                      badgeVariants({ variant: "default" }),
-                      "transition-colors duration-instant hover:text-foreground",
-                      FOCUS_RING,
-                    )}
-                  >
-                    {t(category.titleKey)}
-                  </Link>
-                ) : null}
-                {page.project === DEFAULT_PROJECT ? (
-                  // The release badge is OUR versioning; imported pages carry
-                  // their freshness in the provenance badge instead (spec §6).
-                  <Badge variant="outline">
-                    {t("docs.badge.verified", { version: page.lastVerified })}
-                  </Badge>
-                ) : null}
-                {page.provenance ? (
-                  <ProvenanceBadge provenance={page.provenance} />
-                ) : null}
-                {localeOriginal ? (
-                  <Badge variant="outline">
-                    <Languages className="mr-1 size-3.5" aria-hidden="true" />
-                    {t("docs.localeOriginal", { lang: t(LANG_NAME_KEY[engineLocale]) })}
-                  </Badge>
-                ) : null}
-                {bilingual ? (
-                  <BilingualSwitch
-                    page={page}
-                    readingLocale={readingLocale}
-                    onPick={setReadingLocale}
-                  />
-                ) : null}
-              </div>
-              <DocsSearch className="w-full sm:max-w-xs" />
-            </div>
-
-            {body === null ? (
-              failed ? (
-                <RenderFallback
-                  message=""
-                  onRetry={() => setAttempt((current) => current + 1)}
-                />
-              ) : (
-                <ArticleSkeleton />
-              )
-            ) : (
-              <>
-                {apiBoard ? (
-                  <ApiTocDetails items={toc} activeId={activeId} />
-                ) : (
-                  <TocDetails items={toc} activeId={activeId} />
-                )}
-                {/* h1 rides the READING locale — the title language always
-                  matches the body language (spec §7.1). */}
-                <h1 className="mt-4 text-xl font-semibold leading-tight text-foreground">
-                  {titleFor(page, readingLocale)}
-                </h1>
-                <RenderBoundary>
-                  {apiBoard ? (
-                    <ApiDocsBody body={body} pageSlug={slug} />
-                  ) : (
-                    <Markdown source={body} pageSlug={slug} />
+          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              {category ? (
+                <Link
+                  to={categoryUrl(page.project, category.slug)}
+                  aria-label={t(category.titleKey)}
+                  className={cn(
+                    badgeVariants({ variant: "default" }),
+                    "transition-colors duration-instant hover:text-foreground",
+                    FOCUS_RING,
                   )}
-                </RenderBoundary>
-              </>
-            )}
+                >
+                  {t(category.titleKey)}
+                </Link>
+              ) : null}
+              {page.project === DEFAULT_PROJECT ? (
+                // The release badge is OUR versioning; imported pages carry
+                // their freshness in the provenance badge instead (spec §6).
+                <Badge variant="outline">
+                  {t("docs.badge.verified", { version: page.lastVerified })}
+                </Badge>
+              ) : null}
+              {page.provenance ? (
+                <ProvenanceBadge provenance={page.provenance} />
+              ) : null}
+              {localeOriginal ? (
+                <Badge variant="outline">
+                  <Languages className="mr-1 size-3.5" aria-hidden="true" />
+                  {t("docs.localeOriginal", { lang: t(LANG_NAME_KEY[engineLocale]) })}
+                </Badge>
+              ) : null}
+              {bilingual ? (
+                <BilingualSwitch
+                  page={page}
+                  readingLocale={readingLocale}
+                  onPick={setReadingLocale}
+                />
+              ) : null}
+            </div>
+            <DocsSearch className="w-full sm:max-w-xs" />
+          </div>
 
-            <PrevNext slug={slug} />
-          </article>
-        </div>
+          {body === null ? (
+            failed ? (
+              <RenderFallback
+                message=""
+                onRetry={() => setAttempt((current) => current + 1)}
+              />
+            ) : (
+              <ArticleSkeleton />
+            )
+          ) : (
+            <>
+              {apiBoard ? (
+                <ApiTocDetails items={toc} activeId={activeId} />
+              ) : (
+                <TocDetails items={toc} activeId={activeId} />
+              )}
+              {/* h1 rides the READING locale — the title language always
+                  matches the body language (spec §7.1). */}
+              <h1 className="mt-4 text-xl font-semibold leading-tight text-foreground">
+                {titleFor(page, readingLocale)}
+              </h1>
+              <RenderBoundary>
+                {apiBoard ? (
+                  <ApiDocsBody body={body} pageSlug={slug} />
+                ) : (
+                  <Markdown source={body} pageSlug={slug} />
+                )}
+              </RenderBoundary>
+            </>
+          )}
+
+          <PrevNext slug={slug} />
+        </article>
         {apiBoard ? (
           <ApiTocRail items={toc} activeId={activeId} />
         ) : (

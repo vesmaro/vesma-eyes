@@ -18,7 +18,7 @@ import { loadMarkdown } from "./markdownModules";
 import { DEFAULT_PROJECT, docProject, docUrl } from "./projects";
 import { DocsManifestError, DocsNotFound } from "./DocsRedirects";
 import { DocsSearch } from "./DocsSearch";
-import { pageGridClass } from "@/layout/pageGrid";
+import { DOCS_COLUMN, docsFieldClass } from "./docsField";
 
 /**
  * `/docs/:project/c/:category` (design spec §4): the category header, then a
@@ -135,7 +135,9 @@ function CategoryRows({ categorySlug }: { categorySlug: string }) {
             ) : null}
           </span>
           <span className="shrink-0 pt-0.5 text-xs text-foreground-muted">
-            {row.project === DEFAULT_PROJECT ? `v${row.lastVerified}` : row.lastVerified}
+            {row.project === DEFAULT_PROJECT
+              ? `v${row.lastVerified}`
+              : row.lastVerified}
           </span>
         </Link>
       ))}
@@ -152,34 +154,43 @@ export function DocsCategoryPage() {
   const owned =
     projectMeta !== null &&
     category !== null &&
-    docCategoriesForProject(projectMeta.slug).some((entry) => entry.slug === category.slug);
+    docCategoriesForProject(projectMeta.slug).some(
+      (entry) => entry.slug === category.slug,
+    );
   if (!owned || !category) {
     return (
-      <div className={pageGridClass("reading")}>
-        <DocsNotFound />
+      <div className={docsFieldClass()}>
+        <div className={DOCS_COLUMN}>
+          <DocsNotFound />
+        </div>
       </div>
     );
   }
+  // The section's unified field (docsField — owner directive 2026-10-22):
+  // the same centered 72ch column as the article pages, so the H1 axis and
+  // the reading measure never jump between surfaces.
   return (
-    <div className={pageGridClass("reading")}>
-      <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="flex min-w-0 items-start gap-3">
-          <category.icon
-            className="mt-1 size-5 shrink-0 text-foreground-secondary"
-            aria-hidden="true"
-          />
-          <div className="min-w-0">
-            <h1 className="text-xl font-semibold text-foreground">
-              {t(category.titleKey)}
-            </h1>
-            <p className="mt-1 text-sm text-foreground-secondary">
-              {t(category.descriptionKey)}
-            </p>
+    <div className={docsFieldClass()}>
+      <div className={DOCS_COLUMN}>
+        <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <category.icon
+              className="mt-1 size-5 shrink-0 text-foreground-secondary"
+              aria-hidden="true"
+            />
+            <div className="min-w-0">
+              <h1 className="text-xl font-semibold text-foreground">
+                {t(category.titleKey)}
+              </h1>
+              <p className="mt-1 text-sm text-foreground-secondary">
+                {t(category.descriptionKey)}
+              </p>
+            </div>
           </div>
+          <DocsSearch className="w-full md:max-w-xs" />
         </div>
-        <DocsSearch className="w-full md:max-w-xs" />
+        <CategoryRows categorySlug={category.slug} />
       </div>
-      <CategoryRows categorySlug={category.slug} />
     </div>
   );
 }
