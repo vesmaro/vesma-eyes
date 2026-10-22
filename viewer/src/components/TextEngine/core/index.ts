@@ -28,6 +28,7 @@ export type {
 } from "./pipeline";
 export { themeComponents, articleComponents } from "./theme";
 export type { ArticleThemeHooks, TextEngineTheme, ThemeOptions } from "./theme";
+export { EndpointChip } from "./EndpointChip";
 export { isElement, languageOf, nodeText } from "./hast";
 export type { HastishNode } from "./hast";
 export {

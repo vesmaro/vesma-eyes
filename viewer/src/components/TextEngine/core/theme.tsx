@@ -12,6 +12,11 @@ import {
 } from "./constants";
 import { MermaidDiagram } from "./Mermaid";
 import { fenceExceedsSizeCap } from "./mermaidCaps";
+import {
+  isParameterSectionHeading,
+  parseEndpointHeading,
+} from "./apiConvention";
+import { EndpointChip } from "./EndpointChip";
 
 /**
  * Typography themes of the unified text engine (ADR 0020, layer 2 — «одна
@@ -150,25 +155,76 @@ export function articleComponents(hooks: ArticleThemeHooks): Components {
         {children}
       </h1>
     ),
-    h2: ({ node, children }) => (
-      <h2
-        id={hooks.headingSlug(nodeText(asHast(node)))}
-        className="mb-4 mt-10 scroll-mt-24 text-lg font-semibold text-foreground"
-      >
-        {children}
-      </h2>
-    ),
-    h3: ({ node, children }) => (
-      <h3
-        id={hooks.headingSlug(nodeText(asHast(node)))}
-        className="mb-3 mt-8 scroll-mt-24 text-base font-semibold text-foreground"
-      >
-        {children}
-      </h3>
-    ),
-    h4: ({ children }) => (
-      <h4 className="text-base font-medium text-foreground">{children}</h4>
-    ),
+    h2: ({ node, children }) => {
+      const text = nodeText(asHast(node));
+      const id = hooks.headingSlug(text);
+      // Convention branch (D3): an h2 that IS an endpoint («1. `POST
+      // /v1/sessions`» in the upstream mirrors) renders as a chip heading.
+      // It is always the first child of its convention card → mt-0. The
+      // slug comes from the RAW text, so ids match extractHeadings exactly.
+      const endpoint = parseEndpointHeading(text);
+      if (endpoint !== null) {
+        return (
+          <h2
+            id={id}
+            className="mb-4 mt-0 flex flex-wrap items-center gap-x-2 gap-y-1 scroll-mt-24 text-lg font-semibold text-foreground"
+          >
+            <EndpointChip endpoint={endpoint} />
+          </h2>
+        );
+      }
+      return (
+        <h2
+          id={id}
+          className="mb-4 mt-10 scroll-mt-24 text-lg font-semibold text-foreground"
+        >
+          {children}
+        </h2>
+      );
+    },
+    h3: ({ node, children }) => {
+      const text = nodeText(asHast(node));
+      const id = hooks.headingSlug(text);
+      // Convention branch (D3): «METHOD /path» h3 → chip + mono path
+      // (byte-identical to the api-board reference; always first child of
+      // its card). Any other h3 keeps the factory look — golden-pinned.
+      const endpoint = parseEndpointHeading(text);
+      if (endpoint !== null) {
+        return (
+          <h3
+            id={id}
+            className="mb-4 mt-0 flex flex-wrap items-center gap-x-2 gap-y-1 scroll-mt-24 text-base font-semibold text-foreground"
+          >
+            <EndpointChip endpoint={endpoint} />
+          </h3>
+        );
+      }
+      return (
+        <h3
+          id={id}
+          className="mb-3 mt-8 scroll-mt-24 text-base font-semibold text-foreground"
+        >
+          {children}
+        </h3>
+      );
+    },
+    h4: ({ node, children }) => {
+      // Convention branch (D3): reference-section labels (Параметры /
+      // Пример запроса / Ответы / Request body…) render as small-caps
+      // section labels with a static marker bar — same look as the
+      // api-board presentation. Vocabulary-gated (apiConvention.ts — an
+      // unstyled h4 is preferred over a false positive); every other h4
+      // keeps the factory look.
+      if (isParameterSectionHeading(nodeText(asHast(node)))) {
+        return (
+          <h4 className="mt-7 mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-foreground-secondary">
+            <span aria-hidden="true" className="h-4 w-1 shrink-0 rounded-full bg-iris" />
+            {children}
+          </h4>
+        );
+      }
+      return <h4 className="text-base font-medium text-foreground">{children}</h4>;
+    },
     // Upstream typography (design spec §9.2): h5–h6 share one honest look —
     // text-sm/medium. Order stays visible; TOC remains h2/h3 only.
     h5: ({ children }) => (

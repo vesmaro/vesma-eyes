@@ -4,8 +4,8 @@ import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import {
   articleComponents,
-  MONO,
   nodeText,
+  EndpointChip,
   type HastishNode,
 } from "@/components/TextEngine/core";
 import { FOCUS_RING } from "@/components/TextEngine/core/constants";
@@ -34,11 +34,14 @@ import { handleTocClick } from "./tocScroll";
  *    extractHeadings — the split lives in apiDocs.ts) and every endpoint
  *    chunk renders inside a CARD (bordered, well-tinted section) — visible
  *    blocks instead of a wall;
- *  - an endpoint h3 renders as METHOD CHIP (token-colored border+text,
- *    color never the sole carrier — the method name is the text) + mono
- *    path; any other h3 (schema appendix) keeps the factory typography;
- *  - h4 subsections render as small-caps section labels with a static
- *    marker bar;
+ *  - an endpoint h3 renders as METHOD CHIP + mono path — since D3 (owner
+ *    directive 2026-10-22) the CHIP is the ENGINE's (core EndpointChip):
+ *    the same convention applies automatically on every OTHER docs page
+ *    through articleComponents; this module keeps only the board-specific
+ *    flow (cards for EVERY h3 chunk, ALL h4s as section labels — the
+ *    generated corpus is trusted to be uniformly structured);
+ *  - any non-endpoint h3 (schema appendix) keeps the factory typography
+ *    minus the top margin — it is always the first child of its card;
  *  - the TOC rail nests endpoints under collapsible subgroup headers with
  *    a method-colored dot per endpoint.
  *
@@ -47,19 +50,9 @@ import { handleTocClick } from "./tocScroll";
  * Security: the chunks render through CorpusMarkdown — the corpus pipeline
  * (rehype-raw → sanitize) and its ONE react-markdown import site are shared,
  * the wrappers are React DOM (never raw HTML), so the sanitizer boundary is
- * untouched. Default (non-api-board) pages never enter this module → the
- * golden corpus pins stay byte-identical. Pure logic lives in apiDocs.ts
- * (this file exports ONLY components — react-refresh contract).
+ * untouched. Pure logic lives in apiDocs.ts (this file exports ONLY
+ * components — react-refresh contract).
  */
-
-/** Chip = border + text in one semantic color; bg stays the card surface. */
-const METHOD_CHIP_CLASS: Record<HttpMethod, string> = {
-  get: "border-iris-bright text-iris-bright",
-  post: "border-success text-success",
-  put: "border-warning text-warning",
-  patch: "border-warning text-warning",
-  delete: "border-error text-error",
-};
 
 /** TOC dot: same semantic mapping as the chip (method text stays visible). */
 const METHOD_DOT_CLASS: Record<HttpMethod, string> = {
@@ -98,24 +91,17 @@ function buildApiComponents(pageSlug: string | undefined): ArticleComponents {
           </h3>
         );
       }
-      // The chip + path keep the heading text content ("GET /api/memories")
-      // so the accessible name and the TOC anchor stay the heading's.
+      // Endpoint h3: the ENGINE chip (core EndpointChip — the exact
+      // reference chip, one implementation since D3) in the card-first
+      // wrapper. The wrapper classes mirror articleComponents' convention
+      // branch (mt-0: first child of the card); textContent stays the
+      // heading's, so the accessible name and the TOC anchor never move.
       return (
         <h3
           id={id}
           className="mb-4 mt-0 flex flex-wrap items-center gap-x-2 gap-y-1 scroll-mt-24 text-base font-semibold text-foreground"
         >
-          <span
-            className={cn(
-              "inline-flex items-center rounded-sm border px-1.5 py-px text-xs font-semibold uppercase tracking-wide",
-              METHOD_CHIP_CLASS[endpoint.method],
-            )}
-          >
-            {endpoint.method}
-          </span>{" "}
-          <code style={MONO} className="text-sm font-medium [overflow-wrap:anywhere] text-foreground">
-            {endpoint.path}
-          </code>
+          <EndpointChip endpoint={endpoint} />
         </h3>
       );
     },

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Check, Copy } from "lucide-react";
 import { useT } from "@/i18n";
@@ -9,6 +9,10 @@ import { cn } from "@/lib/utils";
 // the single rehype-raw/rehype-sanitize site in src).
 import { buildCorpusPipeline } from "@/components/TextEngine/core/pipeline.corpus";
 import { articleComponents, LINK_CLASS, MONO } from "@/components/TextEngine/core";
+import {
+  ENDPOINT_CARD_CLASS,
+  splitConventionSections,
+} from "@/components/TextEngine/core/apiConvention";
 // ME-013 (ADR 0020 Amendment 1): the diagram component is an ENGINE
 // capability now — TextEngine/core/Mermaid.tsx is the single mermaid import
 // site and serves both trust profiles; the curated profile mounts it with
@@ -257,9 +261,41 @@ export function Markdown({ source, className, pageSlug }: MarkdownProps) {
   // the slugger restarts per document); the TYPOGRAPHY is the factory's,
   // so only the closures are fresh, never the class strings.
   const components = articleComponents(buildArticleHooks(pageSlug));
+  // Convention flow (D3, owner directive 2026-10-22): when the body carries
+  // «METHOD /path» endpoint sections, they render inside the reference
+  // cards (the heading chip itself comes from articleComponents — core).
+  // The split is fence-aware on h2/h3 with the SAME rules as extractHeadings,
+  // so the TOC anchors and the rendered ids agree; one shared components map
+  // renders the chunks in document order (the ApiDocsBody slugger
+  // discipline). NO endpoint sections → single-pass render, byte-identical
+  // to the pre-convention DOM (the golden pins cover this path).
+  const sections = useMemo(() => splitConventionSections(source), [source]);
   return (
     <div className={cn("text-base leading-relaxed text-foreground", className)}>
-      <CorpusMarkdown source={source} components={components} />
+      {sections === null
+        ? (
+          <CorpusMarkdown source={source} components={components} />
+        )
+        : (
+          sections.map((section, index) =>
+            section.endpoint !== null
+              ? (
+                <section key={index} className={ENDPOINT_CARD_CLASS}>
+                  <CorpusMarkdown
+                    source={section.markdown}
+                    components={components}
+                  />
+                </section>
+              )
+              : (
+                <CorpusMarkdown
+                  key={index}
+                  source={section.markdown}
+                  components={components}
+                />
+              )
+          )
+        )}
     </div>
   );
 }

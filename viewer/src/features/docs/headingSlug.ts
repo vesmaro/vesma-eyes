@@ -5,6 +5,13 @@
  * agree.
  */
 
+// D3: the inline-markdown stripper moved into the engine
+// (TextEngine/core/apiConvention.ts) — the convention parser needs the
+// exact same stripping; re-exported here so every existing consumer keeps
+// its import path.
+import { inlineMarkdownToText } from "@/components/TextEngine/core/apiConvention";
+export { inlineMarkdownToText } from "@/components/TextEngine/core/apiConvention";
+
 export function slugifyHeading(text: string): string {
   return text
     .trim()
@@ -26,17 +33,6 @@ export function createHeadingSlugger(): HeadingSlugger {
     counts.set(base, seen + 1);
     return seen === 0 ? base : `${base}-${seen}`;
   };
-}
-
-/** Strip inline markdown so heading TEXT (and its slug) is plain. */
-export function inlineMarkdownToText(line: string): string {
-  return line
-    .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
-    .replace(/`([^`]*)`/g, "$1")
-    .replace(/\*\*([^*]+)\*\*/g, "$1")
-    .replace(/[*_]/g, "")
-    .trim();
 }
 
 export interface TocItem {

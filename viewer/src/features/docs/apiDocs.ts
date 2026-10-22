@@ -1,35 +1,27 @@
-import { inlineMarkdownToText, type TocItem } from "./headingSlug";
+import type { TocItem } from "./headingSlug";
+import {
+  inlineMarkdownToText,
+  parseEndpointHeading,
+} from "@/components/TextEngine/core/apiConvention";
+import type { ApiEndpointHeading } from "@/components/TextEngine/core/apiConvention";
 
-/**
- * Pure logic of the api-board presentation (docs-api-readability, 2026-10-21)
- * — deliberately JSX-free so the react-refresh component contract of the
- * .tsx sibling stays clean. Everything here is deterministic and directly
- * unit-testable: body splitting, endpoint-heading parsing, TOC grouping.
- */
-
-export type HttpMethod = "get" | "put" | "post" | "patch" | "delete";
-
-export const HTTP_METHODS: readonly HttpMethod[] = [
-  "get",
-  "put",
-  "post",
-  "patch",
-  "delete",
-];
-
-export interface ApiEndpointHeading {
-  method: HttpMethod;
-  path: string;
-}
-
-/** "GET /api/memories" → { get, /api/memories }; anything else → null. */
-export function parseEndpointHeading(text: string): ApiEndpointHeading | null {
-  const match = /^([A-Za-z]+)\s+(\/\S+)\s*$/.exec(text);
-  if (match === null) return null;
-  const method = match[1].toLowerCase();
-  if (!HTTP_METHODS.includes(method as HttpMethod)) return null;
-  return { method: method as HttpMethod, path: match[2] };
-}
+// D3 (owner directive 2026-10-22): endpoint-heading parsing moved into the
+// engine (TextEngine/core/apiConvention.ts) so the CONVENTION applies on
+// every docs page, not only the generated board. This module re-exports
+// the engine detection for its existing consumers (apiPresentation + the
+// pinned tests) — one implementation, zero drift. The board SPLIT remains
+// here: it is the generated-corpus flow (cards for EVERY h3 chunk), a
+// different, stricter contract than the engine's conservative
+// endpoint-only convention split.
+export {
+  HTTP_METHODS,
+  inlineMarkdownToText,
+  parseEndpointHeading,
+} from "@/components/TextEngine/core/apiConvention";
+export type {
+  ApiEndpointHeading,
+  HttpMethod,
+} from "@/components/TextEngine/core/apiConvention";
 
 export interface ApiChunk {
   /** "card" = endpoint (or schema) section → wrapped in a card section. */
