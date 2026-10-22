@@ -5709,6 +5709,14 @@ class HermesBridgeStatusOut(_ApiModel):
     mode: str              # off | unreachable | refused | ok
     registry_sessions: int  # hermes rows currently in the Kora registry
     detail: str | None = None
+    # KW2 «Живой чат» (additive, ui-only — the HermesBridgeStatus precedent):
+    # the STATIC verified chat model roster + its default (the single source
+    # is hermes_client.py). Served in BOTH modes — an off bridge still names
+    # the roster so the FE select renders the honest fallback without a
+    # second contract branch.
+    models: list[str] = Field(
+        default_factory=lambda: list(hermes_client.HERMES_MODELS))
+    default_model: str = hermes_client.HERMES_DEFAULT_MODEL
 
 
 def _hermes_error_response(exc: hermes_client.HermesError) -> JSONResponse:
@@ -5901,7 +5909,10 @@ async def kora_hermes_live_sessions(request: Request,
 # starved by (nor starve) the cheap pulls.
 
 _HERMES_CHAT_SOURCE = "hermes · real-time"
-_HERMES_CHAT_DEFAULT_MODEL = "hermes-4.5-405b"   # live-verified 2026-10-10
+# KW2: the default lives in the static roster's single source
+# (hermes_client.HERMES_DEFAULT_MODEL — live-verified 2026-10-10); the
+# status route serves the same roster to the FE model select.
+_HERMES_CHAT_DEFAULT_MODEL = hermes_client.HERMES_DEFAULT_MODEL
 
 _KORA_HERMES_CHAT_RATE_LIMIT = 12     # chat calls per window per client
 _KORA_HERMES_CHAT_RATE_WINDOW = 60.0

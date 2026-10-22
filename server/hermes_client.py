@@ -46,6 +46,19 @@ _HERMES_UNREACHABLE = (
     "hermes api server unreachable"
 )
 
+# The chat-leg model roster (KW2 «Живой чат», the FE model select): the
+# STATIC hand-checked list — the cluster offers no models-directory read
+# worth a live probe on a cheap status route, so the roster is code. The
+# default is live-verified 2026-10-10 (the chat route ships it); the 70b
+# sibling is the explicit-model shape the bridge contract tests ride
+# (wire-verified against the fake hermes, not the live cluster). Honesty:
+# a model the cluster rejects degrades through the typed 502 with hermes's
+# own reason — the FE names it and keeps the user's choice
+# (K-CHAT-MODEL-404), never resets silently. Extend ONLY with a model
+# verified against the live cluster.
+HERMES_MODELS: tuple[str, ...] = ("hermes-4.5-405b", "hermes-4.5-70b")
+HERMES_DEFAULT_MODEL = "hermes-4.5-405b"
+
 
 class HermesError(RuntimeError):
     """Base — every hermes-bridge failure is typed, never a bare raise."""

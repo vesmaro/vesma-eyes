@@ -108,6 +108,26 @@ export class KoraMockAdapter implements KoraGateway {
    * user text last). Null until the first chat call.
    */
   lastChatMessages: HermesChatTurn[] | null = null;
+  /** The model the LAST hermesChat call rode with (the KW2 select seam). */
+  lastChatModel: string | null = null;
+  /**
+   * The hermes messages-read counter (KW2 gate §10.6: ONE messages read
+   * per session — the workspace hoists the hook, the chat and the «Все
+   * ходы» zone consume the same pages; a load-more = exactly one request).
+   * Test seam only. Per-session: an anchor change legitimately opens a NEW
+   * session's read — the gate is «the SAME session is never read twice by
+   * two surfaces».
+   */
+  hermesMessagesCalls = 0;
+  hermesMessagesCallsBySession: Record<string, number> = {};
+  /**
+   * `?hermesChat=badmodel` (mock builds): the chat POST answers the typed
+   * hermes rejection of the REQUESTED model (the 502-shaped verdict the
+   * real bridge raises when the cluster refuses the model) so the
+   * K-CHAT-MODEL-404 frame — the human reason named, the user's choice
+   * KEPT — is exercisable without a live cluster.
+   */
+  private readonly hermesChatBadModel: boolean;
 
   constructor(options: KoraMockAdapterOptions = {}) {
     this.latency = options.latency ?? true;
@@ -132,6 +152,9 @@ export class KoraMockAdapter implements KoraGateway {
     this.hermesChatLimited =
       typeof location !== "undefined" &&
       new URLSearchParams(location.search).get("hermesChat") === "limited";
+    this.hermesChatBadModel =
+      typeof location !== "undefined" &&
+      new URLSearchParams(location.search).get("hermesChat") === "badmodel";
     // `?hermesBridge=pulled` (mock builds only): the registry slice starts
     // ALREADY ingested — visual stands (we-shots) frame the host card's
     // live-session list without driving the pull UI first. The knob ALSO
@@ -404,7 +427,8 @@ export class KoraMockAdapter implements KoraGateway {
       this.requireUnlocked();
       if (this.hermesBridgeOff) {
         // The honest OFF (the server's honest-off wording, mirrored):
-        // config fact + the human reason, zero egress.
+        // config fact + the human reason, zero egress. The KW2 model
+        // roster rides in BOTH modes (the server serves it off too).
         return {
           configured: false,
           endpoint: KORA_FIXTURE_HERMES_STATUS.endpoint,
@@ -414,6 +438,8 @@ export class KoraMockAdapter implements KoraGateway {
             "HERMES_API_KEY не задан — мост честно выключен. " +
             "Ключ передаётся через deploy-канал (env пода борда), после чего " +
             "источник включится без изменения кода.",
+          models: [...KORA_FIXTURE_HERMES_STATUS.models],
+          default_model: KORA_FIXTURE_HERMES_STATUS.default_model,
         } satisfies HermesBridgeStatus;
       }
       const registry = [...this.sessions.values()].filter(
@@ -422,6 +448,8 @@ export class KoraMockAdapter implements KoraGateway {
       return {
         ...KORA_FIXTURE_HERMES_STATUS,
         registry_sessions: registry,
+        models: [...KORA_FIXTURE_HERMES_STATUS.models],
+        default_model: KORA_FIXTURE_HERMES_STATUS.default_model,
       } satisfies HermesBridgeStatus;
     });
   }
@@ -466,6 +494,9 @@ export class KoraMockAdapter implements KoraGateway {
   ): Promise<HermesMessagesPage> {
     return this.delay().then(() => {
       this.requireUnlocked();
+      this.hermesMessagesCalls += 1;
+      this.hermesMessagesCallsBySession[sessionId] =
+        (this.hermesMessagesCallsBySession[sessionId] ?? 0) + 1;
       if (this.hermesBridgeOff) {
         // The honest OFF (the server's typed verdict, mirrored): 503
         // hermes_off with the human reason.
@@ -521,11 +552,29 @@ export class KoraMockAdapter implements KoraGateway {
           "hermes chat rate limit exceeded (12 per 60s per client)",
         );
       }
+      if (this.hermesChatBadModel) {
+        // `?hermesChat=badmodel` demo knob: the typed rejection the real
+        // bridge raises when the cluster refuses the REQUESTED model (the
+        // hermes 404-on-model → the 502-shaped HermesUnavailableError
+        // verdict, hermes's own reason inside). The choice stays the
+        // user's — the mock does not decide the select's value.
+        const asked = body.model !== undefined && body.model !== ""
+          ? body.model
+          : "hermes-4.5-405b";
+        throw new ApiError(
+          502,
+          `hermes недоступен или отказал: the model «${asked}» does not exist (404)`,
+        );
+      }
       // The last user turn drives the canned reply (deterministic).
       const lastUser = [...body.messages]
         .reverse()
         .find((turn) => turn.role === "user")?.content;
       this.lastChatMessages = [...body.messages];
+      this.lastChatModel =
+        body.model !== undefined && body.model !== ""
+          ? body.model
+          : "hermes-4.5-405b";
       return {
         ok: true,
         source: "hermes · real-time",

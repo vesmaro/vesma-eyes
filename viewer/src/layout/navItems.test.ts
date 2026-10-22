@@ -210,6 +210,19 @@ describe("breadcrumbs (last crumb is not a link)", () => {
     expect(crumbsFor("/system/traces")[1]).toEqual({ key: "nav.traces" });
   });
 
+  it("KW2: /kora/hermes reads as the cluster chat, never the generic session crumb", () => {
+    // The RESERVED segment (kora-rethink blueprint §5) — the generic
+    // /kora/:sessionId branch would honestly lie «Сессия» here.
+    expect(crumbsFor("/kora/hermes")).toEqual([
+      { to: "/kora", key: "nav.kora" },
+      { key: "kora.nav.clusterChat" },
+    ]);
+    // The id-shaped deep links keep the session crumb.
+    expect(crumbsFor("/kora/hermes:api-server-main")[1]).toEqual({
+      key: "nav.session",
+    });
+  });
+
   it("trails detail pages one level deeper (level 3)", () => {
     expect(crumbsFor("/memory/m-42")).toEqual([
       { to: "/memory", key: "nav.memory" },

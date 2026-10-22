@@ -78,7 +78,16 @@ const PAGE_SIZE = 50;
  * keys on harness=hermes, so the value only routes the select. */
 const HERMES_SOURCE = "hermes";
 
-export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null }) {
+export function KoraWorkspace({
+  sessionId = null,
+  cluster = false,
+}: {
+  sessionId?: string | null;
+  /** The RESERVED /kora/hermes segment (kora-rethink blueprint §5): the
+   * cluster-chat mode is ROUTE-driven — it no longer depends on the filter
+   * being hermes with nothing selected. */
+  cluster?: boolean;
+}) {
   const t = useT();
   const navigate = useNavigate();
   const sessions = useKoraSessionPages(PAGE_SIZE);
@@ -88,18 +97,51 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
   // routing fact (the FE only ever links the canonical form), so the
   // disabled hook stays a no-op instead of a guaranteed-404 call.
   const hermesDeepLink = sessionId !== null && sessionId.startsWith(`${HERMES_SOURCE}:`);
+  // T004 slice 3 — the chat anchor: the api_server session of the source,
+  // the LAST ACTIVE one (live first, then freshest) — the conversation the
+  // chat continues. No api_server row (pre-pull, or the cluster serves
+  // other sources only) → the chat starts from a clean slate, honestly.
+  // (Hoisted ABOVE the transcript hooks: KW2's ONE messages read targets it
+  // in the cluster mode.)
+  const items = sessions.items;
+  const hermesChatSession = useMemo(() => {
+    const api = items.filter(
+      (item) => item.harness === "hermes" && item.project === "hermes:api_server",
+    );
+    if (api.length === 0) return null;
+    const live = api.filter((item) => item.state === "live");
+    const pool = live.length > 0 ? live : api;
+    // last_activity_at is nullable on the frozen row — «fresher» compares
+    // with the empty string as the floor (a missing stamp is the oldest).
+    return pool.reduce((a, b) =>
+      (a.last_activity_at ?? "") >= (b.last_activity_at ?? "") ? a : b,
+    );
+  }, [items]);
+  // KW2 (kora-rethink blueprint §6): ONE hermes messages read per session
+  // at the workspace level — the chat filters user/assistant out of it, the
+  // «Все ходы» zone shows the full grammar; a pagination click is ONE
+  // request (gate §10.6, test-pinned). The target: a selected hermes
+  // session rides its own id; the cluster rides the anchor's.
+  const hermesTarget = hermesDeepLink
+    ? sessionId
+    : cluster
+      ? (hermesChatSession?.id ?? undefined)
+      : undefined;
   const transcript = useKoraTranscriptPages(
     sessionId !== null && !hermesDeepLink ? sessionId : undefined,
     PAGE_SIZE,
   );
-  const hermesTranscript = useKoraHermesTranscriptPages(
-    hermesDeepLink ? sessionId : undefined,
-    PAGE_SIZE,
-  );
+  const hermesTranscript = useKoraHermesTranscriptPages(hermesTarget, PAGE_SIZE);
   // kora.entered (taxonomy §1.2 #3): settle = first honest verdict of the
-  // page the visit entered (list vs deep-linked transcript).
+  // page the visit entered (list vs deep-linked transcript). The cluster
+  // route settles on the registry read — the chat's own skeleton lives
+  // inside the split, the frame's verdict is the nav's.
   useKoraEntered(
-    sessionId ? !(hermesDeepLink ? hermesTranscript.isPending : transcript.isPending) : !sessions.isPending,
+    hermesDeepLink
+      ? !hermesTranscript.isPending
+      : sessionId !== null
+        ? !transcript.isPending
+        : !sessions.isPending,
   );
   const executors = useExecutors();
 
@@ -143,7 +185,6 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
     (transcript.error !== null && isKoraUnauthorized(transcript.error)) ||
     (hermesTranscript.error !== null && isKoraUnauthorized(hermesTranscript.error));
 
-  const items = sessions.items;
   const session = useMemo(
     () =>
       sessionId === null ? null : (items.find((item) => item.id === sessionId) ?? null),
@@ -210,24 +251,6 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
     return items.filter((item) => item.executor_id === context.executorId);
   }, [context, items, model]);
 
-  // T004 slice 3 — the chat anchor: the api_server session of the source,
-  // the LAST ACTIVE one (live first, then freshest) — the conversation the
-  // chat continues. No api_server row (pre-pull, or the cluster serves
-  // other sources only) → the chat starts from a clean slate, honestly.
-  const hermesChatSession = useMemo(() => {
-    const api = items.filter(
-      (item) => item.harness === "hermes" && item.project === "hermes:api_server",
-    );
-    if (api.length === 0) return null;
-    const live = api.filter((item) => item.state === "live");
-    const pool = live.length > 0 ? live : api;
-    // last_activity_at is nullable on the frozen row — «fresher» compares
-    // with the empty string as the floor (a missing stamp is the oldest).
-    return pool.reduce((a, b) =>
-      (a.last_activity_at ?? "") >= (b.last_activity_at ?? "") ? a : b,
-    );
-  }, [items]);
-
   const registryEmpty: KoraRegistryEmpty =
     !sessions.isPending && sessions.error === null && items.length === 0
       ? noExecutors
@@ -274,15 +297,43 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
     // one source into two filter targets.
     .filter((host) => host.length > 0 && host !== HERMES_SOURCE);
 
-  // The pinned «Чат с кластером» entry (blueprint §4): KW1 leads to the
-  // CURRENT hermes chat surface — the hermes context with no session
-  // selected. The dedicated /kora/hermes route is KW2; the entry exists so
-  // the nav grammar is in place (and the click is honest, not a dead stub).
+  // The pinned «Чат с кластером» entry (blueprint §4–5): KW2 lands the
+  // dedicated route — the click WRITES /kora/hermes (deep-linkable, the
+  // reserved segment) and keeps the hermes filter context for the nav.
   // KEPT ABOVE THE EARLY RETURNS: hooks never ride a render branch.
   const onClusterChat = useCallback((): void => {
     setContext({ kind: "hermes" });
-    if (sessionId !== null) navigate("/kora");
-  }, [navigate, sessionId]);
+    navigate("/kora/hermes");
+  }, [navigate]);
+
+  // The route seam of the chat's session switcher (blueprint §4): the
+  // cluster option → /kora/hermes, a context session → /kora/:sessionId —
+  // both deep-linkable, the frame never re-assembles.
+  const onChatNavigateSession = useCallback(
+    (id: string | null): void => {
+      if (id === null) {
+        navigate("/kora/hermes");
+        return;
+      }
+      navigate(`/kora/${encodeURIComponent(id)}`);
+    },
+    [navigate],
+  );
+
+  // The hermes split contract (KW2): non-null iff a hermes mode is on
+  // stage — the cluster route or a selected hermes session.
+  const hermesSplit =
+    cluster || session?.harness === "hermes"
+      ? {
+          session: cluster ? hermesChatSession : session,
+          pages: hermesTranscript,
+          models: hermesStatus.data?.models ?? [],
+          defaultModel: hermesStatus.data?.default_model ?? null,
+          sessions: contextSessions,
+          activeSessionId: cluster ? null : hermesDeepLink ? sessionId : null,
+          onNavigateSession: onChatNavigateSession,
+        }
+      : null;
 
   // ── The 401 gate: the CTA replaces every data-shaped surface (the old
   // hotfix contract, kept verbatim through the rework). ──
@@ -460,6 +511,7 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
             hermesStatusPending={hermesStatus.isPending}
             hermesStatusError={hermesStatus.isError}
             hermesPullError={hermesPull.error}
+            clusterActive={cluster}
             onClusterChat={onClusterChat}
           />
         </aside>
@@ -483,9 +535,10 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
           className="absolute inset-y-0 left-[var(--kora-left-w)] hidden -translate-x-1/2 lg:flex"
         />
 
-        {/* CENTRAL column: the work zone as it stands (the chat split and
-         * the «Все ходы» zone are KW2). Flush inside the frame, a card
-         * below lg. The Пульт is gone (KW1): no strip, no wings here. */}
+        {/* CENTRAL column: the work zone — KW2 «Живой чат»: the hermes
+         * modes ride the SPLIT (chat + «Все ходы»), zcode/vscode/pi stay
+         * the full-page transcript. Flush inside the frame, a card below
+         * lg. The Пульт is gone (KW1): no strip, no wings here. */}
         <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-md border border-myelin bg-well lg:rounded-none lg:border-0">
           {sessions.isPending || resolvingDeepLink ? (
             <div
@@ -504,12 +557,7 @@ export function KoraWorkspace({ sessionId = null }: { sessionId?: string | null 
               registryEmpty={registryEmpty}
               coverage={sessions.coverage}
               transcript={transcript}
-              hermesTranscript={hermesDeepLink ? hermesTranscript : null}
-              hermesChat={
-                context.kind === "hermes" && session === null
-                  ? { session: hermesChatSession }
-                  : null
-              }
+              hermes={hermesSplit}
               intentEvents={NOOP_KORA_INTENT_EVENTS}
             />
           )}

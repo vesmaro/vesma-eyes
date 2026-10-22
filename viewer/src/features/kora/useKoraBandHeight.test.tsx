@@ -13,26 +13,19 @@ import { useKoraBandHeight } from "./useKoraBandHeight";
  * The BAND height mechanics (07l §3.1–3.2) — the ex-Пульт hardware, KW1
  * dissolved the strip but the mechanics SURVIVE here for KW2's «Все ходы»
  * zone (kora-rethink blueprint §6: «механика Пульта переезжает целиком»).
- * The harness mounts the hook THROUGH a real KoraResizeHandle (the exact
- * wiring KW2's zone will use): auto by content (≤280) vs fixed 160–420,
- * persist ONLY on commit (vesmaro.koraPultH in the harness — the retired
- * key keepers; KW2 passes its own koraMovesH readers), the <120 гистерезис
- * collapses, dblclick/Home resets to auto by REMOVING the key.
+ * The harness mounts the hook THROUGH a real KoraResizeHandle wired to the
+ * REAL koraMovesH keepers (the exact wiring the zone ships): auto by
+ * content (≤280) vs fixed 160–420, persist ONLY on commit
+ * (vesmaro.koraMovesH), the <120 гистерезис collapses, dblclick/Home resets
+ * to auto by REMOVING the key.
  */
 
+import { clearKoraMovesH, readKoraMovesH, writeKoraMovesH } from "./koraFrameStorage";
+
 const readers = {
-  readH: () => {
-    const raw = localStorage.getItem("vesmaro.koraPultH");
-    if (raw === null) return 0;
-    const n = Number.parseInt(raw, 10);
-    return Number.isFinite(n) ? Math.min(420, Math.max(160, n)) : 0;
-  },
-  writeH: (h: number): void => {
-    localStorage.setItem("vesmaro.koraPultH", String(h));
-  },
-  clearH: (): void => {
-    localStorage.removeItem("vesmaro.koraPultH");
-  },
+  readH: readKoraMovesH,
+  writeH: writeKoraMovesH,
+  clearH: clearKoraMovesH,
 };
 
 /** The zone stand: strip toggle + a top seam wired to the band hook. */
@@ -154,7 +147,7 @@ describe("useKoraBandHeight — the ex-Пульт height mechanics (07l §3, KW2
     const container = mountBand();
     expect(toggle(container).getAttribute("aria-expanded")).toBe("false");
     expect(seam(container).getAttribute("aria-valuenow")).toBe("40"); // the strip
-    expect(localStorage.getItem("vesmaro.koraPultH")).toBeNull();
+    expect(localStorage.getItem("vesmaro.koraMovesH")).toBeNull();
 
     // Deploy via the strip toggle, then a keyboard step to the minimum —
     // the commit (keyup) writes the fixed height.
@@ -164,14 +157,14 @@ describe("useKoraBandHeight — the ex-Пульт height mechanics (07l §3, KW2
     expect(toggle(container).getAttribute("aria-expanded")).toBe("true");
     await keyOn(seam(container), "focusin");
     await keyOn(seam(container), "keydown", "ArrowUp");
-    expect(localStorage.getItem("vesmaro.koraPultH")).toBeNull(); // not yet
+    expect(localStorage.getItem("vesmaro.koraMovesH")).toBeNull(); // not yet
     await keyOn(seam(container), "keyup", "ArrowUp");
-    expect(localStorage.getItem("vesmaro.koraPultH")).toBe("160");
+    expect(localStorage.getItem("vesmaro.koraMovesH")).toBe("160");
     expect(seam(container).getAttribute("aria-valuenow")).toBe("160");
   });
 
   it("restores a persisted fixed height on mount; Home/dblclick resets to auto by REMOVING the key", async () => {
-    localStorage.setItem("vesmaro.koraPultH", "240");
+    localStorage.setItem("vesmaro.koraMovesH", "240");
     const container = mountBand();
     // The seam honestly mirrors the collapsed strip until deployed; the
     // restored height applies when the band opens.
@@ -186,12 +179,12 @@ describe("useKoraBandHeight — the ex-Пульт height mechanics (07l §3, KW2
 
     await keyOn(seam(container), "focusin");
     await keyOn(seam(container), "keydown", "Home");
-    expect(localStorage.getItem("vesmaro.koraPultH")).toBeNull(); // auto = absent
+    expect(localStorage.getItem("vesmaro.koraMovesH")).toBeNull(); // auto = absent
     expect(seam(container).getAttribute("aria-valuenow")).not.toBe("40"); // stays deployed
     await act(async () => {
       seam(container).dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
     });
-    expect(localStorage.getItem("vesmaro.koraPultH")).toBeNull();
+    expect(localStorage.getItem("vesmaro.koraMovesH")).toBeNull();
   });
 
   it("the collapse гистерезис: a seam move below 120 folds the band; a later move deploys", async () => {

@@ -116,6 +116,10 @@ export const KORA_FIXTURE_HERMES_STATUS = {
   mode: "ok" as const,
   registry_sessions: KORA_FIXTURE_HERMES_SESSIONS.length,
   detail: null,
+  // KW2 «Живой чат»: the static verified roster (the server's single
+  // source hermes_client.HERMES_MODELS, mirrored in the mock).
+  models: ["hermes-4.5-405b", "hermes-4.5-70b"],
+  default_model: "hermes-4.5-405b",
 };
 
 /**

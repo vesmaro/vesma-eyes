@@ -2,39 +2,34 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
   DRAFT_PREFIX,
-  KORA_ETHER_DEFAULT,
-  KORA_ETHER_MAX,
-  KORA_ETHER_MIN,
+  KORA_BAND_MAX,
+  KORA_BAND_MIN,
   KORA_NAV_DEFAULT,
   KORA_NAV_MAX,
   KORA_NAV_MIN,
-  KORA_PULT_MAX,
-  KORA_PULT_MIN,
   KORA_SIDE_DEFAULT,
   KORA_SIDE_MAX,
   KORA_SIDE_MIN,
   clearKoraDraft,
-  clearKoraPultH,
+  clearKoraMovesH,
   readFrameInt,
   readKoraDraft,
-  readKoraEtherW,
   readKoraLeftW,
-  readKoraPultH,
+  readKoraMovesH,
   readKoraSideW,
   writeKoraDraft,
-  writeKoraEtherW,
   writeKoraLeftW,
-  writeKoraPultH,
+  writeKoraMovesH,
   writeKoraSideW,
 } from "./koraFrameStorage";
 
 /**
  * The v7 frame storage (07l §5.2 «безопасные геттеры»): garbage resets,
- * out-of-range clamps, absent keys mean the documented default (the Пульт
- * auto mode = the key's ABSENCE), storage failures never throw, and the
- * draft round-trips under its per-session key. The Пульт-era keepers are
- * RETIRED IN KW2 (the module doc) — their contract is still pinned here
- * until the keys are dropped for real.
+ * out-of-range clamps, absent keys mean the documented default (the «Все
+ * ходы» auto mode = the key's ABSENCE), storage failures never throw, and
+ * the draft round-trips under its per-session key. KW2: the Пульт-era
+ * keepers (vesmaro.koraPultH / vesmaro.koraEtherW) are GONE — the height
+ * key is vesmaro.koraMovesH now.
  */
 
 afterEach(() => {
@@ -78,24 +73,25 @@ describe("the named frame keys (v7 §3.1 ranges)", () => {
     expect(KORA_NAV_DEFAULT).toBe(280);
   });
 
-  it("Пульт height: the key's ABSENCE = auto (0), values clamp to 160..420", () => {
-    expect(readKoraPultH()).toBe(0);
-    writeKoraPultH(240);
-    expect(readKoraPultH()).toBe(240);
-    writeKoraPultH(50);
-    expect(readKoraPultH()).toBe(KORA_PULT_MIN);
-    writeKoraPultH(999);
-    expect(readKoraPultH()).toBe(KORA_PULT_MAX);
-    clearKoraPultH();
-    expect(readKoraPultH()).toBe(0); // reset = auto, the key removed
+  it("«Все ходы» height (KW2, vesmaro.koraMovesH): the key's ABSENCE = auto (0), values clamp to 160..420", () => {
+    expect(readKoraMovesH()).toBe(0);
+    writeKoraMovesH(240);
+    expect(readKoraMovesH()).toBe(240);
+    writeKoraMovesH(50);
+    expect(readKoraMovesH()).toBe(KORA_BAND_MIN);
+    writeKoraMovesH(999);
+    expect(readKoraMovesH()).toBe(KORA_BAND_MAX);
+    clearKoraMovesH();
+    expect(readKoraMovesH()).toBe(0); // reset = auto, the key removed
   });
 
-  it("Эфир width: default 320, clamped to 280..480 (15-WOW ≥280px)", () => {
-    expect(readKoraEtherW()).toBe(KORA_ETHER_DEFAULT);
-    writeKoraEtherW(200);
-    expect(readKoraEtherW()).toBe(KORA_ETHER_MIN);
-    writeKoraEtherW(900);
-    expect(readKoraEtherW()).toBe(KORA_ETHER_MAX);
+  it("the retired Пульт-era keys are gone (KW2): no keeper reads them", () => {
+    // The legacy keys carry no live reader anymore — a stale value in
+    // storage is dead weight the frame ignores (no migration needed: the
+    // «Все ходы» zone starts honestly at its own default).
+    localStorage.setItem("vesmaro.koraPultH", "240");
+    localStorage.setItem("vesmaro.koraEtherW", "360");
+    expect(readKoraMovesH()).toBe(0);
   });
 });
 

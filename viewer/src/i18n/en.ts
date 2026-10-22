@@ -2547,11 +2547,6 @@ export const en: Record<TranslationKey, string> = {
   "kora.hermes.refreshing": "Refreshing…",
   "kora.hermes.emptyNoPull":
     "No sessions yet — press «Refresh»: the board will ask the hermes cluster for the live listing and put it into the registry",
-  // Hermes transcripts + chat (T004 slice 3, the bridge's final leg): the
-  // transcript is read-only, the source chat lives in Kora with no session
-  // selected.
-  "kora.hermes.transcriptReadonly":
-    "Read-only transcript; the source chat lives in Kora while no session is selected",
   "kora.hermes.reasoning": "Reasoning",
   "kora.hermes.toolCalls": "Tool calls: {{n}}",
   "kora.hermes.chatTitle": "Chat with hermes",
@@ -2571,6 +2566,30 @@ export const en: Record<TranslationKey, string> = {
   "kora.hermes.chatUnknownReply":
     "A reply arrived, but its text did not parse — the hermes shape differed from the expected one",
   "kora.hermes.chatAnnounce": "Hermes reply received",
+  // KW2 «Живой чат»: the chat header — the session switcher (writes the
+  // route), the model select (the /status roster, default preselected), the
+  // source badge (server data, not decor) and the honest non-persistence
+  // note (POST /chat is stateless — the reply never reaches the transcript).
+  "kora.hermes.chatSourceBadge": "hermes · real-time",
+  "kora.hermes.chatSessionLabel": "Session",
+  "kora.hermes.modelLabel": "Model",
+  "kora.hermes.chatNonPersistent":
+    "Chat replies are not written to the hermes session transcript — the thread lives on this page; a reload shows the session's stored history",
+  // The «Все ходы» zone (KW2, kora-rethink blueprint §4): the collapsed
+  // strip is the default; expanding = today's transcript grammar; the height
+  // persists on commit only (vesmaro.koraMovesH), auto = the key's absence.
+  "kora.moves.region": "All moves",
+  "kora.moves.caps": "All moves · {{n}}",
+  "kora.moves.expand": "Expand",
+  "kora.moves.collapse": "Collapse",
+  "kora.moves.seamLabel": "The «All moves» zone height",
+  "kora.moves.seamTooltip":
+    "Drag to change the height. Double-click to restore",
+  // Honest height-seam aria values (07l §3.3): auto named auto, collapsed
+  // named collapsed — the deployed seam announces its own geometry.
+  "kora.resize.autoPx": "auto, {{n}} px",
+  "kora.resize.auto": "auto",
+  "kora.resize.collapsedPx": "collapsed, {{n}} px",
 
   // --- base kit state matrices (spec 05 §2.2/§2.5, wave U0) ------------------
   "field.errorPrefix": "Error:",
