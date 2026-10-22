@@ -2,6 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Search } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  COLUMN_STATUS_MAP,
+  isTaskColumn,
+  statusBadgeVariant,
+  statusLabelKey,
+} from "@/features/tasks/taskStatus";
 import { useT } from "@/i18n";
 import { withReturn } from "@/lib/returnParams";
 import { usePaletteOpen, setPaletteOpen } from "@/lib/paletteState";
@@ -26,6 +33,11 @@ import {
   type PaletteGroupId,
   type PaletteItem,
 } from "./commandPaletteModel";
+// v12 D1: the iris hit-flare reuses the house U4 recall-edge implementation
+// (one implementation per concept). The class lives in that component's css
+// file, which route-splitting keeps out of the entry chunk — the palette is
+// mounted on every page, so it carries the import itself (idempotent).
+import "@/components/SearchResultList/SearchResultList.css";
 
 /**
  * The command palette (UX-overhaul §7.3, Ф2): ONE search input answering in
@@ -62,11 +74,21 @@ export function CommandPalette() {
   return (
     <DialogPrimitive.Root open={open} onOpenChange={setPaletteOpen}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-overlay-scrim" />
+        {/* v12 skin (D1): the palette backdrop finally consumes its own token —
+         * `--palette-scrim` existed in all five theme presets since Phase 1
+         * with no consumer (the palette rode the generic overlay scrim). The
+         * blur is the «pupil» from the v12 stand (palette.css: blur 4px) —
+         * the system's only DIALOG blur, not the only blur: backdrop-blur
+         * also lives on the sticky crumbs row (Shell.tsx) and the settings
+         * hub's sticky anchor nav (SettingsHubPage.tsx). The budget — ≤2 blur
+         * sources per viewport — is docs/design/06-MOTION.md §6. Functional
+         * focus-keeper, not decoration; a static filter behind the panel —
+         * motion settings do not apply. */}
+        <DialogPrimitive.Overlay className="cmdk-overlay fixed inset-0 z-50 bg-palette-scrim backdrop-blur-sm" />
         <DialogPrimitive.Content
           aria-describedby={undefined}
           className={
-            "fixed z-50 flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-elevated shadow-float " +
+            "cmdk-panel fixed z-50 flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-elevated shadow-float " +
             "inset-x-2 top-2 max-h-[85dvh] " +
             "sm:inset-x-auto sm:left-1/2 sm:right-auto sm:top-[10vh] sm:w-full sm:max-w-xl sm:-translate-x-1/2"
           }
@@ -379,6 +401,13 @@ function optionDomId(itemId: string): string {
   return `cmdk-option-${itemId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
 }
 
+/** Task chip vocabulary: the board column → workflow status (taskStatus.ts
+ * mirrors the wire dictionaries; unknown values fall through to the honest
+ * «unknown» label with the neutral badge). */
+function taskChipStatus(col: string): string {
+  return isTaskColumn(col) ? COLUMN_STATUS_MAP[col] : col;
+}
+
 function PaletteGroupBlock({
   entry,
   offset,
@@ -394,6 +423,7 @@ function PaletteGroupBlock({
   onChoose: (item: PaletteItem, via: "enter" | "click") => void;
   onHover: (index: number) => void;
 }) {
+  const t = useT();
   const labelId = `${LISTBOX_ID}-label-${entry.group}`;
   return (
     <div role="group" aria-labelledby={labelId} className="mb-1 last:mb-0">
@@ -406,13 +436,46 @@ function PaletteGroupBlock({
       <ul>
         {entry.items.map((item, position) => {
           const isActive = item.id === activeId;
+          // The li's aria-label overrides the row content for the screen
+          // reader — the second story (snippet / chip + agents) must ride it,
+          // or the v12 preview richness would be silent to SR users.
+          const secondStoryText =
+            item.group === "memory"
+              ? item.preview
+              : item.group === "tasks"
+                ? [
+                    item.status !== undefined
+                      ? t(statusLabelKey(taskChipStatus(item.status)))
+                      : "",
+                    (item.taskAgents ?? []).join(", "),
+                  ]
+                    .filter(Boolean)
+                    .join(" ")
+                : undefined;
           return (
             <li
               key={item.id}
               id={optionDomId(item.id)}
               role="option"
               aria-selected={isActive}
-              aria-label={`${label}: ${item.label}`}
+              // v12 D1 — the iris hit-flare rides the ROW MOUNT (stand
+              // §13.7.3 «попадание в память»), reusing the house U4 recall
+              // edge: one implementation per concept, and the same mount-keyed
+              // grammar as the memory page («played once per list mount; a
+              // refetch of the SAME query does not replay»). A flare is a
+              // response to hits arriving — never spontaneous light; a row
+              // that stays mounted under query edits does not re-flash.
+              // fill-mode `both` keeps the edge at its transparent end state
+              // after the decay — nothing lingers; reduced contexts ride the
+              // house reduced mirror (static tint release).
+              className={
+                item.group === "memory" ? "search-result-recall" : undefined
+              }
+              aria-label={
+                secondStoryText
+                  ? `${label}: ${item.label} — ${secondStoryText}${item.hint ? ` (${item.hint})` : ""}`
+                  : `${label}: ${item.label}`
+              }
             >
               <button
                 type="button"
@@ -423,13 +486,44 @@ function PaletteGroupBlock({
                 // a one-step action.
                 onMouseMove={() => onHover(offset + position)}
                 className={
-                  "flex w-full items-baseline gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors duration-instant " +
+                  "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors duration-instant " +
                   (isActive
                     ? "bg-well text-foreground"
                     : "text-foreground-secondary hover:bg-well hover:text-foreground")
                 }
               >
-                <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                {/* v12 skin (D1): the two-story preview row (stand palette.css
+                 * `.pal-main`) — story 1 is the label, story 2 is the row's own
+                 * wire data. Memory: the record's content snippet; tasks: the
+                 * status chip (the list-page badge vocabulary) + the assigned
+                 * agents. Nothing invented: sections whose wire data has no
+                 * second story (agents, nav) stay single-story. */}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate">{item.label}</span>
+                  {item.group === "memory" && item.preview ? (
+                    <span className="block truncate text-xs text-foreground-muted">
+                      {item.preview}
+                    </span>
+                  ) : null}
+                  {item.group === "tasks" &&
+                  (item.status !== undefined || (item.taskAgents ?? []).length > 0) ? (
+                    <span className="mt-0.5 flex min-w-0 items-center gap-1.5">
+                      {item.status !== undefined ? (
+                        <Badge
+                          variant={statusBadgeVariant(taskChipStatus(item.status))}
+                          className="px-1.5 py-0 text-caps uppercase tracking-caps"
+                        >
+                          {t(statusLabelKey(taskChipStatus(item.status)))}
+                        </Badge>
+                      ) : null}
+                      {(item.taskAgents ?? []).length > 0 ? (
+                        <span className="min-w-0 truncate text-xs text-foreground-secondary">
+                          {item.taskAgents!.join(", ")}
+                        </span>
+                      ) : null}
+                    </span>
+                  ) : null}
+                </span>
                 {item.hint ? (
                   <span className="max-w-[45%] shrink-0 truncate font-mono text-xs text-foreground-muted">
                     {item.hint}

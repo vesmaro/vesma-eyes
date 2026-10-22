@@ -34,6 +34,15 @@ export interface PaletteItem {
   readonly hint?: string;
   /** Navigate target (react-router `to`). */
   readonly to: string;
+  // v12 skin (D1): the two-story preview rows. All values ride the wire
+  // data the palette already holds — nothing invented, absence renders no
+  // second story (honest absence, the house rule).
+  /** Memory second story: the record's content snippet (the scroll line). */
+  readonly preview?: string;
+  /** Task second story: the board column (rendered as the status chip). */
+  readonly status?: string;
+  /** Task second story: the assigned agents (rendered after the chip). */
+  readonly taskAgents?: readonly string[];
 }
 
 // --- local indexes ------------------------------------------------------------
@@ -64,6 +73,10 @@ export function filterTaskItems(
       label: task.title || task.id,
       hint: task.id,
       to: buildTo(task.id),
+      // v12 two-story: the chip vocabulary maps the column → workflow status
+      // at render time (taskStatus.ts mirrors); the model stays i18n-free.
+      status: task.col,
+      taskAgents: task.agents ?? [],
     }));
 }
 
@@ -110,6 +123,9 @@ export function memoryHitItems(
     label: hit.title || hit.id,
     hint: hit.server,
     to: buildTo(hit.id),
+    // v12 two-story: the record's own scroll line (v12 stand `.pal-preview`);
+    // the provenance stays the mono right slot (unchanged Ф2 contract).
+    preview: hit.content,
   }));
 }
 
