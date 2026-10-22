@@ -25,8 +25,8 @@ last_verified: "1.13.0"
 | Где | Что | Кто меняет |
 | --- | --- | --- |
 | `server/app.py` | первоисточник версии | релизный PR |
-| `deploy/chart/vesma-eyes/Chart.yaml` | версия чарта и приложения | релизный PR |
-| `deploy/chart/vesma-eyes/values.yaml` | тег образа по умолчанию | релизный PR |
+| `deploy/chart/vesmaro-eyes/Chart.yaml` | версия чарта и приложения | релизный PR |
+| `deploy/chart/vesmaro-eyes/values.yaml` | тег образа по умолчанию | релизный PR |
 | подвал левой панели интерфейса | живая версия на борде | приходит из `/api/health` |
 
 ## Перед обновлением
@@ -58,7 +58,7 @@ last_verified: "1.13.0"
 обновление без обновления.
 
 ```bash
-helm upgrade --install vesma-eyes deploy/chart/vesma-eyes \
+helm upgrade --install vesma-eyes deploy/chart/vesmaro-eyes \
   -n kube-agents --atomic --timeout 5m \
   -f my-values.yaml \
   --set image.tag=<новая версия>

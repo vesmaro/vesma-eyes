@@ -21,7 +21,7 @@ per-peer ACL и работу с ключами, которые оператор 
 > модель угроз — ADR-0016 в репозитории vesma
 > (`mnemos/docs/project/adr/0016-federation-threat-model.md`).
 > Об архитектуре —
-> [../architecture.md](https://github.com/Korrnals/mnemos-mesh/blob/331ef3a785c1a74fb9f8972ff93cd6db5a8fc174/docs/architecture.md).
+> [../architecture.md](https://github.com/vesmaro/vesma-mesh/blob/331ef3a785c1a74fb9f8972ff93cd6db5a8fc174/docs/architecture.md).
 
 ---
 
@@ -169,7 +169,7 @@ peers:
 > **Жёсткое правило.** Не реализуйте проверку ACL в меше. Любой Go-код,
 > инспектирующий контент ради проектов/типов/тегов, отвергается на
 > ревью — жёсткое правило 4 в
-> [CONTRIBUTING.md](https://github.com/Korrnals/mnemos-mesh/blob/331ef3a785c1a74fb9f8972ff93cd6db5a8fc174/CONTRIBUTING.md).
+> [CONTRIBUTING.md](https://github.com/vesmaro/vesma-mesh/blob/331ef3a785c1a74fb9f8972ff93cd6db5a8fc174/CONTRIBUTING.md).
 
 ---
 
@@ -236,7 +236,7 @@ ADR-0016.
 ## См. также
 
 - [ADR-0016 — модель угроз федерации](https://github.com/vesmaro/vesmaro/blob/23f0fce42ea87c329d4049397292b3dca948773c/docs/project/adr/0016-federation-threat-model.md) (репозиторий vesma)
-- [Архитектура](https://github.com/Korrnals/mnemos-mesh/blob/331ef3a785c1a74fb9f8972ff93cd6db5a8fc174/docs/architecture.md) — границы доверия, ключи, потоки данных
+- [Архитектура](https://github.com/vesmaro/vesma-mesh/blob/331ef3a785c1a74fb9f8972ff93cd6db5a8fc174/docs/architecture.md) — границы доверия, ключи, потоки данных
 - [Справочник конфигурации](mnemos-mesh/user/configuration) — поля `mesh.yaml`
 - [Первый запуск](mnemos-mesh/user/getting-started) — генерация материала mTLS
-- [CONTRIBUTING.md](https://github.com/Korrnals/mnemos-mesh/blob/331ef3a785c1a74fb9f8972ff93cd6db5a8fc174/CONTRIBUTING.md) — жёсткие правила контрибуций
+- [CONTRIBUTING.md](https://github.com/vesmaro/vesma-mesh/blob/331ef3a785c1a74fb9f8972ff93cd6db5a8fc174/CONTRIBUTING.md) — жёсткие правила контрибуций

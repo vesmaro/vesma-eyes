@@ -10,6 +10,10 @@
 #      by this script: the board bearer token (mnk_..., totp_required=0) is
 #      minted once via `mnemos auth token create --no-totp` and patched into
 #      the secret manually. Re-running deploy only fills the PLACEHOLDER.
+#      NOTE: the `mnemos` binary is correct for the CURRENT cluster store
+#      (agentsnode-mnemos, generation 4.3.8) — this is how the existing
+#      token was minted. The canonical `vesma auth token create` applies
+#      only after the store migrates to vesma 6.x (task 62238e77).
 #   2. Apply deploy/k8s/vesmaro-eyes.yaml.
 #   3. Roll out and wait for readiness.
 set -euo pipefail

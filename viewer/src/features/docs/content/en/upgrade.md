@@ -24,8 +24,8 @@ the operator, all you need is the release number from the release notes.
 | Where | What | Who changes it |
 | --- | --- | --- |
 | `server/app.py` | the source of truth for the version | the release PR |
-| `deploy/chart/vesma-eyes/Chart.yaml` | the chart and app version | the release PR |
-| `deploy/chart/vesma-eyes/values.yaml` | the default image tag | the release PR |
+| `deploy/chart/vesmaro-eyes/Chart.yaml` | the chart and app version | the release PR |
+| `deploy/chart/vesmaro-eyes/values.yaml` | the default image tag | the release PR |
 | the bottom of the interface's left panel | the live version on the board | comes from `/api/health` |
 
 ## Before upgrading
@@ -58,7 +58,7 @@ a new one is not given: the pod restarts but stays on the old version —
 an upgrade without an upgrade.
 
 ```bash
-helm upgrade --install vesma-eyes deploy/chart/vesma-eyes \
+helm upgrade --install vesma-eyes deploy/chart/vesmaro-eyes \
   -n kube-agents --atomic --timeout 5m \
   -f my-values.yaml \
   --set image.tag=<new version>

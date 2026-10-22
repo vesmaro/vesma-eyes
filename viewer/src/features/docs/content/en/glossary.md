@@ -61,7 +61,7 @@ calls things its own way; this table translates into board language.
 | Upstream term | Board term | Comment |
 | --- | --- | --- |
 | memory, entry | entry | one unit of memory; the upstream says "memories"/"entries", the board says "entry" |
-| vault | originals directory | in the upstream a vault is the directory of a memory's source files (`~/.mnemos/vault`); the board calls the whole vesma server a "store", not this directory |
+| vault | originals directory | in the upstream a vault is the directory of a memory's source files (`~/.vesma/vault`); the board calls the whole vesma server a "store", not this directory |
 | store | memory store | the database inside vesma; on the board a "store" is a connected vesma server as a whole |
 | harness | harness | the same term: an agent's runtime (`zcode`, `copilot`) |
 | pipeline | processing pipeline | cleaning an entry before it reaches a model; the board shows it as the "raw → processed" statuses |

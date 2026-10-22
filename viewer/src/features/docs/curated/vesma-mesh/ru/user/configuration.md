@@ -84,7 +84,7 @@ openssl x509 -in node.pem -noout -fingerprint -sha256 | sed 's/://g'
 > `project_scope` и фильтры запроса; vesma сверяет их со своим
 > per-peer конфигом, прежде чем вернуть какую-либо запись. Не
 > реализуйте проверку ACL в меше — жёсткое правило 4 в
-> [CONTRIBUTING.md](https://github.com/Korrnals/mnemos-mesh/blob/331ef3a785c1a74fb9f8972ff93cd6db5a8fc174/CONTRIBUTING.md).
+> [CONTRIBUTING.md](https://github.com/vesmaro/vesma-mesh/blob/331ef3a785c1a74fb9f8972ff93cd6db5a8fc174/CONTRIBUTING.md).
 
 ---
 
@@ -212,5 +212,5 @@ metrics:
 
 - [Первый запуск](mnemos-mesh/user/getting-started) — управляемый разбор
 - [Модель безопасности](mnemos-mesh/admin/security) — mTLS, ACL, ключи
-- [Архитектура](https://github.com/Korrnals/mnemos-mesh/blob/331ef3a785c1a74fb9f8972ff93cd6db5a8fc174/docs/architecture.md) — полный дизайн системы
-- [`internal/config/config.go`](https://github.com/Korrnals/mnemos-mesh/blob/331ef3a785c1a74fb9f8972ff93cd6db5a8fc174/internal/config/config.go) — исходник загрузчика
+- [Архитектура](https://github.com/vesmaro/vesma-mesh/blob/331ef3a785c1a74fb9f8972ff93cd6db5a8fc174/docs/architecture.md) — полный дизайн системы
+- [`internal/config/config.go`](https://github.com/vesmaro/vesma-mesh/blob/331ef3a785c1a74fb9f8972ff93cd6db5a8fc174/internal/config/config.go) — исходник загрузчика
