@@ -77,9 +77,13 @@ export function CommandPalette() {
         {/* v12 skin (D1): the palette backdrop finally consumes its own token —
          * `--palette-scrim` existed in all five theme presets since Phase 1
          * with no consumer (the palette rode the generic overlay scrim). The
-         * blur is the «pupil» from the v12 stand (palette.css: blur 4px — the
-         * system's only blur, functional focus-keeper, not decoration). It is
-         * a static filter behind the panel — motion settings do not apply. */}
+         * blur is the «pupil» from the v12 stand (palette.css: blur 4px) —
+         * the system's only DIALOG blur, not the only blur: backdrop-blur
+         * also lives on the sticky crumbs row (Shell.tsx) and the settings
+         * hub's sticky anchor nav (SettingsHubPage.tsx). The budget — ≤2 blur
+         * sources per viewport — is docs/design/06-MOTION.md §6. Functional
+         * focus-keeper, not decoration; a static filter behind the panel —
+         * motion settings do not apply. */}
         <DialogPrimitive.Overlay className="cmdk-overlay fixed inset-0 z-50 bg-palette-scrim backdrop-blur-sm" />
         <DialogPrimitive.Content
           aria-describedby={undefined}

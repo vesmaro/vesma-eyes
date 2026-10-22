@@ -112,7 +112,7 @@
    * ADR 0006 §8, recorded in docs/design/02-TOKENS.md §5. */
   --well-hero-h: clamp(520px, calc(100vh - var(--shell-topbar-h) - var(--shell-crumbs-h) - var(--space-6)), 860px);
   --hud-veil: rgb(5 16 21 / 0.78);      /* functional HUD-text backdrop on canvas ONLY; pairs §7.1 */
-  --palette-scrim: rgb(5 16 21 / 0.55); /* palette backdrop tint; + blur(4px) = the system's only blur */
+  --palette-scrim: rgb(5 16 21 / 0.55); /* palette backdrop tint; + blur(4px) — the only DIALOG blur (blur budget ≤2/view: 06-MOTION.md §6) */
   --duration-awaken: 1200ms;            /* Overview awakening wave — once per session */
   /* U2 honesty of light (SPEC-2026-10-07: «первое дыхание из шины; шина
    * молчит — экран стоит»): a real bus event opens ONE breath window;
