@@ -286,6 +286,11 @@ export function crumbsFor(pathname: string): Crumb[] {
     case "/kora":
       // The domain root IS the page (slice-1 list): one non-link crumb.
       return [{ key: "nav.kora" }];
+    case "/kora/hermes":
+      // KW2 (kora-rethink blueprint §5): the RESERVED cluster-chat segment —
+      // not a session lookup; the crumb names the cluster chat honestly
+      // (the generic /kora/:sessionId branch below would lie «Сессия»).
+      return [KORA_CRUMB, { key: "kora.nav.clusterChat" }];
     case "/memory":
       return [MEMORY_CRUMB, { key: "nav.records" }];
     case "/memory/search":
