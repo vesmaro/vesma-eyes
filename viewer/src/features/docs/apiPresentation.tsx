@@ -18,6 +18,7 @@ import {
 } from "./apiDocs";
 import { buildArticleHooks } from "./Markdown";
 import { CorpusMarkdown, type ArticleComponents } from "./Markdown";
+import { handleTocClick } from "./tocScroll";
 
 /**
  * API-board presentation (docs-api-readability wave, 2026-10-21).
@@ -137,7 +138,8 @@ export function ApiDocsBody({ body, pageSlug }: { body: string; pageSlug: string
   // closes over a FRESH heading slugger per pass. A memoized map would keep
   // the slugger alive across re-renders and every re-render of a chunk
   // would double-count its headings — ids would drift to their -1 suffixes
-  // and the TOC anchors would die.
+  // and the TOC anchors would die. The scroll-spy therefore must not hold
+  // element references across renders — useScrollSpy re-reads the live DOM.
   const components = buildApiComponents(pageSlug);
   return (
     <div>
@@ -161,7 +163,9 @@ export function ApiDocsBody({ body, pageSlug }: { body: string; pageSlug: string
   );
 }
 
-/** TOC list with method dots (colour reinforces the method TEXT, 1.4.1). */
+/** TOC list with method dots (colour reinforces the method TEXT, 1.4.1).
+ *  Clicks scroll programmatically — same handler as the plain TocList
+ *  (tocScroll.ts; first-click/repeat-click discipline, D2 2026-10-22). */
 function TocMethodList({
   items,
   activeId,
@@ -180,6 +184,7 @@ function TocMethodList({
               href={`#${item.id}`}
               title={item.text}
               aria-current={active ? "location" : undefined}
+              onClick={(event) => handleTocClick(event, item.id)}
               className={cn(
                 "block truncate border-l-2 py-1.5 pl-3 pr-1 text-sm transition-colors duration-instant",
                 item.depth === 3 && "pl-7",

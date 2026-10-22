@@ -25,6 +25,7 @@ import { DocsSearch } from "./DocsSearch";
 import { DocsNotFound } from "./DocsRedirects";
 import { formatSyncDate } from "./sidecar";
 import { docSlugForPath } from "./docsNav";
+import { handleTocClick } from "./tocScroll";
 import {
   DEFAULT_PROJECT,
   docUrl,
@@ -80,7 +81,9 @@ function PageSkeleton() {
   );
 }
 
-/** TocList item — active state is shape + colour (WCAG 1.4.1, spec §5.3). */
+/** TocList item — active state is shape + colour (WCAG 1.4.1, spec §5.3).
+ *  Clicks scroll programmatically (tocScroll.ts): the first click lands,
+ *  a repeat click re-lands, the URL stays shareable. */
 function TocList({ items, activeId }: { items: TocItem[]; activeId: string | null }) {
   return (
     <ul>
@@ -92,6 +95,7 @@ function TocList({ items, activeId }: { items: TocItem[]; activeId: string | nul
               href={`#${item.id}`}
               title={item.text}
               aria-current={active ? "location" : undefined}
+              onClick={(event) => handleTocClick(event, item.id)}
               className={cn(
                 "block truncate border-l-2 py-1.5 pl-3 pr-1 text-sm transition-colors duration-instant",
                 item.depth === 3 && "pl-7",
@@ -111,45 +115,50 @@ function TocList({ items, activeId }: { items: TocItem[]; activeId: string | nul
 }
 
 /**
- * Scroll-spy over the rendered h2/h3 ids (contract §8). Falls back to "no
- * active item" where IntersectionObserver is unavailable (tests, ancient
- * webviews) — the TOC stays usable as plain anchor links.
+ * Scroll-spy over the rendered h2/h3 ids (contract §8), rAF-throttled
+ * window scroll/resize listener. NOT IntersectionObserver: the markdown
+ * component maps are rebuilt per body (the slugger discipline), and every
+ * spy state change re-renders the article — an IO that captured element
+ * references would observe DETACHED nodes after the re-render and freeze
+ * (the reproduced stuck-highlight defect). The listener re-reads the live
+ * DOM every frame, so remounts cannot strand it; ids re-resolve per frame
+ * (~40 getElementById calls, rAF-capped) — no measured cost.
+ *
+ * Active = the LAST heading above the sticky-chrome line (scroll-mt-24);
+ * above the first heading nothing is active — the rail starts silent and
+ * honest. Falls back to "no active item" without window scroll (tests,
+ * ancient webviews) — the TOC stays usable as plain anchor links.
  */
 function useScrollSpy(ids: string[]): string | null {
   const [activeId, setActiveId] = useState<string | null>(null);
   const key = ids.join("|");
   useEffect(() => {
-    if (key === "" || typeof IntersectionObserver === "undefined") return undefined;
-    const elements = ids
-      .map((id) => document.getElementById(id))
-      .filter((element): element is HTMLElement => element !== null);
-    if (elements.length === 0) return undefined;
-
-    const visible = new Map<string, number>();
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting)
-            visible.set(entry.target.id, entry.boundingClientRect.top);
-          else visible.delete(entry.target.id);
-        }
-        if (visible.size > 0) {
-          const topmost = [...visible.entries()].sort((a, b) => a[1] - b[1])[0][0];
-          setActiveId(topmost);
-          return;
-        }
-        // Nothing visible under the sticky header line — the spy holds the
-        // last heading scrolled past, so the rail never points at nothing.
-        let last: string | null = null;
-        for (const element of elements) {
-          if (element.getBoundingClientRect().top < 120) last = element.id;
-        }
-        setActiveId(last);
-      },
-      { rootMargin: "-96px 0px -55% 0px", threshold: 0 },
-    );
-    elements.forEach((element) => observer.observe(element));
-    return () => observer.disconnect();
+    if (key === "" || typeof window === "undefined") return undefined;
+    let frame = 0;
+    const measure = () => {
+      frame = 0;
+      let last: string | null = null;
+      for (const id of ids) {
+        const element = document.getElementById(id);
+        if (element === null) continue;
+        // Last heading whose top cleared the sticky line — the section the
+        // reader is in. 120 ≈ scroll-mt (96) + a sliver of grace.
+        if (element.getBoundingClientRect().top < 120) last = id;
+        else break; // ids are document-ordered — the first below-line ends it
+      }
+      setActiveId(last);
+    };
+    const schedule = () => {
+      if (frame === 0) frame = window.requestAnimationFrame(measure);
+    };
+    measure();
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule, { passive: true });
+    return () => {
+      if (frame !== 0) window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- ids array identity churns per render; the joined key is the real dependency
   }, [key]);
   return activeId;
