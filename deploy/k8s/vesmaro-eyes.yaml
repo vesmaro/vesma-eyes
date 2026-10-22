@@ -16,6 +16,9 @@
 #     mnemos auth token create --name vesmaro-eyes-board --no-totp
 #   kubectl -n kube-agents patch secret vesmaro-eyes-mnemos \
 #     --type merge -p '{"stringData":{"MNEMOS_TOKEN":"mnk_..."}}'
+# `mnemos` (not `vesma`) is the working binary in the CURRENT store image
+# (agentsnode-mnemos, generation 4.3.8) — switch to the canonical
+# `vesma auth token create` when the store migrates to 6.x (task 62238e77).
 # It is deliberately NOT declared here so `kubectl apply` never wipes it.
 ---
 apiVersion: v1
