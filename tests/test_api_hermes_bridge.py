@@ -447,6 +447,52 @@ class TestHonestOff:
         assert app_module.store.kora_sessions(harness="hermes") == []
 
 
+# ------------------------------------------------ KW2 model roster (status)
+
+class TestStatusModelRoster:
+    """KW2 «Живой чат»: the status route serves the STATIC verified chat
+    model roster (models[] + default_model) in BOTH modes — an off bridge
+    still names the roster so the FE select renders its honest fallback.
+    The single source is hermes_client.py; the chat route's default IS the
+    roster default."""
+
+    def test_roster_source_of_truth(self) -> None:
+        from server import hermes_client
+        assert hermes_client.HERMES_MODELS == ("hermes-4.5-405b",
+                                               "hermes-4.5-70b")
+        assert hermes_client.HERMES_DEFAULT_MODEL == "hermes-4.5-405b"
+        # the default is a member of the roster it defaults to
+        assert hermes_client.HERMES_DEFAULT_MODEL in hermes_client.HERMES_MODELS
+
+    def test_chat_default_is_the_roster_default(self, app_module) -> None:
+        from server import hermes_client
+        assert (app_module._HERMES_CHAT_DEFAULT_MODEL
+                == hermes_client.HERMES_DEFAULT_MODEL)
+
+    def test_status_ok_serves_roster_and_default(
+            self, app_module, client: TestClient) -> None:
+        from server import hermes_client
+        resp = client.get("/api/kora/hermes/status",
+                          headers=_ui_headers(app_module))
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["models"] == list(hermes_client.HERMES_MODELS)
+        assert body["default_model"] == hermes_client.HERMES_DEFAULT_MODEL
+        assert body["default_model"] == body["models"][0]
+
+    def test_status_off_still_serves_roster(
+            self, app_module, client: TestClient, monkeypatch) -> None:
+        from server import hermes_client
+        monkeypatch.delenv("HERMES_API_KEY", raising=False)
+        resp = client.get("/api/kora/hermes/status",
+                          headers=_ui_headers(app_module))
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["mode"] == "off"
+        assert body["models"] == list(hermes_client.HERMES_MODELS)
+        assert body["default_model"] == hermes_client.HERMES_DEFAULT_MODEL
+
+
 # --------------------------------------------------- 3+4. routes + guard
 
 class TestLivePullRoute:
