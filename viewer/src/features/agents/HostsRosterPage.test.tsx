@@ -312,9 +312,9 @@ async function teardown(root: Root): Promise<void> {
   vi.useRealTimers();
 }
 
-/** The roster panel (aside region). */
+/** The meta-panel (aside region; W2: Присутствие/Пульс/Настройки). */
 const panel = (container: HTMLElement): HTMLElement =>
-  container.querySelector('aside[aria-label="Host roster"]')!;
+  container.querySelector('aside[aria-label="Host panel"]')!;
 
 /** The roster ROWS (listbox options; the panel's ul excludes the connect). */
 const rows = (container: HTMLElement): NodeListOf<HTMLElement> =>
@@ -933,19 +933,31 @@ describe("the main field: the selected host's scaffold", () => {
     await actUnmount(root);
   });
 
-  it("«Недавно»: the revoked host's field answers with the honest quiet", async () => {
+  it("«Пульс» (W2): the revoked host's quiet answer lives in the meta-panel, the field carries the tombstone only", async () => {
     const { root, container } = await mountPage({ path: "/agents/hosts/old-host" });
     await actFlush(200);
     const field = mainField(container);
-    // The tombstone block + the reconnect CTA.
+    // The tombstone block + the reconnect CTA stay in the field.
     expect(field.textContent).toContain("Access revoked");
     const reconnect = [...field.querySelectorAll("a")].find((a) =>
       a.textContent?.includes("Reconnect"),
     );
     expect(reconnect).not.toBeNull();
     expect(reconnect!.getAttribute("href")).toBe("/agents/harnesses?connect=1");
-    // The feed resolves empty for the dead host → the canonical quiet line.
-    expect(field.textContent).toContain("Quiet. The first events arrive");
+    // W2: the feed left the field — the pulse block (ex-«Недавно») answers
+    // in the meta-panel now, host-scoped as before.
+    expect(field.textContent).not.toContain("Quiet. The first events arrive");
+    expect(panel(container).textContent).toContain(
+      "Quiet. The first events arrive",
+    );
+    // The panel blocks: the three collapsible sections are present.
+    for (const block of ["Presence", "Pulse", "Settings"]) {
+      expect(
+        [...panel(container).querySelectorAll("button")].some((button) =>
+          button.textContent?.includes(block),
+        ),
+      ).toBe(true);
+    }
     await actUnmount(root);
   });
 
@@ -1126,7 +1138,7 @@ describe("the /agents default landing", () => {
     await actWaitUntil(() => {
       expect(router.state.location.pathname).toBe("/agents/hosts/gone");
       expect(
-        container.querySelector('aside[aria-label="Host roster"]'),
+        container.querySelector('aside[aria-label="Host panel"]'),
       ).not.toBeNull();
     });
     await actUnmount(root);

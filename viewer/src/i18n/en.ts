@@ -1340,9 +1340,16 @@ export const en: Record<TranslationKey, string> = {
   "agents.hosts.nowNoSessions":
     "No live sessions — they appear when a harness starts working.",
   "agents.hosts.sessionsFailed": "Sessions unavailable.",
-  "agents.hosts.recentTitle": "Recent",
-  "agents.hosts.recentEmpty": "Quiet. The first events arrive after the first report.",
-  "agents.hosts.recentFailed": "Failed to load the feed.",
+  // W2 "Meta-panel" (states.md §2): the right panel blocks; the field's
+  // «Недавно» moved into the «Пульс» block (the pulse* keys — the same
+  // honest states).
+  "agents.hosts.panelRegion": "Host panel",
+  "agents.hosts.presenceTitle": "Presence",
+  "agents.hosts.pulseTitle": "Pulse",
+  "agents.hosts.pulseNoHost": "Pick a host — its 24h pulse shows up here.",
+  "agents.hosts.pulseEmpty": "Quiet. The first events arrive after the first report.",
+  "agents.hosts.pulseFailed": "Failed to load the feed.",
+  "agents.hosts.settingsTitle": "Settings",
   "agents.hosts.reconnectAction": "Reconnect",
   // The host's harnesses (agents-workspace-ide W1 "untangle the weave"):
   // a compact chip strip instead of the «Zone plexuses» accordion; the lore

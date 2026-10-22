@@ -1377,9 +1377,15 @@ export const ru = {
   "agents.hosts.nowNoSessions":
     "Живых сессий нет — появятся, когда харнес начнёт работу.",
   "agents.hosts.sessionsFailed": "Сессии недоступны.",
-  "agents.hosts.recentTitle": "Недавно",
-  "agents.hosts.recentEmpty": "Тишина. Первые события — после первого доклада.",
-  "agents.hosts.recentFailed": "Ленту не удалось загрузить.",
+  // W2 «Мета-панель» (states.md §2): блоки правой панели; «Недавно» поля
+  // переехало в блок «Пульс» (ключи pulse* — те же честные состояния).
+  "agents.hosts.panelRegion": "Панель хостов",
+  "agents.hosts.presenceTitle": "Присутствие",
+  "agents.hosts.pulseTitle": "Пульс",
+  "agents.hosts.pulseNoHost": "Выберите хост — здесь появится его пульс за сутки.",
+  "agents.hosts.pulseEmpty": "Тишина. Первые события — после первого доклада.",
+  "agents.hosts.pulseFailed": "Ленту не удалось загрузить.",
+  "agents.hosts.settingsTitle": "Настройки",
   "agents.hosts.reconnectAction": "Подключить заново",
   // Харнесы хоста (agents-workspace-ide W1 «Распустить сплетения»):
   // компактный чип-стрип вместо аккордеона «Сплетения зоны»; лор из

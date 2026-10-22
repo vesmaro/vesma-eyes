@@ -12,20 +12,17 @@ import {
 import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import type {
-  ActivityKind,
   AssignmentItem,
   ExecutorLifecycleState,
   ExecutorListMeta,
 } from "@/gateway/boardTypes";
 import { isAgentsSource } from "@/gateway/capabilities";
 import { useGateway } from "@/gateway/GatewayContext";
-import { useT, useI18n, type TranslationKey } from "@/i18n";
+import { useT, type TranslationKey } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { withReturn } from "@/lib/returnParams";
 import { useBoardTasks } from "@/features/tasks/useTasks";
 import { useValidationNow } from "@/features/tasks/useValidationClock";
-import { useActivityBuckets, useActivityFeed } from "@/features/tasks/useActivity";
-import { buildPulseAxis } from "@/features/tasks/activityUrl";
 import {
   KoraGatewayContext,
   makeKoraGateway,
@@ -33,6 +30,11 @@ import {
 import { useKoraSessionPages } from "@/features/kora/useKora";
 import type { KoraSession } from "@/features/kora/koraTypes";
 import { KoraResizeHandle, seamPx } from "@/features/kora/KoraResizeHandle";
+import {
+  HostsPresenceBlock,
+  HostsPulseBlock,
+  HostsSettingsBlock,
+} from "./HostsMetaPanel";
 import { AgentsUnsupported } from "./AgentsUnsupported";
 import { AssignmentStateBadge } from "./AssignmentStateBadge";
 import { CreateTaskDialog } from "@/features/tasks/CreateTaskDialog";
@@ -80,17 +82,26 @@ import { pageGridClass } from "@/layout/pageGrid";
 
 /**
  * `/agents/hosts` — the HOSTS frame (agents-redesign A1, blueprint
- * 2026-10-09 «каркас-инверсия»; A2 mobile reflow + keyboard path): the Kora
- * v7 frame pattern ≥xl (100vh app frame, NO page scroll, one grid — the
- * host field + the roster panel + a REAL seam) with the selection as a
- * ROUTE (`/agents/hosts/:host?`) — the frame never re-assembles.
+ * 2026-10-09 «каркас-инверсия»; A2 mobile reflow + keyboard path; W2
+ * «Мета-панель» of agents-workspace-ide): the Kora v7 frame pattern ≥xl
+ * (100vh app frame, NO page scroll, one grid — the host field + a REAL
+ * seam + the META-PANEL) with the selection as a ROUTE
+ * (`/agents/hosts/:host?`) — the frame never re-assembles.
  *
- * A2 RESPONSIVE LADDER (blueprint §3.D):
- * - ≥xl: the A1 frame — field | seam | roster panel (one list scroll).
- * - md..xl (768–1279): the seams leave, the page scrolls honestly (the Kora
- *   precedent); the roster compresses to a RIBBON of compact host chips
- *   under the section header (one-tap selection) + a trigger opening the
- *   full roster as a right-side SHEET; the details open over the page.
+ * W2 META-PANEL (states.md §2, blueprint §2-4): the right side is three
+ * collapsible blocks under ONE panel scroll — «Присутствие» (the roster
+ * listbox + filter chips, moved as-is), «Пульс» (the host-scoped 24h
+ * strip + fresh activity, moved OUT of the field), «Настройки» (the
+ * routing verdict + quiet hub links, collapsed by default). The field
+ * keeps the working content only: header → harness chips (W1) → «Сейчас».
+ *
+ * A2 RESPONSIVE LADDER (blueprint §3.D + W2 §6 re-cut):
+ * - ≥xl: the frame — field | seam | meta-panel (one panel scroll).
+ * - md..xl (768–1279): the seams leave, the page scrolls honestly (the
+ *   Kora precedent); the roster compresses to a RIBBON of compact host
+ *   chips under the section header (one-tap selection) + a trigger opening
+ *   the full roster as a right-side SHEET; «Пульс» becomes a section
+ *   UNDER the field; settings live in the hub only.
  * - <768: the sheet IS the roster (trigger button, ≥48px rows, fullscreen
  *   below sm); the field is one column; the conveyor stays a full page.
  *
@@ -397,21 +408,16 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
           className="absolute inset-y-0 left-[calc(100%-var(--agents-right-w))] hidden -translate-x-1/2 xl:flex"
         />
 
-        {/* Right panel (≥xl): THE ROSTER — filter chips, the listbox of host
-         * rows (ONE list scroll), the connect action pinned at the bottom. */}
+        {/* RIGHT META-PANEL (≥xl, W2): three collapsible blocks —
+         * «Присутствие» (the roster as-is), «Пульс» (the host-scoped
+         * activity, ex-«Недавно» of the field), «Настройки» (collapsed) —
+         * under ONE panel scroll; the connect action stays pinned at the
+         * bottom (the roster CTA of blueprint §2). */}
         <aside
-          aria-label={t("agents.hosts.rosterRegion")}
+          aria-label={t("agents.hosts.panelRegion")}
           className="hidden min-h-0 min-w-0 flex-col overflow-hidden rounded-md border border-myelin bg-well xl:flex xl:rounded-none xl:border-0"
         >
-          {/* The chips stay reachable even when the DEFAULT view is empty
-           * (every host archived): the registry rows, not the default
-           * projection, gate the filter. */}
-          {!executors.isPending && items.length > 0 ? (
-            <div className="shrink-0 px-3 pt-3">
-              <HostFilterChips filter={filter} onFilter={setFilter} />
-            </div>
-          ) : null}
-          <div className="kora-scroll min-h-0 flex-1 overflow-y-auto px-3 pb-2 pt-2">
+          <div className="kora-scroll min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-3">
             {executors.isPending ? (
               <div
                 role="status"
@@ -423,24 +429,41 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
                 <Skeleton className="h-10 w-4/5" />
               </div>
             ) : (
-              <HostsRosterList
-                idPrefix="hosts-panel"
-                groups={visibleGroups}
-                selectedId={hostId}
-                assignments={assignmentItems}
-                meta={meta}
-                now={now}
-                titleOf={titleOf}
-                onNavigate={openHost}
-              />
+              <>
+                {/* «Присутствие»: the roster listbox + filter chips moved
+                 * AS-IS (blueprint §5 reuse map). The chips stay reachable
+                 * even when the DEFAULT view is empty (every host
+                 * archived): the registry rows, not the default projection,
+                 * gate the filter. */}
+                <HostsPresenceBlock>
+                  {items.length > 0 ? (
+                    <HostFilterChips filter={filter} onFilter={setFilter} />
+                  ) : null}
+                  <HostsRosterList
+                    idPrefix="hosts-panel"
+                    groups={visibleGroups}
+                    selectedId={hostId}
+                    assignments={assignmentItems}
+                    meta={meta}
+                    now={now}
+                    titleOf={titleOf}
+                    onNavigate={openHost}
+                  />
+                  {items.length > 0 && visibleGroups.length === 0 ? (
+                    <p className="px-2 py-3 text-xs text-foreground-muted">
+                      {t("agents.hosts.filterEmpty")}
+                    </p>
+                  ) : null}
+                </HostsPresenceBlock>
+                {/* «Пульс»: the selected host's 24h strip + fresh events
+                 * (host-scoped, states.md §2); the honest no-host line
+                 * while the URL names nothing the roster can resolve. */}
+                <HostsPulseBlock group={selected} now={now} />
+                {/* «Настройки»: the routing verdict + quiet hub links,
+                 * collapsed by default (states.md §2). */}
+                <HostsSettingsBlock />
+              </>
             )}
-            {!executors.isPending &&
-            items.length > 0 &&
-            visibleGroups.length === 0 ? (
-              <p className="px-2 py-3 text-xs text-foreground-muted">
-                {t("agents.hosts.filterEmpty")}
-              </p>
-            ) : null}
           </div>
           <div className="shrink-0 border-t border-myelin-hairline p-3">
             <Button asChild size="sm" className="w-full">
@@ -451,6 +474,16 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
           </div>
         </aside>
       </div>
+
+      {/* W2 md..xl ladder (blueprint §6): «Пульс» becomes a section UNDER
+       * the field — the honest page scroll carries it; the roster stays in
+       * the sheet, the settings in the hub. The SAME block component as the
+       * panel (one react-query key per host — one wire read). */}
+      {!executors.isPending && selected !== null ? (
+        <div className="xl:hidden">
+          <HostsPulseBlock group={selected} now={now} />
+        </div>
+      ) : null}
 
       {/* A2 §3.D: the roster SHEET (<xl) — the full roster as an overlay:
        * filters + the listbox + connect; FULLSCREEN below sm, a right-side
@@ -716,18 +749,17 @@ function HostRibbon({
   );
 }
 
-// --- the main field (B1: header + actions + Сейчас + Недавно) ---------------------
+// --- the main field (B1 + W2: header + actions + Сейчас) --------------------------
 
-/** The field is the host's WORKBENCH (agents-redesign B1, blueprint §3.C.1-2):
- * the header (identity pill + stats + the three actions), «Сейчас» — the
- * host's active assignments (→ the task's live execution feed) and live
- * harness sessions (→ the Kora transcript), the honest state blocks (off /
- * revoked / provisioning), and «Недавно» — the host-scoped activity feed
- * with the 24h hourly strip. Every row links into an EXISTING surface.
- * Nothing here is invented: the sessions come from the Kora registry (the
- * `executor_id` join with the group members), the feed from
- * `GET /api/activity?host=` — what the engine does not have, the field does
- * not draw. */
+/** The field is the host's WORKBENCH (agents-redesign B1, blueprint §3.C.1-2;
+ * W2 «Мета-панель» re-cut): the header (identity pill + stats + the three
+ * actions), the honest state blocks (off / revoked / provisioning), the W1
+ * harness chip strip, and «Сейчас» — the host's active assignments (→ the
+ * task's live execution feed) and live harness sessions (→ the Kora
+ * transcript). «Недавно» left for the meta-panel's «Пульс» block (W2).
+ * Every row links into an EXISTING surface. Nothing here is invented: the
+ * sessions come from the Kora registry (the `executor_id` join with the
+ * group members) — what the engine does not have, the field does not draw. */
 function HostField({
   group,
   assignments,
@@ -744,7 +776,6 @@ function HostField({
   onGiveTask: () => void;
 }) {
   const t = useT();
-  const { lang } = useI18n();
   const state = hostLifecycle(group);
   const presence = hostPresence(group, meta, now);
   const presenceKey = presence ?? "unknown";
@@ -772,15 +803,6 @@ function HostField({
   const sessionSupport = (session: KoraSession): string | undefined =>
     kora.coverage?.harnesses.find((row) => row.harness === session.harness)
       ?.support;
-
-  // The host-scoped activity (B1 «Недавно»): the cursor feed + the 24h
-  // hourly buckets — the SAME wire the Задачи activity page reads.
-  const activity = useActivityFeed({ host: group.host, limit: 8 });
-  const buckets = useActivityBuckets({ host: group.host, bucket: "hour", hours: 24 });
-  const pulseSlots = useMemo(
-    () => buildPulseAxis(buckets.data?.buckets ?? [], now),
-    [buckets.data, now],
-  );
 
   // The next_action line: the state-defining member's server-owned report
   // age, humanised exactly like the registry pill (the {{silentMax}} var
@@ -833,9 +855,6 @@ function HostField({
       : null;
   const giveDisabledReason =
     state !== null && !routable ? t(lifecycleNextKey(state), nextVars) : null;
-
-  const activityRows = activity.data?.pages.flatMap((page) => [...page.items]) ?? [];
-  const maxSlot = Math.max(1, ...pulseSlots.map((slot) => slot.total));
 
   return (
     <div className="flex min-h-0 min-w-0 flex-col">
@@ -971,8 +990,7 @@ function HostField({
        * compact chip strip UNDER THE HEADER (blueprint §3: header → chips →
        * the working content) — glance facts only; the full workbench is the
        * ExecutorSheet drawer OVER the field (parity with /agents/harnesses
-       * by construction). «Сейчас»/«Недавно» keep their center places until
-       * W2 moves «Недавно» to the meta-panel. */}
+       * by construction). */}
       <HarnessChipStrip members={group.members} meta={meta} now={now} />
 
       {/* «Сейчас»: the host's active work — assignments (→ the task's live
@@ -1070,107 +1088,13 @@ function HostField({
         )}
       </section>
 
-      {/* «Недавно»: the host-scoped activity — the 24h hourly strip + the
-       * freshest rows; the honest quiet line when the host never spoke. */}
-      <section aria-label={t("agents.hosts.recentTitle")} className="space-y-2 px-6 pb-6">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
-          {t("agents.hosts.recentTitle")}
-        </h3>
-        {activity.isError ? (
-          <p className="text-sm text-foreground-muted">{t("agents.hosts.recentFailed")}</p>
-        ) : activityRows.length === 0 && buckets.data === undefined ? (
-          <div role="status" aria-label={t("agents.hosts.loading")} className="space-y-2">
-            <Skeleton className="h-8 w-full" />
-            <Skeleton className="h-4 w-3/5" />
-          </div>
-        ) : activityRows.length === 0 ? (
-          <p className="text-sm text-foreground-muted">{t("agents.hosts.recentEmpty")}</p>
-        ) : buckets.data === undefined ? (
-          // The strip renders only from RESOLVED buckets — a zero-flat axis
-          // would read as «тишина» while the wire is still in flight.
-          <div role="status" aria-label={t("agents.hosts.loading")} className="space-y-2">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-4 w-3/5" />
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <div
-              aria-hidden="true"
-              className="flex h-12 items-end gap-px"
-            >
-              {pulseSlots.map((slot) => (
-                <div
-                  key={slot.ts}
-                  title={`${new Date(slot.ts).toLocaleTimeString(lang, { hour: "2-digit", minute: "2-digit" })} — ${slot.total}`}
-                  className={cn(
-                    "min-w-[2px] flex-1 rounded-t-sm",
-                    slot.total > 0 ? "bg-iris/80" : "bg-border-subtle",
-                  )}
-                  style={{
-                    height: `${slot.total > 0 ? Math.max(25, Math.round((slot.total / maxSlot) * 100)) : 8}%`,
-                  }}
-                />
-              ))}
-            </div>
-            <ul className="space-y-0.5">
-              {activityRows.slice(0, 8).map((row) => (
-                <li
-                  key={row.id}
-                  className="flex min-h-8 items-baseline gap-2 rounded-sm px-1 text-xs"
-                >
-                  <span className="shrink-0 font-mono tabular-nums text-foreground-muted">
-                    {new Date(row.ts).toLocaleTimeString(lang, {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                  <span className="shrink-0 text-foreground-secondary">
-                    {t(activityKindKey(row.kind))}
-                  </span>
-                  {row.task_title || row.task_id ? (
-                    <span className="min-w-0 truncate text-foreground-secondary">
-                      {row.task_title ?? row.task_id}
-                    </span>
-                  ) : null}
-                  {row.detail ? (
-                    <span className="min-w-0 truncate text-foreground-muted">
-                      {row.detail}
-                    </span>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </section>
+      {/* «Недавно» left the field in W2 — it is the meta-panel's «Пульс»
+       * block now (HostsMetaPanel.tsx); the center keeps the working
+       * content only (blueprint §3: the field never grows a second feed). */}
     </div>
   );
 }
 
-/** The activity kind → the agents feed dictionary (the SAME keys the
- * execution feed speaks — one vocabulary per fact). */
-function activityKindKey(kind: ActivityKind): TranslationKey {
-  switch (kind) {
-    case "task.created":
-      return "agents.feed.created";
-    case "assignment.claimed":
-      return "agents.feed.claimed";
-    case "assignment.started":
-      return "agents.feed.started";
-    case "assignment.done":
-      return "agents.feed.done";
-    case "assignment.failed":
-      return "agents.feed.failed";
-    case "assignment.cancelled":
-      return "agents.feed.cancelled";
-    case "assignment.expired":
-      return "agents.feed.expired";
-    case "report":
-      return "agents.feed.report";
-    default:
-      return "agents.feed.created";
-  }
-}
 // --- the roster LISTBOX (A2 §3.E) -------------------------------------------------
 
 const optionId = (prefix: string, group: HostGroup): string =>
