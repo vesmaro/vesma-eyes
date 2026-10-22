@@ -91,7 +91,7 @@ The peer registry. Each entry describes one remote mesh peer.
 > **ACL is mnemos-side.** The mesh carries `peer_id` + `project_scope`
 > and request filters in the RPC; mnemos checks them against its per-peer
 > config before returning any record. Do NOT implement ACL enforcement in
-> the mesh — see [CONTRIBUTING.md](https://github.com/Korrnals/mnemos-mesh/blob/b428ea9b7ec9731fe4d53478702d0667cf3f53de/CONTRIBUTING.md) hard rule 4.
+> the mesh — see [CONTRIBUTING.md](https://github.com/vesmaro/vesma-mesh/blob/b428ea9b7ec9731fe4d53478702d0667cf3f53de/CONTRIBUTING.md) hard rule 4.
 
 ---
 
@@ -219,5 +219,5 @@ metrics:
 
 - [Getting started](mnemos-mesh/user/getting-started) — guided walkthrough
 - [Security model](mnemos-mesh/admin/security) — mTLS, ACL, key management
-- [Architecture](https://github.com/Korrnals/mnemos-mesh/blob/b428ea9b7ec9731fe4d53478702d0667cf3f53de/docs/architecture.md) — full system design
-- [`internal/config/config.go`](https://github.com/Korrnals/mnemos-mesh/blob/b428ea9b7ec9731fe4d53478702d0667cf3f53de/internal/config/config.go) — the loader source
+- [Architecture](https://github.com/vesmaro/vesma-mesh/blob/b428ea9b7ec9731fe4d53478702d0667cf3f53de/docs/architecture.md) — full system design
+- [`internal/config/config.go`](https://github.com/vesmaro/vesma-mesh/blob/b428ea9b7ec9731fe4d53478702d0667cf3f53de/internal/config/config.go) — the loader source

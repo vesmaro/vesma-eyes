@@ -12,8 +12,8 @@
     {
       "slug": "api/mnemos-mesh/index",
       "titles": {
-        "en": "mnemos-mesh — no public HTTP API",
-        "ru": "mnemos-mesh — публичного HTTP API нет"
+        "en": "vesma-mesh — no public HTTP API",
+        "ru": "vesma-mesh — публичного HTTP API нет"
       },
       "category": "api-mesh",
       "order": 1,
@@ -60,8 +60,8 @@
     {
       "slug": "api/mnemos/http-api",
       "titles": {
-        "en": "mnemos HTTP API — map",
-        "ru": "HTTP API mnemos — карта"
+        "en": "vesma HTTP API — map",
+        "ru": "HTTP API vesma — карта"
       },
       "category": "api-mnemos",
       "order": 1,
@@ -89,16 +89,16 @@
       },
       "category": "api-overview",
       "order": 1,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
       ],
       "provenance": {
-        "repo": "vesmaro-eyes",
+        "repo": "vesma-eyes",
         "source_path": "curated/api/{ru,en}/overview.md",
-        "sha": "aa2a4c815a564e80f84ae1a1294895b1a398ee65",
-        "commit_date": "2026-09-29T22:50:53+03:00"
+        "sha": "c8dac3260cc4091676ff5d8c0cfa0a1d58e1b07a",
+        "commit_date": "2026-10-22T02:02:58+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -158,16 +158,16 @@
       },
       "category": "api-board",
       "order": 4,
-      "lastVerified": "2026-09-30",
+      "lastVerified": "2026-10-03",
       "locales": [
         "en",
         "ru"
       ],
       "provenance": {
-        "repo": "vesmaro-eyes",
+        "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
-        "commit_date": "2026-09-30T12:22:11+03:00"
+        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
+        "commit_date": "2026-10-03T12:50:41+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -182,16 +182,16 @@
       },
       "category": "api-board",
       "order": 6,
-      "lastVerified": "2026-09-30",
+      "lastVerified": "2026-10-03",
       "locales": [
         "en",
         "ru"
       ],
       "provenance": {
-        "repo": "vesmaro-eyes",
+        "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
-        "commit_date": "2026-09-30T12:22:11+03:00"
+        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
+        "commit_date": "2026-10-03T12:50:41+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -206,16 +206,16 @@
       },
       "category": "api-board",
       "order": 7,
-      "lastVerified": "2026-09-30",
+      "lastVerified": "2026-10-03",
       "locales": [
         "en",
         "ru"
       ],
       "provenance": {
-        "repo": "vesmaro-eyes",
+        "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
-        "commit_date": "2026-09-30T12:22:11+03:00"
+        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
+        "commit_date": "2026-10-03T12:50:41+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -230,16 +230,16 @@
       },
       "category": "api-board",
       "order": 5,
-      "lastVerified": "2026-09-30",
+      "lastVerified": "2026-10-03",
       "locales": [
         "en",
         "ru"
       ],
       "provenance": {
-        "repo": "vesmaro-eyes",
+        "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
-        "commit_date": "2026-09-30T12:22:11+03:00"
+        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
+        "commit_date": "2026-10-03T12:50:41+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -254,16 +254,16 @@
       },
       "category": "api-board",
       "order": 11,
-      "lastVerified": "2026-09-30",
+      "lastVerified": "2026-10-03",
       "locales": [
         "en",
         "ru"
       ],
       "provenance": {
-        "repo": "vesmaro-eyes",
+        "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
-        "commit_date": "2026-09-30T12:22:11+03:00"
+        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
+        "commit_date": "2026-10-03T12:50:41+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -278,16 +278,16 @@
       },
       "category": "api-board",
       "order": 1,
-      "lastVerified": "2026-09-30",
+      "lastVerified": "2026-10-03",
       "locales": [
         "en",
         "ru"
       ],
       "provenance": {
-        "repo": "vesmaro-eyes",
+        "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
-        "commit_date": "2026-09-30T12:22:11+03:00"
+        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
+        "commit_date": "2026-10-03T12:50:41+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -302,16 +302,16 @@
       },
       "category": "api-board",
       "order": 8,
-      "lastVerified": "2026-09-30",
+      "lastVerified": "2026-10-03",
       "locales": [
         "en",
         "ru"
       ],
       "provenance": {
-        "repo": "vesmaro-eyes",
+        "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
-        "commit_date": "2026-09-30T12:22:11+03:00"
+        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
+        "commit_date": "2026-10-03T12:50:41+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -326,16 +326,16 @@
       },
       "category": "api-board",
       "order": 3,
-      "lastVerified": "2026-09-30",
+      "lastVerified": "2026-10-03",
       "locales": [
         "en",
         "ru"
       ],
       "provenance": {
-        "repo": "vesmaro-eyes",
+        "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
-        "commit_date": "2026-09-30T12:22:11+03:00"
+        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
+        "commit_date": "2026-10-03T12:50:41+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -350,16 +350,16 @@
       },
       "category": "api-board",
       "order": 9,
-      "lastVerified": "2026-09-30",
+      "lastVerified": "2026-10-03",
       "locales": [
         "en",
         "ru"
       ],
       "provenance": {
-        "repo": "vesmaro-eyes",
+        "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
-        "commit_date": "2026-09-30T12:22:11+03:00"
+        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
+        "commit_date": "2026-10-03T12:50:41+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -374,16 +374,16 @@
       },
       "category": "api-board",
       "order": 10,
-      "lastVerified": "2026-09-30",
+      "lastVerified": "2026-10-03",
       "locales": [
         "en",
         "ru"
       ],
       "provenance": {
-        "repo": "vesmaro-eyes",
+        "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
-        "commit_date": "2026-09-30T12:22:11+03:00"
+        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
+        "commit_date": "2026-10-03T12:50:41+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -398,16 +398,16 @@
       },
       "category": "api-board",
       "order": 12,
-      "lastVerified": "2026-09-30",
+      "lastVerified": "2026-10-03",
       "locales": [
         "en",
         "ru"
       ],
       "provenance": {
-        "repo": "vesmaro-eyes",
+        "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
-        "commit_date": "2026-09-30T12:22:11+03:00"
+        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
+        "commit_date": "2026-10-03T12:50:41+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -422,16 +422,16 @@
       },
       "category": "api-board",
       "order": 2,
-      "lastVerified": "2026-09-30",
+      "lastVerified": "2026-10-03",
       "locales": [
         "en",
         "ru"
       ],
       "provenance": {
-        "repo": "vesmaro-eyes",
+        "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "5a4ec07ae915c41c3f0d4dfe4b5648aba7f33cca",
-        "commit_date": "2026-09-30T12:22:11+03:00"
+        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
+        "commit_date": "2026-10-03T12:50:41+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -442,7 +442,7 @@
       "slug": "mnemos-mesh/admin/runbook",
       "titles": {
         "en": "mnemos-mesh Operations Runbook",
-        "ru": "Эксплуатационный ранбук mnemos-mesh"
+        "ru": "Эксплуатационный ранбук vesma-mesh"
       },
       "category": "mesh-admin",
       "order": 2,
@@ -469,7 +469,7 @@
       "slug": "mnemos-mesh/admin/security",
       "titles": {
         "en": "Security model for mnemos-mesh operators",
-        "ru": "Модель безопасности mnemos-mesh для оператора"
+        "ru": "Модель безопасности vesma-mesh для оператора"
       },
       "category": "mesh-admin",
       "order": 1,
@@ -523,7 +523,7 @@
       "slug": "mnemos-mesh/user/getting-started",
       "titles": {
         "en": "Getting started with mnemos-mesh",
-        "ru": "Первый запуск mnemos-mesh"
+        "ru": "Первый запуск vesma-mesh"
       },
       "category": "mesh-user",
       "order": 1,

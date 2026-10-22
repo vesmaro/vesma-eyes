@@ -31,7 +31,7 @@ export PATH="$HOME/go/bin:$PATH"
 ```
 
 Команды установки `buf` и protoc-генераторов — в
-[CONTRIBUTING.md](https://github.com/Korrnals/mnemos-mesh/blob/331ef3a785c1a74fb9f8972ff93cd6db5a8fc174/CONTRIBUTING.md).
+[CONTRIBUTING.md](https://github.com/vesmaro/vesma-mesh/blob/b428ea9b7ec9731fe4d53478702d0667cf3f53de/CONTRIBUTING.md).
 
 ---
 
@@ -39,14 +39,14 @@ export PATH="$HOME/go/bin:$PATH"
 
 ```bash
 git clone https://github.com/Korrnals/mnemos-mesh.git
-cd vesma-mesh
+cd mnemos-mesh
 make build
 ./bin/mnemos-mesh version
 ```
 
 Бинарник статический (`-trimpath -ldflags "-s -w"`), около 12 МБ.
 Кросс-компиляция под другие платформы — командами из CI, см.
-[`.github/workflows/ci.yml`](https://github.com/Korrnals/mnemos-mesh/blob/331ef3a785c1a74fb9f8972ff93cd6db5a8fc174/.github/workflows/ci.yml).
+[`.github/workflows/ci.yml`](https://github.com/vesmaro/vesma-mesh/blob/b428ea9b7ec9731fe4d53478702d0667cf3f53de/.github/workflows/ci.yml).
 
 ---
 
@@ -61,7 +61,7 @@ vesma-mesh работает на **приватном CA** со взаимной
 ```bash
 openssl genrsa -out ca.key 4096
 openssl req -x509 -new -key ca.key -sha256 -days 3650 \
-  -subj "/CN=vesma-mesh-ca" -out ca.pem
+  -subj "/CN=mnemos-mesh-ca" -out ca.pem
 ```
 
 `ca.key` держите офлайн. Раздайте `ca.pem` всем узлам.
@@ -135,7 +135,7 @@ metrics:
 ## 4 · Запуск
 
 ```bash
-vesma-mesh serve --config ~/.mnemos/mesh.yaml
+mnemos-mesh serve --config ~/.mnemos/mesh.yaml
 ```
 
 Меш открывает mTLS-слушатель для пиров (`listen`) и подключается к
@@ -144,7 +144,7 @@ vesma через Unix-сокет (`unix_socket`). На M2 обе половин�
 (Python-клиент) и дальше.
 
 Для продакшена запускайте под systemd. Шаблон юнита запланирован на M5
-(production hardening); до тех пор — `vesma-mesh serve` под любым
+(production hardening); до тех пор — `mnemos-mesh serve` под любым
 супервизором процессов (systemd, supervisord или init-скрипт).
 
 ---
@@ -168,12 +168,12 @@ vesma mesh heartbeat --peer mnemos-B
 # Ожидание: непустое поле версии от бинарника M2
 ```
 
-На M2 (заглушка) инструмент проверки — `vesma-mesh doctor`: он
+На M2 (заглушка) инструмент проверки — `mnemos-mesh doctor`: он
 проверяет путь Unix-сокета, валидность сертификатов и досягаемость
 пиров (заглушка). Запустите после `serve`:
 
 ```bash
-vesma-mesh doctor --config ~/.mnemos/mesh.yaml
+mnemos-mesh doctor --config ~/.mnemos/mesh.yaml
 ```
 
 ---
@@ -235,5 +235,5 @@ mTLS-сертификата).
 
 - [Справочник конфигурации](mnemos-mesh/user/configuration) — каждое поле `mesh.yaml`
 - [Модель безопасности](mnemos-mesh/admin/security) — граница доверия, mTLS, ACL, ключи
-- [Архитектура](https://github.com/Korrnals/mnemos-mesh/blob/331ef3a785c1a74fb9f8972ff93cd6db5a8fc174/docs/architecture.md) — полный дизайн системы
-- [PLAN.md](https://github.com/Korrnals/mnemos-mesh/blob/331ef3a785c1a74fb9f8972ff93cd6db5a8fc174/PLAN.md) — дорожная карта M1–M6
+- [Архитектура](https://github.com/vesmaro/vesma-mesh/blob/b428ea9b7ec9731fe4d53478702d0667cf3f53de/docs/architecture.md) — полный дизайн системы
+- [PLAN.md](https://github.com/vesmaro/vesma-mesh/blob/b428ea9b7ec9731fe4d53478702d0667cf3f53de/PLAN.md) — дорожная карта M1–M6

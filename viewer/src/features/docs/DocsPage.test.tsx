@@ -157,8 +157,10 @@ describe("imported article (/docs/mnemos/**, spec §6)", () => {
       "/docs/mnemos-mesh/user/getting-started",
     );
     await actWaitUntil(() => {
+      // 33af843 rebranded the curated mesh layer (dir + wording); the
+      // regenerated corpus follows its curated sources — the pin follows.
       expect(container.querySelector("h1")?.textContent).toBe(
-        "Первый запуск mnemos-mesh",
+        "Первый запуск vesma-mesh",
       );
     });
     expect(container.textContent).not.toContain("На языке оригинала");

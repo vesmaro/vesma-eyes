@@ -37,7 +37,7 @@ All Go tools land in `~/go/bin/` — ensure it is on `$PATH`:
 export PATH="$HOME/go/bin:$PATH"
 ```
 
-See [CONTRIBUTING.md](https://github.com/Korrnals/mnemos-mesh/blob/b428ea9b7ec9731fe4d53478702d0667cf3f53de/CONTRIBUTING.md) for install commands for
+See [CONTRIBUTING.md](https://github.com/vesmaro/vesma-mesh/blob/b428ea9b7ec9731fe4d53478702d0667cf3f53de/CONTRIBUTING.md) for install commands for
 `buf` and the protoc generators.
 
 ---
@@ -53,7 +53,7 @@ make build
 
 The binary is static (`-trimpath -ldflags "-s -w"`), ~12MB. Cross-compile
 for other targets with the CI commands — see
-[`.github/workflows/ci.yml`](https://github.com/Korrnals/mnemos-mesh/blob/b428ea9b7ec9731fe4d53478702d0667cf3f53de/.github/workflows/ci.yml).
+[`.github/workflows/ci.yml`](https://github.com/vesmaro/vesma-mesh/blob/b428ea9b7ec9731fe4d53478702d0667cf3f53de/.github/workflows/ci.yml).
 
 ---
 
@@ -242,5 +242,5 @@ architecture §7) and is used as the peer id in ACL lookup and the
 
 - [Configuration reference](mnemos-mesh/user/configuration) — every `mesh.yaml` field
 - [Security model](mnemos-mesh/admin/security) — trust boundary, mTLS, ACL, keys
-- [Architecture](https://github.com/Korrnals/mnemos-mesh/blob/b428ea9b7ec9731fe4d53478702d0667cf3f53de/docs/architecture.md) — full system design
-- [PLAN.md](https://github.com/Korrnals/mnemos-mesh/blob/b428ea9b7ec9731fe4d53478702d0667cf3f53de/PLAN.md) — M1–M6 roadmap
+- [Architecture](https://github.com/vesmaro/vesma-mesh/blob/b428ea9b7ec9731fe4d53478702d0667cf3f53de/docs/architecture.md) — full system design
+- [PLAN.md](https://github.com/vesmaro/vesma-mesh/blob/b428ea9b7ec9731fe4d53478702d0667cf3f53de/PLAN.md) — M1–M6 roadmap
