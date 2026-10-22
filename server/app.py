@@ -100,6 +100,7 @@ from .store import (
     executor_archived,
     executor_lifecycle_status,
     presence_from_last_seen,
+    specialist_matches,
 )
 from . import provisioner as provisioning
 from . import provisioner as provisioner_mod
@@ -389,8 +390,9 @@ async def _profile_cache_refresher() -> None:
 # ------------------------------------ assignment reaper (ARCH-7, phase 3)
 # ADR 0009 §10: in-process wall-clock reaper for stuck assignments.
 # claimed without a start > 10 min, or running without a heartbeat
-# > 30 min → expired (task → blocked) + notification + SSE
-# assignment.expired (ui-contract §11). The same tick notices stagnant
+# > 30 min → transport requeue with backoff while the attempt budget
+# lasts (Loop S-step 3), else expired (task → blocked) + notification +
+# SSE assignment.expired (ui-contract §11). The same tick notices stagnant
 # queued assignments (> 30 min, notification only — cancelling stays the
 # owner's call). Deadlines live in store.py (REAP_* constants).
 _REAPER_INTERVAL_S = 60.0
@@ -401,15 +403,48 @@ _reaper_log = logging.getLogger("vesmaro.reaper")
 def _assignment_reaper_tick() -> dict[str, int]:
     """One synchronous reaper pass — no sleeps, directly testable.
 
-    Expiry reuses finish_assignment(outcome='expired'): terminal state +
-    in-progress → blocked column mapping + audit event, identical to the
-    API paths (the 409 a poller then gets on heartbeat is the kill
+    Stale claimed/running rows first get a transport requeue (Loop S-step
+    3: attempts + backoff + honest note); a row whose attempt budget is
+    spent falls through to finish_assignment(outcome='expired'): terminal
+    state + in-progress → blocked column mapping + audit event, identical
+    to the API paths (the 409 a poller then gets on heartbeat is the kill
     signal). Races with a concurrent API transition (complete/fail/
     cancel/delete) surface as AssignmentError and skip the row; the next
     tick re-scans from stored state.
     """
-    expired = stagnation_notified = 0
+    expired = requeued_count = stagnation_notified = 0
     for row in store.stale_assignments():
+        # Loop S-step 3 (transport retries): a stale claimed/running
+        # assignment is a transport casualty FIRST (mesh tunnel flap, board
+        # 503 window) — requeued with backoff and an honest note while the
+        # attempt budget lasts; only a spent budget expires honestly, the
+        # same terminal transition as before this loop existed.
+        try:
+            requeued = store.transport_requeue(row["id"], row["reap_reason"])
+        except AssignmentError as exc:
+            _reaper_log.info("reaper skipped assignment id=%s: %s",
+                             row["id"], exc)
+            continue
+        if requeued is not None:
+            a, moved_from, _moved_to = requeued
+            if moved_from:
+                # §A.5 actor: the reaper is server-internal, board-class
+                # trust (in-progress → open, the inverse of the claim map).
+                _broadcast({"kind": "task.moved", "task": store.task(a["task_id"]),
+                            "actor": "machine:reaper"})
+            # Notification only — no new SSE kind: the ui-contract §11
+            # dictionary stays closed; the card itself carries the state,
+            # attempts and the transport note on the next read.
+            _notify_and_broadcast(
+                "work",
+                f"{a['task_id']}: транспортный сбой — поручение повторено",
+                a.get("note") or row["reap_reason"], a["task_id"])
+            _reaper_log.info(
+                "reaper requeued assignment id=%s task=%s attempts=%s "
+                "reason=%s", a["id"], a["task_id"], a.get("attempts"),
+                row["reap_reason"])
+            requeued_count += 1
+            continue
         try:
             a, task, moved_from, _moved_to = store.finish_assignment(
                 row["id"], "expired", note=row["reap_reason"])
@@ -442,7 +477,8 @@ def _assignment_reaper_tick() -> dict[str, int]:
         _reaper_log.info("reaper stagnation notice assignment id=%s task=%s",
                          row["id"], row["task_id"])
         stagnation_notified += 1
-    return {"expired": expired, "stagnation_notified": stagnation_notified}
+    return {"expired": expired, "requeued": requeued_count,
+            "stagnation_notified": stagnation_notified}
 
 
 async def _assignment_reaper() -> None:
@@ -811,14 +847,43 @@ def _executor_capabilities(e: dict[str, Any]) -> set[str]:
     return {c for c in caps if isinstance(c, str)}
 
 
+def _pin_waiting_status(executors: list[dict[str, Any]],
+                        pin: str) -> dict[str, str] | None:
+    """Loop S-step 2: why a PINNED assignment cannot move right now, in
+    human words from the downtime dictionary (Store.EXECUTOR_WAIT_REASONS).
+    None = the pin target is eligible (approved + enabled). Computed per
+    GET — stored nowhere (same freshness discipline as the routing chain):
+    an executor switched off AFTER the nomination makes the card honest on
+    the very next read (the id=9 ghost story)."""
+    target = next((e for e in executors if (e.get("id") or "") == pin), None)
+    if target is None:
+        code = "executor-unknown"
+    elif target.get("state") == "revoked":
+        code = "executor-revoked"
+    elif target.get("state") != "approved":
+        code = "executor-pending"
+    elif not target.get("enabled"):
+        code = "executor-disabled"
+    else:
+        return None
+    return {"code": code,
+            "reason": store.EXECUTOR_WAIT_REASONS[code].format(executor=pin)}
+
+
 def _routing_annotation(a: dict[str, Any], task: dict[str, Any] | None,
                         executors: list[dict[str, Any]],
                         project_default: str, global_default: str) -> dict[str, Any]:
-    """{resolved, reason} for one assignment (GET /api/assignments items).
-    ``resolved=None`` with reason 'unmatched' means visible-to-all."""
+    """{resolved, reason, waiting} for one assignment (GET
+    /api/assignments items). ``resolved=None`` with reason 'unmatched'
+    means visible-to-all. Loop S-step 2: ``waiting`` is non-None only for
+    an explicit pin onto an ineligible executor — the honest "ждёт"
+    status (human words, downtime dictionary) instead of a card that
+    pretends to be claimable. The pin stays resolved and enforced at
+    claim — waiting never substitutes the owner's decision."""
     pin = (a.get("executor_id") or "").strip()
+    waiting = _pin_waiting_status(executors, pin) if pin else None
     if pin:
-        return {"resolved": pin, "reason": "explicit"}
+        return {"resolved": pin, "reason": "explicit", "waiting": waiting}
     eligible = [e for e in executors
                 if e.get("state") == "approved" and e.get("enabled")]
 
@@ -830,21 +895,29 @@ def _routing_annotation(a: dict[str, Any], task: dict[str, Any] | None,
     task_specialists = [s.strip() for s in ((task or {}).get("specialists") or [])
                         if isinstance(s, str) and s.strip()]
     if specialist:
-        cands = [e for e in eligible if specialist in _executor_capabilities(e)]
+        cands = [e for e in eligible
+                 if any(specialist_matches(specialist, c)
+                        for c in _executor_capabilities(e))]
         if cands:
-            return {"resolved": best(cands)["id"], "reason": "specialist"}
+            return {"resolved": best(cands)["id"], "reason": "specialist",
+                    "waiting": None}
     for s in task_specialists:
-        cands = [e for e in eligible if s in _executor_capabilities(e)]
+        cands = [e for e in eligible
+                 if any(specialist_matches(s, c)
+                        for c in _executor_capabilities(e))]
         if cands:
-            return {"resolved": best(cands)["id"], "reason": "task-specialists"}
+            return {"resolved": best(cands)["id"],
+                    "reason": "task-specialists", "waiting": None}
     # Defaults: resolved even when the target is offline (the owner chose
     # it; silently substituting another executor is forbidden). Ineligible
     # (revoked/disabled/gone) defaults fall through to the next tier.
     eligible_ids = {e["id"] for e in eligible}
     if project_default and project_default in eligible_ids:
-        return {"resolved": project_default, "reason": "project-default"}
+        return {"resolved": project_default, "reason": "project-default",
+                "waiting": None}
     if global_default and global_default in eligible_ids:
-        return {"resolved": global_default, "reason": "global-default"}
+        return {"resolved": global_default, "reason": "global-default",
+                "waiting": None}
     # Auto tier = live local worker, caps-free. Design note (AC6
     # resolution): gating auto on caps∩wanted would make the tier
     # structurally unreachable — any executor satisfying that predicate
@@ -860,8 +933,9 @@ def _routing_annotation(a: dict[str, Any], task: dict[str, Any] | None,
             if e.get("transport") == "local-poll"
             and presence_from_last_seen(e["last_seen"]) == "online"]
     if auto:
-        return {"resolved": best(auto)["id"], "reason": "auto"}
-    return {"resolved": None, "reason": "unmatched"}
+        return {"resolved": best(auto)["id"], "reason": "auto",
+                "waiting": None}
+    return {"resolved": None, "reason": "unmatched", "waiting": None}
 
 
 @asynccontextmanager
@@ -2667,6 +2741,18 @@ def _event_detail(e: dict[str, Any]) -> str:
               "assignment.cancelled": "отменено",
               "assignment.expired": "истекло"}
         return f"№{p.get('assignment_id')}: {ru[kind]}"
+    # Loop S-steps 1-3 journal kinds — human digests, not raw JSON.
+    if kind == "assignment.transport_requeue":
+        return (f"№{p.get('assignment_id')}: транспорт — повтор "
+                f"{p.get('attempts', '?')}, {p.get('reason') or ''}")
+    if kind == "assignment.ghost_unpinned":
+        return (f"№{p.get('assignment_id')}: призрак разморожен — "
+                f"{p.get('reason') or ''}")
+    if kind == "assignment.pin_waiting":
+        return f"№{p.get('assignment_id')}: {p.get('reason') or ''}"
+    if kind == "assignment.specialist_unnormalized":
+        return (f"№{p.get('assignment_id')}: имя «{p.get('specialist')}» "
+                "не нормализуется в слаг")
     text = str(p)[:200]
     return "" if text == "{}" else text
 
@@ -4227,6 +4313,14 @@ async def list_assignments(request: Request, state: str = "",
         i["routing"] = _routing_annotation(
             i, task, executors, project_defaults.get(project, ""),
             global_default)
+        # Loop S-step 2: the honest "ждёт" status on the CARD (top level,
+        # sparse — present only when the pinned executor is ineligible and
+        # the assignment is still active). Additive API field; the FE picks
+        # it up whenever it reads it, words come from the server-side
+        # downtime dictionary.
+        if (i["routing"].get("waiting")
+                and i["state"] in ("queued", "claimed", "running")):
+            i["waiting"] = i["routing"]["waiting"]
     public = [_assignment_public(i) for i in items]
     return {"ok": True, "count": len(public), "items": public}
 

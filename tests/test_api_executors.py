@@ -620,7 +620,7 @@ class TestRoutingChain:
             "task_id": task["id"], "specialist": "gcw-tech-lead",
             "executor_id": ex["id"]}).json()["assignment"]["id"]
         assert _assignment_routing(client, aid) == {
-            "resolved": ex["id"], "reason": "explicit"}
+            "resolved": ex["id"], "reason": "explicit", "waiting": None}
 
     def test_specialist_tier_prefers_online_candidate(self, client, auth,
                                                       make_task):
@@ -632,7 +632,8 @@ class TestRoutingChain:
             "task_id": task["id"], "specialist": "spec-f2"}
             ).json()["assignment"]["id"]
         routing = _assignment_routing(client, aid)
-        assert routing == {"resolved": on["id"], "reason": "specialist"}
+        assert routing == {"resolved": on["id"], "reason": "specialist",
+                           "waiting": None}
         assert routing["resolved"] != off["id"]
 
     def test_task_specialists_tier(self, client, auth, make_task):
@@ -643,7 +644,7 @@ class TestRoutingChain:
             "task_id": task["id"], "specialist": "spec-f3-assign"}
             ).json()["assignment"]["id"]
         assert _assignment_routing(client, aid) == {
-            "resolved": ex["id"], "reason": "task-specialists"}
+            "resolved": ex["id"], "reason": "task-specialists", "waiting": None}
 
     def test_routing_considers_approved_enabled_only(
             self, client, auth, make_task):
@@ -675,7 +676,7 @@ class TestRoutingChain:
             "task_id": task["id"], "specialist": "spec-f5"}
             ).json()["assignment"]["id"]
         assert _assignment_routing(client, aid) == {
-            "resolved": ex["id"], "reason": "project-default"}
+            "resolved": ex["id"], "reason": "project-default", "waiting": None}
 
     def test_global_default_tier_and_revoked_fallthrough(
             self, client, auth, make_task):
@@ -694,7 +695,7 @@ class TestRoutingChain:
             ).json()["assignment"]["id"]
         # revoked project default falls through to the global tier
         assert _assignment_routing(client, aid) == {
-            "resolved": glob["id"], "reason": "global-default"}
+            "resolved": glob["id"], "reason": "global-default", "waiting": None}
 
     def test_auto_tier_live_local_worker(self, client, auth, make_task):
         """Auto = generic live-worker fallback (caps-free): the nomination
@@ -709,7 +710,7 @@ class TestRoutingChain:
             "task_id": task["id"], "specialist": "spec-f7"}
             ).json()["assignment"]["id"]
         assert _assignment_routing(client, aid) == {
-            "resolved": off["id"], "reason": "specialist"}
+            "resolved": off["id"], "reason": "specialist", "waiting": None}
 
         # no caps anywhere: only a remote (mesh-r4) live worker → auto
         # cannot point at it (remote ineligible until R4) → unmatched
@@ -720,18 +721,18 @@ class TestRoutingChain:
             "task_id": task2["id"], "specialist": "spec-f7b"}
             ).json()["assignment"]["id"]
         assert _assignment_routing(client, aid2) == {
-            "resolved": None, "reason": "unmatched"}
+            "resolved": None, "reason": "unmatched", "waiting": None}
         # an offline local worker without caps does not qualify either
         _make_executor(client, auth, "rt-f7-dead")
         assert _assignment_routing(client, aid2) == {
-            "resolved": None, "reason": "unmatched"}
+            "resolved": None, "reason": "unmatched", "waiting": None}
         # a live local worker (no caps — the laptop-poller bootstrap
         # shape) resolves the auto tier; deterministic min-id pick
         on1, _ = _make_executor(client, auth, "rt-f7-on1", online=True)
         on2, _ = _make_executor(client, auth, "rt-f7-on2", online=True)
         routing = _assignment_routing(client, aid2)
         assert routing == {"resolved": min(on1["id"], on2["id"]),
-                           "reason": "auto"}
+                           "reason": "auto", "waiting": None}
 
     def test_unmatched_and_no_storage(self, client, auth, make_task,
                                       app_module):
@@ -740,7 +741,7 @@ class TestRoutingChain:
             "task_id": task["id"], "specialist": "spec-f8"}
             ).json()["assignment"]["id"]
         assert _assignment_routing(client, aid) == {
-            "resolved": None, "reason": "unmatched"}
+            "resolved": None, "reason": "unmatched", "waiting": None}
         # computed per GET, never stored: the raw row has no routing key
         with app_module.store._lock, app_module.store._conn() as db:
             row = db.execute(
