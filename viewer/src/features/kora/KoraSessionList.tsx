@@ -184,9 +184,13 @@ export function KoraSessionList({
   return (
     <section aria-label={t("kora.block2.section")}>
       {/* Sticky context header (07l §4): the context stays readable while
-       * the panel scrolls in the document flow — well bg so nothing shows
-       * through, offset below the shell's topbar+crumbs rows. */}
-      <div className="sticky top-[calc(var(--shell-topbar-h)+var(--shell-crumbs-h))] z-10 -mx-3 flex min-h-8 items-center gap-2 bg-well px-3 py-1">
+       * its scrollport scrolls. Below lg the scrollport is the PAGE — the
+       * header pins under the shell's sticky topbar+crumbs rows; inside
+       * the frame (lg+, incl. the KW3 meta-panel placement at lg..xl) the
+       * scrollport is the panel itself — pin to its top, the shell chrome
+       * is not part of it (KW3 a11y pass fix: the frame offset used to
+       * leave a dead 88px band inside the panel scroll). */}
+      <div className="sticky top-0 z-10 -mx-3 flex min-h-8 items-center gap-2 bg-well px-3 py-1 max-lg:top-[calc(var(--shell-topbar-h)+var(--shell-crumbs-h))]">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
           {title}
         </h2>
@@ -206,7 +210,7 @@ export function KoraSessionList({
             size="sm"
             loading={hermesRefresh.pending}
             onClick={hermesRefresh.onRefresh}
-            className="ml-auto h-7 border-border-subtle px-2 font-mono text-xs text-foreground-secondary"
+            className="ml-auto h-12 border-border-subtle px-2 font-mono text-xs text-foreground-secondary md:h-7"
           >
             <RefreshCw aria-hidden className="size-3" />
             {hermesRefresh.pending

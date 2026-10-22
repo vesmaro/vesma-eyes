@@ -41,8 +41,6 @@ export interface KoraBandHeight {
   expanded: boolean;
   /** The honest aria value for the seam in the current state. */
   seamValue: number;
-  /** Ref for the zone body — the auto measurement target. */
-  bodyRef: React.RefObject<HTMLDivElement>;
   deploy: () => void;
   toggle: () => void;
   collapse: () => void;
@@ -54,6 +52,12 @@ export interface KoraBandHeight {
   onReset: () => void;
 }
 
+/**
+ * The ref rides OUTSIDE the state aggregate (K3-7): a ref inside the
+ * returned object makes every `band.*` read in render look like a ref
+ * access to react-hooks/refs — with the ref separate, the aggregate is
+ * plain render data and the ref is attached verbatim.
+ */
 export function useKoraBandHeight({
   readH,
   writeH,
@@ -69,7 +73,7 @@ export function useKoraBandHeight({
   max?: number;
   /** The collapsed strip's height — the seam's honest value while folded. */
   collapsedValue?: number;
-}): KoraBandHeight {
+}): [KoraBandHeight, React.RefObject<HTMLDivElement>] {
   const [expanded, setExpanded] = useState(false);
   /** 0 = auto mode (height by content) — the storage key's absence. */
   const [fixedH, setFixedH] = useState<number>(readH);
@@ -119,17 +123,19 @@ export function useKoraBandHeight({
 
   const seamValue = expanded ? (fixedH > 0 ? fixedH : autoH) : collapsedValue;
 
-  return {
-    fixedH,
-    autoH,
-    expanded,
-    seamValue,
+  return [
+    {
+      fixedH,
+      autoH,
+      expanded,
+      seamValue,
+      deploy,
+      toggle,
+      collapse,
+      onValue,
+      onCommit,
+      onReset,
+    },
     bodyRef,
-    deploy,
-    toggle,
-    collapse,
-    onValue,
-    onCommit,
-    onReset,
-  };
+  ];
 }

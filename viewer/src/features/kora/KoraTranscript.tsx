@@ -358,7 +358,7 @@ export function RawWalkFold({
     >
       <summary
         title={t("kora.transcript.rawWalkHint")}
-        className="inline-flex min-h-6 cursor-pointer select-none list-none items-center gap-1 rounded-sm font-ui text-xs text-foreground-muted transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright [&::-webkit-details-marker]:hidden"
+        className="inline-flex min-h-11 cursor-pointer select-none list-none items-center gap-1 rounded-sm font-ui text-xs text-foreground-muted transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright md:min-h-6 [&::-webkit-details-marker]:hidden"
       >
         <ChevronRight
           aria-hidden

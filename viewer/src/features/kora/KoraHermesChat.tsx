@@ -8,6 +8,7 @@ import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { ROLE_TONE } from "./KoraTranscript";
 import { formatTranscriptTime, koraSessionName } from "./koraWorkspaceModel";
+import { useIsFrameViewport } from "./koraViewport";
 import { useKoraHermesChat } from "./useKora";
 import type {
   HermesChatReply,
@@ -131,22 +132,46 @@ export function KoraHermesChat({
   // the way back to the default is the user's move).
   const [model, setModel] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   const headingRef = useRef<HTMLHeadingElement | null>(null);
   const nextId = useRef(1);
+  // The reader-at-tail flag (KW3, blueprint §8 — review K2-3): the chat
+  // pins the view ONLY while the reader is at (or near) the tail; a scroll
+  // up stops the following, returning to the tail resumes it. The scroll
+  // IS the switch — this tail has no toolbar toggle.
+  const pinnedRef = useRef(true);
 
   const roster = models.length > 0 ? models : [KORA_HERMES_FALLBACK_MODEL];
   const effectiveModel = model ?? defaultModel ?? KORA_HERMES_FALLBACK_MODEL;
 
-  // The honest follow: appended turns pin the view to the bottom (scroll
-  // positioning only — the same canon as the transcript follow-tail; this
-  // tail is the CHAT'S OWN — the moves zone runs its own).
+  // The honest follow (the CHAT'S OWN tail — the moves zone runs its own,
+  // on its own scroll and its own toggle; a pending answer scrolls ONLY
+  // the chat — the two autos never fight, kora-rethink blueprint §8).
+  // TWO triggers, one pin gate (pinnedRef — a reader who moved up is
+  // never yanked):
+  // - the reader's OWN activity (a sent turn, the pending line) pins in
+  //   BOTH regimes — acting on the composer asks for the tail;
+  // - CONTENT growth (the history's first read, every pagination page —
+  //   the moves zone's «Показать ещё» grows the SAME shared read)
+  //   settles ONLY inside the frame (K3-1): there the chat owns its
+  //   scroll; below lg the PAGE does, and a settle would yank the whole
+  //   page to the chat tail on every zone pagination — там некуда
+  //   оседать, the page position is the reader's.
+  const frameViewport = useIsFrameViewport();
   useEffect(() => {
+    if (!pinnedRef.current) return;
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [turns.length, chat.isPending]);
+  useEffect(() => {
+    if (!frameViewport || !pinnedRef.current) return;
+    bottomRef.current?.scrollIntoView({ block: "end" });
+  }, [frameViewport, pages.items.length]);
 
   // a11y (blueprint §10.7): a session switch moves FOCUS to the chat h2 —
   // the change is announced by the focus move itself, not just visually.
-  // The first render is not a switch — no steal.
+  // The first render is not a switch — no steal. A switch also RESUMES the
+  // follow (the pinned flag described the previous session's scroll); the
+  // history arrival then settles the new conversation at its tail.
   const anchorKey = session?.id ?? null;
   const prevAnchor = useRef<string | null | undefined>(undefined);
   useEffect(() => {
@@ -156,9 +181,20 @@ export function KoraHermesChat({
     }
     if (prevAnchor.current !== anchorKey) {
       prevAnchor.current = anchorKey;
+      pinnedRef.current = true;
       headingRef.current?.focus();
     }
   }, [anchorKey]);
+
+  // The reader's position decides the next pin (the arbitration canon):
+  // near the tail = following; a scroll up = not. ~1.5 lines of slack so
+  // sub-pixel rounding never breaks a pinned tail.
+  const onChatScroll = (): void => {
+    const el = scrollRef.current;
+    if (el === null) return;
+    pinnedRef.current =
+      el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+  };
 
   const pending = chat.isPending;
   const hasDraft = draft.trim().length > 0;
@@ -250,7 +286,7 @@ export function KoraHermesChat({
               const value = event.target.value;
               onNavigateSession(value === KORA_CLUSTER_OPTION ? null : value);
             }}
-            className="h-7 max-w-56 rounded-md border border-border-subtle bg-background px-2 text-xs text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+            className="h-12 max-w-56 rounded-md border border-border-subtle bg-background px-2 text-xs text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright md:h-7"
           >
             <option value={KORA_CLUSTER_OPTION}>
               {t("kora.nav.clusterChat")}
@@ -270,7 +306,7 @@ export function KoraHermesChat({
             id="kora-hermes-chat-model"
             value={effectiveModel}
             onChange={(event) => setModel(event.target.value)}
-            className="h-7 max-w-56 rounded-md border border-border-subtle bg-background px-2 font-mono text-xs text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+            className="h-12 max-w-56 rounded-md border border-border-subtle bg-background px-2 font-mono text-xs text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright md:h-7"
           >
             {roster.map((name) => (
               <option key={name} value={name}>
@@ -282,8 +318,13 @@ export function KoraHermesChat({
       </div>
 
       {/* The scroll owns the free height (the scene canon) — history first,
-       * then the locally appended turns, then the honest tail. */}
-      <div className="kora-scroll mt-3 min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+       * then the locally appended turns, then the honest tail. Its scroll
+       * events ARE the follow switch (the reader-at-tail arbitration). */}
+      <div
+        ref={scrollRef}
+        onScroll={onChatScroll}
+        className="kora-scroll mt-3 min-h-0 flex-1 overflow-y-auto px-4 pb-4"
+      >
         {historyPending ? (
           <div
             role="status"
@@ -382,7 +423,7 @@ export function KoraHermesChat({
             maxLength={CHAT_TURN_CAP}
             disabled={pending}
             aria-describedby="kora-hermes-chat-note"
-            className="min-h-11 w-full resize-y rounded-md border border-border-subtle bg-background px-3 py-2 font-ui text-sm text-foreground placeholder:text-foreground-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright disabled:cursor-not-allowed disabled:text-foreground-muted"
+            className="min-h-12 w-full resize-y rounded-md border border-border-subtle bg-background px-3 py-2 font-ui text-sm text-foreground placeholder:text-foreground-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright disabled:cursor-not-allowed disabled:text-foreground-muted"
             placeholder={t("kora.hermes.chatPlaceholder")}
             value={draft}
             onChange={(event) => setDraft(event.target.value)}

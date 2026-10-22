@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { KoraHermesChat, KORA_CLUSTER_OPTION } from "./KoraHermesChat";
 import { KoraMockAdapter } from "./KoraMockAdapter";
 import { KoraGatewayContext } from "./koraGatewayContext";
+import { KORA_FRAME_QUERY } from "./koraViewport";
 import { KORA_FIXTURE_HERMES_MESSAGES } from "./koraFixtures";
 import type {
   HermesChatReply,
@@ -450,5 +451,145 @@ describe("KoraHermesChat — the send statuses (states.md §3)", () => {
     );
     // The honest turn does NOT carry the provenance badge (no reply rode).
     expect(container.textContent).toContain("проверка формата");
+  });
+});
+
+describe("KoraHermesChat — the follow-tail arbitration (KW3, blueprint §8)", () => {
+  /** Geometry stub for the chat's ONE scroll container: happy-dom lays
+   * nothing out, so the reader-at-tail math is pinned by hand. */
+  function stubScrollBox(
+    el: HTMLElement,
+    geometry: { clientHeight: number; scrollHeight: number; scrollTop: number },
+  ): void {
+    for (const key of ["clientHeight", "scrollHeight", "scrollTop"] as const) {
+      Object.defineProperty(el, key, {
+        configurable: true,
+        get: () => geometry[key],
+      });
+    }
+  }
+
+  function chatScrollBox(container: HTMLElement): HTMLElement {
+    const el = container.querySelector<HTMLElement>(".kora-scroll");
+    if (el === null) throw new Error("chat scroll container not rendered");
+    return el;
+  }
+
+  it("a reader at the tail keeps the pin: appended turns scroll the chat to the bottom", async () => {
+    const adapter = new KoraMockAdapter({ latency: false });
+    const { container } = mountChat(adapter, { items: [] });
+    const pin = vi
+      .spyOn(Element.prototype, "scrollIntoView")
+      .mockImplementation(() => {});
+    try {
+      const box = chatScrollBox(container);
+      stubScrollBox(box, { clientHeight: 500, scrollHeight: 900, scrollTop: 400 });
+      await act(async () => {
+        box.dispatchEvent(new Event("scroll", { bubbles: true }));
+      });
+      pin.mockClear();
+      await typeDraft(container, "пинг с хвоста");
+      await act(async () => {
+        sendButton(container).click();
+        await Promise.resolve();
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(pin).toHaveBeenCalled();
+    } finally {
+      pin.mockRestore();
+    }
+  });
+
+  it("a reader who left the tail is never yanked: the reply appends WITHOUT a scroll", async () => {
+    const adapter = new KoraMockAdapter({ latency: false });
+    const { container } = mountChat(adapter, { items: [] });
+    const pin = vi
+      .spyOn(Element.prototype, "scrollIntoView")
+      .mockImplementation(() => {});
+    try {
+      const box = chatScrollBox(container);
+      // The reader scrolled UP: 500px from the tail — the pin must drop.
+      stubScrollBox(box, { clientHeight: 500, scrollHeight: 1200, scrollTop: 200 });
+      await act(async () => {
+        box.dispatchEvent(new Event("scroll", { bubbles: true }));
+      });
+      pin.mockClear();
+      await typeDraft(container, "читаю историю");
+      await act(async () => {
+        sendButton(container).click();
+        await Promise.resolve();
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+      // The turn landed (the draft cleared, the reply rode) — silently.
+      expect(pin).not.toHaveBeenCalled();
+      expect(container.textContent).toContain("читаю историю");
+    } finally {
+      pin.mockRestore();
+    }
+  });
+
+  // K3-1: below lg the chat has NO scroll of its own (the page does) —
+  // content growth of the SHARED read (the moves zone's «Показать ещё»)
+  // must never try to move it. In happy-dom terms, "the page moved" IS a
+  // scrollIntoView call: the contract is that none fires. The regime is
+  // pinned EXPLICITLY (happy-dom's default viewport is 1024 — it would
+  // answer the frame query true).
+  it("below lg: the shared read growing (a moves-zone page) never scrolls the page", async () => {
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = ((_query: string) => ({
+      matches: false,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    })) as unknown as typeof window.matchMedia;
+    const adapter = new KoraMockAdapter({ latency: false });
+    const options: MountChatOptions = { items: fixtureItems };
+    const { rerender } = mountChat(adapter, options);
+    const pin = vi
+      .spyOn(Element.prototype, "scrollIntoView")
+      .mockImplementation(() => {});
+    try {
+      pin.mockClear();
+      // The zone loads one more page: the ONE hoisted read grows.
+      options.items = [
+        ...fixtureItems,
+        { ...fixtureItems[0], seq: 10_001, role: "user", content: "хвост страницы" },
+      ];
+      await rerender(ANCHOR);
+      expect(pin).not.toHaveBeenCalled();
+    } finally {
+      pin.mockRestore();
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it("in the frame: the same growth settles the chat at its tail (the reader owns that scroll)", async () => {
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: query === KORA_FRAME_QUERY,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    })) as unknown as typeof window.matchMedia;
+    const pin = vi
+      .spyOn(Element.prototype, "scrollIntoView")
+      .mockImplementation(() => {});
+    try {
+      const adapter = new KoraMockAdapter({ latency: false });
+      const options: MountChatOptions = { items: fixtureItems };
+      const { rerender } = mountChat(adapter, options);
+      pin.mockClear();
+      options.items = [
+        ...fixtureItems,
+        { ...fixtureItems[0], seq: 10_001, role: "user", content: "хвост страницы" },
+      ];
+      await rerender(ANCHOR);
+      expect(pin).toHaveBeenCalled();
+    } finally {
+      pin.mockRestore();
+      window.matchMedia = originalMatchMedia;
+    }
   });
 });

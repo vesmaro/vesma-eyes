@@ -9,13 +9,14 @@ import { KoraHermesChat } from "./KoraHermesChat";
 import { KoraMovesZone } from "./KoraMovesZone";
 import { KoraReadingTools } from "./KoraReadingTools";
 import type { KoraIntentEventPoints } from "./koraIntentEvents";
+import { NOOP_KORA_FRAME_EVENTS, type KoraFrameEventPoints } from "./koraFrameEvents";
 import type { KoraCoverage, KoraSession } from "./koraTypes";
 import {
   koraAgeUnit,
   koraSessionName,
   sessionCoverageSupport,
 } from "./koraWorkspaceModel";
-import type { KoraTranscriptPages } from "./useKora";
+import type { KoraHermesTranscriptPages, KoraTranscriptPages } from "./useKora";
 
 /**
  * The central work zone (07j §3.1; the KW2 SPLIT per kora-rethink
@@ -47,7 +48,7 @@ export interface KoraHermesSplit {
   session: KoraSession | null;
   /** The ONE hoisted messages read (the chat filters user/assistant out of
    * it; the zone shows the full grammar). */
-  pages: import("./useKora").KoraHermesTranscriptPages;
+  pages: KoraHermesTranscriptPages;
   /** The verified model roster + default from /status (empty = fallback). */
   models: readonly string[];
   defaultModel: string | null;
@@ -66,6 +67,7 @@ export function KoraWorkzone({
   transcript,
   hermes = null,
   intentEvents,
+  frameEvents = NOOP_KORA_FRAME_EVENTS,
 }: {
   session: KoraSession | null;
   registryEmpty: KoraRegistryEmpty;
@@ -75,6 +77,9 @@ export function KoraWorkzone({
    * selected hermes session) — the split center. */
   hermes?: KoraHermesSplit | null;
   intentEvents: KoraIntentEventPoints;
+  /** The frame telemetry call points (KW3) — forwarded to the moves zone;
+   * a no-op until the taxonomy v1 revision names the kinds. */
+  frameEvents?: KoraFrameEventPoints;
 }) {
   const t = useT();
 
@@ -83,7 +88,7 @@ export function KoraWorkzone({
       // K-HERMES-LIVE: the selected hermes session is a CHAT + the moves
       // zone (the read-only full-page transcript left with KW1's shape —
       // the composer here is real, the note names its statelessness).
-      return <KoraHermesSplitView split={hermes} />;
+      return <KoraHermesSplitView split={hermes} frameEvents={frameEvents} />;
     }
     // Mode B (zcode/vscode/pi): the full-page transcript, NO split.
     return (
@@ -99,7 +104,7 @@ export function KoraWorkzone({
   if (hermes !== null) {
     // K-CLUSTER (/kora/hermes): the same split, the anchor = the last
     // active api_server session or the honest clean slate.
-    return <KoraHermesSplitView split={hermes} />;
+    return <KoraHermesSplitView split={hermes} frameEvents={frameEvents} />;
   }
 
   return (
@@ -146,7 +151,13 @@ export function KoraWorkzone({
  * (flex) + the «Все ходы» zone (the seam + the 40px strip / the deployed
  * body). The zones NEVER share scroll state — two follow-tails by design
  * (kora-rethink blueprint §8). */
-function KoraHermesSplitView({ split }: { split: KoraHermesSplit | null }) {
+function KoraHermesSplitView({
+  split,
+  frameEvents,
+}: {
+  split: KoraHermesSplit | null;
+  frameEvents: KoraFrameEventPoints;
+}) {
   if (split === null) return null;
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -162,6 +173,7 @@ function KoraHermesSplitView({ split }: { split: KoraHermesSplit | null }) {
       <KoraMovesZone
         sessionId={split.session?.id ?? null}
         pages={split.pages}
+        frameEvents={frameEvents}
       />
     </div>
   );

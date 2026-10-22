@@ -29,6 +29,11 @@ import {
   writeKoraSideW,
 } from "./koraFrameStorage";
 import { NOOP_KORA_INTENT_EVENTS } from "./koraIntentEvents";
+import {
+  NOOP_KORA_FRAME_EVENTS,
+  type KoraFrameEventPoints,
+} from "./koraFrameEvents";
+import { useIsFrameViewport, useIsWideFrame } from "./koraViewport";
 import { buildKoraTree, koraSummary, type KoraQuickFilter } from "./koraWorkspaceModel";
 import {
   useKoraSessionPages,
@@ -81,12 +86,16 @@ const HERMES_SOURCE = "hermes";
 export function KoraWorkspace({
   sessionId = null,
   cluster = false,
+  frameEvents = NOOP_KORA_FRAME_EVENTS,
 }: {
   sessionId?: string | null;
   /** The RESERVED /kora/hermes segment (kora-rethink blueprint §5): the
    * cluster-chat mode is ROUTE-driven — it no longer depends on the filter
    * being hermes with nothing selected. */
   cluster?: boolean;
+  /** The frame telemetry call points (KW3): seam commits ride them — a
+   * no-op until the taxonomy v1 revision names the kinds. */
+  frameEvents?: KoraFrameEventPoints;
 }) {
   const t = useT();
   const navigate = useNavigate();
@@ -156,7 +165,8 @@ export function KoraWorkspace({
   const onSideValue = useCallback((next: number): void => setSideW(next), []);
   const onSideCommit = useCallback((): void => {
     writeKoraSideW(sideW);
-  }, [sideW]);
+    frameEvents.seamCommitted("meta");
+  }, [sideW, frameEvents]);
   const onSideReset = useCallback((): void => {
     setSideW(KORA_SIDE_DEFAULT);
     writeKoraSideW(KORA_SIDE_DEFAULT);
@@ -168,7 +178,8 @@ export function KoraWorkspace({
   const onLeftValue = useCallback((next: number): void => setLeftW(next), []);
   const onLeftCommit = useCallback((): void => {
     writeKoraLeftW(leftW);
-  }, [leftW]);
+    frameEvents.seamCommitted("nav");
+  }, [leftW, frameEvents]);
   const onLeftReset = useCallback((): void => {
     setLeftW(KORA_NAV_DEFAULT);
     writeKoraLeftW(KORA_NAV_DEFAULT);
@@ -335,6 +346,15 @@ export function KoraWorkspace({
         }
       : null;
 
+  // The responsive ladder (states.md §6, KW3): the nav panel's PLACEMENT is
+  // a render fact. ≥xl — its own column; lg..xl — sections at the top of
+  // the META panel (one scroll, navigation first); <lg — its own card in
+  // the document flow. Exactly ONE instance mounts in every regime (the
+  // tree's aria-controls ids and the W2-1 uniqueness lesson forbid two).
+  const wideFrame = useIsWideFrame();
+  const frameViewport = useIsFrameViewport();
+  const navInMeta = frameViewport && !wideFrame;
+
   // ── The 401 gate: the CTA replaces every data-shaped surface (the old
   // hotfix contract, kept verbatim through the rework). ──
   if (unauthorized) {
@@ -438,6 +458,47 @@ export function KoraWorkspace({
     );
   }
 
+  // The nav panel element (kora-rethink blueprint §4) — ONE element, two
+  // placements (states.md §6): its own aside at ≥xl and below lg; sections
+  // at the top of the meta panel at lg..xl (one scroll, navigation first).
+  const navPanel = (
+    <KoraNavPanel
+      model={model}
+      treeReady={treeReady}
+      context={context}
+      contextSessions={contextSessions}
+      quickFilter={quickFilter}
+      onQuickFilter={setQuickFilter}
+      sessionId={sessionId}
+      selectedSessionId={sessionId}
+      noExecutors={noExecutors}
+      sessionsEmpty={registryEmpty !== null}
+      activeHost={contextHost ?? ""}
+      onSelectHostContext={selectHost}
+      onSelectAgentContext={(agent) =>
+        selectAgent(
+          agent.executorId,
+          agent.harness,
+          agent.executor?.host ?? null,
+        )
+      }
+      hermesRefresh={
+        context.kind === "hermes"
+          ? {
+              onRefresh: () => void hermesPull.mutate(),
+              pending: hermesPull.isPending,
+            }
+          : null
+      }
+      hermesStatus={hermesStatus.data ?? null}
+      hermesStatusPending={hermesStatus.isPending}
+      hermesStatusError={hermesStatus.isError}
+      hermesPullError={hermesPull.error}
+      clusterActive={cluster}
+      onClusterChat={onClusterChat}
+    />
+  );
+
   return (
     /* The v7 frame (07l §1.2): from lg the section IS the viewport minus
      * the shell chrome (topbar 48 + crumbs 40 + main's p-6 ×2 — and the
@@ -463,7 +524,12 @@ export function KoraWorkspace({
       </div>
 
       <div
-        className="relative grid min-h-0 min-w-0 flex-1 items-start gap-6 lg:grid-cols-[var(--kora-left-w)_minmax(0,1fr)_var(--kora-right-w)] lg:items-stretch lg:gap-0"
+        className={cn(
+          "relative grid min-h-0 min-w-0 flex-1 items-start gap-6 lg:items-stretch lg:gap-0",
+          wideFrame
+            ? "lg:grid-cols-[var(--kora-left-w)_minmax(0,1fr)_var(--kora-right-w)]"
+            : "lg:grid-cols-[minmax(0,1fr)_var(--kora-right-w)]",
+        )}
         style={
           {
             "--kora-left-w": `${leftW}px`,
@@ -471,55 +537,27 @@ export function KoraWorkspace({
           } as React.CSSProperties
         }
       >
-        {/* LEFT: the navigation panel (kora-rethink blueprint §4) — tree →
-         * sessions → the pinned cluster-chat entry → the hermes source
-         * line, ONE panel scroll. Flush inside the frame (§1.2), a card
-         * below lg. */}
-        <aside
-          aria-label={t("kora.nav.region")}
-          className="kora-scroll min-h-0 min-w-0 overflow-y-auto rounded-md border border-myelin bg-well lg:rounded-none lg:border-0"
-        >
-          <KoraNavPanel
-            model={model}
-            treeReady={treeReady}
-            context={context}
-            contextSessions={contextSessions}
-            quickFilter={quickFilter}
-            onQuickFilter={setQuickFilter}
-            sessionId={sessionId}
-            selectedSessionId={sessionId}
-            noExecutors={noExecutors}
-            sessionsEmpty={registryEmpty !== null}
-            activeHost={contextHost ?? ""}
-            onSelectHostContext={selectHost}
-            onSelectAgentContext={(agent) =>
-              selectAgent(
-                agent.executorId,
-                agent.harness,
-                agent.executor?.host ?? null,
-              )
-            }
-            hermesRefresh={
-              context.kind === "hermes"
-                ? {
-                    onRefresh: () => void hermesPull.mutate(),
-                    pending: hermesPull.isPending,
-                  }
-                : null
-            }
-            hermesStatus={hermesStatus.data ?? null}
-            hermesStatusPending={hermesStatus.isPending}
-            hermesStatusError={hermesStatus.isError}
-            hermesPullError={hermesPull.error}
-            clusterActive={cluster}
-            onClusterChat={onClusterChat}
-          />
-        </aside>
+        {/* LEFT: the navigation column (≥xl; kora-rethink blueprint §4) —
+         * tree → sessions → the pinned cluster-chat entry → the hermes
+         * source line, ONE panel scroll. Flush inside the frame; below xl
+         * the panel travels: sections atop the meta panel at lg..xl, its
+         * own card in the document flow below lg (states.md §6). */}
+        {!navInMeta ? (
+          <aside
+            aria-label={t("kora.nav.region")}
+            className="kora-scroll min-h-0 min-w-0 overflow-y-auto rounded-md border border-myelin bg-well xl:rounded-none xl:border-0"
+          >
+            {navPanel}
+          </aside>
+        ) : null}
 
         {/* The LEFT SEAM (07l §3 anatomy, blueprint §4): col-resize on the
          * nav panel's right edge — pointer drag + full keyboard path +
          * dblclick reset, persist on commit. Grows RIGHTWARD (dragSign -1).
-         * Lives only inside the frame (≥lg). */}
+         * Lives in the three-column frame only (≥xl) — at lg..xl the nav
+         * lives inside the meta panel and owns no width of its own, below
+         * lg the frame leaves; the CSS classes retire it there (display:
+         * none keeps it out of the a11y tree). */}
         <KoraResizeHandle
           orientation="vertical"
           label={t("kora.resize.nav.label")}
@@ -532,7 +570,7 @@ export function KoraWorkspace({
           onValue={onLeftValue}
           onCommit={onLeftCommit}
           onReset={onLeftReset}
-          className="absolute inset-y-0 left-[var(--kora-left-w)] hidden -translate-x-1/2 lg:flex"
+          className="absolute inset-y-0 left-[var(--kora-left-w)] hidden -translate-x-1/2 xl:flex"
         />
 
         {/* CENTRAL column: the work zone — KW2 «Живой чат»: the hermes
@@ -559,6 +597,7 @@ export function KoraWorkspace({
               transcript={transcript}
               hermes={hermesSplit}
               intentEvents={NOOP_KORA_INTENT_EVENTS}
+              frameEvents={frameEvents}
             />
           )}
         </div>
@@ -583,11 +622,22 @@ export function KoraWorkspace({
 
         {/* RIGHT: the meta panel (kora-rethink blueprint §4) — О СЕССИИ /
          * ДАЙДЖЕСТ / ЭФИР / ПОКРЫТИЕ, ONE panel scroll, the states.md §5
-         * defaults (about+ether open, digest+coverage folded). */}
+         * defaults (about+ether open, digest+coverage folded). At lg..xl
+         * (states.md §6) the NAVIGATION sections ride at its top — the
+         * narrow frame's two columns are center + meta, one scroll with
+         * the navigation first. */}
         <aside
           aria-label={t("kora.meta.region")}
           className="kora-scroll min-h-0 min-w-0 overflow-y-auto rounded-md border border-myelin bg-well lg:rounded-none lg:border-0"
         >
+          {navInMeta ? (
+            <nav
+              aria-label={t("kora.nav.region")}
+              className="border-b border-myelin-hairline"
+            >
+              {navPanel}
+            </nav>
+          ) : null}
           <KoraMetaPanel
             session={session}
             coverage={sessions.coverage}

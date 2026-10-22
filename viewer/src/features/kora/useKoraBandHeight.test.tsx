@@ -30,17 +30,10 @@ const readers = {
 
 /** The zone stand: strip toggle + a top seam wired to the band hook. */
 function BandStand(): React.ReactElement {
-  const {
-    fixedH,
-    expanded,
-    seamValue,
+  const [
+    { fixedH, expanded, seamValue, toggle, collapse, onValue, onCommit, onReset },
     bodyRef,
-    toggle,
-    collapse,
-    onValue,
-    onCommit,
-    onReset,
-  } = useKoraBandHeight(readers);
+  ] = useKoraBandHeight(readers);
   return (
     <section>
       <button
