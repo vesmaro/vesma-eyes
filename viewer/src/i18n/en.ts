@@ -2535,11 +2535,6 @@ export const en: Record<TranslationKey, string> = {
   "kora.hermes.refreshing": "Refreshing…",
   "kora.hermes.emptyNoPull":
     "No sessions yet — press «Refresh»: the board will ask the hermes cluster for the live listing and put it into the registry",
-  // Hermes transcripts + chat (T004 slice 3, the bridge's final leg): the
-  // transcript is read-only, the source chat lives in Kora with no session
-  // selected.
-  "kora.hermes.transcriptReadonly":
-    "Read-only transcript; the source chat lives in Kora while no session is selected",
   "kora.hermes.reasoning": "Reasoning",
   "kora.hermes.toolCalls": "Tool calls: {{n}}",
   "kora.hermes.chatTitle": "Chat with hermes",

@@ -2594,10 +2594,6 @@ export const ru = {
   "kora.hermes.refreshing": "Обновляем…",
   "kora.hermes.emptyNoPull":
     "Сессий пока нет — нажмите «Обновить»: борд запросит живой список у кластера hermes и положит его в реестр",
-  // Транскрипты и чат hermes (T004 срез 3, финал моста): транскрипт —
-  // read-only, чат источника живёт в виде Коры без выбранной сессии.
-  "kora.hermes.transcriptReadonly":
-    "Транскрипт только для чтения; чат с источником — в Коре, пока не выбрана сессия",
   "kora.hermes.reasoning": "Размышления",
   "kora.hermes.toolCalls": "Вызовы инструментов: {{n}}",
   "kora.hermes.chatTitle": "Чат с hermes",

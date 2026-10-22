@@ -407,6 +407,7 @@ export function KoraHermesChat({
           </Button>
         </div>
         <p
+          id="kora-hermes-chat-note"
           role={errorLine !== null ? "alert" : undefined}
           className={cn(
             "mt-2 text-xs",

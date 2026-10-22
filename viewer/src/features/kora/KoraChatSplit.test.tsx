@@ -8,7 +8,11 @@ import { KoraHermesChat, KORA_CLUSTER_OPTION } from "./KoraHermesChat";
 import { KoraMockAdapter } from "./KoraMockAdapter";
 import { KoraGatewayContext } from "./koraGatewayContext";
 import { KORA_FIXTURE_HERMES_MESSAGES } from "./koraFixtures";
-import type { KoraSession } from "./koraTypes";
+import type {
+  HermesChatReply,
+  HermesMessage,
+  KoraSession,
+} from "./koraTypes";
 import type { KoraHermesTranscriptPages } from "./useKora";
 import { I18nProvider } from "@/i18n";
 
@@ -51,7 +55,7 @@ const OTHER: KoraSession = {
 const ROSTER = ["hermes-4.5-405b", "hermes-4.5-70b"];
 
 function pagesOf(
-  items: readonly import("./koraTypes").HermesMessage[],
+  items: readonly HermesMessage[],
   overrides: Partial<KoraHermesTranscriptPages> = {},
 ): KoraHermesTranscriptPages {
   return {
@@ -69,7 +73,7 @@ function pagesOf(
 const fixtureItems = KORA_FIXTURE_HERMES_MESSAGES["hermes:api-server-main"] ?? [];
 
 interface MountChatOptions {
-  items?: readonly import("./koraTypes").HermesMessage[];
+  items?: readonly HermesMessage[];
   activeSessionId?: string | null;
   models?: readonly string[];
   defaultModel?: string | null;
@@ -283,9 +287,9 @@ describe("KoraHermesChat — the send statuses (states.md §3)", () => {
   it("K-CHAT-PENDING: the composer and the button disable, the honest line shows, NO fake typing", async () => {
     const adapter = new KoraMockAdapter({ latency: false });
     // Hold the reply in flight: the chat must render the pending state.
-    let release: ((value: import("./koraTypes").HermesChatReply) => void) | null =
+    let release: ((value: HermesChatReply) => void) | null =
       null;
-    const held = new Promise<import("./koraTypes").HermesChatReply>((resolve) => {
+    const held = new Promise<HermesChatReply>((resolve) => {
       release = resolve;
     });
     adapter.hermesChat = () => held;
@@ -376,6 +380,14 @@ describe("KoraHermesChat — the send statuses (states.md §3)", () => {
       "#kora-hermes-chat-input",
     );
     expect(input?.getAttribute("maxlength")).toBe("8000");
+    // The ARIA link resolves: the describedby target EXISTS in the markup
+    // (K2-1 review fix — the honest note is the field's description).
+    expect(input?.getAttribute("aria-describedby")).toBe("kora-hermes-chat-note");
+    expect(document.getElementById("kora-hermes-chat-note")).not.toBeNull();
+    const send = [...container.querySelectorAll("button")].find((el) =>
+      el.textContent?.includes("Отправить"),
+    );
+    expect(send?.getAttribute("aria-describedby")).toBe("kora-hermes-chat-note");
   });
 
   it("K-CHAT-MODEL-404: the human reason names the refusal, the select KEEPS the user's choice", async () => {
