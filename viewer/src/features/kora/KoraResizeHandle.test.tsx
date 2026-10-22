@@ -116,6 +116,23 @@ describe("KoraResizeHandle — the keyboard path (07l §3.3)", () => {
     expect(h.onCommit).toHaveBeenCalledTimes(1);
   });
 
+  it("dragSign −1 (the edge on the RIGHT — the nav panel): keyboard mirrors the visual movement", async () => {
+    // Review P2: the keyboard delta rides the dragSign, so a right-edged
+    // seam grows with ArrowRight and shrinks with ArrowLeft; the collapse
+    // stickiness judges the SIGNED delta (narrowing folds, whichever key).
+    const h = mountHandle({ dragSign: -1 });
+    const el = seam(h.container);
+    await key(el, "ArrowRight");
+    expect(h.onValue).toHaveBeenCalledWith(336); // wider — the edge moves right
+    await key(el, "ArrowLeft");
+    expect(h.onValue).toHaveBeenCalledWith(304); // narrower
+    // A narrowing step below the minimum folds (the signed judgement).
+    const folded = mountHandle({ dragSign: -1, value: 240 });
+    await key(seam(folded.container), "ArrowLeft");
+    expect(folded.onCollapse).toHaveBeenCalledTimes(1);
+    expect(folded.onValue).not.toHaveBeenCalled();
+  });
+
   it("horizontal seams grow with ArrowUp / shrink with ArrowDown", async () => {
     const h = mountHandle({ orientation: "horizontal" });
     const el = seam(h.container);

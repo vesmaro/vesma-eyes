@@ -63,7 +63,11 @@ export function KoraResizeHandle({
   onCommit: () => void;
   /** dblclick / Home (07l §3.4: focus STAYS on the handle after a reset). */
   onReset: () => void;
-  /** Vertical seams grow to the LEFT (ArrowLeft = wider) — the v12 sign. */
+  /** Which way the seam's edge visually moves: 1 = the edge is on the LEFT
+   * (grows leftward: pointer-drag left / ArrowLeft widen), −1 = the edge is
+   * on the RIGHT (the nav panel — grows rightward: pointer-drag right /
+   * ArrowRight widen). BOTH the pointer delta and the keyboard delta ride
+   * it, so the keyboard always mirrors the visual movement. */
   dragSign?: 1 | -1;
   /** Drag/keyboard below this line means «свернуть» (Пульт гистерезис). */
   collapseBelow?: number;
@@ -141,10 +145,18 @@ export function KoraResizeHandle({
       }
       return;
     }
-    const delta =
-      event.key === widen ? step : event.key === narrow ? -step : 0;
-    if (delta === 0) return;
+    const widenKey = event.key === widen;
+    const narrowKey = event.key === narrow;
+    if (!widenKey && !narrowKey) return;
     event.preventDefault();
+    // The keyboard follows the VISUAL edge movement (review P2): the delta
+    // rides the same dragSign as the pointer drag, so on a dragSign −1 seam
+    // (the nav panel — its edge is the RIGHT one) ArrowRight grows and
+    // ArrowLeft shrinks; dragSign 1 seams (the right panel, the band) keep
+    // the v12 «ArrowLeft = wider» rule byte-for-byte. The collapse line is
+    // judged on the SIGNED delta — narrowing is what can fold the zone,
+    // regardless of which arrow the visual direction makes it.
+    const delta = (widenKey ? step : -step) * dragSign;
     const next = value + delta;
     if (delta < 0 && next < min) {
       // v12 §3.2 keyboard stickiness: a NARROWING step below the minimum is

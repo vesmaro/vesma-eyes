@@ -197,9 +197,11 @@ describe("KoraWorkspace frame (U5, 07l §3; KW1 — three columns)", () => {
     const { container } = mountWorkspace();
     const seam = navSeam(container);
     await keyOn(seam, "focusin");
-    // ArrowLeft = wider on BOTH vertical seams (the v12 uniform rule).
-    await keyOn(seam, "keydown", "ArrowLeft");
-    await keyOn(seam, "keyup", "ArrowLeft");
+    // The nav seam's edge is the RIGHT one (dragSign −1): the keyboard
+    // mirrors the visual movement — ArrowRight = wider, ArrowLeft = narrower.
+    // The right seam keeps the v12 ArrowLeft = wider rule (dragSign 1).
+    await keyOn(seam, "keydown", "ArrowRight");
+    await keyOn(seam, "keyup", "ArrowRight");
     expect(localStorage.getItem("vesmaro.koraLeftW")).toBe("296");
     expect(seam.getAttribute("aria-valuenow")).toBe("296");
   });
