@@ -8,6 +8,7 @@ import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { ROLE_TONE } from "./KoraTranscript";
 import { formatTranscriptTime, koraSessionName } from "./koraWorkspaceModel";
+import { useIsFrameViewport } from "./koraViewport";
 import { useKoraHermesChat } from "./useKora";
 import type {
   HermesChatReply,
@@ -146,13 +147,25 @@ export function KoraHermesChat({
   // The honest follow (the CHAT'S OWN tail — the moves zone runs its own,
   // on its own scroll and its own toggle; a pending answer scrolls ONLY
   // the chat — the two autos never fight, kora-rethink blueprint §8).
-  // Fires on appended turns, the pending line, AND history arriving (the
-  // first read / a switch settles at the tail, not at the oldest page) —
-  // but never yanks a reader who moved up (pinnedRef gate).
+  // TWO triggers, one pin gate (pinnedRef — a reader who moved up is
+  // never yanked):
+  // - the reader's OWN activity (a sent turn, the pending line) pins in
+  //   BOTH regimes — acting on the composer asks for the tail;
+  // - CONTENT growth (the history's first read, every pagination page —
+  //   the moves zone's «Показать ещё» grows the SAME shared read)
+  //   settles ONLY inside the frame (K3-1): there the chat owns its
+  //   scroll; below lg the PAGE does, and a settle would yank the whole
+  //   page to the chat tail on every zone pagination — там некуда
+  //   оседать, the page position is the reader's.
+  const frameViewport = useIsFrameViewport();
   useEffect(() => {
     if (!pinnedRef.current) return;
     bottomRef.current?.scrollIntoView({ block: "end" });
-  }, [turns.length, chat.isPending, pages.items.length]);
+  }, [turns.length, chat.isPending]);
+  useEffect(() => {
+    if (!frameViewport || !pinnedRef.current) return;
+    bottomRef.current?.scrollIntoView({ block: "end" });
+  }, [frameViewport, pages.items.length]);
 
   // a11y (blueprint §10.7): a session switch moves FOCUS to the chat h2 —
   // the change is announced by the focus move itself, not just visually.

@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { KoraHermesChat, KORA_CLUSTER_OPTION } from "./KoraHermesChat";
 import { KoraMockAdapter } from "./KoraMockAdapter";
 import { KoraGatewayContext } from "./koraGatewayContext";
+import { KORA_FRAME_QUERY } from "./koraViewport";
 import { KORA_FIXTURE_HERMES_MESSAGES } from "./koraFixtures";
 import type {
   HermesChatReply,
@@ -528,6 +529,67 @@ describe("KoraHermesChat — the follow-tail arbitration (KW3, blueprint §8)", 
       expect(container.textContent).toContain("читаю историю");
     } finally {
       pin.mockRestore();
+    }
+  });
+
+  // K3-1: below lg the chat has NO scroll of its own (the page does) —
+  // content growth of the SHARED read (the moves zone's «Показать ещё»)
+  // must never try to move it. In happy-dom terms, "the page moved" IS a
+  // scrollIntoView call: the contract is that none fires. The regime is
+  // pinned EXPLICITLY (happy-dom's default viewport is 1024 — it would
+  // answer the frame query true).
+  it("below lg: the shared read growing (a moves-zone page) never scrolls the page", async () => {
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: false,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    })) as unknown as typeof window.matchMedia;
+    const adapter = new KoraMockAdapter({ latency: false });
+    const options: MountChatOptions = { items: fixtureItems };
+    const { rerender } = mountChat(adapter, options);
+    const pin = vi
+      .spyOn(Element.prototype, "scrollIntoView")
+      .mockImplementation(() => {});
+    try {
+      pin.mockClear();
+      // The zone loads one more page: the ONE hoisted read grows.
+      options.items = [
+        ...fixtureItems,
+        { ...fixtureItems[0], seq: 10_001, role: "user", content: "хвост страницы" },
+      ];
+      await rerender(ANCHOR);
+      expect(pin).not.toHaveBeenCalled();
+    } finally {
+      pin.mockRestore();
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it("in the frame: the same growth settles the chat at its tail (the reader owns that scroll)", async () => {
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: query === KORA_FRAME_QUERY,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    })) as unknown as typeof window.matchMedia;
+    const pin = vi
+      .spyOn(Element.prototype, "scrollIntoView")
+      .mockImplementation(() => {});
+    try {
+      const adapter = new KoraMockAdapter({ latency: false });
+      const options: MountChatOptions = { items: fixtureItems };
+      const { rerender } = mountChat(adapter, options);
+      pin.mockClear();
+      options.items = [
+        ...fixtureItems,
+        { ...fixtureItems[0], seq: 10_001, role: "user", content: "хвост страницы" },
+      ];
+      await rerender(ANCHOR);
+      expect(pin).toHaveBeenCalled();
+    } finally {
+      pin.mockRestore();
+      window.matchMedia = originalMatchMedia;
     }
   });
 });
