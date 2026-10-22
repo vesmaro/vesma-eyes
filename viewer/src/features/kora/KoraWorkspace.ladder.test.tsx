@@ -169,8 +169,15 @@ describe("KoraWorkspace ladder (states.md §6, KW3)", () => {
     expect(nav?.contains(treeHeading(container))).toBe(true);
     // Navigation FIRST: the nav block is the aside's first element child.
     expect(meta[0].firstElementChild).toBe(nav);
-    // The nav seam retires with the column; the meta seam stays.
-    expect(labelled(container, "Ширина панели навигации")).toHaveLength(1); // CSS-retired, kept out of the way by display:none
+    // The nav seam's retirement is CSS, not structural (happy-dom applies
+    // no styles, so the DOM keeps the node and these tests pin its
+    // classes): the handle must read `hidden … xl:flex` — visible ONLY in
+    // the three-column frame, retired at lg..xl with the column it ruled.
+    const navSeam = labelled(container, "Ширина панели навигации");
+    expect(navSeam).toHaveLength(1);
+    expect(navSeam[0].className).toContain("hidden");
+    expect(navSeam[0].className).toContain("xl:flex");
+    expect(navSeam[0].className).not.toContain("lg:flex");
     expect(labelled(container, "Ширина мета-панели")).toHaveLength(1);
   });
 
