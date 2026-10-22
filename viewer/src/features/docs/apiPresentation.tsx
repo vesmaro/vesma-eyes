@@ -1,11 +1,12 @@
 import { useMemo } from "react";
+import { useNavigate } from "react-router";
 import { ChevronDown } from "lucide-react";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import {
   articleComponents,
-  MONO,
   nodeText,
+  EndpointChip,
   type HastishNode,
 } from "@/components/TextEngine/core";
 import { FOCUS_RING } from "@/components/TextEngine/core/constants";
@@ -18,6 +19,7 @@ import {
 } from "./apiDocs";
 import { buildArticleHooks } from "./Markdown";
 import { CorpusMarkdown, type ArticleComponents } from "./Markdown";
+import { handleTocClick } from "./tocScroll";
 
 /**
  * API-board presentation (docs-api-readability wave, 2026-10-21).
@@ -33,11 +35,14 @@ import { CorpusMarkdown, type ArticleComponents } from "./Markdown";
  *    extractHeadings — the split lives in apiDocs.ts) and every endpoint
  *    chunk renders inside a CARD (bordered, well-tinted section) — visible
  *    blocks instead of a wall;
- *  - an endpoint h3 renders as METHOD CHIP (token-colored border+text,
- *    color never the sole carrier — the method name is the text) + mono
- *    path; any other h3 (schema appendix) keeps the factory typography;
- *  - h4 subsections render as small-caps section labels with a static
- *    marker bar;
+ *  - an endpoint h3 renders as METHOD CHIP + mono path — since D3 (owner
+ *    directive 2026-10-22) the CHIP is the ENGINE's (core EndpointChip):
+ *    the same convention applies automatically on every OTHER docs page
+ *    through articleComponents; this module keeps only the board-specific
+ *    flow (cards for EVERY h3 chunk, ALL h4s as section labels — the
+ *    generated corpus is trusted to be uniformly structured);
+ *  - any non-endpoint h3 (schema appendix) keeps the factory typography
+ *    minus the top margin — it is always the first child of its card;
  *  - the TOC rail nests endpoints under collapsible subgroup headers with
  *    a method-colored dot per endpoint.
  *
@@ -46,19 +51,9 @@ import { CorpusMarkdown, type ArticleComponents } from "./Markdown";
  * Security: the chunks render through CorpusMarkdown — the corpus pipeline
  * (rehype-raw → sanitize) and its ONE react-markdown import site are shared,
  * the wrappers are React DOM (never raw HTML), so the sanitizer boundary is
- * untouched. Default (non-api-board) pages never enter this module → the
- * golden corpus pins stay byte-identical. Pure logic lives in apiDocs.ts
- * (this file exports ONLY components — react-refresh contract).
+ * untouched. Pure logic lives in apiDocs.ts (this file exports ONLY
+ * components — react-refresh contract).
  */
-
-/** Chip = border + text in one semantic color; bg stays the card surface. */
-const METHOD_CHIP_CLASS: Record<HttpMethod, string> = {
-  get: "border-iris-bright text-iris-bright",
-  post: "border-success text-success",
-  put: "border-warning text-warning",
-  patch: "border-warning text-warning",
-  delete: "border-error text-error",
-};
 
 /** TOC dot: same semantic mapping as the chip (method text stays visible). */
 const METHOD_DOT_CLASS: Record<HttpMethod, string> = {
@@ -92,29 +87,25 @@ function buildApiComponents(pageSlug: string | undefined): ArticleComponents {
         // Schema appendix (and any non-endpoint h3): factory look, minus
         // the top margin — it is always the first child of its card.
         return (
-          <h3 id={id} className="mb-4 mt-0 scroll-mt-24 text-base font-semibold text-foreground">
+          <h3
+            id={id}
+            className="mb-4 mt-0 scroll-mt-24 text-base font-semibold text-foreground"
+          >
             {children}
           </h3>
         );
       }
-      // The chip + path keep the heading text content ("GET /api/memories")
-      // so the accessible name and the TOC anchor stay the heading's.
+      // Endpoint h3: the ENGINE chip (core EndpointChip — the exact
+      // reference chip, one implementation since D3) in the card-first
+      // wrapper. The wrapper classes mirror articleComponents' convention
+      // branch (mt-0: first child of the card); textContent stays the
+      // heading's, so the accessible name and the TOC anchor never move.
       return (
         <h3
           id={id}
           className="mb-4 mt-0 flex flex-wrap items-center gap-x-2 gap-y-1 scroll-mt-24 text-base font-semibold text-foreground"
         >
-          <span
-            className={cn(
-              "inline-flex items-center rounded-sm border px-1.5 py-px text-xs font-semibold uppercase tracking-wide",
-              METHOD_CHIP_CLASS[endpoint.method],
-            )}
-          >
-            {endpoint.method}
-          </span>{" "}
-          <code style={MONO} className="text-sm font-medium [overflow-wrap:anywhere] text-foreground">
-            {endpoint.path}
-          </code>
+          <EndpointChip endpoint={endpoint} />
         </h3>
       );
     },
@@ -137,7 +128,8 @@ export function ApiDocsBody({ body, pageSlug }: { body: string; pageSlug: string
   // closes over a FRESH heading slugger per pass. A memoized map would keep
   // the slugger alive across re-renders and every re-render of a chunk
   // would double-count its headings — ids would drift to their -1 suffixes
-  // and the TOC anchors would die.
+  // and the TOC anchors would die. The scroll-spy therefore must not hold
+  // element references across renders — useScrollSpy re-reads the live DOM.
   const components = buildApiComponents(pageSlug);
   return (
     <div>
@@ -150,18 +142,17 @@ export function ApiDocsBody({ body, pageSlug }: { body: string; pageSlug: string
             <CorpusMarkdown source={chunk.markdown} components={components} />
           </section>
         ) : (
-          <CorpusMarkdown
-            key={index}
-            source={chunk.markdown}
-            components={components}
-          />
+          <CorpusMarkdown key={index} source={chunk.markdown} components={components} />
         ),
       )}
     </div>
   );
 }
 
-/** TOC list with method dots (colour reinforces the method TEXT, 1.4.1). */
+/** TOC list with method dots (colour reinforces the method TEXT, 1.4.1).
+ *  Clicks scroll programmatically — same handler as the plain TocList
+ *  (tocScroll.ts; first-click/repeat-click discipline, D2 2026-10-22;
+ *  review P2: the URL update goes through router.navigate). */
 function TocMethodList({
   items,
   activeId,
@@ -169,6 +160,7 @@ function TocMethodList({
   items: TocItem[];
   activeId: string | null;
 }) {
+  const navigate = useNavigate();
   return (
     <ul>
       {items.map((item) => {
@@ -180,6 +172,7 @@ function TocMethodList({
               href={`#${item.id}`}
               title={item.text}
               aria-current={active ? "location" : undefined}
+              onClick={(event) => handleTocClick(event, item.id, navigate)}
               className={cn(
                 "block truncate border-l-2 py-1.5 pl-3 pr-1 text-sm transition-colors duration-instant",
                 item.depth === 3 && "pl-7",
@@ -258,7 +251,9 @@ export function ApiTocTree({
   );
 }
 
-/** TOC rail for api-board pages (lg+): sticky, grouped, method dots. */
+/** TOC rail for api-board pages (lg+): sticky, grouped, method dots.
+ *  w-64 shrink-0 pins the rail column in the page's justified flex row
+ *  (owner directive 2026-10-22) — same geometry as TocRail. */
 export function ApiTocRail({
   items,
   activeId,
@@ -269,7 +264,7 @@ export function ApiTocRail({
   const t = useT();
   if (items.length < 2) return null;
   return (
-    <aside className="hidden lg:block">
+    <aside className="hidden w-64 shrink-0 lg:block">
       <div className="sticky top-28 max-h-[calc(100dvh-8rem)] overflow-y-auto">
         <p className="mb-3 text-xs font-medium text-foreground-secondary">
           {t("docs.toc.title")}

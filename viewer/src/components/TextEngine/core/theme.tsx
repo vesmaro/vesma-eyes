@@ -12,6 +12,12 @@ import {
 } from "./constants";
 import { MermaidDiagram } from "./Mermaid";
 import { fenceExceedsSizeCap } from "./mermaidCaps";
+import {
+  enumerationPrefix,
+  parseEndpointHeading,
+} from "./apiConvention";
+import { EndpointChip } from "./EndpointChip";
+import { ArticleH4 } from "./ArticleH4";
 
 /**
  * Typography themes of the unified text engine (ADR 0020, layer 2 — «одна
@@ -138,6 +144,7 @@ export interface ArticleThemeHooks {
  * The search-hit mark class lives in ./constants (single home; re-exported
  * by the barrel for renderer consumers).
  */
+
 export function articleComponents(hooks: ArticleThemeHooks): Components {
   return {
     h1: ({ node, children }) => (
@@ -150,25 +157,63 @@ export function articleComponents(hooks: ArticleThemeHooks): Components {
         {children}
       </h1>
     ),
-    h2: ({ node, children }) => (
-      <h2
-        id={hooks.headingSlug(nodeText(asHast(node)))}
-        className="mb-4 mt-10 scroll-mt-24 text-lg font-semibold text-foreground"
-      >
-        {children}
-      </h2>
-    ),
-    h3: ({ node, children }) => (
-      <h3
-        id={hooks.headingSlug(nodeText(asHast(node)))}
-        className="mb-3 mt-8 scroll-mt-24 text-base font-semibold text-foreground"
-      >
-        {children}
-      </h3>
-    ),
-    h4: ({ children }) => (
-      <h4 className="text-base font-medium text-foreground">{children}</h4>
-    ),
+    h2: ({ node, children }) => {
+      const text = nodeText(asHast(node));
+      const id = hooks.headingSlug(text);
+      // Convention branch (D3): an h2 that IS an endpoint («1. `POST
+      // /v1/sessions`» in the upstream mirrors) renders as a chip heading.
+      // It is always the first child of its convention card → mt-0. The
+      // slug comes from the RAW text, so ids match extractHeadings exactly;
+      // the enumeration prefix stays in the accessible name (review P3).
+      const endpoint = parseEndpointHeading(text);
+      if (endpoint !== null) {
+        return (
+          <h2
+            id={id}
+            className="mb-4 mt-0 flex flex-wrap items-center gap-x-2 gap-y-1 scroll-mt-24 text-lg font-semibold text-foreground"
+          >
+            {enumerationPrefix(text)}
+            <EndpointChip endpoint={endpoint} />
+          </h2>
+        );
+      }
+      return (
+        <h2
+          id={id}
+          className="mb-4 mt-10 scroll-mt-24 text-lg font-semibold text-foreground"
+        >
+          {children}
+        </h2>
+      );
+    },
+    h3: ({ node, children }) => {
+      const text = nodeText(asHast(node));
+      const id = hooks.headingSlug(text);
+      // Convention branch (D3): «METHOD /path» h3 → chip + mono path
+      // (byte-identical to the api-board reference; always first child of
+      // its card). Any other h3 keeps the factory look — golden-pinned.
+      const endpoint = parseEndpointHeading(text);
+      if (endpoint !== null) {
+        return (
+          <h3
+            id={id}
+            className="mb-4 mt-0 flex flex-wrap items-center gap-x-2 gap-y-1 scroll-mt-24 text-base font-semibold text-foreground"
+          >
+            {enumerationPrefix(text)}
+            <EndpointChip endpoint={endpoint} />
+          </h3>
+        );
+      }
+      return (
+        <h3
+          id={id}
+          className="mb-3 mt-8 scroll-mt-24 text-base font-semibold text-foreground"
+        >
+          {children}
+        </h3>
+      );
+    },
+    h4: ArticleH4,
     // Upstream typography (design spec §9.2): h5–h6 share one honest look —
     // text-sm/medium. Order stays visible; TOC remains h2/h3 only.
     h5: ({ children }) => (
@@ -193,9 +238,7 @@ export function articleComponents(hooks: ArticleThemeHooks): Components {
     li: ({ children }) => (
       <li className="text-base leading-relaxed text-foreground">{children}</li>
     ),
-    a: ({ href, children }) => (
-      <>{hooks.link(href, children)}</>
-    ),
+    a: ({ href, children }) => <>{hooks.link(href, children)}</>,
     blockquote: ({ children }) => (
       <blockquote className="mb-4 border-l-2 border-iris-dim pl-4 text-foreground-secondary">
         {children}

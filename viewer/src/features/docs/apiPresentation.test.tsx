@@ -2,6 +2,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { createRoot } from "react-dom/client";
 import { act } from "react";
+import { MemoryRouter } from "react-router";
 
 import { ApiDocsBody, ApiTocTree } from "./apiPresentation";
 import {
@@ -244,7 +245,11 @@ describe("ApiTocTree", () => {
     await act(async () => {
       root.render(
         <I18nProvider initialLang="ru">
-          <ApiTocTree items={items} activeId={activeId} />
+          {/* MemoryRouter: TocMethodList resolves useNavigate for the
+           * router-owned anchor URL sync (review P2). */}
+          <MemoryRouter>
+            <ApiTocTree items={items} activeId={activeId} />
+          </MemoryRouter>
         </I18nProvider>,
       );
     });

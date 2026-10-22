@@ -11,11 +11,13 @@ import { cn } from "@/lib/utils";
  * - "operational" (операционный — Задачи, Агенты, Кора, /system/*): the full
  *   content width; dense tool surfaces use the whole board.
  * - "reading" (читальный — Доки; owner directive 2026-10-21): a centered
- *   max-w-5xl column. Doc text must sit centered in the central field, not
- *   pressed against the sidebar — but the READING MEASURE is pinned: at lg+
- *   the article shares the column with the TOC rail (16rem + gap), which
- *   keeps the text block at today's ~730px instead of narrowing it. Below
- *   the max-width the column is simply full width (narrow screens).
+ *   max-w-5xl column — the BASE of the docs field below lg. Since the
+ *   owner's layout directives of 2026-10-22 the /docs surfaces own their
+ *   lg+ geometry themselves through features/docs/docsField.ts (the
+ *   group-centered [article 72ch | TOC 256px] scheme) and uncap this
+ *   wrapper at lg+; this regime stays the honest description of the
+ *   narrow-viewport column and of any docs page rendered without its
+ *   field (skeletons, embedded previews).
  *
  * Side fields are owned ONCE by the Shell (`main` p-6) and the crumb row
  * (px-4 md:px-8) — neither the regime nor a page adds its own horizontal

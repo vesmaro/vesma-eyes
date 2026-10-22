@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Check, Copy } from "lucide-react";
 import { useT } from "@/i18n";
@@ -9,6 +9,11 @@ import { cn } from "@/lib/utils";
 // the single rehype-raw/rehype-sanitize site in src).
 import { buildCorpusPipeline } from "@/components/TextEngine/core/pipeline.corpus";
 import { articleComponents, LINK_CLASS, MONO } from "@/components/TextEngine/core";
+import {
+  ENDPOINT_CARD_CLASS,
+  splitConventionSections,
+} from "@/components/TextEngine/core/apiConvention";
+import { EndpointSectionContext } from "@/components/TextEngine/core/endpointContext";
 // ME-013 (ADR 0020 Amendment 1): the diagram component is an ENGINE
 // capability now — TextEngine/core/Mermaid.tsx is the single mermaid import
 // site and serves both trust profiles; the curated profile mounts it with
@@ -118,13 +123,7 @@ function CopyButton({ code }: { code: string }) {
 }
 
 /** Fenced block chrome (docs-owned): language label + copy + EXACT code. */
-function CodeBlock({
-  code,
-  language,
-}: {
-  code: string;
-  language: string | undefined;
-}) {
+function CodeBlock({ code, language }: { code: string; language: string | undefined }) {
   return (
     <div className="relative my-4">
       {language ? (
@@ -257,9 +256,40 @@ export function Markdown({ source, className, pageSlug }: MarkdownProps) {
   // the slugger restarts per document); the TYPOGRAPHY is the factory's,
   // so only the closures are fresh, never the class strings.
   const components = articleComponents(buildArticleHooks(pageSlug));
+  // Convention flow (D3, owner directive 2026-10-22): when the body carries
+  // «METHOD /path» endpoint sections, they render inside the reference
+  // cards (the heading chip itself comes from articleComponents — core).
+  // The split is fence-aware on h2/h3 with the SAME rules as extractHeadings,
+  // so the TOC anchors and the rendered ids agree; one shared components map
+  // renders the chunks in document order (the ApiDocsBody slugger
+  // discipline). NO endpoint sections → single-pass render, byte-identical
+  // to the pre-convention DOM (the golden pins cover this path).
+  const sections = useMemo(() => splitConventionSections(source), [source]);
   return (
     <div className={cn("text-base leading-relaxed text-foreground", className)}>
-      <CorpusMarkdown source={source} components={components} />
+      {sections === null ? (
+        <CorpusMarkdown source={source} components={components} />
+      ) : (
+        sections.map((section, index) =>
+          section.endpoint !== null ? (
+            // The card chunk mounts the endpoint-section context: the
+            // theme's vocabulary h4 label style applies HERE (review P2
+            // — an h4 «Configuration» on an ordinary page keeps the
+            // factory look; apiConvention's docstring promise).
+            <EndpointSectionContext.Provider key={index} value={true}>
+              <section className={ENDPOINT_CARD_CLASS}>
+                <CorpusMarkdown source={section.markdown} components={components} />
+              </section>
+            </EndpointSectionContext.Provider>
+          ) : (
+            <CorpusMarkdown
+              key={index}
+              source={section.markdown}
+              components={components}
+            />
+          ),
+        )
+      )}
     </div>
   );
 }

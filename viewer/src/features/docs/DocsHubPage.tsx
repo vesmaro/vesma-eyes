@@ -28,7 +28,7 @@ import { formatSyncDate } from "./sidecar";
 import { legacyDocsTarget } from "./legacyDocs";
 import { DocsManifestError, DocsNotFound } from "./DocsRedirects";
 import { DocsSearch } from "./DocsSearch";
-import { pageGridClass } from "@/layout/pageGrid";
+import { DOCS_COLUMN, docsFieldClass } from "./docsField";
 
 /**
  * `/docs/:project` — the hub cover (design spec §4): a book title page, not
@@ -111,7 +111,13 @@ function HubError() {
   return <DocsManifestError onRetry={() => retryManifest()} />;
 }
 
-function StatusBadges({ project, pages }: { project: DocProject; pages: readonly DocPage[] }) {
+function StatusBadges({
+  project,
+  pages,
+}: {
+  project: DocProject;
+  pages: readonly DocPage[];
+}) {
   const t = useT();
   const provenance = project.upstream ? hubProvenance(pages) : null;
   return (
@@ -216,11 +222,12 @@ function HubCards({
       <p className="border-b border-border-subtle pb-2 text-xs font-medium text-foreground-secondary">
         {t("docs.hub.cardsLabel")}
       </p>
-      <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-[1.35fr_1fr_1fr_1fr]">
+      {/* Two columns: the hub lives in the section's 72ch reading column
+       * (docsField — owner directive 2026-10-22), where a 4-card row cannot
+       * survive; ~350px cards stay readable. */}
+      <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {DOC_PROJECTS.map((project) => {
-          const pages = manifest.pages.filter(
-            (page) => page.project === project.slug,
-          );
+          const pages = manifest.pages.filter((page) => page.project === project.slug);
           const stats = hubStats(project, pages);
           const Icon = project.icon;
           const current = project.slug === activeProject.slug;
@@ -290,7 +297,13 @@ function HubCards({
   );
 }
 
-function StartHere({ project, manifest }: { project: DocProject; manifest: DocsManifest }) {
+function StartHere({
+  project,
+  manifest,
+}: {
+  project: DocProject;
+  manifest: DocsManifest;
+}) {
   const t = useT();
   const { lang } = useI18n();
   const pages = project.startSlugs
@@ -322,7 +335,13 @@ function StartHere({ project, manifest }: { project: DocProject; manifest: DocsM
   );
 }
 
-function CategoryRows({ project, manifest }: { project: DocProject; manifest: DocsManifest }) {
+function CategoryRows({
+  project,
+  manifest,
+}: {
+  project: DocProject;
+  manifest: DocsManifest;
+}) {
   const t = useT();
   const { lang } = useI18n();
   return (
@@ -375,48 +394,50 @@ function HubCover({ project }: { project: DocProject }) {
   const manifestFailed = useDocsManifestFailed();
   const pages = manifest?.pages.filter((page) => page.project === project.slug);
   return (
-    <div className={pageGridClass("reading")}>
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="flex min-w-0 items-start gap-3">
-          <Icon
-            className="mt-1 size-6 shrink-0 text-foreground-secondary"
-            aria-hidden="true"
-          />
-          <div className="min-w-0">
-            <h1 className="text-xl font-semibold text-foreground">{project.name}</h1>
-            <p className="mt-1 max-w-[60ch] text-sm text-foreground-secondary">
-              {t(project.ledeKey)}
-            </p>
-          </div>
-        </div>
-        <DocsSearch className="w-full md:max-w-xs" />
-      </div>
-      {manifest && pages ? (
-        <>
-          <div className="mb-6">
-            <StatusBadges project={project} pages={pages} />
-          </div>
-          <div className="mb-6">
-            <StartHere project={project} manifest={manifest} />
-          </div>
-          {/* U6: the corpus map — v12 hub cards with data counters, on the
-           * section root (the default hub) only; the /docs root keeps its
-           * instant redirect into this hub (design spec §8 untouched). */}
-          {project.slug === DEFAULT_PROJECT ? (
-            <div className="mb-6">
-              <HubCards activeProject={project} manifest={manifest} />
+    <div className={docsFieldClass()}>
+      <div className={DOCS_COLUMN}>
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <Icon
+              className="mt-1 size-6 shrink-0 text-foreground-secondary"
+              aria-hidden="true"
+            />
+            <div className="min-w-0">
+              <h1 className="text-xl font-semibold text-foreground">{project.name}</h1>
+              <p className="mt-1 max-w-[60ch] text-sm text-foreground-secondary">
+                {t(project.ledeKey)}
+              </p>
             </div>
-          ) : null}
-          <p className="border-b border-border-subtle pb-2 text-xs font-medium text-foreground-secondary">
-            {t("docs.hub.categories")}
-          </p>
-          <CategoryRows project={project} manifest={manifest} />
-        </>
-      ) : manifestFailed ? (
-        <HubError />
-      ) : (
-        <HubSkeleton />
-      )}
+          </div>
+          <DocsSearch className="w-full md:max-w-xs" />
+        </div>
+        {manifest && pages ? (
+          <>
+            <div className="mb-6">
+              <StatusBadges project={project} pages={pages} />
+            </div>
+            <div className="mb-6">
+              <StartHere project={project} manifest={manifest} />
+            </div>
+            {/* U6: the corpus map — v12 hub cards with data counters, on the
+             * section root (the default hub) only; the /docs root keeps its
+             * instant redirect into this hub (design spec §8 untouched). */}
+            {project.slug === DEFAULT_PROJECT ? (
+              <div className="mb-6">
+                <HubCards activeProject={project} manifest={manifest} />
+              </div>
+            ) : null}
+            <p className="border-b border-border-subtle pb-2 text-xs font-medium text-foreground-secondary">
+              {t("docs.hub.categories")}
+            </p>
+            <CategoryRows project={project} manifest={manifest} />
+          </>
+        ) : manifestFailed ? (
+          <HubError />
+        ) : (
+          <HubSkeleton />
+        )}
+      </div>
     </div>
   );
 }
@@ -431,8 +452,10 @@ export function DocsHubPage() {
   const target = legacyDocsTarget(`/docs/${project}`);
   if (target !== null) return <Navigate to={target} replace />;
   return (
-    <div className={pageGridClass("reading")}>
-      <DocsNotFound />
+    <div className={docsFieldClass()}>
+      <div className={DOCS_COLUMN}>
+        <DocsNotFound />
+      </div>
     </div>
   );
 }

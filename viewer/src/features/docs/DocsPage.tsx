@@ -1,6 +1,12 @@
 import { Component, useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router";
-import { ArrowLeft, ArrowRight, ChevronDown, GitCommitHorizontal, Languages } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ChevronDown,
+  GitCommitHorizontal,
+  Languages,
+} from "lucide-react";
 import { useI18n, useT, type TranslationKey } from "@/i18n";
 import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,20 +31,33 @@ import { DocsSearch } from "./DocsSearch";
 import { DocsNotFound } from "./DocsRedirects";
 import { formatSyncDate } from "./sidecar";
 import { docSlugForPath } from "./docsNav";
-import {
-  DEFAULT_PROJECT,
-  docUrl,
-  projectOfDocSlug,
-  categoryUrl,
-} from "./projects";
-import { pageGridClass } from "@/layout/pageGrid";
+import { handleTocClick } from "./tocScroll";
+import { DEFAULT_PROJECT, docUrl, projectOfDocSlug, categoryUrl } from "./projects";
+import { DOCS_COLUMN, DOCS_GROUP_ROW, docsFieldClass } from "./docsField";
 
 /**
  * `/docs/:project/*` (design spec §5/§6/§7/§9): category chip → version
  * badge → provenance badge (imported pages) → locale badge → h1 → article
- * at the 72ch reading measure, TOC rail (sticky, scroll-spy) on the right
- * from lg up, native <details> TOC above the h1 on narrow screens, prev/next
- * at the end confined to the page's OWN project (spec §9.7).
+ * at the 72ch reading measure, TOC rail (sticky, scroll-spy) NEXT to the
+ * article from lg up, native <details> TOC above the h1 on narrow screens,
+ * prev/next at the end confined to the page's OWN project (spec §9.7).
+ *
+ * Layout (owner directive 2026-10-22 + the group-centered revision of the
+ * same day — the FINAL scheme, history below so the next iteration does
+ * not relitigate it):
+ *
+ *   v1 (morning)  [article+TOC] centered as a GROUP (max-w-5xl) — rejected:
+ *                 on wide windows the TOC sat mid-window, torn from the edge;
+ *   v2 (noon)     article pinned left, rail on the right edge, slack as the
+ *                 gutter — rejected: the article stuck to the sidebar;
+ *   v3 (evening)  article centered BETWEEN sidebar and rail — rejected: the
+ *                 rail sat at the window edge, torn from the article;
+ *   FINAL         the GROUP [article 72ch | gap 32→64px | TOC 256px] is
+ *                 centered in the field; the slack becomes equal OUTER
+ *                 margins (industry convention — Stripe/MDN/Next.js: the
+ *                 rail sits NEXT to the content). Schema + rationale in
+ *                 docsField.ts; rail-less docs surfaces center the same
+ *                 72ch column via the same helpers.
  */
 
 function ArticleSkeleton() {
@@ -71,8 +90,11 @@ function PageSkeleton() {
   );
 }
 
-/** TocList item — active state is shape + colour (WCAG 1.4.1, spec §5.3). */
+/** TocList item — active state is shape + colour (WCAG 1.4.1, spec §5.3).
+ *  Clicks scroll programmatically (tocScroll.ts): the first click lands,
+ *  a repeat click re-lands, the URL stays shareable. */
 function TocList({ items, activeId }: { items: TocItem[]; activeId: string | null }) {
+  const navigate = useNavigate();
   return (
     <ul>
       {items.map((item) => {
@@ -83,6 +105,7 @@ function TocList({ items, activeId }: { items: TocItem[]; activeId: string | nul
               href={`#${item.id}`}
               title={item.text}
               aria-current={active ? "location" : undefined}
+              onClick={(event) => handleTocClick(event, item.id, navigate)}
               className={cn(
                 "block truncate border-l-2 py-1.5 pl-3 pr-1 text-sm transition-colors duration-instant",
                 item.depth === 3 && "pl-7",
@@ -102,56 +125,63 @@ function TocList({ items, activeId }: { items: TocItem[]; activeId: string | nul
 }
 
 /**
- * Scroll-spy over the rendered h2/h3 ids (contract §8). Falls back to "no
- * active item" where IntersectionObserver is unavailable (tests, ancient
- * webviews) — the TOC stays usable as plain anchor links.
+ * Scroll-spy over the rendered h2/h3 ids (contract §8), rAF-throttled
+ * window scroll/resize listener. NOT IntersectionObserver: the markdown
+ * component maps are rebuilt per body (the slugger discipline), and every
+ * spy state change re-renders the article — an IO that captured element
+ * references would observe DETACHED nodes after the re-render and freeze
+ * (the reproduced stuck-highlight defect). The listener re-reads the live
+ * DOM every frame, so remounts cannot strand it; ids re-resolve per frame
+ * (~40 getElementById calls, rAF-capped) — no measured cost.
+ *
+ * Active = the LAST heading above the sticky-chrome line (scroll-mt-24);
+ * above the first heading nothing is active — the rail starts silent and
+ * honest. Falls back to "no active item" without window scroll (tests,
+ * ancient webviews) — the TOC stays usable as plain anchor links.
  */
 function useScrollSpy(ids: string[]): string | null {
   const [activeId, setActiveId] = useState<string | null>(null);
   const key = ids.join("|");
   useEffect(() => {
-    if (key === "" || typeof IntersectionObserver === "undefined") return undefined;
-    const elements = ids
-      .map((id) => document.getElementById(id))
-      .filter((element): element is HTMLElement => element !== null);
-    if (elements.length === 0) return undefined;
-
-    const visible = new Map<string, number>();
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting)
-            visible.set(entry.target.id, entry.boundingClientRect.top);
-          else visible.delete(entry.target.id);
-        }
-        if (visible.size > 0) {
-          const topmost = [...visible.entries()].sort((a, b) => a[1] - b[1])[0][0];
-          setActiveId(topmost);
-          return;
-        }
-        // Nothing visible under the sticky header line — the spy holds the
-        // last heading scrolled past, so the rail never points at nothing.
-        let last: string | null = null;
-        for (const element of elements) {
-          if (element.getBoundingClientRect().top < 120) last = element.id;
-        }
-        setActiveId(last);
-      },
-      { rootMargin: "-96px 0px -55% 0px", threshold: 0 },
-    );
-    elements.forEach((element) => observer.observe(element));
-    return () => observer.disconnect();
+    if (key === "" || typeof window === "undefined") return undefined;
+    let frame = 0;
+    const measure = () => {
+      frame = 0;
+      let last: string | null = null;
+      for (const id of ids) {
+        const element = document.getElementById(id);
+        if (element === null) continue;
+        // Last heading whose top cleared the sticky line — the section the
+        // reader is in. 120 ≈ scroll-mt (96) + a sliver of grace.
+        if (element.getBoundingClientRect().top < 120) last = id;
+        else break; // ids are document-ordered — the first below-line ends it
+      }
+      setActiveId(last);
+    };
+    const schedule = () => {
+      if (frame === 0) frame = window.requestAnimationFrame(measure);
+    };
+    measure();
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule, { passive: true });
+    return () => {
+      if (frame !== 0) window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- ids array identity churns per render; the joined key is the real dependency
   }, [key]);
   return activeId;
 }
 
-/** TOC rail — hidden below lg (the <details> variant covers narrow widths). */
+/** TOC rail — hidden below lg (the <details> variant covers narrow widths).
+ *  w-64 shrink-0 pins the rail column in the page's justified flex row
+ *  (owner directive 2026-10-22) — the flex neighbour is the article. */
 function TocRail({ items, activeId }: { items: TocItem[]; activeId: string | null }) {
   const t = useT();
   if (items.length < 2) return null; // empty TOC is noise — spec §5.3
   return (
-    <aside className="hidden lg:block">
+    <aside className="hidden w-64 shrink-0 lg:block">
       <div className="sticky top-28 max-h-[calc(100dvh-8rem)] overflow-y-auto">
         <p className="mb-3 text-xs font-medium text-foreground-secondary">
           {t("docs.toc.title")}
@@ -255,7 +285,10 @@ function ProvenanceBadge({ provenance }: { provenance: DocProvenance }) {
   });
   return (
     <Badge variant="outline" title={full} aria-label={full}>
-      <GitCommitHorizontal className="mr-1 size-3.5 text-foreground-muted" aria-hidden="true" />
+      <GitCommitHorizontal
+        className="mr-1 size-3.5 text-foreground-muted"
+        aria-hidden="true"
+      />
       {t("docs.provenance.badge", {
         repo: provenance.repo,
         sha: provenance.sha.slice(0, 7),
@@ -340,14 +373,13 @@ export function DocsPage() {
 
   if (slug === null || page === null) {
     // A project namespace miss IS the redirect-map miss (design spec §8):
-    // honest not-found with the CTA into the section root.
+    // honest not-found with the CTA into the section root — in the SAME
+    // centered 72ch column as every other docs surface.
     return (
-      <div className={pageGridClass("reading")}>
-        {manifest ? (
-          <DocsNotFound />
-        ) : (
-          <PageSkeleton />
-        )}
+      <div className={docsFieldClass()}>
+        <div className={DOCS_COLUMN}>
+          {manifest ? <DocsNotFound /> : <PageSkeleton />}
+        </div>
       </div>
     );
   }
@@ -486,8 +518,23 @@ function ArticleView({ slug, page }: { slug: string; page: DocPage }) {
   const localeOriginal = !bilingual && lang !== engineLocale;
 
   return (
-    <div className={pageGridClass("reading")}>
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_16rem]">
+    <div className={docsFieldClass()}>
+      {/* The docs field (owner directive 2026-10-22 + group-centered revision
+       * of the same day — the FINAL scheme, do not relitigate without the
+       * owner): [ article 72ch | gap 32→64px | TOC 256px ], the GROUP
+       * centered in the field (docsField.ts for the schema and rationale).
+       * The TOC sits NEXT to the article — the industry convention
+       * (Stripe/MDN/Next.js); the slack becomes equal OUTER margins
+       * (~335px each side at 2000px). At 1280 the group fills the field
+       * exactly (gap-8 keeps the density). Below lg: the centered 5xl
+       * reading column, no rail. Rail-less docs surfaces (hub, category,
+       * not-found) center the same 72ch column through the same helpers. */}
+      <div className={DOCS_GROUP_ROW}>
+        {/* NO mx-auto here: the article is a flex ITEM of the centered group
+         * — auto margins would absorb the group's slack and defeat
+         * justify-center (measured: the rail jumped back to the window
+         * edge). Centering is the ROW's job; mx-auto is for rail-less
+         * pages' block columns (DOCS_COLUMN). */}
         <article className="min-w-0 max-w-scroll">
           {/* Meta row: category chip → version badge → provenance badge →
               locale badge, RUS/ORIG + search right (design spec §6.1). */}
@@ -513,7 +560,9 @@ function ArticleView({ slug, page }: { slug: string; page: DocPage }) {
                   {t("docs.badge.verified", { version: page.lastVerified })}
                 </Badge>
               ) : null}
-              {page.provenance ? <ProvenanceBadge provenance={page.provenance} /> : null}
+              {page.provenance ? (
+                <ProvenanceBadge provenance={page.provenance} />
+              ) : null}
               {localeOriginal ? (
                 <Badge variant="outline">
                   <Languages className="mr-1 size-3.5" aria-hidden="true" />
