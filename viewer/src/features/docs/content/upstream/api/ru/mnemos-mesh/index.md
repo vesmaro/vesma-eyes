@@ -20,9 +20,9 @@ last_verified: 2026-09-29
 
 | Поверхность | Что это | Где определено |
 |---|---|---|
-| Внутренний core-API | gRPC через Unix-сокет между мешом и mnemos: запись/чтение уже обработанных конвертов, без расшаренной SQLite | [`proto/mnemos_core_api.proto`](https://github.com/Korrnals/mnemos-mesh/blob/b428ea9b7ec9731fe4d53478702d0667cf3f53de/proto/mnemos_core_api.proto) |
-| Пиринговая федерация | контракт «узел ↔ узел» поверх mTLS: per-peer ACL, батч-синк, опосредованная выдача | [`proto/federation.proto`](https://github.com/Korrnals/mnemos-mesh/blob/b428ea9b7ec9731fe4d53478702d0667cf3f53de/proto/federation.proto) |
-| Внутренние релеи | транспортные контракты пересылки (assignment/relay-ноги) — деталь реализации, не внешний контракт | каталог [`proto/`](https://github.com/Korrnals/mnemos-mesh/tree/b428ea9b7ec9731fe4d53478702d0667cf3f53de/proto) |
+| Внутренний core-API | gRPC через Unix-сокет между мешом и mnemos: запись/чтение уже обработанных конвертов, без расшаренной SQLite | [`proto/mnemos_core_api.proto`](https://github.com/vesmaro/vesma-mesh/blob/b428ea9b7ec9731fe4d53478702d0667cf3f53de/proto/mnemos_core_api.proto) |
+| Пиринговая федерация | контракт «узел ↔ узел» поверх mTLS: per-peer ACL, батч-синк, опосредованная выдача | [`proto/federation.proto`](https://github.com/vesmaro/vesma-mesh/blob/b428ea9b7ec9731fe4d53478702d0667cf3f53de/proto/federation.proto) |
+| Внутренние релеи | транспортные контракты пересылки (assignment/relay-ноги) — деталь реализации, не внешний контракт | каталог [`proto/`](https://github.com/vesmaro/vesma-mesh/tree/b428ea9b7ec9731fe4d53478702d0667cf3f53de/proto) |
 
 ## Поверхность оператора
 

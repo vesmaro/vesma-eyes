@@ -38,7 +38,7 @@ export PATH="$HOME/go/bin:$PATH"
 ## 1 · Сборка
 
 ```bash
-git clone https://github.com/Korrnals/mnemos-mesh.git
+git clone https://github.com/vesmaro/vesma-mesh.git
 cd mnemos-mesh
 make build
 ./bin/mnemos-mesh version

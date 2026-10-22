@@ -45,7 +45,7 @@ See [CONTRIBUTING.md](https://github.com/vesmaro/vesma-mesh/blob/b428ea9b7ec9731
 ## 1 · Build
 
 ```bash
-git clone https://github.com/Korrnals/mnemos-mesh.git
+git clone https://github.com/vesmaro/vesma-mesh.git
 cd mnemos-mesh
 make build
 ./bin/mnemos-mesh version
