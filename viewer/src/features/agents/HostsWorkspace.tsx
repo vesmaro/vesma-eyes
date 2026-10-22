@@ -40,6 +40,7 @@ import { AssignmentStateBadge } from "./AssignmentStateBadge";
 import { CreateTaskDialog } from "@/features/tasks/CreateTaskDialog";
 import { ExecutorLinkCheck } from "./ExecutorLinkCheck";
 import { HarnessChipStrip } from "./HarnessChipStrip";
+import { SessionPreview } from "./SessionPreview";
 import {
   formatReportAge,
   isLifecycle,
@@ -111,6 +112,15 @@ import { pageGridClass } from "@/layout/pageGrid";
  * top overlay (the sheet; Radix handles it, the list mirrors the intent).
  * The ≥xl seam keeps its KoraResizeHandle arrow/Home/End/Esc path.
  *
+ * W3 «СЕССИЯ В ЦЕНТРЕ» (agents-workspace-ide, states.md §1 S-SESSION + §3):
+ * the session selection is a ROUTE segment (`/agents/hosts/:host/sessions/
+ * :sessionId` — the SAME frame element). A resolved live session renders the
+ * READ-ONLY transcript preview in the field (SessionPreview — the Kora
+ * reading grammar; the chat lives ONLY in Kora, blueprint §9); the preview
+ * is the field's ONLY transcript-wire carrier and mounts/unmounts with the
+ * selection (blueprint §7 — the 1 Hz ticker stays the single shared beat).
+ * Esc inside the preview / the ✕ button return to S-HOST-LIVE.
+ *
  * A «host» is a CLIENT-SIDE projection of the executor registry
  * (rosterModel.groupExecutorsByHost — no host API exists in the engine):
  * every host fact here is an aggregate over the group's real member rows.
@@ -124,7 +134,14 @@ import { pageGridClass } from "@/layout/pageGrid";
  * not motion). No pulses, no breathing, no fake counters: while the
  * registry read is pending the summary shows a skeleton with NO numbers.
  */
-export function HostsWorkspace({ hostId }: { hostId: string | null }) {
+export function HostsWorkspace({
+  hostId,
+  sessionId,
+}: {
+  hostId: string | null;
+  /** The `sessions/:sessionId` route segment (W3) — null = S-HOST-LIVE. */
+  sessionId: string | null;
+}) {
   const t = useT();
   const gateway = useGateway();
   const capable = isAgentsSource(gateway);
@@ -229,6 +246,23 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
     });
     return () => cancelAnimationFrame(raf);
   }, [hostId, sheetOpen]);
+
+  // W3: the SESSION selection is a navigation too — on CLOSE (the ✕/Esc
+  // path unmounts the preview) the focus returns to the field's h2, the
+  // same landing landmark the host change uses. Opening focuses the
+  // preview's own title (SessionPreview's mount effect).
+  const prevSessionId = useRef(sessionId);
+  useEffect(() => {
+    const changed = prevSessionId.current !== sessionId;
+    prevSessionId.current = sessionId;
+    if (!changed || sessionId !== null) return;
+    const raf = requestAnimationFrame(() => {
+      document
+        .getElementById("agents-host-title")
+        ?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [sessionId]);
 
   if (!capable) {
     return <AgentsUnsupported />;
@@ -378,6 +412,7 @@ export function HostsWorkspace({ hostId }: { hostId: string | null }) {
             <KoraGatewayContext.Provider value={koraGateway}>
               <HostField
                 group={selected}
+                sessionId={sessionId}
                 assignments={assignmentItems}
                 meta={meta}
                 now={now}
@@ -773,6 +808,7 @@ function HostRibbon({
  * group members) — what the engine does not have, the field does not draw. */
 function HostField({
   group,
+  sessionId,
   assignments,
   meta,
   now,
@@ -780,6 +816,8 @@ function HostField({
   onGiveTask,
 }: {
   group: HostGroup;
+  /** The selected session's id (the route segment) — null = none. */
+  sessionId: string | null;
   assignments: readonly AssignmentItem[];
   meta: ExecutorListMeta | undefined;
   now: number;
@@ -814,6 +852,15 @@ function HostField({
   const sessionSupport = (session: KoraSession): string | undefined =>
     kora.coverage?.harnesses.find((row) => row.harness === session.harness)
       ?.support;
+
+  // W3 S-SESSION: the selected session resolves within the host's LIVE
+  // sessions (the same registry read the «Сейчас» list renders). An
+  // unresolved id is the honest not-found — the transcript wire does NOT
+  // mount for it (blueprint §7: the read lives only with a real selection).
+  const selectedSession =
+    sessionId !== null
+      ? (liveSessions.find((session) => session.id === sessionId) ?? null)
+      : null;
 
   // The next_action line: the state-defining member's server-owned report
   // age, humanised exactly like the registry pill (the {{silentMax}} var
@@ -1004,6 +1051,54 @@ function HostField({
        * by construction). */}
       <HarnessChipStrip members={group.members} meta={meta} now={now} />
 
+      {/* W3 S-SESSION (states.md §1): the selected live session's READ-ONLY
+       * transcript preview + mini-meta + [Открыть в Корe] (blueprint §4).
+       * The preview is the ONLY transcript-wire carrier — it mounts ONLY
+       * with a resolved selection and unmounts on switch/close (§7). While
+       * the registry read is in flight: skeleton, no verdict; an id that
+       * projects to nothing gets the honest not-found line (the deep link
+       * outlived the live list) — never a transcript read. */}
+      {sessionId !== null ? (
+        kora.isPending ? (
+          <div
+            role="status"
+            aria-label={t("agents.hosts.loading")}
+            className="mx-6 mb-3 space-y-2 rounded-md border border-border-subtle p-3"
+          >
+            <Skeleton className="h-4 w-1/3" />
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-4 w-1/2" />
+          </div>
+        ) : selectedSession !== null ? (
+          <SessionPreview
+            session={selectedSession}
+            hostRouteId={routeId}
+            coverage={kora.coverage}
+          />
+        ) : (
+          <div className="mx-6 mb-3 space-y-1 rounded-md border border-border-subtle p-3">
+            <p className="text-sm font-medium text-foreground-secondary">
+              {t("agents.hosts.session.notFound")}
+            </p>
+            <p className="text-xs text-foreground-muted">
+              {t("agents.hosts.session.notFoundHint")}
+            </p>
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <Button asChild variant="outline" size="sm">
+                <Link to={`/agents/hosts/${routeId}`}>
+                  {t("agents.hosts.session.backToHost")}
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <Link to={`/kora/${encodeURIComponent(sessionId)}`}>
+                  {t("agents.hosts.session.openInKora")}
+                </Link>
+              </Button>
+            </div>
+          </div>
+        )
+      ) : null}
+
       {/* «Сейчас»: the host's active work — assignments (→ the task's live
        * execution feed) and live harness sessions (→ the Kora transcript;
        * lists-only harnesses wear the honest badge, never a dead link). */}
@@ -1055,11 +1150,22 @@ function HostField({
                 <ul className="space-y-0.5">
                   {hostSessionDisplayLabels(liveSessions).map((label, index) => {
                     const session = liveSessions[index]!;
+                    // W3 (states.md §1 S-HOST-LIVE → S-SESSION): a live row
+                    // selects the session IN THE FIELD (the route segment);
+                    // Kora stays one [Открыть в Корe] away from the preview.
+                    const selected = session.id === sessionId;
                     return (
                       <li key={session.id}>
                         <Link
-                          to={`/kora/${encodeURIComponent(session.id)}`}
-                          className="flex min-h-9 items-center gap-1.5 rounded-sm px-1 text-sm transition-colors duration-instant hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+                          to={`/agents/hosts/${routeId}/sessions/${encodeURIComponent(session.id)}`}
+                          aria-current={selected ? "true" : undefined}
+                          className={cn(
+                            "flex min-h-9 items-center gap-1.5 rounded-sm px-1 text-sm transition-colors duration-instant hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
+                            // iris-tint, NOT bg-iris/10 — the /-opacity
+                            // spelling produces NO utility on var() colours
+                            // (the config's color-mix note).
+                            selected && "bg-iris-tint",
+                          )}
                         >
                           <span
                             aria-hidden="true"

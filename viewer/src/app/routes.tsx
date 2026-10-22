@@ -312,6 +312,16 @@ export function buildRoutes(): RouteObject[] {
                 // selection is the :host param — ONE frame element, the
                 // selection never re-assembles it.
                 { path: "hosts/:host?", element: <AgentsHostsPage /> },
+                // agents-workspace-ide W3 (states.md §3): the SESSION
+                // selection is a route segment — the SAME element as
+                // `hosts/:host?` (one frame element, the selection never
+                // re-assembles it — the A1 contract). Deep-linkable;
+                // /kora/:sessionId coexists and stays canonical for chat
+                // (agents blueprint §9).
+                {
+                  path: "hosts/:host/sessions/:sessionId",
+                  element: <AgentsHostsPage />,
+                },
                 { path: "execution", element: <AgentsExecutionPage /> },
                 // AGW-4: the executor registry — connection guide + approve /
                 // enable / revoke / delete management (spec §1, wave 2).

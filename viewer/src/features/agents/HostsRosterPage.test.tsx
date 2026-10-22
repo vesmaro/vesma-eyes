@@ -923,8 +923,11 @@ describe("the main field: the selected host's scaffold", () => {
       }),
     });
     const field = mainField(container);
+    // W3 (states.md §1 S-HOST-LIVE): the live row selects the session IN
+    // the field — the link targets the agents session route, not Kora
+    // (the chat stays canonical there, one [Открыть в Корe] away).
     const sessionLink = field.querySelector<HTMLAnchorElement>(
-      'a[href="/kora/ex-1%3Asess_42"]',
+      'a[href="/agents/hosts/laptop/sessions/ex-1%3Asess_42"]',
     );
     expect(sessionLink).not.toBeNull();
     expect(sessionLink!.textContent).toContain("vscode");
