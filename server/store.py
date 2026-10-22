@@ -414,6 +414,70 @@ HARNESS_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{0,59}$")
 HARNESS_MAX_COUNT = 64
 
 
+# ---------------------------------------------- specialist slug normalization
+# Loop S-step 1 (verdict card loop-verification-board-agents, 2026-10-22):
+# nominations died on display names — a card declared «@GCW: Tech Lead»
+# while the executor roster (and every poller's local allowlist) speaks the
+# slug ``gcw-tech-lead``. The wire payload must carry the slug, so the
+# normalization happens ONCE, at mint time, in the store — every downstream
+# consumer (poller allowlists, routing annotation, hook conditions) sees the
+# canonical form; the raw display name survives in the audit event
+# (``specialist_raw``) and in the honest-miss journal for names that do not
+# normalize at all.
+_GCW_COLON_PREFIX_RE = re.compile(r"^@?\s*gcw\s*:", re.IGNORECASE)
+_SPECIALIST_SLUG_RE = re.compile(r"^[a-z0-9](?:[a-z0-9._-]{0,59})$")
+
+
+def normalize_specialist(name: str) -> str:
+    """Display name → specialist slug, or '' when it does not normalize.
+
+    Transformation (verdict fixtures): lowercase; a leading «@GCW:» /
+    «gcw:» token is cut (colon required — «@gcw-product-architect» must
+    keep its ``gcw-`` head); further leading '@' signs are cut; whitespace
+    runs collapse to single hyphens; edge hyphens are stripped. The «@GCW:»
+    token NAMES the gcw namespace (the GCW delegate syntax «@GCW: Tech
+    Lead» denotes the agent ``gcw-tech-lead``), so the ``gcw-`` head is
+    restored when the explicit namespace form is used and the remainder
+    lacks it — the canonical form the roster capabilities and every
+    poller's local allowlist speak. A bare display name («Tech Lead») is
+    never given a head it did not claim — matching stays head-insensitive
+    instead (specialist_matches). The result must satisfy the same shape
+    as :data:`HARNESS_NAME_RE` (lowercase [a-z0-9] head, then
+    [a-z0-9._-]) — anything else (Cyrillic names, punctuation junk)
+    returns '' and the caller keeps the raw name plus a journal entry: an
+    unknown name is never silently dropped.
+    """
+    s = (name or "").strip()
+    if not s:
+        return ""
+    gcw_ns = _GCW_COLON_PREFIX_RE.match(s) is not None
+    s = _GCW_COLON_PREFIX_RE.sub("", s, count=1).lstrip("@").strip()
+    s = re.sub(r"\s+", "-", s.lower()).strip("-")
+    if not _SPECIALIST_SLUG_RE.fullmatch(s):
+        return ""
+    if gcw_ns and not s.startswith("gcw-"):
+        s = f"gcw-{s}"
+    return s
+
+
+def specialist_matches(declared: str, capability: str) -> bool:
+    """Case/prefix-insensitive specialist ↔ capability match (routing).
+
+    Both sides go through :func:`normalize_specialist`; a match is the
+    exact slug equality, or equality under the single ``gcw-`` head
+    («Tech Lead» → ``tech-lead`` matches the roster capability
+    ``gcw-tech-lead``). When either side does not normalize, the match
+    falls back to honest raw equality — never a fuzzy substring.
+    """
+    raw_d, raw_c = (declared or "").strip(), (capability or "").strip()
+    if not raw_d or not raw_c:
+        return False
+    d, c = normalize_specialist(raw_d), normalize_specialist(raw_c)
+    if not d or not c:
+        return raw_d == raw_c
+    return d == c or c == f"gcw-{d}" or d == f"gcw-{c}"
+
+
 class HarnessError(Exception):
     """Base class for harness-dictionary violations (wave 3C)."""
 
@@ -1003,6 +1067,11 @@ CREATE TABLE IF NOT EXISTS task_assignments (
     executor_id         TEXT NOT NULL DEFAULT '',
     claimed_by_executor TEXT NOT NULL DEFAULT '',
     topics              TEXT NOT NULL DEFAULT '[]',
+    -- Loop S-step 3 (transport retries): attempts = completed requeues;
+    -- not_before = ISO stamp until which the claim CAS refuses (backoff).
+    -- '' = immediately claimable (default for every pre-existing row).
+    attempts            INTEGER NOT NULL DEFAULT 0,
+    not_before          TEXT NOT NULL DEFAULT '',
     created_at          TEXT NOT NULL,
     claimed_at          TEXT,
     started_at          TEXT,
@@ -1701,6 +1770,18 @@ class Store:
             db.execute(
                 "ALTER TABLE task_assignments "
                 "ADD COLUMN topics TEXT NOT NULL DEFAULT '[]'")
+        # Loop S-step 3 (transport retries): additive ALTER for
+        # pre-S-step databases — attempts=0 / not_before='' cover existing
+        # rows (every queued row stays immediately claimable); no
+        # SEED_VERSION bump (topics precedent).
+        if "attempts" not in acols:
+            db.execute(
+                "ALTER TABLE task_assignments "
+                "ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0")
+        if "not_before" not in acols:
+            db.execute(
+                "ALTER TABLE task_assignments "
+                "ADD COLUMN not_before TEXT NOT NULL DEFAULT ''")
         # Enrollment (Amd 2 §4 supplement): origin fact on the executor row
         # ('' = machine-token bootstrap; 'enrollment:<id>' = one-time token).
         # Additive ALTER for pre-enrollment databases — the '' DEFAULT covers
@@ -2981,6 +3062,15 @@ class Store:
         if harness not in known:
             raise UnknownHarnessError(
                 f"unknown harness: {harness}; known: {sorted(known)}")
+        # Loop S-step 1: the declared specialist is normalized to its slug
+        # at mint time (display name «@GCW: Tech Lead» → ``gcw-tech-lead``)
+        # so the stored row and every wire payload carry the canonical form
+        # the poller allowlists match on. A name that does NOT normalize is
+        # kept verbatim and journaled (honest miss) — never silently
+        # dropped and never a rejection: the poller may still know it.
+        specialist_raw = specialist.strip()[:120]
+        specialist_slug = normalize_specialist(specialist_raw)
+        specialist_stored = specialist_slug or specialist_raw
         active = db.execute(
             "SELECT COUNT(*) AS n FROM task_assignments "
             "WHERE task_id=? AND state IN ('queued','claimed','running')",
@@ -3007,7 +3097,7 @@ class Store:
                        (task_id, specialist, harness, state, created_by, note,
                         spec_snapshot, spec_hash, executor_id, topics, created_at)
                        VALUES (?,?,?,'queued',?,?,?,?,?,?,?)""",
-                (task_id, specialist.strip()[:120], harness,
+                (task_id, specialist_stored, harness,
                  created_by[:120], "", spec[:SPEC_SNAPSHOT_CAP], spec_hash,
                  executor_id.strip()[:120], json.dumps(topics), _now()),
             )
@@ -3017,12 +3107,38 @@ class Store:
             raise AssignmentConflictError(
                 f"task {task_id} already has an active assignment") from exc
         aid = int(cur.lastrowid)
-        self._log(db, "assignment.created", task_id, {
-            "assignment_id": aid, "specialist": specialist.strip()[:120],
+        created_payload: dict[str, Any] = {
+            "assignment_id": aid, "specialist": specialist_stored,
             "harness": harness, "created_by": created_by[:120],
             "executor_id": executor_id.strip()[:120], "spec_hash": spec_hash,
             "topics": topics,
-        })
+        }
+        if specialist_slug and specialist_slug != specialist_raw:
+            created_payload["specialist_raw"] = specialist_raw
+        self._log(db, "assignment.created", task_id, created_payload)
+        if specialist_raw and not specialist_slug:
+            # Honest miss (S-step 1): the declared name carries no
+            # normalizable slug form — journaled with the reason, the
+            # nomination still stands verbatim.
+            self._log(db, "assignment.specialist_unnormalized", task_id, {
+                "assignment_id": aid, "specialist": specialist_raw,
+                "reason": "display name does not normalize to a slug form",
+            })
+        pin = executor_id.strip()[:120]
+        if pin:
+            # Loop S-step 2 (mint-time leg): a pin onto an executor that is
+            # already ineligible (missing / disabled / revoked) is honest
+            # from the first second — journaled with human words; the
+            # standing waiting status (computed per GET) keeps it honest
+            # when the executor is switched off LATER (the id=9 ghost
+            # story: nominated alive, disabled a day later).
+            waiting = self._pin_waiting_reason_db(db, pin)
+            if waiting is not None:
+                self._log(db, "assignment.pin_waiting", task_id, {
+                    "assignment_id": aid, "executor_id": pin,
+                    "reason_code": waiting["code"],
+                    "reason": waiting["reason"].format(executor=pin),
+                })
         return self._assignment(db, aid)  # type: ignore[return-value]
 
     def create_assignment(self, task_id: str, specialist: str,
@@ -3142,9 +3258,10 @@ class Store:
                 cur = db.execute(
                     "UPDATE task_assignments SET state='claimed', claimed_by=?, "
                     "claim_token=?, claimed_at=?, claimed_by_executor=? "
-                    "WHERE id=? AND state='queued'",
+                    "WHERE id=? AND state='queued' "
+                    "AND (NULLIF(not_before, '') IS NULL OR not_before <= ?)",
                     (claimed_by.strip()[:120], token, now,
-                     effective_executor[:120], assignment_id),
+                     effective_executor[:120], assignment_id, now),
                 )
             except sqlite3.IntegrityError as exc:
                 raise AssignmentConflictError(
@@ -3464,6 +3581,188 @@ class Store:
                 (cut,),
             ).fetchall()
         return [dict(r) for r in rows]
+
+    # Loop S-step 3 (transport retries, verdict card
+    # loop-verification-board-agents): a nomination caught in a transport
+    # failure (mesh tunnel flap, board 503 window) must not burn on the
+    # first reaper pass. A stale claimed/running row is REQUEUED with an
+    # exponential backoff and an honest transport note; only after
+    # REAP_TRANSPORT_MAX_ATTEMPTS requeues does the next stale pass expire
+    # it (task → blocked, exactly as before). The documented 409 kill
+    # signal is preserved verbatim: the claim_token is KEPT on the queued
+    # row (expiry keeps it too — it is a correctness boundary, never
+    # displayed), so the possibly-still-alive poller's next
+    # heartbeat/complete passes the token gate and dies on the state gate
+    # (409), while a fresh claim overwrites the token — no zombie
+    # completion, no double-claim.
+    REAP_TRANSPORT_MAX_ATTEMPTS = 3
+    REAP_TRANSPORT_BACKOFF_BASE_S = 60.0
+    REAP_TRANSPORT_BACKOFF_CAP_S = 1800.0
+
+    def transport_requeue(self, assignment_id: int,
+                          reason: str,
+                          ) -> tuple[dict[str, Any], str | None, str | None] | None:
+        """claimed/running → queued with attempt count + backoff (S-step 3).
+
+        The reaper calls this instead of finish_assignment('expired') while
+        the attempt budget lasts. Returns (assignment, moved_from,
+        moved_to) — the task column walks back in-progress → open (the
+        exact inverse of the claim mapping, applied only for the task's
+        last active assignment, same discipline as finish_assignment) — or
+        None when the budget is exhausted (the caller then expires
+        honestly). Race-safe: the staleness recheck runs inside the
+        transaction (same discipline as finish_assignment's expired path)
+        and the CAS guards the source state.
+
+        Raises:
+            AssignmentNotFoundError — unknown id;
+            AssignmentConflictError — not in a reapable state, or liveness
+            moved inside the scan→UPDATE window.
+        """
+        now_dt = datetime.now(timezone.utc)
+        now = _now()
+        with self._lock, self._conn() as db:
+            row = db.execute(
+                "SELECT * FROM task_assignments WHERE id=?",
+                (assignment_id,)).fetchone()
+            if row is None:
+                raise AssignmentNotFoundError(
+                    f"assignment {assignment_id} not found")
+            if row["state"] not in ("claimed", "running"):
+                raise AssignmentConflictError(
+                    f"assignment {assignment_id} is {row['state']}; "
+                    "transport requeue requires claimed or running")
+            if int(row["attempts"] or 0) >= self.REAP_TRANSPORT_MAX_ATTEMPTS:
+                return None   # budget spent — the caller expires honestly
+            if not self._is_stale_for_reap(row):
+                raise AssignmentConflictError(
+                    f"assignment {assignment_id} is no longer stale "
+                    "(liveness updated after the reaper scan)")
+            attempts = int(row["attempts"] or 0) + 1
+            backoff_s = min(
+                self.REAP_TRANSPORT_BACKOFF_BASE_S * (2 ** (attempts - 1)),
+                self.REAP_TRANSPORT_BACKOFF_CAP_S)
+            not_before = (now_dt + timedelta(seconds=backoff_s)
+                          ).isoformat(timespec="seconds")
+            note = (f"транспорт: повтор "
+                    f"{attempts}/{self.REAP_TRANSPORT_MAX_ATTEMPTS} — "
+                    f"{reason.strip()}")[:400]
+            db.execute(
+                """UPDATE task_assignments
+                   SET state='queued', claimed_by=NULL,
+                       claimed_by_executor='', claimed_at=NULL,
+                       started_at=NULL, heartbeat_at=NULL,
+                       attempts=?, not_before=?, note=?
+                   WHERE id=? AND state IN ('claimed','running')""",
+                (attempts, not_before, note, assignment_id))
+            # Task column: the inverse of the claim mapping — in-progress
+            # → open (a queued assignment holding in-progress is the same
+            # lie the ADR names for expiry), only for the task's LAST
+            # active assignment, only from in-progress (owner-touched
+            # columns stay untouched).
+            moved_from = moved_to = None
+            others = db.execute(
+                "SELECT COUNT(*) AS n FROM task_assignments "
+                "WHERE task_id=? AND id<>? "
+                "AND state IN ('queued','claimed','running')",
+                (row["task_id"], assignment_id),
+            ).fetchone()["n"]
+            trow = db.execute(
+                "SELECT col FROM tasks WHERE id=?", (row["task_id"],)
+            ).fetchone()
+            if trow is not None and not others and trow["col"] == "in-progress":
+                pos = db.execute(
+                    "SELECT COALESCE(MAX(position)+1, 0) AS p FROM tasks "
+                    "WHERE col='open'",
+                ).fetchone()["p"]
+                db.execute(
+                    "UPDATE tasks SET col='open', status='open', "
+                    "position=?, updated_at=? WHERE id=?",
+                    (pos, now, row["task_id"]))
+                moved_from, moved_to = "in-progress", "open"
+            self._log(db, "assignment.transport_requeue", row["task_id"], {
+                "assignment_id": assignment_id, "attempts": attempts,
+                "not_before": not_before, "reason": reason.strip()[:400],
+                "moved": [moved_from, moved_to] if moved_from else [],
+                "executor_id": (row["claimed_by_executor"] or "")[:120],
+                "transport": self._executor_transport(
+                    db, row["claimed_by_executor"] or ""),
+            })
+            return self._assignment(db, assignment_id), moved_from, moved_to
+
+    def unghost_assignment(self, assignment_id: int, *, mode: str = "unpin",
+                           actor: str = "unghost-script") -> dict[str, Any]:
+        """Resolve a ghost — a queued assignment pinned to an INELIGIBLE
+        executor (the id=9 class: queued since 23.09, pinned to
+        laptop-zcode-1, disabled 24.09). One-off migration primitive behind
+        scripts/unghost_assignments.py; the owner-facing UI keeps its own
+        cancel route.
+
+        - ``mode='unpin'`` (default, reversible): the specialist slug is
+          normalized (S-step 1 applied to data), the stale pin is cleared,
+          an honest note names the reason — the nomination returns to the
+          live queue where any eligible poller can claim it. The removed
+          pin survives in the journal event.
+        - ``mode='cancel'``: terminal cancelled with the reason in the
+          note (the owner's "не нужно" verdict, recorded where it happened).
+
+        Refuses (409-class) anything not queued and any row whose pin
+        target became eligible again — the ghost class is defined by the
+        waiting predicate, and the script must never fight a live owner.
+
+        Returns the updated assignment.
+        """
+        if mode not in ("unpin", "cancel"):
+            raise ValueError(f"invalid unghost mode: {mode}")
+        now = _now()
+        with self._lock, self._conn() as db:
+            row = db.execute(
+                "SELECT * FROM task_assignments WHERE id=?",
+                (assignment_id,)).fetchone()
+            if row is None:
+                raise AssignmentNotFoundError(
+                    f"assignment {assignment_id} not found")
+            if row["state"] != "queued":
+                raise AssignmentConflictError(
+                    f"assignment {assignment_id} is {row['state']}; "
+                    "unghost requires queued")
+            pin = (row["executor_id"] or "").strip()
+            waiting = (self._pin_waiting_reason_db(db, pin)
+                       if pin else None)
+            if waiting is None:
+                raise AssignmentConflictError(
+                    f"assignment {assignment_id} is not a ghost: pin "
+                    f"target '{pin}' is eligible")
+            note = waiting["reason"]
+            if mode == "cancel":
+                db.execute(
+                    "UPDATE task_assignments SET state='cancelled', "
+                    "finished_at=?, note=COALESCE(NULLIF(?,''), note) "
+                    "WHERE id=? AND state='queued'",
+                    (now, f"разморожено миграцией: {note}", assignment_id))
+                self._log(db, "assignment.cancelled", row["task_id"], {
+                    "assignment_id": assignment_id, "outcome": "unghost",
+                    "by": actor[:120], "reason": note,
+                    "executor_id": pin,
+                })
+            else:
+                raw = (row["specialist"] or "").strip()[:120]
+                slug = normalize_specialist(raw)
+                new_note = (row["note"] + " | " if row["note"] else "") + \
+                    f"разморожено миграцией: {note}"
+                db.execute(
+                    """UPDATE task_assignments
+                       SET executor_id='', specialist=?, note=?
+                       WHERE id=? AND state='queued'""",
+                    (slug or raw, new_note[:400], assignment_id))
+                self._log(db, "assignment.ghost_unpinned", row["task_id"], {
+                    "assignment_id": assignment_id, "by": actor[:120],
+                    "executor_id_removed": pin,
+                    "specialist_before": raw,
+                    "specialist_after": slug or raw,
+                    "reason": note,
+                })
+            return self._assignment(db, assignment_id)
 
     def notification_exists(self, task_id: str | None, message: str) -> bool:
         """Exact (task_id, message) match — the reaper's dedup for
@@ -4913,6 +5212,71 @@ class Store:
         harness_names())."""
         return frozenset(
             r["name"] for r in db.execute("SELECT name FROM harnesses"))
+
+    # Loop S-step 2: the downtime dictionary («словарь простоя») — the
+    # server-side human words for "why this pinned nomination cannot move".
+    # Served on the assignment card as the computed ``waiting`` block
+    # (additive API field; the FE picks it up whenever it reads it) and
+    # journaled at mint time. Format key: {executor}.
+    EXECUTOR_WAIT_REASONS: dict[str, str] = {
+        "executor-disabled":
+            "исполнитель выключен ({executor}) — поручение ждёт включения "
+            "исполнителя или отмены владельцем",
+        "executor-revoked":
+            "исполнитель отозван ({executor}) — поручению нужно новое "
+            "решение владельца",
+        "executor-pending":
+            "исполнитель не одобрен владельцем ({executor}) — поручение "
+            "ждёт одобрения",
+        "executor-unknown":
+            "исполнитель {executor} не найден в реестре — пин указывает "
+            "в пустоту",
+    }
+
+    @staticmethod
+    def _pin_waiting_reason_db(db: sqlite3.Connection,
+                               executor_id: str) -> dict[str, str] | None:
+        """Why a pinned assignment cannot be claimed now, in human words.
+        None = the pin target is eligible (approved + enabled) — no waiting.
+        Mirrors the routing-annotation eligibility predicate exactly."""
+        row = db.execute(
+            "SELECT state, enabled FROM executors WHERE id=?",
+            (executor_id,)).fetchone()
+        if row is None:
+            code = "executor-unknown"
+        elif row["state"] == "revoked":
+            code = "executor-revoked"
+        elif row["state"] != "approved":
+            code = "executor-pending"
+        elif not row["enabled"]:
+            code = "executor-disabled"
+        else:
+            return None
+        return {"code": code,
+                "reason": Store.EXECUTOR_WAIT_REASONS[code].format(
+                    executor=executor_id)}
+
+    def waiting_pinned_assignments(self) -> list[dict[str, Any]]:
+        """Active queued assignments pinned to an INELIGIBLE executor —
+        the ghost class of loop-verification-board-agents (id=9: queued
+        since 23.09, pinned to laptop-zcode-1, disabled 24.09). Read-only
+        scan for the unghost migration script and its dry-run; the ≤1-active
+        slot each row holds is frozen until the owner (or the script)
+        resolves it."""
+        with self._lock, self._conn() as db:
+            rows = db.execute(
+                """SELECT * FROM task_assignments
+                   WHERE state='queued' AND NULLIF(TRIM(executor_id), '')
+                     IS NOT NULL ORDER BY id ASC""").fetchall()
+            out: list[dict[str, Any]] = []
+            for r in rows:
+                a = dict(r)
+                waiting = self._pin_waiting_reason_db(
+                    db, a["executor_id"].strip())
+                if waiting is not None:
+                    a["waiting"] = waiting
+                    out.append(a)
+        return out
 
     def harness_names(self) -> frozenset[str]:
         """Live dictionary snapshot — the single lookup every nomination

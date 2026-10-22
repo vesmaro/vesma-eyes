@@ -68,6 +68,31 @@ def _backdate(data_dir, assignment_id: int, **columns: float) -> None:
         db.close()
 
 
+def _spend_budget(data_dir, assignment_id: int) -> None:
+    """Exhaust the transport-retry budget (Loop S-step 3): attempts=cap —
+    the next stale pass expires the row the way ALL stale passes did
+    before the transport-retry loop existed."""
+    db = sqlite3.connect(data_dir / "board.db")
+    try:
+        db.execute("UPDATE task_assignments SET attempts=? WHERE id=?",
+                   (Store.REAP_TRANSPORT_MAX_ATTEMPTS, assignment_id))
+        db.commit()
+    finally:
+        db.close()
+
+
+def _clear_backoff(data_dir, assignment_id: int) -> None:
+    """Time-travel past the transport-retry backoff window (the poller
+    came back after waiting) so the row can be claimed again."""
+    db = sqlite3.connect(data_dir / "board.db")
+    try:
+        db.execute("UPDATE task_assignments SET not_before='' WHERE id=?",
+                   (assignment_id,))
+        db.commit()
+    finally:
+        db.close()
+
+
 def _create(client, headers, task_id: str, **extra):
     return client.post("/api/assignments",
                        json={"task_id": task_id,
@@ -103,13 +128,29 @@ class TestReaperExpiry:
     def test_claimed_without_start_expired_after_downtime(
             self, client, auth, make_task, app_module, data_dir):
         """Restart-safe catch-up: the claim happened '40 min ago' (server
-        down ever since); the first tick after boot must expire it."""
+        down ever since); the first tick after boot must act on it. Loop
+        S-step 3: with live budget the act is a transport REQUEUE (the
+        nomination survives); with the budget spent the same single tick
+        expires it — the pre-S-step contract, kept verbatim."""
         task = make_task(title="reaper claimed")
         aid = _create(client, auth, task["id"]).json()["assignment"]["id"]
         _claim(client, auth, aid)
         assert _board_col(client, task["id"]) == "in-progress"
         _backdate(data_dir, aid, claimed_at=40)
 
+        result = app_module._assignment_reaper_tick()
+        assert result["requeued"] == 1
+        assert result["expired"] == 0
+        assert _assignment(client, aid)["state"] == "queued"
+        assert _board_col(client, task["id"]) == "open"   # claim map undone
+
+        # budget spent → the same downtime catch-up expires honestly; the
+        # row must be in a reapable (claimed) state, so the poller's
+        # post-backoff claim starts the next cycle first
+        _clear_backoff(data_dir, aid)
+        _claim(client, auth, aid)
+        _spend_budget(data_dir, aid)
+        _backdate(data_dir, aid, claimed_at=40)
         result = app_module._assignment_reaper_tick()
         assert result["expired"] == 1
         assert result["stagnation_notified"] == 0
@@ -144,6 +185,20 @@ class TestReaperExpiry:
         _backdate(data_dir, aid, heartbeat_at=45, started_at=45)
 
         result = app_module._assignment_reaper_tick()
+        assert result["requeued"] == 1   # first pass: transport retry
+        # the budget is spent in the NEXT claimed cycle: the poller comes
+        # back after the backoff, claims, starts, dies again — now the
+        # stale pass expires honestly (a queued row is out of the stale
+        # scan by construction: the queue is alive, only attempts burn)
+        _clear_backoff(data_dir, aid)
+        claim2 = _claim(client, auth, aid)
+        started = client.post(f"/api/assignments/{aid}/start",
+                              json={"claim_token": claim2["claim_token"]},
+                              headers=auth)
+        assert started.status_code == 200
+        _spend_budget(data_dir, aid)
+        _backdate(data_dir, aid, heartbeat_at=45, started_at=45)
+        result = app_module._assignment_reaper_tick()
         assert result["expired"] == 1
         assert _assignment(client, aid)["state"] == "expired"
         assert _board_col(client, task["id"]) == "blocked"
@@ -159,13 +214,25 @@ class TestReaperExpiry:
         _backdate(data_dir, aid, claimed_at=40)
         first = app_module._assignment_reaper_tick()
         second = app_module._assignment_reaper_tick()
-        assert first["expired"] == 1 and second["expired"] == 0
+        # first pass requeues (budget live); the row is queued+fresh now,
+        # so the second pass neither requeues nor notifies again
+        assert first["requeued"] == 1
+        assert second["requeued"] == 0 and second["expired"] == 0
+        _clear_backoff(data_dir, aid)
+        _claim(client, auth, aid)
+        _spend_budget(data_dir, aid)
+        _backdate(data_dir, aid, claimed_at=40)
+        third = app_module._assignment_reaper_tick()
+        assert third["expired"] == 1
+        fourth = app_module._assignment_reaper_tick()
+        assert fourth["expired"] == 0
         assert len(_task_notifications(client, task["id"], "истекло")) == 1
 
     def test_live_assignments_untouched(self, client, auth, make_task,
                                         app_module):
         """Fresh queue entry / claim / heartbeat — none is stale, nothing
-        expires, nothing is notified, task stays in-progress."""
+        is requeued, nothing expires, nothing is notified, task stays
+        in-progress."""
         t_queued = make_task(title="live queued")
         _create(client, auth, t_queued["id"])
         t_claimed = make_task(title="live claimed")
@@ -178,7 +245,8 @@ class TestReaperExpiry:
                     json={"claim_token": claim["claim_token"]}, headers=auth)
 
         result = app_module._assignment_reaper_tick()
-        assert result == {"expired": 0, "stagnation_notified": 0}
+        assert result == {"expired": 0, "requeued": 0,
+                          "stagnation_notified": 0}
         assert _assignment(client, aid_c)["state"] == "claimed"
         assert _assignment(client, aid_r)["state"] == "running"
         assert _board_col(client, t_running["id"]) == "in-progress"
@@ -187,9 +255,11 @@ class TestReaperExpiry:
 class TestHeartbeatOnExpired:
     def test_heartbeat_409_is_the_kill_signal(
             self, client, auth, make_task, app_module, data_dir):
-        """ADR 0009 §10: a heartbeat against an expired assignment answers
-        409 with the valid token (the poller's kill signal). A wrong token
-        stays 403 — the token gate precedes the state gate (pinned in Ф1)."""
+        """ADR 0009 §10: a heartbeat against an assignment the reaper took
+        away answers 409 with the valid token (the poller's kill signal) —
+        after a transport requeue (state gate, row is queued) AND after an
+        honest expiry. A wrong token stays 403 — the token gate precedes
+        the state gate (pinned in Ф1)."""
         task = make_task(title="kill signal")
         aid = _create(client, auth, task["id"]).json()["assignment"]["id"]
         claim = _claim(client, auth, aid)
@@ -202,10 +272,24 @@ class TestHeartbeatOnExpired:
         r = client.post(f"/api/assignments/{aid}/heartbeat",
                         json={"claim_token": token}, headers=auth)
         assert r.status_code == 409
-        assert "expired" in r.json()["detail"]
+        assert "queued" in r.json()["detail"]   # requeued: state gate
         wrong = client.post(f"/api/assignments/{aid}/heartbeat",
                             json={"claim_token": "f" * 32}, headers=auth)
         assert wrong.status_code == 403
+
+        # the same kill signal after an honest expiry (budget spent in the
+        # NEXT claimed cycle; the fresh claim rotates the token, so the
+        # kill signal is checked with the CURRENT claim_token)
+        _clear_backoff(data_dir, aid)
+        claim2 = _claim(client, auth, aid)
+        token2 = claim2["claim_token"]
+        _spend_budget(data_dir, aid)
+        _backdate(data_dir, aid, claimed_at=40)
+        app_module._assignment_reaper_tick()
+        r = client.post(f"/api/assignments/{aid}/heartbeat",
+                        json={"claim_token": token2}, headers=auth)
+        assert r.status_code == 409
+        assert "expired" in r.json()["detail"]
 
 
 class TestReaperSse:
@@ -221,6 +305,7 @@ class TestReaperSse:
         client.post(f"/api/assignments/{aid}/start",
                     json={"claim_token": claim["claim_token"]}, headers=auth)
         _backdate(data_dir, aid, heartbeat_at=45)
+        _spend_budget(data_dir, aid)   # spent budget → expiry (and its SSE)
 
         async def run() -> bytes:
             frames: list[dict] = []
@@ -287,6 +372,7 @@ class TestReaperLoopWiring:
         client.post(f"/api/assignments/{aid}/start",
                     json={"claim_token": claim["claim_token"]}, headers=auth)
         _backdate(data_dir, aid, heartbeat_at=45)
+        _spend_budget(data_dir, aid)   # spent budget → expiry path
 
         with TestClient(app_module.app):   # lifespan starts (and stops)
             deadline = time.monotonic() + 5.0
