@@ -303,6 +303,49 @@ describe("ExecutorStrip (layer 1)", () => {
       await actUnmount(root);
     }
   });
+
+  // specialists-interactive-cards (owner directive 2026-10-21): the
+  // inventory record cards deep-link /agents/execution?specialist=<name> —
+  // the same reading-init contract the ?executor= seed established.
+  it("?specialist= seeds the specialist filter on mount (the inventory record-card deep link)", async () => {
+    const rows = [
+      assignment({ id: 1, state: "running", specialist: "gcw-tech-lead", claimed_by_executor: "exec-live", claimed_by: "z:laptop", started_at: ago(60), heartbeat_at: ago(30) }),
+      assignment({ id: 2, state: "queued", task_id: "TB-3", specialist: "SFE" }),
+    ];
+    // The inventory record card builds exactly this URL.
+    const { root, container } = await mountPage(
+      rows,
+      "/agents/execution?specialist=gcw-tech-lead",
+    );
+    // Only the seeded specialist's assignment renders.
+    expect(container.textContent).toContain("TB-1");
+    expect(container.textContent).not.toContain("TB-3");
+    // The filter input carries the seed — it stays the LIVE filter UI.
+    const input = container.querySelector<HTMLInputElement>(
+      'input[placeholder="specialist"]',
+    );
+    expect(input).not.toBeNull();
+    expect(input!.value).toBe("gcw-tech-lead");
+    await actUnmount(root);
+  });
+
+  it("a garbage/empty ?specialist= seeds NOTHING (the filter starts clean)", async () => {
+    const rows = [
+      assignment({ id: 1, state: "queued", task_id: "TB-1", specialist: "gcw-tech-lead" }),
+      assignment({ id: 2, state: "queued", task_id: "TB-3", specialist: "SFE" }),
+    ];
+    for (const path of ["/agents/execution?specialist=", "/agents/execution"]) {
+      const { root, container } = await mountPage(rows, path);
+      // No narrowing without a real seed.
+      expect(container.textContent).toContain("TB-1");
+      expect(container.textContent).toContain("TB-3");
+      const input = container.querySelector<HTMLInputElement>(
+        'input[placeholder="specialist"]',
+      );
+      expect(input!.value).toBe("");
+      await actUnmount(root);
+    }
+  });
 });
 
 describe("Assignment groups (layer 2)", () => {

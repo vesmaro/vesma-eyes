@@ -1708,6 +1708,30 @@ export const ru = {
   "agents.card.inventoryNoNames": "имён нет — только счётчик",
   "agents.card.inventoryOverflow": "…и ещё {{count}}",
   "agents.card.inventoryGcwShare": "из них gcw-*: {{count}}",
+  // specialists-interactive-cards (директива владельца 21.10): карточки
+  // записей инвентаря — человеческая структура вместо сырого списка.
+  "agents.card.recordTypeSpecialist": "специалист",
+  "agents.card.recordTypeSkill": "скилл",
+  "agents.card.recordTypePlugin": "плагин",
+  "agents.card.recordTypeInstruction": "инструкция",
+  "agents.card.recordName": "Имя",
+  "agents.card.recordType": "Тип записи",
+  "agents.card.recordEnv": "Окружение",
+  "agents.card.recordSurface": "Среда",
+  "agents.card.recordEnvPath": "Путь окружения",
+  "agents.card.recordEnvVersion": "Версия окружения",
+  "agents.card.recordDescription": "Описание",
+  "agents.card.recordNoDescription": "нет — агент присылает только имена",
+  "agents.card.recordTasksAgent": "Задачи с участием",
+  "agents.card.recordTasksAgentHint": "список задач с фильтром по агенту",
+  "agents.card.recordAssignments": "Поручения специалиста",
+  "agents.card.recordAssignmentsHint":
+    "страница «Исполнение» с фильтром по специалисту",
+  "agents.card.recordTaskMentions": "Упоминания в задачах",
+  "agents.card.recordTaskMentionsHint": "поиск по названиям и описаниям задач",
+  "agents.card.recordNoMoreActions":
+    "других действий у записи нет — она известна только из отчёта агента",
+  "agents.card.inventoryRawList": "сырой список имён",
   // AGW-23/24 «Среда исполнения» (карточка): зеркало surface-фактов агента.
   "agents.card.surfaceFacts": "Среда исполнения (данные агента)",
   "agents.card.surfaceRuntime": "Процесс агента",

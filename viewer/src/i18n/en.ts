@@ -1667,6 +1667,30 @@ export const en: Record<TranslationKey, string> = {
   "agents.card.inventoryNoNames": "no names — counter only",
   "agents.card.inventoryOverflow": "…and {{count}} more",
   "agents.card.inventoryGcwShare": "gcw-* among them: {{count}}",
+  // specialists-interactive-cards (owner directive 2026-10-21): the
+  // inventory record cards — a human structure instead of the raw list.
+  "agents.card.recordTypeSpecialist": "specialist",
+  "agents.card.recordTypeSkill": "skill",
+  "agents.card.recordTypePlugin": "plugin",
+  "agents.card.recordTypeInstruction": "instruction",
+  "agents.card.recordName": "Name",
+  "agents.card.recordType": "Record type",
+  "agents.card.recordEnv": "Environment",
+  "agents.card.recordSurface": "Surface",
+  "agents.card.recordEnvPath": "Environment path",
+  "agents.card.recordEnvVersion": "Environment version",
+  "agents.card.recordDescription": "Description",
+  "agents.card.recordNoDescription": "none — the agent reports names only",
+  "agents.card.recordTasksAgent": "Tasks with this agent",
+  "agents.card.recordTasksAgentHint": "the task list filtered by this agent",
+  "agents.card.recordAssignments": "Specialist assignments",
+  "agents.card.recordAssignmentsHint":
+    "the Execution page filtered by this specialist",
+  "agents.card.recordTaskMentions": "Mentions in tasks",
+  "agents.card.recordTaskMentionsHint": "searches task titles and summaries",
+  "agents.card.recordNoMoreActions":
+    "no other actions exist — the record is known only from the agent's report",
+  "agents.card.inventoryRawList": "raw name list",
   // AGW-23/24 execution-environment section (card): the agent's surface mirror.
   "agents.card.surfaceFacts": "Execution environment (agent-reported)",
   "agents.card.surfaceRuntime": "Agent process",
