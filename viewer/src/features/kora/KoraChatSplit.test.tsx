@@ -540,7 +540,7 @@ describe("KoraHermesChat — the follow-tail arbitration (KW3, blueprint §8)", 
   // answer the frame query true).
   it("below lg: the shared read growing (a moves-zone page) never scrolls the page", async () => {
     const originalMatchMedia = window.matchMedia;
-    window.matchMedia = ((query: string) => ({
+    window.matchMedia = ((_query: string) => ({
       matches: false,
       addEventListener: () => undefined,
       removeEventListener: () => undefined,

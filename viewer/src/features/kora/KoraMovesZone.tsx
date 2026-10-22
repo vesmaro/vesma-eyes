@@ -69,7 +69,7 @@ export function KoraMovesZone({
   frameEvents?: KoraFrameEventPoints;
 }) {
   const t = useT();
-  const band = useKoraBandHeight({
+  const [band, bodyRef] = useKoraBandHeight({
     readH: readKoraMovesH,
     writeH: writeKoraMovesH,
     clearH: clearKoraMovesH,
@@ -158,7 +158,7 @@ export function KoraMovesZone({
       {band.expanded ? (
         <div
           id="kora-moves-body"
-          ref={band.bodyRef}
+          ref={bodyRef}
           className="flex min-h-0 flex-col overflow-hidden border-t border-myelin"
           style={{
             height: band.fixedH > 0 ? band.fixedH : undefined,

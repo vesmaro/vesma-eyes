@@ -26,6 +26,7 @@ HERMES_ENDPOINT (test seam), the key via HERMES_API_KEY.
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 import tempfile
 import threading
@@ -470,17 +471,24 @@ class TestStatusModelRoster:
                 == hermes_client.HERMES_DEFAULT_MODEL)
 
     def test_viewer_fixtures_carry_the_roster(self) -> None:
-        """K2-4 drift guard (KW3): the viewer's fixture roster mirror must
-        know EVERY verified model — a server-side roster addition that
-        skips viewer/src/features/kora/koraFixtures.ts leaves the chat
-        select (and its FE fallback constant) silently stale."""
+        """K2-4 drift guard (KW3; tightened K3-5): the viewer's STATUS
+        literal must list EVERY verified model — a server-side roster
+        addition that skips viewer/src/features/kora/koraFixtures.ts
+        leaves the chat select silently stale. The match rides the
+        `models: [...]` array literal itself: a bare `name in text` over
+        the whole file would false-pass on any stray mention (a comment,
+        the fallback constant)."""
         from server import hermes_client
         fixtures = (Path(__file__).resolve().parents[1]
                     / "viewer" / "src" / "features" / "kora"
                     / "koraFixtures.ts")
         text = fixtures.read_text(encoding="utf-8")
+        status_models = re.search(r"models:\s*\[([^\]]*)\]", text)
+        assert status_models is not None, (
+            "koraFixtures.ts lost the `models: [...]` status literal")
         for name in hermes_client.HERMES_MODELS:
-            assert name in text, f"koraFixtures.ts misses roster model {name!r}"
+            assert f'"{name}"' in status_models.group(1), (
+                f"koraFixtures.ts status roster misses model {name!r}")
 
     def test_status_ok_serves_roster_and_default(
             self, app_module, client: TestClient) -> None:

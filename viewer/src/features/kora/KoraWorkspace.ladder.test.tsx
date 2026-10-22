@@ -183,8 +183,8 @@ describe("KoraWorkspace ladder (states.md §6, KW3)", () => {
 
   it("lg..xl: exactly ONE KoraNavPanel instance mounts (no doubled tree ids)", () => {
     const { container } = mountLadder("narrow-frame");
-    // The host branch button + its aria-controls list id appear ONCE.
-    expect(container.querySelectorAll("h2")).length; // sanity: content rendered
+    // The «Хосты и агенты» heading — the tree's anchor — appears ONCE: a
+    // second panel instance would double it (and every aria-controls id).
     const treeTitles = [...container.querySelectorAll("h2")].filter(
       (el) => el.textContent === "Хосты и агенты",
     );

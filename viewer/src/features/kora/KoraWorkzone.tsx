@@ -16,7 +16,7 @@ import {
   koraSessionName,
   sessionCoverageSupport,
 } from "./koraWorkspaceModel";
-import type { KoraTranscriptPages } from "./useKora";
+import type { KoraHermesTranscriptPages, KoraTranscriptPages } from "./useKora";
 
 /**
  * The central work zone (07j §3.1; the KW2 SPLIT per kora-rethink
@@ -48,7 +48,7 @@ export interface KoraHermesSplit {
   session: KoraSession | null;
   /** The ONE hoisted messages read (the chat filters user/assistant out of
    * it; the zone shows the full grammar). */
-  pages: import("./useKora").KoraHermesTranscriptPages;
+  pages: KoraHermesTranscriptPages;
   /** The verified model roster + default from /status (empty = fallback). */
   models: readonly string[];
   defaultModel: string | null;
