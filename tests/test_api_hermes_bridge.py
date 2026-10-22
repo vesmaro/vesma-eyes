@@ -469,6 +469,19 @@ class TestStatusModelRoster:
         assert (app_module._HERMES_CHAT_DEFAULT_MODEL
                 == hermes_client.HERMES_DEFAULT_MODEL)
 
+    def test_viewer_fixtures_carry_the_roster(self) -> None:
+        """K2-4 drift guard (KW3): the viewer's fixture roster mirror must
+        know EVERY verified model — a server-side roster addition that
+        skips viewer/src/features/kora/koraFixtures.ts leaves the chat
+        select (and its FE fallback constant) silently stale."""
+        from server import hermes_client
+        fixtures = (Path(__file__).resolve().parents[1]
+                    / "viewer" / "src" / "features" / "kora"
+                    / "koraFixtures.ts")
+        text = fixtures.read_text(encoding="utf-8")
+        for name in hermes_client.HERMES_MODELS:
+            assert name in text, f"koraFixtures.ts misses roster model {name!r}"
+
     def test_status_ok_serves_roster_and_default(
             self, app_module, client: TestClient) -> None:
         from server import hermes_client

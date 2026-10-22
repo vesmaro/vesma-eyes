@@ -28,6 +28,7 @@ import type {
   HermesChatReply,
   HermesChatRequest,
   HermesChatTurn,
+  HermesMessage,
   HermesMessagesPage,
   HermesMessagesParams,
   KoraMessageAccepted,
@@ -66,6 +67,66 @@ export class KoraMockError extends KoraError {
 
 /** Step-up window length in the mock (the contract caps TTL at 900s). */
 const STEP_UP_TTL_SECONDS = 900;
+
+/** The synthetic corpus behind `?hermesMessages=big` (mock builds, the
+ * KW3 perf stand): 720 deterministic hermes rows — dialog anchors plus
+ * raw-walk tool rows with multi-line contents — so the «Все ходы» zone
+ * expansion is timed against a transcript far beyond the 500-visible-line
+ * mark (kora-rethink blueprint §8: virtualization is decided on NUMBERS).
+ * Fixture rows are never mutated; the corpus exists only in this branch. */
+function bigHermesCorpus(): HermesMessage[] {
+  const tools = [
+    "bash",
+    "read_file",
+    "grep",
+    "write_file",
+    "list_dir",
+  ];
+  const topics = [
+    "разбор журнала кластера",
+    "проверка репликации памяти",
+    "правка тестов транскрипта",
+    "аудит конфига туннеля",
+    "ревью волны полировки",
+  ];
+  const rows: HermesMessage[] = [];
+  let seq = 0;
+  const ts = (i: number): string =>
+    new Date(Date.UTC(2026, 9, 20, 8, 0, i * 30)).toISOString();
+  for (let block = 0; block < 90; block += 1) {
+    const topic = topics[block % topics.length];
+    const filler = `Строка разбора ${block + 1}: ${topic}. `.repeat(4);
+    rows.push({
+      seq: (seq += 1),
+      role: "user",
+      kind: null,
+      ts: ts(seq),
+      content: `Блок ${block + 1}: ${topic} — покажи состояние и журнал.`,
+      redaction_applied: false,
+    });
+    for (let step = 0; step < 6; step += 1) {
+      const tool = tools[(block + step) % tools.length];
+      rows.push({
+        seq: (seq += 1),
+        role: "tool",
+        kind: step % 2 === 0 ? "tool_call" : "tool_result",
+        ts: ts(seq),
+        content: `${tool} → ${filler}`,
+        redaction_applied: false,
+      });
+    }
+    rows.push({
+      seq: (seq += 1),
+      role: "assistant",
+      kind: null,
+      ts: ts(seq),
+      content: `${topic}: состояние зелёное. ${filler}`,
+      redaction_applied: false,
+    });
+  }
+  return rows;
+}
+const BIG_HERMES_CORPUS: readonly HermesMessage[] = bigHermesCorpus();
 
 export interface KoraMockAdapterOptions {
   /** Disable the artificial latency for snapshot/renderToString tests. */
@@ -129,6 +190,14 @@ export class KoraMockAdapter implements KoraGateway {
    */
   private readonly hermesChatBadModel: boolean;
 
+  /** `?hermesMessages=big` (mock builds only, KW3 perf stand): the anchor
+   * session's transcript serves a SYNTHETIC large corpus (~720 rows,
+   * multi-line contents → well over 500 visible lines) instead of the
+   * fixture — the «Все ходы» expansion timing and the virtualization
+   * backlog numbers are measured against it (blueprint §8: decide on
+   * numbers, not taste). Registry/other sessions stay untouched. */
+  private readonly hermesMessagesBig: boolean;
+
   constructor(options: KoraMockAdapterOptions = {}) {
     this.latency = options.latency ?? true;
     this.store = new Map(
@@ -155,6 +224,9 @@ export class KoraMockAdapter implements KoraGateway {
     this.hermesChatBadModel =
       typeof location !== "undefined" &&
       new URLSearchParams(location.search).get("hermesChat") === "badmodel";
+    this.hermesMessagesBig =
+      typeof location !== "undefined" &&
+      new URLSearchParams(location.search).get("hermesMessages") === "big";
     // `?hermesBridge=pulled` (mock builds only): the registry slice starts
     // ALREADY ingested — visual stands (we-shots) frame the host card's
     // live-session list without driving the pull UI first. The knob ALSO
@@ -507,7 +579,10 @@ export class KoraMockAdapter implements KoraGateway {
             "чего leg включится без изменения кода.",
         );
       }
-      const rows = KORA_FIXTURE_HERMES_MESSAGES[sessionId];
+      const rows =
+        this.hermesMessagesBig && sessionId === "hermes:api-server-main"
+          ? BIG_HERMES_CORPUS
+          : KORA_FIXTURE_HERMES_MESSAGES[sessionId];
       if (rows === undefined) {
         // The server does NOT re-validate the registry (hermes IS the
         // authority) — an unknown id answers hermes' own 404 verbatim.

@@ -16,6 +16,10 @@ import {
   writeKoraMovesH,
 } from "./koraFrameStorage";
 import { useKoraBandHeight } from "./useKoraBandHeight";
+import {
+  NOOP_KORA_FRAME_EVENTS,
+  type KoraFrameEventPoints,
+} from "./koraFrameEvents";
 import type { KoraHermesTranscriptPages } from "./useKora";
 
 /**
@@ -42,15 +46,27 @@ import type { KoraHermesTranscriptPages } from "./useKora";
  * the chat — two autos never fight, «следит развёрнутая зона, пользователь
  * ушёл вверх — не следим» is the scroll-pinning semantics of the shared
  * grammar (a scroll up simply stops the pinning; HermesTranscript owns it).
+ *
+ * VIRTUALIZATION BACKLOG (blueprint §8 — decide on numbers, not taste; KW3
+ * measurement, kw3-shots.mjs, chromium headless 1440×900, mock stand
+ * `?hermesMessages=big`): a 720-row / ~163k-char / 6317-node body deploys
+ * in 43 ms median (spread 32–73 over 5 runs), long-task median 0 ms (one
+ * 62 ms outlier) — pagination remains the only DOM boundary, no
+ * virtualization needed; revisit when the median commit on real transcripts
+ * passes ~100 ms or long-tasks become systematic (07l §12.4).
  */
 export function KoraMovesZone({
   sessionId,
   pages,
+  frameEvents = NOOP_KORA_FRAME_EVENTS,
 }: {
   /** The transcript's session handle (null = the honest clean slate). */
   sessionId: string | null;
   /** The ONE hoisted messages read (the chat consumes the same pages). */
   pages: KoraHermesTranscriptPages;
+  /** The frame telemetry call points (KW3): the zone toggle and the seam
+   * commit ride them — a no-op until the taxonomy v1 revision lands. */
+  frameEvents?: KoraFrameEventPoints;
 }) {
   const t = useT();
   const band = useKoraBandHeight({
@@ -100,7 +116,10 @@ export function KoraMovesZone({
         dragSign={1}
         collapseBelow={KORA_BAND_COLLAPSE_AT}
         onValue={band.onValue}
-        onCommit={band.onCommit}
+        onCommit={() => {
+          band.onCommit();
+          frameEvents.seamCommitted("moves");
+        }}
         onReset={band.onReset}
         onCollapse={band.collapse}
         className="hidden h-6 w-full lg:flex"
@@ -112,9 +131,13 @@ export function KoraMovesZone({
         type="button"
         aria-expanded={band.expanded}
         aria-controls="kora-moves-body"
-        onClick={band.toggle}
+        onClick={() => {
+          // `to` is the state AFTER the click (the fact, not the intent).
+          frameEvents.movesZoneToggled(band.expanded ? "collapsed" : "expanded");
+          band.toggle();
+        }}
         className={cn(
-          "flex h-10 w-full items-center gap-2 border-t border-myelin px-4 text-left text-xs font-semibold uppercase tracking-wide text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
+          "flex h-10 min-h-12 w-full items-center gap-2 border-t border-myelin px-4 text-left text-xs font-semibold uppercase tracking-wide text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright md:min-h-10",
         )}
       >
         <span className="min-w-0 truncate font-mono tabular-nums">{caps}</span>

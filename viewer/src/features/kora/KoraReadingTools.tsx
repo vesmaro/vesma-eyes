@@ -52,7 +52,7 @@ export function KoraReadingTools({
           value={query}
           placeholder={t("kora.workzone.searchPlaceholder")}
           onChange={(event) => onQuery(event.target.value)}
-          className="h-7 w-full rounded-md border border-border-subtle bg-background pl-7 pr-2 text-xs text-foreground placeholder:text-foreground-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+          className="h-12 w-full rounded-md border border-border-subtle bg-background pl-7 pr-2 text-xs text-foreground placeholder:text-foreground-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright md:h-7"
         />
       </div>
       {matchCount !== null ? (

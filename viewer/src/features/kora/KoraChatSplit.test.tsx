@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -450,5 +450,84 @@ describe("KoraHermesChat — the send statuses (states.md §3)", () => {
     );
     // The honest turn does NOT carry the provenance badge (no reply rode).
     expect(container.textContent).toContain("проверка формата");
+  });
+});
+
+describe("KoraHermesChat — the follow-tail arbitration (KW3, blueprint §8)", () => {
+  /** Geometry stub for the chat's ONE scroll container: happy-dom lays
+   * nothing out, so the reader-at-tail math is pinned by hand. */
+  function stubScrollBox(
+    el: HTMLElement,
+    geometry: { clientHeight: number; scrollHeight: number; scrollTop: number },
+  ): void {
+    for (const key of ["clientHeight", "scrollHeight", "scrollTop"] as const) {
+      Object.defineProperty(el, key, {
+        configurable: true,
+        get: () => geometry[key],
+      });
+    }
+  }
+
+  function chatScrollBox(container: HTMLElement): HTMLElement {
+    const el = container.querySelector<HTMLElement>(".kora-scroll");
+    if (el === null) throw new Error("chat scroll container not rendered");
+    return el;
+  }
+
+  it("a reader at the tail keeps the pin: appended turns scroll the chat to the bottom", async () => {
+    const adapter = new KoraMockAdapter({ latency: false });
+    const { container } = mountChat(adapter, { items: [] });
+    const pin = vi
+      .spyOn(Element.prototype, "scrollIntoView")
+      .mockImplementation(() => {});
+    try {
+      const box = chatScrollBox(container);
+      stubScrollBox(box, { clientHeight: 500, scrollHeight: 900, scrollTop: 400 });
+      await act(async () => {
+        box.dispatchEvent(new Event("scroll", { bubbles: true }));
+      });
+      pin.mockClear();
+      await typeDraft(container, "пинг с хвоста");
+      await act(async () => {
+        sendButton(container).click();
+        await Promise.resolve();
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(pin).toHaveBeenCalled();
+    } finally {
+      pin.mockRestore();
+    }
+  });
+
+  it("a reader who left the tail is never yanked: the reply appends WITHOUT a scroll", async () => {
+    const adapter = new KoraMockAdapter({ latency: false });
+    const { container } = mountChat(adapter, { items: [] });
+    const pin = vi
+      .spyOn(Element.prototype, "scrollIntoView")
+      .mockImplementation(() => {});
+    try {
+      const box = chatScrollBox(container);
+      // The reader scrolled UP: 500px from the tail — the pin must drop.
+      stubScrollBox(box, { clientHeight: 500, scrollHeight: 1200, scrollTop: 200 });
+      await act(async () => {
+        box.dispatchEvent(new Event("scroll", { bubbles: true }));
+      });
+      pin.mockClear();
+      await typeDraft(container, "читаю историю");
+      await act(async () => {
+        sendButton(container).click();
+        await Promise.resolve();
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+      // The turn landed (the draft cleared, the reply rode) — silently.
+      expect(pin).not.toHaveBeenCalled();
+      expect(container.textContent).toContain("читаю историю");
+    } finally {
+      pin.mockRestore();
+    }
   });
 });

@@ -5,6 +5,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { I18nProvider } from "@/i18n";
 import { actUnmount } from "@/test/actTools";
 import { KoraMovesZone } from "./KoraMovesZone";
+import { type KoraFrameEventPoints } from "./koraFrameEvents";
 import type { HermesMessage } from "./koraTypes";
 import type { KoraHermesTranscriptPages } from "./useKora";
 
@@ -60,7 +61,10 @@ function pages(
 
 const mountedRoots: Root[] = [];
 
-function mountZone(p: KoraHermesTranscriptPages): HTMLElement {
+function mountZone(
+  p: KoraHermesTranscriptPages,
+  frameEvents?: KoraFrameEventPoints,
+): HTMLElement {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -68,7 +72,11 @@ function mountZone(p: KoraHermesTranscriptPages): HTMLElement {
   act(() => {
     root.render(
       <I18nProvider initialLang="ru">
-        <KoraMovesZone sessionId="hermes:api-server-main" pages={p} />
+        <KoraMovesZone
+          sessionId="hermes:api-server-main"
+          pages={p}
+          frameEvents={frameEvents}
+        />
       </I18nProvider>,
     );
   });
@@ -276,5 +284,31 @@ describe("KoraMovesZone — the ex-Пульт seam hardware (vesmaro.koraMovesH)
     const body = container.querySelector<HTMLElement>("#kora-moves-body");
     expect(body?.style.height).toBe("240px");
     expect(seam(container).getAttribute("aria-valuenow")).toBe("240");
+  });
+
+  it("the frame telemetry call points ride the toggle and the seam commit (KW3; no-op client until taxonomy v1)", async () => {
+    const toggled: Array<"expanded" | "collapsed"> = [];
+    const seams: Array<"nav" | "meta" | "moves"> = [];
+    const container = mountZone(pages(), {
+      movesZoneToggled: (to) => toggled.push(to),
+      seamCommitted: (seam) => seams.push(seam),
+    });
+    // Expand: the fact names the state AFTER the click.
+    await act(async () => {
+      strip(container).click();
+      await Promise.resolve();
+    });
+    expect(toggled).toEqual(["expanded"]);
+    // Collapse: the reverse fact.
+    await act(async () => {
+      strip(container).click();
+      await Promise.resolve();
+    });
+    expect(toggled).toEqual(["expanded", "collapsed"]);
+    // A seam series commit reports the MOVES seam (persists the height).
+    await keyOn(seam(container), "keydown", "ArrowUp"); // from the strip → 160
+    await keyOn(seam(container), "keyup", "ArrowUp");
+    expect(seams).toEqual(["moves"]);
+    expect(localStorage.getItem("vesmaro.koraMovesH")).toBe("160");
   });
 });
