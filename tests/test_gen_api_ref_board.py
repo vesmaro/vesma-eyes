@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -249,6 +250,26 @@ def test_examples_are_synthesized_and_minimal(board_pages) -> None:
     json_part = ru_en.split("#### Example response", 1)[1].split("```json", 1)[1].split("```", 1)[0]
     parsed = json.loads(json_part)
     assert parsed == {"title": "string"}  # optional tags/state stay out
+
+
+def test_curl_with_body_continues_with_backslash(board_pages) -> None:
+    """Regression (review P1, 2026-10-22): a curl example that carries a JSON
+    body spans several lines, so its first line MUST end with a
+    line-continuation backslash — otherwise the copy-pasted command breaks
+    (the -H/-d lines dangle as separate shell commands)."""
+    for page in board_pages[0]:
+        for block in re.findall(r"```bash\n(.*?)```", page["body"], re.S):
+            lines = block.rstrip().split("\n")
+            if "-d '" not in block:
+                continue
+            assert lines[0].endswith(" \\"), (
+                f"{page['locale']}/{page['path']}: curl with a body must"
+                f" continue past line 1, got: {lines[0]!r}"
+            )
+            assert not lines[-1].endswith(" \\"), (
+                f"{page['locale']}/{page['path']}: trailing backslash on the"
+                f" last curl line continues into prose: {lines[-1]!r}"
+            )
 
 
 def test_examples_carry_no_wall_clock(board_pages) -> None:

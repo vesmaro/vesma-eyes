@@ -589,6 +589,9 @@ def build_curl_example(
     else:
         lines.append(f"curl -X {upper} '{url}'")
     if body_json is not None:
+        # With a body the -H/-d lines follow, so the first line MUST end
+        # with a line-continuation backslash or the copied command breaks.
+        lines[-1] += " \\"
         lines.append("  -H 'Content-Type: application/json' \\")
         lines.append(f"  -d '{body_json}'")
     return "\n".join(lines)
