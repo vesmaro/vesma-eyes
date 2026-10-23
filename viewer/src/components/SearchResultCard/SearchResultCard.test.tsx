@@ -58,4 +58,39 @@ describe("SearchResultCard (D7 — «hybrid · 0.01 без объяснения�
     expect(semantic).toContain("по смыслу");
     expect(semantic).toContain("близка по значению");
   });
+
+  // ux-palette-memory-results, page-side leg (TL ruling): the same row-title
+  // rule as the palette — a bare speaker-word title never faces the search
+  // page, mined prose or (for all-dump bodies) the content head instead.
+  it("never renders the «User» role word as the title — mined headline or the content head", () => {
+    const user = renderToString(
+      <MemoryRouter>
+        <I18nProvider initialLang="ru">
+          <SearchResultCard
+            result={{
+              ...hit,
+              title: "User",
+              content:
+                "## User: Сборка падает на этапе линковки webview.\nАгент ответил.",
+            }}
+          />
+        </I18nProvider>
+      </MemoryRouter>,
+    );
+    expect(user).toContain("Сборка падает на этапе линковки webview.");
+
+    const dump = renderToString(
+      <MemoryRouter>
+        <I18nProvider initialLang="ru">
+          <SearchResultCard
+            result={{ ...hit, title: "User", content: "/tmp/audio_3be0bd9e76.ogg" }}
+          />
+        </I18nProvider>
+      </MemoryRouter>,
+    );
+    expect(dump).toContain("/tmp/audio_3be0bd9e76.ogg");
+    // Neither row shows the bare role word as its title.
+    expect(user).not.toMatch(/>\s*User\s*</);
+    expect(dump).not.toMatch(/>\s*User\s*</);
+  });
 });
