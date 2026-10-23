@@ -4006,6 +4006,12 @@ class SubstanceMemoriesOut(_ApiModel):
 
 
 class TaskSubstanceOut(_ApiModel):
+    """The composite. ``review`` is ALWAYS null BY CONTRACT: the board DB
+    holds no review source (no review table, no tasks column, no
+    task-history event kind) — the field exists so the absence is API
+    truth the FE renders («источника нет в базе»), never a forgotten
+    section. The «план» the owner reads off a card is ``task.spec`` /
+    ``task.summary``; the «итог» is ``reports.final``."""
     ok: bool
     task_id: str
     task: dict[str, Any]
@@ -4013,6 +4019,7 @@ class TaskSubstanceOut(_ApiModel):
     executors: SubstanceExecutorsOut
     sessions: SubstanceSessionsOut
     memories: SubstanceMemoriesOut
+    review: None = None  # honest null: no review source exists (see class docstring)
 
 
 def _substance_slug_pair(raw: str) -> tuple[str, bool]:

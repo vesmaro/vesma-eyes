@@ -18,7 +18,10 @@ board DB really holds about a card. Contract pinned here:
   host path) — honest-empty while no facts exist;
 - memories: linked ids + count are board-DB truth by default with NO
   egress (decoy stays at zero connections); ?resolve_memories=true
-  resolves the checkpoint cards through the shared mnemos resolver.
+  resolves the checkpoint cards through the shared mnemos resolver;
+- review is null BY CONTRACT: the board DB holds no review source (no
+  table, no tasks column, no history event kind) — the explicit null
+  tells the FE «источника нет в базе», never a forgotten section.
 
 Every authenticated read below carries the bearer EXPLICITLY. A
 headerless GET can only pass through the ``vesmaro_ui`` cookie leg, and
@@ -91,6 +94,7 @@ class TestSubstanceContract:
         assert out["sessions"] == {"count": 0, "items": []}
         assert out["memories"] == {"count": 0, "linked": [], "items": {},
                                    "unresolved": [], "sources": {}}
+        assert out["review"] is None  # no review source in the board DB
 
     def test_unknown_task_404(self, client, auth):
         # authed caller: the guard passes, the unknown id is a plain 404
