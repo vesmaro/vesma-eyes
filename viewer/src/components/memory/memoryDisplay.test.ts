@@ -4,6 +4,7 @@ import {
   isGenericMemoryTitle,
   memoryCardPreview,
   memoryHumanFace,
+  memoryResultTitle,
   memorySearchQuery,
 } from "./memoryDisplay";
 
@@ -157,6 +158,46 @@ describe("humanMemoryTitle / memoryCardPreview", () => {
     expect(memoryCardPreview({ title: "User", content: "Одна-единственная строка письма." })).toBe(
       "",
     );
+  });
+});
+
+describe("memoryResultTitle (ranked rows — the ⌘K palette)", () => {
+  it("serves the same mined face as the cards for generically-titled prose", () => {
+    expect(
+      memoryResultTitle({
+        title: "User",
+        content: "## User: Да, если что — инициация со телефона.\nОтвет агента.",
+      }),
+    ).toBe("Да, если что — инициация со телефона.");
+  });
+
+  it("keeps a real stored title untouched", () => {
+    expect(
+      memoryResultTitle({ title: "ADR: gateway proxy", content: "body" }),
+    ).toBe("ADR: gateway proxy");
+  });
+
+  it("the last resort is the CONTENT HEAD, not the speaker word — same-titled dump rows stay distinguishable", () => {
+    // The case humanMemoryTitle honestly answers «User» (all-dump body):
+    // a ranked row still needs a distinguishing label, so the record's own
+    // head — never invented, straight from the content — faces the palette.
+    expect(memoryResultTitle({ title: "User", content: "/tmp/audio_3be0bd9e76.ogg" })).toBe(
+      "/tmp/audio_3be0bd9e76.ogg",
+    );
+    expect(memoryResultTitle({ title: "User", content: '{"a":1}' })).toBe('{"a":1}');
+  });
+
+  it("collapses whitespace and caps the head at 60 chars with one ellipsis", () => {
+    const long = `${"слово ".repeat(30)}конец`;
+    const label = memoryResultTitle({ title: "User", content: long });
+    expect(label.endsWith("…")).toBe(true);
+    expect(label.length).toBeLessThanOrEqual(61); // 60 + the single ellipsis
+    expect(label).not.toContain("\n");
+  });
+
+  it("returns empty when the wire carries nothing — the caller falls to the id", () => {
+    expect(memoryResultTitle({ title: "User", content: "" })).toBe("");
+    expect(memoryResultTitle({ title: "", content: "" })).toBe("");
   });
 });
 

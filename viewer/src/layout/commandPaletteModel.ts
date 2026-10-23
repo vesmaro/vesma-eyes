@@ -2,6 +2,7 @@ import type { SearchResult } from "@/gateway/types";
 import type { ExecutorItem } from "@/gateway/boardTypes";
 import type { BoardTask } from "@/gateway/boardTypes";
 import { UNREPORTED_HOST_ID } from "@/features/agents/rosterModel";
+import { memoryResultTitle } from "@/components/memory/memoryDisplay";
 
 /**
  * Pure model of the command palette (UX-overhaul §7.3, Ф2): item records,
@@ -111,7 +112,11 @@ export function filterExecutorItems(
 
 /** Memory hits from the existing search endpoint, capped; the hint carries
  * the PROVENANCE — which store the hit lives in (rendered only when the
- * wire named it, honest absence otherwise). */
+ * wire named it, honest absence otherwise). The label is the record's human
+ * title (`memoryResultTitle`): the stored name, or — for the chat capture's
+ * bare speaker-word titles («User») — the mined content headline, falling to
+ * the content head when nothing minable remains. The author ROLE never
+ * faces the palette as a title (journey 1.81.0: four «User» rows). */
 export function memoryHitItems(
   hits: readonly SearchResult[],
   buildTo: (memoryId: string) => string,
@@ -120,7 +125,7 @@ export function memoryHitItems(
   return hits.slice(0, cap).map((hit) => ({
     id: `memory:${hit.id}`,
     group: "memory" as const,
-    label: hit.title || hit.id,
+    label: memoryResultTitle(hit) || hit.id,
     hint: hit.server,
     to: buildTo(hit.id),
     // v12 two-story: the record's own scroll line (v12 stand `.pal-preview`);

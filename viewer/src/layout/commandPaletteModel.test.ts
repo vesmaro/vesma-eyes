@@ -149,6 +149,87 @@ describe("memoryHitItems", () => {
     }));
     expect(memoryHitItems(many, (id) => id)).toHaveLength(5);
   });
+
+  // ux-palette-memory-results-unreadable: the 1.81.0 journey — a palette
+  // search over chat-captured records answered four rows all titled «User»
+  // (the AUTHOR ROLE the ingest stamps into the title field). The role word
+  // never faces the palette: every row carries a human label mined from (or
+  // honestly fallen back to) the record's own content.
+  it("the «User»×4 journey: unnamed records get distinct content-derived labels, no role word", () => {
+    const hits: SearchResult[] = [
+      {
+        id: "rec-1",
+        title: "User",
+        content: "## User: Сборка падает на этапе линковки webview.\nАгент ответил.",
+        tags: [],
+        score: 0.9,
+        search_type: "fts",
+        server: "laptop",
+      },
+      {
+        id: "rec-2",
+        title: "User",
+        content: "## User — Звуковая версия проходит проверку.",
+        tags: [],
+        score: 0.8,
+        search_type: "fts",
+        server: "laptop",
+      },
+      {
+        id: "rec-3",
+        title: "User",
+        content: "## User\n\nДа, если что — инициация со телефона.",
+        tags: [],
+        score: 0.7,
+        search_type: "fts",
+        server: "laptop",
+      },
+      {
+        id: "rec-4",
+        title: "User",
+        content: "User research показал спрос на оффлайн-режим.",
+        tags: [],
+        score: 0.6,
+        search_type: "fts",
+        server: "laptop",
+      },
+    ];
+    const items = memoryHitItems(hits, (id) => `/memory/${id}`);
+    const labels = items.map((item) => item.label);
+    // No role word anywhere in the primary labels.
+    for (const label of labels) {
+      expect(label).not.toBe("User");
+      expect(label).not.toBe("");
+    }
+    // The four rows are distinguishable from one another.
+    expect(new Set(labels).size).toBe(labels.length);
+    expect(labels).toEqual([
+      "Сборка падает на этапе линковки webview.",
+      "Звуковая версия проходит проверку.",
+      "Да, если что — инициация со телефона.",
+      "User research показал спрос на оффлайн-режим.",
+    ]);
+    // v12 no-regression: the second story still rides the wire content.
+    expect(items[0].preview).toContain("Агент ответил.");
+  });
+
+  it("honest last resorts: dump body faces its content head, empty record falls to the id", () => {
+    const hits: SearchResult[] = [
+      {
+        id: "dump-1",
+        title: "User",
+        content: "/tmp/audio_3be0bd9e76.ogg\n{\"a\":1}",
+        tags: [],
+        score: 0.5,
+        search_type: "fts",
+      },
+      { id: "bare-1", title: "User", content: "", tags: [], score: 0.4, search_type: "fts" },
+    ];
+    const items = memoryHitItems(hits, (id) => id);
+    // The dump head is the label verbatim (whitespace collapsed, ≤60 chars).
+    expect(items[0].label).toBe('/tmp/audio_3be0bd9e76.ogg {"a":1}');
+    expect(items[1].label).toBe("bare-1");
+  });
 });
 
 describe("groupItems / flattenGroups", () => {
