@@ -152,7 +152,9 @@ class FakeWorld:
             exit 0"""))
         # docs corpora drift gate stub: a python entrypoint like the real
         # sync_docs.py (the gate runs it under ${PY[@]}), exit code driven
-        # by the state file — 0 fresh, 1 drifted, 2 unresolvable pin.
+        # by the state file — 0 fresh, 1 drifted, 2 unresolvable pin. The
+        # exit code PROPAGATES verbatim (the gate distinguishes a measured
+        # drift (1) from a broken gate (2); DF-1).
         (self.state / "docs-rc").write_text("0")
         self._write("docs-stub", (
             "#!/usr/bin/env python3\n"
@@ -166,7 +168,7 @@ class FakeWorld:
             "    print('sync_docs: DRIFT — upstream clones moved past the pinned SHAs', file=sys.stderr)\n"
             "else:\n"
             "    print('sync_docs: pin does not resolve in clone', file=sys.stderr)\n"
-            "sys.exit(1 if rc else 0)\n"))
+            "sys.exit(rc)\n"))
 
     def _write(self, name: str, body: str) -> None:
         p = self.bin / name
@@ -259,9 +261,11 @@ class TestPreflightGate:
 class TestDocsDriftGate:
     """Gate 2/6 (docs-engine-freshness wave): the shipped image carries the
     GENERATED /docs corpus — upstream movement past the pins = shipping a
-    stale mirror; refuses. DOCS_DRIFT=allow passes but the waiver MUST land
-    in the JOURNAL line (audited staleness). An unresolvable pin (stub rc 2
-    = the real script's SyncError path) is fail-closed too."""
+    stale mirror; refuses. TWO exit classes (review DF-1): a MEASURED drift
+    (rc 1) is waivable via VESMARO_DEPLOY_DOCS_DRIFT=allow with the waiver
+    (naming the drifted corpora) in the JOURNAL line; a BROKEN gate
+    (rc >= 2: unresolvable pin, missing clone, unreadable config — the real
+    script's SyncError path) is NEVER waivable."""
 
     def test_fresh_pins_pass(self, world):
         r = world.run_function("gate_docs_drift")
@@ -273,38 +277,51 @@ class TestDocsDriftGate:
         r = world.run_function("gate_docs_drift")
         assert r.returncode == 1
         assert "docs corpora drift" in r.stderr
-        assert "DOCS_DRIFT=allow" in r.stderr
+        assert "VESMARO_DEPLOY_DOCS_DRIFT=allow" in r.stderr
 
-    def test_unresolvable_pin_refuses_fail_closed(self, world):
-        # the real sync_docs prints a SyncError and exits 1 when a pin
-        # does not resolve — freshness unprovable = not fresh
+    def test_broken_gate_refuses_fail_closed(self, world):
+        # the real sync_docs exits 2 when a pin does not resolve — the
+        # gate could not MEASURE anything: refuse, message says broken
         (world.state / "docs-rc").write_text("2")
         r = world.run_function("gate_docs_drift")
         assert r.returncode == 1
-        assert "docs corpora drift" in r.stderr
+        assert "docs gate broken" in r.stderr
+        assert "does not cover a broken gate" in r.stderr
 
-    def test_allow_escape_passes(self, world):
+    def test_broken_gate_never_waived_by_allow(self, world):
+        # review DF-1: the waiver covers a measured drift, NEVER a gate
+        # that could not run
+        (world.state / "docs-rc").write_text("2")
+        r = world.run_function("VESMARO_DEPLOY_DOCS_DRIFT=allow gate_docs_drift")
+        assert r.returncode == 1
+        assert "docs gate broken" in r.stderr
+        assert "WAIVED" not in r.stdout
+
+    def test_allow_escape_passes_and_names_corpora(self, world):
         (world.state / "docs-rc").write_text("1")
-        r = world.run_function("DOCS_DRIFT=allow gate_docs_drift")
+        r = world.run_function(
+            "VESMARO_DEPLOY_DOCS_DRIFT=allow gate_docs_drift")
         assert r.returncode == 0
-        assert "WAIVED (DOCS_DRIFT=allow)" in r.stdout
+        assert "WAIVED (VESMARO_DEPLOY_DOCS_DRIFT=allow)" in r.stdout
+        assert "drifted: fakeproj" in r.stdout  # DF-2: corpus named
 
-    def test_journal_line_carries_waiver(self, world, tmp_path):
+    def test_journal_line_carries_waiver_with_corpus_names(self, world, tmp_path):
         (world.state / "docs-rc").write_text("1")  # drifted → the waive path
         journal = tmp_path / "JOURNAL.md"
         r = subprocess.run(
             ["bash", "-c",
              f"source '{DEPLOY_SH}' && "
-             "DOCS_DRIFT=allow gate_docs_drift && "
+             "VESMARO_DEPLOY_DOCS_DRIFT=allow gate_docs_drift && "
              f"journal_append deploy 40 41 '{_resolved_tag()}'"],
             capture_output=True, text=True, timeout=60,
             env=world.env(**{
-                "DOCS_DRIFT": "allow",
+                "VESMARO_DEPLOY_DOCS_DRIFT": "allow",
                 "VESMARO_DEPLOY_JOURNAL": str(journal),
             }))
         assert r.returncode == 0
         line = journal.read_text().strip().splitlines()[-1]
-        assert "docs-drift: allowed (DOCS_DRIFT=allow)" in line
+        assert "docs-drift: allowed (VESMARO_DEPLOY_DOCS_DRIFT=allow)" in line
+        assert "drifted corpora: fakeproj" in line
 
     def test_journal_line_clean_without_waiver(self, world, tmp_path):
         journal = tmp_path / "JOURNAL.md"
