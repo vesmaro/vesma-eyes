@@ -20,6 +20,12 @@ projects:
   # ---------------------------------------------------------------- mnemos ---
   mnemos:
     repo: ../vesma
+    # Reader-facing product name for the provenance stamp/badge (directive
+    # 2026-10-23: the stamp must speak the DISPLAY name, not the internal
+    # slug). The slug `mnemos` stays the URL/slug namespace for link
+    # stability (docs-engine-freshness decision); this field is display-only.
+    # Absent (or equal to the slug) → the slug is shown as-is.
+    display_name: Vesma
     # Re-pinned 2026-10-23 (docs-engine-freshness wave; was 8bc139bf0749,
     # 2026-09-29/ME-039 — a month stale across the 5.x→6.0→6.4 rebrand).
     # 03d30d47 = release tag v6.4.0 (the 6.4.x generation release commit:
@@ -575,6 +581,10 @@ projects:
   # ----------------------------------------------------------- mnemos-mesh ---
   mnemos-mesh:
     repo: ../vesma-mesh
+    # Same display-only contract as projects.mnemos above: the hub, the
+    # breadcrumb and the provenance stamp say «vesma-mesh»; the slug
+    # `mnemos-mesh` stays the link namespace.
+    display_name: vesma-mesh
     # Re-pinned 2026-10-23 (docs-engine-freshness wave; was b428ea9 = tag
     # v1.6.8, 2026-09-29/ME-039). 03b570ea = release tag v1.8.1 — carries
     # the rebrand (mnemos-mesh → vesma-mesh naming) and the v1.7.0 MM-061
@@ -696,6 +706,10 @@ api_hub:
   sources:
     mnemos:
       repo: ../vesma
+      # Display-only name for the page provenance badge (same contract as
+      # projects.*.display_name — the api-hub pages pinned to this repo show
+      # «Vesma@…», not the internal slug).
+      display_name: Vesma
       # Re-pinned 2026-10-23 (docs-engine-freshness) — тот же тег v6.4.0,
       # что и projects.mnemos: выборка отдельная (владение ME-038/ME-039),
       # поколение одно — иначе хаб /docs/api показывает до-ребрендовый A2A.
@@ -767,6 +781,9 @@ api_hub:
 
     mnemos-mesh:
       repo: ../vesma-mesh
+      # Display-only name for the page provenance badge (projects.*.display_name
+      # contract): «vesma-mesh@…», не внутренний слаг.
+      display_name: vesma-mesh
       # Пин для ПРОВЕРКИ кураторской заметки (само тело из curated-слоя).
       ref: 03b570ea1e835b2234d8c4c9c52122219f02d1ef
       web_base: "https://github.com/vesmaro/vesma-mesh/blob/{sha}"
@@ -849,15 +866,15 @@ api_hub:
               ru: Поиск vesma
               en: vesma search
         title:
-          ru: Память, теги и поиск mnemos
-          en: Memory, tags, and mnemos search
+          ru: Память, теги и поиск vesma
+          en: Memory, tags, and vesma search
         about:
           ru: >-
             Серверы памяти и их настройки, группы памяти, пульс и статистика,
-            записи, теги и семантический поиск mnemos.
+            записи, теги и семантический поиск vesma.
           en: >-
             Memory servers and their settings, memory groups, heartbeat and
-            stats, records, tags, and mnemos semantic search.
+            stats, records, tags, and vesma semantic search.
       - slug: vesmaro-eyes/assignments
         prefixes: [assignments]
         order: 4
@@ -951,10 +968,10 @@ api_hub:
           en: Mesh nodes
         about:
           ru: >-
-            Наблюдаемые узлы mnemos-mesh: добавление, правка, удаление,
+            Наблюдаемые узлы vesma-mesh: добавление, правка, удаление,
             список.
           en: >-
-            Observed mnemos-mesh nodes: add, edit, delete, list.
+            Observed vesma-mesh nodes: add, edit, delete, list.
       - slug: vesmaro-eyes/poller
         prefixes: [poller]
         order: 10

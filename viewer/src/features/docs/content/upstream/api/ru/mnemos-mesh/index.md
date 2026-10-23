@@ -20,7 +20,7 @@ last_verified: 2026-10-06
 
 | Поверхность | Что это | Где определено |
 |---|---|---|
-| Внутренний core-API | gRPC через Unix-сокет между мешом и mnemos: запись/чтение уже обработанных конвертов, без расшаренной SQLite | [`proto/mnemos_core_api.proto`](https://github.com/vesmaro/vesma-mesh/blob/03b570ea1e835b2234d8c4c9c52122219f02d1ef/proto/mnemos_core_api.proto) |
+| Внутренний core-API | gRPC через Unix-сокет между мешом и vesma: запись/чтение уже обработанных конвертов, без расшаренной SQLite | [`proto/mnemos_core_api.proto`](https://github.com/vesmaro/vesma-mesh/blob/03b570ea1e835b2234d8c4c9c52122219f02d1ef/proto/mnemos_core_api.proto) |
 | Пиринговая федерация | контракт «узел ↔ узел» поверх mTLS: per-peer ACL, батч-синк, опосредованная выдача | [`proto/federation.proto`](https://github.com/vesmaro/vesma-mesh/blob/03b570ea1e835b2234d8c4c9c52122219f02d1ef/proto/federation.proto) |
 | Внутренние релеи | транспортные контракты пересылки (assignment/relay-ноги) — деталь реализации, не внешний контракт | каталог [`proto/`](https://github.com/vesmaro/vesma-mesh/tree/03b570ea1e835b2234d8c4c9c52122219f02d1ef/proto) |
 

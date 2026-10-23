@@ -13,7 +13,7 @@ stay in vesma.
 
 | Surface | What it is | Where it is defined |
 |---|---|---|
-| Internal core API | gRPC over a Unix socket between the mesh and mnemos: writing/reading already-redacted envelopes, no shared SQLite | [`proto/mnemos_core_api.proto`](https://github.com/vesmaro/vesma-mesh/blob/03b570ea1e835b2234d8c4c9c52122219f02d1ef/proto/mnemos_core_api.proto) |
+| Internal core API | gRPC over a Unix socket between the mesh and vesma: writing/reading already-redacted envelopes, no shared SQLite | [`proto/mnemos_core_api.proto`](https://github.com/vesmaro/vesma-mesh/blob/03b570ea1e835b2234d8c4c9c52122219f02d1ef/proto/mnemos_core_api.proto) |
 | Peer federation | the node ↔ node contract over mTLS: per-peer ACL, batch sync, mediated pull | [`proto/federation.proto`](https://github.com/vesmaro/vesma-mesh/blob/03b570ea1e835b2234d8c4c9c52122219f02d1ef/proto/federation.proto) |
 | Internal relays | forwarding transport contracts (assignment/relay legs) — an implementation detail, not an external contract | the [`proto/`](https://github.com/vesmaro/vesma-mesh/tree/03b570ea1e835b2234d8c4c9c52122219f02d1ef/proto) directory |
 

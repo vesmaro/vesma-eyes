@@ -272,16 +272,18 @@ function RenderFallback({
 
 /**
  * Provenance badge — the freshness stamp (design spec §6.2, HonestLine
- * canon): «актуально для vesma@abc1234 · пин от 23.10» — a passport, not
+ * canon): «актуально для Vesma@abc1234 · пин от 23.10» — a passport, not
  * an alarm: outline variant, muted GitCommitHorizontal, static (local
- * clones — no upstream URL is guaranteed). The date is the PINNED
+ * clones — no upstream URL is guaranteed). The repo label is the
+ * READER-FACING display name (directive 2026-10-23: the stamp speaks the
+ * product name, `repo` stays the internal slug); the date is the PINNED
  * COMMIT's date (the pipeline is wall-clock-free by contract); the title
  * and aria-label carry the FULL form (whole SHA + dd.mm.yyyy date).
  */
 function ProvenanceBadge({ provenance }: { provenance: DocProvenance }) {
   const t = useT();
   const full = t("docs.provenance.full", {
-    repo: provenance.repo,
+    repo: provenance.repoDisplay,
     sha: provenance.sha,
     date: formatSyncDate(provenance.syncedAt, true),
   });
@@ -292,7 +294,7 @@ function ProvenanceBadge({ provenance }: { provenance: DocProvenance }) {
         aria-hidden="true"
       />
       {t("docs.provenance.badge", {
-        repo: provenance.repo,
+        repo: provenance.repoDisplay,
         sha: provenance.sha.slice(0, 7),
         date: formatSyncDate(provenance.syncedAt),
       })}

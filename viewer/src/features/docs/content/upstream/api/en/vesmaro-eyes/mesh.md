@@ -12,7 +12,7 @@ spec_version: 1.80.0
 
 # Mesh nodes
 
-Observed mnemos-mesh nodes: add, edit, delete, list.
+Observed vesma-mesh nodes: add, edit, delete, list.
 
 Generated from the OpenAPI snapshot v1.80.0 (operations in this section: 4).
 

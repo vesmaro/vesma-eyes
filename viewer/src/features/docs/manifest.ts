@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { DOC_CATEGORIES, docCategory } from "./categories";
 import { docProjectsSorted, projectOfDocSlug } from "./projects";
-import { loadSidecar, type SidecarPage } from "./sidecar";
+import { displayRepoName, loadSidecar, type SidecarPage } from "./sidecar";
 import {
   docModuleEntries,
   hasMarkdown,
@@ -23,6 +23,12 @@ import type { Lang } from "@/i18n";
 
 export interface DocProvenance {
   repo: string;
+  /**
+   * Reader-facing label of `repo` for the provenance stamp (directive
+   * 2026-10-23): the display name from the generated sidecar map when one
+   * exists, the raw slug otherwise. `repo` stays the link/namespace key.
+   */
+  repoDisplay: string;
   /** Path inside the upstream repository. */
   path: string;
   sha: string;
@@ -203,7 +209,10 @@ function requireNumber(value: string | undefined): number | null {
 }
 
 /** Shape sidecar provenance into the DocPage form; undefined when partial. */
-function provenanceOf(entry: SidecarPage): DocProvenance | undefined {
+function provenanceOf(
+  entry: SidecarPage,
+  displayNames: Record<string, string> | undefined,
+): DocProvenance | undefined {
   const raw = entry.provenance;
   if (
     !raw ||
@@ -220,6 +229,7 @@ function provenanceOf(entry: SidecarPage): DocProvenance | undefined {
   }
   return {
     repo: raw.repo,
+    repoDisplay: displayRepoName(displayNames, raw.repo),
     path: raw.source_path,
     sha: raw.sha,
     syncedAt: raw.commit_date,
@@ -262,7 +272,7 @@ function pagesFromSidecar(sidecar: Awaited<ReturnType<typeof loadSidecar>>): Map
       );
       continue;
     }
-    const provenance = provenanceOf(entry);
+    const provenance = provenanceOf(entry, sidecar?.display_names);
     if (provenance === undefined) {
       // Gate §6.5 (spec §6.2): an imported page without full provenance is a
       // broken import, not a style issue — exclude and say so.
