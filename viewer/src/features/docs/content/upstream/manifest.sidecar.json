@@ -2,10 +2,10 @@
   "version": 1,
   "generated_by": "scripts/sync_docs.py + scripts/gen_api_ref.py",
   "source_shas": {
-    "mnemos": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-    "mnemos-mesh": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
-    "api/mnemos": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-    "api/mnemos-mesh": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
+    "mnemos": "03d30d47d2147411dfc5b08ca68c4dfd3516f24f",
+    "mnemos-mesh": "03b570ea1e835b2234d8c4c9c52122219f02d1ef",
+    "api/mnemos": "03d30d47d2147411dfc5b08ca68c4dfd3516f24f",
+    "api/mnemos-mesh": "03b570ea1e835b2234d8c4c9c52122219f02d1ef",
     "api/vesmaro-agent": "dbd6054ed22c70897247e83c14effbc2e0b7eead"
   },
   "pages": [
@@ -17,7 +17,7 @@
       },
       "category": "api-mesh",
       "order": 1,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-10-06",
       "locales": [
         "en",
         "ru"
@@ -25,8 +25,8 @@
       "provenance": {
         "repo": "mnemos-mesh",
         "source_path": "proto/federation.proto",
-        "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
-        "commit_date": "2026-09-29T19:55:12+03:00"
+        "sha": "03b570ea1e835b2234d8c4c9c52122219f02d1ef",
+        "commit_date": "2026-10-06T15:35:45+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -41,7 +41,7 @@
       },
       "category": "api-mnemos",
       "order": 2,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -49,8 +49,8 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/architecture/a2a-sessions.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
+        "sha": "03d30d47d2147411dfc5b08ca68c4dfd3516f24f",
+        "commit_date": "2026-10-22T16:05:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -65,7 +65,7 @@
       },
       "category": "api-mnemos",
       "order": 1,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -73,8 +73,8 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/user/http-api.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
+        "sha": "03d30d47d2147411dfc5b08ca68c4dfd3516f24f",
+        "commit_date": "2026-10-22T16:05:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -158,7 +158,7 @@
       },
       "category": "api-board",
       "order": 4,
-      "lastVerified": "2026-10-03",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -167,7 +167,7 @@
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
         "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
-        "commit_date": "2026-10-03T12:50:41+03:00"
+        "commit_date": "2026-10-22T13:35:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -182,7 +182,7 @@
       },
       "category": "api-board",
       "order": 6,
-      "lastVerified": "2026-10-03",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -191,7 +191,7 @@
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
         "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
-        "commit_date": "2026-10-03T12:50:41+03:00"
+        "commit_date": "2026-10-22T13:35:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -206,7 +206,7 @@
       },
       "category": "api-board",
       "order": 7,
-      "lastVerified": "2026-10-03",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -215,7 +215,7 @@
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
         "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
-        "commit_date": "2026-10-03T12:50:41+03:00"
+        "commit_date": "2026-10-22T13:35:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -230,7 +230,7 @@
       },
       "category": "api-board",
       "order": 5,
-      "lastVerified": "2026-10-03",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -239,7 +239,7 @@
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
         "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
-        "commit_date": "2026-10-03T12:50:41+03:00"
+        "commit_date": "2026-10-22T13:35:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -254,7 +254,7 @@
       },
       "category": "api-board",
       "order": 11,
-      "lastVerified": "2026-10-03",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -263,7 +263,7 @@
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
         "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
-        "commit_date": "2026-10-03T12:50:41+03:00"
+        "commit_date": "2026-10-22T13:35:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -278,7 +278,7 @@
       },
       "category": "api-board",
       "order": 1,
-      "lastVerified": "2026-10-03",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -287,7 +287,7 @@
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
         "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
-        "commit_date": "2026-10-03T12:50:41+03:00"
+        "commit_date": "2026-10-22T13:35:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -302,7 +302,7 @@
       },
       "category": "api-board",
       "order": 8,
-      "lastVerified": "2026-10-03",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -311,7 +311,7 @@
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
         "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
-        "commit_date": "2026-10-03T12:50:41+03:00"
+        "commit_date": "2026-10-22T13:35:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -326,7 +326,7 @@
       },
       "category": "api-board",
       "order": 3,
-      "lastVerified": "2026-10-03",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -335,7 +335,7 @@
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
         "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
-        "commit_date": "2026-10-03T12:50:41+03:00"
+        "commit_date": "2026-10-22T13:35:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -350,7 +350,7 @@
       },
       "category": "api-board",
       "order": 9,
-      "lastVerified": "2026-10-03",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -359,7 +359,7 @@
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
         "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
-        "commit_date": "2026-10-03T12:50:41+03:00"
+        "commit_date": "2026-10-22T13:35:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -374,7 +374,7 @@
       },
       "category": "api-board",
       "order": 10,
-      "lastVerified": "2026-10-03",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -383,7 +383,7 @@
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
         "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
-        "commit_date": "2026-10-03T12:50:41+03:00"
+        "commit_date": "2026-10-22T13:35:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -398,7 +398,7 @@
       },
       "category": "api-board",
       "order": 12,
-      "lastVerified": "2026-10-03",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -407,7 +407,7 @@
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
         "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
-        "commit_date": "2026-10-03T12:50:41+03:00"
+        "commit_date": "2026-10-22T13:35:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -422,7 +422,7 @@
       },
       "category": "api-board",
       "order": 2,
-      "lastVerified": "2026-10-03",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -431,7 +431,7 @@
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
         "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
-        "commit_date": "2026-10-03T12:50:41+03:00"
+        "commit_date": "2026-10-22T13:35:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -441,12 +441,12 @@
     {
       "slug": "mnemos-mesh/admin/runbook",
       "titles": {
-        "en": "mnemos-mesh Operations Runbook",
+        "en": "vesma-mesh Operations Runbook",
         "ru": "Эксплуатационный ранбук vesma-mesh"
       },
       "category": "mesh-admin",
       "order": 2,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-10-06",
       "locales": [
         "en",
         "ru"
@@ -454,8 +454,8 @@
       "provenance": {
         "repo": "mnemos-mesh",
         "source_path": "docs/en/admin/runbook.md",
-        "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
-        "commit_date": "2026-09-29T19:55:12+03:00"
+        "sha": "03b570ea1e835b2234d8c4c9c52122219f02d1ef",
+        "commit_date": "2026-10-06T15:35:45+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -468,12 +468,12 @@
     {
       "slug": "mnemos-mesh/admin/security",
       "titles": {
-        "en": "Security model for mnemos-mesh operators",
+        "en": "Security model for vesma-mesh operators",
         "ru": "Модель безопасности vesma-mesh для оператора"
       },
       "category": "mesh-admin",
       "order": 1,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-10-06",
       "locales": [
         "en",
         "ru"
@@ -481,8 +481,8 @@
       "provenance": {
         "repo": "mnemos-mesh",
         "source_path": "docs/en/admin/security.md",
-        "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
-        "commit_date": "2026-09-29T19:55:12+03:00"
+        "sha": "03b570ea1e835b2234d8c4c9c52122219f02d1ef",
+        "commit_date": "2026-10-06T15:35:45+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -500,7 +500,7 @@
       },
       "category": "mesh-user",
       "order": 2,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-10-06",
       "locales": [
         "en",
         "ru"
@@ -508,8 +508,8 @@
       "provenance": {
         "repo": "mnemos-mesh",
         "source_path": "docs/en/user/configuration.md",
-        "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
-        "commit_date": "2026-09-29T19:55:12+03:00"
+        "sha": "03b570ea1e835b2234d8c4c9c52122219f02d1ef",
+        "commit_date": "2026-10-06T15:35:45+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -522,12 +522,12 @@
     {
       "slug": "mnemos-mesh/user/getting-started",
       "titles": {
-        "en": "Getting started with mnemos-mesh",
+        "en": "Getting started with vesma-mesh",
         "ru": "Первый запуск vesma-mesh"
       },
       "category": "mesh-user",
       "order": 1,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-10-06",
       "locales": [
         "en",
         "ru"
@@ -535,8 +535,8 @@
       "provenance": {
         "repo": "mnemos-mesh",
         "source_path": "docs/en/user/getting-started.md",
-        "sha": "b428ea9b7ec9731fe4d53478702d0667cf3f53de",
-        "commit_date": "2026-09-29T19:55:12+03:00"
+        "sha": "03b570ea1e835b2234d8c4c9c52122219f02d1ef",
+        "commit_date": "2026-10-06T15:35:45+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -554,7 +554,7 @@
       },
       "category": "mnemos-admin",
       "order": 2,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -562,8 +562,8 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/admin/federation.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
+        "sha": "03d30d47d2147411dfc5b08ca68c4dfd3516f24f",
+        "commit_date": "2026-10-22T16:05:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -578,7 +578,7 @@
       },
       "category": "mnemos-admin",
       "order": 4,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -586,8 +586,8 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/admin/runbooks/backup-restore.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
+        "sha": "03d30d47d2147411dfc5b08ca68c4dfd3516f24f",
+        "commit_date": "2026-10-22T16:05:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -597,12 +597,12 @@
     {
       "slug": "mnemos/admin/runbooks/install",
       "titles": {
-        "en": "Runbook: Install Mnemos",
-        "ru": "Runbook: Установка Mnemos"
+        "en": "Runbook: Install Vesma",
+        "ru": "Runbook: Установка Vesma"
       },
       "category": "mnemos-admin",
       "order": 3,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -610,8 +610,8 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/admin/runbooks/install.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
+        "sha": "03d30d47d2147411dfc5b08ca68c4dfd3516f24f",
+        "commit_date": "2026-10-22T16:05:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -621,12 +621,12 @@
     {
       "slug": "mnemos/admin/security",
       "titles": {
-        "en": "Mnemos — Security Posture (M15.2)",
-        "ru": "Mnemos — Состояние безопасности (M15.2)"
+        "en": "Vesma — Security Posture (M15.2)",
+        "ru": "Vesma — Состояние безопасности (M15.2)"
       },
       "category": "mnemos-admin",
       "order": 1,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -634,8 +634,8 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/admin/security.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
+        "sha": "03d30d47d2147411dfc5b08ca68c4dfd3516f24f",
+        "commit_date": "2026-10-22T16:05:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -645,12 +645,12 @@
     {
       "slug": "mnemos/architecture/overview",
       "titles": {
-        "en": "Mnemos — System Architecture",
-        "ru": "Mnemos — Архитектура системы"
+        "en": "Vesma — System Architecture",
+        "ru": "Vesma — Архитектура системы"
       },
       "category": "mnemos-architecture",
       "order": 1,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -658,8 +658,8 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/architecture/overview.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
+        "sha": "03d30d47d2147411dfc5b08ca68c4dfd3516f24f",
+        "commit_date": "2026-10-22T16:05:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -674,7 +674,7 @@
       },
       "category": "mnemos-user",
       "order": 8,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -682,8 +682,8 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/user/cli-reference.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
+        "sha": "03d30d47d2147411dfc5b08ca68c4dfd3516f24f",
+        "commit_date": "2026-10-22T16:05:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -698,7 +698,7 @@
       },
       "category": "mnemos-user",
       "order": 4,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -706,8 +706,8 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/user/context-filter.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
+        "sha": "03d30d47d2147411dfc5b08ca68c4dfd3516f24f",
+        "commit_date": "2026-10-22T16:05:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -722,7 +722,7 @@
       },
       "category": "mnemos-user",
       "order": 7,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -730,8 +730,8 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/user/export-import.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
+        "sha": "03d30d47d2147411dfc5b08ca68c4dfd3516f24f",
+        "commit_date": "2026-10-22T16:05:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -746,7 +746,7 @@
       },
       "category": "mnemos-user",
       "order": 1,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -754,8 +754,8 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/user/getting-started.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
+        "sha": "03d30d47d2147411dfc5b08ca68c4dfd3516f24f",
+        "commit_date": "2026-10-22T16:05:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -770,7 +770,7 @@
       },
       "category": "mnemos-user",
       "order": 9,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -778,8 +778,8 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/user/http-api.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
+        "sha": "03d30d47d2147411dfc5b08ca68c4dfd3516f24f",
+        "commit_date": "2026-10-22T16:05:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -794,7 +794,7 @@
       },
       "category": "mnemos-user",
       "order": 2,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -802,8 +802,8 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/user/integration-guide.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
+        "sha": "03d30d47d2147411dfc5b08ca68c4dfd3516f24f",
+        "commit_date": "2026-10-22T16:05:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -818,7 +818,7 @@
       },
       "category": "mnemos-user",
       "order": 10,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -826,8 +826,8 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/user/mcp-tools.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
+        "sha": "03d30d47d2147411dfc5b08ca68c4dfd3516f24f",
+        "commit_date": "2026-10-22T16:05:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -842,7 +842,7 @@
       },
       "category": "mnemos-user",
       "order": 6,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -850,8 +850,8 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/user/metrics.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
+        "sha": "03d30d47d2147411dfc5b08ca68c4dfd3516f24f",
+        "commit_date": "2026-10-22T16:05:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -866,7 +866,7 @@
       },
       "category": "mnemos-user",
       "order": 3,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -874,8 +874,8 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/user/sync.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
+        "sha": "03d30d47d2147411dfc5b08ca68c4dfd3516f24f",
+        "commit_date": "2026-10-22T16:05:10+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -890,7 +890,7 @@
       },
       "category": "mnemos-user",
       "order": 5,
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-10-22",
       "locales": [
         "en",
         "ru"
@@ -898,8 +898,8 @@
       "provenance": {
         "repo": "mnemos",
         "source_path": "docs/en/user/tag-contract.md",
-        "sha": "8bc139bf0749c0a50b9f1661e34d33b03ca78e3a",
-        "commit_date": "2026-09-29T12:16:19+03:00"
+        "sha": "03d30d47d2147411dfc5b08ca68c4dfd3516f24f",
+        "commit_date": "2026-10-22T16:05:10+03:00"
       },
       "contentClass": {
         "en": "corpus",

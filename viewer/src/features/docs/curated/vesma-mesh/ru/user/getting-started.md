@@ -31,7 +31,7 @@ export PATH="$HOME/go/bin:$PATH"
 ```
 
 Команды установки `buf` и protoc-генераторов — в
-[CONTRIBUTING.md](https://github.com/vesmaro/vesma-mesh/blob/b428ea9b7ec9731fe4d53478702d0667cf3f53de/CONTRIBUTING.md).
+[CONTRIBUTING.md](https://github.com/vesmaro/vesma-mesh/blob/03b570ea1e835b2234d8c4c9c52122219f02d1ef/CONTRIBUTING.md).
 
 ---
 
@@ -39,14 +39,14 @@ export PATH="$HOME/go/bin:$PATH"
 
 ```bash
 git clone https://github.com/vesmaro/vesma-mesh.git
-cd mnemos-mesh
+cd vesma-mesh
 make build
 ./bin/mnemos-mesh version
 ```
 
 Бинарник статический (`-trimpath -ldflags "-s -w"`), около 12 МБ.
 Кросс-компиляция под другие платформы — командами из CI, см.
-[`.github/workflows/ci.yml`](https://github.com/vesmaro/vesma-mesh/blob/b428ea9b7ec9731fe4d53478702d0667cf3f53de/.github/workflows/ci.yml).
+[`.github/workflows/ci.yml`](https://github.com/vesmaro/vesma-mesh/blob/03b570ea1e835b2234d8c4c9c52122219f02d1ef/.github/workflows/ci.yml).
 
 ---
 
@@ -61,7 +61,7 @@ vesma-mesh работает на **приватном CA** со взаимной
 ```bash
 openssl genrsa -out ca.key 4096
 openssl req -x509 -new -key ca.key -sha256 -days 3650 \
-  -subj "/CN=mnemos-mesh-ca" -out ca.pem
+  -subj "/CN=vesma-mesh-ca" -out ca.pem
 ```
 
 `ca.key` держите офлайн. Раздайте `ca.pem` всем узлам.
@@ -101,7 +101,7 @@ mTLS — в [модели безопасности](mnemos-mesh/admin/security).
 
 ```yaml
 node_id: mnemos-A
-listen: 0.0.0.0:8443
+listen: 0.0.0.0:29431   # обязателен — без дефолта с v1.7.0
 unix_socket: /run/mnemos/core.sock
 
 mtls:
@@ -114,7 +114,7 @@ mtls:
 
 peers:
   - id: mnemos-B
-    address: b.example.invalid:8443
+    address: b.example.invalid:29431
     fingerprint: sha256:abcdef0123456789...
     projects: ["project-mnemos"]
 
@@ -135,7 +135,7 @@ metrics:
 ## 4 · Запуск
 
 ```bash
-mnemos-mesh serve --config ~/.mnemos/mesh.yaml
+vesma-mesh serve --config ~/.mnemos/mesh.yaml
 ```
 
 Меш открывает mTLS-слушатель для пиров (`listen`) и подключается к
@@ -144,7 +144,7 @@ vesma через Unix-сокет (`unix_socket`). На M2 обе половин�
 (Python-клиент) и дальше.
 
 Для продакшена запускайте под systemd. Шаблон юнита запланирован на M5
-(production hardening); до тех пор — `mnemos-mesh serve` под любым
+(production hardening); до тех пор — `vesma-mesh serve` под любым
 супервизором процессов (systemd, supervisord или init-скрипт).
 
 ---
@@ -168,12 +168,12 @@ vesma mesh heartbeat --peer mnemos-B
 # Ожидание: непустое поле версии от бинарника M2
 ```
 
-На M2 (заглушка) инструмент проверки — `mnemos-mesh doctor`: он
+На M2 (заглушка) инструмент проверки — `vesma-mesh doctor`: он
 проверяет путь Unix-сокета, валидность сертификатов и досягаемость
 пиров (заглушка). Запустите после `serve`:
 
 ```bash
-mnemos-mesh doctor --config ~/.mnemos/mesh.yaml
+vesma-mesh doctor --config ~/.mnemos/mesh.yaml
 ```
 
 ---
@@ -235,5 +235,5 @@ mTLS-сертификата).
 
 - [Справочник конфигурации](mnemos-mesh/user/configuration) — каждое поле `mesh.yaml`
 - [Модель безопасности](mnemos-mesh/admin/security) — граница доверия, mTLS, ACL, ключи
-- [Архитектура](https://github.com/vesmaro/vesma-mesh/blob/b428ea9b7ec9731fe4d53478702d0667cf3f53de/docs/architecture.md) — полный дизайн системы
-- [PLAN.md](https://github.com/vesmaro/vesma-mesh/blob/b428ea9b7ec9731fe4d53478702d0667cf3f53de/PLAN.md) — дорожная карта M1–M6
+- [Архитектура](https://github.com/vesmaro/vesma-mesh/blob/03b570ea1e835b2234d8c4c9c52122219f02d1ef/docs/architecture.md) — полный дизайн системы
+- [PLAN.md](https://github.com/vesmaro/vesma-mesh/blob/03b570ea1e835b2234d8c4c9c52122219f02d1ef/PLAN.md) — дорожная карта M1–M6

@@ -20,10 +20,14 @@ projects:
   # ---------------------------------------------------------------- mnemos ---
   mnemos:
     repo: ../vesma
-    # Pinned 2026-09-29 (ME-039 re-sync, ecosystem revision; was 23f0fce,
-    # 2026-09-23/W1a — 35 commits behind). Re-pin deliberately: update the
-    # SHA, re-run `npm run sync-docs`, diff-review the corpus (Docs Writer).
-    ref: 8bc139bf0749c0a50b9f1661e34d33b03ca78e3a
+    # Re-pinned 2026-10-23 (docs-engine-freshness wave; was 8bc139bf0749,
+    # 2026-09-29/ME-039 — a month stale across the 5.x→6.0→6.4 rebrand).
+    # 03d30d47 = release tag v6.4.0 (the 6.4.x generation release commit:
+    # layout v2 waves 3-4, docs actualization). Anchored on the TAG
+    # generation per the wave contract; the full SHA is recorded (honest
+    # clone discipline), the tag is named here so the next re-pin knows
+    # the anchor kind.
+    ref: 03d30d47d2147411dfc5b08ca68c4dfd3516f24f
     # Non-docs links (CONTRIBUTING.md, config.example.yaml, …) are rewritten
     # to this template at the pinned SHA; {sha} is substituted.
     web_base: "https://github.com/vesmaro/vesmaro/blob/{sha}"
@@ -40,10 +44,10 @@ projects:
         order: 1
         note:
           en: >-
-            Curator: the complete first run of Mnemos — one-line install,
+            Curator: the complete first run of Vesma — one-line install,
             first memory, first search, connecting an agent harness.
           ru: >-
-            Куратор: полный первый прогон mnemos — установка одной командой,
+            Куратор: полный первый прогон vesma — установка одной командой,
             первая запись, первый поиск, подключение агента-харнеса.
       - path: user/integration-guide.md
         category: mnemos-user
@@ -61,11 +65,11 @@ projects:
         order: 3
         note:
           en: >-
-            Curator: offline batch sync between two Mnemos instances via
-            cron and rsync — Mnemos itself makes no network calls.
+            Curator: offline batch sync between two Vesma instances via
+            cron and rsync — Vesma itself makes no network calls.
           ru: >-
-            Куратор: офлайн-синхронизация двух инстансов mnemos по cron
-            и rsync — mnemos сам сетевых вызовов не делает.
+            Куратор: офлайн-синхронизация двух инстансов vesma по cron
+            и rsync — vesma сам сетевых вызовов не делает.
       - path: user/context-filter.md
         category: mnemos-user
         order: 4
@@ -81,52 +85,52 @@ projects:
         order: 5
         note:
           en: >-
-            Curator: the mandatory tag schema of Mnemos — prefixes, allowed
-            values, migration; the board's «Mnemos tags» field follows it.
+            Curator: the mandatory tag schema — mnemos:* prefixes, allowed
+            values, migration; the board's «vesma tags» field follows it.
           ru: >-
-            Куратор: обязательная схема тегов mnemos — префиксы, допустимые
-            значения, миграция; поле «Теги mnemos» у задач борда живёт по
-            этому контракту.
+            Куратор: обязательная схема тегов — префиксы mnemos:,
+            допустимые значения, миграция; поле «Теги vesma» у задач борда
+            живёт по этому контракту.
       - path: user/metrics.md
         category: mnemos-user
         order: 6
         note:
           en: >-
-            Curator: the three HTTP endpoints behind the board's «Пульс»
-            feed and overview stats, plus a Prometheus exposition.
+            Curator: the stats HTTP endpoints and the Prometheus
+            exposition behind the board's «Пульс» feed and overview stats.
           ru: >-
-            Куратор: три HTTP-эндпоинта, на которых держатся «Пульс» и
-            статистика «Обзора» борда, плюс Prometheus-экспозиция.
+            Куратор: HTTP-эндпоинты статистики и Prometheus-экспозиция,
+            на которых держатся «Пульс» и «Обзор» борда.
       - path: user/export-import.md
         category: mnemos-user
         order: 7
         note:
           en: >-
-            Curator: backup, move, and restore Mnemos memories via CLI or
+            Curator: backup, move, and restore Vesma memories via CLI or
             HTTP API — JSON with metadata or full SQLite snapshots.
           ru: >-
-            Куратор: резервные копии и перенос записей mnemos через CLI
+            Куратор: резервные копии и перенос записей vesma через CLI
             или HTTP API — JSON с метаданными или полные SQLite-снимки.
       - path: user/cli-reference.md
         category: mnemos-user
         order: 8
         note:
           en: >-
-            Curator: complete reference for the mnemos CLI — every
+            Curator: complete reference for the vesma CLI — every
             subcommand with runnable examples.
           ru: >-
-            Куратор: полный справочник CLI mnemos — все подкоманды
+            Куратор: полный справочник CLI vesma — все подкоманды
             с запускабельными примерами.
       - path: user/http-api.md
         category: mnemos-user
         order: 9
         note:
           en: >-
-            Curator: the full HTTP surface of Mnemos — memory, search,
+            Curator: the full HTTP surface of Vesma — memory, search,
             pipeline, DLQ, traces, A2A sessions; the requests the board
             makes to stores.
           ru: >-
-            Куратор: полная HTTP-поверхность mnemos — память, поиск,
+            Куратор: полная HTTP-поверхность vesma — память, поиск,
             конвейер, DLQ, трассировки, A2A-сессии; именно этими запросами
             борд читает хранилища.
       - path: user/mcp-tools.md
@@ -134,10 +138,10 @@ projects:
         order: 10
         note:
           en: >-
-            Curator: all mnemos_* tools for MCP clients — the same layer
+            Curator: all vesma_* tools for MCP clients — the same layer
             agents on the board use to work with memory.
           ru: >-
-            Куратор: все инструменты mnemos_* для MCP-клиентов — тот же
+            Куратор: все инструменты vesma_* для MCP-клиентов — тот же
             слой, через который агенты работают с памятью на борде.
       # --- admin/ — ФИНАЛЬНЫЙ список W2 (контракт §3: страницы, на которые
       # --- смотрят наши runbook-страницы; решение по кандидатам — в exclude).
@@ -146,30 +150,30 @@ projects:
         order: 1
         note:
           en: >-
-            Curator: the Mnemos security posture — TOTP, non-loopback
+            Curator: the Vesma security posture — TOTP, non-loopback
             guard, threat model; background for the board's tokens page.
           ru: >-
-            Куратор: позиция безопасности mnemos — TOTP, не-loopback guard,
+            Куратор: позиция безопасности vesma — TOTP, не-loopback guard,
             модель угроз; фон для страницы борда «Токены и доступ».
       - path: admin/federation.md
         category: mnemos-admin
         order: 2
         note:
           en: >-
-            Curator: federation on the Mnemos side — per-peer ACL, trigger
+            Curator: federation on the Vesma side — per-peer ACL, trigger
             codes, access log; the foundation of the observed mesh nodes.
           ru: >-
-            Куратор: федерация на стороне mnemos — per-peer ACL, коды
+            Куратор: федерация на стороне vesma — per-peer ACL, коды
             триггера, журнал доступа; фундамент наблюдаемых «Узлов меша».
       - path: admin/runbooks/install.md
         category: mnemos-admin
         order: 3
         note:
           en: >-
-            Curator: installing Mnemos — the board's prerequisite: PyPI
+            Curator: installing Vesma — the board's prerequisite: PyPI
             install, first run, the mnk_… token for the store hookup.
           ru: >-
-            Куратор: установка mnemos — предпосылка борда: PyPI-установка,
+            Куратор: установка vesma — предпосылка борда: PyPI-установка,
             первый запуск, токен mnk_… для подключения хранилища.
       # W2, решение по кандидату: наша backup-restore.md копирует
       # mnemos.db/vectors.db — апстрим-ранбук про то же, глубже.
@@ -179,9 +183,9 @@ projects:
         note:
           en: >-
             Curator: the upstream runbook for backing up and restoring
-            Mnemos data — goes deeper than the board's own backup page.
+            Vesma data — goes deeper than the board's own backup page.
           ru: >-
-            Куратор: апстрим-ранбук бэкапа и восстановления данных mnemos —
+            Куратор: апстрим-ранбук бэкапа и восстановления данных vesma —
             глубже нашей страницы «Бэкап и восстановление».
       # --- architecture/ — одна обзорная (контракт §3) ---------------------
       - path: architecture/overview.md
@@ -189,10 +193,10 @@ projects:
         order: 1
         note:
           en: >-
-            Curator: how Mnemos is built — hybrid memory, the CLI/HTTP/MCP
+            Curator: how Vesma is built — hybrid memory, the CLI/HTTP/MCP
             surfaces, and where vesmaro-eyes fits.
           ru: >-
-            Куратор: как устроен mnemos — гибридная память, поверхности
+            Куратор: как устроен vesma — гибридная память, поверхности
             CLI/HTTP/MCP и место vesmaro-eyes в картине.
     exclude:
       # --- W2-решения по висящим слагам (ссылки из включённых страниц) -----
@@ -245,6 +249,29 @@ projects:
         reason: внутренний процесс разработки апстрима
       - path: admin/runbooks/edge-stats-maintenance.md
         reason: узкая операционная рутина апстрима
+      # --- ре-пин 2026-10-23 (docs-engine-freshness): новые страницы 6.x ----
+      # Вердикты того же класса, что решения W2; каждая входит входящими
+      # ссылками в включённые страницы — ссылки уводятся overlay'ем на
+      # GitHub @ пина (контракт §6.1). Кандидаты на включение (решение
+      # Docs Writer, не волны): migration-6-0, project-graph.
+      - path: user/migration-6-0.md
+        reason: >-
+          ранбук переезда 5.x→6.0 апстрима; оператор борда ставит vesma
+          готовой предпосылкой (наш upgrade.md управляет только тегом
+          образа борда) — решение W2-класса, кандидат на включение
+      - path: user/project-graph.md
+        reason: >-
+          гид по графу кода (ADR-0032) — поверхность разработчика/MCP,
+          контракт §3 держит пользователя борда на операторских страницах;
+          решение W2-класса, кандидат на включение
+      - path: user/api-surface-parity.md
+        reason: >-
+          внутренняя запись паритета CLI/REST/MCP апстрима — реестр для
+          мейнтейнеров, не операторская страница
+      - path: dev/
+        reason: >-
+          новая dev/-зона 6.x (release-pipeline) — релизная рутина
+          мейнтейнеров апстрима, как ci-cd/pypi-publish
       - path: project/
         reason: >-
           внутреннее: ADR, планы, отчёты сессий — не пользовательская
@@ -254,110 +281,138 @@ projects:
     overlays:
       # Демо-правила W1a (механика якорных замен; тело апстрима не
       # редактируется вне этого механизма — контракт §2).
+      # Ре-пин 2026-10-23: апстрим 6.4.0 переформулировал пункт в чекбокс
+      # роадмапа «- [ ] Web UI (vesma-eyes)» — имя уже правильное, но борд
+      # при этом ЖИВОЙ (эти доки читаются на нём). Вердикт: политика та же
+      # («читателю указывают на живой борд»), якорь перенесён на чекбокс,
+      # отмечаем его живым — форма списка сохранена.
       - file: en/architecture/overview.md
-        find: "A Web UI is planned as a separate project\n(mnemos-eyes)."
-        replace: >-
-          The Web UI for Mnemos is **vesmaro-eyes** — the board that serves
-          this documentation.
+        find: "- [ ] Web UI (vesma-eyes)"
+        replace: "- [x] Web UI (vesma-eyes) — live: the board serving this documentation"
         reason: >-
-          адаптация контекста: читателю указывают на живой борд вместо
-          «запланирован» (решение АРХКОМ-7 о трёхпроектных доках)
+          адаптация контекста: пункт роадмапа «запланирован» отмечен живым —
+          борд vesma-eyes существует и раздаёт эти доки (решение АРХКОМ-7 о
+          трёхпроектных доках; перенесено на чекбокс 6.4.0)
       - file: ru/architecture/overview.md
-        find: "Web UI запланирован как отдельный\nпроект (mnemos-eyes)."
-        replace: >-
-          Web UI для Mnemos — это **vesmaro-eyes**, борд, на котором вы
-          читаете эту документацию.
+        find: "- [ ] Web UI (vesma-eyes)"
+        replace: "- [x] Web UI (vesma-eyes) — живой: борд, на котором вы читаете эту документацию"
         reason: RU-зеркало правила выше
 
       # --- W2: ссылки на страницы вне селекции → GitHub @ пина (контракт §6.1:
       # --- ни одного висящего слага в корпусе). Якоря сняты с апстрима @SHA;
       # --- несовпадение якоря = fail синка (сигнал дрейфа апстрима).
-      # federation-testing — вне селекции (решение W2):
+      # federation-testing — вне селекции (решение W2). Ре-пин 2026-10-23:
+      # апстрим 6.4.0 линкует страницу ДВАЖДЫ (интро + end-to-end
+      # verification) — старый одноанкерный оверлей падал с «2 matches»;
+      # разбит на два с контекстными якорями.
       - file: en/admin/federation.md
-        find: "[`federation-testing.md`](federation-testing.md)"
-        replace: "[`federation-testing.md`](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/en/admin/federation-testing.md)"
+        find: "[`federation-testing.md`](federation-testing.md). The original rollout"
+        replace: "[`federation-testing.md`](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/en/admin/federation-testing.md). The original rollout"
         reason: >-
           federation-testing остаётся в апстриме — QA-гайд релизной проверки
-          федерации, борд федерацию не эксплуатирует
+          федерации, борд федерацию не эксплуатирует (анкер 1: интро)
+      - file: en/admin/federation.md
+        find: "verification:\n   [`federation-testing.md`](federation-testing.md)."
+        replace: "verification:\n   [`federation-testing.md`](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/en/admin/federation-testing.md)."
+        reason: то же решение W2, второй анкер (end-to-end verification)
       - file: ru/admin/federation.md
-        find: "[`federation-testing.md`](federation-testing.md)"
-        replace: "[`federation-testing.md`](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/ru/admin/federation-testing.md)"
-        reason: RU-зеркало правила выше
-      # dependency-updates — вне селекции (решение W2):
+        find: "[`federation-testing.md`](federation-testing.md). Изначально внедрение"
+        replace: "[`federation-testing.md`](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/ru/admin/federation-testing.md). Изначально внедрение"
+        reason: RU-зеркало правила выше (анкер 1 — интро)
+      - file: ru/admin/federation.md
+        find: "проверка —\n   [`federation-testing.md`](federation-testing.md)."
+        replace: "проверка —\n   [`federation-testing.md`](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/ru/admin/federation-testing.md)."
+        reason: RU-зеркало, второй анкер (сквозная проверка)
+      # dependency-updates — вне селекции (решение W2). Ре-пин 2026-10-23:
+      # апстрим 6.4.0 переименовал текст ссылки («dependency-updates runbook»
+      # → «dependency update runbook», вокруг «see the …») — якорь перенесён.
       - file: en/user/getting-started.md
-        find: "[dependency-updates runbook](../admin/runbooks/dependency-updates.md)"
-        replace: "[dependency-updates runbook](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/en/admin/runbooks/dependency-updates.md)"
+        find: "see the [dependency update runbook](../admin/runbooks/dependency-updates.md)"
+        replace: "see the [dependency update runbook](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/en/admin/runbooks/dependency-updates.md)"
         reason: >-
           рутина мейнтейнеров апстрима (пины CVE); наш upgrade.md управляет
           только тегом образа борда
       - file: ru/user/getting-started.md
         find: "[ранбук по обновлению зависимостей](../admin/runbooks/dependency-updates.md)"
-        replace: "[ранбук по обновлению зависимостей](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/ru/admin/runbooks/dependency-updates.md)"
+        replace: "[ранбук по обновлению зависимостей](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/ru/admin/runbooks/dependency-updates.md)"
         reason: RU-зеркало правила выше
       # migrate (ai-brain) — вне селекции (решение W2):
       - file: en/user/cli-reference.md
         find: "[runbooks/migrate.md](../admin/runbooks/migrate.md)"
-        replace: "[runbooks/migrate.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/en/admin/runbooks/migrate.md)"
+        replace: "[runbooks/migrate.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/en/admin/runbooks/migrate.md)"
         reason: >-
           разовая миграция с ai-brain, проекта-предшественника; в
           экосистеме борда его нет
       - file: ru/user/cli-reference.md
         find: "[runbooks/migrate.md](../admin/runbooks/migrate.md)"
-        replace: "[runbooks/migrate.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/ru/admin/runbooks/migrate.md)"
+        replace: "[runbooks/migrate.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/ru/admin/runbooks/migrate.md)"
         reason: RU-зеркало правила выше
       # a2a-sessions — вне селекции (решение W2), 3 ссылки на локаль:
       - file: en/user/http-api.md
         find: "The A2A contract is also documented in [a2a-sessions.md](../architecture/a2a-sessions.md) (link to the design rationale)."
-        replace: "The A2A contract is also documented in [a2a-sessions.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/en/architecture/a2a-sessions.md) (link to the design rationale)."
+        replace: "The A2A contract is also documented in [a2a-sessions.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/en/architecture/a2a-sessions.md) (link to the design rationale)."
         reason: >-
           спека A2A — поверхность разработчика (контракт §3: architecture =
           одна обзорная); ссылка ведёт в апстрим @ пина
       - file: en/user/http-api.md
         find: "The contract is described in detail in [a2a-sessions.md](../architecture/a2a-sessions.md); this section is the HTTP surface."
-        replace: "The contract is described in detail in [a2a-sessions.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/en/architecture/a2a-sessions.md); this section is the HTTP surface."
+        replace: "The contract is described in detail in [a2a-sessions.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/en/architecture/a2a-sessions.md); this section is the HTTP surface."
         reason: то же решение W2, второй анкер
       - file: en/user/http-api.md
         find: "- [a2a-sessions.md](../architecture/a2a-sessions.md) — A2A contract and design rationale"
-        replace: "- [a2a-sessions.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/en/architecture/a2a-sessions.md) — A2A contract and design rationale"
+        replace: "- [a2a-sessions.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/en/architecture/a2a-sessions.md) — A2A contract and design rationale"
         reason: то же решение W2, третий анкер
       - file: ru/user/http-api.md
         find: "Контракт A2A также описан в [a2a-sessions.md](../architecture/a2a-sessions.md) (ссылка на обоснование дизайна)."
-        replace: "Контракт A2A также описан в [a2a-sessions.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/ru/architecture/a2a-sessions.md) (ссылка на обоснование дизайна)."
+        replace: "Контракт A2A также описан в [a2a-sessions.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/ru/architecture/a2a-sessions.md) (ссылка на обоснование дизайна)."
         reason: RU-зеркало правил A2A выше
       - file: ru/user/http-api.md
         find: "Контракт подробно описан в [a2a-sessions.md](../architecture/a2a-sessions.md); этот раздел — HTTP-поверхность."
-        replace: "Контракт подробно описан в [a2a-sessions.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/ru/architecture/a2a-sessions.md); этот раздел — HTTP-поверхность."
+        replace: "Контракт подробно описан в [a2a-sessions.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/ru/architecture/a2a-sessions.md); этот раздел — HTTP-поверхность."
         reason: RU-зеркало, второй анкер
       - file: ru/user/http-api.md
         find: "- [a2a-sessions.md](../architecture/a2a-sessions.md) — контракт A2A и обоснование дизайна"
-        replace: "- [a2a-sessions.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/ru/architecture/a2a-sessions.md) — контракт A2A и обоснование дизайна"
+        replace: "- [a2a-sessions.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/ru/architecture/a2a-sessions.md) — контракт A2A и обоснование дизайна"
         reason: RU-зеркало, третий анкер
-      # container-deployment — вне селекции (решение W2), 6 входящих ссылок:
+      # container-deployment — вне селекции (решение W2). Ре-пин 2026-10-23:
+      # в getting-started 6.4.0 табличная строка «see … |» исчезла (вердикт:
+      # оверлей-анкер устарел, удалён), взамен апстрим линкует ранбук ДВА
+      # раза текстом «[container] / [контейнер]» (Alpine/PEP 668 заметки) —
+      # оба новых якоря занесены; «Full guide»/«Полное руководство»
+      # сохранились как были.
       - file: en/user/getting-started.md
-        find: "see [container-deployment.md](../admin/runbooks/container-deployment.md) |"
-        replace: "see [container-deployment.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/en/admin/runbooks/container-deployment.md) |"
+        find: "take the [container](../admin/runbooks/container-deployment.md)"
+        replace: "take the [container](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/en/admin/runbooks/container-deployment.md)"
         reason: >-
           установочный путь апстрима; наш deploy.md считает mnemos готовой
-          предпосылкой и на этот ранбук не смотрит
+          предпосылкой и на этот ранбук не смотрит (анкер — Alpine-заметка)
+      - file: en/user/getting-started.md
+        find: "[container](../admin/runbooks/container-deployment.md). Alpine / musl is a"
+        replace: "[container](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/en/admin/runbooks/container-deployment.md). Alpine / musl is a"
+        reason: то же решение W2, второй анкер (PEP 668-заметка)
       - file: en/user/getting-started.md
         find: "Full guide: [container-deployment.md](../admin/runbooks/container-deployment.md)."
-        replace: "Full guide: [container-deployment.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/en/admin/runbooks/container-deployment.md)."
-        reason: то же решение W2, второй анкер
+        replace: "Full guide: [container-deployment.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/en/admin/runbooks/container-deployment.md)."
+        reason: то же решение W2, третий анкер
       - file: en/admin/runbooks/install.md
         find: "[container-deployment.md](container-deployment.md)."
-        replace: "[container-deployment.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/en/admin/runbooks/container-deployment.md)."
+        replace: "[container-deployment.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/en/admin/runbooks/container-deployment.md)."
         reason: то же решение W2, ссылка из install
       - file: ru/user/getting-started.md
-        find: "см. [container-deployment.md](../admin/runbooks/container-deployment.md) |"
-        replace: "см. [container-deployment.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/ru/admin/runbooks/container-deployment.md) |"
-        reason: RU-зеркало правил container-deployment выше
+        find: "берите\n>   [контейнер](../admin/runbooks/container-deployment.md)."
+        replace: "берите\n>   [контейнер](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/ru/admin/runbooks/container-deployment.md)."
+        reason: RU-зеркало правил container-deployment выше (Alpine-заметка)
+      - file: ru/user/getting-started.md
+        find: "[контейнер](../admin/runbooks/container-deployment.md). Alpine / musl — другая"
+        replace: "[контейнер](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/ru/admin/runbooks/container-deployment.md). Alpine / musl — другая"
+        reason: RU-зеркало, второй анкер (PEP 668-заметка)
       - file: ru/user/getting-started.md
         find: "Полное руководство: [container-deployment.md](../admin/runbooks/container-deployment.md)."
-        replace: "Полное руководство: [container-deployment.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/ru/admin/runbooks/container-deployment.md)."
-        reason: RU-зеркало, второй анкер
+        replace: "Полное руководство: [container-deployment.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/ru/admin/runbooks/container-deployment.md)."
+        reason: RU-зеркало, третий анкер
       - file: ru/admin/runbooks/install.md
         find: "[ранбук container-deployment.md](container-deployment.md)."
-        replace: "[ранбук container-deployment.md](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/ru/admin/runbooks/container-deployment.md)."
+        replace: "[ранбук container-deployment.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/ru/admin/runbooks/container-deployment.md)."
         reason: RU-зеркало, ссылка из install
       # project/adr — вне селекции (контракт §3). Ссылка на КАТАЛОГ (без .md)
       # не переписывается механизмом ссылок (цель не файл) и остаётся мёртвой
@@ -365,23 +420,167 @@ projects:
       # tree @ пина, как остальные ссылки вне селекции.
       - file: en/user/getting-started.md
         find: "[project/adr/](../../project/adr/)"
-        replace: "[project/adr/](https://github.com/vesmaro/vesmaro/tree/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/project/adr)"
+        replace: "[project/adr/](https://github.com/vesmaro/vesmaro/tree/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/project/adr)"
         reason: >-
           каталог ADR апстрима — вне селекции; мёртвая относительная ссылка
           на каталог в первой же странице читателя недопустима
       - file: ru/user/getting-started.md
         find: "[project/adr/](../../project/adr/)"
-        replace: "[project/adr/](https://github.com/vesmaro/vesmaro/tree/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/project/adr)"
+        replace: "[project/adr/](https://github.com/vesmaro/vesmaro/tree/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/project/adr)"
+        reason: RU-зеркало правила выше
+
+      # --- ре-пин 2026-10-23: ссылки на НОВЫЕ страницы 6.x вне селекции -----
+      # (user/project-graph, user/migration-6-0, user/api-surface-parity,
+      # admin/runbooks/pypi-publish; exclude-вердикты выше). Контракт §6.1:
+      # ни одного висящего слага — каждая входящая ссылка уводится на GitHub
+      # @ пина. Якоря сняты с апстрима @ 03d30d47.
+      # migration-6-0 из getting-started (en, 3 входа):
+      - file: en/user/getting-started.md
+        find: "covered in\n> [migration-6-0.md](migration-6-0.md))."
+        replace: "covered in\n> [migration-6-0.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/en/user/migration-6-0.md))."
+        reason: ранбук миграции 5.x→6.0 — вне селекции (exclude выше)
+      - file: en/user/getting-started.md
+        find: "first ([migration-6-0.md](migration-6-0.md)) |"
+        replace: "first ([migration-6-0.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/en/user/migration-6-0.md)) |"
+        reason: то же решение, второй анкер (таблица ~/.mnemos)
+      - file: ru/user/getting-started.md
+        find: "описан в\n> [migration-6-0.md](migration-6-0.md))."
+        replace: "описан в\n> [migration-6-0.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/ru/user/migration-6-0.md))."
+        reason: RU-зеркало правила выше
+      - file: ru/user/getting-started.md
+        find: "([migration-6-0.md](migration-6-0.md)) |"
+        replace: "([migration-6-0.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/ru/user/migration-6-0.md)) |"
+        reason: RU-зеркало, второй анкер
+      # project-graph из getting-started (en+ru, по 3 входа):
+      - file: en/user/getting-started.md
+        find: "[project graph](project-graph.md), on by default. Since PG-0.5 it needs no"
+        replace: "[project graph](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/en/user/project-graph.md), on by default. Since PG-0.5 it needs no"
+        reason: гид по графу кода — вне селекции (exclude выше)
+      - file: en/user/getting-started.md
+        find: "Full walkthrough: [project-graph.md](project-graph.md)."
+        replace: "Full walkthrough: [project-graph.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/en/user/project-graph.md)."
+        reason: то же решение, второй анкер
+      - file: en/user/getting-started.md
+        find: "auto-register + auto-reindex) | [project-graph.md](project-graph.md) |"
+        replace: "auto-register + auto-reindex) | [project-graph.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/en/user/project-graph.md) |"
+        reason: то же решение, третий анкер (таблица «дальше»)
+      - file: en/user/getting-started.md
+        find: "call tracing, auto-indexing) | [project-graph.md](project-graph.md) |"
+        replace: "call tracing, auto-indexing) | [project-graph.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/en/user/project-graph.md) |"
+        reason: то же решение, четвёртый анкер (таблица «дальше»)
+      - file: ru/user/getting-started.md
+        find: "[граф проектов](project-graph.md), включённый по умолчанию. С волны PG-0.5 он"
+        replace: "[граф проектов](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/ru/user/project-graph.md), включённый по умолчанию. С волны PG-0.5 он"
+        reason: RU-зеркало правил project-graph выше
+      - file: ru/user/getting-started.md
+        find: "Полный гид:\n[project-graph.md](project-graph.md)."
+        replace: "Полный гид:\n[project-graph.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/ru/user/project-graph.md)."
+        reason: RU-зеркало, второй анкер
+      - file: ru/user/getting-started.md
+        find: "авторегистрация + автопереиндексация) | [project-graph.md](project-graph.md) |"
+        replace: "авторегистрация + автопереиндексация) | [project-graph.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/ru/user/project-graph.md) |"
+        reason: RU-зеркало, третий анкер
+      - file: ru/user/getting-started.md
+        find: "трассировка вызовов, авто-индексация) | [project-graph.md](project-graph.md) |"
+        replace: "трассировка вызовов, авто-индексация) | [project-graph.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/ru/user/project-graph.md) |"
+        reason: RU-зеркало, четвёртый анкер
+      # project-graph из integration-guide (en+ru):
+      - file: en/user/integration-guide.md
+        find: "The [project graph](project-graph.md) is server-side by design"
+        replace: "The [project graph](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/en/user/project-graph.md) is server-side by design"
+        reason: гид по графу кода — вне селекции (exclude выше)
+      - file: ru/user/integration-guide.md
+        find: "[Граф проектов](project-graph.md) спроектирован как серверная поверхность"
+        replace: "[Граф проектов](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/ru/user/project-graph.md) спроектирован как серверная поверхность"
+        reason: RU-зеркало правила выше
+      # project-graph из mcp-tools (en+ru, анкерованный):
+      - file: en/user/mcp-tools.md
+        find: "- [project-graph.md — Turn it on for a project](project-graph.md#turn-it-on-for-a-project)"
+        replace: "- [project-graph.md — Turn it on for a project](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/en/user/project-graph.md#turn-it-on-for-a-project)"
+        reason: гид по графу кода — вне селекции (exclude выше)
+      - file: ru/user/mcp-tools.md
+        find: "- [project-graph.md — «Включите граф для проекта»](project-graph.md#включите-граф-для-проекта)"
+        replace: "- [project-graph.md — «Включите граф для проекта»](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/ru/user/project-graph.md#включите-граф-для-проекта)"
+        reason: RU-зеркало правила выше
+      # migration-6-0 из install (en+ru):
+      - file: en/admin/runbooks/install.md
+        find: "see [migration-6-0.md](../../user/migration-6-0.md))."
+        replace: "see [migration-6-0.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/en/user/migration-6-0.md))."
+        reason: ранбук миграции 5.x→6.0 — вне селекции (exclude выше)
+      - file: ru/admin/runbooks/install.md
+        find: "см. [migration-6-0.md](../../user/migration-6-0.md))."
+        replace: "см. [migration-6-0.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/ru/user/migration-6-0.md))."
+        reason: RU-зеркало правила выше
+      # pypi-publish из install (en+ru) — новая входящая ссылка 6.4.0:
+      - file: en/admin/runbooks/install.md
+        find: "Channel table: [PyPI publish runbook](pypi-publish.md)."
+        replace: "Channel table: [PyPI publish runbook](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/en/admin/runbooks/pypi-publish.md)."
+        reason: релизная рутина мейнтейнеров апстрима (exclude выше)
+      - file: ru/admin/runbooks/install.md
+        find: "[ранбук публикации в PyPI](pypi-publish.md)."
+        replace: "[ранбук публикации в PyPI](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/ru/admin/runbooks/pypi-publish.md)."
+        reason: RU-зеркало правила выше
+      # migration-6-0 + migrate из backup-restore (en+ru, по 2+2):
+      - file: en/admin/runbooks/backup-restore.md
+        find: "([migration-6-0.md](../../user/migration-6-0.md)) before relying on these paths."
+        replace: "([migration-6-0.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/en/user/migration-6-0.md)) before relying on these paths."
+        reason: ранбук миграции 5.x→6.0 — вне селекции (exclude выше)
+      - file: en/admin/runbooks/backup-restore.md
+        find: "([migration-6-0.md](../../user/migration-6-0.md)), not directly"
+        replace: "([migration-6-0.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/en/user/migration-6-0.md)), not directly"
+        reason: то же решение, второй анкер
+      - file: en/admin/runbooks/backup-restore.md
+        find: "[ai-brain migration](migrate.md)."
+        replace: "[ai-brain migration](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/en/admin/runbooks/migrate.md)."
+        reason: миграция с ai-brain — вне селекции (решение W2)
+      - file: en/admin/runbooks/backup-restore.md
+        find: "- [migrate.md](migrate.md) — ai-brain migration and tag canonization"
+        replace: "- [migrate.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/en/admin/runbooks/migrate.md) — ai-brain migration and tag canonization"
+        reason: то же решение W2, второй анкер
+      - file: ru/admin/runbooks/backup-restore.md
+        find: "([migration-6-0.md](../../user/migration-6-0.md)) и только потом опирайтесь"
+        replace: "([migration-6-0.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/ru/user/migration-6-0.md)) и только потом опирайтесь"
+        reason: RU-зеркало правил migration-6-0 выше
+      - file: ru/admin/runbooks/backup-restore.md
+        find: "([migration-6-0.md](../../user/migration-6-0.md)), а не поверх"
+        replace: "([migration-6-0.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/ru/user/migration-6-0.md)), а не поверх"
+        reason: RU-зеркало, второй анкер
+      - file: ru/admin/runbooks/backup-restore.md
+        find: "или [миграцию с ai-brain](migrate.md)."
+        replace: "или [миграцию с ai-brain](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/ru/admin/runbooks/migrate.md)."
+        reason: RU-зеркало правил migrate выше
+      - file: ru/admin/runbooks/backup-restore.md
+        find: "- [migrate.md](migrate.md) — миграция с ai-brain и канонизация тегов"
+        replace: "- [migrate.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/ru/admin/runbooks/migrate.md) — миграция с ai-brain и канонизация тегов"
+        reason: RU-зеркало, второй анкер
+      # migrate из cli-reference — ВТОРАЯ ссылка (en+ru), новая в 6.4.0:
+      - file: en/user/cli-reference.md
+        find: "- [Migration runbook](../admin/runbooks/migrate.md)"
+        replace: "- [Migration runbook](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/en/admin/runbooks/migrate.md)"
+        reason: миграция с ai-brain — вне селекции (решение W2), второй вход
+      - file: ru/user/cli-reference.md
+        find: "- [Ранбук миграции](../admin/runbooks/migrate.md)"
+        replace: "- [Ранбук миграции](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/ru/admin/runbooks/migrate.md)"
+        reason: RU-зеркало правила выше
+      # api-surface-parity из http-api (en+ru):
+      - file: en/user/http-api.md
+        find: "lives in [api-surface-parity.md](api-surface-parity.md)."
+        replace: "lives in [api-surface-parity.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/en/user/api-surface-parity.md)."
+        reason: реестр паритета CLI/REST/MCP — вне селекции (exclude выше)
+      - file: ru/user/http-api.md
+        find: "живёт в [api-surface-parity.md](api-surface-parity.md)."
+        replace: "живёт в [api-surface-parity.md](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/ru/user/api-surface-parity.md)."
         reason: RU-зеркало правила выше
 
   # ----------------------------------------------------------- mnemos-mesh ---
   mnemos-mesh:
     repo: ../vesma-mesh
-    # Pinned 2026-09-29 (ME-039 re-sync; was 331ef3a, 2026-09-23/W1a —
-    # 106 commits behind). b428ea9 = tag v1.6.8 — the release-charting
-    # commit (== their main, merge PR #92: homehelper tunnel lifecycle
-    # logging, release-pipeline repairs).
-    ref: b428ea9b7ec9731fe4d53478702d0667cf3f53de
+    # Re-pinned 2026-10-23 (docs-engine-freshness wave; was b428ea9 = tag
+    # v1.6.8, 2026-09-29/ME-039). 03b570ea = release tag v1.8.1 — carries
+    # the rebrand (mnemos-mesh → vesma-mesh naming) and the v1.7.0 MM-061
+    # `listen` breaking change; both classes were carried into the curated
+    # RU translations of this config in the same wave.
+    ref: 03b570ea1e835b2234d8c4c9c52122219f02d1ef
     web_base: "https://github.com/vesmaro/vesma-mesh/blob/{sha}"
     locale_dirs:
       en: docs/en
@@ -395,7 +594,7 @@ projects:
         category: mesh-user
         order: 1
         note: >-
-          Куратор: поднять узел mnemos-mesh с нуля — сборка, конфиг двух
+          Куратор: поднять узел vesma-mesh с нуля — сборка, конфиг двух
           узлов, запуск и проверка канала федерации.
       - path: user/configuration.md
         category: mesh-user
@@ -434,8 +633,8 @@ projects:
       # GitHub mnemos @ пина, чтобы в борде не было битого относительного
       # href (контракт §6.1).
       - file: en/admin/security.md
-        find: "- [ADR-0016 — federation threat model](../../../../mnemos/docs/project/adr/0016-federation-threat-model.md) (mnemos repo)"
-        replace: "- [ADR-0016 — federation threat model](https://github.com/vesmaro/vesmaro/blob/8bc139bf0749c0a50b9f1661e34d33b03ca78e3a/docs/project/adr/0016-federation-threat-model.md) (mnemos repo)"
+        find: "- [ADR-0016 — federation threat model](../../../../mnemos/docs/project/adr/0016-federation-threat-model.md) (vesma repo)"
+        replace: "- [ADR-0016 — federation threat model](https://github.com/vesmaro/vesmaro/blob/03d30d47d2147411dfc5b08ca68c4dfd3516f24f/docs/project/adr/0016-federation-threat-model.md) (vesma repo)"
         reason: >-
           cross-clone ссылка (mesh → mnemos project/adr): относительный путь
           в корпусе борда мёртв — только GitHub @ пина mnemos
@@ -444,22 +643,25 @@ projects:
     # curated-источника (provenance kind "curated-translation"). Пути `source`
     # — от корня нашего репо, вне вытираемой зоны content/upstream. Написаны
     # волной W3. ME-039: тела EN идентичны 331ef3a..b428ea9 (diff пуст),
-    # перевод не протух — translator_note ниже честно хранит базис перевода
-    # (en@331ef3a), обновляется только при изменении EN-тела.
+    # перевод не протух. Ре-пин 2026-10-23 (docs-engine-freshness): EN-тела
+    # b428ea9..v1.8.1 изменились (нейминг vesma-mesh + breaking change
+    # v1.7.0/MM-061 про `listen`) — перевод перенесён на новый базис
+    # (en@03b570ea), translator_note хранит базис честно и обновляется
+    # только при изменении EN-тела.
     translations:
       ru:
         - source_of: user/getting-started.md
           source: viewer/src/features/docs/curated/vesma-mesh/ru/user/getting-started.md
-          translator_note: "Кураторский перевод W3; оригинал en@331ef3a785c1"
+          translator_note: "Кураторский перевод W3; база обновлена 2026-10-23 (docs-engine-freshness); оригинал en@03b570ea1e83"
         - source_of: user/configuration.md
           source: viewer/src/features/docs/curated/vesma-mesh/ru/user/configuration.md
-          translator_note: "Кураторский перевод W3; оригинал en@331ef3a785c1"
+          translator_note: "Кураторский перевод W3; база обновлена 2026-10-23 (MM-061 listen); оригинал en@03b570ea1e83"
         - source_of: admin/security.md
           source: viewer/src/features/docs/curated/vesma-mesh/ru/admin/security.md
-          translator_note: "Кураторский перевод W3; оригинал en@331ef3a785c1"
+          translator_note: "Кураторский перевод W3; база обновлена 2026-10-23 (нейминг, порты); оригинал en@03b570ea1e83"
         - source_of: admin/runbook.md
           source: viewer/src/features/docs/curated/vesma-mesh/ru/admin/runbook.md
-          translator_note: "Кураторский перевод W3; оригинал en@331ef3a785c1"
+          translator_note: "Кураторский перевод W3; база обновлена 2026-10-23 (порты 29431); оригинал en@03b570ea1e83"
 
 # ----------------------------------------------------------------------------
 # Нормализация L1 (применяется к каждому файлу до overlay и перезаписи ссылок).
@@ -494,9 +696,10 @@ api_hub:
   sources:
     mnemos:
       repo: ../vesma
-      # Свежий main на момент волны ME-038 (2026-09-29). Пин НЕ пересекается
-      # с projects.mnemos (владение ME-039) — это отдельная выборка.
-      ref: 8bc139bf0749c0a50b9f1661e34d33b03ca78e3a
+      # Re-pinned 2026-10-23 (docs-engine-freshness) — тот же тег v6.4.0,
+      # что и projects.mnemos: выборка отдельная (владение ME-038/ME-039),
+      # поколение одно — иначе хаб /docs/api показывает до-ребрендовый A2A.
+      ref: 03d30d47d2147411dfc5b08ca68c4dfd3516f24f
       web_base: "https://github.com/vesmaro/vesmaro/blob/{sha}"
       locale_dirs:
         en: docs/en
@@ -515,10 +718,10 @@ api_hub:
             ru: A2A Sessions API
           note:
             en: >-
-              Curator: the A2A sessions contract of Mnemos — session
+              Curator: the A2A sessions contract of Vesma — session
               lifecycle, envelopes, and the design rationale behind the API.
             ru: >-
-              Куратор: контракт A2A-сессий mnemos — жизненный цикл сессии,
+              Куратор: контракт A2A-сессий vesma — жизненный цикл сессии,
               конверты и обоснование дизайна API.
       exclude:
         - path: user/http-api.md
@@ -537,8 +740,9 @@ api_hub:
             869 строк, CLI-поверхность (не HTTP API); уже в хабе mnemos
         - path: user/metrics.md
           reason: >-
-            три метрических эндпоинта описаны внутри http-api-справочника
-            хаба mnemos; отдельная страница в api-хабе не добавляет знания
+            метрические эндпоинты описаны внутри http-api-справочника
+            хаба vesma (mnemos); отдельная страница в api-хабе не
+            добавляет знания
 
     vesmaro-agent:
       repo: ../vesma-agent
@@ -564,7 +768,7 @@ api_hub:
     mnemos-mesh:
       repo: ../vesma-mesh
       # Пин для ПРОВЕРКИ кураторской заметки (само тело из curated-слоя).
-      ref: b428ea9b7ec9731fe4d53478702d0667cf3f53de
+      ref: 03b570ea1e835b2234d8c4c9c52122219f02d1ef
       web_base: "https://github.com/vesmaro/vesma-mesh/blob/{sha}"
       locale_dirs:
         en: docs/en

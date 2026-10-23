@@ -45,8 +45,8 @@ vesma-mesh doctor --config /etc/mnemos/mesh.yaml
 ✅ config (node_id=node-a, peers=3)
 ✅ mtls (certs loadable, node cert valid)
 ✅ unix_socket (/run/mnemos/core.sock reachable)
-  peer node-b (mesh-b.example:8443): reachable
-  peer node-c (mesh-c.example:8443): reachable
+  peer node-b (mesh-b.example:29431): reachable
+  peer node-c (mesh-c.example:29431): reachable
 ✅ peers (2/2 reachable)
 doctor: OK
 ```
@@ -121,7 +121,7 @@ doctor выходит с ненулевым кодом.
    ```yaml
    peers:
      - id: node-d
-       address: mesh-d.example:8443
+       address: mesh-d.example:29431
        fingerprint: "sha256:<hex>"
        projects: ["project-x"]
    ```

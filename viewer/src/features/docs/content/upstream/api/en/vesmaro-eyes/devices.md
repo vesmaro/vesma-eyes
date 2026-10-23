@@ -3,7 +3,7 @@ title: Devices and pairing
 slug: api/vesmaro-eyes/devices
 category: api-board
 order: 7
-last_verified: 2026-10-03
+last_verified: 2026-10-22
 source: spec@79f37cd8a3ff
 spec_version: 1.80.0
 ---

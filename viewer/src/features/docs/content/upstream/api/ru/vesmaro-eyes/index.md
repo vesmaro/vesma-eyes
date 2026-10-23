@@ -3,7 +3,7 @@ title: Обзор API борда
 slug: api/vesmaro-eyes/index
 category: api-board
 order: 1
-last_verified: 2026-10-03
+last_verified: 2026-10-22
 source: spec@79f37cd8a3ff
 spec_version: 1.80.0
 ---

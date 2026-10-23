@@ -30,13 +30,26 @@ M2). Полная валидация схемы (формы ACL, формат о
 | Поле | Тип | По умолчанию | Описание |
 |---|---|---|---|
 | `node_id` | string | *(обязательно)* | id пира этого узла. Привязан к CN mTLS-сертификата (критерий 3, архитектура §7). Используется как `peer_id` в проверке ACL и в `federation_access_log`. Пусто → `ErrEmptyNodeID`. |
-| `listen` | string | `:8443` | Адрес gRPC-слушателя для пиров (mTLS), `host:port`. |
+| `listen` | string | *(обязателен — без дефолта с v1.7.0)* | Адрес gRPC-слушателя для пиров (mTLS), `host:port`. Роль node всегда биндит этот слушатель, поэтому адрес должен быть явным; конфиг узла без `listen` падает с `ErrNoListen` (пустой файл упадёт раньше — на `node_id` / mTLS-материале). Wildcard-ЗНАЧЕНИЕ с пустым хостом (`":29431"`) остаётся легальным, когда задано осознанно. |
 | `unix_socket` | string | `/run/mnemos/core.sock` | Путь Unix-сокета меш↔vesma. Сокет создаёт меш, vesma к нему подключается. |
 | `mtls` | объект | *(обязательно)* | Настройки mTLS — ниже. |
 | `peers` | список | `[]` | Реестр пиров — ниже. |
 | `vesma` | объект | *(дефолты)* | Поведение подключения меш→vesma — ниже. |
 | `logging` | объект | `info` / `json` | Уровень и формат структурированного журнала — ниже. |
 | `metrics` | объект | *(пусто)* | Опциональный Prometheus-слушатель — ниже. |
+
+> **Ломающее изменение (v1.7.0, MM-061).** Неявный дефолт `listen`
+> (старый бинд на все интерфейсы) удалён. Конфиг роли node (роль по
+> умолчанию) без явного верхнеуровневого `listen` теперь падает при
+> загрузке с `ErrNoListen`. Роль node всегда биндит mTLS-слушатель
+> FederationPeer, поэтому «узел без listen» — полунастроенный узел,
+> а не случай дефолтов. Миграция: добавьте одну строку, например
+> `listen: "127.0.0.1:29431"` для локального бинда или адрес вашего
+> интерфейса для LAN-бинда. Это изменение эргономики оператора (явные
+> бинды, меньше copy-paste-шума); безопасность несут mTLS-пины и токены,
+> а не номер порта. Роль relay исключена — она не регистрирует
+> FederationPeer и потому НЕ должна задавать верхнеуровневый `listen`
+> вовсе.
 
 ---
 
@@ -84,7 +97,7 @@ openssl x509 -in node.pem -noout -fingerprint -sha256 | sed 's/://g'
 > `project_scope` и фильтры запроса; vesma сверяет их со своим
 > per-peer конфигом, прежде чем вернуть какую-либо запись. Не
 > реализуйте проверку ACL в меше — жёсткое правило 4 в
-> [CONTRIBUTING.md](https://github.com/vesmaro/vesma-mesh/blob/331ef3a785c1a74fb9f8972ff93cd6db5a8fc174/CONTRIBUTING.md).
+> [CONTRIBUTING.md](https://github.com/vesmaro/vesma-mesh/blob/03b570ea1e835b2234d8c4c9c52122219f02d1ef/CONTRIBUTING.md).
 
 ---
 
@@ -140,7 +153,6 @@ hardening).
 `node_id` и путях mTLS-материала.
 
 ```go
-Listen:     ":8443"
 UnixSocket: "/run/mnemos/core.sock"
 Logging:    {Level: "info", Format: "json"}
 Mnemos:     {DialTimeout: 2s, HeartbeatInterval: 30s}
@@ -159,7 +171,7 @@ MTLS:       {RotationDays: 90}
 |---|---|
 | `node_id` непустой | `ErrEmptyNodeID` |
 | `mtls.{ca_cert, node_cert, node_key}` присутствуют | `ErrNoMTLSCerts` |
-| `listen` непустой (дефолт `:8443`) | заполняется |
+| `listen` непустой | роль node: `ErrNoListen` (без дефолта с v1.7.0); роль relay: отсутствие — корректная форма (любое явное значение — ошибка чистоты роли) |
 | `unix_socket` непустой (дефолт `/run/mnemos/core.sock`) | заполняется |
 | `mnemos.dial_timeout` ненулевой (дефолт `2s`) | заполняется |
 | `mnemos.heartbeat_interval` ненулевой (дефолт `30s`) | заполняется |
@@ -177,7 +189,7 @@ MTLS:       {RotationDays: 90}
 ```yaml
 # ~/.mnemos/mesh.yaml — конфигурация узла меша
 node_id: mnemos-A
-listen: 0.0.0.0:8443
+listen: 0.0.0.0:29431   # обязателен — без дефолта с v1.7.0
 unix_socket: /run/mnemos/core.sock
 
 mtls:
@@ -190,7 +202,7 @@ mtls:
 
 peers:
   - id: mnemos-B
-    address: b.example.invalid:8443
+    address: b.example.invalid:29431
     fingerprint: sha256:abcdef0123456789...
     projects: ["project-mnemos"]
 
@@ -212,5 +224,5 @@ metrics:
 
 - [Первый запуск](mnemos-mesh/user/getting-started) — управляемый разбор
 - [Модель безопасности](mnemos-mesh/admin/security) — mTLS, ACL, ключи
-- [Архитектура](https://github.com/vesmaro/vesma-mesh/blob/331ef3a785c1a74fb9f8972ff93cd6db5a8fc174/docs/architecture.md) — полный дизайн системы
-- [`internal/config/config.go`](https://github.com/vesmaro/vesma-mesh/blob/331ef3a785c1a74fb9f8972ff93cd6db5a8fc174/internal/config/config.go) — исходник загрузчика
+- [Архитектура](https://github.com/vesmaro/vesma-mesh/blob/03b570ea1e835b2234d8c4c9c52122219f02d1ef/docs/architecture.md) — полный дизайн системы
+- [`internal/config/config.go`](https://github.com/vesmaro/vesma-mesh/blob/03b570ea1e835b2234d8c4c9c52122219f02d1ef/internal/config/config.go) — исходник загрузчика
