@@ -1,5 +1,5 @@
 import { useState, useSyncExternalStore } from "react";
-import { Link, useLocation } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
   ChevronRight,
@@ -328,7 +328,10 @@ const STRATA_CLASS: Partial<Record<string, string>> = {
 /**
  * One domain row: a plain LINK for leaf domains (Обзор, Кора, docs) or a
  * GROUP TOGGLE (chevron, aria-expanded) for domains with sections — every
- * nav row is live (D8). The active domain
+ * nav row is live (D8). The group toggle OPENS a closed group; on an open
+ * group that is not the active route's domain the second click ENTERS the
+ * domain root (dead-expand guard — a row click must be able to reach the
+ * section, never just collapse back). The active domain
  * carries the 2px iris strip + its strata wash; the rail keeps icons only.
  *
  * Gates v6 (ME-043, 07k §2.2): for an anonymous visitor a GATED domain row
@@ -358,6 +361,7 @@ function DomainRow({
   pathname: string;
 }) {
   const t = useT();
+  const navigate = useNavigate();
   const { status, gatesActive } = useAuthSession();
   // The lock table is the SAME pure data the Shell content gate reads —
   // one source of truth for «which domains are gated» (gateDomains.ts).
@@ -449,7 +453,19 @@ function DomainRow({
       {hasSections && expanded ? (
         <button
           type="button"
-          onClick={() => onOpenChange(!open)}
+          onClick={() => {
+            // Dead-expand guard (journey 1.81.0): an OPEN group that is not
+            // the active route's domain answers a second click with ENTRY —
+            // navigate to the domain root (the rail's link target), so the
+            // row never dead-ends in an open/collapse dance. The ACTIVE
+            // domain's row keeps its pure toggle (on-route behaviour is
+            // unchanged); a closed group always just opens.
+            if (open && !active) {
+              navigate(domain.linkTo ?? domain.to);
+              return;
+            }
+            onOpenChange(!open);
+          }}
           aria-expanded={open}
           title={rowLabel}
           aria-label={rowLabel}
