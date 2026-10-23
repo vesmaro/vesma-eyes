@@ -99,6 +99,7 @@ from .store import (
     ARCHIVE_AFTER_DISABLED_S,
     executor_archived,
     executor_lifecycle_status,
+    normalize_specialist,
     presence_from_last_seen,
     specialist_matches,
 )
@@ -3900,6 +3901,238 @@ async def list_task_sessions(task_id: str,
     ) for f in facts]
     return TaskSessionsOut(ok=True, task_id=task_id, count=len(items),
                            items=items)
+
+
+# --------------------------------------------------- task card substance (P1)
+# «Карточка = вещество»: ONE ui-class read composing everything the board
+# DB really holds about a card — reports (task_reports), executor
+# nominations (task_assignments), agent session facts (task_session_facts)
+# and the linked memory checkpoints (tasks.memory_ids, resolved on opt-in
+# through the shared /memories resolver). Honesty rules (ME-062 §5
+# precedent): a source with no rows is an HONEST EMPTY (count 0,
+# items []) — never a skeleton/stub; an unknown task is a plain 404.
+#
+# Auth composition mirrors /sessions: the composite carries host
+# filesystem paths (session facts) — ui-class read only, an mnd_ device
+# gets the explanatory wall.
+#
+# Display-name → slug pair (the allowlist-miss fix, read side): every
+# declared agent/specialist carries sibling ``*_slug`` + ``*_slug_ok``
+# computed by normalize_specialist at READ time — rows that predate
+# mint-time normalization (Loop S-step 1) render canonically too, and a
+# name that does not normalize stays verbatim with slug_ok=false (honest
+# miss, never dropped). Mint-time normalization keeps writing canonical
+# forms for NEW assignments; this read-side pair is display-only and
+# changes no stored data.
+
+_TASK_SUBSTANCE_MND_WALL = (
+    "Вещество карточки задачи доступно только владельцу (ui-класс): в "
+    "состав входят сессии специалистов с локальными путями хоста (спека "
+    "ME-020/062, §7). Откройте борд в браузере под owner-сессией.")
+
+# The ≤1-active invariant states (same set as the partial unique index).
+_SUBSTANCE_ACTIVE_ASSIGNMENT_STATES = ("queued", "claimed", "running")
+
+
+class SubstanceReportOut(_ApiModel):
+    """One task report + the read-side slug pair (substance)."""
+    id: int
+    kind: str
+    agent: str = ""
+    agent_slug: str = ""
+    agent_slug_ok: bool = False
+    body: str
+    human_body: str = ""
+    superseded: bool
+    created_at: str
+
+
+class SubstanceReportsOut(_ApiModel):
+    count: int
+    live_count: int
+    final: SubstanceReportOut | None = None
+    items: list[SubstanceReportOut]
+
+
+class SubstanceAssignmentOut(_ApiModel):
+    """One nomination (task_assignments row). claim_token/spec_snapshot
+    never leave (SSE dictionary §11 rule) — the explicit model is the
+    allow-list; slug pair computed read-side."""
+    id: int
+    specialist: str = ""
+    specialist_slug: str = ""
+    specialist_slug_ok: bool = False
+    harness: str
+    state: str
+    created_by: str = ""
+    claimed_by: str = ""
+    executor_id: str = ""
+    claimed_by_executor: str = ""
+    note: str = ""
+    topics: list[str] = []
+    attempts: int = 0
+    created_at: str = ""
+    claimed_at: str = ""
+    started_at: str = ""
+    heartbeat_at: str = ""
+    finished_at: str = ""
+
+
+class SubstanceExecutorsOut(_ApiModel):
+    count: int
+    active: SubstanceAssignmentOut | None = None
+    items: list[SubstanceAssignmentOut]
+
+
+class SubstanceSessionsOut(_ApiModel):
+    """Same fact projection as GET /sessions (ME-062 §4) — re-served here
+    so the card drawer needs one call, honest-empty while the interactive
+    fleet reports no facts."""
+    count: int
+    items: list[TaskSessionFactOut]
+
+
+class SubstanceMemoriesOut(_ApiModel):
+    """Linked memory checkpoints (the owner-loop checkpoint cards).
+    ``linked``/``count`` are board-DB facts (tasks.memory_ids);
+    ``items``/``unresolved``/``sources`` fill only with
+    ?resolve_memories=true — network I/O to mnemos the default answer
+    never pays."""
+    count: int
+    linked: list[str] = []
+    items: dict[str, Any] = {}
+    unresolved: list[dict[str, Any]] = []
+    sources: dict[str, str] = {}
+
+
+class TaskSubstanceOut(_ApiModel):
+    ok: bool
+    task_id: str
+    task: dict[str, Any]
+    reports: SubstanceReportsOut
+    executors: SubstanceExecutorsOut
+    sessions: SubstanceSessionsOut
+    memories: SubstanceMemoriesOut
+
+
+def _substance_slug_pair(raw: str) -> tuple[str, bool]:
+    """Read-side display-name → slug pair; ('', False) is the honest miss
+    (Cyrillic/punctuation names stay verbatim upstream of this pair)."""
+    slug = normalize_specialist(raw or "")
+    return slug, bool(slug)
+
+
+@app.get("/api/tasks/{task_id}/substance")
+async def task_substance(task_id: str, request: Request,
+                         resolve_memories: bool = False) -> TaskSubstanceOut:
+    """The task card's SUBSTANCE (P1 «карточка = вещество»): reports,
+    executor nominations, agent session facts and linked memory
+    checkpoints — the real data the board holds, each source honestly
+    empty (count 0 / null / []) when the loop has not produced any yet.
+
+    Ui-class read (the composite carries session facts with host paths —
+    the /sessions wall applies); 404 unknown task. ``resolve_memories``
+    opts into resolving the linked checkpoint cards through mnemos
+    (default off: the linked ids alone are the board-DB truth)."""
+    _guard_ui_read(request, _TASK_SUBSTANCE_MND_WALL)
+    task = store.task(task_id)
+    if task is None:
+        raise HTTPException(404, "task not found")
+
+    # Reports — chronological (oldest first, the task-card convention);
+    # ``final`` is the LIVE final (a superset of list ordering rules:
+    # superseded finals stay in items, flagged).
+    report_rows = store.list_reports(task_id) or []
+    report_items: list[SubstanceReportOut] = []
+    for r in report_rows:
+        agent_slug, agent_slug_ok = _substance_slug_pair(r.get("agent") or "")
+        report_items.append(SubstanceReportOut(
+            id=r["id"], kind=r["kind"], agent=r.get("agent") or "",
+            agent_slug=agent_slug, agent_slug_ok=agent_slug_ok,
+            body=r.get("body") or "", human_body=r.get("human_body") or "",
+            superseded=bool(r.get("superseded")),
+            created_at=r.get("created_at") or "",
+        ))
+    live_reports = [r for r in report_items if not r.superseded]
+    live_final = next(
+        (r for r in reversed(report_items)
+         if r.kind == "final" and not r.superseded), None)
+
+    # Nominations / executors — full history (every state), active pick
+    # for the card header; secrets (claim_token/spec_snapshot) never enter
+    # the projection (the explicit model is the allow-list).
+    assignment_rows = store.assignments(task_id=task_id)
+    assignment_items: list[SubstanceAssignmentOut] = []
+    for a in assignment_rows:
+        spec_slug, spec_slug_ok = _substance_slug_pair(
+            a.get("specialist") or "")
+        assignment_items.append(SubstanceAssignmentOut(
+            id=a["id"], specialist=a.get("specialist") or "",
+            specialist_slug=spec_slug, specialist_slug_ok=spec_slug_ok,
+            harness=a.get("harness") or "", state=a.get("state") or "",
+            created_by=a.get("created_by") or "",
+            claimed_by=a.get("claimed_by") or "",
+            executor_id=a.get("executor_id") or "",
+            claimed_by_executor=a.get("claimed_by_executor") or "",
+            note=a.get("note") or "", topics=a.get("topics") or [],
+            attempts=a.get("attempts") or 0,
+            created_at=a.get("created_at") or "",
+            claimed_at=a.get("claimed_at") or "",
+            started_at=a.get("started_at") or "",
+            heartbeat_at=a.get("heartbeat_at") or "",
+            finished_at=a.get("finished_at") or "",
+        ))
+    active_assignment = next(
+        (a for a in assignment_items
+         if a.state in _SUBSTANCE_ACTIVE_ASSIGNMENT_STATES), None)
+
+    # Session facts — same projection as GET /sessions (ME-062 §4).
+    facts = store.task_session_facts(task_id) or []
+    session_items = [TaskSessionFactOut(
+        session_id=f"{f['executor_id']}:{f['native_id']}",
+        executor_id=f["executor_id"],
+        executor_name=f.get("executor_name") or "",
+        native_id=f["native_id"],
+        task_id=f["task_id"],
+        harness=f["harness"],
+        specialist=f.get("specialist") or "",
+        path=f.get("path") or "",
+        tool_calls=f.get("tool_calls") or 0,
+        duration_s=f.get("duration_s") or 0,
+        started_at=f.get("started_at") or "",
+        ended_at=f.get("ended_at") or "",
+        parent_native_id=f.get("parent_native_id") or "",
+        first_seen_at=f.get("first_seen_at") or "",
+        reported_at=f.get("reported_at") or "",
+        reported_age_s=_kora_age_seconds(f.get("reported_at") or ""),
+    ) for f in facts]
+
+    # Memory checkpoints — linked ids are board-DB truth; resolving the
+    # cards is opt-in network I/O through the shared /memories resolver.
+    linked_memory_ids = task.get("memory_ids") or []
+    if resolve_memories and linked_memory_ids:
+        memory_items, memory_unresolved, memory_sources = (
+            await _resolve_task_memory_cards(task_id))
+    else:
+        memory_items, memory_unresolved, memory_sources = {}, [], {}
+
+    return TaskSubstanceOut(
+        ok=True,
+        task_id=task_id,
+        task=task,
+        reports=SubstanceReportsOut(
+            count=len(report_items), live_count=len(live_reports),
+            final=live_final, items=report_items),
+        executors=SubstanceExecutorsOut(
+            count=len(assignment_items), active=active_assignment,
+            items=assignment_items),
+        sessions=SubstanceSessionsOut(count=len(session_items),
+                                      items=session_items),
+        memories=SubstanceMemoriesOut(
+            count=len(linked_memory_ids), linked=linked_memory_ids,
+            items=memory_items, unresolved=memory_unresolved,
+            sources=memory_sources),
+    )
 
 
 # Cross-task feed page size (CV-6). Above the cap the limit is silently
