@@ -127,7 +127,7 @@ nodes as observable entities: the Mesh nodes section on the rail shows
 each node's state, version, peer availability and uptime. Node management
 goes through the API: in this version the interface only observes.
 
-![The federation of vesma stores](diagrams/mnemos-federation.svg)
+![The federation of vesma stores](diagrams/vesma-federation.svg)
 
 *Federation: the cluster and laptop stores are linked by the vesma-mesh
 transport; vesma-eyes reads both and marks every entry with its source
