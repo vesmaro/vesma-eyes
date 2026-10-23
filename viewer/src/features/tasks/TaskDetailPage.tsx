@@ -610,7 +610,11 @@ function SubstanceReports({
       </div>
       {reports.items.length === 0 ? (
         <p className="mt-1 text-sm text-foreground-muted">
-          {t("tasks.reportsEmpty")} {t("tasks.reportsEmptyHint")}
+          {t("tasks.reportsEmpty")}
+          {/* The hint is its own line: on one line the two sentences jam
+           * into «Отчётов пока нет Агенты ещё…» (seen in the acceptance
+           * shots, ru and en alike). */}
+          <span className="block">{t("tasks.reportsEmptyHint")}</span>
         </p>
       ) : (
         <ul className="mt-1 space-y-2">
