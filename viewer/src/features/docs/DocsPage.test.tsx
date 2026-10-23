@@ -88,7 +88,7 @@ describe("our article (/docs/vesma-eyes/<slug>)", () => {
     expect(text).toContain("Обслуживание"); // the category chip link
     expect(text).toContain("актуально для v1.13.0"); // last_verified badge
     expect(text).not.toContain("На языке оригинала");
-    expect(text).not.toContain("из mnemos@"); // our pages carry no provenance
+    expect(text).not.toContain("актуально для mnemos@"); // our pages carry no provenance
     await actWaitUntil(() => {
       expect(
         (container.querySelector("article")?.textContent ?? "").length,
@@ -140,14 +140,14 @@ describe("imported article (/docs/mnemos/**, spec §6)", () => {
     });
     const text = container.textContent ?? "";
     expect(text).toContain("Пользователю"); // imported category chip
-    expect(text).not.toContain("актуально для"); // no release badge upstream
-    expect(text).toContain("из mnemos@8bc139b · синхр. 29.09");
+    expect(text).not.toContain("актуально для v"); // no release badge upstream
+    expect(text).toContain("актуально для mnemos@03d30d4 · пин от 22.10");
     // Full form rides title/aria-label (whole SHA + dd.mm.yyyy).
     const badge = [...container.querySelectorAll("[title]")].find((element) =>
-      element.getAttribute("title")?.startsWith("Импортировано из репозитория mnemos"),
+      element.getAttribute("title")?.startsWith("Актуально для репозитория mnemos"),
     );
-    expect(badge?.getAttribute("title")).toContain("8bc139bf0749c0a50b9f1661e34d33b03ca78e3a");
-    expect(badge?.getAttribute("title")).toContain("29.09.2026");
+    expect(badge?.getAttribute("title")).toContain("03d30d47d2147411dfc5b08ca68c4dfd3516f24f");
+    expect(badge?.getAttribute("title")).toContain("22.10.2026");
     expect(badge?.getAttribute("aria-label")).toBe(badge?.getAttribute("title"));
     await actUnmount(root);
   });
@@ -345,7 +345,7 @@ describe("hub covers (design spec §4)", () => {
       9,
     );
     expect(text).toContain("2 страницы"); // getting-started
-    expect(text).not.toContain("из mnemos@"); // our docs carry no provenance
+    expect(text).not.toContain("актуально для mnemos@"); // our docs carry no provenance
     await actUnmount(root);
   });
 
@@ -356,7 +356,7 @@ describe("hub covers (design spec §4)", () => {
     });
     const text = container.textContent ?? "";
     expect(text).toContain("Доступно на русском и английском");
-    expect(text).toContain("из mnemos@8bc139b · синхр. 29.09");
+    expect(text).toContain("актуально для mnemos@03d30d4 · пин от 22.10");
     expect(container.querySelectorAll("a[href^='/docs/mnemos/c/']")).toHaveLength(3);
     // «С чего начать» links into the imported corpus.
     expect(
@@ -372,7 +372,7 @@ describe("hub covers (design spec §4)", () => {
     });
     const text = container.textContent ?? "";
     expect(text).toContain("Доступно на русском и английском");
-    expect(text).toContain("из mnemos-mesh@b428ea9 · синхр. 29.09");
+    expect(text).toContain("актуально для mnemos-mesh@03b570e · пин от 06.10");
     expect(container.querySelectorAll("a[href^='/docs/mnemos-mesh/c/']")).toHaveLength(
       2,
     );

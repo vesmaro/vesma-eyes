@@ -271,10 +271,12 @@ function RenderFallback({
 }
 
 /**
- * Provenance badge (design spec §6.2): «из vesma@abc1234 · синхр. 23.09» —
- * a passport, not an alarm: outline variant, muted GitCommitHorizontal,
- * static (local clones — no upstream URL is guaranteed). The title and
- * aria-label carry the FULL form (whole SHA + dd.mm.yyyy date).
+ * Provenance badge — the freshness stamp (design spec §6.2, HonestLine
+ * canon): «актуально для vesma@abc1234 · пин от 23.10» — a passport, not
+ * an alarm: outline variant, muted GitCommitHorizontal, static (local
+ * clones — no upstream URL is guaranteed). The date is the PINNED
+ * COMMIT's date (the pipeline is wall-clock-free by contract); the title
+ * and aria-label carry the FULL form (whole SHA + dd.mm.yyyy date).
  */
 function ProvenanceBadge({ provenance }: { provenance: DocProvenance }) {
   const t = useT();

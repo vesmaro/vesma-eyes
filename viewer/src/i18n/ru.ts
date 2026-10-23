@@ -2262,9 +2262,9 @@ export const ru = {
   "docs.localeOriginal": "На языке оригинала ({{lang}})",
   "docs.lang.ru": "русский",
   "docs.lang.en": "английский",
-  "docs.provenance.badge": "из {{repo}}@{{sha}} · синхр. {{date}}",
+  "docs.provenance.badge": "актуально для {{repo}}@{{sha}} · пин от {{date}}",
   "docs.provenance.full":
-    "Импортировано из репозитория {{repo}}, коммит {{sha}}, синхронизировано {{date}}",
+    "Актуально для репозитория {{repo}}, коммит {{sha}}, пин от {{date}}",
   "docs.provenance.multiSource": "источников: {{count}} · свежее {{date}}",
   "docs.provenance.multiSourceFull":
     "Страницы хаба синхронизированы из {{count}} репозиториев по пинам; самая свежая синхронизация {{date}} — пин каждой страницы на её бейдже",

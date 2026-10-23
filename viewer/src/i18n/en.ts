@@ -2212,9 +2212,9 @@ export const en: Record<TranslationKey, string> = {
   "docs.localeOriginal": "In the original language ({{lang}})",
   "docs.lang.ru": "Russian",
   "docs.lang.en": "English",
-  "docs.provenance.badge": "from {{repo}}@{{sha}} · synced {{date}}",
+  "docs.provenance.badge": "current as of {{repo}}@{{sha}} · pinned {{date}}",
   "docs.provenance.full":
-    "Imported from the {{repo}} repository, commit {{sha}}, synced {{date}}",
+    "Current as of the {{repo}} repository, commit {{sha}}, pinned {{date}}",
   "docs.provenance.multiSource": "{{count}} sources · latest {{date}}",
   "docs.provenance.multiSourceFull":
     "Hub pages are synced from {{count}} repositories by pins; the latest sync is {{date}} — every page carries its own pin on its badge",
