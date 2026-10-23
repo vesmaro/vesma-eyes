@@ -4,12 +4,17 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import type { HarnessInventoryEnvironment, ExecutorItem } from "@/gateway/boardTypes";
 import { useT } from "@/i18n";
 import type { TranslationKey } from "@/i18n";
+import { Badge } from "@/components/ui/badge";
 import {
   gcwSpecialistsCount,
   inventoryCategories,
   type InventoryCategory,
   type InventoryCategoryKey,
 } from "./harnessInventoryModel";
+import {
+  inventoryRowExecEnv,
+  inventoryRowFoundTrail,
+} from "./execEnvModel";
 
 /**
  * «Обнаружено на хосте» (ME-064, agents-ui-spec §3.1): the harness
@@ -116,7 +121,12 @@ export function HarnessInventorySection({ executor }: { executor: ExecutorItem }
           {t("agents.card.inventoryNoneNote")}
         </p>
       ) : (
-        environments.map((env) => <InventoryEnvironment key={env.name} env={env} />)
+        environments.map((env, index) => (
+          // The composite key (harness-labels wave, 2026-10-21): a host can
+          // carry REAL duplicate installations — name alone collides and
+          // React would squash the rows.
+          <InventoryEnvironment key={`${env.name}-${index}`} env={env} />
+        ))
       )}
     </section>
   );
@@ -124,8 +134,21 @@ export function HarnessInventorySection({ executor }: { executor: ExecutorItem }
 
 /** One harness environment: name line + the four category dropdowns. */
 function InventoryEnvironment({ env }: { env: HarnessInventoryEnvironment }) {
+  const t = useT();
   const categories = inventoryCategories(env);
   const gcwShare = gcwSpecialistsCount(env);
+  // The harness-labels wave (2026-10-21): the row's own surface badge —
+  // the SAME data-driven distinguisher the roster row wears (identical
+  // slot/classes; the AGW-23 reserved-slot rule holds: the badge exists
+  // only when the agent badged THIS row, absence renders nothing — every
+  // row carries it when present, duplicates included, for uniformity).
+  const execEnv = inventoryRowExecEnv(env);
+  // The dedupe trail rides the badge tooltip (audit data of one fact —
+  // the same wording the roster badge uses, same i18n keys).
+  const foundTrail = inventoryRowFoundTrail(env);
+  const execEnvTitle = foundTrail.length
+    ? `${t("agents.hosts.execEnvTooltip")}\n${t("agents.hosts.foundAtTooltip")}\n${foundTrail.join("\n")}`
+    : t("agents.hosts.execEnvTooltip");
 
   return (
     <div className="flex flex-col gap-1 rounded-md border border-border-subtle bg-elevated px-2.5 py-2">
@@ -133,11 +156,23 @@ function InventoryEnvironment({ env }: { env: HarnessInventoryEnvironment }) {
        * (a host fact, secondary to the name — same tier as the card's
        * service facts). */}
       <p
-        className="font-mono text-xs text-foreground-secondary"
+        className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs text-foreground-secondary"
         title={env.home_path || undefined}
       >
-        {env.name}
-        {env.kind ? <span className="text-foreground-muted"> · {env.kind}</span> : null}
+        <span className="min-w-0">
+          {env.name}
+          {env.kind ? <span className="text-foreground-muted"> · {env.kind}</span> : null}
+        </span>
+        {execEnv ? (
+          <Badge
+            data-slot="execution-env"
+            variant="outline"
+            title={execEnvTitle}
+            className="shrink-0 whitespace-nowrap font-mono font-normal"
+          >
+            {execEnv}
+          </Badge>
+        ) : null}
       </p>
       <ul className="flex flex-col gap-0.5">
         {categories.map((category) => (

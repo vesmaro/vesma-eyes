@@ -4,6 +4,8 @@ import {
   executorExecEnv,
   executorFoundTrail,
   executorSurfaceFacts,
+  inventoryRowExecEnv,
+  inventoryRowFoundTrail,
 } from "./execEnvModel";
 
 /**
@@ -188,6 +190,50 @@ describe("executorFoundTrail (the badge's dedupe trail)", () => {
 
   it("no facts at all — the honest empty trail", () => {
     expect(executorFoundTrail(member())).toEqual([]);
+  });
+});
+
+describe("inventoryRowExecEnv / inventoryRowFoundTrail (the row distinguisher, harness-labels wave)", () => {
+  it("reads each row's OWN surface label — duplicates carry different labels", () => {
+    // The owner's prod case: box-home vs host-home installs of one harness.
+    const rows = [
+      { name: "zcode", kind: "cli", exec_env: "metal" },
+      { name: "zcode", kind: "cli", exec_env: "distrobox:ubuntu" },
+    ];
+    expect(inventoryRowExecEnv(rows[0]!)).toBe("metal");
+    expect(inventoryRowExecEnv(rows[1]!)).toBe("distrobox:ubuntu");
+  });
+
+  it("an unbadged row degrades to null — honest absence, never a fabricated metal", () => {
+    expect(inventoryRowExecEnv({ name: "copilot", kind: "cli" })).toBeNull();
+  });
+
+  it("defensive narrowing: junk label / whitespace / over-60 bound", () => {
+    expect(inventoryRowExecEnv({ name: "x", exec_env: "   " })).toBeNull();
+    expect(inventoryRowExecEnv({ name: "x", exec_env: 42 as unknown as string })).toBeNull();
+    const long = `distrobox:${"b".repeat(80)}`;
+    expect(inventoryRowExecEnv({ name: "x", exec_env: long })).toBe(
+      long.slice(0, 60),
+    );
+  });
+
+  it("the trail rides the SAME row (each duplicate keeps its own paths)", () => {
+    const rows = [
+      { name: "zcode", found_at: ["/home/u/.zcode"] },
+      { name: "zcode", found_at: ["/var/home/abyss/.zcode", "/home/u/.zcode"] },
+    ];
+    expect(inventoryRowFoundTrail(rows[0]!)).toEqual(["/home/u/.zcode"]);
+    expect(inventoryRowFoundTrail(rows[1]!)).toEqual([
+      "/var/home/abyss/.zcode",
+      "/home/u/.zcode",
+    ]);
+  });
+
+  it("no trail — the honest empty (never a home_path echo)", () => {
+    expect(inventoryRowFoundTrail({ name: "copilot" })).toEqual([]);
+    expect(inventoryRowFoundTrail({ name: "x", found_at: [1, null, "  "] as never })).toEqual(
+      [],
+    );
   });
 });
 
