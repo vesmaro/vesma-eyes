@@ -741,6 +741,34 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/api/tasks/{task_id}/substance": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Task Substance
+         * @description The task card's SUBSTANCE (P1 «карточка = вещество»): reports,
+         *     executor nominations, agent session facts and linked memory
+         *     checkpoints — the real data the board holds, each source honestly
+         *     empty (count 0 / null / []) when the loop has not produced any yet.
+         *
+         *     Ui-class read (the composite carries session facts with host paths —
+         *     the /sessions wall applies); 404 unknown task. ``resolve_memories``
+         *     opts into resolving the linked checkpoint cards through mnemos
+         *     (default off: the linked ids alone are the board-DB truth).
+         */
+        readonly get: operations["task_substance_api_tasks__task_id__substance_get"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/api/reports": {
         readonly parameters: {
             readonly query?: never;
@@ -5461,6 +5489,211 @@ export interface components {
         } & {
             readonly [key: string]: unknown;
         };
+        /**
+         * SubstanceAssignmentOut
+         * @description One nomination (task_assignments row). claim_token/spec_snapshot
+         *     never leave (SSE dictionary §11 rule) — the explicit model is the
+         *     allow-list; slug pair computed read-side.
+         */
+        readonly SubstanceAssignmentOut: {
+            /** Id */
+            readonly id: number;
+            /**
+             * Specialist
+             * @default
+             */
+            readonly specialist: string;
+            /**
+             * Specialist Slug
+             * @default
+             */
+            readonly specialist_slug: string;
+            /**
+             * Specialist Slug Ok
+             * @default false
+             */
+            readonly specialist_slug_ok: boolean;
+            /** Harness */
+            readonly harness: string;
+            /** State */
+            readonly state: string;
+            /**
+             * Created By
+             * @default
+             */
+            readonly created_by: string;
+            /**
+             * Claimed By
+             * @default
+             */
+            readonly claimed_by: string;
+            /**
+             * Executor Id
+             * @default
+             */
+            readonly executor_id: string;
+            /**
+             * Claimed By Executor
+             * @default
+             */
+            readonly claimed_by_executor: string;
+            /**
+             * Note
+             * @default
+             */
+            readonly note: string;
+            /**
+             * Topics
+             * @default []
+             */
+            readonly topics: readonly string[];
+            /**
+             * Attempts
+             * @default 0
+             */
+            readonly attempts: number;
+            /**
+             * Created At
+             * @default
+             */
+            readonly created_at: string;
+            /**
+             * Claimed At
+             * @default
+             */
+            readonly claimed_at: string;
+            /**
+             * Started At
+             * @default
+             */
+            readonly started_at: string;
+            /**
+             * Heartbeat At
+             * @default
+             */
+            readonly heartbeat_at: string;
+            /**
+             * Finished At
+             * @default
+             */
+            readonly finished_at: string;
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /** SubstanceExecutorsOut */
+        readonly SubstanceExecutorsOut: {
+            /** Count */
+            readonly count: number;
+            readonly active?: components["schemas"]["SubstanceAssignmentOut"] | null;
+            /** Items */
+            readonly items: readonly components["schemas"]["SubstanceAssignmentOut"][];
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /**
+         * SubstanceMemoriesOut
+         * @description Linked memory checkpoints (the owner-loop checkpoint cards).
+         *     ``linked``/``count`` are board-DB facts (tasks.memory_ids);
+         *     ``items``/``unresolved``/``sources`` fill only with
+         *     ?resolve_memories=true — network I/O to mnemos the default answer
+         *     never pays.
+         */
+        readonly SubstanceMemoriesOut: {
+            /** Count */
+            readonly count: number;
+            /**
+             * Linked
+             * @default []
+             */
+            readonly linked: readonly string[];
+            /**
+             * Items
+             * @default {}
+             */
+            readonly items: {
+                readonly [key: string]: unknown;
+            };
+            /**
+             * Unresolved
+             * @default []
+             */
+            readonly unresolved: readonly {
+                readonly [key: string]: unknown;
+            }[];
+            /**
+             * Sources
+             * @default {}
+             */
+            readonly sources: {
+                readonly [key: string]: string;
+            };
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /**
+         * SubstanceReportOut
+         * @description One task report + the read-side slug pair (substance).
+         */
+        readonly SubstanceReportOut: {
+            /** Id */
+            readonly id: number;
+            /** Kind */
+            readonly kind: string;
+            /**
+             * Agent
+             * @default
+             */
+            readonly agent: string;
+            /**
+             * Agent Slug
+             * @default
+             */
+            readonly agent_slug: string;
+            /**
+             * Agent Slug Ok
+             * @default false
+             */
+            readonly agent_slug_ok: boolean;
+            /** Body */
+            readonly body: string;
+            /**
+             * Human Body
+             * @default
+             */
+            readonly human_body: string;
+            /** Superseded */
+            readonly superseded: boolean;
+            /** Created At */
+            readonly created_at: string;
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /** SubstanceReportsOut */
+        readonly SubstanceReportsOut: {
+            /** Count */
+            readonly count: number;
+            /** Live Count */
+            readonly live_count: number;
+            readonly final?: components["schemas"]["SubstanceReportOut"] | null;
+            /** Items */
+            readonly items: readonly components["schemas"]["SubstanceReportOut"][];
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /**
+         * SubstanceSessionsOut
+         * @description Same fact projection as GET /sessions (ME-062 §4) — re-served here
+         *     so the card drawer needs one call, honest-empty while the interactive
+         *     fleet reports no facts.
+         */
+        readonly SubstanceSessionsOut: {
+            /** Count */
+            readonly count: number;
+            /** Items */
+            readonly items: readonly components["schemas"]["TaskSessionFactOut"][];
+        } & {
+            readonly [key: string]: unknown;
+        };
         /** TagCountOut */
         readonly TagCountOut: {
             /** Name */
@@ -5859,6 +6092,33 @@ export interface components {
             readonly count: number;
             /** Items */
             readonly items: readonly components["schemas"]["TaskSessionFactOut"][];
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /**
+         * TaskSubstanceOut
+         * @description The composite. ``review`` is ALWAYS null BY CONTRACT: the board DB
+         *     holds no review source (no review table, no tasks column, no
+         *     task-history event kind) — the field exists so the absence is API
+         *     truth the FE renders («источника нет в базе»), never a forgotten
+         *     section. The «план» the owner reads off a card is ``task.spec`` /
+         *     ``task.summary``; the «итог» is ``reports.final``.
+         */
+        readonly TaskSubstanceOut: {
+            /** Ok */
+            readonly ok: boolean;
+            /** Task Id */
+            readonly task_id: string;
+            /** Task */
+            readonly task: {
+                readonly [key: string]: unknown;
+            };
+            readonly reports: components["schemas"]["SubstanceReportsOut"];
+            readonly executors: components["schemas"]["SubstanceExecutorsOut"];
+            readonly sessions: components["schemas"]["SubstanceSessionsOut"];
+            readonly memories: components["schemas"]["SubstanceMemoriesOut"];
+            /** Review */
+            readonly review?: null;
         } & {
             readonly [key: string]: unknown;
         };
@@ -7328,6 +7588,39 @@ export interface operations {
                 };
                 content: {
                     readonly "application/json": components["schemas"]["TaskSessionsOut"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly task_substance_api_tasks__task_id__substance_get: {
+        readonly parameters: {
+            readonly query?: {
+                readonly resolve_memories?: boolean;
+            };
+            readonly header?: never;
+            readonly path: {
+                readonly task_id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["TaskSubstanceOut"];
                 };
             };
             /** @description Validation Error */
