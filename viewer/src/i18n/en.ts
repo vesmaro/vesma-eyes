@@ -2215,9 +2215,9 @@ export const en: Record<TranslationKey, string> = {
   "docs.provenance.badge": "current as of {{repo}}@{{sha}} · pinned {{date}}",
   "docs.provenance.full":
     "Current as of the {{repo}} repository, commit {{sha}}, pinned {{date}}",
-  "docs.provenance.multiSource": "{{count}} sources · latest {{date}}",
+  "docs.provenance.multiSource": "{{count}} sources · pinned {{date}}",
   "docs.provenance.multiSourceFull":
-    "Hub pages are synced from {{count}} repositories by pins; the latest sync is {{date}} — every page carries its own pin on its badge",
+    "Hub pages are imported from {{count}} repositories by pins; the freshest pin is dated {{date}} — every page carries its own pin on its badge",
   "docs.hub.start": "Start here",
   "docs.hub.categories": "Categories",
   // U6: hub cards with statistics (the v12 canon — counters are DATA, zero
