@@ -31,9 +31,11 @@ Usage:
                                               any clone HEAD is off its pin
 
 Exit codes: 0 ok, 1 sync/drift error (bad pin, dirty clone, clone HEAD off
-the pin — ME-046 guard, fetch-incomplete clone, overlay drift, config
-sanity; with --fail-on-drift also a moved-upstream clone — the
-deploy.sh preflight gate).
+the pin — ME-046 guard, overlay drift, config sanity; with --fail-on-drift
+also a moved-upstream clone — the deploy.sh preflight gate measures DRIFT
+here), 2 check-drift could not run at all (unreadable config, missing or
+fetch-incomplete clone — a BROKEN GATE; the deploy waiver never covers
+exit 2, only the measured drift of exit 1).
 """
 
 from __future__ import annotations
@@ -52,7 +54,11 @@ from typing import Any
 try:
     import yaml
 except ImportError:  # pragma: no cover - environment guard
-    sys.exit("sync_docs: PyYAML is required (python3 -m pip install pyyaml)")
+    print(
+        "sync_docs: PyYAML is required (python3 -m pip install pyyaml)",
+        file=sys.stderr,
+    )
+    sys.exit(2)  # a broken gate, not a measured drift (review DF-1)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
@@ -136,14 +142,24 @@ def assert_pristine(repo: Path, project: str) -> None:
 def resolve_pin(repo: Path, where: str, ref: str) -> str:
     """Resolve a pinned ref with an actionable error (ME-046).
 
-    A pin whose object is absent from the clone (fetch-incomplete wt/
-    mirror) makes `git rev-parse` fail with a generic "Needed a single
-    revision" — wrap it so the operator is told to FETCH the clone first.
+    Two distinct failure shapes get distinct advice:
+    - the clone directory itself is absent (first run on a new machine —
+      sync-config points at a checkout this box does not have) → told to
+      CLONE it; a `git fetch` advice there is unactionable;
+    - the clone exists but the pin's object is missing (fetch-incomplete
+      wt/mirror; `git rev-parse` fails with a generic "Needed a single
+      revision") → told to FETCH the clone first.
     Used by both sync_docs and gen_api_ref (object access there).
     """
     try:
         return resolve_sha(repo, ref)
     except SyncError as error:
+        if not (repo / ".git").exists():
+            raise SyncError(
+                f"{where}: clone not found at {repo} — sync-config points "
+                f"at a clone this machine does not have. Clone it first "
+                f"(the path comes from sync-config.yaml), then re-run."
+            ) from error
         raise SyncError(
             f"{where}: pin {ref!r} does not resolve in clone {repo} — the "
             f"clone is fetch-incomplete for this pin. Update it first: "
@@ -180,7 +196,12 @@ def commit_iso(repo: Path, sha: str) -> str:
 def load_config(path: Path) -> dict[str, Any]:
     if not path.is_file():
         raise SyncError(f"config not found: {path}")
-    config = yaml.safe_load(path.read_text(encoding="utf-8"))
+    try:
+        config = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as error:
+        # An unparseable config must be a SyncError so the command-level
+        # exit classes hold (sync: 1; check-drift: 2 — a broken gate).
+        raise SyncError(f"{path}: config is not valid YAML: {error}") from error
     if not isinstance(config, dict) or not config.get("projects"):
         raise SyncError(f"{path}: expected a non-empty `projects:` mapping")
     for name, project in config["projects"].items():
@@ -983,35 +1004,59 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--fail-on-drift", action="store_true",
-        help="with check-drift: exit 1 when any clone HEAD is off its pin "
-        "(the deploy.sh docs gate; report-only without the flag)",
+        help="with check-drift: exit 1 when any clone HEAD is off its pin, "
+        "exit 2 when the gate cannot run (unreadable config, missing/"
+        "fetch-incomplete clone); report-only without the flag",
     )
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     args = parser.parse_args(argv)
 
-    config = load_config(args.config)
+    drift_command = bool(args.check_drift or args.command == "check-drift")
     if args.check_drift and args.command == "sync":
         parser.error("--check-drift conflicts with the sync command")
-    if args.check_drift or args.command == "check-drift":
+    if args.fail_on_drift and not drift_command:
+        # DF-7 (review): a read-only flag must not silently fall through
+        # into the MUTATING sync command.
+        parser.error("--fail-on-drift requires the check-drift command")
+
+    # Config unreadable is a per-command class: for check-drift it is a
+    # BROKEN GATE (exit 2 — the deploy waiver never covers it), for sync
+    # it stays the plain sync error (exit 1).
+    config: dict[str, Any] | None = None
+    config_error: SyncError | None = None
+    try:
+        config = load_config(args.config)
+    except SyncError as error:
+        config_error = error
+
+    if drift_command:
+        if config_error is not None:
+            print(f"sync_docs: {config_error}", file=sys.stderr)
+            return 2
         try:
             report = check_drift(config)
         except SyncError as error:
-            # An unresolvable pin (fetch-incomplete clone) must fail the
-            # gate too — cannot verify freshness = fresh is not proven.
+            # A pin the clone cannot resolve (fetch-incomplete clone, or
+            # the clone itself missing) = the gate could not run, not a
+            # measured drift: exit 2, the deploy waiver never covers it.
             print(f"sync_docs: {error}", file=sys.stderr)
-            return 1
+            return 2
         if args.fail_on_drift and any(
             entry["drift"] for entry in report["projects"].values()
         ):
             print(
                 "sync_docs: DRIFT — upstream clones moved past the pinned "
-                "SHAs ([DRIFT] lines above). Re-pin + re-sync "
-                "(npm run sync-docs) and commit, or the caller waives with "
-                "DOCS_DRIFT=allow (audited in deploy/JOURNAL.md).",
+                "SHAs ([DRIFT] lines above). Re-pin + re-sync (cd viewer "
+                "&& npm run sync-docs) and commit, or the caller waives "
+                "with VESMARO_DEPLOY_DOCS_DRIFT=allow (audited in "
+                "deploy/JOURNAL.md).",
                 file=sys.stderr,
             )
             return 1
         return 0
+    if config_error is not None:
+        print(f"sync_docs: {config_error}", file=sys.stderr)
+        return 1
     try:
         report = sync(config)
     except SyncError as error:

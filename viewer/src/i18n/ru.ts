@@ -2265,9 +2265,9 @@ export const ru = {
   "docs.provenance.badge": "актуально для {{repo}}@{{sha}} · пин от {{date}}",
   "docs.provenance.full":
     "Актуально для репозитория {{repo}}, коммит {{sha}}, пин от {{date}}",
-  "docs.provenance.multiSource": "источников: {{count}} · свежее {{date}}",
+  "docs.provenance.multiSource": "источников: {{count}} · пин от {{date}}",
   "docs.provenance.multiSourceFull":
-    "Страницы хаба синхронизированы из {{count}} репозиториев по пинам; самая свежая синхронизация {{date}} — пин каждой страницы на её бейдже",
+    "Страницы хаба импортированы из {{count}} репозиториев по пинам; самый свежий пин — от {{date}} — пин каждой страницы на её бейдже",
   "docs.hub.start": "С чего начать",
   "docs.hub.categories": "Категории",
   // U6: карточки хабов со статистикой (v12-канон; счётчики — данные,

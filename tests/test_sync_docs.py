@@ -781,15 +781,55 @@ def test_fail_on_drift_exits_zero_when_fresh(tmp_path, config) -> None:
 
 
 def test_fail_on_drift_refuses_unresolvable_pin(tmp_path, config) -> None:
-    """Fail-closed: a pin the clone cannot resolve (fetch-incomplete clone)
-    must exit 1 too — freshness unprovable = not fresh."""
+    """Exit class 2 (review DF-1): a pin the clone cannot resolve
+    (fetch-incomplete clone) = the gate could not run, not a measured
+    drift — the deploy waiver never covers it."""
     broken = copy.deepcopy(config)
     broken["projects"]["fakeproj"]["ref"] = "0" * 40
     cfg_path = tmp_path / "cfg.yaml"
     cfg_path.write_text(json.dumps(broken), encoding="utf-8")  # JSON ⊂ YAML
     proc = _run_check_drift(cfg_path)
-    assert proc.returncode == 1
+    assert proc.returncode == 2
     assert "does not resolve" in proc.stderr
+
+
+def test_fail_on_drift_distinguishes_missing_clone(tmp_path, config) -> None:
+    """Exit class 2 with the actionable advice for the shape a NEW machine
+    hits (review DF-5): sync-config points at a clone this box does not
+    have — the advice is to CLONE it, not to fetch."""
+    broken = copy.deepcopy(config)
+    broken["projects"]["fakeproj"]["repo"] = str(tmp_path / "no-such-clone")
+    cfg_path = tmp_path / "cfg.yaml"
+    cfg_path.write_text(json.dumps(broken), encoding="utf-8")  # JSON ⊂ YAML
+    proc = _run_check_drift(cfg_path)
+    assert proc.returncode == 2
+    assert "clone not found" in proc.stderr
+    assert "Clone it first" in proc.stderr
+    assert "fetch" not in proc.stderr
+
+
+def test_fail_on_drift_unreadable_config_is_broken_gate(tmp_path) -> None:
+    """Exit class 2 (review DF-1): an unreadable config = the gate could
+    not run at all — never a measured drift."""
+    cfg_path = tmp_path / "cfg.yaml"
+    cfg_path.write_text("projects: [unclosed", encoding="utf-8")
+    proc = _run_check_drift(cfg_path)
+    assert proc.returncode == 2
+    assert "sync_docs:" in proc.stderr
+
+
+def test_fail_on_drift_requires_check_drift_command(tmp_path, config) -> None:
+    """Review DF-7: the read-only flag must not fall through into the
+    mutating sync command."""
+    cfg_path = tmp_path / "cfg.yaml"
+    cfg_path.write_text(json.dumps(config), encoding="utf-8")  # JSON ⊂ YAML
+    proc = subprocess.run(
+        [sys.executable, str(_SCRIPT), "sync", "--fail-on-drift",
+         "--config", str(cfg_path)],
+        capture_output=True, text=True, timeout=60,
+    )
+    assert proc.returncode == 2  # argparse errors exit 2
+    assert "--fail-on-drift requires the check-drift command" in proc.stderr
 
 
 # --- pin guard: HEAD==ref, fail loud (ME-046, incident 2026-09-29) --------------

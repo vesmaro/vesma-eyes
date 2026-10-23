@@ -11,8 +11,12 @@
 #                       the caller's cwd) must still sit at the pinned SHAs.
 #                       Drift = the /docs corpus in this commit is a month
 #                       stale the moment it ships — REFUSES the deploy.
-#                       Escape: DOCS_DRIFT=allow passes BUT writes a waiver
-#                       line into the JOURNAL entry (audited staleness);
+#                       Escape: VESMARO_DEPLOY_DOCS_DRIFT=allow passes a
+#                       MEASURED drift (rc 1) BUT writes a waiver line
+#                       naming the drifted corpora into the JOURNAL entry
+#                       (audited staleness). A BROKEN gate (rc >= 2:
+#                       unreadable config, missing/fetch-incomplete clone)
+#                       is never waivable — fix the environment;
 #   3. version gate   — scripts/sync-version.sh --check (no version drift
 #                       between app.py, chart and image tag);
 #   4. lock           — flock -n on a stable path: one deploy at a time,
@@ -77,7 +81,8 @@
 #
 # Env knobs (ops/test overrides, VESMARO_DEPLOY_ prefix):
 #   GIT / HELM / SYNC_VERSION / SYNC_DOCS / PODMAN_HOST / LOCK / JOURNAL /
-#   ACTOR / PYTHON
+#   ACTOR / PYTHON / DOCS_DRIFT (=allow — the audited docs-drift waiver,
+#   gate 2 only: covers a MEASURED drift, never a broken gate)
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -183,7 +188,7 @@ DRIFT_REASON=""
 # waiver stays auditable even without --allow-drift
 DRIFT_AUTO_WAIVED=0
 # set by gate_docs_drift when the docs corpora drift was waived via
-# DOCS_DRIFT=allow — journal_append folds it into EVERY journaled action
+# VESMARO_DEPLOY_DOCS_DRIFT=allow — journal_append folds it into EVERY journaled action
 # (deploy/rollback/repair) so an audited stale-corpus ship is visible in
 # the audit trail itself
 DOCS_DRIFT_NOTE=""
@@ -216,24 +221,37 @@ gate_version_drift() {
 # shipped image carries the GENERATED /docs corpus, so upstream movement
 # past the pins means shipping a stale mirror — the exact prod incident
 # this wave fixes (a month of pre-rebrand mnemos docs served as current).
-# check-drift --fail-on-drift exits 1 on ANY drifted pin AND on an
-# unresolvable pin (fail-closed: freshness unprovable = not fresh). The
-# DOCS_DRIFT=allow escape keeps the deploy moving in an emergency but the
-# waiver lands in the JOURNAL line (DOCS_DRIFT_NOTE → journal_append).
+# TWO exit classes from check-drift --fail-on-drift, waivered differently
+# (review DF-1):
+#   rc 1 = MEASURED DRIFT (a fetched clone sits past its pin) — the
+#          VESMARO_DEPLOY_DOCS_DRIFT=allow escape keeps the deploy moving
+#          in an emergency; the waiver (with the drifted corpora NAMED)
+#          lands in the JOURNAL line (DOCS_DRIFT_NOTE → journal_append);
+#   rc >= 2 = BROKEN GATE (unreadable config, missing/fetch-incomplete
+#          clone — the gate could not measure anything) — unconditional
+#          die: an audited waiver covers a measured drift, never a gate
+#          that could not run; fix the environment.
 gate_docs_drift() {
   log "gate 2/6 docs corpora drift: sync_docs check-drift"
-  local out rc
+  local out rc drifted
   out="$("${PY[@]}" "$SYNC_DOCS" check-drift --fail-on-drift 2>&1)" && rc=0 || rc=$?
   if [[ -n "$out" ]]; then printf '%s\n' "$out"; fi
   if [[ "$rc" -eq 0 ]]; then
     return 0
   fi
-  if [[ "${DOCS_DRIFT:-}" == "allow" ]]; then
-    DOCS_DRIFT_NOTE="docs-drift: allowed (DOCS_DRIFT=allow) — upstream clones moved past the doc pins"
-    log "gate 2/6 docs corpora drift: WAIVED (DOCS_DRIFT=allow) — waiver recorded in JOURNAL"
+  if [[ "$rc" -ne 1 ]]; then
+    die "docs gate broken (rc=$rc) — fix the environment, VESMARO_DEPLOY_DOCS_DRIFT=allow does not cover a broken gate (details above)" 1
+  fi
+  if [[ "${VESMARO_DEPLOY_DOCS_DRIFT:-}" == "allow" ]]; then
+    # DF-2 (review): the waiver names the drifted corpora — parsed from
+    # the [DRIFT] lines of the check-drift output, so the JOURNAL line
+    # says WHAT was allowed to ship stale.
+    drifted="$(printf '%s\n' "$out" | sed -n 's/^\[\([^]]*\)\] pin .*: DRIFT$/\1/p' | paste -sd, -)"
+    DOCS_DRIFT_NOTE="docs-drift: allowed (VESMARO_DEPLOY_DOCS_DRIFT=allow) — drifted corpora: ${drifted:-unknown}"
+    log "gate 2/6 docs corpora drift: WAIVED (VESMARO_DEPLOY_DOCS_DRIFT=allow) — drifted: ${drifted:-unknown}; waiver recorded in JOURNAL"
     return 0
   fi
-  die "docs corpora drift: upstream clones moved past the pinned SHAs (details above) — re-pin + re-sync (npm run sync-docs) and commit, or run with DOCS_DRIFT=allow (waiver lands in the JOURNAL line)" 1
+  die "docs corpora drift: upstream clones moved past the pinned SHAs (details above) — re-pin + re-sync (cd viewer && npm run sync-docs) and commit, or run with VESMARO_DEPLOY_DOCS_DRIFT=allow (waiver lands in the JOURNAL line)" 1
 }
 
 acquire_lock() {
