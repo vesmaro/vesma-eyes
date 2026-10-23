@@ -26,10 +26,14 @@ Usage:
   python3 scripts/sync_docs.py sync           regenerate L2 (default)
   python3 scripts/sync_docs.py --check-drift  compare pins with clone HEADs
   python3 scripts/sync_docs.py check-drift    (same, subcommand form)
+  python3 scripts/sync_docs.py check-drift --fail-on-drift
+                                              deploy-gate form: exit 1 when
+                                              any clone HEAD is off its pin
 
 Exit codes: 0 ok, 1 sync/drift error (bad pin, dirty clone, clone HEAD off
 the pin — ME-046 guard, fetch-incomplete clone, overlay drift, config
-sanity).
+sanity; with --fail-on-drift also a moved-upstream clone — the
+deploy.sh preflight gate).
 """
 
 from __future__ import annotations
@@ -931,11 +935,11 @@ def print_sync_report(report: dict[str, Any]) -> None:
 # drift check
 # --------------------------------------------------------------------------
 
-def check_drift(config: dict[str, Any]) -> dict[str, Any]:
+def check_drift(config: dict[str, Any], repo_root: Path = REPO_ROOT) -> dict[str, Any]:
     """Report-only comparison of pinned refs vs clone HEADs (contract §7)."""
     report: dict[str, Any] = {"projects": {}}
     for name, project in config["projects"].items():
-        repo = (REPO_ROOT / project["repo"]).resolve()
+        repo = (repo_root / project["repo"]).resolve()
         pinned = resolve_pin(repo, name, project["ref"])
         head = resolve_sha(repo, "HEAD")
         dirty = tracked_dirty(repo)
@@ -977,6 +981,11 @@ def main(argv: list[str] | None = None) -> int:
         "--check-drift", action="store_true",
         help="flag alias of the check-drift subcommand",
     )
+    parser.add_argument(
+        "--fail-on-drift", action="store_true",
+        help="with check-drift: exit 1 when any clone HEAD is off its pin "
+        "(the deploy.sh docs gate; report-only without the flag)",
+    )
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     args = parser.parse_args(argv)
 
@@ -984,7 +993,24 @@ def main(argv: list[str] | None = None) -> int:
     if args.check_drift and args.command == "sync":
         parser.error("--check-drift conflicts with the sync command")
     if args.check_drift or args.command == "check-drift":
-        check_drift(config)
+        try:
+            report = check_drift(config)
+        except SyncError as error:
+            # An unresolvable pin (fetch-incomplete clone) must fail the
+            # gate too — cannot verify freshness = fresh is not proven.
+            print(f"sync_docs: {error}", file=sys.stderr)
+            return 1
+        if args.fail_on_drift and any(
+            entry["drift"] for entry in report["projects"].values()
+        ):
+            print(
+                "sync_docs: DRIFT — upstream clones moved past the pinned "
+                "SHAs ([DRIFT] lines above). Re-pin + re-sync "
+                "(npm run sync-docs) and commit, or the caller waives with "
+                "DOCS_DRIFT=allow (audited in deploy/JOURNAL.md).",
+                file=sys.stderr,
+            )
+            return 1
         return 0
     try:
         report = sync(config)

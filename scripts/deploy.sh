@@ -5,15 +5,23 @@
 #   1. preflight      — git fetch origin; HEAD must == origin/main and the
 #                       working tree must be clean (deploy what main says,
 #                       nothing else);
-#   2. version gate   — scripts/sync-version.sh --check (no version drift
+#   2. docs gate      — scripts/sync_docs.py check-drift --fail-on-drift:
+#                       the upstream doc corpora (../vesma, ../vesma-mesh
+#                       clones, paths resolved against THIS repo root, never
+#                       the caller's cwd) must still sit at the pinned SHAs.
+#                       Drift = the /docs corpus in this commit is a month
+#                       stale the moment it ships — REFUSES the deploy.
+#                       Escape: DOCS_DRIFT=allow passes BUT writes a waiver
+#                       line into the JOURNAL entry (audited staleness);
+#   3. version gate   — scripts/sync-version.sh --check (no version drift
 #                       between app.py, chart and image tag);
-#   3. lock           — flock -n on a stable path: one deploy at a time,
+#   4. lock           — flock -n on a stable path: one deploy at a time,
 #                       trap-cleaned (the protocol never deadlocks);
-#   4. history gate   — helm history: the latest revision must be
+#   5. history gate   — helm history: the latest revision must be
 #                       `deployed` (never stack an upgrade on a failed /
 #                       pending-upgrade release). --skip-history-gate is
 #                       REPAIR/ROLLBACK-ONLY;
-#   5. values gate    — helm get values (live) vs deploy/chart/.../values.yaml
+#   6. values gate    — helm get values (live) vs deploy/chart/.../values.yaml
 #                       (git) on NON-SECRET keys: a hand-edited live release
 #                       (stale --set, a diagnostics window left on) refuses
 #                       the deploy. RELEASE-BUMP FORGIVENESS (1.33.0 battle):
@@ -51,7 +59,7 @@
 #                              ONLY the non-secret drift refusal; every
 #                              other gate still runs; the reason is
 #                              MANDATORY and lands in the JOURNAL line;
-#   verify                     dry run of gates 1-5, no deploy, no journal
+#   verify                     dry run of gates 1-6, no deploy, no journal
 #   rollback <rev> [--skip-history-gate]
 #                              same gates, helm rollback instead of
 #                              upgrade. --skip-history-gate is explicitly
@@ -68,7 +76,8 @@
 #                              pending release)
 #
 # Env knobs (ops/test overrides, VESMARO_DEPLOY_ prefix):
-#   GIT / HELM / SYNC_VERSION / PODMAN_HOST / LOCK / JOURNAL / ACTOR / PYTHON
+#   GIT / HELM / SYNC_VERSION / SYNC_DOCS / PODMAN_HOST / LOCK / JOURNAL /
+#   ACTOR / PYTHON
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -81,6 +90,13 @@ JOURNAL="${VESMARO_DEPLOY_JOURNAL:-$REPO_ROOT/deploy/JOURNAL.md}"
 GIT_BIN="${VESMARO_DEPLOY_GIT:-git}"
 HELM_BIN="${VESMARO_DEPLOY_HELM:-helm}"
 SYNC_VERSION="${VESMARO_DEPLOY_SYNC_VERSION:-$REPO_ROOT/scripts/sync-version.sh}"
+# docs corpora drift gate (docs-engine-freshness wave): the sync_docs
+# entrypoint. A knob, not a constant, for the same reason SYNC_VERSION is:
+# unit tests stub it. The script itself resolves clone paths against ITS
+# OWN location (SCRIPT_DIR/../..), so the gate is cwd-independent — a
+# detached release worktree finds ../vesma / ../vesma-mesh relative to the
+# checked-out tree, exactly like the local sync runs do.
+SYNC_DOCS="${VESMARO_DEPLOY_SYNC_DOCS:-$REPO_ROOT/scripts/sync_docs.py}"
 PODMAN_HOST="${VESMARO_DEPLOY_PODMAN_HOST:-distrobox-host-exec podman}"
 # ME-027: in this distrobox the in-box podman has a broken userns
 # (`newuidmap: Operation not permitted` at build time) — the 1.44/1.45/1.47
@@ -123,7 +139,8 @@ Usage: scripts/deploy.sh [deploy|verify|rollback <rev>|repair] [flags]
             drift (manual tag pin, post-rollback rootApp; reason is
             mandatory, lands in JOURNAL; secret-class drift and every
             other gate still refuse)
-  verify    gates 1-5 only (preflight, version, lock, history, values)
+  verify    gates 1-6 only (preflight, docs corpora, version, lock,
+            history, values)
   rollback  helm rollback <rev> through the same gates + JOURNAL entry
             --skip-history-gate allowed (recover from failed/pending)
   repair    helm upgrade with the current app tag from the fresh main
@@ -165,11 +182,16 @@ DRIFT_REASON=""
 # the previous release — do_deploy folds it into the JOURNAL note so the
 # waiver stays auditable even without --allow-drift
 DRIFT_AUTO_WAIVED=0
+# set by gate_docs_drift when the docs corpora drift was waived via
+# DOCS_DRIFT=allow — journal_append folds it into EVERY journaled action
+# (deploy/rollback/repair) so an audited stale-corpus ship is visible in
+# the audit trail itself
+DOCS_DRIFT_NOTE=""
 
 
 # ------------------------------------------------------------------ gates
 gate_preflight() {
-  log "gate 1/5 preflight: HEAD == origin/main, clean tree"
+  log "gate 1/6 preflight: HEAD == origin/main, clean tree"
   "$GIT_BIN" fetch origin >/dev/null 2>&1 \
     || die "git fetch origin failed — is the network/upstream sane?" 1
   local head origin_main
@@ -185,9 +207,33 @@ gate_preflight() {
 }
 
 gate_version_drift() {
-  log "gate 2/5 version drift: sync-version --check"
+  log "gate 3/6 version drift: sync-version --check"
   bash "$SYNC_VERSION" --check \
     || die "version drift detected — run scripts/sync-version.sh and commit" 1
+}
+
+# Docs corpora freshness (docs-engine-freshness wave, 2026-10-23): the
+# shipped image carries the GENERATED /docs corpus, so upstream movement
+# past the pins means shipping a stale mirror — the exact prod incident
+# this wave fixes (a month of pre-rebrand mnemos docs served as current).
+# check-drift --fail-on-drift exits 1 on ANY drifted pin AND on an
+# unresolvable pin (fail-closed: freshness unprovable = not fresh). The
+# DOCS_DRIFT=allow escape keeps the deploy moving in an emergency but the
+# waiver lands in the JOURNAL line (DOCS_DRIFT_NOTE → journal_append).
+gate_docs_drift() {
+  log "gate 2/6 docs corpora drift: sync_docs check-drift"
+  local out rc
+  out="$("${PY[@]}" "$SYNC_DOCS" check-drift --fail-on-drift 2>&1)" && rc=0 || rc=$?
+  if [[ -n "$out" ]]; then printf '%s\n' "$out"; fi
+  if [[ "$rc" -eq 0 ]]; then
+    return 0
+  fi
+  if [[ "${DOCS_DRIFT:-}" == "allow" ]]; then
+    DOCS_DRIFT_NOTE="docs-drift: allowed (DOCS_DRIFT=allow) — upstream clones moved past the doc pins"
+    log "gate 2/6 docs corpora drift: WAIVED (DOCS_DRIFT=allow) — waiver recorded in JOURNAL"
+    return 0
+  fi
+  die "docs corpora drift: upstream clones moved past the pinned SHAs (details above) — re-pin + re-sync (npm run sync-docs) and commit, or run with DOCS_DRIFT=allow (waiver lands in the JOURNAL line)" 1
 }
 
 acquire_lock() {
@@ -201,7 +247,7 @@ acquire_lock() {
     LOCK_PATH="${XDG_RUNTIME_DIR:-/tmp}/vesmaro-deploy.lock"
     echo "deploy: WARNING — default lock path (/run/vesmaro-deploy.lock) not writable; falling back to $LOCK_PATH (best-effort serialization; pre-create the /run file or set VESMARO_DEPLOY_LOCK for strict locking)" >&2
   fi
-  log "gate 3/5 lock: $LOCK_PATH"
+  log "gate 4/6 lock: $LOCK_PATH"
   exec 9>"$LOCK_PATH" || die "cannot open $LOCK_PATH for locking" 1
   if ! flock -n 9; then
     local holder
@@ -316,7 +362,7 @@ print(last.get("app_version") or "")
 }
 
 gate_helm_history() {
-  log "gate 4/5 helm history: latest revision must be deployed"
+  log "gate 5/6 helm history: latest revision must be deployed"
   local last
   if ! last="$(helm_last_revision)"; then
     die "cannot read helm history for $RELEASE/$NAMESPACE — is the release real?" 1
@@ -347,7 +393,7 @@ gate_helm_history() {
 # refuse/--allow-drift), 3 = secret-class drift (never), 4 = unexpected
 # error (never — a parse crash must not be mistakable for waivable drift).
 gate_values_drift() {
-  log "gate 5/5 values drift: live release vs git (non-secret keys)"
+  log "gate 6/6 values drift: live release vs git (non-secret keys)"
   local live_yaml tag repo rc out
   live_yaml="$(mktemp)"
   # removed on EVERY exit path (die included) by the global cleanup()
@@ -475,16 +521,16 @@ PYDRIFT
       prev_app="$(deployed_app_version)" || prev_app=""
       if [[ -n "$live_tag" && -n "$prev_app" && "$live_tag" == "$prev_app" ]]; then
         DRIFT_AUTO_WAIVED=1
-        log "gate 5/5 values drift: WAIVED — image.tag $live_tag is the appVersion of the deployed revision (previous release, not manual drift)"
+        log "gate 6/6 values drift: WAIVED — image.tag $live_tag is the appVersion of the deployed revision (previous release, not manual drift)"
       elif [[ "$ALLOW_DRIFT" -eq 1 ]]; then
-        log "gate 5/5 values drift: image.tag '$live_tag' is NOT the deployed revision's appVersion ('${prev_app:-unknown}') — previous-release auto-waive does not apply"
-        log "gate 5/5 values drift: WAIVED (--allow-drift) — non-secret keys only, reason recorded in JOURNAL"
+        log "gate 6/6 values drift: image.tag '$live_tag' is NOT the deployed revision's appVersion ('${prev_app:-unknown}') — previous-release auto-waive does not apply"
+        log "gate 6/6 values drift: WAIVED (--allow-drift) — non-secret keys only, reason recorded in JOURNAL"
       else
         die "image.tag drift is NOT the previous release (live=$live_tag, deployed-revision appVersion=${prev_app:-unknown}) — realign the live release (scripts/deploy.sh repair), commit the intended values, or waive explicitly: scripts/deploy.sh deploy --allow-drift \"<reason>\"" 1
       fi ;;
     1)
       if [[ "$ALLOW_DRIFT" -eq 1 ]]; then
-        log "gate 5/5 values drift: WAIVED (--allow-drift) — non-secret keys only, reason recorded in JOURNAL"
+        log "gate 6/6 values drift: WAIVED (--allow-drift) — non-secret keys only, reason recorded in JOURNAL"
       else
         die "values drift detected (details above) — realign the live release (scripts/deploy.sh repair), commit the intended values, or waive explicitly: scripts/deploy.sh deploy --allow-drift \"<reason>\"" 1
       fi ;;
@@ -495,10 +541,11 @@ PYDRIFT
 
 run_gates() {
   gate_preflight
+  gate_docs_drift
   gate_version_drift
   acquire_lock
   if [[ "$SKIP_HISTORY" -eq 1 ]]; then
-    log "gate 4/5 helm history: SKIPPED (--skip-history-gate, repair/rollback only)"
+    log "gate 5/6 helm history: SKIPPED (--skip-history-gate, repair/rollback only)"
   else
     gate_helm_history
   fi
@@ -523,6 +570,12 @@ journal_append() {  # $1 action, $2 rev_before, $3 rev_after, $4 image_tag, [$5 
     "${image_tag:-none}" "${chart_ver:-unknown}" "$head")"
   if [[ -n "$note" ]]; then
     line="$line | $note"
+  fi
+  # the docs-drift waiver rides EVERY journaled action (deploy/rollback/
+  # repair) — a stale-corpus ship must be visible in the audit trail
+  # itself, not only in the deploy console output
+  if [[ -n "$DOCS_DRIFT_NOTE" ]]; then
+    line="$line | $DOCS_DRIFT_NOTE"
   fi
   printf '%s\n' "$line" >> "$JOURNAL"
   # The journal travels with the repo — but only when it lives inside it

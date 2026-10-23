@@ -14,6 +14,7 @@ import importlib.util
 import json
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -738,6 +739,57 @@ def test_check_drift_detects_new_commits(tmp_path, config, upstream_repo) -> Non
     repin["projects"]["fakeproj"]["ref"] = _git(moved, "rev-parse", "HEAD")
     repin["projects"]["fakeproj"]["repo"] = str(moved)
     assert sync_docs.check_drift(repin)["projects"]["fakeproj"]["drift"] is False
+
+
+# --- deploy gate form: check-drift --fail-on-drift (docs-engine-freshness) -----
+
+
+def _run_check_drift(cfg_path: Path) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        [sys.executable, str(_SCRIPT), "check-drift", "--fail-on-drift",
+         "--config", str(cfg_path)],
+        capture_output=True, text=True, timeout=60,
+    )
+
+
+def test_fail_on_drift_exits_one_on_drift(tmp_path, config, upstream_repo) -> None:
+    """The deploy-gate shape: upstream moved past the pin → exit 1 (the
+    deploy.sh docs gate refuses the deploy on it)."""
+    moved = tmp_path / "gate-drift-clone"
+    shutil.copytree(str(upstream_repo["repo"]), moved)
+    (moved / "docs/en/user/cli-reference.md").write_text(
+        "# CLI reference\n\nEvery command. Updated.\n", encoding="utf-8"
+    )
+    _git(moved, "config", "user.email", "153223100+Korrnals@users.noreply.github.com")
+    _git(moved, "config", "user.name", "Korrnals")
+    _git(moved, "commit", "-qam", "docs: upstream moved on")
+    moved_cfg = copy.deepcopy(config)
+    moved_cfg["projects"]["fakeproj"]["repo"] = str(moved)
+    cfg_path = tmp_path / "cfg.yaml"
+    cfg_path.write_text(json.dumps(moved_cfg), encoding="utf-8")  # JSON ⊂ YAML
+    proc = _run_check_drift(cfg_path)
+    assert proc.returncode == 1
+    assert "DRIFT" in proc.stdout + proc.stderr
+
+
+def test_fail_on_drift_exits_zero_when_fresh(tmp_path, config) -> None:
+    cfg_path = tmp_path / "cfg.yaml"
+    cfg_path.write_text(json.dumps(config), encoding="utf-8")  # JSON ⊂ YAML
+    proc = _run_check_drift(cfg_path)
+    assert proc.returncode == 0
+    assert "OK" in proc.stdout
+
+
+def test_fail_on_drift_refuses_unresolvable_pin(tmp_path, config) -> None:
+    """Fail-closed: a pin the clone cannot resolve (fetch-incomplete clone)
+    must exit 1 too — freshness unprovable = not fresh."""
+    broken = copy.deepcopy(config)
+    broken["projects"]["fakeproj"]["ref"] = "0" * 40
+    cfg_path = tmp_path / "cfg.yaml"
+    cfg_path.write_text(json.dumps(broken), encoding="utf-8")  # JSON ⊂ YAML
+    proc = _run_check_drift(cfg_path)
+    assert proc.returncode == 1
+    assert "does not resolve" in proc.stderr
 
 
 # --- pin guard: HEAD==ref, fail loud (ME-046, incident 2026-09-29) --------------

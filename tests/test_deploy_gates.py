@@ -150,6 +150,23 @@ class FakeWorld:
             fi
             echo "source version: stub (ok)"
             exit 0"""))
+        # docs corpora drift gate stub: a python entrypoint like the real
+        # sync_docs.py (the gate runs it under ${PY[@]}), exit code driven
+        # by the state file — 0 fresh, 1 drifted, 2 unresolvable pin.
+        (self.state / "docs-rc").write_text("0")
+        self._write("docs-stub", (
+            "#!/usr/bin/env python3\n"
+            "import sys\n"
+            f"rc = int(open('{self.state}/docs-rc').read().strip())\n"
+            "if rc == 0:\n"
+            "    print('[fakeproj] pin aaaaaaaaaaa vs HEAD aaaaaaaaaaa: OK')\n"
+            "elif rc == 1:\n"
+            "    print('[fakeproj] pin aaaaaaaaaaa vs HEAD bbbbbbbbbbb: DRIFT')\n"
+            "    print('    new: docs: upstream moved on')\n"
+            "    print('sync_docs: DRIFT — upstream clones moved past the pinned SHAs', file=sys.stderr)\n"
+            "else:\n"
+            "    print('sync_docs: pin does not resolve in clone', file=sys.stderr)\n"
+            "sys.exit(1 if rc else 0)\n"))
 
     def _write(self, name: str, body: str) -> None:
         p = self.bin / name
@@ -162,6 +179,7 @@ class FakeWorld:
             "VESMARO_DEPLOY_GIT": str(self.bin / "git"),
             "VESMARO_DEPLOY_HELM": str(self.bin / "helm"),
             "VESMARO_DEPLOY_SYNC_VERSION": str(self.bin / "sync-stub"),
+            "VESMARO_DEPLOY_SYNC_DOCS": str(self.bin / "docs-stub"),
             "VESMARO_DEPLOY_PODMAN_HOST": f"bash {self.bin / 'podman-stub'}",
             "VESMARO_DEPLOY_LOCK": str(self.state / "deploy.lock"),
             "VESMARO_DEPLOY_JOURNAL": str(self.state / "JOURNAL.md"),
@@ -236,6 +254,77 @@ class TestPreflightGate:
         r = world.run_function("gate_preflight")
         assert r.returncode == 1
         assert "origin/main" in r.stderr
+
+
+class TestDocsDriftGate:
+    """Gate 2/6 (docs-engine-freshness wave): the shipped image carries the
+    GENERATED /docs corpus — upstream movement past the pins = shipping a
+    stale mirror; refuses. DOCS_DRIFT=allow passes but the waiver MUST land
+    in the JOURNAL line (audited staleness). An unresolvable pin (stub rc 2
+    = the real script's SyncError path) is fail-closed too."""
+
+    def test_fresh_pins_pass(self, world):
+        r = world.run_function("gate_docs_drift")
+        assert r.returncode == 0
+        assert "DRIFT" not in r.stdout
+
+    def test_drift_refuses(self, world):
+        (world.state / "docs-rc").write_text("1")
+        r = world.run_function("gate_docs_drift")
+        assert r.returncode == 1
+        assert "docs corpora drift" in r.stderr
+        assert "DOCS_DRIFT=allow" in r.stderr
+
+    def test_unresolvable_pin_refuses_fail_closed(self, world):
+        # the real sync_docs prints a SyncError and exits 1 when a pin
+        # does not resolve — freshness unprovable = not fresh
+        (world.state / "docs-rc").write_text("2")
+        r = world.run_function("gate_docs_drift")
+        assert r.returncode == 1
+        assert "docs corpora drift" in r.stderr
+
+    def test_allow_escape_passes(self, world):
+        (world.state / "docs-rc").write_text("1")
+        r = world.run_function("DOCS_DRIFT=allow gate_docs_drift")
+        assert r.returncode == 0
+        assert "WAIVED (DOCS_DRIFT=allow)" in r.stdout
+
+    def test_journal_line_carries_waiver(self, world, tmp_path):
+        (world.state / "docs-rc").write_text("1")  # drifted → the waive path
+        journal = tmp_path / "JOURNAL.md"
+        r = subprocess.run(
+            ["bash", "-c",
+             f"source '{DEPLOY_SH}' && "
+             "DOCS_DRIFT=allow gate_docs_drift && "
+             f"journal_append deploy 40 41 '{_resolved_tag()}'"],
+            capture_output=True, text=True, timeout=60,
+            env=world.env(**{
+                "DOCS_DRIFT": "allow",
+                "VESMARO_DEPLOY_JOURNAL": str(journal),
+            }))
+        assert r.returncode == 0
+        line = journal.read_text().strip().splitlines()[-1]
+        assert "docs-drift: allowed (DOCS_DRIFT=allow)" in line
+
+    def test_journal_line_clean_without_waiver(self, world, tmp_path):
+        journal = tmp_path / "JOURNAL.md"
+        r = subprocess.run(
+            ["bash", "-c",
+             f"source '{DEPLOY_SH}' && "
+             "gate_docs_drift && "
+             f"journal_append deploy 40 41 '{_resolved_tag()}'"],
+            capture_output=True, text=True, timeout=60,
+            env=world.env(**{"VESMARO_DEPLOY_JOURNAL": str(journal)}))
+        assert r.returncode == 0
+        line = journal.read_text().strip().splitlines()[-1]
+        assert "docs-drift" not in line
+
+    def test_deploy_blocked_by_docs_drift(self, world):
+        (world.state / "docs-rc").write_text("1")
+        r = world.run_subcommand("deploy")
+        assert r.returncode == 1
+        assert "docs corpora drift" in r.stderr
+        assert "podman" not in world.logs()["podman.log"]
 
 
 class TestVersionGate:
