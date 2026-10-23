@@ -252,11 +252,13 @@ describe("Kora hermes bridge (T004 slice 2)", () => {
     await selectHermes(container);
     expect(container.textContent).toContain("Сессий пока нет");
     await clickRefresh(container);
-    await settle();
-    // The hermes rows land in Блок 2 (the display name is the project
-    // field — `hermes:<source>`; the native id rides «О сессии»).
-    expect(container.textContent).toContain("hermes:api_server");
-    expect(container.textContent).toContain("hermes:telegram");
+    // The pull chain (mutate → onSuccess → invalidate → refetch → notify →
+    // render) rides query-notification beats that can land on macrotasks —
+    // a settle() gamble here went 2-of-3 red solo (TL triage 2026-10-24).
+    // Async arrivals poll, per this file's own waitText canon.
+    await waitText(container, "hermes:api_server");
+    await waitText(container, "hermes:telegram");
+    await waitText(container, "сессий в реестре: 2");
     // The status line reports the ok state (DATA, honest light).
     expect(container.textContent).toContain("подключён");
     expect(container.textContent).toContain("сессий в реестре: 2");
