@@ -171,6 +171,36 @@ export function useTaskMemories(taskId: string | undefined) {
   });
 }
 
+/**
+ * P1 «карточка = вещество»: the ONE composite read behind the task card's
+ * substance drawer — reports, executor nominations, session facts and
+ * linked memories (`GET /api/tasks/{id}/substance`). Fired at CARD OPEN
+ * (the detail route), never on the list; `review` arrives as an explicit
+ * contract null and the drawer renders that absence honestly.
+ */
+export function useTaskSubstance(taskId: string | undefined) {
+  const gateway = useGateway();
+  const capable = isTaskSource(gateway) && taskId !== undefined;
+  const id = taskId ?? "";
+  const queryKey = useMemo(() => keys.tasks.substance(id), [id]);
+  const queryFn = useCallback(
+    ({ signal }: QueryFunctionContext) => {
+      if (!isTaskSource(gateway) || id === "") {
+        throw new Error("useTaskSubstance: gateway has no task capability.");
+      }
+      return gateway.taskSubstance(id, signal);
+    },
+    [gateway, id],
+  );
+  return useQuery({
+    queryKey,
+    queryFn,
+    enabled: capable,
+    staleTime: STALE_TIMES.taskDetail,
+    gcTime: GC_TIMES.taskDetail,
+  });
+}
+
 /** Filtered + paginated archive page. */
 export function useTaskArchive(params: ArchiveParams) {
   const gateway = useGateway();

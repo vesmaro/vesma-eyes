@@ -89,6 +89,7 @@ import type {
   TaskPatchInput,
   TaskReports,
   TaskSessionsPage,
+  TaskSubstance,
   TaskUnarchiveResult,
 } from "./boardTypes";
 import type {
@@ -255,6 +256,14 @@ export interface BoardGateway extends MemoryGateway {
   history(taskId: string, signal?: AbortSignal): Promise<TaskHistory>;
   /** Resolved memory links of a task (`GET /api/tasks/{id}/memories`, Ф2). */
   taskMemories(taskId: string, signal?: AbortSignal): Promise<TaskMemories>;
+  /**
+   * Task card substance composite (`GET /api/tasks/{id}/substance`, P1):
+   * reports + executor nominations + session facts + linked memories in ONE
+   * ui-class read; `review` is an explicit contract null. 401 anonymous /
+   * machine-bearer, 404 unknown task — the hook surfaces the class, the
+   * drawer renders the honest state.
+   */
+  taskSubstance(taskId: string, signal?: AbortSignal): Promise<TaskSubstance>;
   /** Filtered + paginated archive page (`GET /api/archive`, Ф2). */
   archive(params?: ArchiveParams, signal?: AbortSignal): Promise<ArchivePage>;
   /**
@@ -770,6 +779,12 @@ export class BoardAdapter implements BoardGateway {
 
   async taskMemories(taskId: string, signal?: AbortSignal): Promise<TaskMemories> {
     return this.request<TaskMemories>(`/tasks/${encodeURIComponent(taskId)}/memories`, {
+      signal,
+    });
+  }
+
+  async taskSubstance(taskId: string, signal?: AbortSignal): Promise<TaskSubstance> {
+    return this.request<TaskSubstance>(`/tasks/${encodeURIComponent(taskId)}/substance`, {
       signal,
     });
   }

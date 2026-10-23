@@ -61,6 +61,8 @@ export const keys = {
     memories: (taskId: string) => ["tasks", "memories", taskId] as const,
     /** ME-063: specialist session facts (ui-class read, per-task). */
     sessions: (taskId: string) => ["tasks", "sessions", taskId] as const,
+    /** P1: task card substance composite (one read for the whole drawer). */
+    substance: (taskId: string) => ["tasks", "substance", taskId] as const,
     archive: (params: ArchiveParams = {}) => ["tasks", "archive", params] as const,
     archiveAll: ["tasks", "archive"] as const,
     inbox: (params: InboxParams = {}) => ["tasks", "inbox", params] as const,
