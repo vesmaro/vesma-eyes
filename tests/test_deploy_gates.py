@@ -25,6 +25,10 @@ QA matrix:
 - journal: append-only line format, header on create; the git
   add/commit/push branch exercised with a real tmp git repo (branch
   checkout AND detached-HEAD worktree — the push goes out HEAD:main);
+- journal guard (incident 2026-10-23): a MANUAL journal_append outside
+  the do_* verbs refuses unless the verb set VESMARO_DEPLOY_JOURNAL_WRITE=1
+  or the journal is a non-default scratch file (the unit contour); the
+  do_deploy path journals unchanged even with the knob cleared;
 - subcommands: verify (gates only, no helm upgrade), deploy (podman
   build+push with the resolved tag, helm upgrade --atomic -f values
   --set image.tag --set rootApp=app, journal), rollback (helm rollback
@@ -563,7 +567,12 @@ class TestJournal:
         r = subprocess.run(
             ["bash", "-c",
              f"cd '{repo}' && source '{DEPLOY_SH}' "
-             f"&& REPO_ROOT='{repo}' journal_append deploy 5 6 1.2.3"],
+             # the journal-inside-its-repo shape = the default-journal form
+             # of the guard (incident 2026-10-23): these tests exercise the
+             # git travel branch, so they whitelist the call exactly the
+             # way the do_* verbs do
+             f"&& REPO_ROOT='{repo}' VESMARO_DEPLOY_JOURNAL_WRITE=1 "
+             "journal_append deploy 5 6 1.2.3"],
             capture_output=True, text=True, timeout=60, env=env)
         assert r.returncode == 0, r.stderr
 
@@ -623,7 +632,10 @@ class TestJournal:
         r = subprocess.run(
             ["bash", "-c",
              f"cd '{wt}' && source '{DEPLOY_SH}' "
-             f"&& REPO_ROOT='{wt}' journal_append deploy 5 6 1.2.3"],
+             # travel-branch test: whitelist as the do_* verbs do (the
+             # journal-inside-repo shape is the guard's default form)
+             f"&& REPO_ROOT='{wt}' VESMARO_DEPLOY_JOURNAL_WRITE=1 "
+             "journal_append deploy 5 6 1.2.3"],
             capture_output=True, text=True, timeout=60, env=env)
         assert r.returncode == 0, r.stderr
 
@@ -638,6 +650,72 @@ class TestJournal:
         pushed = git("rev-parse", "main", git_dir=origin).stdout.strip()
         assert pushed == head
         assert git("rev-parse", "main").stdout.strip() == base
+
+
+# ---------------------------------------------------------- journal guard
+class TestJournalGuard:
+    """Incident 2026-10-23 (the struck 61a0ef1 synthetic line): a manual
+    journal_append call outside do_deploy/do_rollback/do_repair appended
+    an audit line for a deploy that never happened. The guard: a manual
+    call refuses (rc 2) unless the calling do_* verb set
+    VESMARO_DEPLOY_JOURNAL_WRITE=1, or the journal points at a NON-default
+    (scratch) file — the unit contour cannot poison the real audit trail.
+    Every die-shape test below redirects REPO_ROOT+JOURNAL into tmp_path
+    FIRST, so even a hypothetical guard regression writes to scratch,
+    never to the real deploy/JOURNAL.md."""
+
+    def test_manual_call_default_journal_dies_writes_nothing(self, world,
+                                                             tmp_path):
+        # the default-journal shape (hermetic): JOURNAL resolves to
+        # $REPO_ROOT/deploy/JOURNAL.md with REPO_ROOT overridden into tmp
+        journal = tmp_path / "deploy" / "JOURNAL.md"
+        journal.parent.mkdir()
+        r = subprocess.run(
+            ["bash", "-c",
+             f"source '{DEPLOY_SH}' && "
+             f"REPO_ROOT='{tmp_path}' JOURNAL='{journal}' "
+             "journal_append deploy 40 41 9.9.9"],
+            capture_output=True, text=True, timeout=60, env=world.env())
+        assert r.returncode == 2
+        assert ("journal_append is not callable outside "
+                "do_deploy/do_rollback/do_repair") in r.stderr
+        assert "set VESMARO_DEPLOY_JOURNAL to a scratch file" in r.stderr
+        assert not journal.exists()              # died BEFORE any write
+        assert "add" not in world.logs()["git.log"]   # no journal commit
+
+    def test_manual_call_with_optin_writes(self, world, tmp_path):
+        # the exact escape hatch the do_* verbs use: the flag whitelists
+        # the call even when the journal resolves to the default path
+        journal = tmp_path / "deploy" / "JOURNAL.md"
+        journal.parent.mkdir()
+        r = subprocess.run(
+            ["bash", "-c",
+             f"source '{DEPLOY_SH}' && "
+             f"REPO_ROOT='{tmp_path}' JOURNAL='{journal}' "
+             "VESMARO_DEPLOY_JOURNAL_WRITE=1 "
+             "journal_append deploy 40 41 9.9.9"],
+            capture_output=True, text=True, timeout=60, env=world.env())
+        assert r.returncode == 0, r.stderr
+        assert "| deploy | rev 40>41 | image 9.9.9 |" in journal.read_text()
+
+    def test_custom_journal_unit_contour_works_without_optin(self, world):
+        # the unit harness contour: VESMARO_DEPLOY_JOURNAL at a scratch
+        # file, NO opt-in flag — unchanged behavior, writes fine
+        assert "VESMARO_DEPLOY_JOURNAL_WRITE" not in os.environ
+        r = world.run_function("journal_append deploy 40 41 9.9.9")
+        assert r.returncode == 0, r.stderr
+        line = (world.state / "JOURNAL.md").read_text().strip().splitlines()[-1]
+        assert "| deploy | rev 40>41 | image 9.9.9 |" in line
+
+    def test_do_deploy_journals_with_ambient_knob_cleared(self, world):
+        # the do_* opt-in is function-local: an explicitly CLEARED ambient
+        # knob (set to "" — `${VAR:-0}` reads it as 0) must not change the
+        # deploy path — the verb's own flag still whitelists the write
+        r = world.run_subcommand(
+            "deploy", env_extra={"VESMARO_DEPLOY_JOURNAL_WRITE": ""})
+        assert r.returncode == 0, r.stderr
+        journal = (world.state / "JOURNAL.md").read_text()
+        assert "| deploy | rev 40>41 |" in journal
 
 
 # ------------------------------------------------------------ subcommands

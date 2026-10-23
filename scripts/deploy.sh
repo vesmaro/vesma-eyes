@@ -82,7 +82,11 @@
 # Env knobs (ops/test overrides, VESMARO_DEPLOY_ prefix):
 #   GIT / HELM / SYNC_VERSION / SYNC_DOCS / PODMAN_HOST / LOCK / JOURNAL /
 #   ACTOR / PYTHON / DOCS_DRIFT (=allow — the audited docs-drift waiver,
-#   gate 2 only: covers a MEASURED drift, never a broken gate)
+#   gate 2 only: covers a MEASURED drift, never a broken gate) /
+#   JOURNAL_WRITE (=1 — the do_* verbs set it for their own journal_append
+#   call; a MANUAL journal_append outside do_deploy/do_rollback/do_repair
+#   is refused unless JOURNAL points at a non-default scratch file, so a
+#   synthetic line can never enter the real audit trail)
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -574,6 +578,17 @@ run_gates() {
 journal_append() {  # $1 action, $2 rev_before, $3 rev_after, $4 image_tag, [$5 note]
   local action="$1" rev_before="$2" rev_after="$3" image_tag="$4" note="${5:-}"
   local head chart_ver actor when line
+  # Guard (incident 2026-10-23 — the struck 61a0ef1 synthetic line):
+  # journal_append is an INTERNAL helper of the do_* verbs, not a public
+  # API. A manual call outside do_deploy/do_rollback/do_repair appends an
+  # audit line for a deploy that never happened. Allowed only when the
+  # calling do_* verb set VESMARO_DEPLOY_JOURNAL_WRITE=1, or the journal
+  # is pointed at a NON-default (scratch) file — the unit-test contour:
+  # a scratch journal cannot poison the real audit trail.
+  if [[ "${VESMARO_DEPLOY_JOURNAL_WRITE:-0}" != "1" ]] \
+     && [[ "$(readlink -f "$JOURNAL")" == "$(readlink -f "$REPO_ROOT/deploy/JOURNAL.md")" ]]; then
+    die "journal_append is not callable outside do_deploy/do_rollback/do_repair — set VESMARO_DEPLOY_JOURNAL to a scratch file for testing" 2
+  fi
   head="$("$GIT_BIN" rev-parse --short HEAD 2>/dev/null || echo unknown)"
   chart_ver="$(chart_version)"
   actor="${VESMARO_DEPLOY_ACTOR:-$(id -un 2>/dev/null || echo unknown)@$(hostname -s 2>/dev/null || echo unknown)}"
@@ -664,6 +679,9 @@ do_deploy() {
   elif [[ "$DRIFT_AUTO_WAIVED" -eq 1 ]]; then
     note="auto-waived: image.tag drift = previous release (deployed-revision appVersion)"
   fi
+  # the guard opt-in is FUNCTION-LOCAL: only this journal_append call is
+  # whitelisted, the knob never leaks past the verb
+  local VESMARO_DEPLOY_JOURNAL_WRITE=1
   journal_append deploy "$rev_before" "$rev_after" "$(resolve_image_tag)" "$note"
 }
 
@@ -686,6 +704,7 @@ do_rollback() {
     log "WARNING: could not read the live tag of rev $rev_after — journaling the git tag as a fallback"
     tag_after="$(resolve_image_tag)"
   fi
+  local VESMARO_DEPLOY_JOURNAL_WRITE=1
   journal_append rollback "$rev_before" "$rev_after" "$tag_after"
 }
 
@@ -699,6 +718,7 @@ do_repair() {
   local rev_after
   rev_after="$(rev_now)"
   log "repaired: rev $rev_before>$rev_after (current app tag from fresh main chart)"
+  local VESMARO_DEPLOY_JOURNAL_WRITE=1
   journal_append repair "$rev_before" "$rev_after" "$(resolve_image_tag)"
 }
 
