@@ -54,6 +54,48 @@ const PROVENANCE_HITS: SearchResult[] = [
   },
 ];
 
+/** The ux-palette-memory-results journey: a search over chat-captured records
+ * where the ingest stamped the bare AUTHOR ROLE into the title field — the
+ * palette answered four unreadable «User» rows. The stub replays that wire. */
+const USER_X4_HITS: SearchResult[] = [
+  {
+    id: "rec-1",
+    title: "User",
+    content: "## User: Сборка падает на этапе линковки webview.\nАгент ответил.",
+    tags: [],
+    score: 0.9,
+    search_type: "fts",
+    server: "laptop",
+  },
+  {
+    id: "rec-2",
+    title: "User",
+    content: "## User — Звуковая версия проходит проверку.",
+    tags: [],
+    score: 0.8,
+    search_type: "fts",
+    server: "laptop",
+  },
+  {
+    id: "rec-3",
+    title: "User",
+    content: "## User\n\nДа, если что — инициация со телефона.",
+    tags: [],
+    score: 0.7,
+    search_type: "fts",
+    server: "laptop",
+  },
+  {
+    id: "rec-4",
+    title: "User",
+    content: "User research показал спрос на оффлайн-режим.\nДальше — больше.",
+    tags: [],
+    score: 0.6,
+    search_type: "fts",
+    server: "laptop",
+  },
+];
+
 async function mount(
   seed: (client: QueryClient, gateway: MockAdapter) => Promise<void> = async () => {},
 ): Promise<MockAdapter> {
@@ -330,6 +372,46 @@ describe("CommandPalette (Ф2, UX-overhaul §7.3)", () => {
     expect(memoryRow!.getAttribute("aria-label")).toContain("recorded corpus");
     expect(taskRow!.getAttribute("aria-label")).toContain("in progress");
     expect(taskRow!.getAttribute("aria-label")).toContain("zcode");
+  });
+
+  // ux-palette-memory-results-unreadable: the 1.81.0 journey — the palette
+  // over chat-captured records answered four unreadable «User» rows (the
+  // ingest stamps the AUTHOR ROLE into the title field). The rows must face
+  // content-derived human labels; the role word survives, if at all, only
+  // inside real prose («User research…» — P3-1), never as THE label.
+  it("the «User»×4 journey: palette memory rows carry content-derived labels, not the role word", async () => {
+    await mount(async (client, mock) => {
+      await seedPaletteData(client, mock);
+      mock.search = vi.fn(async () => USER_X4_HITS);
+    });
+    await pressKey({ key: "k", metaKey: true });
+    await waitFor("palette dialog", () => dialog() !== null);
+    await type("сборка");
+    await waitFor(
+      "four memory rows",
+      () => options().filter((option) => option.id.includes("memory")).length === 4,
+      3000,
+    );
+    const memoryRows = options().filter((option) => option.id.includes("memory"));
+    expect(memoryRows).toHaveLength(4);
+    // The SR path carries «Memory: <label> — …»: the primary label is never
+    // the bare speaker word.
+    const arias = memoryRows.map((row) => row.getAttribute("aria-label") ?? "");
+    for (const aria of arias) {
+      expect(aria.startsWith("Memory: User —")).toBe(false);
+      expect(aria.startsWith("Memory: User (")).toBe(false);
+    }
+    // The mined headlines face the reader; the rows are distinguishable.
+    const visible = document.body.textContent ?? "";
+    expect(visible).toContain("Сборка падает на этапе линковки webview.");
+    expect(visible).toContain("Звуковая версия проходит проверку.");
+    expect(visible).toContain("Да, если что — инициация со телефона.");
+    // P3-1: «User research…» is real prose — the word survives inside it.
+    expect(visible).toContain("User research показал спрос на оффлайн-режим.");
+    // v12 no-regression: the second story (the record's own scroll line)
+    // still rides the rows.
+    expect(visible).toContain("Агент ответил.");
+    expect(visible).toContain("Дальше — больше.");
   });
 
   it("v12: the iris hit-flare rides the memory rows only (U4 recall idiom, mount-keyed)", async () => {

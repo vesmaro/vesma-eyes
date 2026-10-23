@@ -115,6 +115,29 @@ export function humanMemoryTitle(memory: HumanFaceSource & { title?: string | nu
   return content.length > 60 ? `${content.slice(0, 60).trimEnd()}…` : content;
 }
 
+/** Row title for RANKED result lists (the ⌘K palette): never a bare speaker
+ * word, even when the body has no minable headline. Same human face as the
+ * cards, but the last resort is the record's own content head — NOT the
+ * generic word: four dump-bodied records titled "User" must stay
+ * distinguishable, and the role word names the speaker, never the record
+ * (ux-palette-memory-results-unreadable). Returns "" only when the wire
+ * carries nothing at all — the caller decides (the palette falls to the id). */
+export function memoryResultTitle(
+  memory: HumanFaceSource & { title?: string | null },
+): string {
+  const face = memoryHumanFace(memory);
+  if (face) return face.headline;
+  const title = memory.title?.trim();
+  if (title && !isGenericMemoryTitle(title)) return title;
+  const content = ((memory.clean_content ?? memory.content) ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const head = content.replace(MD_PREFIX, "").trim();
+  return head.length > MAX_HEADLINE_CHARS
+    ? `${head.slice(0, MAX_HEADLINE_CHARS).trimEnd()}…`
+    : head;
+}
+
 /** Card preview: effective content, or the face preview (dump head under the
  * fold) for generically-titled records. The full scroll stays on the detail
  * page — including the raw toggle. */
