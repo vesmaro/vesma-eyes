@@ -4,6 +4,7 @@ import {
   Code2,
   Cog,
   FileText,
+  FlaskConical,
   History,
   Layers,
   Activity as ActivityIcon,
@@ -17,10 +18,20 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { MemoryCardSkeleton, TableRowSkeleton } from "@/components/skeletons/Skeletons";
 import { TextEngine } from "@/components/TextEngine";
+import { AssignmentStateBadge } from "@/features/agents/AssignmentStateBadge";
 import { TaskExecutionTab } from "@/features/agents/TaskExecutionTab";
+import { isApiError } from "@/lib/errors";
 import { isTaskMutationSource, isTaskSource } from "@/gateway/capabilities";
 import { useGateway } from "@/gateway/GatewayContext";
-import type { BoardTask, TaskHistory, TaskMemories } from "@/gateway/boardTypes";
+import type {
+  AssignmentLifecycleState,
+  BoardTask,
+  SubstanceAssignment,
+  SubstanceReport,
+  TaskHistory,
+  TaskMemories,
+  TaskSubstance,
+} from "@/gateway/boardTypes";
 import { useI18n, useT } from "@/i18n";
 import type { TranslationKey } from "@/i18n";
 import { withReturn } from "@/lib/returnParams";
@@ -45,6 +56,7 @@ import {
   useTaskHistory,
   useTaskMemories,
   useTaskReports,
+  useTaskSubstance,
 } from "./useTasks";
 import { pageGridClass } from "@/layout/pageGrid";
 
@@ -69,6 +81,9 @@ import { pageGridClass } from "@/layout/pageGrid";
 
 const TASK_TABS = [
   { id: "reports", key: "tasks.tabReports" as const, icon: ScrollText },
+  // P1 «карточка = вещество»: the ONE composite read (reports + executors +
+  // sessions + memories + the contract-null review line) in one place.
+  { id: "substance", key: "tasks.tabSubstance" as const, icon: FlaskConical },
   { id: "history", key: "tasks.tabHistory" as const, icon: History },
   { id: "memory", key: "tasks.tabMemory" as const, icon: Layers },
   { id: "details", key: "tasks.tabDetails" as const, icon: FileText },
@@ -99,6 +114,9 @@ export function TaskDetailPage() {
   // UI-8 needs the reports anyway (the «Отчёты» tab loads the same key —
   // one wire call, no extra request for the header decision).
   const reports = useTaskReports(id);
+  // P1 «карточка = вещество»: the composite read fires at CARD OPEN (this
+  // route), never on the list — the substance tab renders from one query.
+  const substance = useTaskSubstance(id);
   const { resumeTask } = useTaskMutations();
   const [editOpen, setEditOpen] = useState(false);
   // ME-078: the card shows the human channel by default; «исходник» flips
@@ -424,6 +442,7 @@ export function TaskDetailPage() {
 
       <div className="min-w-0">
         {tab === "reports" ? <ReportsTab taskId={id} lang={lang} /> : null}
+        {tab === "substance" ? <SubstanceTab query={substance} lang={lang} /> : null}
         {tab === "history" ? <HistoryTab taskId={id} lang={lang} /> : null}
         {tab === "memory" ? <MemoryTab taskId={id} lang={lang} /> : null}
         {tab === "details" ? <DetailsTab task={current} lang={lang} /> : null}
@@ -451,6 +470,344 @@ function TaskDetailShell({ children }: { children: React.ReactNode }) {
       className={pageGridClass("operational", "flex flex-col gap-4")}
     >
       {children}
+    </section>
+  );
+}
+
+/**
+ * «Вещество» (P1 «карточка = вещество»): the card's real content from ONE
+ * composite read (`useTaskSubstance`, fired at card open). Sections:
+ * План (task.spec/summary as written), Отчёты (chronological; the live
+ * final marked, superseded rows muted with their flag, agent names
+ * human-readable — display + slug badge, slug_ok=false stays raw and is
+ * never dropped), Исполнители (active nomination + history), Сессии и
+ * память (honestly empty when the agents produced nothing — an empty is a
+ * fact, not a skeleton), and Ревью — never hidden, never invented: the
+ * board DB holds no review source, and the card says so in plain words
+ * (the API's explicit contract null).
+ */
+type SubstanceQuery = ReturnType<typeof useTaskSubstance>;
+
+/** dict[str, Any] field guard — the substance task is an anonymous dict. */
+function substanceText(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+/** Mirror of AssignmentLifecycleState — the wire state is a plain string. */
+const ASSIGNMENT_STATES: ReadonlySet<string> = new Set([
+  "queued",
+  "claimed",
+  "running",
+  "done",
+  "failed",
+  "cancelled",
+  "expired",
+]);
+
+function SubstanceTab({ query, lang }: { query: SubstanceQuery; lang: "ru" | "en" }) {
+  const t = useT();
+
+  if (query.isPending) {
+    return (
+      <div role="status" aria-label={t("tasks.substanceLoading")}>
+        <TableRowSkeleton rows={4} columns={2} />
+      </div>
+    );
+  }
+  if (query.isError) {
+    // The read's honest failure classes (contract pins 401/404) speak for
+    // themselves; everything else keeps the retry escape.
+    const status = isApiError(query.error) ? query.error.status : 0;
+    if (status === 404) {
+      return <EmptyState variant="not-found" title={t("tasks.substanceNotFound")} />;
+    }
+    if (status === 401 || status === 403) {
+      return <EmptyState variant="error" title={t("tasks.substanceNoAccess")} />;
+    }
+    return (
+      <EmptyState
+        variant="error"
+        title={t("tasks.substanceFailed")}
+        message={query.error.message}
+        action={
+          <Button variant="outline" onClick={() => void query.refetch()}>
+            {t("common.retry")}
+          </Button>
+        }
+      />
+    );
+  }
+  const data = query.data;
+  if (!data) return null;
+
+  return (
+    <div className="space-y-5">
+      <SubstancePlan task={data.task} />
+      <SubstanceReports reports={data.reports} lang={lang} />
+      <SubstanceExecutors executors={data.executors} />
+      <SubstanceSessionsMemory
+        sessions={data.sessions}
+        memories={data.memories}
+        lang={lang}
+      />
+      {/* Contract honesty: `review` is ALWAYS null — the board DB has no
+       * review source (no table, no column, no event kind). The section
+       * renders in every state; its one line IS the honest status. */}
+      <section aria-label={t("tasks.substanceReview")}>
+        <h2 className="text-sm font-medium text-foreground-secondary">
+          {t("tasks.substanceReview")}
+        </h2>
+        <p className="mt-1 text-sm text-foreground-muted" data-substance-review="none">
+          {t("tasks.substanceReviewNone")}
+        </p>
+      </section>
+    </div>
+  );
+}
+
+/** План: spec/summary exactly as the owner wrote them («как есть»). */
+function SubstancePlan({ task }: { task: TaskSubstance["task"] }) {
+  const t = useT();
+  const summary = substanceText(task.summary);
+  const spec = substanceText(task.spec);
+  return (
+    <section aria-label={t("tasks.substancePlan")}>
+      <h2 className="text-sm font-medium text-foreground-secondary">
+        {t("tasks.substancePlan")}
+      </h2>
+      {summary || spec ? (
+        <div className="mt-1 space-y-2 rounded-md border border-border-subtle bg-well p-3">
+          {summary ? <TextEngine text={summary} variant="compact" className="text-sm" /> : null}
+          {spec && spec !== summary ? (
+            <TextEngine text={spec} variant="full" clamp className="text-sm" />
+          ) : null}
+        </div>
+      ) : (
+        <p className="mt-1 text-sm text-foreground-muted">—</p>
+      )}
+    </section>
+  );
+}
+
+/** Отчёты: chronological; live final marked, superseded muted with flag. */
+function SubstanceReports({
+  reports,
+  lang,
+}: {
+  reports: TaskSubstance["reports"];
+  lang: "ru" | "en";
+}) {
+  const t = useT();
+  return (
+    <section aria-label={t("tasks.substanceReports")}>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-sm font-medium text-foreground-secondary">
+          {t("tasks.substanceReports")}
+        </h2>
+        <span className="text-xs text-foreground-muted">
+          {t("tasks.substanceReportsMeta", { count: reports.count, live: reports.live_count })}
+        </span>
+      </div>
+      {reports.items.length === 0 ? (
+        <p className="mt-1 text-sm text-foreground-muted">
+          {t("tasks.reportsEmpty")}
+          {/* The hint is its own line: on one line the two sentences jam
+           * into «Отчётов пока нет Агенты ещё…» (seen in the acceptance
+           * shots, ru and en alike). */}
+          <span className="block">{t("tasks.reportsEmptyHint")}</span>
+        </p>
+      ) : (
+        <ul className="mt-1 space-y-2">
+          {reports.items.map((report) => (
+            <SubstanceReportRow key={report.id} report={report} lang={lang} />
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function SubstanceReportRow({ report, lang }: { report: SubstanceReport; lang: "ru" | "en" }) {
+  const t = useT();
+  const liveFinal = report.kind === "final" && !report.superseded;
+  return (
+    <li>
+      <details
+        className={
+          "rounded-md border border-border-subtle bg-well px-3 py-2 text-sm shadow-well " +
+          (report.superseded ? "opacity-60" : "")
+        }
+      >
+        <summary className="flex cursor-pointer flex-wrap items-center gap-2 rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright">
+          <Badge variant={report.kind === "final" ? "iris" : "default"}>
+            {t(report.kind === "final" ? "tasks.reportFinal" : "tasks.reportIntermediate")}
+          </Badge>
+          {liveFinal ? <Badge variant="outline">{t("tasks.substanceFinalLive")}</Badge> : null}
+          {report.superseded ? (
+            <Badge variant="outline">{t("tasks.reportSuperseded")}</Badge>
+          ) : null}
+          {/* Human-readable agent: display name first; the slug badge only
+           * when the server normalized it. slug_ok=false keeps the raw name
+           * above — never dropped, never rewritten. */}
+          <span className="text-xs text-foreground-secondary">
+            {report.agent || t("tasks.reportNoAgent")}
+          </span>
+          {report.agent_slug_ok && report.agent_slug ? (
+            <Badge variant="outline" className="font-mono text-[10px]">
+              {report.agent_slug}
+            </Badge>
+          ) : null}
+          <span className="ml-auto whitespace-nowrap font-mono text-xs text-foreground-muted">
+            {formatTaskDate(report.created_at, lang)}
+          </span>
+        </summary>
+        <TextEngine
+          text={humanOrRaw(report.human_body, report.body)}
+          variant="full"
+          clamp
+          className="mt-2"
+        />
+      </details>
+    </li>
+  );
+}
+
+/** Исполнители: the active nomination (the history's live peak) + history. */
+function SubstanceExecutors({ executors }: { executors: TaskSubstance["executors"] }) {
+  const t = useT();
+  return (
+    <section aria-label={t("tasks.substanceExecutors")}>
+      <h2 className="text-sm font-medium text-foreground-secondary">
+        {t("tasks.substanceExecutors")}
+      </h2>
+      {executors.count === 0 ? (
+        <p className="mt-1 text-sm text-foreground-muted">
+          {t("tasks.substanceExecutorsEmpty")}
+        </p>
+      ) : (
+        <div className="mt-1 space-y-2">
+          {executors.active ? (
+            <div className="rounded-md border border-iris-bright/40 bg-well px-3 py-2">
+              <p className="text-xs text-foreground-muted">
+                {t("tasks.substanceExecutorsActive")}
+              </p>
+              <div className="mt-1">
+                <SubstanceAssignmentRow assignment={executors.active} />
+              </div>
+            </div>
+          ) : null}
+          <p className="text-xs text-foreground-muted">
+            {t("tasks.substanceExecutorsHistory")}
+          </p>
+          <ul className="space-y-1">
+            {executors.items.map((assignment) => (
+              <li key={assignment.id}>
+                <SubstanceAssignmentRow assignment={assignment} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function SubstanceAssignmentRow({ assignment }: { assignment: SubstanceAssignment }) {
+  const t = useT();
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm">
+      {ASSIGNMENT_STATES.has(assignment.state) ? (
+        <AssignmentStateBadge state={assignment.state as AssignmentLifecycleState} />
+      ) : (
+        <Badge variant="outline">{assignment.state}</Badge>
+      )}
+      <span>{assignment.specialist || t("tasks.substanceSpecialistNone")}</span>
+      {assignment.specialist_slug_ok && assignment.specialist_slug ? (
+        <Badge variant="outline" className="font-mono text-[10px]">
+          {assignment.specialist_slug}
+        </Badge>
+      ) : null}
+      <span className="font-mono text-xs text-foreground-muted">{assignment.harness}</span>
+      {assignment.attempts > 0 ? (
+        <span className="text-xs text-foreground-muted">
+          {t("tasks.substanceAttempts", { attempts: assignment.attempts })}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Сессии и память: agent-produced facts only. BOTH empty is a fact the card
+ * states in words («нет данных от агентов») — never a skeleton, never a
+ * pretend-filter. Memories render the board-DB links (ids); resolved cards
+ * live on the «Память» tab (the ?resolve_memories leg stays server-side).
+ */
+function SubstanceSessionsMemory({
+  sessions,
+  memories,
+  lang,
+}: {
+  sessions: TaskSubstance["sessions"];
+  memories: TaskSubstance["memories"];
+  lang: "ru" | "en";
+}) {
+  const t = useT();
+  const sessionsEmpty = sessions.items.length === 0;
+  const memoriesEmpty = memories.linked.length === 0;
+  if (sessionsEmpty && memoriesEmpty) {
+    return (
+      <section aria-label={t("tasks.substanceSessionsMemory")}>
+        <h2 className="text-sm font-medium text-foreground-secondary">
+          {t("tasks.substanceSessionsMemory")}
+        </h2>
+        <p className="mt-1 text-sm text-foreground-muted">
+          {t("tasks.substanceAgentsSilent")}
+        </p>
+      </section>
+    );
+  }
+  return (
+    <section aria-label={t("tasks.substanceSessionsMemory")} className="space-y-2">
+      <h2 className="text-sm font-medium text-foreground-secondary">
+        {t("tasks.substanceSessionsMemory")}
+      </h2>
+      {!sessionsEmpty ? (
+        <div>
+          <p className="text-xs text-foreground-muted">{t("tasks.substanceSessionsLabel")}</p>
+          <ul className="mt-1 space-y-1">
+            {sessions.items.map((session) => (
+              <li key={session.session_id} className="flex flex-wrap items-center gap-2 text-sm">
+                <span>{session.executor_name || session.executor_id}</span>
+                <span className="font-mono text-xs text-foreground-muted">{session.harness}</span>
+                <span className="text-xs text-foreground-muted">
+                  {session.tool_calls} · {Math.round(session.duration_s)}s
+                </span>
+                {session.ended_at ? null : (
+                  <Badge variant="default">{t("tasks.substanceSessionLive")}</Badge>
+                )}
+                <span className="ml-auto whitespace-nowrap font-mono text-xs text-foreground-muted">
+                  {formatTaskDate(session.reported_at, lang)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {!memoriesEmpty ? (
+        <div>
+          <p className="text-xs text-foreground-muted">{t("tasks.substanceMemoriesLabel")}</p>
+          <ul className="mt-1 space-y-1">
+            {memories.linked.map((memoryId) => (
+              <li key={memoryId} className="break-all font-mono text-xs text-foreground-muted">
+                {memoryId}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <p className="text-sm text-foreground-muted">{t("tasks.substanceMemoriesEmpty")}</p>
+      )}
     </section>
   );
 }
