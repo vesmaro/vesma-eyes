@@ -19,6 +19,13 @@ board DB really holds about a card. Contract pinned here:
 - memories: linked ids + count are board-DB truth by default with NO
   egress (decoy stays at zero connections); ?resolve_memories=true
   resolves the checkpoint cards through the shared mnemos resolver.
+
+Every authenticated read below carries the bearer EXPLICITLY. A
+headerless GET can only pass through the ``vesmaro_ui`` cookie leg, and
+that cookie is set by the ui-write sliding-reissue whose 5-minute
+per-IP budget (``_ui_reissue_last``) is module-global — order- and
+timing-dependent, invisible in a solo re-run. The cookie side channel
+is board behavior, not something a contract test may lean on.
 """
 
 from __future__ import annotations
@@ -71,7 +78,7 @@ class TestSubstanceContract:
     def test_honest_empty_fresh_task(self, client, auth, make_task):
         """A task the loop never touched: every source honestly empty."""
         task = make_task(title="subst-empty")
-        r = _substance(client, task["id"])
+        r = _substance(client, task["id"], headers=auth)
         assert r.status_code == 200
         out = r.json()
         assert out["ok"] is True
@@ -98,7 +105,7 @@ class TestSubstanceContract:
                 "@GCW: Tech Lead", "промежуточный")
         _report(client, auth, task["id"], "final",
                 "gcw-senior-system-engineer", "финальный")
-        out = _substance(client, task["id"]).json()
+        out = _substance(client, task["id"], headers=auth).json()
         reports = out["reports"]
         assert reports["count"] == 2
         assert reports["live_count"] == 2
@@ -119,7 +126,8 @@ class TestSubstanceContract:
         task = make_task(title="subst-supersede")
         _report(client, auth, task["id"], "final", "gcw-tech-lead", "v1")
         _report(client, auth, task["id"], "final", "gcw-tech-lead", "v2")
-        out = _substance(client, task["id"]).json()["reports"]
+        out = _substance(client, task["id"],
+                         headers=auth).json()["reports"]
         assert out["count"] == 2
         assert out["live_count"] == 1
         assert out["final"]["body"] == "v2"
@@ -132,7 +140,8 @@ class TestSubstanceContract:
         task = make_task(title="subst-slug-miss")
         _report(client, auth, task["id"], "intermediate", "Максим")
         _report(client, auth, task["id"], "final", "@gcw-product-architect")
-        items = _substance(client, task["id"]).json()["reports"]["items"]
+        items = _substance(client, task["id"],
+                           headers=auth).json()["reports"]["items"]
         miss = items[0]
         assert miss["agent"] == "Максим"
         assert miss["agent_slug"] == ""
@@ -170,7 +179,8 @@ class TestSubstanceExecutors:
                               "specialist": "@GCW: QA Engineer"},
                         headers=auth)
         assert r.status_code == 201, r.text
-        out = _substance(client, task["id"]).json()["executors"]
+        out = _substance(client, task["id"],
+                         headers=auth).json()["executors"]
         assert out["count"] == 1
         assert out["active"] is not None
         assert out["active"]["state"] == "queued"
@@ -178,7 +188,8 @@ class TestSubstanceExecutors:
         assert out["active"]["specialist"] == "gcw-qa-engineer"
         assert out["active"]["specialist_slug"] == "gcw-qa-engineer"
         assert out["active"]["specialist_slug_ok"] is True
-        raw = json.dumps(_substance(client, task["id"]).json())
+        raw = json.dumps(_substance(client, task["id"],
+                                    headers=auth).json())
         assert "claim_token" not in raw
         assert "spec_snapshot" not in raw
 
@@ -193,7 +204,8 @@ class TestSubstanceExecutors:
         r = client.post(f"/api/assignments/{assignment_id}/cancel",
                         json={"reason": "тест"}, headers=auth)
         assert r.status_code == 200, r.text
-        out = _substance(client, task["id"]).json()["executors"]
+        out = _substance(client, task["id"],
+                         headers=auth).json()["executors"]
         assert out["count"] == 1  # history kept
         assert out["active"] is None
         assert out["items"][0]["state"] == "cancelled"
@@ -204,7 +216,8 @@ class TestSubstanceSessions:
     def test_fact_row_served_with_glue_id(self, client, auth, app_module,
                                           make_task):
         task = make_task(title="subst-sessions")
-        assert _substance(client, task["id"]).json()["sessions"] == \
+        assert _substance(client, task["id"],
+                          headers=auth).json()["sessions"] == \
             {"count": 0, "items": []}  # honest empty first
         with app_module.store._lock, app_module.store._conn() as db:
             db.execute(
@@ -216,7 +229,8 @@ class TestSubstanceSessions:
                  "gcw-tech-lead", "/home/u/sessions/sess_abc.jsonl",
                  12, 340, "2026-10-22T10:04:11Z", "2026-10-22T10:09:51Z",
                  "", "2026-10-22T10:04:12Z", "2026-10-22T10:09:52Z"))
-        out = _substance(client, task["id"]).json()["sessions"]
+        out = _substance(client, task["id"],
+                         headers=auth).json()["sessions"]
         assert out["count"] == 1
         fact = out["items"][0]
         assert fact["session_id"] == "exec-1:sess_abc"
@@ -234,7 +248,8 @@ class TestSubstanceMemories:
         r = client.patch(f"/api/tasks/{task['id']}",
                          json={"memory_ids": ["m-1", "m-2"]}, headers=auth)
         assert r.status_code == 200, r.text
-        out = _substance(client, task["id"]).json()["memories"]
+        out = _substance(client, task["id"],
+                         headers=auth).json()["memories"]
         assert out["count"] == 2
         assert out["linked"] == ["m-1", "m-2"]
         assert out["items"] == {}
@@ -252,6 +267,7 @@ class TestSubstanceMemories:
                          json={"memory_ids": ["m-1"]}, headers=auth)
         assert r.status_code == 200, r.text
         out = _substance(client, task["id"],
+                         headers=auth,
                          resolve_memories=True).json()["memories"]
         assert out["items"]["m-1"]["title"] == \
             "Промежуточный отчёт — 22.10"
@@ -266,6 +282,7 @@ class TestSubstanceMemories:
         client.patch(f"/api/tasks/{task['id']}",
                      json={"memory_ids": ["ghost-id"]}, headers=auth)
         out = _substance(client, task["id"],
+                         headers=auth,
                          resolve_memories=True).json()["memories"]
         assert out["items"] == {}
         assert any(u["id"] == "ghost-id" for u in out["unresolved"])
