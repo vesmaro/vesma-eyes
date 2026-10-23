@@ -266,6 +266,12 @@ def load_api_hub_config(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
         for key in ("repo", "ref", "include"):
             if key not in source:
                 raise SyncError(f"{path}: api_hub.sources.{name} lacks `{key}`")
+        display = source.get("display_name")
+        if display is not None and (not isinstance(display, str) or not display.strip()):
+            raise SyncError(
+                f"{path}: api_hub.sources.{name} has an empty/non-string "
+                "`display_name` (omit the field to show the slug as-is)"
+            )
     return config, hub
 
 
@@ -1294,10 +1300,20 @@ def merge_manifests(
             if name in pins
         }
     )
+    # Provenance stamp display names (directive 2026-10-23): carry the map
+    # sync_docs emitted, merge the api-hub sources' own display_name entries.
+    # Only DIFFERING entries live in the map (absent = slug as-is); sorted
+    # for the byte-stable re-run gate.
+    display_names = dict(sidecar.get("display_names") or {})
+    for name, source in hub["sources"].items():
+        display = str(source.get("display_name") or "").strip()
+        if display and display != name:
+            display_names[name] = display
     sidecar_out = {
         "version": sidecar.get("version", 1),
         "generated_by": "scripts/sync_docs.py + scripts/gen_api_ref.py",
         "source_shas": source_shas,
+        "display_names": dict(sorted(display_names.items())),
         "pages": [sidecar_pages[slug] for slug in sorted(sidecar_pages)],
     }
     provenance_path.write_text(

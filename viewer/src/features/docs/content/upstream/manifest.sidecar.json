@@ -8,6 +8,10 @@
     "api/mnemos-mesh": "03b570ea1e835b2234d8c4c9c52122219f02d1ef",
     "api/vesmaro-agent": "dbd6054ed22c70897247e83c14effbc2e0b7eead"
   },
+  "display_names": {
+    "mnemos": "Vesma",
+    "mnemos-mesh": "vesma-mesh"
+  },
   "pages": [
     {
       "slug": "api/mnemos-mesh/index",
@@ -321,8 +325,8 @@
     {
       "slug": "api/vesmaro-eyes/memories",
       "titles": {
-        "en": "Memory, tags, and mnemos search",
-        "ru": "Память, теги и поиск mnemos"
+        "en": "Memory, tags, and vesma search",
+        "ru": "Память, теги и поиск vesma"
       },
       "category": "api-board",
       "order": 3,

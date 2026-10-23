@@ -71,7 +71,7 @@ calls things its own way; this table translates into board language.
 | federation, peer | federation, mesh node | a participant of the vesma federation; the board observes them as Mesh nodes |
 | trigger code | trigger code | a one-time peer-confirmation code in the vesma federation; do not confuse it with the board's QR pairing |
 | tag contract | tag contract | the mandatory tag schema; the task's "vesma tags" field follows it |
-| mnemos_* (MCP) | MCP tools | the layer agents use to reach the memory; the board uses the same layer |
+| vesma_* (MCP) | MCP tools | the layer agents use to reach the memory; the board uses the same layer |
 
 ## See also
 

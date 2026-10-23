@@ -31,7 +31,27 @@ export interface DocsSidecar {
   version: number;
   generated_by: string;
   source_shas: Record<string, string>;
+  /**
+   * Slug → reader-facing display name for the provenance stamp (directive
+   * 2026-10-23: the badge says «Vesma@…», not the internal slug; the slug
+   * stays the link namespace). OPTIONAL: entries exist only where the
+   * display name differs from the slug — anything else displays as-is.
+   */
+  display_names?: Record<string, string>;
   pages: SidecarPage[];
+}
+
+/**
+ * The provenance stamp's repo label: the display name when the generated
+ * map carries one, the raw slug otherwise (honest fallback — repos without
+ * an entry, e.g. `vesmaro-agent`, already ARE their display names).
+ */
+export function displayRepoName(
+  displayNames: Record<string, string> | undefined,
+  repo: string,
+): string {
+  const display = displayNames?.[repo];
+  return typeof display === "string" && display !== "" ? display : repo;
 }
 
 /** The one generated sidecar inside the corpus (GENERATED — never hand-edited). */

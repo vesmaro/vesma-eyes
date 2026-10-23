@@ -210,7 +210,27 @@ def load_config(path: Path) -> dict[str, Any]:
                 raise SyncError(f"{path}: project {name} lacks `{key}`")
         if not project["locale_dirs"]:
             raise SyncError(f"{path}: project {name} has empty locale_dirs")
+        display = project.get("display_name")
+        if display is not None and (not isinstance(display, str) or not display.strip()):
+            raise SyncError(
+                f"{path}: project {name} has an empty/non-string `display_name` "
+                "(omit the field to show the slug as-is)"
+            )
     return config
+
+
+def display_names_map(projects: dict[str, Any]) -> dict[str, str]:
+    """The slug → display-name map for the provenance stamp (directive
+    2026-10-23: the badge speaks the reader-facing product name, the slug
+    stays the link namespace). Only DIFFERING entries are emitted — an
+    absent entry means «display the slug as-is», which keeps the map honest
+    and the sidecar diff small."""
+    return {
+        name: str(project["display_name"]).strip()
+        for name, project in projects.items()
+        if project.get("display_name")
+        and str(project["display_name"]).strip() != name
+    }
 
 
 def validate_selection(project_name: str, project: dict[str, Any]) -> None:
@@ -897,6 +917,9 @@ def sync(
         "version": 1,
         "generated_by": "scripts/sync_docs.py",
         "source_shas": {name: pins[name]["sha"] for name in projects},
+        # Slug → display-name for the provenance stamp (directive 2026-10-23);
+        # gen_api_ref merges its api-hub sources into the same map.
+        "display_names": dict(sorted(display_names_map(projects).items())),
         # Field shape mirrors viewer DocPage (manifest.ts): slug, titles,
         # category, order, lastVerified, locales + per-page provenance.
         "pages": [sidecar_pages[slug] for slug in sorted(sidecar_pages)],
