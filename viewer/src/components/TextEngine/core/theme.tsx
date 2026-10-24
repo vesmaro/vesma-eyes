@@ -18,6 +18,44 @@ import {
 } from "./apiConvention";
 import { EndpointChip } from "./EndpointChip";
 import { ArticleH4 } from "./ArticleH4";
+import { TableScroll } from "./TableScroll";
+
+/**
+ * Table-aware table typography (design blueprint docs-tables-width §3) —
+ * ONE copy of the five rules, consumed by BOTH themes (only paddings/type
+ * steps differ per theme). The 2026-10-23 owner directive («таблицы
+ * нечитаемы — колонки сжаты в столбики по букве») deliberately REPLACED the
+ * former `[overflow-wrap:anywhere]` cell typography; the golden files were
+ * rebaselined in the same wave.
+ */
+const TABLE_CLASS =
+  // §3.3 — the table sizes to its content (`min-w-max`) yet still fills a
+  // narrow wrapper (`w-full`); the wrapper's overflow-x-auto goes live only
+  // when the content genuinely exceeds the measure. `border-separate
+  // border-spacing-0` keeps each cell's borders ON the cell, so the sticky
+  // column carries its rules while scrolled (collapsed borders belong to
+  // the table layer and stay put).
+  "w-full min-w-max border-separate border-spacing-0 text-sm";
+/** §3.1 — the header never wraps: min column width = header width, so a
+ * per-character header break is impossible by construction (the owner's
+ * render auto-test pins both halves: nowrap present, anywhere absent).
+ * The sticky edge carries the INTERACTIVE border token (not subtle): the
+ * rule must read as a boundary against the content sliding under it. */
+const TH_TABLE_RULES =
+  "whitespace-nowrap group-data-[table-overflow]:first:sticky " +
+  "group-data-[table-overflow]:first:left-0 group-data-[table-overflow]:first:bg-background " +
+  "group-data-[table-overflow]:first:border-r group-data-[table-overflow]:first:border-border";
+/** §3.2 — cells wrap by words, never per character (`overflow-wrap:
+ * break-word`); the spec-pinned 32ch ceiling means super-long tokens break
+ * only inside a cell and only when necessary. §3.5 — the sticky first
+ * column turns on ONLY while the wrapper really overflows (the wrapper's
+ * data attribute). T-CODE — inline code inside a cell wraps by words too:
+ * the theme's global anywhere code style is overridden in the cell scope. */
+const TD_TABLE_RULES =
+  "max-w-[32ch] [overflow-wrap:break-word] [&_code]:[overflow-wrap:break-word] " +
+  "group-data-[table-overflow]:first:sticky " +
+  "group-data-[table-overflow]:first:left-0 group-data-[table-overflow]:first:bg-background " +
+  "group-data-[table-overflow]:first:border-r group-data-[table-overflow]:first:border-border";
 
 /**
  * Typography themes of the unified text engine (ADR 0020, layer 2 — «одна
@@ -41,6 +79,11 @@ import { ArticleH4 } from "./ArticleH4";
  * per theme (untrusted profile): hrefs whitelisted to http(s)/mailto, image
  * srcs to http(s) absolute, task-list checkboxes disabled and
  * non-interactive. Tokens only — no literal colours/spacings.
+ *
+ * docs-tables-width (2026-10-23): the table typography is TABLE-AWARE in
+ * both themes (see the §3 rule constants below) — the one deliberate
+ * departure from the historical byte-identical gates; goldens and consumer
+ * snapshots were rebaselined in the same wave.
  */
 export type TextEngineTheme = "compact" | "full" | "article";
 
@@ -280,17 +323,27 @@ export function articleComponents(hooks: ArticleThemeHooks): Components {
       );
     },
     table: ({ children }) => (
-      <div className="mb-4 overflow-x-auto rounded-md border border-border-subtle">
-        <table className="w-full border-collapse text-sm">{children}</table>
-      </div>
+      <TableScroll className="mb-4">
+        <table className={TABLE_CLASS}>{children}</table>
+      </TableScroll>
     ),
     th: ({ children }) => (
-      <th className="[overflow-wrap:anywhere] border-b border-border px-3 py-2 text-left text-sm font-medium text-foreground-secondary">
+      <th
+        className={cn(
+          TH_TABLE_RULES,
+          "border-b border-border px-3 py-2 text-left text-sm font-medium text-foreground-secondary",
+        )}
+      >
         {children}
       </th>
     ),
     td: ({ children }) => (
-      <td className="[overflow-wrap:anywhere] border-b border-border-subtle px-3 py-2 text-sm text-foreground [tr:last-child_&]:border-b-0">
+      <td
+        className={cn(
+          TD_TABLE_RULES,
+          "border-b border-border-subtle px-3 py-2 text-sm text-foreground [tr:last-child_&]:border-b-0",
+        )}
+      >
         {children}
       </td>
     ),
@@ -468,17 +521,27 @@ function buildCompactFullComponents(
       </code>
     ),
     table: ({ children }) => (
-      <div className="my-2 overflow-x-auto rounded-md border border-border-subtle">
-        <table className="w-full border-collapse text-sm">{children}</table>
-      </div>
+      <TableScroll className="my-2">
+        <table className={TABLE_CLASS}>{children}</table>
+      </TableScroll>
     ),
     th: ({ children }) => (
-      <th className="border-b border-border px-2.5 py-1.5 text-left text-xs font-medium text-foreground-secondary">
+      <th
+        className={cn(
+          TH_TABLE_RULES,
+          "border-b border-border px-2.5 py-1.5 text-left text-xs font-medium text-foreground-secondary",
+        )}
+      >
         {children}
       </th>
     ),
     td: ({ children }) => (
-      <td className="border-b border-border-subtle px-2.5 py-1.5 text-sm [tr:last-child_&]:border-b-0">
+      <td
+        className={cn(
+          TD_TABLE_RULES,
+          "border-b border-border-subtle px-2.5 py-1.5 text-sm [tr:last-child_&]:border-b-0",
+        )}
+      >
         {children}
       </td>
     ),

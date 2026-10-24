@@ -231,7 +231,7 @@ describe("upstream typography (W1c spec §9)", () => {
     expect(html).not.toContain('id="тонкий-заголовок"'); // TOC stays h2/h3
   });
 
-  it("keeps wide tables scrollable inside their wrapper (72ch measure holds)", () => {
+  it("keeps wide tables scrollable inside their wrapper (docs measure holds)", () => {
     const html = render(
       "| col1 | col2 | col3 |\n| --- | --- | --- |\n| a | b | c |\n",
     );

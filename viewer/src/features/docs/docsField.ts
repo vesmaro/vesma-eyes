@@ -6,17 +6,21 @@ import { pageGridClass } from "@/layout/pageGrid";
  * «Документация» section; group-centered revision of the same day): EVERY
  * /docs/* surface shares the same geometry —
  *
- *   [ article 72ch | gap 32-64px | TOC 256px ]   ← the GROUP is centered
+ *   [ article 80ch | gap 32-64px | TOC 256px ]   ← the GROUP is centered
  *
  * The [article + TOC] group is centered in the field between the sidebar
  * and the window edge (the industry convention — Stripe/MDN/Next.js:
  * «On this page» sits NEXT to the content, the slack becomes equal OUTER
  * margins). At 2000px: ~335px outer fields each side; at 1280 the group
  * fills the field exactly (the article compresses, gap-8 keeps today's
- * density); below lg the field is the centered max-w-5xl reading column.
+ * density); below lg the field is the centered max-w-6xl reading column.
+ *
+ * The article measure is `--measure-docs: 80ch` (docs-tables-width W2,
+ * blueprint §4 — the wider measure lets reference tables fit without
+ * scroll more often; `--measure-scroll` stays 72ch for Kora/Memory).
  *
  * Rail-less surfaces (hubs, category lists, not-found) center the same
- * 72ch column in the field — one reading measure everywhere, no
+ * 80ch column in the field — one reading measure everywhere, no
  * width/axis jump when navigating the section.
  *
  * The class strings are the single source of the geometry. Per page:
@@ -53,8 +57,9 @@ export function docsFieldClass(): string {
 export const DOCS_GROUP_ROW =
   "lg:flex lg:justify-center lg:gap-8 2xl:gap-16";
 
-/** The centered reading column — 72ch, the same measure on every surface. */
-export const DOCS_COLUMN = "mx-auto w-full max-w-scroll";
+/** The centered reading column — the docs measure (--measure-docs, 80ch),
+ *  the same measure on every surface. */
+export const DOCS_COLUMN = "mx-auto w-full max-w-docs";
 
 /** The TOC rail slot (w-64 shrink-0 — the rail components carry the same
  *  classes; a rail-less page simply renders no slot at all). */

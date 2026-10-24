@@ -2301,6 +2301,8 @@ export const en: Record<TranslationKey, string> = {
   "common.retry": "Retry",
   // UX-overhaul §7.2 (Ф1): raw error text lives only under a disclosure.
   "common.techDetails": "Technical details",
+  // docs-tables-width §3 rule 4: accessible name of the table scroll wrapper.
+  "common.tableScrollRegion": "Horizontally scrollable table",
 
   // --- UI-27: TextEngine (author text — markdown engine) ----------------------------
   "text.showFull": "Show full text",

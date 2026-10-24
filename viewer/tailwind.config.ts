@@ -140,6 +140,7 @@ export default {
       },
       maxWidth: {
         scroll: "var(--measure-scroll)",
+        docs: "var(--measure-docs)",
       },
       fontSize: {
         xs: "var(--text-xs)",
