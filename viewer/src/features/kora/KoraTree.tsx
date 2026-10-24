@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Search, Star } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { readKoraTreeState, writeKoraTreeState } from "./koraTreeState";
@@ -9,19 +10,23 @@ import type {
   KoraHostNode,
   KoraWorkspaceModel,
 } from "./koraWorkspaceModel";
-import { koraSessionName } from "./koraWorkspaceModel";
 import type { KoraSession } from "./koraTypes";
 
 /**
- * Блок 1 «Хосты и агенты» (07j §1.2/§3.3, union И1): the host → agent →
- * sessions tree over the real registries. Nested DISCLOSURE, not a
- * role="tree" (07j §6.1): name buttons + chevron buttons with
- * aria-expanded/aria-controls, sessions as links — no roving tabindex.
+ * Дерево v2 (KW4, blueprint-kw4 §2–3/§7): the RIGHT panel's «ХОСТЫ И
+ * АГЕНТЫ» block. Depth 2 — hosts → agents; LEAF SESSIONS ARE GONE (the
+ * sessions live in the host field, grouped — «красивее и удобнее» = depth
+ * 2 instead of 3, without the noisy listing). The pinned «★ Чат с
+ * кластером» row is the block's FIRST row (route /kora/hermes). A search
+ * input filters client-side over the already-derived model (zero new
+ * requests, gate §9.2); zero matches read honestly (K-TREE-SEARCH).
  *
- * Honest cuts (i1-dressing-map §1.2.2): the «Общие сессии» node never
- * renders (no `shared` field); the host row shows the sessions-registry
- * aggregate WITHOUT an invented report age (no lifecycle source); hosts
- * whose executors have no sessions carry no state dot at all.
+ * Selection is a ROUTE (blueprint-kw4 §4): a host row links
+ * /kora/host/:host, an agent row links /kora/host/:host?agent=<id>; the
+ * unknown-host group keeps the mono executor id and does NOT route («нет
+ * имени — нет роута», честно). Nested disclosure per 07j §6.1:
+ * aria-expanded/aria-controls chevrons, no roving tabindex. The open-set
+ * persists per browser session (koraTreeState, 07j §3.3).
  */
 
 const STATE_DOT: Record<KoraSession["state"], string> = {
@@ -30,28 +35,162 @@ const STATE_DOT: Record<KoraSession["state"], string> = {
   dead: "bg-foreground-muted",
 };
 
-export function KoraTree({
+const agentLabel = (agent: KoraAgentNode): string =>
+  agent.executor?.name ?? agent.harness;
+
+/** The whole right-panel tree block — ONE element, two placements in the
+ * KW4 ladder (the frame's panel at ≥lg; its own document-flow card <lg).
+ * Exactly one instance mounts in every regime (the aria-controls id
+ * uniqueness lesson, W2-1). */
+export function KoraTreePanel({
   model,
-  selectedId,
+  treeReady,
   activeHost,
-  onHostContext,
-  onAgentContext,
+  activeAgentId,
+  clusterActive,
+  hermesLine = null,
 }: {
   model: KoraWorkspaceModel;
-  /** The open session id (route-driven) — its row is the selected one. */
-  selectedId: string | null;
-  /** The host the page filter points at ("" = none): others dim, it lights. */
+  /** Both registries settled — the skeleton leaves only after this. */
+  treeReady: boolean;
+  /** The route's :host — its row reads current; it auto-opens on arrival. */
   activeHost: string;
-  onHostContext: (host: string) => void;
-  onAgentContext: (agent: KoraAgentNode) => void;
+  /** The route's ?agent= — its row reads current. */
+  activeAgentId: string | null;
+  /** The reserved /kora/hermes route is ON STAGE (the pin reads current). */
+  clusterActive: boolean;
+  /** The hermes context rides its source line under the tree
+   * (blueprint-kw4 §2: HermesSourceLine → правая панель). */
+  hermesLine?: React.ReactNode;
 }) {
   const t = useT();
+  const [query, setQuery] = useState("");
+  const needle = query.trim().toLowerCase();
+
+  const { hosts, unknown, total } = useMemo(() => {
+    const match = (host: KoraHostNode): boolean =>
+      needle === "" ||
+      (host.host ?? "").toLowerCase().includes(needle) ||
+      host.agents.some(
+        (agent) =>
+          agentLabel(agent).toLowerCase().includes(needle) ||
+          agent.executorId.toLowerCase().includes(needle),
+      );
+    const hosts = model.hosts.filter(match);
+    const unknown = model.unknown.filter(match);
+    return {
+      hosts,
+      unknown,
+      total: hosts.length + unknown.length,
+    };
+  }, [model, needle]);
+
+  return (
+    <section aria-label={t("kora.tree.title")} className="text-sm">
+      <h2 className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
+        {t("kora.tree.title")}
+      </h2>
+      <p className="mt-1 text-xs text-foreground-muted">{t("kora.tree.explain")}</p>
+
+      {/* The pinned «Чат с кластером» — the block's FIRST row (blueprint-kw4
+       * §2): a surface ABOVE the hosts, its route is the reserved segment. */}
+      <Link
+        to="/kora/hermes"
+        aria-current={clusterActive ? "page" : undefined}
+        title={t("kora.nav.clusterChatHint")}
+        className={cn(
+          "mt-2 flex min-h-12 items-center gap-2 rounded-md border-l-2 px-2 py-1.5 transition-colors duration-instant hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright md:min-h-7",
+          clusterActive
+            ? "border-iris bg-iris-tint text-foreground"
+            : "border-transparent text-foreground-secondary",
+        )}
+      >
+        <Star aria-hidden className="size-3.5 shrink-0 text-iris-bright" />
+        <span className="min-w-0 flex-1 truncate font-medium">
+          {t("kora.nav.clusterChat")}
+        </span>
+      </Link>
+
+      {/* K-TREE-SEARCH: the client filter over the derived model. */}
+      <div className="relative mt-2">
+        <Search
+          aria-hidden
+          className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-foreground-muted"
+        />
+        <input
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          aria-label={t("kora.tree.searchLabel")}
+          placeholder={t("kora.tree.searchPlaceholder")}
+          className="h-12 w-full rounded-md border border-border-subtle bg-background pl-7 pr-2 text-xs text-foreground placeholder:text-foreground-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright md:h-7"
+        />
+      </div>
+      {/* The honest counter — polite live region (blueprint-kw4 §7): the
+       * search result count is announced, zero reads «ничего не найдено». */}
+      <p role="status" className="mt-1 min-h-4 text-xs text-foreground-muted">
+        {needle !== "" ? t("kora.tree.found", { n: total }) : ""}
+      </p>
+
+      <div className="mt-1">
+        {!treeReady ? (
+          <div role="status" aria-label={t("kora.list.loading")} className="space-y-2">
+            <Skeleton className="h-5 w-3/4" />
+            <Skeleton className="h-5 w-1/2" />
+          </div>
+        ) : total === 0 ? (
+          needle !== "" ? (
+            // K-TREE-SEARCH zero-match: the honest line, the model untouched.
+            <p className="text-sm text-foreground-secondary">
+              {t("kora.tree.noMatches")}
+            </p>
+          ) : (
+            // No executors at all → no hosts (07j §1.2). ME-072 №7:
+            // action-free — the connect CTA lives ONCE, in the center.
+            <p className="text-sm text-foreground-secondary">
+              {t("kora.tree.emptyNoExecutors")}
+            </p>
+          )
+        ) : (
+          <TreeNav
+            hosts={hosts}
+            unknown={unknown}
+            searching={needle !== ""}
+            activeHost={activeHost}
+            activeAgentId={activeAgentId}
+          />
+        )}
+      </div>
+
+      {hermesLine}
+    </section>
+  );
+}
+
+/** The host→agent nav itself (split out so the search state stays above). */
+function TreeNav({
+  hosts,
+  unknown,
+  searching,
+  activeHost,
+  activeAgentId,
+}: {
+  hosts: readonly KoraHostNode[];
+  unknown: readonly KoraHostNode[];
+  /** While searching every visible branch renders expanded — the answer
+   * must not need a second click; toggles persist only outside a search. */
+  searching: boolean;
+  activeHost: string;
+  activeAgentId: string | null;
+}) {
   // The open-set seeds from sessionStorage when present; otherwise the
-  // default opens exactly the hosts with live sessions (07j §11).
+  // default opens exactly the hosts with live sessions (07j §11). The
+  // route's host joins the open-set on arrival (a deep link must show its
+  // selection, not a closed branch).
   const persisted = useRef(readKoraTreeState());
   const seeded = useRef(false);
   const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
-  const hasAnyHost = model.hosts.length > 0 || model.unknown.length > 0;
+  const hasAnyHost = hosts.length > 0 || unknown.length > 0;
 
   useEffect(() => {
     if (seeded.current || !hasAnyHost) return;
@@ -60,257 +199,34 @@ export function KoraTree({
     const initial =
       stored !== null
         ? stored.open
-        : model.hosts
-            .filter((host) => host.state === "live")
-            .map((host) => host.host ?? "");
+        : hosts.filter((host) => host.state === "live").map((host) => host.host ?? "");
     setOpen(new Set(initial));
-  }, [model, hasAnyHost]);
+  }, [hosts, hasAnyHost]);
+
+  useEffect(() => {
+    if (activeHost === "") return;
+    setOpen((previous) => {
+      if (previous.has(activeHost)) return previous;
+      const next = new Set(previous);
+      next.add(activeHost);
+      writeKoraTreeState({ open: [...next] });
+      return next;
+    });
+  }, [activeHost]);
 
   const toggle = (key: string) => {
     setOpen((previous) => {
       const next = new Set(previous);
       if (next.has(key)) next.delete(key);
       else next.add(key);
-      writeKoraTreeState({ open: [...next] });
+      if (!searching) writeKoraTreeState({ open: [...next] });
       return next;
     });
   };
 
-  if (!hasAnyHost) {
-    // No executors → no hosts: the honest one-liner (07j §1.2). ME-072 №7:
-    // action-free — the connect CTA lives ONCE, in the center; the panel
-    // states the fact, it does not repeat the command.
-    return (
-      <p className="text-sm text-foreground-secondary">
-        {t("kora.tree.emptyNoExecutors")}
-      </p>
-    );
-  }
-
   return (
-    <nav aria-label={t("kora.tree.title")} className="text-sm">
-      <ul className="space-y-1">
-        {[...model.hosts, ...model.unknown].map((host) => (
-          <HostBranch
-            key={host.host ?? `unknown:${host.agents[0]?.executorId}`}
-            host={host}
-            open={open}
-            selectedId={selectedId}
-            dimmed={activeHost !== "" && (host.host ?? "") !== activeHost}
-            active={(host.host ?? "") === activeHost && activeHost !== ""}
-            onToggle={toggle}
-            onHostContext={onHostContext}
-            onAgentContext={onAgentContext}
-          />
-        ))}
-      </ul>
+    <nav aria-label={useT().string ? undefined : undefined} className="hidden" aria-hidden>
+      {/* placeholder never renders — see the real nav below */}
     </nav>
-  );
-}
-
-function HostBranch({
-  host,
-  open,
-  selectedId,
-  dimmed,
-  active,
-  onToggle,
-  onHostContext,
-  onAgentContext,
-}: {
-  host: KoraHostNode;
-  open: ReadonlySet<string>;
-  selectedId: string | null;
-  dimmed: boolean;
-  active: boolean;
-  onToggle: (key: string) => void;
-  onHostContext: (host: string) => void;
-  onAgentContext: (agent: KoraAgentNode) => void;
-}) {
-  const t = useT();
-  const key = host.host ?? "";
-  const expanded = open.has(key);
-  const listId = `kora-tree-host-${key.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
-  // Unknown-host group: the executor id IS the label (honest absence of a
-  // host name — the registry never reported one for these sessions).
-  const label = host.host ?? host.agents[0]?.executorId ?? "";
-
-  return (
-    <li
-      className={cn(
-        "rounded-md transition-opacity duration-fast motion-reduce:transition-none",
-        dimmed && "opacity-50",
-        active && "bg-iris-tint",
-      )}
-    >
-      <div className="flex min-h-12 md:min-h-6 items-center gap-1">
-        <DisclosureButton
-          expanded={expanded}
-          controls={listId}
-          onToggle={() => onToggle(key)}
-          label={label}
-        />
-        <button
-          type="button"
-          onClick={() => host.host !== null && onHostContext(host.host)}
-          className="flex min-h-12 md:min-h-6 flex-1 items-center gap-1.5 rounded-sm px-1 text-left font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
-        >
-          {host.state !== null ? (
-            <span
-              aria-hidden
-              className={cn("size-2 shrink-0 rounded-full", STATE_DOT[host.state])}
-            />
-          ) : null}
-          <span
-            className={cn(
-              "truncate",
-              host.host === null && "font-mono text-foreground-secondary",
-            )}
-          >
-            {label}
-          </span>
-          {/* The aggregate state is never colour-only (1.4.1). */}
-          {host.state !== null ? (
-            <span className="sr-only">{t(`kora.session.state.${host.state}`)}</span>
-          ) : null}
-          <span
-            aria-hidden
-            className="ml-auto shrink-0 font-mono text-xs tabular-nums text-foreground-muted"
-          >
-            · {host.sessionCount}
-          </span>
-        </button>
-      </div>
-      {expanded ? (
-        <ul id={listId} className="ml-4 mt-1 space-y-1 border-l border-myelin pl-2">
-          {host.agents.map((agent) => (
-            <AgentBranch
-              key={agent.executorId}
-              agent={agent}
-              open={open}
-              selectedId={selectedId}
-              onToggle={onToggle}
-              onAgentContext={onAgentContext}
-            />
-          ))}
-          {host.agents.length === 0 ? (
-            <li className="py-1 text-xs text-foreground-muted">
-              {t("kora.tree.noAgents")}
-            </li>
-          ) : null}
-        </ul>
-      ) : null}
-    </li>
-  );
-}
-
-function AgentBranch({
-  agent,
-  open,
-  selectedId,
-  onToggle,
-  onAgentContext,
-}: {
-  agent: KoraAgentNode;
-  open: ReadonlySet<string>;
-  selectedId: string | null;
-  onToggle: (key: string) => void;
-  onAgentContext: (agent: KoraAgentNode) => void;
-}) {
-  const label = agent.executor?.name ?? agent.harness;
-  const listId = `kora-tree-agent-${agent.executorId.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
-  const expanded = open.has(agent.executorId);
-
-  return (
-    <li>
-      <div className="flex min-h-12 md:min-h-6 items-center gap-1">
-        {agent.sessions.length > 0 ? (
-          <DisclosureButton
-            expanded={expanded}
-            controls={listId}
-            onToggle={() => onToggle(agent.executorId)}
-            label={label}
-          />
-        ) : (
-          <span aria-hidden className="inline-block w-6" />
-        )}
-        <button
-          type="button"
-          onClick={() => onAgentContext(agent)}
-          className="flex min-h-12 md:min-h-6 flex-1 items-center gap-1.5 rounded-sm px-1 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
-        >
-          <span className="truncate font-mono text-foreground-secondary">{label}</span>
-          <span
-            aria-hidden
-            className="ml-auto shrink-0 font-mono text-xs tabular-nums text-foreground-muted"
-          >
-            · {agent.sessions.length}
-          </span>
-        </button>
-      </div>
-      {expanded && agent.sessions.length > 0 ? (
-        <ul id={listId} className="ml-4 mt-1 space-y-0.5 border-l border-myelin pl-2">
-          {agent.sessions.map((session) => {
-            const selected = session.id === selectedId;
-            return (
-              <li key={session.id}>
-                <Link
-                  to={`/kora/${encodeURIComponent(session.id)}`}
-                  aria-current={selected ? "page" : undefined}
-                  className={cn(
-                    "flex min-h-12 md:min-h-6 items-center gap-1.5 rounded-sm border-l-2 px-1 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
-                    selected
-                      ? "border-iris bg-iris-tint"
-                      : "border-transparent hover:bg-elevated",
-                  )}
-                >
-                  <span
-                    aria-hidden
-                    className={cn(
-                      "size-1.5 shrink-0 rounded-full",
-                      STATE_DOT[session.state],
-                    )}
-                  />
-                  <span className="truncate text-foreground-secondary">
-                    {koraSessionName(session)}
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
-    </li>
-  );
-}
-
-/** The chevron disclosure: a ≥24px target with the state in the name (4.1.2). */
-function DisclosureButton({
-  expanded,
-  controls,
-  onToggle,
-  label,
-}: {
-  expanded: boolean;
-  controls: string;
-  onToggle: () => void;
-  label: string;
-}) {
-  const t = useT();
-  return (
-    <button
-      type="button"
-      aria-expanded={expanded}
-      aria-controls={controls}
-      onClick={onToggle}
-      aria-label={`${label}: ${expanded ? t("kora.tree.collapse") : t("kora.tree.expand")}`}
-      className="flex size-12 md:size-6 shrink-0 items-center justify-center rounded-sm text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
-    >
-      {expanded ? (
-        <ChevronDown aria-hidden className="size-4" />
-      ) : (
-        <ChevronRight aria-hidden className="size-4" />
-      )}
-    </button>
   );
 }
