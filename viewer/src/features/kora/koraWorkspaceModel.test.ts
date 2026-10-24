@@ -3,6 +3,7 @@ import type { ExecutorItem } from "@/gateway/boardTypes";
 import type { KoraSession } from "./koraTypes";
 import {
   buildKoraTree,
+  buildProjectGroups,
   formatTranscriptTime,
   groupKoraTranscript,
   koraAgeUnit,
@@ -10,6 +11,7 @@ import {
   koraSummary,
   koraTranscriptAnchorId,
   koraTranscriptFoldId,
+  pathBasename,
   quickFilterMatches,
   sessionCoverageSupport,
   sortKoraSessions,
@@ -290,5 +292,197 @@ describe("groupKoraTranscript (transcript-ux wave)", () => {
     expect(koraTranscriptAnchorId(12)).toBe("kora-anchor-12");
     expect(koraTranscriptFoldId(12)).toBe("kora-fold-12");
     expect(koraTranscriptAnchorId(12)).not.toBe(koraTranscriptFoldId(12));
+  });
+});
+
+describe("buildProjectGroups (KW4 «Поле хоста», blueprint-kw4 §1–3)", () => {
+  const host = executor("exec-z", "zcode", "abyss-laptop");
+
+  it("groups by the FULL cwd — the key is the path, not the basename", () => {
+    const groups = buildProjectGroups([
+      session({
+        id: "a",
+        executor_id: host.id,
+        state: "live",
+        harness: "zcode",
+        project: "proj",
+        cwd: "/home/a/proj",
+      }),
+      session({
+        id: "b",
+        executor_id: host.id,
+        state: "idle",
+        harness: "zcode",
+        project: "proj",
+        cwd: "/home/a/proj",
+      }),
+    ]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.key).toBe("/home/a/proj");
+    expect(groups[0]?.kind).toBe("cwd");
+    expect(groups[0]?.cwd).toBe("/home/a/proj");
+    expect(groups[0]?.sessions.map((s) => s.id)).toEqual(["a", "b"]); // live on top
+  });
+
+  it("basename collisions do NOT merge (gate §9.2): two cwds, one basename", () => {
+    const groups = buildProjectGroups([
+      session({
+        id: "a",
+        executor_id: host.id,
+        state: "idle",
+        harness: "zcode",
+        cwd: "/home/a/proj",
+      }),
+      session({
+        id: "b",
+        executor_id: host.id,
+        state: "idle",
+        harness: "zcode",
+        cwd: "/home/b/proj",
+      }),
+    ]);
+    expect(groups).toHaveLength(2);
+    expect(groups.map((g) => g.key).sort()).toEqual(["/home/a/proj", "/home/b/proj"]);
+    // The component derives BOTH titles from basename("…/proj") = "proj" —
+    // the keys above are what keeps them apart.
+  });
+
+  it("empty cwd lands in ONE honest no-directory group (sentinel key)", () => {
+    const groups = buildProjectGroups([
+      session({ id: "a", executor_id: host.id, state: "idle", harness: "pi" }),
+      session({
+        id: "b",
+        executor_id: host.id,
+        state: "dead",
+        harness: "pi",
+        cwd: "",
+        project: null,
+      }),
+    ]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.key).toBe("__nocwd__");
+    expect(groups[0]?.kind).toBe("none");
+    expect(groups[0]?.cwd).toBeNull();
+  });
+
+  it("hermes groups by SOURCE (the project tag), not by cwd", () => {
+    const groups = buildProjectGroups([
+      session({
+        id: "h1",
+        executor_id: "hermes",
+        state: "live",
+        harness: "hermes",
+        project: "hermes:api_server",
+        cwd: null,
+      }),
+      session({
+        id: "h2",
+        executor_id: "hermes",
+        state: "idle",
+        harness: "hermes",
+        project: "hermes:telegram",
+        cwd: null,
+      }),
+      session({
+        id: "h3",
+        executor_id: "hermes",
+        state: "idle",
+        harness: "hermes",
+        project: "hermes:api_server",
+        cwd: null,
+      }),
+    ]);
+    expect(groups).toHaveLength(2);
+    const api = groups.find((g) => g.key === "hermes:api_server");
+    expect(api?.kind).toBe("source");
+    expect(api?.source).toBe("api_server");
+    expect(api?.hasLive).toBe(true);
+    expect(api?.sessions.map((s) => s.id)).toEqual(["h1", "h3"]);
+  });
+
+  it("a hermes row without the project tag degrades to the no-cwd group", () => {
+    const groups = buildProjectGroups([
+      session({ id: "h1", executor_id: "hermes", state: "live", harness: "hermes" }),
+    ]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.kind).toBe("none");
+  });
+
+  it("hasLive marks exactly the groups holding a live session (default open-set)", () => {
+    const groups = buildProjectGroups([
+      session({
+        id: "live1",
+        executor_id: host.id,
+        state: "live",
+        harness: "zcode",
+        cwd: "/hot",
+      }),
+      session({
+        id: "idle1",
+        executor_id: host.id,
+        state: "idle",
+        harness: "zcode",
+        cwd: "/cold",
+      }),
+    ]);
+    expect(groups.map((g) => [g.key, g.hasLive])).toEqual([
+      ["/hot", true],
+      ["/cold", false],
+    ]);
+  });
+
+  it("order: live groups first, then freshest activity, then key — deterministic", () => {
+    const groups = buildProjectGroups([
+      session({
+        id: "old-idle",
+        executor_id: host.id,
+        state: "idle",
+        harness: "zcode",
+        cwd: "/b-old",
+        last_activity_at: "2026-09-24T09:00:00Z",
+      }),
+      session({
+        id: "old-live",
+        executor_id: host.id,
+        state: "live",
+        harness: "zcode",
+        cwd: "/z-live",
+        last_activity_at: "2026-09-24T09:00:00Z",
+      }),
+      session({
+        id: "fresh-idle",
+        executor_id: host.id,
+        state: "idle",
+        harness: "zcode",
+        cwd: "/a-fresh",
+        last_activity_at: "2026-09-24T11:00:00Z",
+      }),
+    ]);
+    expect(groups.map((g) => g.key)).toEqual(["/z-live", "/a-fresh", "/b-old"]);
+  });
+
+  it("pure over the input: the registry slice comes back untouched (no new reads)", () => {
+    const input = [
+      session({
+        id: "a",
+        executor_id: host.id,
+        state: "live",
+        harness: "zcode",
+        cwd: "/p",
+      }),
+    ];
+    const frozen = [...input];
+    buildProjectGroups(input);
+    expect(input).toEqual(frozen);
+  });
+});
+
+describe("pathBasename", () => {
+  it("cuts the last segment; trailing slashes strip; bare segment is itself", () => {
+    expect(pathBasename("/var/home/a/proj")).toBe("proj");
+    expect(pathBasename("/var/home/a/proj/")).toBe("proj");
+    expect(pathBasename("proj")).toBe("proj");
+    expect(pathBasename("/")).toBe("/");
+    expect(pathBasename("/a/b/c.dee")).toBe("c.dee");
   });
 });
