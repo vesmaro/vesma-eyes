@@ -29,6 +29,27 @@ def _add(client, auth, payload):
     return client.post("/api/memories/servers", json=payload, headers=auth)
 
 
+@pytest.fixture(autouse=True)
+def _no_leaked_servers(app_module):
+    """Any memory-server row a test in this file registers is removed again
+    on teardown: snapshot the registry before the test, delete the delta
+    (store.delete_server is idempotent, so rows the test deleted itself
+    — doomed-srv, maskme — are a no-op).
+
+    This file used to leave ENABLED rows (fakesrv, dup-srv, patchme, ...)
+    in the session-scoped DB pointing at closed loopback ports — documented
+    by the wired-fixture remark in test_api_task_drafts and fatal for any
+    later test that walks ALL active registry servers: substance
+    ?resolve_memories=true hit the dead fakesrv row and got an honest 503,
+    failing test_resolve_opt_in_resolves_cards (issue #4). Fixed at the
+    source so downstream tests see a clean registry."""
+    before = {s["name"] for s in app_module.store.list_servers()}
+    yield
+    for s in app_module.store.list_servers():
+        if s["name"] not in before:
+            app_module.store.delete_server(s["name"])
+
+
 # --------------------------------------------- SEC-2 legacy plain migration
 class TestLegacyPlainMigrationOnBoot:
     """conftest pre-seeds a plain: row before app import; the registry

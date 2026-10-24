@@ -124,6 +124,22 @@ export type TaskHistory = Schemas["HistoryOut"];
 export type TaskMemories = Schemas["TaskMemoriesOut"];
 
 /**
+ * Task card substance composite — board `TaskSubstanceOut` schema
+ * (`GET /api/tasks/{id}/substance`, P1 «карточка = вещество»). ONE ui-class
+ * read serving the whole card drawer: reports (chronological, live final +
+ * superseded flags, slug pairs), executor nominations, session facts and
+ * linked memories. `review` is ALWAYS null BY CONTRACT — the board DB holds
+ * no review source, and the FE renders that absence honestly.
+ */
+export type TaskSubstance = Schemas["TaskSubstanceOut"];
+
+/** One substance report row — board `SubstanceReportOut` schema. */
+export type SubstanceReport = Schemas["SubstanceReportOut"];
+
+/** One executor nomination row — board `SubstanceAssignmentOut` schema. */
+export type SubstanceAssignment = Schemas["SubstanceAssignmentOut"];
+
+/**
  * Archive page — board `ArchiveOut` schema (`GET /api/archive`). `items` is
  * the limit/offset page; `projects` groups the FULL matching set (stable
  * teaser counts under pagination, BE-11b); `count` is the legacy total key.

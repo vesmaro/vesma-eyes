@@ -16,3 +16,6 @@ coverage
 
 # U2/U3 honesty-gate screenshot artifacts (rebuilt on every gate run)
 /honesty-shots/
+
+# Acceptance-shot artifacts (task-substance-shots.mjs et al; rebuilt on demand)
+/scripts/shots/

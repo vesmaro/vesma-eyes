@@ -24,6 +24,7 @@ import type {
   TaskPatchInput,
   TaskReports,
   TaskSessionsPage,
+  TaskSubstance,
   TaskUnarchiveResult,
 } from "./boardTypes";
 import type {
@@ -123,6 +124,8 @@ export interface TaskSource {
   reports(taskId: string, signal?: AbortSignal): Promise<TaskReports>;
   history(taskId: string, signal?: AbortSignal): Promise<TaskHistory>;
   taskMemories(taskId: string, signal?: AbortSignal): Promise<TaskMemories>;
+  /** P1: task card substance composite (one read for the whole drawer). */
+  taskSubstance(taskId: string, signal?: AbortSignal): Promise<TaskSubstance>;
   archive(params?: ArchiveParams, signal?: AbortSignal): Promise<ArchivePage>;
   taskById(taskId: string, signal?: AbortSignal): Promise<BoardTask>;
 }
