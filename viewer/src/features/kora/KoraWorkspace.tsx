@@ -189,6 +189,18 @@ export function KoraWorkspace({
       sessionId === null ? null : (items.find((item) => item.id === sessionId) ?? null),
     [items, sessionId],
   );
+  // states-kw4 §4 — the session-mode breadcrumb's host: the registry group
+  // that owns the session's executor. A registry miss (unknown-host group)
+  // reads «← Кора» — no invented host name, one way back.
+  const sessionHost = useMemo(() => {
+    if (session === null) return null;
+    for (const group of [...model.hosts, ...model.unknown]) {
+      if (group.agents.some((agent) => agent.executorId === session.executor_id)) {
+        return group.host;
+      }
+    }
+    return null;
+  }, [session, model]);
   // A deep link may point past the loaded pages: keep appending until the
   // session turns up or the cursor honestly ends (one query, no second
   // read). The ref keeps the effect deps stable; items.length re-triggers
@@ -482,15 +494,37 @@ export function KoraWorkspace({
               onLoadMore={() => void sessions.loadMore()}
             />
           ) : (
-            <KoraWorkzone
-              session={session}
-              registryEmpty={registryEmpty}
-              coverage={sessions.coverage}
-              transcript={transcript}
-              hermes={hermesSplit}
-              intentEvents={NOOP_KORA_INTENT_EVENTS}
-              frameEvents={frameEvents}
-            />
+            <>
+              {/* states-kw4 §4: the breadcrumb above the session head —
+               * «← <хост> · поле» back to the field; unknown host → «←
+               * Кора» (no invented name). Session modes stay byte-identical
+               * — this rides ABOVE KoraWorkzone, the workzone is untouched. */}
+              {session !== null ? (
+                <div className="shrink-0 border-b border-myelin-hairline px-4 py-1">
+                  <Link
+                    to={
+                      sessionHost !== null
+                        ? `/kora/host/${encodeURIComponent(sessionHost)}`
+                        : "/kora"
+                    }
+                    className="inline-flex min-h-12 items-center gap-1 text-sm text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright md:min-h-6"
+                  >
+                    {sessionHost !== null
+                      ? t("kora.breadcrumb.field", { host: sessionHost })
+                      : t("kora.breadcrumb.kora")}
+                  </Link>
+                </div>
+              ) : null}
+              <KoraWorkzone
+                session={session}
+                registryEmpty={registryEmpty}
+                coverage={sessions.coverage}
+                transcript={transcript}
+                hermes={hermesSplit}
+                intentEvents={NOOP_KORA_INTENT_EVENTS}
+                frameEvents={frameEvents}
+              />
+            </>
           )}
         </div>
 
