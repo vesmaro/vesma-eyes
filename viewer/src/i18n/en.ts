@@ -2258,6 +2258,9 @@ export const en: Record<TranslationKey, string> = {
   // W2 docs-hubs-nav: the unified «Book › Category › Page» trail inside the
   // page field (distinct from the top bar's breadcrumb row).
   "docs.breadcrumbs.label": "Book navigation",
+  // W3 docs-hubs-nav: the UI-18 context back control's visible label (the
+  // accessible name is the shared nav.backTo «Back: …»).
+  "docs.back.label": "back to {{place}}",
   // U6: the honest manifest error (honest-map rows 20–21) — an explicit
   // slot with Retry instead of an eternal skeleton.
   "docs.error.manifestTitle": "The docs catalog failed to build",

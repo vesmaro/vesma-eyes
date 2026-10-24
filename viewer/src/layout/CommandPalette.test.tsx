@@ -534,6 +534,27 @@ describe("CommandPalette (Ф2, UX-overhaul §7.3)", () => {
     expect(location()).toContain(`return=${encodeURIComponent("/")}`);
   });
 
+  it("W3 docs-hubs-nav: the docs nav row navigates WITH its return= context (UI-18)", async () => {
+    await mount();
+    await pressKey({ key: "k", metaKey: true });
+    await waitFor("palette dialog", () => dialog() !== null);
+
+    const docsRow = options().find((option) =>
+      option.textContent?.includes("Documentation"),
+    );
+    expect(docsRow).toBeDefined();
+    await act(async () => {
+      (docsRow!.querySelector("button") as HTMLButtonElement).click();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    await waitFor(
+      "navigated to the docs hub",
+      () => location().startsWith("/docs/vesma-eyes"),
+    );
+    // The hub receives the SOURCE context (the palette was opened on "/").
+    expect(location()).toContain(`return=${encodeURIComponent("/")}`);
+  });
+
   it("an empty memory result offers «Расширенный поиск» → /memory/search?q=…", async () => {
     const gateway = await mount(async (client, mock) => {
       await seedPaletteData(client, mock);

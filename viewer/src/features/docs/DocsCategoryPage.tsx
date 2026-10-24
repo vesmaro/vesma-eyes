@@ -5,7 +5,7 @@ import { useI18n, useT } from "@/i18n";
 import { Skeleton } from "@/components/ui/skeleton";
 import { docCategory, docCategoriesForProject } from "./categories";
 import { DocCard, DocCardGrid } from "./DocCards";
-import { DocsBreadcrumbs } from "./DocsBreadcrumbs";
+import { DocsBreadcrumbs, DocsBackControl } from "./DocsBreadcrumbs";
 import {
   firstParagraph,
   getManifest,
@@ -193,8 +193,10 @@ export function DocsCategoryPage() {
     <div className={docsFieldClass()}>
       <div className={DOCS_COLUMN}>
         {/* The unified trail (blueprint W2): Книга › Категория — the first
-            crumb is the book's TOC, one click to the hub from any depth. */}
+            crumb is the book's TOC, one click to the hub from any depth.
+            W3: the context back control rides ABOVE the trail. */}
         <div className="mb-4">
+          <DocsBackControl />
           <DocsBreadcrumbs project={projectMeta} category={category} />
         </div>
         <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">

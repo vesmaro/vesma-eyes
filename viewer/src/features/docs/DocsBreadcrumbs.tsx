@@ -1,8 +1,11 @@
-import { Link } from "react-router";
-import { ChevronLeft } from "lucide-react";
+import { useMemo } from "react";
+import { Link, useLocation } from "react-router";
+import { ArrowLeft, ChevronLeft } from "lucide-react";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { FOCUS_RING } from "@/components/TextEngine/core/constants";
+import { resolveReturnTarget } from "@/lib/returnParams";
+import { routeTitle } from "@/layout/navItems";
 import { categoryUrl, hubUrl, type DocProject } from "./projects";
 import type { DocCategory } from "./categories";
 
@@ -124,6 +127,57 @@ export function DocsBreadcrumbs({
           </Link>
         </nav>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * The docs context back control (blueprint W3, UI-18): reads `?return=` on
+ * ANY docs surface and renders «← назад к …» ABOVE the breadcrumb trail —
+ * but ONLY when the target survives resolveReturnTarget (D-RET-VALID).
+ * Every rejection is SILENT (D-RET-NONE): absent param, a non-Shell path,
+ * a scheme/protocol-relative garbage value, the self-return — the control
+ * is simply not there, never an error, never a disabled button. A dead
+ * target is honest too (D-RET-DEAD): we don't pre-validate, the target
+ * page answers for itself. Internal docs links never carry the param, so
+ * ordinary browsing inside the section never grows a back control.
+ */
+export function DocsBackControl() {
+  const t = useT();
+  const { pathname, search } = useLocation();
+  const searchParams = useMemo(() => new URLSearchParams(search), [search]);
+  const target = resolveReturnTarget({
+    searchParams,
+    currentPathname: pathname,
+    currentSearch: search,
+  });
+  const queryStart = target === null ? -1 : target.indexOf("?");
+  const targetPathname =
+    target === null ? "" : queryStart === -1 ? target : target.slice(0, queryStart);
+  // Docs-side self-return guard (UI-18 §2.3, consumption side): the
+  // transport rejects the EXACT self (pathname+search with the param); a
+  // param-less return pointing at the SAME docs route would render «назад»
+  // to the page itself — a lie. returnParams.ts stays untouched (blueprint
+  // §5: consume only).
+  if (target === null || targetPathname === pathname) return null;
+  // The same title grammar as the Shell back control: the target's route
+  // name, «Назад: …» as the accessible name (WCAG 2.4.4 — the name carries
+  // the destination), «назад к …» as the visible label (the blueprint's
+  // wording; the arrow icon is aria-hidden decoration).
+  const place = routeTitle(targetPathname, t) ?? t("nav.backFallback");
+  return (
+    <div className="mb-2">
+      <Link
+        to={target}
+        aria-label={t("nav.backTo", { place })}
+        className={cn(
+          "inline-flex min-h-8 items-center gap-1 rounded-sm text-sm text-foreground-secondary transition-colors duration-instant hover:text-foreground",
+          FOCUS_RING,
+        )}
+      >
+        <ArrowLeft className="size-4 shrink-0 text-foreground-muted" aria-hidden="true" />
+        <span className="truncate">{t("docs.back.label", { place })}</span>
+      </Link>
     </div>
   );
 }

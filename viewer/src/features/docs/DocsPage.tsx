@@ -27,7 +27,7 @@ import {
 } from "./manifest";
 import { Markdown } from "./Markdown";
 import { ApiDocsBody, ApiTocDetails, ApiTocRail } from "./apiPresentation";
-import { DocsBreadcrumbs } from "./DocsBreadcrumbs";
+import { DocsBreadcrumbs, DocsBackControl } from "./DocsBreadcrumbs";
 import { DocsSearch } from "./DocsSearch";
 import { DocsNotFound } from "./DocsRedirects";
 import { formatSyncDate } from "./sidecar";
@@ -553,6 +553,7 @@ function ArticleView({ slug, page }: { slug: string; page: DocPage }) {
         <article className="min-w-0 max-w-scroll">
           {projectMeta ? (
             <div className="mb-3">
+              <DocsBackControl />
               <DocsBreadcrumbs
                 project={projectMeta}
                 category={category}
