@@ -346,4 +346,32 @@ describe("KoraHostField (KW4, blueprint-kw4 §3 / states-kw4 §1–2)", () => {
     const { container } = mountField({ model, selectedAgentId: "exec-fresh" });
     expect(container.textContent).toContain("У этого агента сессий нет");
   });
+
+  it("a11y: a host/agent route change moves the focus to the field's h2 (§7); the first mount never steals it", () => {
+    const { container, root } = mountField();
+    const headline = container.querySelector("h2");
+    // The fresh mount must not grab the reading focus.
+    expect(document.activeElement).not.toBe(headline);
+    // The route change (?agent= writes a new selectedAgentId) → the h2
+    // receives the focus — the reading position follows the selection.
+    act(() => {
+      root.render(
+        <I18nProvider initialLang="ru">
+          <MemoryRouter initialEntries={["/kora/host/abyss-laptop"]}>
+            <KoraHostField
+              host="abyss-laptop"
+              model={buildModel()}
+              quickFilter={null}
+              onQuickFilter={() => undefined}
+              onSelectAgent={() => undefined}
+              selectedAgentId="exec-pi-edge"
+            />
+          </MemoryRouter>
+        </I18nProvider>,
+      );
+    });
+    expect(document.activeElement).toBe(headline);
+    // The focusable headline carries the visible focus outline contract.
+    expect(headline?.getAttribute("tabindex")).toBe("-1");
+  });
 });
