@@ -225,8 +225,220 @@ function TreeNav({
   };
 
   return (
-    <nav aria-label={useT().string ? undefined : undefined} className="hidden" aria-hidden>
-      {/* placeholder never renders — see the real nav below */}
-    </nav>
+    <ul role="list" className="space-y-1">
+      {hosts.map((host) => (
+        <HostBranch
+          key={host.host ?? ""}
+          host={host}
+          // The search answers in one click: every visible branch is expanded
+          // while a query is live (toggles stay inert for persistence).
+          expanded={searching || open.has(host.host ?? "")}
+          active={(host.host ?? "") === activeHost}
+          activeAgentId={activeAgentId}
+          onToggle={toggle}
+        />
+      ))}
+      {unknown.map((host) => (
+        <UnknownRow
+          key={host.agents[0]?.executorId ?? "unknown"}
+          host={host}
+        />
+      ))}
+    </ul>
+  );
+}
+
+/** The aggregate state of ONE agent — same live > idle > dead rank as the
+ * host aggregate (koraWorkspaceModel), derived over the agent's sessions;
+ * zero sessions → no dot (no invented state). */
+function agentState(agent: KoraAgentNode): KoraSession["state"] | null {
+  if (agent.sessions.length === 0) return null;
+  if (agent.sessions.some((session) => session.state === "live")) return "live";
+  if (agent.sessions.some((session) => session.state === "idle")) return "idle";
+  return "dead";
+}
+
+/** One host branch: chevron disclosure + the host LINK (the route IS the
+ * selection — /kora/host/:host). Depth 2: the agents below are LEAVES —
+ * no session subtree (the sessions live in the field, grouped). */
+function HostBranch({
+  host,
+  expanded,
+  active,
+  activeAgentId,
+  onToggle,
+}: {
+  host: KoraHostNode;
+  expanded: boolean;
+  active: boolean;
+  activeAgentId: string | null;
+  onToggle: (key: string) => void;
+}) {
+  const t = useT();
+  const key = host.host ?? "";
+  const listId = `kora-tree-host-${key.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+
+  return (
+    <li>
+      <div className="flex items-center gap-1">
+        <DisclosureButton
+          expanded={expanded}
+          controls={listId}
+          onToggle={() => onToggle(key)}
+          label={key}
+        />
+        <Link
+          to={`/kora/host/${encodeURIComponent(key)}`}
+          aria-current={active ? "page" : undefined}
+          className={cn(
+            "flex min-h-12 flex-1 items-center gap-1.5 rounded-sm px-1 font-medium transition-colors duration-instant hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright md:min-h-6",
+            active && "bg-iris-tint",
+          )}
+        >
+          {host.state !== null ? (
+            <span
+              aria-hidden
+              className={cn("size-2 shrink-0 rounded-full", STATE_DOT[host.state])}
+            />
+          ) : null}
+          <span className="min-w-0 truncate">{key}</span>
+          {/* The aggregate state is never colour-only (1.4.1). */}
+          {host.state !== null ? (
+            <span className="sr-only">{t(`kora.session.state.${host.state}`)}</span>
+          ) : null}
+          <span
+            aria-hidden
+            className="ml-auto shrink-0 font-mono text-xs tabular-nums text-foreground-muted"
+          >
+            · {host.sessionCount}
+          </span>
+        </Link>
+      </div>
+      {expanded ? (
+        <ul id={listId} className="ml-4 mt-1 space-y-0.5 border-l border-myelin pl-2">
+          {host.agents.map((agent) => (
+            <AgentRow
+              key={agent.executorId}
+              host={key}
+              agent={agent}
+              active={active && agent.executorId === activeAgentId}
+            />
+          ))}
+          {host.agents.length === 0 ? (
+            <li className="py-1 text-xs text-foreground-muted">
+              {t("kora.tree.noAgents")}
+            </li>
+          ) : null}
+        </ul>
+      ) : null}
+    </li>
+  );
+}
+
+/** One agent LEAF (v2: no session subtree): the row links the field route
+ * with ?agent= — the field shows the sessions grouped. Current reads
+ * aria-current="true" (a selection, not the page itself). */
+function AgentRow({
+  host,
+  agent,
+  active,
+}: {
+  host: string;
+  agent: KoraAgentNode;
+  active: boolean;
+}) {
+  const t = useT();
+  const state = agentState(agent);
+  return (
+    <li>
+      <Link
+        to={`/kora/host/${encodeURIComponent(host)}?agent=${encodeURIComponent(agent.executorId)}`}
+        aria-current={active ? "true" : undefined}
+        title={agentLabel(agent)}
+        className={cn(
+          "flex min-h-12 items-center gap-1.5 rounded-sm px-1 transition-colors duration-instant hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright md:min-h-6",
+          active && "bg-iris-tint",
+        )}
+      >
+        {state !== null ? (
+          <span
+            aria-hidden
+            className={cn("size-1.5 shrink-0 rounded-full", STATE_DOT[state])}
+          />
+        ) : null}
+        <span className="min-w-0 truncate font-mono text-foreground-secondary">
+          {agentLabel(agent)}
+        </span>
+        {state !== null ? (
+          <span className="sr-only">{t(`kora.session.state.${state}`)}</span>
+        ) : null}
+        <span
+          aria-hidden
+          className="ml-auto shrink-0 font-mono text-xs tabular-nums text-foreground-muted"
+        >
+          · {agent.sessions.length}
+        </span>
+      </Link>
+    </li>
+  );
+}
+
+/** K-TREE-UNKNOWN: the registry-miss group keeps the mono executor id and
+ * does NOT route («нет имени — нет роута», честно) — no link, no chevron. */
+function UnknownRow({ host }: { host: KoraHostNode }) {
+  const t = useT();
+  const label = host.agents[0]?.executorId ?? "";
+  return (
+    <li className="flex min-h-12 items-center gap-1.5 px-1 md:min-h-6">
+      {host.state !== null ? (
+        <span
+          aria-hidden
+          className={cn("size-2 shrink-0 rounded-full", STATE_DOT[host.state])}
+        />
+      ) : null}
+      <span className="min-w-0 truncate font-mono text-foreground-secondary">
+        {label}
+      </span>
+      {host.state !== null ? (
+        <span className="sr-only">{t(`kora.session.state.${host.state}`)}</span>
+      ) : null}
+      <span
+        aria-hidden
+        className="ml-auto shrink-0 font-mono text-xs tabular-nums text-foreground-muted"
+      >
+        · {host.sessionCount}
+      </span>
+    </li>
+  );
+}
+
+/** The chevron disclosure: a ≥24px target with the state in the name (4.1.2). */
+function DisclosureButton({
+  expanded,
+  controls,
+  onToggle,
+  label,
+}: {
+  expanded: boolean;
+  controls: string;
+  onToggle: () => void;
+  label: string;
+}) {
+  const t = useT();
+  return (
+    <button
+      type="button"
+      aria-expanded={expanded}
+      aria-controls={controls}
+      onClick={onToggle}
+      aria-label={`${label}: ${expanded ? t("kora.tree.collapse") : t("kora.tree.expand")}`}
+      className="flex size-12 md:size-6 shrink-0 items-center justify-center rounded-sm text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+    >
+      {expanded ? (
+        <ChevronDown aria-hidden className="size-4" />
+      ) : (
+        <ChevronRight aria-hidden className="size-4" />
+      )}
+    </button>
   );
 }
