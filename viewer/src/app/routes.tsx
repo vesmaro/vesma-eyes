@@ -98,20 +98,12 @@ const AgentsHarnessesPage = lazy(() =>
 );
 // Кора (ADR 0019 rev.2 — week 0 CONTRACT-FIRST UI mocks): slice-1 list +
 // slice-2/3 transcript/chat, mock-gateway driven until the slices land.
+// KW4 (blueprint-kw4 §4): ONE route element for the WHOLE domain — /kora,
+// /kora/host/:host, /kora/hermes and /kora/:sessionId all mount KoraPage
+// (the HostsRosterPage A1 precedent: navigating between them reconciles
+// the same element type, the frame never re-assembles).
 const KoraPage = lazy(() =>
   import("@/features/kora/KoraPage").then((m) => ({ default: m.KoraPage })),
-);
-const KoraSessionPage = lazy(() =>
-  import("@/features/kora/KoraSessionPage").then((m) => ({
-    default: m.KoraSessionPage,
-  })),
-);
-// KW2 «Живой чат» (kora-rethink blueprint §5): the RESERVED cluster-chat
-// segment — /kora/hermes.
-const KoraHermesChatPage = lazy(() =>
-  import("@/features/kora/KoraHermesChatPage").then((m) => ({
-    default: m.KoraHermesChatPage,
-  })),
 );
 // Settings hub (UI-21): the /system/settings route composes «Исполнение»
 // (the AGW-3 section, reused verbatim) + «Автоматизация» + «Интерфейс»
@@ -351,22 +343,44 @@ export function buildRoutes(): RouteObject[] {
               // regardless of order, so /kora/hermes can never resolve into
               // a session lookup (and a registry id is never the bare
               // "hermes": ids are executor:native). Deep-linkable; the
-              // pinned nav entry «Чат с кластером» lands here.
+              // pinned tree row «Чат с кластером» lands here.
               path: "/kora/hermes",
               element: (
                 <Page>
                   <KoraGatewayContext.Provider value={makeKoraGateway()}>
-                    <KoraHermesChatPage />
+                    <KoraPage />
                   </KoraGatewayContext.Provider>
                 </Page>
               ),
             },
             {
+              // KW4 (blueprint-kw4 §4): the HOST FIELD route — «host» is a
+              // RESERVED static segment (same mechanism as /kora/hermes: it
+              // outranks :sessionId, and a registry id is always
+              // `executor:native`, never a bare word). `?agent=` rides the
+              // search string; the optional param keeps the bare /kora/host
+              // deep link honest (it renders the unknown-host empty — a
+              // registry never has the empty host). The retired header
+              // filter's `?host=X` deep link redirect rides INSIDE KoraPage
+              // (one compat wave, blueprint-kw4 §2/§4).
+              path: "/kora/host/:host?",
+              element: (
+                <Page>
+                  <KoraGatewayContext.Provider value={makeKoraGateway()}>
+                    <KoraPage />
+                  </KoraGatewayContext.Provider>
+                </Page>
+              ),
+            },
+            {
+              // The frozen session deep link (§9): the SAME KoraPage element
+              // — navigating field ↔ session reconciles one element type,
+              // the frame (and the right panel) never re-assembles.
               path: "/kora/:sessionId",
               element: (
                 <Page>
                   <KoraGatewayContext.Provider value={makeKoraGateway()}>
-                    <KoraSessionPage />
+                    <KoraPage />
                   </KoraGatewayContext.Provider>
                 </Page>
               ),
