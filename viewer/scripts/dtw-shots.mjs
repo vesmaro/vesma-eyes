@@ -201,16 +201,26 @@ async function main() {
         await shootTable(page, `dtw-${width}-table-scrolled.png`, { scrollLeft: 220 });
       }
       if (width === 1440) {
-        // Keyboard access: programmatic focus (no pointer interaction in
-        // this page) — the focus ring must land on the scroll region.
-        const focusVisible = await page.evaluate(
-          `(() => { const t = ${TABLE_PROBE};
-             const region = t.closest('[role="region"]');
-             region.focus();
-             return document.activeElement === region &&
-                    region.matches(':focus-visible'); })()`,
+        // Keyboard access, the honest path: real TAB presses from the page
+        // top until the scroll region takes focus (WCAG 2.1.1/2.4.7 —
+        // reachable in tab order AND focus-visible). Programmatic .focus()
+        // does not trigger :focus-visible in headless (script-focus
+        // heuristic), so it proves nothing about the keyboard path.
+        let tabs = 0;
+        let regionFocused = false;
+        for (; tabs < 250; tabs += 1) {
+          await page.keyboard.press("Tab");
+          regionFocused = await page.evaluate(
+            `(() => { const t = ${TABLE_PROBE};
+               const region = t.closest('[role="region"]');
+               return document.activeElement === region &&
+                      region.matches(':focus-visible'); })()`,
+          );
+          if (regionFocused) break;
+        }
+        console.log(
+          `[metrics 1440] region keyboard-focus-visible: ${regionFocused} (tabs=${tabs + 1})`,
         );
-        console.log(`[metrics 1440] region focus-visible: ${focusVisible}`);
         await page.evaluate(
           `(() => { const t = ${TABLE_PROBE};
              t.closest('[role="region"]').scrollIntoView({ block: "center" }); })()`,
