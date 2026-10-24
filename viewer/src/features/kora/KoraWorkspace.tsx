@@ -554,7 +554,9 @@ export function KoraWorkspace({
          * ПОКРЫТИЕ), ONE panel scroll. Below lg it is its own document-
          * flow card (the last rung of the ladder). */}
         <aside
-          aria-label={t("kora.panel.region")}
+          aria-label={
+            frameViewport ? t("kora.panel.region") : t("kora.meta.region")
+          }
           className="kora-scroll min-h-0 min-w-0 overflow-y-auto rounded-md border border-myelin bg-well lg:rounded-none lg:border-0"
         >
           {frameViewport ? (
