@@ -38,11 +38,13 @@ const TABLE_CLASS =
   "w-full min-w-max border-separate border-spacing-0 text-sm";
 /** §3.1 — the header never wraps: min column width = header width, so a
  * per-character header break is impossible by construction (the owner's
- * render auto-test pins both halves: nowrap present, anywhere absent). */
+ * render auto-test pins both halves: nowrap present, anywhere absent).
+ * The sticky edge carries the INTERACTIVE border token (not subtle): the
+ * rule must read as a boundary against the content sliding under it. */
 const TH_TABLE_RULES =
   "whitespace-nowrap group-data-[table-overflow]:first:sticky " +
   "group-data-[table-overflow]:first:left-0 group-data-[table-overflow]:first:bg-background " +
-  "group-data-[table-overflow]:first:border-r group-data-[table-overflow]:first:border-border-subtle";
+  "group-data-[table-overflow]:first:border-r group-data-[table-overflow]:first:border-border";
 /** §3.2 — cells wrap by words, never per character (`overflow-wrap:
  * break-word`); the spec-pinned 32ch ceiling means super-long tokens break
  * only inside a cell and only when necessary. §3.5 — the sticky first
@@ -53,7 +55,7 @@ const TD_TABLE_RULES =
   "max-w-[32ch] [overflow-wrap:break-word] [&_code]:[overflow-wrap:break-word] " +
   "group-data-[table-overflow]:first:sticky " +
   "group-data-[table-overflow]:first:left-0 group-data-[table-overflow]:first:bg-background " +
-  "group-data-[table-overflow]:first:border-r group-data-[table-overflow]:first:border-border-subtle";
+  "group-data-[table-overflow]:first:border-r group-data-[table-overflow]:first:border-border";
 
 /**
  * Typography themes of the unified text engine (ADR 0020, layer 2 — «одна

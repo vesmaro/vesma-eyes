@@ -34,6 +34,14 @@ import { tableOverflowState } from "./tableOverflow";
 const REMAINDER_FADE =
   "pointer-events-none absolute inset-y-0 right-0 w-8 rounded-r-md bg-gradient-to-l from-background to-transparent";
 
+/**
+ * Keyboard scroll step as a share of the visible width (APG scrollable-
+ * region pattern: a focused region scrolls on ArrowLeft/ArrowRight). A
+ * near-page step — fixed 48px minimum for tiny wrappers.
+ */
+const KEY_SCROLL_RATIO = 0.85;
+const KEY_SCROLL_MIN_PX = 48;
+
 export function TableScroll({
   children,
   className,
@@ -85,6 +93,27 @@ export function TableScroll({
         aria-label={t("common.tableScrollRegion")}
         tabIndex={0}
         onScroll={measure}
+        onKeyDown={(event) => {
+          // Host apps carry global arrow-key handlers (palettes, hotkeys)
+          // that swallow the browser's native focused-region scrolling —
+          // own the keys explicitly while THIS region overflows.
+          if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+          const el = ref.current;
+          if (el === null || el.scrollWidth <= el.clientWidth) return;
+          event.preventDefault();
+          event.stopPropagation();
+          const step = Math.max(
+            KEY_SCROLL_MIN_PX,
+            el.clientWidth * KEY_SCROLL_RATIO,
+          );
+          // "instant" on purpose: the app's global html{scroll-behavior:
+          // smooth} would otherwise animate every key-step (sluggish hold-
+          // to-repeat); a table column step is a position jump, no motion.
+          el.scrollBy({
+            left: event.key === "ArrowRight" ? step : -step,
+            behavior: "instant",
+          });
+        }}
         data-table-overflow={state.overflow || undefined}
         className={cn(
           "group overflow-x-auto rounded-md border border-border-subtle",
