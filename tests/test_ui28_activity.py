@@ -39,6 +39,26 @@ from conftest import DATA_DIR
 DB_PATH = DATA_DIR / "board.db"
 
 
+@pytest.fixture(autouse=True)
+def _fresh_assignment_limiters(app_module, monkeypatch):
+    """Assignment rate limiting rides module-global RateLimiters in
+    server/app (UI class 10/60s, machine class 30/60s). The shared
+    session-scoped client means earlier files burn the UI budget before
+    this file runs: POST /api/assignments answered 429 in full-suite
+    order (deterministically, 3/3) while solo runs stayed green. Reset
+    both limiters per test — same house pattern as
+    test_api_task_drafts._fresh_limiter."""
+    from server.security import RateLimiter
+    monkeypatch.setattr(
+        app_module, "_assignment_ui_limiter",
+        RateLimiter(limit=app_module._ASSIGNMENT_UI_RATE_LIMIT,
+                    window=app_module._ASSIGNMENT_UI_RATE_WINDOW))
+    monkeypatch.setattr(
+        app_module, "_assignment_limiter",
+        RateLimiter(limit=app_module._ASSIGNMENT_RATE_LIMIT,
+                    window=app_module._ASSIGNMENT_RATE_WINDOW))
+
+
 # ------------------------------------------------------------------ helpers
 def _db() -> sqlite3.Connection:
     db = sqlite3.connect(DB_PATH)
