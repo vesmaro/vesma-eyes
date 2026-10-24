@@ -192,12 +192,14 @@ describe("Kora workspace snapshots (KW4 «Поле хоста + правая п�
     expect(html).toMatchSnapshot();
   });
 
-  it("the v2 tree routes hosts and agents (depth 2) — the session deep link lives in the FIELD", async () => {
+  it("the v2 tree routes hosts (depth 2) — the session deep link lives in the FIELD", async () => {
     const html = await renderKoraPage("ru");
     expect(html).toContain('href="/kora/host/abyss-laptop"');
-    expect(html).toContain(
-      'href="/kora/host/abyss-laptop?agent=exec-zcode-main"',
-    );
+    expect(html).toContain('href="/kora/host/pi-edge"');
+    // The agent ?agent= rows render EXPANDED only (the open-set seeds in a
+    // client effect — SSR renders the collapsed frame); the interaction pin
+    // lives in KoraTree.test.tsx («agent leaves carry ?agent=»).
+    expect(html).not.toContain("?agent=");
     // Gate §9.4: no leaf-session links in the tree.
     expect(html).not.toContain('href="/kora/exec-zcode-main%3Asess_7f3a91"');
   });
