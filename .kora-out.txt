@@ -1,0 +1,16 @@
+2436:  "kora.workspace.title": "Kora · host sessions",
+2439:  "kora.summary.hosts": "hosts: {{n}}",
+2440:  "kora.summary.running": "running sessions: {{n}}",
+2441:  "kora.summary.day": "in 24h: {{n}}",
+2444:  "kora.tree.title": "Hosts and agents",
+2445:  "kora.tree.explain":
+2469:  "kora.panel.region": "Tree and meta",
+2470:  "kora.tree.searchLabel": "Search hosts and agents",
+2567:  "kora.meta.region": "Meta panel",
+2577:  "kora.nav.clusterChat": "Chat with the cluster",
+2578:  "kora.nav.clusterChatHint": "Open the Hermes cluster chat",
+---RU-INVITE---
+src/i18n/ru.ts:2605:  "kora.workzone.invite": "Выберите сессию — здесь откроется её ход",
+---EN-EMPTY---
+2448:  "kora.tree.emptyNoExecutors": "No hosts yet",
+2578:  "kora.nav.clusterChatHint": "Open the Hermes cluster chat",
