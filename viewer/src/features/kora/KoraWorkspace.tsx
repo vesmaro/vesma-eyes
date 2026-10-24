@@ -189,18 +189,6 @@ export function KoraWorkspace({
       sessionId === null ? null : (items.find((item) => item.id === sessionId) ?? null),
     [items, sessionId],
   );
-  // states-kw4 §4 — the session-mode breadcrumb's host: the registry group
-  // that owns the session's executor. A registry miss (unknown-host group)
-  // reads «← Кора» — no invented host name, one way back.
-  const sessionHost = useMemo(() => {
-    if (session === null) return null;
-    for (const group of [...model.hosts, ...model.unknown]) {
-      if (group.agents.some((agent) => agent.executorId === session.executor_id)) {
-        return group.host;
-      }
-    }
-    return null;
-  }, [session, model]);
   // A deep link may point past the loaded pages: keep appending until the
   // session turns up or the cursor honestly ends (one query, no second
   // read). The ref keeps the effect deps stable; items.length re-triggers
@@ -224,6 +212,19 @@ export function KoraWorkspace({
     [items, executors.data],
   );
   const summary = useMemo(() => koraSummary(model, items), [model, items]);
+
+  // states-kw4 §4 — the session-mode breadcrumb's host: the registry group
+  // that owns the session's executor. A registry miss (unknown-host group)
+  // reads «← Кора» — no invented host name, one way back.
+  const sessionHost = useMemo(() => {
+    if (session === null) return null;
+    for (const group of [...model.hosts, ...model.unknown]) {
+      if (group.agents.some((agent) => agent.executorId === session.executor_id)) {
+        return group.host;
+      }
+    }
+    return null;
+  }, [session, model]);
 
   // The route IS the page context (KW4): ?agent= selects the field's agent
   // (empty → the freshest default, K-CTX-NO-AGENT). The quick filter stays
