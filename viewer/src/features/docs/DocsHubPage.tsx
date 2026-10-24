@@ -232,7 +232,7 @@ function HubCards({
       <p className="border-b border-border-subtle pb-2 text-xs font-medium text-foreground-secondary">
         {t("docs.hub.cardsLabel")}
       </p>
-      {/* Two columns: the hub lives in the section's 72ch reading column
+      {/* Two columns: the hub lives in the section's 80ch reading column
        * (docsField — owner directive 2026-10-22), where a 4-card row cannot
        * survive; ~350px cards stay readable. */}
       <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">

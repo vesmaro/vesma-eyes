@@ -106,6 +106,23 @@ describe("our article (/docs/vesma-eyes/<slug>)", () => {
     await actUnmount(root);
   });
 
+  it("the article reads the docs measure 80ch (docs-tables-width W2), not the scroll measure", async () => {
+    const { root, container } = await mountDocs("/docs/vesma-eyes/upgrade");
+    await actWaitUntil(() => {
+      expect(container.querySelector("article")?.className ?? "").toContain(
+        "max-w-docs",
+      );
+    });
+    const article = container.querySelector("article")!;
+    expect(article.className).toContain("max-w-docs");
+    expect(article.className).not.toContain("max-w-scroll");
+    // The field wrapper: reading regime widened to 6xl, uncapped at lg+.
+    const field = container.firstElementChild as HTMLElement;
+    expect(field.className).toContain("max-w-6xl");
+    expect(field.className).toContain("lg:max-w-none");
+    await actUnmount(root);
+  });
+
   it("UI=en over a bilingual own page renders the EN mirror — no «оригинал» badge (post-W3)", async () => {
     const { root, container } = await mountDocs("/docs/vesma-eyes/upgrade", "en");
     await actWaitUntil(() => {

@@ -167,7 +167,7 @@ export function DocsCategoryPage() {
     );
   }
   // The section's unified field (docsField — owner directive 2026-10-22):
-  // the same centered 72ch column as the article pages, so the H1 axis and
+  // the same centered 80ch column as the article pages, so the H1 axis and
   // the reading measure never jump between surfaces.
   return (
     <div className={docsFieldClass()}>

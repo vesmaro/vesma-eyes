@@ -11,10 +11,11 @@ import { cn } from "@/lib/utils";
  * - "operational" (операционный — Задачи, Агенты, Кора, /system/*): the full
  *   content width; dense tool surfaces use the whole board.
  * - "reading" (читальный — Доки; owner directive 2026-10-21): a centered
- *   max-w-5xl column — the BASE of the docs field below lg. Since the
+ *   max-w-6xl column — the BASE of the docs field below lg (docs-tables-width
+ *   W2 widened the field 5xl → 6xl for the 80ch article + rail). Since the
  *   owner's layout directives of 2026-10-22 the /docs surfaces own their
  *   lg+ geometry themselves through features/docs/docsField.ts (the
- *   group-centered [article 72ch | TOC 256px] scheme) and uncap this
+ *   group-centered [article 80ch | TOC 256px] scheme) and uncap this
  *   wrapper at lg+; this regime stays the honest description of the
  *   narrow-viewport column and of any docs page rendered without its
  *   field (skeletons, embedded previews).
@@ -33,7 +34,9 @@ export type PageDensity = "showcase" | "operational" | "reading";
 const PAGE_GRID: Record<PageDensity, string> = {
   showcase: "mx-auto w-full max-w-4xl",
   operational: "w-full",
-  reading: "mx-auto w-full max-w-5xl",
+  // docs-tables-width W2 (blueprint §4): the docs field widened 5xl → 6xl
+  // (1152px) so the 80ch article + TOC rail fit side by side from lg up.
+  reading: "mx-auto w-full max-w-6xl",
 };
 
 export function pageGridClass(
