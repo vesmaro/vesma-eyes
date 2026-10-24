@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
+import { FileText } from "lucide-react";
 import { useI18n, useT } from "@/i18n";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
-import { FOCUS_RING } from "@/components/TextEngine/core/constants";
 import { docCategory, docCategoriesForProject } from "./categories";
+import { DocCard, DocCardGrid } from "./DocCards";
+import { DocsBreadcrumbs, DocsBackControl } from "./DocsBreadcrumbs";
 import {
   firstParagraph,
   getManifest,
@@ -15,15 +16,21 @@ import {
   useDocsManifestFailed,
 } from "./manifest";
 import { loadMarkdown } from "./markdownModules";
+import { pagesLabel } from "./docsFormat";
 import { DEFAULT_PROJECT, docProject, docUrl } from "./projects";
+import { formatSyncDate } from "./sidecar";
 import { DocsManifestError, DocsNotFound } from "./DocsRedirects";
 import { DocsSearch } from "./DocsSearch";
 import { DOCS_COLUMN, docsFieldClass } from "./docsField";
 
 /**
- * `/docs/:project/c/:category` (design spec §4): the category header, then a
- * LIST of page rows (never a second card grid — анти-слоп §14.5). The
- * category must belong to the URL's project — a cross-project URL is a miss.
+ * `/docs/:project/c/:category` (design spec §4 + blueprint-hubs-nav-intro
+ * W1): the category header, then the pages as DATA cards — the ONE card
+ * grammar (title + the body's first paragraph + the version/sync stamp,
+ * mono tabular; D-CARD-NO-DESC: no paragraph → no description, nothing is
+ * invented). The rowInfos mechanics stay: descriptions come from the
+ * already-bundled md modules — zero new network requests. The category
+ * must belong to the URL's project — a cross-project URL is a miss.
  */
 
 interface RowInfo {
@@ -32,6 +39,8 @@ interface RowInfo {
   description: string;
   lastVerified: string;
   project: string;
+  /** Imported pages carry the reader-facing repo name for the meta line. */
+  repoDisplay: string | null;
 }
 
 /** Rows of one category: manifest order + descriptions from the bodies. */
@@ -49,6 +58,7 @@ async function rowInfos(categorySlug: string, lang: "ru" | "en"): Promise<RowInf
           description: parsed ? firstParagraph(parsed.body) : "",
           lastVerified: page.lastVerified,
           project: page.project,
+          repoDisplay: page.provenance?.repoDisplay ?? null,
         };
       }),
   );
@@ -63,20 +73,24 @@ function RowsSkeleton() {
       aria-label={t("docs.loading")}
       aria-hidden="true"
     >
-      {Array.from({ length: 3 }, (_, index) => (
-        <div
-          key={index}
-          className="shimmer border-b border-border-subtle px-4 py-4 last:border-b-0"
-        >
-          <Skeleton className="h-4 w-1/3" />
-          <Skeleton className="mt-2 h-3 w-2/3" />
-        </div>
-      ))}
+      <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {Array.from({ length: 4 }, (_, index) => (
+          <div
+            key={index}
+            className="shimmer rounded-lg border border-border-subtle bg-well p-5"
+          >
+            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="mt-3 h-3 w-full" />
+            <Skeleton className="mt-2 h-3 w-2/3" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
-function CategoryRows({ categorySlug }: { categorySlug: string }) {
+function CategoryCards({ categorySlug }: { categorySlug: string }) {
+  const t = useT();
   const { lang } = useI18n();
   // U6 honest error slot: a FAILED manifest build surfaces here with
   // «Повторить» instead of an eternal skeleton (the rejection previously
@@ -112,36 +126,45 @@ function CategoryRows({ categorySlug }: { categorySlug: string }) {
     );
   }
   if (rows === null) return <RowsSkeleton />;
+  // D-CAT-EMPTY (defensive here — the manifest gate forbids empty
+  // categories, but the honest zero beats a silent blank if one appears):
+  // the counter speaks, the section never renders as if pages existed.
+  if (rows.length === 0) {
+    return (
+      <p className="text-sm text-foreground-secondary">
+        {/* The ONE page-count formatter (review P3) — the same phrase the
+         * cards and the hub speak, not a hand-rolled key call. */}
+        {pagesLabel(lang, 0, t)}
+      </p>
+    );
+  }
   return (
-    <div>
+    <DocCardGrid label={t("docs.category.pagesLabel")}>
       {rows.map((row) => (
-        <Link
+        <DocCard
           key={row.slug}
           to={docUrl(row.slug)}
-          className={cn(
-            "group flex min-h-14 items-start justify-between gap-4 border-b border-border-subtle px-4 py-4",
-            "transition-colors duration-instant last:border-b-0 hover:bg-elevated",
-            FOCUS_RING,
-          )}
-        >
-          <span className="min-w-0">
-            <span className="block text-base font-medium text-foreground transition-colors duration-instant group-hover:text-iris-bright">
-              {row.title}
-            </span>
-            {row.description !== "" ? (
-              <span className="mt-0.5 line-clamp-2 block text-sm text-foreground-secondary">
-                {row.description}
+          icon={FileText}
+          title={row.title}
+          description={row.description === "" ? undefined : row.description}
+          labels={{ here: t("docs.card.here"), open: t("docs.card.open") }}
+          meta={
+            <>
+              {/* Own corpus: a version stamp (vX.Y.Z). Imported corpus: the
+               * sync date in the reader's calendar form + the display repo. */}
+              <span>
+                {row.project === DEFAULT_PROJECT
+                  ? `v${row.lastVerified}`
+                  : formatSyncDate(row.lastVerified)}
               </span>
-            ) : null}
-          </span>
-          <span className="shrink-0 pt-0.5 text-xs text-foreground-muted">
-            {row.project === DEFAULT_PROJECT
-              ? `v${row.lastVerified}`
-              : row.lastVerified}
-          </span>
-        </Link>
+              {row.repoDisplay ? (
+                <span className="text-foreground-muted">{row.repoDisplay}</span>
+              ) : null}
+            </>
+          }
+        />
       ))}
-    </div>
+    </DocCardGrid>
   );
 }
 
@@ -172,6 +195,13 @@ export function DocsCategoryPage() {
   return (
     <div className={docsFieldClass()}>
       <div className={DOCS_COLUMN}>
+        {/* The unified trail (blueprint W2): Книга › Категория — the first
+            crumb is the book's TOC, one click to the hub from any depth.
+            W3: the context back control rides ABOVE the trail. */}
+        <div className="mb-4">
+          <DocsBackControl />
+          <DocsBreadcrumbs project={projectMeta} category={category} />
+        </div>
         <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="flex min-w-0 items-start gap-3">
             <category.icon
@@ -189,7 +219,7 @@ export function DocsCategoryPage() {
           </div>
           <DocsSearch className="w-full md:max-w-xs" />
         </div>
-        <CategoryRows categorySlug={category.slug} />
+        <CategoryCards categorySlug={category.slug} />
       </div>
     </div>
   );

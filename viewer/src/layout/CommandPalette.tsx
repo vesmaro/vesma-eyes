@@ -161,12 +161,20 @@ function PaletteBody() {
     const nav: PaletteItem[] = [];
     for (const domain of NAV_DOMAINS) {
       const to = domain.linkTo ?? domain.to;
+      // W3 docs-hubs-nav (UI-18): the palette is an enumerated Shell ENTRY —
+      // a docs row carries the `?return=` context of wherever the palette
+      // was opened (the hint keeps the clean canonical path). Other domains
+      // are outside this wave's boundary.
+      const href =
+        to === "/docs" || to.startsWith("/docs/")
+          ? withReturn(to, location.pathname, location.search)
+          : to;
       nav.push({
         id: `nav:d${domain.to}`,
         group: "nav",
         label: t(domain.key),
         hint: to,
-        to,
+        to: href,
       });
       for (const section of domain.sections ?? []) {
         nav.push({
@@ -250,6 +258,8 @@ function PaletteBody() {
     executors.data,
     buildTaskTo,
     buildMemoryTo,
+    location.pathname,
+    location.search,
     now,
   ]);
 

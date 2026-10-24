@@ -8,7 +8,7 @@ import {
   Languages,
 } from "lucide-react";
 import { useI18n, useT, type TranslationKey } from "@/i18n";
-import { Badge, badgeVariants } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,17 +27,25 @@ import {
 } from "./manifest";
 import { Markdown } from "./Markdown";
 import { ApiDocsBody, ApiTocDetails, ApiTocRail } from "./apiPresentation";
+import { DocsBreadcrumbs, DocsBackControl } from "./DocsBreadcrumbs";
 import { DocsSearch } from "./DocsSearch";
 import { DocsNotFound } from "./DocsRedirects";
 import { formatSyncDate } from "./sidecar";
 import { docSlugForPath } from "./docsNav";
 import { handleTocClick } from "./tocScroll";
-import { DEFAULT_PROJECT, docUrl, projectOfDocSlug, categoryUrl } from "./projects";
+import {
+  DEFAULT_PROJECT,
+  docProject,
+  docUrl,
+  projectOfDocSlug,
+} from "./projects";
 import { DOCS_COLUMN, DOCS_GROUP_ROW, docsFieldClass } from "./docsField";
 
 /**
- * `/docs/:project/*` (design spec §5/§6/§7/§9): category chip → version
- * badge → provenance badge (imported pages) → locale badge → h1 → article
+ * `/docs/:project/*` (design spec §5/§6/§7/§9; blueprint-hubs-nav-intro W2):
+ * the unified breadcrumb trail (Книга › Категория › Страница — replaces the
+ * old category chip) → version badge → provenance badge (imported pages) →
+ * locale badge → h1 → article
  * at the 72ch reading measure, TOC rail (sticky, scroll-spy) NEXT to the
  * article from lg up, native <details> TOC above the h1 on narrow screens,
  * prev/next at the end confined to the page's OWN project (spec §9.7).
@@ -510,6 +518,9 @@ function ArticleView({ slug, page }: { slug: string; page: DocPage }) {
   const toc = useMemo(() => (body === null ? [] : extractHeadings(body)), [body]);
   const activeId = useScrollSpy(toc.map((item) => item.id));
   const category = docCategory(page.category);
+  // The trail's book crumb (blueprint W2). The manifest gate keeps every
+  // page's project in the registry — the null branch is defensive honesty.
+  const projectMeta = docProject(page.project);
   // The generated board reference gets the API presentation: endpoint
   // cards, method chips, labeled subsections, nested TOC (docs-api-
   // readability). Every other page keeps the default article typography.
@@ -540,23 +551,24 @@ function ArticleView({ slug, page }: { slug: string; page: DocPage }) {
          * edge). Centering is the ROW's job; mx-auto is for rail-less
          * pages' block columns (DOCS_COLUMN). */}
         <article className="min-w-0 max-w-scroll">
-          {/* Meta row: category chip → version badge → provenance badge →
-              locale badge, RUS/ORIG + search right (design spec §6.1). */}
+          {/* The context back control sits OUTSIDE the defensive projectMeta
+              gate (review P3): a return must survive even the impossible
+              unknown-project branch — the trail, not the exit, may degrade. */}
+          <DocsBackControl />
+          {projectMeta ? (
+            <div className="mb-3">
+              <DocsBreadcrumbs
+                project={projectMeta}
+                category={category}
+                pageTitle={titleFor(page, readingLocale)}
+              />
+            </div>
+          ) : null}
+          {/* Meta row: version badge → provenance badge → locale badge,
+              RUS/ORIG + search right (design spec §6.1; the category chip
+              left the row to the breadcrumb in W2). */}
           <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex flex-wrap items-center gap-2">
-              {category ? (
-                <Link
-                  to={categoryUrl(page.project, category.slug)}
-                  aria-label={t(category.titleKey)}
-                  className={cn(
-                    badgeVariants({ variant: "default" }),
-                    "transition-colors duration-instant hover:text-foreground",
-                    FOCUS_RING,
-                  )}
-                >
-                  {t(category.titleKey)}
-                </Link>
-              ) : null}
               {page.project === DEFAULT_PROJECT ? (
                 // The release badge is OUR versioning; imported pages carry
                 // their freshness in the provenance badge instead (spec §6).

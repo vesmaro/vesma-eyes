@@ -1,10 +1,11 @@
 import { Link, Navigate, useParams } from "react-router";
-import { ArrowRight, Languages } from "lucide-react";
+import { Languages } from "lucide-react";
 import { useI18n, useT } from "@/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
-import { FOCUS_RING, LINK_CLASS } from "@/components/TextEngine/core/constants";
+import { LINK_CLASS } from "@/components/TextEngine/core/constants";
+import { DocCard, DocCardGrid } from "./DocCards";
+import { DocsBreadcrumbs, DocsBackControl } from "./DocsBreadcrumbs";
 import { docCategoriesForProject } from "./categories";
 import { pagesLabel } from "./docsFormat";
 import {
@@ -21,7 +22,6 @@ import {
   docUrl,
   categoryUrl,
   DOC_PROJECTS,
-  DEFAULT_PROJECT,
   type DocProject,
 } from "./projects";
 import { formatSyncDate } from "./sidecar";
@@ -32,10 +32,13 @@ import { DOCS_COLUMN, docsFieldClass } from "./docsField";
 
 /**
  * `/docs/:project` — the hub cover (design spec §4): a book title page, not
- * a landing. One form for all three projects: project icon + h1, ONE intro
+ * a landing. One form for ALL projects: project icon + h1, ONE intro
  * paragraph (chrome i18n — L3 layer), an honest status line (locale coverage
  * + provenance for imported projects), «с чего начать» text links, then the
- * categories as ROWS (never a card grid — анти-слоп §14.10).
+ * DATA card grids — the four hub books and the categories (blueprint-
+ * hubs-nav-intro W1: the owner directive «карточки на ВСЕХ хабах» cancels
+ * the анти-слоп verdict §14.10 FOR THE TOCs; the slop ban — tiles without
+ * data — stays, every card carries its counters).
  */
 
 /** Honest locale-coverage wording, derived from the manifest (spec §4.1.3). */
@@ -211,14 +214,15 @@ function hubStats(
 }
 
 /**
- * The hub cards (U6; SPEC-2026-10-07 «Доки: из v12 — карточки хабов со
- * статистикой»): the corpus map as v12 well-cards on the section root —
- * the featured CURRENT hub first, then the three siblings, each with its
- * data counters (pages / freshness / provenance, mono tabular). Counters
- * are DATA; zero living layer (the domain verdict). The current hub's card
- * is marked aria-current and says «вы здесь» instead of a CTA.
+ * The hub cards (U6; blueprint-hubs-nav-intro W1 — the corpus map on EVERY
+ * project hub): the v12 well-card grammar — the featured CURRENT hub first,
+ * then the three siblings, each with its data counters (pages / freshness /
+ * provenance, mono tabular). Counters are DATA; zero living layer (the
+ * domain verdict). The current hub's card is marked aria-current and says
+ * «вы здесь» instead of a CTA (D-CARD-CURRENT); the whole card is the route.
  */
-function HubCards({
+/** Exported for the W1 state tests (D-CARD-CURRENT, the every-hub gate). */
+export function HubCards({
   activeProject,
   manifest,
 }: {
@@ -228,49 +232,23 @@ function HubCards({
   const t = useT();
   const { lang } = useI18n();
   return (
-    <section aria-label={t("docs.hub.cardsLabel")}>
-      <p className="border-b border-border-subtle pb-2 text-xs font-medium text-foreground-secondary">
-        {t("docs.hub.cardsLabel")}
-      </p>
-      {/* Two columns: the hub lives in the section's 72ch reading column
-       * (docsField — owner directive 2026-10-22), where a 4-card row cannot
-       * survive; ~350px cards stay readable. */}
-      <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {DOC_PROJECTS.map((project) => {
-          const pages = manifest.pages.filter((page) => page.project === project.slug);
-          const stats = hubStats(project, pages);
-          const Icon = project.icon;
-          const current = project.slug === activeProject.slug;
-          return (
-            <article
-              key={project.slug}
-              aria-current={current ? "page" : undefined}
-              className={cn(
-                "flex min-h-60 flex-col gap-3 rounded-lg border bg-well p-5 shadow-well",
-                current ? "border-iris" : "border-border-subtle",
-              )}
-            >
-              <div className="flex min-w-0 items-center gap-2">
-                <Icon
-                  className="size-5 shrink-0 text-foreground-secondary"
-                  aria-hidden="true"
-                />
-                <h3
-                  className={cn(
-                    "min-w-0 truncate text-base font-semibold text-foreground",
-                    // The featured «слово»: the current hub's title is the
-                    // one Lora display on the strip (the v12 hub-card canon).
-                    current && "font-scroll text-lg",
-                  )}
-                >
-                  {project.name}
-                </h3>
-              </div>
-              <hr className="border-border-subtle" />
-              <p className="text-sm leading-relaxed text-foreground-secondary">
-                {t(project.ledeKey)}
-              </p>
-              <div className="grid gap-1 font-mono text-xs tabular-nums text-foreground-secondary">
+    <DocCardGrid label={t("docs.hub.cardsLabel")}>
+      {DOC_PROJECTS.map((project) => {
+        const pages = manifest.pages.filter((page) => page.project === project.slug);
+        const stats = hubStats(project, pages);
+        const current = project.slug === activeProject.slug;
+        return (
+          <DocCard
+            key={project.slug}
+            to={`/docs/${project.slug}`}
+            icon={project.icon}
+            title={project.name}
+            description={t(project.ledeKey)}
+            tall
+            current={current}
+            labels={{ here: t("docs.card.here"), open: t("docs.card.open") }}
+            meta={
+              <>
                 <span>{pagesLabel(lang, stats.count, t)}</span>
                 {stats.updated !== "" ? (
                   <span>{t("docs.hub.cardUpdated", { stamp: stats.updated })}</span>
@@ -282,28 +260,12 @@ function HubCards({
                       : stats.prov}
                   </span>
                 ) : null}
-              </div>
-              {current ? (
-                <p className="mt-auto text-xs text-foreground-muted">
-                  {t("docs.hub.cardHere")}
-                </p>
-              ) : (
-                <Link
-                  to={`/docs/${project.slug}`}
-                  className={cn(
-                    "mt-auto inline-flex items-center gap-1 text-sm font-medium text-foreground-secondary transition-colors duration-instant hover:text-iris-bright",
-                    FOCUS_RING,
-                  )}
-                >
-                  {t("docs.hub.cardOpen")}
-                  <ArrowRight className="size-3.5" aria-hidden="true" />
-                </Link>
-              )}
-            </article>
-          );
-        })}
-      </div>
-    </section>
+              </>
+            }
+          />
+        );
+      })}
+    </DocCardGrid>
   );
 }
 
@@ -345,7 +307,14 @@ function StartHere({
   );
 }
 
-function CategoryRows({
+/**
+ * The category cards (blueprint-hubs-nav-intro W1 — the ONE card grammar on
+ * the second level): same shape as the hub cards — icon + title + the i18n
+ * lede + the honest page counter (D-CAT-EMPTY: a category without pages
+ * shows «0 страниц», it never hides — hiding would lie about the TOC).
+ */
+/** Exported for the W1 state tests (D-CAT-EMPTY: the honest «0 страниц»). */
+export function CategoryCards({
   project,
   manifest,
 }: {
@@ -355,44 +324,24 @@ function CategoryRows({
   const t = useT();
   const { lang } = useI18n();
   return (
-    <div>
+    <DocCardGrid label={t("docs.hub.categories")}>
       {docCategoriesForProject(project.slug).map((category) => {
-        const Icon = category.icon;
         const count = manifest.pages.filter(
           (page) => page.category === category.slug,
         ).length;
         return (
-          <Link
+          <DocCard
             key={category.slug}
             to={categoryUrl(project.slug, category.slug)}
-            aria-label={t(category.titleKey)}
-            className={cn(
-              "group flex min-h-14 items-center justify-between gap-4 border-b border-border-subtle px-4 py-4",
-              "transition-colors duration-instant last:border-b-0 hover:bg-elevated",
-              FOCUS_RING,
-            )}
-          >
-            <span className="flex min-w-0 items-start gap-3">
-              <Icon
-                className="mt-1 size-5 shrink-0 text-foreground-secondary"
-                aria-hidden="true"
-              />
-              <span className="min-w-0">
-                <span className="block text-base font-medium text-foreground transition-colors duration-instant group-hover:text-iris-bright">
-                  {t(category.titleKey)}
-                </span>
-                <span className="mt-0.5 block truncate text-sm text-foreground-secondary">
-                  {t(category.descriptionKey)}
-                </span>
-              </span>
-            </span>
-            <span className="shrink-0 text-xs text-foreground-muted">
-              {pagesLabel(lang, count, t)}
-            </span>
-          </Link>
+            icon={category.icon}
+            title={t(category.titleKey)}
+            description={t(category.descriptionKey)}
+            labels={{ here: t("docs.card.here"), open: t("docs.card.open") }}
+            meta={<span>{pagesLabel(lang, count, t)}</span>}
+          />
         );
       })}
-    </div>
+    </DocCardGrid>
   );
 }
 
@@ -406,6 +355,14 @@ function HubCover({ project }: { project: DocProject }) {
   return (
     <div className={docsFieldClass()}>
       <div className={DOCS_COLUMN}>
+        {/* The unified trail (blueprint W2): the book crumb IS this page —
+            a lone aria-current crumb keeps the grammar uniform; below lg the
+            hub has no docs parent, the line stays empty (the <lg verdict).
+            W3: the context back control rides ABOVE the trail. */}
+        <div className="mb-4">
+          <DocsBackControl />
+          <DocsBreadcrumbs project={project} category={null} />
+        </div>
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="flex min-w-0 items-start gap-3">
             <Icon
@@ -429,18 +386,14 @@ function HubCover({ project }: { project: DocProject }) {
             <div className="mb-6">
               <StartHere project={project} manifest={manifest} />
             </div>
-            {/* U6: the corpus map — v12 hub cards with data counters, on the
-             * section root (the default hub) only; the /docs root keeps its
-             * instant redirect into this hub (design spec §8 untouched). */}
-            {project.slug === DEFAULT_PROJECT ? (
-              <div className="mb-6">
-                <HubCards activeProject={project} manifest={manifest} />
-              </div>
-            ) : null}
-            <p className="border-b border-border-subtle pb-2 text-xs font-medium text-foreground-secondary">
-              {t("docs.hub.categories")}
-            </p>
-            <CategoryRows project={project} manifest={manifest} />
+            {/* U6 + blueprint-hubs-nav-intro W1: the corpus map — v12 hub
+             * cards with data counters on EVERY project hub; the /docs root
+             * keeps its instant redirect into the default hub (design spec
+             * §8 untouched). */}
+            <div className="mb-6">
+              <HubCards activeProject={project} manifest={manifest} />
+            </div>
+            <CategoryCards project={project} manifest={manifest} />
           </>
         ) : manifestFailed ? (
           <HubError />
