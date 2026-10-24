@@ -150,8 +150,10 @@ describe("Kora session screen snapshots (union И1)", () => {
     expect(html).not.toContain("в очереди");
     expect(html).not.toContain("доставлено");
     expect(html).not.toContain("Доставлено");
-    // The retired mock-era chat panel is gone.
-    expect(html).not.toContain("Чат");
+    // The retired mock-era chat panel is gone. KW4 note: the bare word
+    // «Чат» is allowed only inside the tree pin «Чат с кластером», so the
+    // guard matches an element whose whole text is exactly «Чат».
+    expect(html).not.toMatch(/>Чат</);
     expect(html).not.toContain("PIN");
     expect(html).not.toContain("рулени");
     expect(html).toMatchSnapshot();
