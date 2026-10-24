@@ -5,6 +5,7 @@ import { useI18n, useT } from "@/i18n";
 import { Skeleton } from "@/components/ui/skeleton";
 import { docCategory, docCategoriesForProject } from "./categories";
 import { DocCard, DocCardGrid } from "./DocCards";
+import { DocsBreadcrumbs } from "./DocsBreadcrumbs";
 import {
   firstParagraph,
   getManifest,
@@ -191,6 +192,11 @@ export function DocsCategoryPage() {
   return (
     <div className={docsFieldClass()}>
       <div className={DOCS_COLUMN}>
+        {/* The unified trail (blueprint W2): Книга › Категория — the first
+            crumb is the book's TOC, one click to the hub from any depth. */}
+        <div className="mb-4">
+          <DocsBreadcrumbs project={projectMeta} category={category} />
+        </div>
         <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="flex min-w-0 items-start gap-3">
             <category.icon

@@ -2255,6 +2255,9 @@ export const en: Record<TranslationKey, string> = {
   "docs.card.here": "You are here",
   "docs.card.open": "Open",
   "docs.category.pagesLabel": "Pages",
+  // W2 docs-hubs-nav: the unified «Book › Category › Page» trail inside the
+  // page field (distinct from the top bar's breadcrumb row).
+  "docs.breadcrumbs.label": "Book navigation",
   // U6: the honest manifest error (honest-map rows 20–21) — an explicit
   // slot with Retry instead of an eternal skeleton.
   "docs.error.manifestTitle": "The docs catalog failed to build",

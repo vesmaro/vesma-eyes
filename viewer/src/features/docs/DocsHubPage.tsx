@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LINK_CLASS } from "@/components/TextEngine/core/constants";
 import { DocCard, DocCardGrid } from "./DocCards";
+import { DocsBreadcrumbs } from "./DocsBreadcrumbs";
 import { docCategoriesForProject } from "./categories";
 import { pagesLabel } from "./docsFormat";
 import {
@@ -354,6 +355,12 @@ function HubCover({ project }: { project: DocProject }) {
   return (
     <div className={docsFieldClass()}>
       <div className={DOCS_COLUMN}>
+        {/* The unified trail (blueprint W2): the book crumb IS this page —
+            a lone aria-current crumb keeps the grammar uniform; below lg the
+            hub has no docs parent, the line stays empty (the <lg verdict). */}
+        <div className="mb-4">
+          <DocsBreadcrumbs project={project} category={null} />
+        </div>
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="flex min-w-0 items-start gap-3">
             <Icon
