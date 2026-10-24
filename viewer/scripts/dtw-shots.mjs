@@ -149,6 +149,12 @@ async function main() {
     await page.addInitScript(`
       try { localStorage.setItem("vesmaro.theme", "dark"); } catch {}
       try { localStorage.setItem("vesmaro.lang", "ru"); } catch {}
+      // The nest-keeper creature is chrome, not the acceptance object —
+      // hide it so it cannot photobomb the frames (it sits fixed z-30 in
+      // the bottom-right corner, exactly where wide tables end).
+      const style = document.createElement("style");
+      style.textContent = "[data-vesma-slot]{display:none!important}";
+      document.documentElement.append(style);
     `);
     await page.goto(PAGE_URL, { waitUntil: "load" });
     await page.evaluate(() => document.fonts.ready);
