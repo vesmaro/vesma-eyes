@@ -8,7 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { KoraWorkspace } from "./KoraWorkspace";
 import { KoraMockAdapter } from "./KoraMockAdapter";
 import { KoraGatewayContext } from "./koraGatewayContext";
-import { KORA_FRAME_QUERY, KORA_WIDE_QUERY } from "./koraViewport";
+import { KORA_FRAME_QUERY } from "./koraViewport";
 import { koraKeys } from "./useKora";
 import { KORA_FIXTURE_COVERAGE, KORA_FIXTURE_SESSIONS } from "./koraFixtures";
 import type { ExecutorsPage, TaskInbox } from "@/gateway/boardTypes";
@@ -32,13 +32,13 @@ import { I18nProvider } from "@/i18n";
 
 const PAGE_SIZE = 50;
 
-/** Pin the viewport hooks (KW3 ladder) to the WIDE frame: these tests own
- * the ≥xl three-column geometry, and happy-dom answers every width query
+/** Pin the viewport hook (KW4 ladder) to the FRAME regime: these tests own
+ * the ≥lg two-zone geometry, and happy-dom answers every width query
  * false — the explicit stub states the regime instead of inheriting the
  * environment's null answer. */
 function stubWideFrame(): void {
   window.matchMedia = ((query: string) => ({
-    matches: query === KORA_WIDE_QUERY || query === KORA_FRAME_QUERY,
+    matches: query === KORA_FRAME_QUERY,
     addEventListener: () => undefined,
     removeEventListener: () => undefined,
   })) as unknown as typeof window.matchMedia;
