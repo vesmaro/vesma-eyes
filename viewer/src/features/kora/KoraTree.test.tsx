@@ -235,4 +235,20 @@ describe("KoraTreePanel v2 (KW4, gate §9.4 / states-kw4 §3)", () => {
     expect(unknown?.querySelector("a")).toBeNull();
     expect(unknown?.querySelector("button[aria-expanded]")).toBeNull();
   });
+
+  it("K-PANEL-PENDING: the panel waits with the honest loading status — no fabricated rows", () => {
+    const { container } = mountTree({ treeReady: false });
+    // The polite loading status names itself; the skeleton, not fake rows.
+    const loading = container.querySelector("[role='status'][aria-label]");
+    expect(loading?.getAttribute("aria-label")).toBe("Загружаем сессии");
+    // Quiet bg-elevated placeholders (skeleton.tsx), not fabricated rows.
+    expect(loading?.querySelectorAll("div[aria-hidden='true'].bg-elevated").length).toBe(2);
+    // The registry data rides along but renders NO host/agent rows until it
+    // is ready — the only anchor is the always-on cluster pin (K-TREE-PIN).
+    const hrefs = [...container.querySelectorAll("a")].map((el) =>
+      el.getAttribute("href"),
+    );
+    expect(hrefs).toEqual(["/kora/hermes"]);
+    expect(container.querySelector("button[aria-expanded]")).toBeNull();
+  });
 });
