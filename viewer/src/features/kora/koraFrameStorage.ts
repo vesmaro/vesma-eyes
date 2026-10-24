@@ -4,9 +4,9 @@
  * reserved this namespace («localStorage … for the И3 frame hardware») —
  * this module IS that hardware's key keeper:
  *
- * - `vesmaro.koraRightW`  — the meta panel width, 240..420 px (def 320);
- * - `vesmaro.koraLeftW`   — the navigation panel width, 220..380 px
- *   (def 280; kora-rethink blueprint §4 — KW1 «Три колонки»);
+ * - `vesmaro.koraRightW`  — the right panel width, 240..420 px (def 320);
+ * - `vesmaro.koraGroups`  — the host-field session-group open-set (KW4
+ *   «Поле хоста»; live groups open by default, the user's toggles persist);
  * - `vesmaro.koraMovesH`  — the «Все ходы» zone FIXED height, 160..420 px
  *   (the key's ABSENCE = the auto mode ≤280; kora-rethink blueprint §4 —
  *   KW2 «Живой чат»; the height hardware lives in useKoraBandHeight);
@@ -19,6 +19,13 @@
  * mechanics moved to the «Все ходы» zone), `vesmaro.koraEtherW` (the Эфир
  * wing column is gone — Эфир lives in the meta panel).
  *
+ * RETIRED IN KW4 (blueprint-kw4 §5): `vesmaro.koraLeftW` — the LEFT
+ * navigation column died with the two-zone frame; its named helpers are
+ * gone with the last reader. A stale value under the dead key is IGNORED
+ * by the safe getters (nothing reads it) — the storage version is NOT
+ * bumped: the 07l §5.2 contract covers BREAKING schema changes, not
+ * ignored leftovers.
+ *
  * Guards (07l §5.2 «безопасные геттеры»): every read/write is try/catch —
  * private mode, disabled storage and SSR all degrade to the in-memory
  * default. Garbage values reset to the default, out-of-range numbers clamp
@@ -26,19 +33,16 @@
  */
 
 const RIGHT_W_KEY = "vesmaro.koraRightW";
-const LEFT_W_KEY = "vesmaro.koraLeftW";
+/** The host-field group open-set (KW4). */
+const GROUPS_KEY = "vesmaro.koraGroups";
 /** The «Все ходы» fixed height (KW2; absent = the auto mode). */
 const MOVES_H_KEY = "vesmaro.koraMovesH";
 export const DRAFT_PREFIX = "vesmaro.koraDraft:";
 
-/** v7 §3.1 ranges: the two panel widths. */
+/** v7 §3.1 ranges: the panel width (the ONE seam of the two-zone frame). */
 export const KORA_SIDE_MIN = 240;
 export const KORA_SIDE_MAX = 420;
 export const KORA_SIDE_DEFAULT = 320;
-/** kora-rethink blueprint §4: nav panel 220–380, default 280. */
-export const KORA_NAV_MIN = 220;
-export const KORA_NAV_MAX = 380;
-export const KORA_NAV_DEFAULT = 280;
 /** The band hardware ranges (07l §3.1) — the «Все ходы» height mechanics
  * live in useKoraBandHeight and mount on the zone in KW2. */
 export const KORA_BAND_MIN = 160;
@@ -99,11 +103,42 @@ export const readKoraSideW = (): number =>
 export const writeKoraSideW = (w: number): void =>
   writeFrameValue(RIGHT_W_KEY, String(w));
 
-/** The nav panel width (kora-rethink blueprint §4, KW1). */
-export const readKoraLeftW = (): number =>
-  readFrameInt(LEFT_W_KEY, KORA_NAV_DEFAULT, KORA_NAV_MIN, KORA_NAV_MAX);
-export const writeKoraLeftW = (w: number): void =>
-  writeFrameValue(LEFT_W_KEY, String(w));
+// --- the host-field group open-set (KW4; vesmaro.koraGroups) -------------------
+
+/**
+ * Read the persisted group open-set; null when absent or garbage. The
+ * payload is a JSON array of group keys (strings — cwd paths, hermes source
+ * keys, the no-cwd sentinel); any other shape resets, never throws.
+ */
+export function readKoraGroups(): readonly string[] | null {
+  const storage = safeLocalStorage();
+  if (storage === undefined) return null;
+  try {
+    const raw = storage.getItem(GROUPS_KEY);
+    if (raw === null) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      Array.isArray(parsed) &&
+      parsed.every((key) => typeof key === "string")
+    ) {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Persist the group open-set; storage failures are non-fatal by design. */
+export function writeKoraGroups(keys: readonly string[]): void {
+  const storage = safeLocalStorage();
+  if (storage === undefined) return;
+  try {
+    storage.setItem(GROUPS_KEY, JSON.stringify([...keys]));
+  } catch {
+    // Private mode / quota — the in-memory state still works this visit.
+  }
+}
 
 // --- the «Все ходы» fixed height (KW2; the Пульт mechanics moved here) -------
 
