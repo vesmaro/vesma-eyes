@@ -341,12 +341,39 @@ describe("hub covers (design spec §4)", () => {
     const text = container.textContent ?? "";
     expect(text).toContain("С чего начать");
     expect(text).toContain("Первый вход");
-    expect(text).toContain("Категории");
+    // W1 docs-hubs-nav: the book strip on EVERY hub — here with «вы здесь»
+    // on the vesma-eyes card (D-CARD-CURRENT).
+    const books = container.querySelector("section[aria-label='Хабы']");
+    expect(books).not.toBeNull();
+    expect(books?.querySelectorAll("a")).toHaveLength(4);
+    const currentBook = books?.querySelector("a[aria-current='page']");
+    expect(currentBook?.getAttribute("href")).toBe("/docs/vesma-eyes");
+    expect(currentBook?.textContent).toContain("Вы здесь");
     expect(container.querySelectorAll("a[href^='/docs/vesma-eyes/c/']")).toHaveLength(
       9,
     );
     expect(text).toContain("2 страницы"); // getting-started
     expect(text).not.toContain("актуально для mnemos@"); // our docs carry no provenance
+    await actUnmount(root);
+  });
+
+  it("W1: the api hub — which never had cards — carries the same book strip", async () => {
+    const { root, container } = await mountDocs("/docs/api");
+    await actWaitUntil(() => {
+      expect(container.querySelector("h1")?.textContent).toBe("API");
+    });
+    const books = container.querySelector("section[aria-label='Хабы']");
+    expect(books).not.toBeNull();
+    const cards = [...(books?.querySelectorAll("a") ?? [])];
+    expect(cards).toHaveLength(4);
+    const current = cards.find((card) => card.getAttribute("aria-current") === "page");
+    expect(current?.getAttribute("href")).toBe("/docs/api");
+    expect(current?.textContent).toContain("Вы здесь");
+    // Every card is a DATA card: a pages counter per card (anti-slop §2 —
+    // no bare tiles).
+    for (const card of cards) {
+      expect(card.textContent).toMatch(/страниц/u);
+    }
     await actUnmount(root);
   });
 

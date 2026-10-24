@@ -2246,12 +2246,15 @@ export const en: Record<TranslationKey, string> = {
   "docs.hub.start": "Start here",
   "docs.hub.categories": "Categories",
   // U6: hub cards with statistics (the v12 canon — counters are DATA, zero
-  // living layer). The strip lives on the section-root hub only.
+  // living layer). W1 docs-hubs-nav: the strip lives on EVERY project hub.
   "docs.hub.cardsLabel": "Hubs",
   "docs.hub.cardUpdated": "updated {{stamp}}",
-  "docs.hub.cardHere": "You are here — the current hub",
-  "docs.hub.cardOpen": "Open the hub",
   "docs.hub.cardMultiSource": "{{count}} sources",
+  // W1 docs-hubs-nav: the ONE card grammar on all three TOC levels
+  // (books → categories → pages) — the footer and the CTA labels.
+  "docs.card.here": "You are here",
+  "docs.card.open": "Open",
+  "docs.category.pagesLabel": "Pages",
   // U6: the honest manifest error (honest-map rows 20–21) — an explicit
   // slot with Retry instead of an eternal skeleton.
   "docs.error.manifestTitle": "The docs catalog failed to build",
