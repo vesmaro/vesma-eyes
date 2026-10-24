@@ -16,6 +16,7 @@ import {
   useDocsManifestFailed,
 } from "./manifest";
 import { loadMarkdown } from "./markdownModules";
+import { pagesLabel } from "./docsFormat";
 import { DEFAULT_PROJECT, docProject, docUrl } from "./projects";
 import { formatSyncDate } from "./sidecar";
 import { DocsManifestError, DocsNotFound } from "./DocsRedirects";
@@ -131,7 +132,9 @@ function CategoryCards({ categorySlug }: { categorySlug: string }) {
   if (rows.length === 0) {
     return (
       <p className="text-sm text-foreground-secondary">
-        {t("docs.pages.many", { count: 0 })}
+        {/* The ONE page-count formatter (review P3) — the same phrase the
+         * cards and the hub speak, not a hand-rolled key call. */}
+        {pagesLabel(lang, 0, t)}
       </p>
     );
   }

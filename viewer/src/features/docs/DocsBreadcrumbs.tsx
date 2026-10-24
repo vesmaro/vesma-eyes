@@ -133,7 +133,7 @@ export function DocsBreadcrumbs({
 
 /**
  * The docs context back control (blueprint W3, UI-18): reads `?return=` on
- * ANY docs surface and renders «← назад к …» ABOVE the breadcrumb trail —
+ * ANY docs surface and renders «← Назад: …» ABOVE the breadcrumb trail —
  * but ONLY when the target survives resolveReturnTarget (D-RET-VALID).
  * Every rejection is SILENT (D-RET-NONE): absent param, a non-Shell path,
  * a scheme/protocol-relative garbage value, the self-return — the control
@@ -161,9 +161,9 @@ export function DocsBackControl() {
   // §5: consume only).
   if (target === null || targetPathname === pathname) return null;
   // The same title grammar as the Shell back control: the target's route
-  // name, «Назад: …» as the accessible name (WCAG 2.4.4 — the name carries
-  // the destination), «назад к …» as the visible label (the blueprint's
-  // wording; the arrow icon is aria-hidden decoration).
+  // name, «Назад: …» as BOTH the accessible name (WCAG 2.4.4 — the name
+  // carries the destination) and the visible label (review P3: one grammar
+  // with the Shell BackControl); the arrow icon is aria-hidden decoration.
   const place = routeTitle(targetPathname, t) ?? t("nav.backFallback");
   return (
     <div className="mb-2">

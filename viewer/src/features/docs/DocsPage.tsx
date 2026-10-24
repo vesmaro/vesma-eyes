@@ -551,9 +551,12 @@ function ArticleView({ slug, page }: { slug: string; page: DocPage }) {
          * edge). Centering is the ROW's job; mx-auto is for rail-less
          * pages' block columns (DOCS_COLUMN). */}
         <article className="min-w-0 max-w-scroll">
+          {/* The context back control sits OUTSIDE the defensive projectMeta
+              gate (review P3): a return must survive even the impossible
+              unknown-project branch — the trail, not the exit, may degrade. */}
+          <DocsBackControl />
           {projectMeta ? (
             <div className="mb-3">
-              <DocsBackControl />
               <DocsBreadcrumbs
                 project={projectMeta}
                 category={category}

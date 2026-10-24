@@ -14,7 +14,7 @@ import { actUnmount, actWaitUntil } from "@/test/actTools";
 /**
  * W3 docs-hubs-nav gates over the UI-18 context back control on the docs
  * surfaces (blueprint «Честные состояния», rows D-RET-*): a VALID `?return=`
- * draws «← назад к …» above the breadcrumb trail and resolves EXACTLY (the
+ * draws «← Назад: …» above the breadcrumb trail and resolves EXACTLY (the
  * encode/decode round-trip through withReturn), every rejection is silent —
  * absent param (D-RET-NONE), garbage (schemes, protocol-relative), the
  * self-return — no control, never an error. Internal docs links (prev/next,
@@ -60,7 +60,7 @@ afterEach(() => {
 });
 
 describe("D-RET-VALID: the control renders and returns EXACTLY", () => {
-  it("article: «назад к Задача» resolves the round-trip through withReturn", async () => {
+  it("article: «Назад: Задача» resolves the round-trip through withReturn", async () => {
     // The FULL entry path a Shell caller produces: withReturn builds the
     // URL, the page's resolveReturnTarget must decode it back exactly.
     const entry = withReturn("/docs/vesma-eyes/upgrade", "/tasks/TB-1", "?status=open");
@@ -72,7 +72,7 @@ describe("D-RET-VALID: the control renders and returns EXACTLY", () => {
     expect(control).not.toBeNull();
     expect(control?.getAttribute("href")).toBe("/tasks/TB-1?status=open");
     expect(control?.getAttribute("aria-label")).toBe("Назад: Задача");
-    expect(control?.textContent).toContain("назад к Задача");
+    expect(control?.textContent).toContain("Назад: Задача");
     await actUnmount(root);
   });
 
