@@ -39,14 +39,20 @@ import {
   docUrl,
   projectOfDocSlug,
 } from "./projects";
-import { DOCS_COLUMN, DOCS_GROUP_ROW, docsFieldClass } from "./docsField";
+import {
+  DOCS_ARTICLE,
+  DOCS_COLUMN,
+  DOCS_GROUP_ROW,
+  docsFieldClass,
+} from "./docsField";
 
 /**
  * `/docs/:project/*` (design spec §5/§6/§7/§9; blueprint-hubs-nav-intro W2):
  * the unified breadcrumb trail (Книга › Категория › Страница — replaces the
  * old category chip) → version badge → provenance badge (imported pages) →
  * locale badge → h1 → article
- * at the 80ch reading measure (--measure-docs, docs-tables-width W2), TOC
+ * on the wide docs slot (max-w-docs-field, docs-a4-field — prose clamped to
+ * the 80ch --measure-docs by the global.css .docs-article rule), TOC
  * rail (sticky, scroll-spy) NEXT to the
  * article from lg up, native <details> TOC above the h1 on narrow screens,
  * prev/next at the end confined to the page's OWN project (spec §9.7).
@@ -537,22 +543,26 @@ function ArticleView({ slug, page }: { slug: string; page: DocPage }) {
     <div className={docsFieldClass()}>
       {/* The docs field (owner directive 2026-10-22 + group-centered revision
        * of the same day — the FINAL scheme, do not relitigate without the
-       * owner): [ article 80ch | gap 32→64px | TOC 256px ], the GROUP
+       * owner; docs-a4-field 2026-10-24 widened the slot): [ article
+       * min(1123px, field−rail−gap) | gap 32→64px | TOC 256px ], the GROUP
        * centered in the field (docsField.ts for the schema and rationale;
-       * docs-tables-width W2 moved the measure 72ch → --measure-docs 80ch).
+       * docs-tables-width W2 moved the measure 72ch → --measure-docs 80ch;
+       * docs-a4-field capped the slot at the A4-landscape 1123px — prose
+       * inside is clamped back to 80ch by the .docs-article rule in
+       * global.css, tables/diagrams/code take the full slot).
        * The TOC sits NEXT to the article — the industry convention
-       * (Stripe/MDN/Next.js); the slack becomes equal OUTER margins
-       * (~335px each side at 2000px). At 1280 the group fills the field
-       * exactly (gap-8 keeps the density). Below lg: the centered 6xl
-       * reading column, no rail. Rail-less docs surfaces (hub, category,
-       * not-found) center the same 80ch column through the same helpers. */}
+       * (Stripe/MDN/Next.js); the slack becomes equal OUTER margins. At
+       * 1280 the group still fills the field exactly (gap-8 keeps the
+       * density). Below lg: the full-width reading column, no rail.
+       * Rail-less docs surfaces (hub, category, not-found) keep the
+       * centered 80ch column through DOCS_COLUMN. */}
       <div className={DOCS_GROUP_ROW}>
         {/* NO mx-auto here: the article is a flex ITEM of the centered group
          * — auto margins would absorb the group's slack and defeat
          * justify-center (measured: the rail jumped back to the window
          * edge). Centering is the ROW's job; mx-auto is for rail-less
          * pages' block columns (DOCS_COLUMN). */}
-        <article className="min-w-0 max-w-docs">
+        <article className={DOCS_ARTICLE}>
           {/* The context back control sits OUTSIDE the defensive projectMeta
               gate (review P3): a return must survive even the impossible
               unknown-project branch — the trail, not the exit, may degrade. */}

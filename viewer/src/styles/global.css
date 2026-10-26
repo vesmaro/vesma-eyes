@@ -69,6 +69,33 @@
   animation: docs-pop var(--duration-fast) var(--ease-out);
 }
 
+/* ── Docs field ceiling (docs-a4-field, owner directive 2026-10-24) ──────
+ * «Поле информационное чуть расширить … до базового формата А4». The docs
+ * article slot grows past the 80ch prose measure to an A4-landscape
+ * ceiling (297mm at 96dpi = 1122.5px ≈ 1123px) so elementary tables and
+ * diagrams fit without scroll; large ones keep the honest TableScroll
+ * scroll. Viewer-only layout arithmetic (same standing as --vesma-slot
+ * below — NOT a design token; tokens.css stays the frozen viewer↔board
+ * canon inventory). The «minus rail» half of the formula
+ * min(1123px, field − rail − gap) is supplied by flexbox itself: the
+ * article is a shrappable flex item (min-w-0) whose cap IS this var via
+ * max-w-docs-field — no shell-chrome arithmetic, no breakpoint table. */
+:root {
+  --docs-field-max: 1123px;
+}
+
+/* The prose clamp: inside the WIDE docs article (.docs-article) every
+ * prose-level block keeps the reading measure --measure-docs (80ch, the
+ * 60–85ch corridor) — headings, paragraphs, lists, quotes, rules. What is
+ * NOT in the selector list takes the full article width by construction:
+ * tables (TableScroll), code blocks, mermaid diagrams, endpoint cards,
+ * details, prev/next — the wide zone the ceiling exists for. ONE rule,
+ * zero component-DOM drift (TextEngine goldens untouched); it cannot leak
+ * outside docs — nothing else carries the .docs-article class. */
+.docs-article :is(h1, h2, h3, h4, h5, h6, p, ul, ol, dl, blockquote, hr) {
+  max-width: var(--measure-docs);
+}
+
 /* ── Well hero (blueprint §10 — Overview awakening + drift) ────────────
  * Awakening = once per session (sessionStorage-gated by the hero): nodes
  * surface bottom-up in 8 depth bands — 240ms per node (--duration-impulse

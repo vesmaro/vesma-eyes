@@ -19,6 +19,19 @@ import { pageGridClass } from "@/layout/pageGrid";
  * blueprint §4 — the wider measure lets reference tables fit without
  * scroll more often; `--measure-scroll` stays 72ch for Kora/Memory).
  *
+ * docs-a4-field (owner directive 2026-10-24, blueprint §4 amendment —
+ * «поле информационное чуть расширить … до базового формата А4»): the
+ * article SLOT grows to `min(1123px, field − rail − gap)` — the
+ * A4-landscape ceiling `--docs-field-max` (global.css, viewer-only layout
+ * arithmetic) mapped as `max-w-docs-field`; flexbox supplies the minus-
+ * rail half (the article is a shrappable `min-w-0` flex item — no shell
+ * arithmetic, no breakpoint table). PROSE stays at the 80ch measure via
+ * the ONE `.docs-article` clamp rule in global.css; tables (TableScroll),
+ * mermaid diagrams and wide code blocks take the full slot — the wide
+ * zone the ceiling exists for. Rail-less surfaces keep the centered 80ch
+ * column: prose reads at the same measure on every docs surface, and
+ * they carry no wide blocks.
+ *
  * Rail-less surfaces (hubs, category lists, not-found) center the same
  * 80ch column in the field — one reading measure everywhere, no
  * width/axis jump when navigating the section.
@@ -60,6 +73,22 @@ export const DOCS_GROUP_ROW =
 /** The centered reading column — the docs measure (--measure-docs, 80ch),
  *  the same measure on every surface. */
 export const DOCS_COLUMN = "mx-auto w-full max-w-docs";
+
+/**
+ * The article slot of the group row (docs-a4-field): a shrappable flex
+ * ITEM that grows to the A4-landscape ceiling (`max-w-docs-field` =
+ * var(--docs-field-max), 1123px) and below it fills the field minus rail
+ * minus gap — flex shrink with `min-w-0` IS the «minus rail» clause, so
+ * the degradation under the cap is the algorithm's default (already
+ * battle-tested at 1280). `w-full` pins the flex basis so the slot never
+ * collapse-sizes to table max-content. The `docs-article` class arms the
+ * global.css prose clamp (prose → --measure-docs; wide blocks inherit the
+ * full slot). NO mx-auto (same reason as before: auto margins would
+ * absorb the group's slack and defeat justify-center — measured, 1.83.0).
+ * Below lg the row is a block and the slot fills the field (the ceiling
+ * never binds under 1024px viewports).
+ */
+export const DOCS_ARTICLE = "docs-article min-w-0 w-full max-w-docs-field";
 
 /** The TOC rail slot (w-64 shrink-0 — the rail components carry the same
  *  classes; a rail-less page simply renders no slot at all). */
