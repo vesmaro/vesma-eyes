@@ -114,8 +114,9 @@ describe("ModelsHubPage — the live shape (MF-HUB-LIVE)", () => {
     expect(text).toContain("default: hermes-4.5-405b");
 
     // Red line (verdict §5): no credential-shaped string anywhere.
+    // MF1 review P3-4: «token» joined the pin family.
     const lowered = text.toLowerCase();
-    for (const banned of ["credential", "api_key", "apikey", "secret"]) {
+    for (const banned of ["credential", "api_key", "apikey", "secret", "token"]) {
       expect(lowered).not.toContain(banned);
     }
 

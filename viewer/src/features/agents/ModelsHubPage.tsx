@@ -112,7 +112,10 @@ function BoardCard({ row }: { row: BoardRosterRow }) {
         </p>
       ) : (
         <p className="mt-1.5 text-xs text-foreground-muted">
-          {t("models.hub.mirrorEmpty")}
+          {/* MF1 review P3-2: the board card states its OWN fact — the
+           * board roster does not «wait for agent reports» (agents never
+           * report this row), the model list is simply not named. */}
+          {t("models.hub.boardNoModels")}
         </p>
       )}
       {row.defaultModel ? (

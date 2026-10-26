@@ -2819,6 +2819,7 @@ export const ru = {
   "models.hub.boardTitle": "Борд-ростер",
   "models.hub.boardBadge": "борд",
   "models.hub.boardCluster": "(кластер)",
+  "models.hub.boardNoModels": "Модели не указаны",
   "models.hub.noKey": "без ключа",
   "models.hub.modelsCount": "модели: {{count}}",
   "models.hub.overflow": "…и ещё {{count}}",

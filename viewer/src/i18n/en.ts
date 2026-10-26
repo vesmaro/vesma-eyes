@@ -2759,6 +2759,7 @@ export const en: Record<TranslationKey, string> = {
   "models.hub.boardTitle": "Board roster",
   "models.hub.boardBadge": "board",
   "models.hub.boardCluster": "(cluster)",
+  "models.hub.boardNoModels": "No models listed",
   "models.hub.noKey": "no key",
   "models.hub.modelsCount": "models: {{count}}",
   "models.hub.overflow": "…and {{count}} more",
