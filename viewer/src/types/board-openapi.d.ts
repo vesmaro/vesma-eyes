@@ -5076,6 +5076,24 @@ export interface components {
             readonly provenance: "agent";
         };
         /**
+         * ModelsGrantsOut
+         * @description GET /api/models/providers/{key}/grants — the grant rows + the LIVE
+         *     selector registry for the ux picker (metadata only; no material
+         *     exists in the family).
+         */
+        readonly ModelsGrantsOut: {
+            /** Ok */
+            readonly ok: boolean;
+            /** Grants */
+            readonly grants?: readonly components["schemas"]["ModelGrantOut"][];
+            /** Meta */
+            readonly meta: {
+                readonly [key: string]: unknown;
+            };
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /**
          * ModelsRosterOut
          * @description The fleet roster page (discovery-contract §3 /api/models, MF1 cut):
          *     board rows now, owner providers + agent mirror rows from their waves,
@@ -9035,7 +9053,7 @@ export interface operations {
                     readonly [name: string]: unknown;
                 };
                 content: {
-                    readonly "application/json": unknown;
+                    readonly "application/json": components["schemas"]["ModelsGrantsOut"];
                 };
             };
             /** @description Validation Error */

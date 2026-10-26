@@ -6862,7 +6862,17 @@ class ModelGrantPatchIn(BaseModel):
     enabled: bool
 
 
-@app.get("/api/models/providers/{provider_key}/grants")
+class ModelsGrantsOut(_ApiModel):
+    """GET /api/models/providers/{key}/grants — the grant rows + the LIVE
+    selector registry for the ux picker (metadata only; no material
+    exists in the family)."""
+    ok: bool
+    grants: list[ModelGrantOut] = Field(default_factory=list)
+    meta: dict[str, Any]
+
+
+@app.get("/api/models/providers/{provider_key}/grants",
+         response_model=ModelsGrantsOut)
 async def list_model_grants(provider_key: str) -> JSONResponse:
     """Grant rows of one provider + the LIVE selector registry for the
     ux picker («Хосты · Исполнители» из живого реестра, ux §3.3). OPEN
@@ -6873,17 +6883,16 @@ async def list_model_grants(provider_key: str) -> JSONResponse:
         return _kora_error(
             404, "provider_not_found",
             f"Провайдер {provider_key} не найден в реестре.")
-    return JSONResponse(content={
-        "ok": True,
-        "grants": [_grant_public(row).model_dump()
-                   for row in store.model_grants(provider_key)],
-        "meta": {
+    return JSONResponse(content=ModelsGrantsOut(
+        ok=True,
+        grants=[_grant_public(row).model_dump()
+                for row in store.model_grants(provider_key)],
+        meta={
             "selector_registry": {
                 "hosts": _spine_hosts(),
                 "executors": _spine_executor_identities(),
             },
-        },
-    })
+        }).model_dump())
 
 
 @app.post("/api/models/providers/{provider_key}/grants",
