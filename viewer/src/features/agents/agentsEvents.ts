@@ -24,6 +24,8 @@ import { pushExecutionEvent, setFeedStreamState } from "./executionFeedStore";
  * | assignment.* (7 kinds) | agents.assignments.*                        |
  * | executor.* (5 kinds)   | agents.executors.* AND agents.assignments.* |
  * | harness.* (2 kinds)    | agents.harnesses.*                          |
+ * | model.inventory.changed| agents.models.* (MF1; the emitter lands with |
+ * |                        | the roster-write wave — declared additively) |
  * | provisioning.* (5)     | agents.provision.* (ok adds executors.*)    |
  *
  * executor.* also invalidates the assignment queue because queued rows
@@ -89,6 +91,12 @@ export function applyAgentsEventToCache(
       void queryClient.invalidateQueries({ queryKey: keys.agents.provision.all });
       void queryClient.invalidateQueries({ queryKey: keys.agents.executors.all });
       break;
+    // MF1 (models fleet): the roster-mutation frame invalidates the hub's
+    // family. The board emits nothing yet — the kind is accepted and the
+    // case sits ready, per the additive-dictionary discipline.
+    case "model.inventory.changed":
+      void queryClient.invalidateQueries({ queryKey: keys.agents.models.all });
+      break;
     default:
       // task / report / notification kinds — task-domain keys are the task
       // bridge's (taskEvents.ts) responsibility; agents keys stay untouched.
@@ -109,6 +117,9 @@ export function applyAgentsReconnectToCache(queryClient: QueryClient): void {
   // AGW-11: a live provision job may have moved (or finished) while the
   // stream was down — the connect card re-reads its terminal verdict.
   void queryClient.invalidateQueries({ queryKey: keys.agents.provision.all });
+  // MF1: the roster may have changed during the drop window — the hub
+  // re-reads (same at-most-once rationale as provision above).
+  void queryClient.invalidateQueries({ queryKey: keys.agents.models.all });
 }
 
 /**

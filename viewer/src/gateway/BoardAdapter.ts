@@ -59,6 +59,7 @@ import type {
   MemoryPulseItem,
   MemoryPulseServerNote,
   MergedMemoriesPage,
+  ModelsRosterPage,
   MergedMemoryListItem,
   MergedTags,
   PairingConfirmResult,
@@ -425,6 +426,15 @@ export interface BoardGateway extends MemoryGateway {
    * guaranteed seed size, the set itself is data, never a UI constant.
    */
   listHarnesses(signal?: AbortSignal): Promise<HarnessesPage>;
+  /**
+   * Models fleet roster (`GET /api/models`, open read; MF1). The single
+   * aggregation point (discovery-contract §3, OQ-1): provenance-marked
+   * board rows (the hermes roster), plus the honestly-empty providers
+   * (MF2) and agent-mirror zones; NO credential field exists in the
+   * family (security verdict §5). Caps travel in meta — read, never
+   * hardcode.
+   */
+  modelsRoster(signal?: AbortSignal): Promise<ModelsRosterPage>;
   /**
    * Specialist session facts (`GET /api/tasks/{id}/sessions`, ME-063 —
    * agents-ui-spec §4). UI-class read: rides the owner session (same-origin
@@ -1103,6 +1113,10 @@ export class BoardAdapter implements BoardGateway {
 
   async listHarnesses(signal?: AbortSignal): Promise<HarnessesPage> {
     return this.request<HarnessesPage>("/harnesses", { signal });
+  }
+
+  async modelsRoster(signal?: AbortSignal): Promise<ModelsRosterPage> {
+    return this.request<ModelsRosterPage>("/models", { signal });
   }
 
   async listTaskSessions(

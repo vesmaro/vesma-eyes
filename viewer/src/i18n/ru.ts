@@ -2802,6 +2802,34 @@ export const ru = {
   "agents.provision.stepVerify": "Проверка",
   "agents.provision.detachNote":
     "Карточку можно закрыть — установка НЕ отменится: она продолжится на сервере, а при возвращении карточка снова подхватит задачу.",
+
+  // --- models fleet: hub «Модели» (MF1, ux-blueprint §6) ---------------------
+  "nav.agentsModels": "Модели",
+  "models.hub.title": "Модели",
+  "models.hub.loading": "Загружаем ростер моделей",
+  "models.hub.failed": "Не удалось загрузить ростер моделей",
+  "models.hub.empty.title": "Моделей пока не видно",
+  "models.hub.empty.message":
+    "Борд пока не видит ни одного факта о моделях: провайдеры не подключены, агенты ничего не отчитали, борд-ростер пуст.",
+  "models.hub.connectedTitle": "Подключённые провайдеры",
+  "models.hub.connectedEmpty":
+    "Подключённых провайдеров пока нет. Подключение провайдеров появится в следующей волне.",
+  "models.hub.mirrorTitle": "Найдено агентами — не подключено",
+  "models.hub.mirrorEmpty": "Модели пока не видны — ждём отчёт агентов",
+  "models.hub.boardTitle": "Борд-ростер",
+  "models.hub.boardBadge": "борд",
+  "models.hub.boardCluster": "(кластер)",
+  "models.hub.noKey": "без ключа",
+  "models.hub.modelsCount": "модели: {{count}}",
+  "models.hub.overflow": "…и ещё {{count}}",
+  "models.hub.defaultModel": "дефолт: {{model}}",
+  "models.hub.mirrorSeenOn": "найдено на {{where}}",
+  "models.hub.mirrorAuthConfigured": "ключ настроен локально",
+  "models.hub.mirrorAuthAnonymous": "анонимно",
+  "models.hub.mirrorAuthUnknown": "ключ: неизвестно",
+  "models.hub.sourceConfig": "источник: конфиг харнеса",
+  "models.hub.sourceProbe": "источник: локальный сервер моделей",
+
 } as const;
 
 export type TranslationKey = keyof typeof ru;

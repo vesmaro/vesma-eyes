@@ -132,6 +132,14 @@ export const keys = {
       all: ["agents", "provision"] as const,
       job: (jobId: string) => ["agents", "provision", "job", jobId] as const,
     },
+    // Models fleet roster (MF1, GET /api/models). SSE
+    // model.inventory.changed invalidates the family (the additive frame
+    // arrives with the wave that writes the roster — the FE side is wired
+    // from day one).
+    models: {
+      all: ["agents", "models"] as const,
+      list: () => ["agents", "models", "list"] as const,
+    },
     settings: {
       execution: () => ["agents", "settings", "execution"] as const,
     },

@@ -1452,6 +1452,30 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/api/models": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Models Roster
+         * @description The models fleet roster (MF1): the board-reported hermes roster plus
+         *     the honestly-empty owner-registry and agent-mirror zones. OPEN read —
+         *     names/URLs/counts only, no credential field exists in the family; the
+         *     single aggregation point the hub «Модели» consumes (the hermes roster
+         *     stays served by /api/kora/hermes/status too — consumed, not moved).
+         */
+        readonly get: operations["models_roster_api_models_get"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/api/kora/hermes/sessions/{session_id}/messages": {
         readonly parameters: {
             readonly query?: never;
@@ -4673,6 +4697,80 @@ export interface components {
             readonly nodes: readonly components["schemas"]["MeshNodeOut"][];
         } & {
             readonly [key: string]: unknown;
+        };
+        /**
+         * ModelsBoardRosterItem
+         * @description One board-reported provider row (MF1: the hermes cluster only).
+         */
+        readonly ModelsBoardRosterItem: {
+            /** Provider */
+            readonly provider: string;
+            /** Base Url */
+            readonly base_url: string;
+            /** Models */
+            readonly models: readonly string[];
+            /** Default Model */
+            readonly default_model?: string | null;
+            /**
+             * Provenance
+             * @constant
+             */
+            readonly provenance: "board";
+        };
+        /**
+         * ModelsDiscoveredItem
+         * @description One agent-discovered provider fact (contract §3 item shape, the
+         *     mirror-wave ingest target). MF1 serves none — the field exists so the
+         *     FE contract is stable when the discovery leg lands.
+         */
+        readonly ModelsDiscoveredItem: {
+            /** Provider */
+            readonly provider: string;
+            /** Base Url */
+            readonly base_url: string;
+            /** Models */
+            readonly models: readonly string[];
+            /**
+             * Auth
+             * @enum {string}
+             */
+            readonly auth: "configured" | "anonymous" | "unknown";
+            /**
+             * Source
+             * @enum {string}
+             */
+            readonly source: "config" | "probe";
+            /** Seen On */
+            readonly seen_on?: readonly {
+                readonly [key: string]: string;
+            }[];
+            /**
+             * Provenance
+             * @constant
+             */
+            readonly provenance: "agent";
+        };
+        /**
+         * ModelsRosterOut
+         * @description The fleet roster page (discovery-contract §3 /api/models, MF1 cut):
+         *     board rows now, owner providers + agent mirror rows from their waves,
+         *     caps in meta — read, never hardcode.
+         */
+        readonly ModelsRosterOut: {
+            /** Ok */
+            readonly ok: boolean;
+            /** Providers */
+            readonly providers?: readonly {
+                readonly [key: string]: unknown;
+            }[];
+            /** Discovered */
+            readonly discovered?: readonly components["schemas"]["ModelsDiscoveredItem"][];
+            /** Board */
+            readonly board?: readonly components["schemas"]["ModelsBoardRosterItem"][];
+            /** Meta */
+            readonly meta: {
+                readonly [key: string]: unknown;
+            };
         };
         /** MoveBody */
         readonly MoveBody: {
@@ -8472,6 +8570,26 @@ export interface operations {
                 };
                 content: {
                     readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly models_roster_api_models_get: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["ModelsRosterOut"];
                 };
             };
         };

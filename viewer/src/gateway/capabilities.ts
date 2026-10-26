@@ -46,6 +46,7 @@ import type {
   ExecutorsPage,
   HarnessCreateInput,
   HarnessesPage,
+  ModelsRosterPage,
   InboxEditInput,
   HarnessStateResult,
   EnrollmentCreateInput,
@@ -240,6 +241,9 @@ export interface AgentsSource {
   getExecutionSettings(signal?: AbortSignal): Promise<ExecutionSettings>;
   /** Harness dictionary (`GET /api/harnesses`, open read; wave 3C). */
   listHarnesses(signal?: AbortSignal): Promise<HarnessesPage>;
+  /** Models fleet roster (`GET /api/models`, open read; MF1) — provenance-
+   * marked facts only, no credential field in the family. */
+  modelsRoster(signal?: AbortSignal): Promise<ModelsRosterPage>;
   /**
    * Specialist session facts (`GET /api/tasks/{id}/sessions`, ME-063) —
    * ui-class read (the fact carries a host path): the owner session cookie
@@ -257,6 +261,7 @@ export function isAgentsSource(gateway: MemoryGateway): gateway is AgentsGateway
     typeof (gateway as Partial<AgentsSource>).listExecutors === "function" &&
     typeof (gateway as Partial<AgentsSource>).getExecutionSettings === "function" &&
     typeof (gateway as Partial<AgentsSource>).listHarnesses === "function" &&
+    typeof (gateway as Partial<AgentsSource>).modelsRoster === "function" &&
     typeof (gateway as Partial<AgentsSource>).listTaskSessions === "function"
   );
 }

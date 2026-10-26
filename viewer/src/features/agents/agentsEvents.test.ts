@@ -242,6 +242,41 @@ describe("harness.* — dictionary sync (wave 3C)", () => {
     }
   });
 
+describe("model.inventory.changed — roster sync (MF1)", () => {
+  it("invalidates the models roster family and nothing else (additive kind, the board emits nothing yet)", () => {
+    const client = seededClient();
+    client.setQueryData(keys.agents.models.list(), {
+      ok: true,
+      providers: [],
+      discovered: [],
+      board: [],
+      meta: { max_models_per_row: 50 },
+    });
+    applyAgentsEventToCache(
+      client,
+      mustEvent({ kind: "model.inventory.changed", provider: "deepseek" }),
+    );
+    expect(isKeyInvalidated(client, keys.agents.models.all)).toBe(true);
+    expect(isKeyInvalidated(client, keys.agents.executors.all)).toBe(false);
+    expect(isKeyInvalidated(client, keys.agents.assignments.all)).toBe(false);
+    expect(isKeyInvalidated(client, keys.agents.harnesses.all)).toBe(false);
+  });
+
+  it("the payload-free frame parses and invalidates too (contract §2.3)", () => {
+    const client = seededClient();
+    client.setQueryData(keys.agents.models.list(), { ok: true });
+    applyAgentsEventToCache(client, mustEvent({ kind: "model.inventory.changed" }));
+    expect(isKeyInvalidated(client, keys.agents.models.all)).toBe(true);
+  });
+
+  it("reconnect marks the roster stale too (at-most-once stream)", () => {
+    const client = seededClient();
+    client.setQueryData(keys.agents.models.list(), { ok: true });
+    applyAgentsReconnectToCache(client);
+    expect(isKeyInvalidated(client, keys.agents.models.all)).toBe(true);
+  });
+});
+
   it("reconnect marks the harness dictionary stale too (at-most-once stream)", () => {
     const client = seededClient();
     client.setQueryData(keys.agents.harnesses.list(), {

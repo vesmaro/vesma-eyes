@@ -27,6 +27,7 @@ import {
   MOCK_EXECUTORS_META,
   MOCK_EXECUTION_SETTINGS,
   MOCK_HARNESSES,
+  MOCK_MODELS_ROSTER,
   MOCK_HISTORY,
   MOCK_HOOKS,
   MOCK_INBOX,
@@ -78,6 +79,7 @@ import type {
   HarnessCreateInput,
   HarnessesPage,
   HarnessItem,
+  ModelsRosterPage,
   HarnessStateResult,
   HookCreateInput,
   HookPatchInput,
@@ -292,6 +294,7 @@ export class MockAdapter implements MemoryGateway {
   /** Harness dictionary (wave 3C): live playground state seeded from the
    * fixture corpus; the nomination gates read THIS, like the server. */
   private harnesses: HarnessItem[];
+  private modelsRosterPage: ModelsRosterPage;
   private executionSettings: ExecutionSettings;
   /** Per-project defaults (board_meta `default_executor:project:<slug>`
    * mirror) — modelled through PUT /settings/execution with a project scope. */
@@ -349,6 +352,10 @@ export class MockAdapter implements MemoryGateway {
     this.assignments = MOCK_ASSIGNMENTS.map((assignment) => ({ ...assignment }));
     this.executors = MOCK_EXECUTORS.map((executor) => ({ ...executor }));
     this.harnesses = MOCK_HARNESSES.map((harness) => ({ ...harness }));
+    this.modelsRosterPage = {
+      ...MOCK_MODELS_ROSTER,
+      board: (MOCK_MODELS_ROSTER.board ?? []).map((row) => ({ ...row })),
+    };
     this.executionSettings = { ...MOCK_EXECUTION_SETTINGS };
     if (options.scenario === "trust-wa") {
       // The verdict's prod snapshot: the default executor is disabled by the
@@ -1463,6 +1470,18 @@ export class MockAdapter implements MemoryGateway {
       items: [...this.harnesses].sort((a, b) => a.name.localeCompare(b.name)),
       meta: { seed_min_count: 10 },
     };
+  }
+
+  /**
+   * Models fleet roster (MF1) — the playground serves the SAME honest
+   * fresh-board shape as the real endpoint: the board hermes row, the
+   * owner-registry and agent-mirror zones empty. No auth wall — the
+   * ui-class question belongs to the real board (this is an open read
+   * there too).
+   */
+  async modelsRoster(signal?: AbortSignal): Promise<ModelsRosterPage> {
+    await this.delay(signal);
+    return this.modelsRosterPage;
   }
 
   /**

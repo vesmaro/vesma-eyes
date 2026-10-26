@@ -13,6 +13,7 @@ import type {
   HarnessItem,
   HookRule,
   LaunchRow,
+  ModelsRosterPage,
   ScheduleRule,
   TaskHistory,
   TaskInbox,
@@ -982,6 +983,29 @@ export const MOCK_EXECUTORS_PAGE: ExecutorsPage = {
  * GET /api/harnesses. The former closed-set mirror module is DELETED
  * (the drift class died with the dictionary).
  */
+/**
+ * Models fleet roster corpus (MF1) — the playground's START state: the
+ * SAME honest shape a fresh board serves (board hermes row, providers and
+ * the agent mirror empty). FIXTURE data for the mock adapter, not a UI
+ * constant; the real UI reads GET /api/models.
+ */
+export const MOCK_MODELS_ROSTER: ModelsRosterPage = {
+  ok: true,
+  providers: [],
+  discovered: [],
+  board: [
+    {
+      provider: "hermes",
+      base_url:
+        "http://agentsnode-hermes-clusterip.kube-agents.svc.cluster.local:8642",
+      models: ["hermes-4.5-405b", "hermes-4.5-70b"],
+      default_model: "hermes-4.5-405b",
+      provenance: "board",
+    },
+  ],
+  meta: { max_models_per_row: 50 },
+};
+
 export const MOCK_HARNESSES: HarnessItem[] = [
   "aider",
   "claude-code",

@@ -133,12 +133,15 @@ describe("domain map", () => {
     // ME-014: the domain root has no index route — the domain link goes to
     // the host roster (the section's default landing).
     expect(agents?.linkTo).toBe("/agents/hosts");
-    // agents-redesign C1: TWO sections — the hosts workbench and
-    // Исполнение. The connect conveyor left the nav (contextual entries);
-    // its route /agents/harnesses stays LIVE for direct entries.
+    // agents-redesign C1: the hosts workbench + Исполнение. The connect
+    // conveyor left the nav (contextual entries); its route
+    // /agents/harnesses stays LIVE for direct entries. MF1 (2026-10-26):
+    // the models fleet hub joins as the THIRD section (ux-blueprint §2 —
+    // a live read surface, so D8 lets it take the nav slot).
     expect(agents?.sections?.map((s) => s.to)).toEqual([
       "/agents/hosts",
       "/agents/execution",
+      "/agents/models",
     ]);
   });
 });

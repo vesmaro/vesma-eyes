@@ -6111,6 +6111,96 @@ async def kora_hermes_live_sessions(request: Request,
     )
 
 
+# --------------------------------------- models fleet roster (MF1 read leg)
+# The «флот моделей» hub read (ux-blueprint wave MF1; discovery-contract §3):
+# ONE aggregation point for every model-serving fact the board holds, with a
+# provenance marker per row (OQ-1's single-contract verdict).
+#
+# MF1 scope is honest about what exists TODAY:
+# - `board`    — the cluster hermes roster, the STATIC live-verified list
+#                from hermes_client (the SAME single source the hermes status
+#                route serves; consumed, not duplicated). No agent reports
+#                it; the endpoint is board config already surfaced on
+#                /api/kora/hermes/status.
+# - `providers`— the owner credential registry: MF2 territory. The field is
+#                declared now (the contract's shape) and is honestly empty
+#                until that wave; nothing in MF1 writes it.
+# - `discovered`—agent-reported provider facts (the discovery mirror). The
+#                agent wire carries NO `models` slice yet (contract §2.1 is
+#                the future shape), so MF1 is honestly empty here; the row
+#                schema below is the ingest target the mirror wave fills,
+#                dedup identity (provider, base_url).
+#
+# NO credential field exists in this family by construction (security
+# verdict §5): names, endpoint URLs and counts are facts; key material
+# never is. Open read — the same boundary as GET /api/executors (cluster
+# ingress is the auth boundary; the roster is names/URLs/counts metadata).
+# No SSE emitter yet: nothing mutates the roster in MF1; the additive
+# `model.inventory.changed` frame arrives with the wave that writes it.
+
+_MODELS_MAX_PER_ROW = 50  # the contract §2.1 cap family (honest-422 on ingest)
+
+
+class ModelsBoardRosterItem(BaseModel):
+    """One board-reported provider row (MF1: the hermes cluster only)."""
+
+    provider: str
+    base_url: str
+    models: list[str]
+    default_model: str | None = None
+    provenance: Literal["board"]
+
+
+class ModelsDiscoveredItem(BaseModel):
+    """One agent-discovered provider fact (contract §3 item shape, the
+    mirror-wave ingest target). MF1 serves none — the field exists so the
+    FE contract is stable when the discovery leg lands."""
+
+    provider: str
+    base_url: str
+    models: list[str]
+    auth: Literal["configured", "anonymous", "unknown"]
+    source: Literal["config", "probe"]
+    seen_on: list[dict[str, str]] = Field(default_factory=list)
+    provenance: Literal["agent"]
+
+
+class ModelsRosterOut(BaseModel):
+    """The fleet roster page (discovery-contract §3 /api/models, MF1 cut):
+    board rows now, owner providers + agent mirror rows from their waves,
+    caps in meta — read, never hardcode."""
+
+    ok: bool
+    providers: list[dict[str, Any]] = Field(default_factory=list)
+    discovered: list[ModelsDiscoveredItem] = Field(default_factory=list)
+    board: list[ModelsBoardRosterItem] = Field(default_factory=list)
+    meta: dict[str, Any]
+
+
+@app.get("/api/models")
+async def models_roster() -> ModelsRosterOut:
+    """The models fleet roster (MF1): the board-reported hermes roster plus
+    the honestly-empty owner-registry and agent-mirror zones. OPEN read —
+    names/URLs/counts only, no credential field exists in the family; the
+    single aggregation point the hub «Модели» consumes (the hermes roster
+    stays served by /api/kora/hermes/status too — consumed, not moved)."""
+    return ModelsRosterOut(
+        ok=True,
+        providers=[],
+        discovered=[],
+        board=[
+            ModelsBoardRosterItem(
+                provider="hermes",
+                base_url=_hermes_endpoint(),
+                models=list(hermes_client.HERMES_MODELS),
+                default_model=hermes_client.HERMES_DEFAULT_MODEL,
+                provenance="board",
+            )
+        ],
+        meta={"max_models_per_row": _MODELS_MAX_PER_ROW},
+    )
+
+
 # ----------------------------- kora hermes bridge: transcript + chat (T004 s3)
 # The bridge's transcript and chat legs on the ALREADY-shipped client
 # (server/hermes_client.py, slice 1 — fetch_messages/chat were verified
