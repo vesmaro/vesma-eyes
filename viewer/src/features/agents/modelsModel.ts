@@ -1,11 +1,12 @@
 import type {
+  ModelProvider,
   ModelsBoardRosterItem,
   ModelsDiscoveredItem,
   ModelsRosterPage,
 } from "@/gateway/boardTypes";
 
 /**
- * MF1 pure projections for the models fleet hub (the execEnvModel
+ * MF1/MF2 pure projections for the models fleet hub (the execEnvModel
  * discipline: the payload is a board projection — every field is narrowed
  * defensively, a buggy wire degrades to the honest empty slot / fewer
  * rows, never to a crash or a fabricated fact).
@@ -15,6 +16,8 @@ import type {
  * / an agent report) and a models counter — honest empties everywhere;
  * NO credential field exists in the family by construction (security
  * verdict §5), so none is read here even if a buggy wire smuggles one.
+ * MF2 adds the owner registry rows (metadata only: fingerprint — which is
+ * NOT the key — dates and the closed status slot).
  */
 
 /** The per-card display cut for model ids (MF-HUB-CAPS: 8 rows + the
@@ -69,13 +72,40 @@ export interface DiscoveredRosterRow {
   readonly seenOnOverflow: number;
 }
 
-/** The hub's three zones, narrowed. `connectedCount` stays a COUNT in MF1:
- * the owner-registry rows are MF2's contract — rendering name-only ghosts
- * of them now would fabricate a card the wire does not define yet. */
+/** The key-status slot value on an owner-registry row — the CLOSED enum
+ * from the security verdict §5: `set | rejected | null` («не подключён»).
+ * `rejected` is minted by the MF3 enforcement wave; a wire value outside
+ * the enum degrades to `null`, never invented. */
+export type ProviderSlot = "set" | "rejected" | null;
+
+/** One owner-registry provider card (MF2): METADATA ONLY — the
+ * fingerprint is the single material-derived artifact allowed to persist
+ * and it is NOT the key; no credential field is read even if a buggy wire
+ * smuggles one. */
+export interface ProviderRow {
+  readonly providerKey: string;
+  readonly baseUrl: string;
+  readonly fingerprint: string | null;
+  readonly createdAt: string | null;
+  readonly rotatedAt: string | null;
+  readonly status: ProviderSlot;
+}
+
+/** The hub's three zones, narrowed (MF2: the owner registry renders REAL
+ * cards — metadata only). */
 export interface HubZones {
   readonly connectedCount: number;
+  readonly connected: readonly ProviderRow[];
   readonly discovered: readonly DiscoveredRosterRow[];
   readonly board: readonly BoardRosterRow[];
+}
+
+/** True when the roster page says the credential registry is honestly off
+ * (H1: VESMARO_SECRETS_DIR unset/unusable — the meta fact the server
+ * pins; absent meta = the fact is unknown, treated as ON for rendering
+ * while the mutations themselves stay honestly gated server-side). */
+export function providersOff(page: ModelsRosterPage | undefined): boolean {
+  return page?.meta?.["providers_off"] === true;
 }
 
 function boundedString(value: unknown, bound: number): string | null {
@@ -213,13 +243,43 @@ export function dedupeDiscovered(
   return [...byKey.values()];
 }
 
+/** Defensive narrowing of one owner-registry row (MF2). The fingerprint
+ * is bounded to its 12-hex wire shape; a status outside the closed enum
+ * degrades to null (honestly unset), never invented. */
+function narrowProviderRow(row: ModelProvider): ProviderRow | null {
+  if (row === null || typeof row !== "object") return null;
+  const record = row as unknown as Record<string, unknown>;
+  const providerKey = boundedString(record["provider_key"], NAME_BOUND);
+  if (!providerKey) return null;
+  const fingerprint = boundedString(record["fingerprint"], 12);
+  const rawStatus = record["status"];
+  const status: ProviderSlot =
+    rawStatus === "set" || rawStatus === "rejected" ? rawStatus : null;
+  return {
+    providerKey,
+    baseUrl: boundedString(record["base_url"], URL_BOUND) ?? "",
+    fingerprint: fingerprint && status === "set" ? fingerprint : null,
+    createdAt: boundedString(record["created_at"], 40),
+    rotatedAt: boundedString(record["rotated_at"], 40),
+    status,
+  };
+}
+
 /**
- * The hub zones from the roster page (MF1): connected stays a count, the
- * mirror zone dedupes defensively, board rows narrow one by one.
- * `undefined` page (query pending) → all zones empty — the caller renders
- * its loading state from the query status, not from this projection.
+ * The hub zones from the roster page (MF1/MF2): the owner registry narrows
+ * to metadata cards, the mirror zone dedupes defensively, board rows
+ * narrow one by one. `undefined` page (query pending) → all zones empty —
+ * the caller renders its loading state from the query status, not from
+ * this projection.
  */
 export function hubZones(page: ModelsRosterPage | undefined): HubZones {
+  const connected = (Array.isArray(page?.providers) ? page.providers : [])
+    .map((row) =>
+      row === null || typeof row !== "object"
+        ? null
+        : narrowProviderRow(row as ModelProvider),
+    )
+    .filter((row): row is ProviderRow => row !== null);
   const discovered = dedupeDiscovered(
     (Array.isArray(page?.discovered) ? page.discovered : [])
       .map((row) =>
@@ -236,8 +296,7 @@ export function hubZones(page: ModelsRosterPage | undefined): HubZones {
         : narrowBoardRow(row as ModelsBoardRosterItem),
     )
     .filter((row): row is BoardRosterRow => row !== null);
-  const connectedCount = Array.isArray(page?.providers) ? page.providers.length : 0;
-  return { connectedCount, discovered, board };
+  return { connectedCount: connected.length, connected, discovered, board };
 }
 
 /** MF-HUB-EMPTY: no owner provider, no agent fact, no board row. */

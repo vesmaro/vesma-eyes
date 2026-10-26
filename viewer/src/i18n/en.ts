@@ -2752,8 +2752,6 @@ export const en: Record<TranslationKey, string> = {
   "models.hub.empty.message":
     "The board sees no model facts yet: no providers connected, no agent reports, the board roster is empty.",
   "models.hub.connectedTitle": "Connected providers",
-  "models.hub.connectedEmpty":
-    "No providers connected yet. Provider connection arrives in the next wave.",
   "models.hub.mirrorTitle": "Found by agents — not connected",
   "models.hub.mirrorEmpty": "No models visible yet — waiting for agent reports",
   "models.hub.boardTitle": "Board roster",
@@ -2770,5 +2768,50 @@ export const en: Record<TranslationKey, string> = {
   "models.hub.mirrorAuthUnknown": "key: unknown",
   "models.hub.sourceConfig": "source: harness config",
   "models.hub.sourceProbe": "source: local model server",
+
+  // --- models fleet: provider connection (MF2, ux-blueprint §3/§6,
+  // --- security-verdict §5: write-only key, set/unset/rejected slot) ---
+  "models.hub.connectCta": "Connect provider",
+  "models.hub.connectedEmpty": "No providers connected yet.",
+  "models.slot.set": "Key set",
+  "models.slot.unset": "Not connected — no key set",
+  "models.slot.rejected": "Key rejected by the provider",
+  "models.slot.unknown": "Key status not known yet",
+  "models.slot.fingerprintHint": "The fingerprint is not the key",
+  "models.slot.setAt": "set {{date}}",
+  "models.off.title": "Provider connection is off",
+  "models.off.reason":
+    "The board has no secrets directory configured (VESMARO_SECRETS_DIR) — key registration and rotation are unavailable.",
+  "models.grants.roadmap": "Access management arrives in the next wave",
+  "models.card.setKey": "Set key",
+  "models.card.rotate": "Replace key",
+  "models.card.removeKey": "Remove key",
+  "models.card.removing": "Removing…",
+  "models.card.removeConfirmTitle": "Remove the key?",
+  "models.card.removeConfirm":
+    "The key will be removed from the vault. The provider stays listed as «not connected»; access management arrives in the next wave.",
+  "models.card.removeKeep": "Keep",
+  "models.card.removeConfirmCta": "Remove key",
+  "models.form.title": "Connect provider",
+  "models.form.rotateTitle": "Replace key",
+  "models.form.description":
+    "The key reaches the board once and lives only in the secrets directory — no response and no journal ever carry it.",
+  "models.form.name": "Name",
+  "models.form.nameHint": "lowercase latin, digits, hyphen — up to 60 chars",
+  "models.form.errName": "Name: lowercase latin, digits and hyphen, up to 60 chars",
+  "models.form.baseUrl": "Base URL",
+  "models.form.baseUrlPreview": "will be saved as: {{url}}",
+  "models.form.key": "Key",
+  "models.form.keyHint":
+    "The key is saved once and is never shown again — check it before saving.",
+  "models.form.reveal": "Show",
+  "models.form.hide": "Hide",
+  "models.form.submit": "Connect provider",
+  "models.form.rotateSubmit": "Replace key",
+  "models.form.saving": "Saving…",
+  "models.form.cancel": "Cancel",
+  "models.toast.connected": "Provider connected",
+  "models.toast.rotated": "Key replaced",
+  "models.toast.removed": "Key removed",
 
 };

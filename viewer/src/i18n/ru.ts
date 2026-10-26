@@ -2812,8 +2812,6 @@ export const ru = {
   "models.hub.empty.message":
     "Борд пока не видит ни одного факта о моделях: провайдеры не подключены, агенты ничего не отчитали, борд-ростер пуст.",
   "models.hub.connectedTitle": "Подключённые провайдеры",
-  "models.hub.connectedEmpty":
-    "Подключённых провайдеров пока нет. Подключение провайдеров появится в следующей волне.",
   "models.hub.mirrorTitle": "Найдено агентами — не подключено",
   "models.hub.mirrorEmpty": "Модели пока не видны — ждём отчёт агентов",
   "models.hub.boardTitle": "Борд-ростер",
@@ -2830,6 +2828,51 @@ export const ru = {
   "models.hub.mirrorAuthUnknown": "ключ: неизвестно",
   "models.hub.sourceConfig": "источник: конфиг харнеса",
   "models.hub.sourceProbe": "источник: локальный сервер моделей",
+
+  // --- models fleet: подключение провайдеров (MF2, ux-blueprint §3/§6,
+  // --- security-verdict §5: ключ write-only, слот set/unset/rejected) ---
+  "models.hub.connectCta": "Подключить провайдера",
+  "models.hub.connectedEmpty": "Провайдеров пока не подключено.",
+  "models.slot.set": "Ключ установлен",
+  "models.slot.unset": "Не подключён — ключ не установлен",
+  "models.slot.rejected": "Ключ отклонён провайдером",
+  "models.slot.unknown": "Статус ключа пока неизвестен",
+  "models.slot.fingerprintHint": "Отпечаток — это не ключ",
+  "models.slot.setAt": "установлен {{date}}",
+  "models.off.title": "Подключение провайдеров выключено",
+  "models.off.reason":
+    "На борде не настроен каталог секретов (VESMARO_SECRETS_DIR) — регистрация и замена ключей недоступны.",
+  "models.grants.roadmap": "Управление доступом — следующая волна",
+  "models.card.setKey": "Установить ключ",
+  "models.card.rotate": "Заменить ключ",
+  "models.card.removeKey": "Удалить ключ",
+  "models.card.removing": "Удаляем…",
+  "models.card.removeConfirmTitle": "Удалить ключ?",
+  "models.card.removeConfirm":
+    "Ключ будет удалён из хранилища. Провайдер останется в списке как «не подключён»; управление доступом включится в следующей волне.",
+  "models.card.removeKeep": "Оставить",
+  "models.card.removeConfirmCta": "Удалить ключ",
+  "models.form.title": "Подключить провайдера",
+  "models.form.rotateTitle": "Заменить ключ",
+  "models.form.description":
+    "Ключ уходит на борд один раз и сохраняется только в каталоге секретов — ни ответы, ни журнал его не содержат.",
+  "models.form.name": "Имя",
+  "models.form.nameHint": "латиница, цифры, дефис — до 60 символов",
+  "models.form.errName": "Имя: латиница в нижнем регистре, цифры и дефис, до 60 символов",
+  "models.form.baseUrl": "Base URL",
+  "models.form.baseUrlPreview": "сохранится как: {{url}}",
+  "models.form.key": "Ключ",
+  "models.form.keyHint":
+    "Ключ сохраняется один раз и больше не показывается — проверьте перед сохранением.",
+  "models.form.reveal": "Показать",
+  "models.form.hide": "Скрыть",
+  "models.form.submit": "Подключить провайдера",
+  "models.form.rotateSubmit": "Заменить ключ",
+  "models.form.saving": "Сохраняем…",
+  "models.form.cancel": "Отмена",
+  "models.toast.connected": "Провайдер подключён",
+  "models.toast.rotated": "Ключ заменён",
+  "models.toast.removed": "Ключ удалён",
 
 } as const;
 
