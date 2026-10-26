@@ -106,15 +106,23 @@ describe("our article (/docs/vesma-eyes/<slug>)", () => {
     await actUnmount(root);
   });
 
-  it("the article reads the docs measure 80ch (docs-tables-width W2), not the scroll measure", async () => {
+  it("the article reads the wide docs slot (docs-a4-field), not the scroll measure", async () => {
     const { root, container } = await mountDocs("/docs/vesma-eyes/upgrade");
     await actWaitUntil(() => {
       expect(container.querySelector("article")?.className ?? "").toContain(
-        "max-w-docs",
+        "max-w-docs-field",
       );
     });
     const article = container.querySelector("article")!;
-    expect(article.className).toContain("max-w-docs");
+    // docs-a4-field: the slot takes the A4-landscape ceiling; the 80ch
+    // measure moved INTO the article (the .docs-article clamp), so the
+    // article itself must NOT carry max-w-docs anymore.
+    expect(article.className).toContain("docs-article");
+    expect(article.className).toContain("min-w-0");
+    expect(article.className).toContain("max-w-docs-field");
+    // max-w-docs (the bare measure) must be GONE from the slot — but
+    // max-w-docs-field contains that substring, hence the lookahead.
+    expect(article.className).not.toMatch(/max-w-docs(?!-field)/);
     expect(article.className).not.toContain("max-w-scroll");
     // The field wrapper: reading regime widened to 6xl, uncapped at lg+.
     const field = container.firstElementChild as HTMLElement;

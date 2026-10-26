@@ -141,6 +141,10 @@ export default {
       maxWidth: {
         scroll: "var(--measure-scroll)",
         docs: "var(--measure-docs)",
+        // The docs article slot ceiling (docs-a4-field — global.css
+        // :root, viewer-only layout arithmetic): the A4-landscape
+        // 1123px cap of the wide article column.
+        "docs-field": "var(--docs-field-max)",
       },
       fontSize: {
         xs: "var(--text-xs)",
