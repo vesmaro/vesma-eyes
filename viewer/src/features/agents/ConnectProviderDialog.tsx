@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -63,10 +63,17 @@ export function ConnectProviderDialog({
   const [credential, setCredential] = useState("");
   const [reveal, setReveal] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  // Initialized INVERTED on purpose: the mount itself counts as the open
+  // transition, so an initially-open dialog (the rotate prefills) resets
+  // on the very first render too.
+  const [prevOpen, setPrevOpen] = useState(!open);
 
   // A fresh open resets the whole form (a rotation prefill included) —
-  // no credential ever survives a close.
-  useEffect(() => {
+  // no credential ever survives a close. Adjusting state DURING RENDER
+  // (the React-docs pattern, not an effect): the reset is part of the
+  // open transition, no cascading render.
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (open) {
       setName(rotate?.providerKey ?? "");
       setBaseUrl(rotate?.baseUrl ?? "");
@@ -74,7 +81,7 @@ export function ConnectProviderDialog({
       setReveal(false);
       setSubmitted(false);
     }
-  }, [open, rotate]);
+  }
 
   const nameError = submitted && !isProviderKeyValid(name.trim());
   const urlVerdict = baseUrl.trim()
