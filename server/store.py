@@ -1427,8 +1427,10 @@ ON auth_sessions (account_id);
 -- [:12hex] — the only material-derived artifact allowed to persist
 -- (verdict §1 H1); credential_ref names the vault file so DELETE can
 -- unlink it. status facts: fingerprint IS NULL ⇒ the key is not set
--- (the roster's «не подключён» slot); 'rejected' arrives with the MF3
--- enforcement wave (provider.use.rejected), the column stays metadata.
+-- (the roster's «не подключён» slot); slot_rejected_at IS the MF3
+-- `rejected` slot state (provider.use.rejected — a provider 401), it is
+-- cleared by an ok call or a rotation (the §3 slot machine); grants
+-- NEVER move the key slot. last_used_at ticks from ok use events.
 -- Additive IF NOT EXISTS riding the _SCHEMA executescript — NO
 -- SEED_VERSION bump (accounts precedent).
 CREATE TABLE IF NOT EXISTS model_providers (
@@ -1437,8 +1439,56 @@ CREATE TABLE IF NOT EXISTS model_providers (
     fingerprint    TEXT,
     credential_ref TEXT,
     created_at     TEXT NOT NULL,
-    rotated_at     TEXT NOT NULL DEFAULT ''
+    rotated_at     TEXT NOT NULL DEFAULT '',
+    last_used_at   TEXT NOT NULL DEFAULT '',
+    slot_rejected_at TEXT NOT NULL DEFAULT ''
 );
+-- MF3 sharing grants (threat model §1, discovery-contract §1): OWNER-side
+-- authority records (credential_ref, selector, enabled). The selector
+-- names ONE spine entity — selector_kind 'host' (a registry host name)
+-- or 'executor' (the harness@host identity of a registered executor);
+-- write-time validation refuses unknown targets (never auto-extend).
+-- Grants are owner-write-only (ui-token); executor tokens never write
+-- them (verdict red line 6). added_via/created_by are the H4 audit
+-- fields; the credential_ref must exist in the provider registry at
+-- write time (authority without material is dead — the DELETE-credential
+-- cascade disables the provider's grants).
+CREATE TABLE IF NOT EXISTS model_grants (
+    id             TEXT PRIMARY KEY,
+    provider_key   TEXT NOT NULL,
+    credential_ref TEXT NOT NULL,
+    selector_kind  TEXT NOT NULL CHECK (selector_kind IN ('host','executor')),
+    selector_value TEXT NOT NULL,
+    enabled        INTEGER NOT NULL DEFAULT 1,
+    added_via      TEXT NOT NULL DEFAULT 'ui',
+    created_by     TEXT NOT NULL DEFAULT 'ui',
+    created_at     TEXT NOT NULL,
+    updated_at     TEXT NOT NULL DEFAULT '',
+    UNIQUE (provider_key, selector_kind, selector_value)
+);
+CREATE INDEX IF NOT EXISTS idx_model_grants_provider
+    ON model_grants (provider_key);
+-- MF3 per-request use-audit (threat model §4): ONE row per proxied
+-- request. The field set is EXACTLY the §4 contract — prompt/completion
+-- content, headers (either direction), the credential or its
+-- Authorization header and URLs never enter ANY column (CWE-538, ASVS
+-- V7). Retention: 90 days OR 50k rows per provider, whichever first —
+-- pruned at insert time (log_model_use).
+CREATE TABLE IF NOT EXISTS model_use_audit (
+    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts                    TEXT NOT NULL,
+    principal             TEXT NOT NULL,
+    provider_key          TEXT NOT NULL,
+    credential_fingerprint TEXT NOT NULL DEFAULT '',
+    model_id              TEXT NOT NULL DEFAULT '',
+    outcome               TEXT NOT NULL,
+    status_code           INTEGER NOT NULL DEFAULT 0,
+    latency_bucket        TEXT NOT NULL DEFAULT '',
+    req_bytes             INTEGER NOT NULL DEFAULT 0,
+    resp_bytes            INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_model_use_provider
+    ON model_use_audit (provider_key, id);
 """
 
 # WF-1 table-rebuild target (Store._rebuild_tasks_for_wf1): the full
@@ -1863,6 +1913,22 @@ class Store:
             db.execute(
                 "ALTER TABLE task_inbox "
                 "ADD COLUMN edits TEXT NOT NULL DEFAULT ''")
+        # MF3 slot-machine columns on the provider registry (threat model
+        # §3): last_used_at ticks from ok use events, slot_rejected_at is
+        # set by a provider 401 and cleared by ok/rotation. Additive ALTER
+        # — the '' DEFAULT covers pre-MF3 rows (honest «не использовался»);
+        # the model_grants / model_use_audit tables ride the _SCHEMA
+        # executescript (IF NOT EXISTS). No SEED_VERSION bump.
+        mcols = {r["name"] for r in db.execute(
+            "PRAGMA table_info(model_providers)").fetchall()}
+        if mcols and "last_used_at" not in mcols:
+            db.execute(
+                "ALTER TABLE model_providers "
+                "ADD COLUMN last_used_at TEXT NOT NULL DEFAULT ''")
+        if mcols and "slot_rejected_at" not in mcols:
+            db.execute(
+                "ALTER TABLE model_providers "
+                "ADD COLUMN slot_rejected_at TEXT NOT NULL DEFAULT ''")
         row = db.execute(
             "SELECT value FROM board_meta WHERE key='seed_version'"
         ).fetchone()
@@ -5231,7 +5297,8 @@ class Store:
         with self._lock, self._conn() as db:
             rows = db.execute(
                 "SELECT provider_key, base_url, fingerprint, credential_ref,"
-                " created_at, rotated_at FROM model_providers"
+                " created_at, rotated_at, last_used_at, slot_rejected_at"
+                " FROM model_providers"
                 " ORDER BY provider_key ASC").fetchall()
         return [dict(r) for r in rows]
 
@@ -5240,7 +5307,8 @@ class Store:
         with self._lock, self._conn() as db:
             row = db.execute(
                 "SELECT provider_key, base_url, fingerprint, credential_ref,"
-                " created_at, rotated_at FROM model_providers"
+                " created_at, rotated_at, last_used_at, slot_rejected_at"
+                " FROM model_providers"
                 " WHERE provider_key=?", (provider_key,)).fetchone()
         return dict(row) if row else None
 
@@ -5267,11 +5335,14 @@ class Store:
         leg (the ONLY re-set path: a POST for an existing name — including
         one whose credential was DELETEd — 409s at the route, pinned by
         test_re_register_after_delete_reuses_the_name). New fingerprint +
-        ref + rotated_at. None when the provider row does not exist."""
+        ref + rotated_at, and the slot machine's rotation transition
+        (threat model §3): a fresh key clears the `rejected` state — the
+        slot reads `set` until the provider says otherwise. None when the
+        provider row does not exist."""
         with self._lock, self._conn() as db:
             cur = db.execute(
                 "UPDATE model_providers SET fingerprint=?, credential_ref=?,"
-                " rotated_at=? WHERE provider_key=?",
+                " rotated_at=?, slot_rejected_at='' WHERE provider_key=?",
                 (fingerprint, credential_ref, rotated_at, provider_key))
             if cur.rowcount == 0:
                 return None
@@ -5293,12 +5364,43 @@ class Store:
                                          provider_key: str) -> dict[str, Any] | None:
         """Clear the credential metadata (the vault file is unlinked by
         the route): the row stays — the provider keeps its name, base_url
-        and created_at and shows the honest «не подключён» slot."""
+        and created_at and shows the honest «не подключён» slot. The key
+        slot facts (last_used / rejected) are key-health facts about a
+        key that no longer exists — cleared with it."""
         with self._lock, self._conn() as db:
             cur = db.execute(
                 "UPDATE model_providers SET fingerprint=NULL,"
-                " credential_ref=NULL, rotated_at=''"
-                " WHERE provider_key=?", (provider_key,))
+                " credential_ref=NULL, rotated_at='', last_used_at='',"
+                " slot_rejected_at='' WHERE provider_key=?", (provider_key,))
+            if cur.rowcount == 0:
+                return None
+        return self.model_provider(provider_key)
+
+    def model_provider_mark_used(self, provider_key: str,
+                                 used_at: str) -> dict[str, Any] | None:
+        """Slot machine `ok` transition (threat model §3): last_used_at
+        ticks from the use event AND a prior `rejected` state is cleared
+        (the slot reflects the LAST known outcome, not a tombstone).
+        None when the provider row does not exist."""
+        with self._lock, self._conn() as db:
+            cur = db.execute(
+                "UPDATE model_providers SET last_used_at=?,"
+                " slot_rejected_at='' WHERE provider_key=?",
+                (used_at, provider_key))
+            if cur.rowcount == 0:
+                return None
+        return self.model_provider(provider_key)
+
+    def model_provider_mark_rejected(self, provider_key: str,
+                                     rejected_at: str) -> dict[str, Any] | None:
+        """Slot machine `provider-401` transition: the provider refused the
+        key — slot_rejected_at stamps the LAST attempt time; last_used_at
+        is untouched (a rejected attempt is not a use). None when the
+        provider row does not exist."""
+        with self._lock, self._conn() as db:
+            cur = db.execute(
+                "UPDATE model_providers SET slot_rejected_at=?"
+                " WHERE provider_key=?", (rejected_at, provider_key))
             if cur.rowcount == 0:
                 return None
         return self.model_provider(provider_key)
@@ -5310,6 +5412,155 @@ class Store:
         fingerprint, timestamp. NEVER the material itself."""
         with self._lock, self._conn() as db:
             self._log(db, kind, None, payload)
+
+    # ------------------------------------------------ grants + use-audit (MF3)
+    # The grant is the OWNER-side authority record (threat model §1):
+    # (credential_ref, selector, enabled). Selectors reference EXISTING
+    # spine entities only — the route validates against the executors
+    # registry at write time and audits grant.rejected_unknown_target on
+    # refusal (the harness-dictionary rule: never auto-extend). Lifecycle
+    # audit rides the same events trail (grant.created/.enabled/.disabled/
+    # .removed); per-REQUEST use rows live in their own bounded table
+    # (log_model_use) — one grammar of fields, threat model §4.
+
+    def model_grants(self, provider_key: str) -> list[dict[str, Any]]:
+        """All grant rows of one provider, creation-ordered (metadata
+        only — selectors, no material)."""
+        with self._lock, self._conn() as db:
+            rows = db.execute(
+                "SELECT id, provider_key, credential_ref, selector_kind,"
+                " selector_value, enabled, added_via, created_by, created_at,"
+                " updated_at FROM model_grants"
+                " WHERE provider_key=? ORDER BY created_at ASC, id ASC",
+                (provider_key,)).fetchall()
+        return [dict(r) for r in rows]
+
+    def model_grant(self, grant_id: str) -> dict[str, Any] | None:
+        """One grant row by id (metadata only)."""
+        with self._lock, self._conn() as db:
+            row = db.execute(
+                "SELECT id, provider_key, credential_ref, selector_kind,"
+                " selector_value, enabled, added_via, created_by, created_at,"
+                " updated_at FROM model_grants WHERE id=?",
+                (grant_id,)).fetchone()
+        return dict(row) if row else None
+
+    def model_grant_create(self, provider_key: str, credential_ref: str,
+                           selector_kind: str, selector_value: str,
+                           created_by: str, created_at: str) -> dict[str, Any]:
+        """Insert one grant row. IntegrityError from the UNIQUE
+        (provider_key, selector_kind, selector_value) pair propagates —
+        the route maps it to the named 409 «доступ уже выдан». A PRIMARY
+        KEY collision on the minted id (48 bits — the ex- precedent) is
+        retried, never surfaced."""
+        grant_id = "mgr-" + secrets.token_hex(6)
+        with self._lock, self._conn() as db:
+            while True:
+                try:
+                    db.execute(
+                        "INSERT INTO model_grants (id, provider_key,"
+                        " credential_ref, selector_kind, selector_value,"
+                        " enabled, added_via, created_by, created_at)"
+                        " VALUES (?,?,?,?,?,1,'ui',?,?)",
+                        (grant_id, provider_key, credential_ref,
+                         selector_kind, selector_value, created_by,
+                         created_at))
+                    break
+                except sqlite3.IntegrityError as exc:
+                    if "PRIMARY KEY" in str(exc):
+                        grant_id = "mgr-" + secrets.token_hex(6)
+                        continue
+                    raise
+        return self.model_grant(grant_id)  # type: ignore[return-value]
+
+    def model_grant_set_enabled(self, grant_id: str, enabled: bool,
+                                updated_at: str) -> dict[str, Any] | None:
+        """Pause/resume one grant (the owner toggle; the row NEVER
+        disappears on disable — audit stays visible). None = unknown id."""
+        with self._lock, self._conn() as db:
+            cur = db.execute(
+                "UPDATE model_grants SET enabled=?, updated_at=?"
+                " WHERE id=?", (1 if enabled else 0, updated_at, grant_id))
+            if cur.rowcount == 0:
+                return None
+        return self.model_grant(grant_id)
+
+    def model_grant_delete(self, grant_id: str) -> dict[str, Any] | None:
+        """Revoke one grant (the row is REMOVED — ux MF-GRANT-REVOKE;
+        the audit event carries the removed selector). Returns the removed
+        row for the audit payload, None = unknown id."""
+        row = self.model_grant(grant_id)
+        if row is None:
+            return None
+        with self._lock, self._conn() as db:
+            db.execute("DELETE FROM model_grants WHERE id=?", (grant_id,))
+        return row
+
+    def model_grants_disable_for_provider(
+            self, provider_key: str, updated_at: str) -> list[dict[str, Any]]:
+        """The credential-removal cascade (verdict H1 consequences:
+        authority without material is dead). Disables every ENABLED grant
+        of the provider in one statement and returns the rows that THIS
+        call disabled (for the audit payloads)."""
+        with self._lock, self._conn() as db:
+            rows = db.execute(
+                "SELECT id FROM model_grants WHERE provider_key=? AND"
+                " enabled=1", (provider_key,)).fetchall()
+            ids = [r["id"] for r in rows]
+            if ids:
+                marks = ",".join("?" for _ in ids)
+                db.execute(
+                    f"UPDATE model_grants SET enabled=0, updated_at=?"
+                    f" WHERE id IN ({marks})", (updated_at, *ids))
+        return [self.model_grant(i) for i in ids
+                if self.model_grant(i) is not None]
+
+    def log_model_use(self, row: dict[str, Any]) -> None:
+        """ONE use-audit row per proxied request (threat model §4 — the
+        field set is exact; content/headers/material never ride in). The
+        retention bound (90 days OR 50k rows per provider, whichever
+        first) is pruned on THIS insert path — a single board process
+        never lets the table run ahead of its bound."""
+        with self._lock, self._conn() as db:
+            db.execute(
+                "INSERT INTO model_use_audit (ts, principal, provider_key,"
+                " credential_fingerprint, model_id, outcome, status_code,"
+                " latency_bucket, req_bytes, resp_bytes)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?)",
+                (row.get("ts") or "", row.get("principal") or "",
+                 row.get("provider_key") or "",
+                 row.get("credential_fingerprint") or "",
+                 row.get("model_id") or "", row.get("outcome") or "",
+                 int(row.get("status_code") or 0),
+                 row.get("latency_bucket") or "",
+                 int(row.get("req_bytes") or 0),
+                 int(row.get("resp_bytes") or 0)))
+            cutoff = (datetime.now(timezone.utc) - timedelta(days=90)
+                      ).isoformat(timespec="seconds")
+            db.execute(
+                "DELETE FROM model_use_audit WHERE provider_key=? AND ("
+                " ts < ? OR id < (SELECT MIN(id) FROM (SELECT id FROM"
+                " model_use_audit WHERE provider_key=?"
+                " ORDER BY id DESC LIMIT 50000)))",
+                (row.get("provider_key") or "", cutoff,
+                 row.get("provider_key") or ""))
+
+    def model_use_rows(self, provider_key: str | None = None,
+                       limit: int = 100) -> list[dict[str, Any]]:
+        """Diagnostic read of the use-audit table (metadata only by
+        construction — the §4 field set is all there is)."""
+        with self._lock, self._conn() as db:
+            if provider_key is None:
+                rows = db.execute(
+                    "SELECT * FROM model_use_audit"
+                    " ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+            else:
+                rows = db.execute(
+                    "SELECT * FROM model_use_audit WHERE provider_key=?"
+                    " ORDER BY id DESC LIMIT ?", (provider_key, limit)
+                ).fetchall()
+        return [dict(r) for r in rows]
+
 
     # ------------------------------------------- harness dictionary (wave 3C)
     # The owner-managed nomination dictionary (design 2026-09-22 §C). The
