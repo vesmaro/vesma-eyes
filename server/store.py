@@ -1420,6 +1420,25 @@ CREATE TABLE IF NOT EXISTS auth_sessions (
 );
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_account
 ON auth_sessions (account_id);
+-- Models fleet MF2 (security-verdict H1): the provider credential REGISTRY
+-- — METADATA ONLY. The credential material itself never lands here: it
+-- lives in a 0600 file under VESMARO_SECRETS_DIR (one file per
+-- credential_ref, outside the data dir). fingerprint = SHA-256(material)
+-- [:12hex] — the only material-derived artifact allowed to persist
+-- (verdict §1 H1); credential_ref names the vault file so DELETE can
+-- unlink it. status facts: fingerprint IS NULL ⇒ the key is not set
+-- (the roster's «не подключён» slot); 'rejected' arrives with the MF3
+-- enforcement wave (provider.use.rejected), the column stays metadata.
+-- Additive IF NOT EXISTS riding the _SCHEMA executescript — NO
+-- SEED_VERSION bump (accounts precedent).
+CREATE TABLE IF NOT EXISTS model_providers (
+    provider_key   TEXT PRIMARY KEY,
+    base_url       TEXT NOT NULL,
+    fingerprint    TEXT,
+    credential_ref TEXT,
+    created_at     TEXT NOT NULL,
+    rotated_at     TEXT NOT NULL DEFAULT ''
+);
 """
 
 # WF-1 table-rebuild target (Store._rebuild_tasks_for_wf1): the full
@@ -5195,6 +5214,98 @@ class Store:
         ``session.transcript_viewed`` with device_class / network_path /
         session_host in the payload. No transcript content ever rides
         along — WHO/WHEN/WHAT(opened), never WHAT(WAS WRITTEN)."""
+        with self._lock, self._conn() as db:
+            self._log(db, kind, None, payload)
+
+    # ------------------------------------- models fleet providers (MF2)
+    # The owner credential registry — METADATA rows only (security-verdict
+    # H1: the data dir stays keyless BY CONSTRUCTION). The material lives
+    # in a 0600 vault file under VESMARO_SECRETS_DIR; these methods never
+    # see it, only the fingerprint/credential_ref metadata the app layer
+    # derived at write time. Audit: provider.credential.set/.rotated/.removed
+    # (dot-family, fingerprint never material — verdict H4).
+
+    def model_providers(self) -> list[dict[str, Any]]:
+        """All registry rows (metadata only), name-ordered — the roster's
+        providers[] zone."""
+        with self._lock, self._conn() as db:
+            rows = db.execute(
+                "SELECT provider_key, base_url, fingerprint, credential_ref,"
+                " created_at, rotated_at FROM model_providers"
+                " ORDER BY provider_key ASC").fetchall()
+        return [dict(r) for r in rows]
+
+    def model_provider(self, provider_key: str) -> dict[str, Any] | None:
+        """One registry row by name (metadata only)."""
+        with self._lock, self._conn() as db:
+            row = db.execute(
+                "SELECT provider_key, base_url, fingerprint, credential_ref,"
+                " created_at, rotated_at FROM model_providers"
+                " WHERE provider_key=?", (provider_key,)).fetchone()
+        return dict(row) if row else None
+
+    def model_provider_create(self, provider_key: str, base_url: str,
+                              fingerprint: str, credential_ref: str,
+                              created_at: str) -> dict[str, Any]:
+        """Insert one registry row. IntegrityError (duplicate name)
+        propagates — the route maps it to the named 409."""
+        with self._lock, self._conn() as db:
+            db.execute(
+                "INSERT INTO model_providers (provider_key, base_url,"
+                " fingerprint, credential_ref, created_at)"
+                " VALUES (?,?,?,?,?)",
+                (provider_key, base_url, fingerprint, credential_ref,
+                 created_at))
+        row = self.model_provider(provider_key)
+        assert row is not None  # just inserted under the same lock
+        return row
+
+    def model_provider_set_credential(self, provider_key: str,
+                                      fingerprint: str, credential_ref: str,
+                                      rotated_at: str) -> dict[str, Any] | None:
+        """Set/replace the credential metadata (POST re-set after a
+        DELETE, or the PUT rotation): new fingerprint + ref + rotated_at.
+        None when the provider row does not exist."""
+        with self._lock, self._conn() as db:
+            cur = db.execute(
+                "UPDATE model_providers SET fingerprint=?, credential_ref=?,"
+                " rotated_at=? WHERE provider_key=?",
+                (fingerprint, credential_ref, rotated_at, provider_key))
+            if cur.rowcount == 0:
+                return None
+        return self.model_provider(provider_key)
+
+    def model_provider_update_base_url(self, provider_key: str,
+                                       base_url: str) -> dict[str, Any] | None:
+        """Point the registry row at a new base_url (the PUT rotation's
+        optional address change; metadata, no material involved)."""
+        with self._lock, self._conn() as db:
+            cur = db.execute(
+                "UPDATE model_providers SET base_url=? WHERE provider_key=?",
+                (base_url, provider_key))
+            if cur.rowcount == 0:
+                return None
+        return self.model_provider(provider_key)
+
+    def model_provider_remove_credential(self,
+                                         provider_key: str) -> dict[str, Any] | None:
+        """Clear the credential metadata (the vault file is unlinked by
+        the route): the row stays — the provider keeps its name, base_url
+        and created_at and shows the honest «не подключён» slot."""
+        with self._lock, self._conn() as db:
+            cur = db.execute(
+                "UPDATE model_providers SET fingerprint=NULL,"
+                " credential_ref=NULL, rotated_at=''"
+                " WHERE provider_key=?", (provider_key,))
+            if cur.rowcount == 0:
+                return None
+        return self.model_provider(provider_key)
+
+    def log_models_audit(self, kind: str, payload: dict[str, Any]) -> None:
+        """Provider-lifecycle audit into the SAME events trail (the
+        log_kora_audit body — one audit table, one grammar). The verdict
+        H4 payload contract: actor principal, provider_key, credential_ref,
+        fingerprint, timestamp. NEVER the material itself."""
         with self._lock, self._conn() as db:
             self._log(db, kind, None, payload)
 
