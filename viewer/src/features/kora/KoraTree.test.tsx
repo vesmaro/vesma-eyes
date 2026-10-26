@@ -179,7 +179,9 @@ describe("KoraTreePanel v2 (KW4, gate §9.4 / states-kw4 §3)", () => {
 
   it("every disclosure carries aria-expanded + aria-controls to a real id", () => {
     const { container } = mountTree();
-    const toggles = [...container.querySelectorAll("button[aria-expanded]")];
+    const toggles = [
+      ...container.querySelectorAll<HTMLButtonElement>("button[aria-expanded]"),
+    ];
     expect(toggles.length).toBeGreaterThan(0);
     for (const toggle of toggles) {
       const controls = toggle.getAttribute("aria-controls");

@@ -213,11 +213,13 @@ describe("Kora workspace (union И1 — 07j §6 / 07l §7)", () => {
     );
   }
 
-  it("exposes the named regions: work zone, navigation, meta panel (1.3.1)", () => {
+  it("exposes the named regions: session work zone, the tree-and-meta panel (1.3.1) — KW4 two-zone frame", () => {
     const html = renderKoraSession();
+    // KW4 (blueprint-kw4 §7): the left zone died — navigation lives in the
+    // right panel's tree; the session work zone keeps its aria-label, the
+    // panel is «Tree and meta», the hosts-and-agents tree sits inside it.
     expect(html).toContain('aria-label="Session run"');
-    expect(html).toContain('aria-label="Navigation"');
-    expect(html).toContain('aria-label="Meta panel"');
+    expect(html).toContain('aria-label="Tree and meta"');
     expect(html).toContain('aria-label="Hosts and agents"');
   });
 
