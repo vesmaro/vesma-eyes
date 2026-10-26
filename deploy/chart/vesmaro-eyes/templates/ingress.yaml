@@ -13,6 +13,22 @@ metadata:
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
+  {{- /* MF3 inference pull-proxy (mf3-threat-model.md §6): the /api/
+       models infer routes stream provider answers through this ingress —
+       the route needs proxy-read-timeout ≥ 330s (total 300s + slack) and
+       BUFFERING DISABLED (streaming pass-through, no spool). Traefik
+       defaults pass SSE through unbuffered and carry no fixed read
+       ceiling, so v1 ships a COMMENT, not an enforcement — enable the
+       matching annotations when the class changes or the proxy 504s on
+       long streams:
+       traefik.ingress.kubernetes.io/service.readtimeout: "330s"
+       traefik.ingress.kubernetes.io/buffering: |
+         middlewarename-buffering:
+           buffering:
+             maxRequestBodyBytes: 4194304
+             memRequestBodyBytes: 4194304
+       (values, not enforcement, v1 — the owner's traefik owns the
+       operator posture.) */}}
 spec:
   ingressClassName: {{ .Values.ingress.className }}
   {{- if .Values.ingress.tls.enabled }}

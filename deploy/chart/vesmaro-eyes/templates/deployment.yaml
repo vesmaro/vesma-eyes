@@ -99,6 +99,45 @@ spec:
             - name: VESMARO_TLS_CA_FILE
               value: /etc/vesmaro/tls/ca.crt
             {{- end }}
+            {{- if .Values.models.secretsDir.enabled }}
+            # MF2/MF3 credential vault (H1): a dedicated volume OUTSIDE the
+            # data dir — the data dir stays keyless BY CONSTRUCTION. The
+            # OWNER installs keys through the board UI; deploy never
+            # writes vault contents (the existingSecret discipline).
+            - name: VESMARO_SECRETS_DIR
+              value: {{ .Values.models.secretsDir.mountPath | quote }}
+            {{- end }}
+            {{- /* MF3 pull-proxy knobs (threat model §6): read once at
+                 boot, server-clamped to the §2-D ceilings (stricter
+                 only). enabled=false = the honest 503 off on both infer
+                 routes. */}}
+            {{- if .Values.models.proxy.enabled }}
+            - name: MODELS_PROXY_ENABLED
+              value: "1"
+            {{- else }}
+            - name: MODELS_PROXY_ENABLED
+              value: "0"
+            {{- end }}
+            - name: MODELS_PROXY_BODY_CAP_BYTES
+              value: {{ .Values.models.proxy.bodyCapBytes | quote }}
+            - name: MODELS_PROXY_MODEL_ID_MAX
+              value: {{ .Values.models.proxy.modelIdMax | quote }}
+            - name: MODELS_PROXY_CONNECT_SECONDS
+              value: {{ .Values.models.proxy.timeouts.connectSeconds | quote }}
+            - name: MODELS_PROXY_FIRST_BYTE_SECONDS
+              value: {{ .Values.models.proxy.timeouts.firstByteSeconds | quote }}
+            - name: MODELS_PROXY_IDLE_READ_SECONDS
+              value: {{ .Values.models.proxy.timeouts.idleReadSeconds | quote }}
+            - name: MODELS_PROXY_TOTAL_SECONDS
+              value: {{ .Values.models.proxy.timeouts.totalSeconds | quote }}
+            - name: MODELS_PROXY_PER_EXECUTOR_INFLIGHT
+              value: {{ .Values.models.proxy.limits.perExecutorInFlight | quote }}
+            - name: MODELS_PROXY_GLOBAL_INFLIGHT
+              value: {{ .Values.models.proxy.limits.globalInFlight | quote }}
+            - name: MODELS_PROXY_PER_EXECUTOR_PER_MINUTE
+              value: {{ .Values.models.proxy.limits.perExecutorPerMinute | quote }}
+            - name: MODELS_PROXY_GLOBAL_PER_MINUTE
+              value: {{ .Values.models.proxy.limits.globalPerMinute | quote }}
             {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -132,6 +171,10 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
+            {{- if .Values.models.secretsDir.enabled }}
+            - name: vault
+              mountPath: {{ .Values.models.secretsDir.mountPath }}
+            {{- end }}
             {{- if .Values.memoryRegistry.configMap.create }}
             - name: memories-config
               mountPath: /config
@@ -146,6 +189,11 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: {{ include "vesmaro-eyes.pvcName" . }}
+        {{- if .Values.models.secretsDir.enabled }}
+        - name: vault
+          persistentVolumeClaim:
+            claimName: {{ default (printf "%s-vault" (include "vesmaro-eyes.fullname" .)) .Values.models.secretsDir.existingClaim }}
+        {{- end }}
         {{- if .Values.memoryRegistry.configMap.create }}
         - name: memories-config
           configMap:
