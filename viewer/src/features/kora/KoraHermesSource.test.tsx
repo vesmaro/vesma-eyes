@@ -254,8 +254,12 @@ describe("Kora hermes bridge (T004 slice 2)", () => {
 
   it("one manual refresh fills the registry through the same leg — the anchor then resolves", async () => {
     const { container } = mountWorkspace({ cluster: true, noHermesRows: true });
-    await settle();
-    expect(container.textContent).toContain("сессий в реестре: 0");
+    // KW4: the refresh button lives in the panel furniture, which mounts on
+    // a query beat after the route renders — a settle() gamble before
+    // clickRefresh threw "refresh button not rendered" intermittently.
+    // The registry status line renders in the SAME panel block as the
+    // button, so polling for it proves the furniture is up.
+    await waitText(container, "сессий в реестре: 0");
     await clickRefresh(container);
     // The pull chain (mutate → onSuccess → invalidate → refetch → notify →
     // render) rides query-notification beats that can land on macrotasks —
