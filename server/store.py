@@ -5263,9 +5263,11 @@ class Store:
     def model_provider_set_credential(self, provider_key: str,
                                       fingerprint: str, credential_ref: str,
                                       rotated_at: str) -> dict[str, Any] | None:
-        """Set/replace the credential metadata (POST re-set after a
-        DELETE, or the PUT rotation): new fingerprint + ref + rotated_at.
-        None when the provider row does not exist."""
+        """Set/replace the credential metadata — the PUT rotation's store
+        leg (the ONLY re-set path: a POST for an existing name — including
+        one whose credential was DELETEd — 409s at the route, pinned by
+        test_re_register_after_delete_reuses_the_name). New fingerprint +
+        ref + rotated_at. None when the provider row does not exist."""
         with self._lock, self._conn() as db:
             cur = db.execute(
                 "UPDATE model_providers SET fingerprint=?, credential_ref=?,"

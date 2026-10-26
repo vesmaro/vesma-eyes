@@ -552,22 +552,31 @@ def test_sse_broadcast_on_mutations(client, app_module, vault) -> None:
     sse = FakeSse(app_module)
     try:
         _post(client, "prov-x", headers=_ui(client, app_module))
-        assert sse.frame()["kind"] == "model.inventory.changed"
+        frame = sse.frame()
+        assert frame["kind"] == "model.inventory.changed"
+        # Red line 1 pin: the roster frame carries metadata only — the
+        # material from the write path must not leak onto the stream.
+        assert CREDENTIAL not in json.dumps(frame)
         client.put("/api/models/providers/prov-x", json={"credential": CREDENTIAL_2},
                    headers=_ui(client, app_module))
-        assert sse.frame()["kind"] == "model.inventory.changed"
+        frame = sse.frame()
+        assert frame["kind"] == "model.inventory.changed"
+        assert CREDENTIAL not in json.dumps(frame)
+        assert CREDENTIAL_2 not in json.dumps(frame)
         client.delete("/api/models/providers/prov-x/credential",
                       headers=_ui(client, app_module))
         frame = sse.frame()
         assert frame["kind"] == "model.inventory.changed"
         assert frame["provider"] == "prov-x"
+        assert CREDENTIAL_2 not in json.dumps(frame)
     finally:
         sse.close()
 
 
 def test_validation_errors_never_touch_the_vault(client, app_module, vault) -> None:
-    """Order guarantee: owner wall → dir → URL → dup. A URL rejection
-    happens BEFORE the vault write — no file, no partial state."""
+    """Order guarantee (the handler's actual gate sequence): owner wall →
+    key-regex → URL → dir → dup. A URL rejection happens BEFORE the vault
+    write — no file, no partial state."""
     resp = client.post(
         "/api/models/providers",
         json={"provider_key": "prov-y", "base_url": "https://a@b.example",
