@@ -51,6 +51,9 @@ import type {
   InboxEditInput,
   InboxRefreshResult,
   LaunchesPage,
+  ModelProvider,
+  ModelProviderCreateInput,
+  ModelProviderRotateInput,
   LaunchesParams,
   DeviceGrantsResult,
   DeviceRevokedResult,
@@ -468,6 +471,37 @@ export interface BoardGateway extends MemoryGateway {
    * 404 unknown id; 503 while the provisioner is disabled.
    */
   getProvisionJob(jobId: string, signal?: AbortSignal): Promise<ProvisionJobStatus>;
+  /**
+   * Register a provider credential (`POST /api/models/providers`,
+   * ui-token; MF2, security-verdict §5). The material rides the request
+   * body EXACTLY ONCE — the answer is metadata only (fingerprint, never
+   * the key). 409 duplicate; 422 bad name / the credential-in-URL family;
+   * 503 honest-off (no secrets dir, never a DB fallback).
+   */
+  createModelProvider(
+    payload: ModelProviderCreateInput,
+    signal?: AbortSignal,
+  ): Promise<ModelProvider>;
+  /**
+   * Rotate the credential (`PUT /api/models/providers/{key}`, ui-token;
+   * MF2): new material → new fingerprint + audit .rotated; the old key
+   * stays valid until the write lands. 404 unknown; 503 honest-off.
+   */
+  rotateModelProvider(
+    providerKey: string,
+    payload: ModelProviderRotateInput,
+    signal?: AbortSignal,
+  ): Promise<ModelProvider>;
+  /**
+   * Remove the credential (`DELETE /api/models/providers/{key}/credential`,
+   * ui-token; MF2): the vault file is unlinked, the registry row STAYS
+   * with the honest «не подключён» slot. 404 unknown; 409 nothing to
+   * remove; 503 honest-off.
+   */
+  deleteModelProviderCredential(
+    providerKey: string,
+    signal?: AbortSignal,
+  ): Promise<ModelProvider>;
   /**
    * Set the default/fallback pair (`PUT /api/settings/execution`,
    * ui-token). Amd 2 §5 gates answer 422: a default must exist, be
@@ -1117,6 +1151,46 @@ export class BoardAdapter implements BoardGateway {
 
   async modelsRoster(signal?: AbortSignal): Promise<ModelsRosterPage> {
     return this.request<ModelsRosterPage>("/models", { signal });
+  }
+
+  /**
+   * MF2 owner acts (ui-token; security-verdict §5). The credential
+   * material rides the request body EXACTLY ONCE — every answer is the
+   * metadata-only ModelProviderOut (fingerprint, never the key). Errors
+   * carry the {ok, code, message} envelope: 409 duplicate / 404 unknown /
+   * 422 the credential-in-URL family / 503 honest-off (providers_off).
+   */
+  async createModelProvider(
+    payload: ModelProviderCreateInput,
+    signal?: AbortSignal,
+  ): Promise<ModelProvider> {
+    return this.request<ModelProvider>("/models/providers", {
+      method: "POST",
+      body: payload,
+      signal,
+      auth: true,
+    });
+  }
+
+  async rotateModelProvider(
+    providerKey: string,
+    payload: ModelProviderRotateInput,
+    signal?: AbortSignal,
+  ): Promise<ModelProvider> {
+    return this.request<ModelProvider>(
+      `/models/providers/${encodeURIComponent(providerKey)}`,
+      { method: "PUT", body: payload, signal, auth: true },
+    );
+  }
+
+  async deleteModelProviderCredential(
+    providerKey: string,
+    signal?: AbortSignal,
+  ): Promise<ModelProvider> {
+    return this.request<ModelProvider>(
+      `/models/providers/${encodeURIComponent(providerKey)}/credential`,
+      { method: "DELETE", signal, auth: true },
+    );
   }
 
   async listTaskSessions(

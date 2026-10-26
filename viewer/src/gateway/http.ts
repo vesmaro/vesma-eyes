@@ -208,6 +208,13 @@ function extractErrorMessage(response: Response, body: string): string {
         if (messages.length > 0) return messages.join("; ");
       }
     }
+    // The honest-envelope family ({ok: false, code, message} — KoraErrorOut,
+    // the MF2 provider gates, the hermes bridge): the human reason rides
+    // `message` and surfaces VERBATIM (MF-FORM-ERR-SERVER discipline).
+    if (parsed && typeof parsed === "object" && "message" in parsed) {
+      const message = (parsed as { message: unknown }).message;
+      if (typeof message === "string" && message.length > 0) return message;
+    }
   } catch {
     // Body was not JSON — fall through to truncation.
   }

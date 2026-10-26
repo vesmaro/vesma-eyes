@@ -14,6 +14,9 @@ import type {
   InboxRefreshResult,
   MemoryPulse,
   MergedTags,
+  ModelProvider,
+  ModelProviderCreateInput,
+  ModelProviderRotateInput,
   PulseParams,
   TaskCreateInput,
   TaskHistory,
@@ -333,6 +336,39 @@ export interface AgentsMutationSource {
    * no secret material travels.
    */
   getProvisionJob(jobId: string, signal?: AbortSignal): Promise<ProvisionJobStatus>;
+  /**
+   * Register a provider credential (`POST /api/models/providers`,
+   * ui-token; MF2, security-verdict §5). The material rides the request
+   * body EXACTLY ONCE — the 201 answer is metadata only (fingerprint,
+   * never the key). 409 duplicate name; 422 bad name / the credential-in-
+   * URL family; 503 honest-off (no VESMARO_SECRETS_DIR — never a DB
+   * fallback).
+   */
+  createModelProvider(
+    payload: ModelProviderCreateInput,
+    signal?: AbortSignal,
+  ): Promise<ModelProvider>;
+  /**
+   * Rotate the credential (`PUT /api/models/providers/{key}`, ui-token;
+   * MF2). New material → new fingerprint + audit .rotated; the old key
+   * stays valid until the write lands. 404 unknown; 503 honest-off.
+   */
+  rotateModelProvider(
+    providerKey: string,
+    payload: ModelProviderRotateInput,
+    signal?: AbortSignal,
+  ): Promise<ModelProvider>;
+  /**
+   * Remove the credential (`DELETE /api/models/providers/{key}/credential`,
+   * ui-token; MF2): the vault file is unlinked, the registry row STAYS
+   * with the honest «не подключён» slot; the grants cascade rides its MF3
+   * hook + audit .removed. 404 unknown; 409 nothing to remove; 503
+   * honest-off.
+   */
+  deleteModelProviderCredential(
+    providerKey: string,
+    signal?: AbortSignal,
+  ): Promise<ModelProvider>;
 }
 
 /** Gateway type that also speaks the agents-domain mutation wire. */
@@ -355,7 +391,13 @@ export function isAgentsMutationSource(
     typeof (gateway as Partial<AgentsMutationSource>).deleteHarness === "function" &&
     typeof (gateway as Partial<AgentsMutationSource>).createProvisionJob ===
       "function" &&
-    typeof (gateway as Partial<AgentsMutationSource>).getProvisionJob === "function"
+    typeof (gateway as Partial<AgentsMutationSource>).getProvisionJob === "function" &&
+    typeof (gateway as Partial<AgentsMutationSource>).createModelProvider ===
+      "function" &&
+    typeof (gateway as Partial<AgentsMutationSource>).rotateModelProvider ===
+      "function" &&
+    typeof (gateway as Partial<AgentsMutationSource>).deleteModelProviderCredential ===
+      "function"
   );
 }
 
