@@ -15,6 +15,7 @@ import {
   Settings,
   Tag,
   Bot,
+  Cpu,
   BrainCircuit,
   Smartphone,
   Workflow,
@@ -146,6 +147,16 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
         to: "/agents/execution",
         key: "nav.agentsExecution",
         icon: Workflow,
+        end: true,
+      },
+      // Models fleet hub (MF1, ux-blueprint §2): the roster lives in the
+      // Agents domain next to Hosts/Execution — the owner-registry family
+      // precedent (/agents/harnesses). Live-only rule (D8): the roster is
+      // a live read surface, so the section honestly takes its nav slot.
+      {
+        to: "/agents/models",
+        key: "nav.agentsModels",
+        icon: Cpu,
         end: true,
       },
     ],
@@ -313,6 +324,8 @@ export function crumbsFor(pathname: string): Crumb[] {
       return [AGENTS_CRUMB, { key: "nav.agentsExecution" }];
     case "/agents/harnesses":
       return [AGENTS_CRUMB, { key: "nav.agentsHarnesses" }];
+    case "/agents/models":
+      return [AGENTS_CRUMB, { key: "nav.agentsModels" }];
     case "/system/sessions":
       return [SYSTEM_CRUMB, { key: "nav.sessions" }];
     case "/system/traces":

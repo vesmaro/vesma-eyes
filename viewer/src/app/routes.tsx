@@ -96,6 +96,14 @@ const AgentsHarnessesPage = lazy(() =>
     default: m.ExecutorRegistryPage,
   })),
 );
+// Models fleet hub (MF1, ux-blueprint §2): the roster lives in the Agents
+// domain — the section reads GET /api/models (the single aggregation
+// point) and owns no mutations in MF1.
+const AgentsModelsPage = lazy(() =>
+  import("@/features/agents/ModelsHubPage").then((m) => ({
+    default: m.ModelsHubPage,
+  })),
+);
 // Кора (ADR 0019 rev.2 — week 0 CONTRACT-FIRST UI mocks): slice-1 list +
 // slice-2/3 transcript/chat, mock-gateway driven until the slices land.
 // KW4 (blueprint-kw4 §4): ONE route element for the WHOLE domain — /kora,
@@ -318,6 +326,9 @@ export function buildRoutes(): RouteObject[] {
                 // AGW-4: the executor registry — connection guide + approve /
                 // enable / revoke / delete management (spec §1, wave 2).
                 { path: "harnesses", element: <AgentsHarnessesPage /> },
+                // Models fleet hub (MF1, ux-blueprint §2): the read-only
+                // roster section — /agents/models next to Hosts/Execution.
+                { path: "models", element: <AgentsModelsPage /> },
               ],
             },
 

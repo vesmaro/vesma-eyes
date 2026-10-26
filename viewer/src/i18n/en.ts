@@ -2742,4 +2742,32 @@ export const en: Record<TranslationKey, string> = {
   "agents.provision.stepVerify": "Verify",
   "agents.provision.detachNote":
     "You may close this card — the install does NOT cancel: it keeps running on the server, and the card re-attaches to the job when you return.",
+
+  // --- models fleet: hub «Модели» (MF1, ux-blueprint §6) ---------------------
+  "nav.agentsModels": "Models",
+  "models.hub.title": "Models",
+  "models.hub.loading": "Loading the model roster",
+  "models.hub.failed": "Failed to load the model roster",
+  "models.hub.empty.title": "No models visible yet",
+  "models.hub.empty.message":
+    "The board sees no model facts yet: no providers connected, no agent reports, the board roster is empty.",
+  "models.hub.connectedTitle": "Connected providers",
+  "models.hub.connectedEmpty":
+    "No providers connected yet. Provider connection arrives in the next wave.",
+  "models.hub.mirrorTitle": "Found by agents — not connected",
+  "models.hub.mirrorEmpty": "No models visible yet — waiting for agent reports",
+  "models.hub.boardTitle": "Board roster",
+  "models.hub.boardBadge": "board",
+  "models.hub.boardCluster": "(cluster)",
+  "models.hub.noKey": "no key",
+  "models.hub.modelsCount": "models: {{count}}",
+  "models.hub.overflow": "…and {{count}} more",
+  "models.hub.defaultModel": "default: {{model}}",
+  "models.hub.mirrorSeenOn": "seen on {{where}}",
+  "models.hub.mirrorAuthConfigured": "key configured locally",
+  "models.hub.mirrorAuthAnonymous": "anonymous",
+  "models.hub.mirrorAuthUnknown": "key: unknown",
+  "models.hub.sourceConfig": "source: harness config",
+  "models.hub.sourceProbe": "source: local model server",
+
 };
