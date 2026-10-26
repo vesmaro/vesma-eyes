@@ -150,6 +150,19 @@ export interface BoardEventMap {
     readonly kind: "server.changed";
     readonly server?: string;
   };
+  /**
+   * Models fleet roster (MF1, additive reserved kind): the roster-mutation
+   * frame of discovery-contract §2.3. The MF1 board emits NOTHING yet —
+   * nothing writes the roster — but the kind is declared so the agents
+   * SSE bridge invalidates the hub the day the emitter lands (the
+   * accept-and-ignore dictionary discipline; payload shape fixed by the
+   * contract: the dedup tuple, optional).
+   */
+  "model.inventory.changed": {
+    readonly kind: "model.inventory.changed";
+    readonly provider?: string;
+    readonly base_url?: string;
+  };
   notification: {
     readonly kind: "notification";
     readonly notification: BoardNotification;
@@ -479,6 +492,22 @@ export function parseBoardEvent(raw: string): ParsedBoardEvent {
         event: {
           kind,
           ...(typeof parsed.server === "string" ? { server: parsed.server } : {}),
+        },
+      };
+    case "model.inventory.changed":
+      // Payload-free for the invalidation bridge: the optional dedup tuple
+      // rides along when present, never gates acceptance (MF1 — the board
+      // emits nothing yet; declared per the additive dictionary rule).
+      return {
+        status: "event",
+        event: {
+          kind,
+          ...(typeof parsed.provider === "string"
+            ? { provider: parsed.provider }
+            : {}),
+          ...(typeof parsed.base_url === "string"
+            ? { base_url: parsed.base_url }
+            : {}),
         },
       };
     case "notification":

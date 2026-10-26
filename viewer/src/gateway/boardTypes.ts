@@ -735,6 +735,31 @@ export interface HarnessStateResult {
   readonly harness: HarnessItem;
 }
 
+// --- models fleet roster (MF1, discovery-contract §3 /api/models) -----------
+
+/**
+ * One board-reported provider row (board `ModelsBoardRosterItem`) — MF1
+ * serves the hermes cluster roster only. No credential field exists in the
+ * family by construction (security verdict §5): names, endpoint URLs and
+ * counts are facts; key material never is.
+ */
+export type ModelsBoardRosterItem = Schemas["ModelsBoardRosterItem"];
+
+/**
+ * One agent-discovered provider fact (board `ModelsDiscoveredItem`) — the
+ * mirror-wave ingest target; honestly empty in MF1 (the agent wire carries
+ * no models slice yet). Dedup identity: (provider, base_url).
+ */
+export type ModelsDiscoveredItem = Schemas["ModelsDiscoveredItem"];
+
+/**
+ * The fleet roster page — board `ModelsRosterOut` (MF1 cut): board rows
+ * now; `providers` (MF2 owner registry) and `discovered` (the agent mirror)
+ * ride honestly empty until their waves; caps travel in `meta` — read,
+ * never hardcode.
+ */
+export type ModelsRosterPage = Schemas["ModelsRosterOut"];
+
 /** Execution settings read — board `ExecutionSettingsOut`. */
 export type ExecutionSettings = Schemas["ExecutionSettingsOut"];
 
