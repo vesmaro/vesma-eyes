@@ -413,15 +413,22 @@ class ProviderEgress:
         clean_base = base_url.rstrip("/")
         return f"{clean_base}{path}"
 
-    def outbound_headers(self, api_key: str) -> dict[str, str]:
+    def outbound_headers(self, api_key: str, *,
+                         method: str = "POST") -> dict[str, str]:
         """EXACTLY ONE Authorization header from the vault (Bearer) plus
-        Accept. No inbound header is ever an input here — nothing to
-        merge, drop or forward; Host is rebuilt by the HTTP client from
-        the resolved authority."""
-        return {
+        Accept — and, on body-carrying legs, Content-Type. httpx does NOT
+        set Content-Type for raw ``content=bytes`` bodies, and strict
+        provider gateways answer a JSON POST without the header with 415
+        (review P2-1). No inbound header is ever an input here — nothing
+        to merge, drop or forward; Host is rebuilt by the HTTP client
+        from the resolved authority."""
+        headers = {
             "Authorization": f"Bearer {api_key}",
             "Accept": "application/json, text/event-stream",
         }
+        if method.upper() != "GET":
+            headers["Content-Type"] = "application/json"
+        return headers
 
     # ---------------------------------------------------------- calling
     async def call_buffered(self, base_url: str, path: str, api_key: str,
@@ -441,13 +448,16 @@ class ProviderEgress:
         try:
             async with httpx.AsyncClient(
                     timeout=timeout, follow_redirects=False) as client:
-                if method == "GET":
-                    response = await client.get(
-                        url, headers=self.outbound_headers(api_key))
-                else:
-                    response = await client.post(
-                        url, headers=self.outbound_headers(api_key),
-                        content=payload_bytes_or_none(payload))
+                # stream=True: the send returns at response HEADERS — the
+                # body read below is what the §2-D total budget bounds
+                # (a plain client.post would have already buffered the
+                # whole body under the 30s read timeout, P3-4).
+                request = client.build_request(
+                    method, url, headers=self.outbound_headers(
+                        api_key, method=method),
+                    content=payload_bytes_or_none(payload) if method
+                    != "GET" else None)
+                response = await client.send(request, stream=True)
                 elapsed = time.monotonic() - started
                 if response.status_code >= 300:
                     raw = await _read_bounded(response)
@@ -458,13 +468,26 @@ class ProviderEgress:
                         elapsed_s=elapsed,
                         error=error_allowlist(response.status_code, raw),
                         resp_bytes=len(raw))
-                body = await response.aread()
+                # P3-4: the buffered read runs under the §2-D TOTAL wall
+                # clock too (first-byte alone no longer bounds a slow
+                # body) — the remaining budget, floor at 0.1s.
+                body = await asyncio.wait_for(
+                    response.aread(),
+                    timeout=max(0.1, self.total_timeout - elapsed))
                 return EgressOutcome(
                     status_code=response.status_code,
                     content_type=response.headers.get(
                         "content-type", "").split(";")[0].strip(),
                     bytes_=body, elapsed_s=elapsed,
                     resp_bytes=len(body))
+        except asyncio.TimeoutError:
+            # The total budget ran out mid-read (a slow body on a
+            # buffered leg) — the same honest 504 family as a stalled
+            # stream; the exception class name only, never str(exc).
+            return EgressOutcome(
+                status_code=0, content_type="",
+                elapsed_s=time.monotonic() - started,
+                request_error="ReadTimeout")
         except httpx.HTTPError as exc:
             # The class name only — str(exc) may carry URLs (the
             # hermes_client discipline); the material never appears in
@@ -492,7 +515,8 @@ class ProviderEgress:
             client = httpx.AsyncClient(timeout=timeout,
                                        follow_redirects=False)
             request = client.build_request(
-                method.upper(), url, headers=self.outbound_headers(api_key),
+                method.upper(), url,
+                headers=self.outbound_headers(api_key, method=method),
                 content=payload_bytes_or_none(payload) if method.upper()
                 != "GET" else None)
             response = await client.send(request, stream=True)

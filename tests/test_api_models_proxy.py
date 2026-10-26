@@ -47,6 +47,7 @@ import hashlib
 import json
 import sqlite3
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -79,6 +80,12 @@ class FakeProvider:
             "body": b'{"choices": [{"message": {"content": "ok"}}]}',
             "content_type": "application/json",
             "location": "http://127.0.0.1:1/evil",
+            # Optional threading.Event: the handler sends HEADERS, then
+            # waits for the event BEFORE the body — pins in-flight
+            # coverage across an open stream and the buffered total
+            # wall-clock (set() to release; bounded wait so a failed
+            # test never hangs the server thread forever).
+            "hold_body": None,
         }
         self._server: ThreadingHTTPServer | None = None
         self.port = 0
@@ -107,6 +114,9 @@ class FakeProvider:
                                      provider.behavior["location"])
                 self.send_header("Content-Length", str(len(resp)))
                 self.end_headers()
+                hold = provider.behavior.get("hold_body")
+                if hold is not None:
+                    hold.wait(timeout=8)
                 self.wfile.write(resp)
 
             do_GET = _handle
@@ -966,6 +976,10 @@ def test_header_discipline_on_the_wire(client, app_module, vault,
     assert "x-sneaky" not in sent_headers
     assert "x-api-key" not in sent_headers
     assert sent_headers["host"] == f"127.0.0.1:{provider.port}"
+    # Review P2-1: httpx never sets Content-Type for raw content=bytes —
+    # the board does, on every body-carrying leg (strict provider
+    # gateways answer a JSON POST without the header with 415).
+    assert sent_headers.get("content-type") == "application/json"
     # The executor token and the owner cookie never reach the provider —
     # neither in the recorded headers nor in the outbound body.
     assert secret not in json.dumps(
@@ -1027,6 +1041,148 @@ def test_outbound_model_is_pinned(client, app_module, vault, provider) -> None:
     assert sent_body["model"] == "audited-id"
     assert sent_body["messages"][0]["content"] == "hi"
     assert _use_rows("prov")[0]["model_id"] == "audited-id"
+
+
+def test_declared_body_cap_refuses_before_read(client, app_module, vault,
+                                               provider) -> None:
+    """Review P2-3: a DECLARED Content-Length over the §2-D cap answers
+    413 capped BEFORE a single body byte is read — the board never
+    buffers an oversized body just to refuse it (the telemetry-family
+    pre-parse pattern). The refusal row's req_bytes is honestly 0
+    (nothing was read), and the provider saw zero requests."""
+    from server import models_proxy
+    _register_provider(client, app_module, provider)
+    executor, secret = _make_executor(client, app_module, "exq-declared")
+    _grant(client, app_module, "prov", "host", "laptop-1")
+    resp = client.post(
+        f"/api/executors/{executor['id']}/models/prov/infer",
+        content=b'{"model_id": "m-1", "payload": {}}',
+        headers=_ex_headers(secret) | {
+            "Content-Type": "application/json",
+            "Content-Length": str(models_proxy.BODY_CAP_BYTES + 1),
+        })
+    assert resp.status_code == 413
+    assert resp.json()["code"] == "body_capped"
+    assert provider.requests == []
+    row = _use_rows("prov")[0]
+    assert row["outcome"] == "capped"
+    assert row["req_bytes"] == 0
+
+
+def test_buffered_read_runs_under_total_wall_clock(client, app_module, vault,
+                                                   provider,
+                                                   monkeypatch) -> None:
+    """Review P3-4: the buffered read is bounded by the §2-D TOTAL wall
+    clock — a provider that answers headers and then stalls the body
+    cannot hold the buffered leg beyond the budget; the board answers
+    the honest 504 family (ReadTimeout) and the use row records
+    provider_error."""
+    from server import models_proxy
+    import server.app as app
+    _register_provider(client, app_module, provider)
+    executor, secret = _make_executor(client, app_module, "exq-total")
+    _grant(client, app_module, "prov", "host", "laptop-1")
+    monkeypatch.setattr(app, "_provider_egress",
+                        models_proxy.ProviderEgress(total_timeout=0.6))
+    provider.behavior["hold_body"] = threading.Event()
+    try:
+        resp = _infer(client, executor, secret)
+        assert resp.status_code == 504
+        body = resp.json()
+        assert body["code"] == "provider_unreachable"
+        assert "ReadTimeout" in body["message"]
+        row = _use_rows("prov")[0]
+        assert row["outcome"] == "provider_error"
+        assert row["status_code"] == 504
+    finally:
+        provider.behavior["hold_body"].set()  # free the server thread
+
+
+def test_inflight_caps_cover_the_whole_streaming_relay(client, app_module,
+                                                       vault, provider,
+                                                       monkeypatch) -> None:
+    """Review P2-2: the in-flight slot is held for the WHOLE provider
+    call — including a streaming relay that runs AFTER the handler
+    returned its StreamingResponse. Two concurrent held streams occupy
+    the per-executor budget (cap 2); the THIRD concurrent call answers
+    429 concurrency_capped; once the streams close (relay generators
+    finish), a fourth call succeeds — the release happened in the relay,
+    not at handler exit. Real HTTP: uvicorn in a thread + httpx.AsyncClient
+    (the TestClient transport buffers whole responses and cannot hold a
+    stream open)."""
+    import asyncio
+
+    import httpx
+    import server.app as app
+    import uvicorn
+    from server import models_proxy
+
+    _register_provider(client, app_module, provider)
+    executor, secret = _make_executor(client, app_module, "exq-inflight2")
+    _grant(client, app_module, "prov", "host", "laptop-1")
+    monkeypatch.setattr(app, "_models_inflight", models_proxy.InFlightLimiter(
+        global_cap=8, per_key_cap=2))
+    provider.behavior["hold_body"] = threading.Event()
+
+    config = uvicorn.Config(app_module.app, host="127.0.0.1", port=0,
+                            log_level="error", lifespan="off")
+    server = uvicorn.Server(config)
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    deadline = time.monotonic() + 15
+    while not server.started and time.monotonic() < deadline:
+        time.sleep(0.05)
+    assert server.started, "uvicorn never started"
+    port = server.servers[0].sockets[0].getsockname()[1]
+    try:
+        async def flow() -> None:
+            base = f"http://127.0.0.1:{port}"
+            url = (f"{base}/api/executors/{executor['id']}"
+                   f"/models/prov/infer")
+            headers = _ex_headers(secret)
+            async with httpx.AsyncClient(timeout=30) as ac:
+                # Two concurrent HELD streams — each context yields at
+                # response headers while the provider holds the body,
+                # so both relays are mid-flight, each holding a slot.
+                async def open_stream():
+                    cm = ac.stream("POST", url, headers=headers, json={
+                        "model_id": "m-1",
+                        "payload": {"stream": True, "messages": []}})
+                    response = await cm.__aenter__()
+                    return cm, response
+
+                cm_a, resp_a = await open_stream()
+                cm_b, resp_b = await open_stream()
+                assert resp_a.status_code == 200, await resp_a.aread()
+                assert resp_b.status_code == 200, await resp_b.aread()
+
+                # The THIRD concurrent call is capped: the budget counts
+                # the two still-relaying streams.
+                third = await ac.post(url, headers=headers, json={
+                    "model_id": "m-1", "payload": {}})
+                assert third.status_code == 429, third.text
+                assert third.json()["code"] == "concurrency_capped"
+                assert len(provider.requests) == 2  # capped pre-egress
+
+                # Release the provider; both relays drain and their
+                # finally legs free the slots.
+                provider.behavior["hold_body"].set()
+                await asyncio.sleep(0.5)
+                await cm_a.__aexit__(None, None, None)
+                await cm_b.__aexit__(None, None, None)
+                await asyncio.sleep(0.3)
+
+                # The slots came back — the release happened in the
+                # relay's finally, not at handler exit.
+                fourth = await ac.post(url, headers=headers, json={
+                    "model_id": "m-1", "payload": {}})
+                assert fourth.status_code == 200, fourth.text
+
+        asyncio.run(flow())
+    finally:
+        provider.behavior["hold_body"].set()
+        server.should_exit = True
+        thread.join(timeout=10)
 
 
 def test_body_and_model_id_caps(client, app_module, vault, provider,

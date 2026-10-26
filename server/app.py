@@ -27,7 +27,7 @@ import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Annotated, Any, AsyncIterator, Literal
+from typing import Annotated, Any, AsyncIterator, Callable, Literal
 from urllib.parse import parse_qs, urlparse
 
 from fastapi import FastAPI, HTTPException, Query, Request, Response
@@ -7205,26 +7205,49 @@ async def _model_inference(request: Request, provider_key: str,
             f"Достигнут предел одновременных вызовов: "
             f"{models_proxy.PER_EXECUTOR_INFLIGHT} на исполнителя, "
             f"{models_proxy.GLOBAL_INFLIGHT} на борд.")
+    # The in-flight budget must cover the WHOLE provider call — including
+    # a streaming relay that keeps running AFTER this handler returns its
+    # StreamingResponse (review P2-2). The caller's finally fires at
+    # HANDLER RETURN — before the relay iterates — so the admitted half
+    # flags `with_relay` on the streaming branch and the RELAY's finally
+    # performs the real release; the guard here is then a no-op. For
+    # every completed answer (buffered ok, refused, transport failure)
+    # the branch releases immediately and the flag stays False. The
+    # residual leak window (a relay generator that is neither started
+    # nor closed) does not exist in practice: starlette closes a
+    # half-consumed generator on disconnect and asyncio closes an
+    # unstarted one on GC — the finally runs either way. The RATE budget
+    # is a sliding window of ATTEMPTS — a completed call keeps its
+    # recorded slot until the window passes (nothing to release).
+    slot = {"with_relay": False}
+
+    def _release_inflight() -> None:
+        if not slot["with_relay"]:
+            _models_inflight.release(inflight_key)
+
     try:
         return await _model_inference_admitted(
             request, provider_row=provider_row, principal=principal,
             executor_row=executor_row, inflight_key=inflight_key,
-            fingerprint=fingerprint, catalog=catalog, started=started)
+            fingerprint=fingerprint, catalog=catalog, started=started,
+            slot=slot, release_inflight=_release_inflight)
     finally:
-        # The in-flight budget is released; the RATE budget is a sliding
-        # window of ATTEMPTS — a completed call keeps its recorded slot
-        # until the window passes (nothing to release).
-        _models_inflight.release(inflight_key)
+        _release_inflight()
 
 
 async def _model_inference_admitted(
         request: Request, *, provider_row: dict[str, Any],
         principal: str, executor_row: dict[str, Any] | None,
         inflight_key: str | None, fingerprint: str, catalog: bool,
-        started: float) -> Response:
+        started: float, slot: dict[str, bool],
+        release_inflight: Callable[[], None]) -> Response:
     """The admitted half of the pipeline: feature gate → grant check →
-    fingerprint → egress. The rate/in-flight budgets are held by the
-    caller (released in its finally)."""
+    fingerprint → egress. The rate budgets are held by the caller. The
+    IN-FLIGHT slot: every completed answer releases through
+    ``release_inflight`` immediately; the streaming pass-through flags
+    ``slot["with_relay"] = True`` and the RELAY generator's finally
+    performs the real release — the §2-D per-executor/global caps bound
+    the whole provider call including the relay (review P2-2)."""
     provider_key = provider_row["provider_key"]
 
     # ---- §3.3 feature gate (honest-off family) -------------------------
@@ -7329,6 +7352,25 @@ async def _model_inference_admitted(
         method = "GET"
     else:
         method = "POST"
+        # §2-D pre-parse gate (review P2-3, the telemetry-family
+        # pattern): a DECLARED Content-Length over the cap refuses 413
+        # BEFORE a single body byte is read — a caller cannot force the
+        # board to buffer 4 MiB+ on the wire just to tell it no. The
+        # actual-size re-check below stays as the belt for chunked /
+        # lying headers; req_bytes in the refusal row is honestly 0
+        # (nothing was read).
+        declared = request.headers.get("content-length", "")
+        if (declared.isdigit()
+                and int(declared) > models_proxy.BODY_CAP_BYTES):
+            _model_use_row(
+                principal=principal, provider_key=provider_key,
+                fingerprint=fingerprint, model_id="",
+                outcome="capped", status_code=413, started=started,
+                req_bytes=0, resp_bytes=0)
+            return _kora_error(
+                413, "body_capped",
+                f"Тело запроса больше {models_proxy.BODY_CAP_BYTES} байт "
+                "(§2-D).")
         raw = await request.body()
         req_bytes = len(raw)
         if req_bytes > models_proxy.BODY_CAP_BYTES:
@@ -7390,7 +7432,10 @@ async def _model_inference_admitted(
     if isinstance(opened, models_proxy.EgressOutcome):
         # Either a buffered success (bytes_) or a REFUSED call (the
         # error/3xx allowlist outcome, or the transport never answered).
+        # Every branch here COMPLETES the provider call — the in-flight
+        # slot is released immediately (review P2-2).
         if opened.request_error is not None:
+            release_inflight()
             _use("provider_error", 504, 0)
             return _egress_transport_failure(opened)
         if opened.error is not None:
@@ -7406,11 +7451,14 @@ async def _model_inference_admitted(
                 })
                 _broadcast({"kind": "model.inventory.changed",
                             "provider": provider_key})
+                release_inflight()
                 _use("provider-401", status, opened.resp_bytes)
                 return _egress_error_response(opened.error)
+            release_inflight()
             _use("provider_error", status, opened.resp_bytes)
             return _egress_error_response(opened.error)
         # ---- provider answered 2xx (buffered): the slot `ok` transition
+        release_inflight()
         _mark_ok_and_maybe_broadcast()
         body_bytes = opened.bytes_ or b""
         _use("ok", opened.status_code, len(body_bytes))
@@ -7421,7 +7469,14 @@ async def _model_inference_admitted(
                         media_type=media_type)
 
     # ---- streaming pass-through (buffering disabled, no spool) ---------
+    # In-flight OWNERSHIP TRANSFERS to the relay generator (review P2-2):
+    # flag it so the caller's finally no-ops, and the relay's finally
+    # performs the real release — the §2-D caps then bound the whole
+    # provider call including the relay. The generator's finally runs on
+    # client disconnect (starlette closes it) and on GC of an unstarted
+    # generator — no leak window in practice.
     stream = opened
+    slot["with_relay"] = True
     _mark_ok_and_maybe_broadcast()
 
     async def _relayed() -> AsyncIterator[bytes]:
@@ -7429,7 +7484,10 @@ async def _model_inference_admitted(
             async for chunk in stream.aiter():
                 yield chunk
         finally:
-            # The §4 row lands when the last byte left the board.
+            # The §4 row lands when the last byte left the board, and
+            # the in-flight slot with it (the caller's finally no-ops —
+            # with_relay is set).
+            _models_inflight.release(inflight_key)
             _use("ok", stream.status_code, stream.relayed_bytes)
 
     media_type = (stream.content_type
