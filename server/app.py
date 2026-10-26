@@ -7202,9 +7202,10 @@ async def _model_inference(request: Request, provider_key: str,
             executor_row=executor_row, inflight_key=inflight_key,
             fingerprint=fingerprint, catalog=catalog, started=started)
     finally:
+        # The in-flight budget is released; the RATE budget is a sliding
+        # window of ATTEMPTS — a completed call keeps its recorded slot
+        # until the window passes (nothing to release).
         _models_inflight.release(inflight_key)
-        _models_rate_executor.release(rate_key)
-        _models_rate_global.release("global")
 
 
 async def _model_inference_admitted(
@@ -7309,12 +7310,16 @@ async def _model_inference_admitted(
     # ---- §3.6 egress (models_proxy owns the wire) -----------------------
     base_url = provider_row["base_url"]
     if catalog:
+        # The listing leg: a GET /models on the wire (the §2-T allowlist
+        # shape), audited like every use (§2-R).
         path = models_proxy.PATH_MODELS
         model_id = ""
         payload: dict[str, Any] | None = None
         req_bytes = 0
         want_stream = False
+        method = "GET"
     else:
+        method = "POST"
         raw = await request.body()
         req_bytes = len(raw)
         if req_bytes > models_proxy.BODY_CAP_BYTES:
@@ -7352,7 +7357,7 @@ async def _model_inference_admitted(
             base_url, path, material, payload or {})
     else:
         opened = await _provider_egress.call_buffered(
-            base_url, path, material, payload)
+            base_url, path, material, payload, method=method)
 
     def _use(outcome: str, status_code: int, resp_bytes: int) -> None:
         _model_use_row(
@@ -7361,40 +7366,43 @@ async def _model_inference_admitted(
             outcome=outcome, status_code=status_code, started=started,
             req_bytes=req_bytes, resp_bytes=resp_bytes)
 
+    def _mark_ok_and_maybe_broadcast() -> None:
+        """The slot machine `ok` transition (§3): last_used ticks, a
+        prior `rejected` state clears; the TRANSITION broadcasts (a
+        state the owner must see), ordinary ok uses do not — per-request
+        frames would thrash the roster cache under agentic loops (the
+        use row is the audit of record)."""
+        was_rejected = bool(provider_row.get("slot_rejected_at"))
+        store.model_provider_mark_used(provider_key, _now_iso())
+        if was_rejected:
+            _broadcast({"kind": "model.inventory.changed",
+                        "provider": provider_key})
+
     if isinstance(opened, models_proxy.EgressOutcome):
+        # Either a buffered success (bytes_) or a REFUSED call (the
+        # error/3xx allowlist outcome, or the transport never answered).
         if opened.request_error is not None:
             _use("provider_error", 504, 0)
             return _egress_transport_failure(opened)
-        assert opened.error is not None  # every >=300 carries the allowlist
-        status = opened.error.status_code
-        if status == 401:
-            # §3.6: the provider refused the key — the named honest fact,
-            # the `rejected` slot, audit provider.use.rejected.
-            store.model_provider_mark_rejected(provider_key, _now_iso())
-            store.log_models_audit("provider.use.rejected", {
-                "actor": principal, "provider_key": provider_key,
-                "fingerprint": fingerprint, "model_id": model_id,
-                "status_code": status,
-            })
-            _broadcast({"kind": "model.inventory.changed",
-                        "provider": provider_key})
-            _use("provider-401", status, opened.resp_bytes)
+        if opened.error is not None:
+            status = opened.error.status_code
+            if status == 401:
+                # §3.6: the provider refused the key — the named honest
+                # fact, the `rejected` slot, audit provider.use.rejected.
+                store.model_provider_mark_rejected(provider_key, _now_iso())
+                store.log_models_audit("provider.use.rejected", {
+                    "actor": principal, "provider_key": provider_key,
+                    "fingerprint": fingerprint, "model_id": model_id,
+                    "status_code": status,
+                })
+                _broadcast({"kind": "model.inventory.changed",
+                            "provider": provider_key})
+                _use("provider-401", status, opened.resp_bytes)
+                return _egress_error_response(opened.error)
+            _use("provider_error", status, opened.resp_bytes)
             return _egress_error_response(opened.error)
-        _use("provider_error", status, opened.resp_bytes)
-        return _egress_error_response(opened.error)
-
-    # ---- provider answered 2xx: the slot machine `ok` transition -------
-    was_rejected = bool(provider_row.get("slot_rejected_at"))
-    store.model_provider_mark_used(provider_key, _now_iso())
-    if was_rejected:
-        # `rejected + ok → set` is a state the owner must see (the slot
-        # reflects the LAST known outcome); ordinary ok uses do not
-        # broadcast (per-request frames would thrash the roster cache
-        # under agentic loops — the use row is the audit of record).
-        _broadcast({"kind": "model.inventory.changed",
-                    "provider": provider_key})
-
-    if catalog or not want_stream:
+        # ---- provider answered 2xx (buffered): the slot `ok` transition
+        _mark_ok_and_maybe_broadcast()
         body_bytes = opened.bytes_ or b""
         _use("ok", opened.status_code, len(body_bytes))
         media_type = (opened.content_type
@@ -7405,6 +7413,7 @@ async def _model_inference_admitted(
 
     # ---- streaming pass-through (buffering disabled, no spool) ---------
     stream = opened
+    _mark_ok_and_maybe_broadcast()
 
     async def _relayed() -> AsyncIterator[bytes]:
         try:
@@ -7412,13 +7421,13 @@ async def _model_inference_admitted(
                 yield chunk
         finally:
             # The §4 row lands when the last byte left the board.
-            _use("ok", opened.status_code, stream.relayed_bytes)
+            _use("ok", stream.status_code, stream.relayed_bytes)
 
     media_type = (stream.content_type
                   if stream.content_type in ("text/event-stream",
                                              "application/json")
                   else "text/event-stream")
-    return StreamingResponse(_relayed(), status_code=opened.status_code,
+    return StreamingResponse(_relayed(), status_code=stream.status_code,
                              media_type=media_type)
 
 

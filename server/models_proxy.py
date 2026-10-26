@@ -345,12 +345,22 @@ class ProviderStream:
     _idle_read_timeout: float
     _total_timeout: float
     _started: float
+    status_code: int
     content_type: str
     relayed_bytes: int = 0
     _closed: bool = False
+    _raw_iter: AsyncIterator[bytes] | None = None
 
     async def aiter(self) -> AsyncIterator[bytes]:
         try:
+            # ONE raw iterator for the whole relay — re-calling
+            # aiter_raw() per chunk would mint a fresh generator that
+            # sees the response-level is_stream_consumed flag and dies
+            # on the second chunk.
+            raw_iter = self._raw_iter
+            if raw_iter is None:
+                raw_iter = self._response.aiter_raw()
+                self._raw_iter = raw_iter
             while True:
                 remaining = self._total_timeout - (
                     time.monotonic() - self._started)
@@ -358,7 +368,7 @@ class ProviderStream:
                     break  # total wall clock spent — the honest end
                 try:
                     chunk = await asyncio.wait_for(
-                        self._response.aiter_raw().__anext__(),
+                        raw_iter.__anext__(),
                         timeout=min(remaining, self._idle_read_timeout))
                 except (StopAsyncIteration, TimeoutError):
                     break
@@ -506,6 +516,7 @@ class ProviderEgress:
             _response=response, _client=client,
             _idle_read_timeout=self.idle_read_timeout,
             _total_timeout=self.total_timeout, _started=started,
+            status_code=response.status_code,
             content_type=response.headers.get(
                 "content-type", "").split(";")[0].strip())
 
