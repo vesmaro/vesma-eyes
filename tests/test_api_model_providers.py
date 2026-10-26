@@ -373,14 +373,24 @@ def test_device_post_is_403_wall(client, app_module, vault) -> None:
     store.scan_pairing(row["id"], device_name="qa-prov-dev", source_ip="testclient")
     store.confirm_pairing(row["id"], allow=True)
     device, token = store.issue_device_session(row["id"])
-    resp = client.post(
-        "/api/models/providers",
-        json={"provider_key": "prov-m", "base_url": "https://x.example/api",
-              "credential": CREDENTIAL},
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert resp.status_code == 403
-    assert app_module.store.model_provider("prov-m") is None
+    try:
+        resp = client.post(
+            "/api/models/providers",
+            json={"provider_key": "prov-m", "base_url": "https://x.example/api",
+                  "credential": CREDENTIAL},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code == 403
+        assert app_module.store.model_provider("prov-m") is None
+    finally:
+        # The shared session DB must not leak rows into the ≤5 device
+        # quota (the test_device_scope_v1 fixture discipline).
+        db = sqlite3.connect(DATA_DIR / "board.db")
+        try:
+            db.execute("DELETE FROM device_sessions WHERE id=?", (device["id"],))
+            db.commit()
+        finally:
+            db.close()
 
 
 def test_cookie_leg_writes(client, app_module, vault) -> None:
