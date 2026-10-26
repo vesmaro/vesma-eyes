@@ -1547,6 +1547,152 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/api/models/providers/{provider_key}/grants": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * List Model Grants
+         * @description Grant rows of one provider + the LIVE selector registry for the
+         *     ux picker («Хосты · Исполнители» из живого реестра, ux §3.3). OPEN
+         *     read: selectors and dates are roster-class facts (no material
+         *     exists in the family); the WRITES below carry the owner wall (red
+         *     line 6).
+         */
+        readonly get: operations["list_model_grants_api_models_providers__provider_key__grants_get"];
+        readonly put?: never;
+        /**
+         * Create Model Grant
+         * @description Grant access (owner act, ui-token; red line 6). Order: owner wall
+         *     → provider exists → credential set (authority without material is
+         *     dead) → selector validated against the LIVE spine (unknown → 422 +
+         *     audit grant.rejected_unknown_target) → duplicate selector 409 →
+         *     row + audit grant.created + SSE.
+         */
+        readonly post: operations["create_model_grant_api_models_providers__provider_key__grants_post"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/models/providers/{provider_key}/grants/{grant_id}": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        readonly post?: never;
+        /**
+         * Delete Model Grant
+         * @description Revoke one grant (owner act; the row is REMOVED — MF-GRANT-REVOKE;
+         *     the audit event carries the removed selector). Revocation acts at
+         *     the NEXT use — the in-flight call completes honestly (red line 7).
+         */
+        readonly delete: operations["delete_model_grant_api_models_providers__provider_key__grants__grant_id__delete"];
+        readonly options?: never;
+        readonly head?: never;
+        /**
+         * Patch Model Grant
+         * @description Pause/resume one grant (owner act). enabled=false answers the
+         *     NEXT request with 403 (pull: immediate — the ux promise «следующий
+         *     вызов — без доступа»); the row stays visible for audit.
+         */
+        readonly patch: operations["patch_model_grant_api_models_providers__provider_key__grants__grant_id__patch"];
+        readonly trace?: never;
+    };
+    readonly "/api/models/{provider_key}/infer": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Board Model Infer
+         * @description Board self-use inference (§1: the ui class — grant check NONE by
+         *     design, the provider being registered IS the board's access;
+         *     «доступен только борду», MF-GRANT-EMPTY).
+         */
+        readonly post: operations["board_model_infer_api_models__provider_key__infer_post"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/models/{provider_key}/catalog": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Board Model Catalog
+         * @description Board self-use listing (GET /models egress — audited like every
+         *     use: «who saw the roster of a paid provider», §2-R).
+         */
+        readonly get: operations["board_model_catalog_api_models__provider_key__catalog_get"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/executors/{executor_id}/models/{provider_key}/infer": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Executor Model Infer
+         * @description Agent-relay inference (§1: the executor token class,
+         *     identity-matched to {id}; grant-checked against the AUTHENTICATED
+         *     identity — a body field naming an executor is ignored for both the
+         *     check and the audit attribution, CWE-284).
+         */
+        readonly post: operations["executor_model_infer_api_executors__executor_id__models__provider_key__infer_post"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/executors/{executor_id}/models/{provider_key}/catalog": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Executor Model Catalog
+         * @description Agent-relay listing (grant-checked like the infer leg).
+         */
+        readonly get: operations["executor_model_catalog_api_executors__executor_id__models__provider_key__catalog_get"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/api/kora/hermes/sessions/{session_id}/messages": {
         readonly parameters: {
             readonly query?: never;
@@ -4770,6 +4916,60 @@ export interface components {
             readonly [key: string]: unknown;
         };
         /**
+         * ModelGrantCreateIn
+         * @description POST /api/models/providers/{key}/grants — the owner act. No
+         *     credential material, no wildcard («всем» is not a v1 selector —
+         *     ux §3.3: the intent is «на выбранных агентов/хостов»).
+         */
+        readonly ModelGrantCreateIn: {
+            /**
+             * Selector Kind
+             * @enum {string}
+             */
+            readonly selector_kind: "host" | "executor";
+            /** Selector Value */
+            readonly selector_value: string;
+        };
+        /**
+         * ModelGrantOut
+         * @description One grant row (metadata only — selectors name spine entities, no
+         *     material). ``selector`` is the ux «Кому» display form
+         *     (`host:<name>` / `executor:<harness@host>`); created_by is the H4
+         *     audit actor field.
+         */
+        readonly ModelGrantOut: {
+            /** Grant Id */
+            readonly grant_id: string;
+            /** Provider Key */
+            readonly provider_key: string;
+            /**
+             * Selector Kind
+             * @enum {string}
+             */
+            readonly selector_kind: "host" | "executor";
+            /** Selector Value */
+            readonly selector_value: string;
+            /** Selector */
+            readonly selector: string;
+            /** Enabled */
+            readonly enabled: boolean;
+            /** Created At */
+            readonly created_at: string;
+            /** Created By */
+            readonly created_by: string;
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /**
+         * ModelGrantPatchIn
+         * @description PATCH — the pause/resume toggle (enabled=false = «приостановлен»;
+         *     the row stays for audit, MF-GRANT-DISABLED).
+         */
+        readonly ModelGrantPatchIn: {
+            /** Enabled */
+            readonly enabled: boolean;
+        };
+        /**
          * ModelProviderCreateIn
          * @description POST /api/models/providers — the ONE body that ever carries
          *     credential material (verdict §4 red line 1: the write path).
@@ -4787,7 +4987,10 @@ export interface components {
          * @description One registry row, metadata only — the roster providers[] shape
          *     (OQ-1 verdict: additive) and the mutation response body. NO credential
          *     field exists in this family by construction; fingerprint + status are
-         *     the honest «тот ли ключ» facts.
+         *     the honest «тот ли ключ» facts. MF3 adds the slot-machine facts
+         *     (threat model §3): ``last_used_at`` ticks from ok use events,
+         *     ``rejected_at`` stamps the provider-401 that set the `rejected`
+         *     slot; grants never move the key slot.
          */
         readonly ModelProviderOut: {
             /** Provider Key */
@@ -4802,6 +5005,10 @@ export interface components {
             readonly rotated_at?: string | null;
             /** Status */
             readonly status?: ("set" | "rejected") | null;
+            /** Last Used At */
+            readonly last_used_at?: string | null;
+            /** Rejected At */
+            readonly rejected_at?: string | null;
         } & {
             readonly [key: string]: unknown;
         };
@@ -8798,6 +9005,266 @@ export interface operations {
                 };
                 content: {
                     readonly "application/json": components["schemas"]["ModelProviderOut"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly list_model_grants_api_models_providers__provider_key__grants_get: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly provider_key: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly create_model_grant_api_models_providers__provider_key__grants_post: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly provider_key: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["ModelGrantCreateIn"];
+            };
+        };
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 201: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["ModelGrantOut"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly delete_model_grant_api_models_providers__provider_key__grants__grant_id__delete: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly provider_key: string;
+                readonly grant_id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly patch_model_grant_api_models_providers__provider_key__grants__grant_id__patch: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly provider_key: string;
+                readonly grant_id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["ModelGrantPatchIn"];
+            };
+        };
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["ModelGrantOut"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly board_model_infer_api_models__provider_key__infer_post: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly provider_key: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly board_model_catalog_api_models__provider_key__catalog_get: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly provider_key: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly executor_model_infer_api_executors__executor_id__models__provider_key__infer_post: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly executor_id: string;
+                readonly provider_key: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly executor_model_catalog_api_executors__executor_id__models__provider_key__catalog_get: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly executor_id: string;
+                readonly provider_key: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": unknown;
                 };
             };
             /** @description Validation Error */
