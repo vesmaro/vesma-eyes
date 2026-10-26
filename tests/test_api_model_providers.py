@@ -79,8 +79,11 @@ def _clean_registry_after_each():
 
 @pytest.fixture()
 def vault(monkeypatch, tmp_path: Path) -> Path:
-    """A usable secrets dir pinned via the H1 env (read LIVE per call)."""
+    """A usable secrets dir pinned via the H1 env (read LIVE per call).
+    The dir is PRE-CREATED — the operator-provisioned volume posture; the
+    write path's own on-demand mkdir covers the compose/dev shape."""
     directory = tmp_path / "vault"
+    directory.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("VESMARO_SECRETS_DIR", str(directory))
     return directory
 
