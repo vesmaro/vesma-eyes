@@ -6202,7 +6202,13 @@ async def models_roster() -> ModelsRosterOut:
                 provenance="board",
             )
         ],
-        meta={"max_models_per_row": _MODELS_MAX_PER_ROW},
+        meta={
+            "max_models_per_row": _MODELS_MAX_PER_ROW,
+            # MF-HUB-OFF honesty (H1): the FE renders the disabled connect
+            # CTA WITH its reason when the credential features are off.
+            # Metadata only — no credential-shaped name in the payload.
+            "providers_off": not _providers_vault_ready(),
+        },
     )
 
 
@@ -6263,14 +6269,27 @@ class ProviderCredentialError(ValueError):
     speaks (ux-blueprint §3.1)."""
 
 
+def _providers_vault_ready() -> bool:
+    """READ-ONLY availability check for the roster's meta fact
+    (MF-HUB-OFF): env set AND the path is an existing directory. A read
+    must never mkdir; the authoritative gate stays the write path's probe
+    (this hint may be optimistic where os.access lies — root — but the
+    mutations still refuse honestly there)."""
+    raw = os.environ.get(MODELS_SECRETS_DIR_ENV, "").strip()
+    if not raw:
+        return False
+    return Path(raw).is_dir()
+
+
 def _providers_secrets_dir() -> Path | None:
-    """The credential vault directory, or None when credential features
-    are honestly OFF (H1: unset/unusable = refused, never a DB fallback).
-    Reads the env LIVE (the _hermes_api_key discipline): the deploy
-    channel can mount the volume without a code change. A configured dir
-    is created 0700 on demand (compose/dev convenience; k8s provisions it
-    out-of-band) and PROBED for writability — a read-only or missing
-    mount degrades to honest-off, never to a half-written secret."""
+    """The credential vault directory for WRITES, or None when credential
+    features are honestly OFF (H1: unset/unusable = refused, never a DB
+    fallback). Reads the env LIVE (the _hermes_api_key discipline): the
+    deploy channel can mount the volume without a code change. A
+    configured dir is created 0700 on demand (compose/dev convenience;
+    k8s provisions it out-of-band) and PROBED for writability — a
+    read-only or missing mount degrades to honest-off, never to a
+    half-written secret."""
     raw = os.environ.get(MODELS_SECRETS_DIR_ENV, "").strip()
     if not raw:
         return None

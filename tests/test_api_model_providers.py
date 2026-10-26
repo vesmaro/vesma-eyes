@@ -62,6 +62,21 @@ def _fingerprint(material: str) -> str:
     return hashlib.sha256(material.encode("utf-8")).hexdigest()[:12]
 
 
+@pytest.fixture(autouse=True)
+def _clean_registry_after_each():
+    """The store is session-scoped: registry rows created here must not
+    leak into the MF1 roster tests' `providers == []` honest-empty pin
+    (they run in the same process). Audit events stay — they are the
+    trail; only the registry table is swept."""
+    yield
+    db = sqlite3.connect(DATA_DIR / "board.db")
+    try:
+        db.execute("DELETE FROM model_providers")
+        db.commit()
+    finally:
+        db.close()
+
+
 @pytest.fixture()
 def vault(monkeypatch, tmp_path: Path) -> Path:
     """A usable secrets dir pinned via the H1 env (read LIVE per call)."""
@@ -548,3 +563,14 @@ def test_validation_errors_never_touch_the_vault(client, app_module, vault) -> N
     assert resp.status_code == 422
     assert not vault.exists() or list(vault.iterdir()) == []
     assert app_module.store.model_provider("prov-y") is None
+
+
+def test_roster_meta_names_the_off_fact(client, app_module, providers_off) -> None:
+    """MF-HUB-OFF honesty: with the env unset the roster meta says
+    providers_off=true (the FE renders the disabled CTA WITH its reason);
+    with a usable dir the fact flips to false. A read never mkdirs."""
+    assert client.get("/api/models").json()["meta"]["providers_off"] is True
+
+
+def test_roster_meta_off_fact_flips_with_vault(client, app_module, vault) -> None:
+    assert client.get("/api/models").json()["meta"]["providers_off"] is False
