@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,22 +10,18 @@ import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { isKoraUnauthorized } from "./koraGateway";
 import { KoraSignInCta } from "./KoraSignInCta";
-import { KoraNavPanel } from "./KoraNavPanel";
 import { KoraMetaPanel } from "./KoraMetaPanel";
-import { type KoraBlock2Context } from "./KoraSessionList";
 import { KoraWorkzone, type KoraRegistryEmpty } from "./KoraWorkzone";
+import { KoraHostField } from "./KoraHostField";
+import { KoraTreePanel } from "./KoraTree";
+import { HermesSourceLine } from "./KoraHermesSource";
 import { KoraResizeHandle, seamPx } from "./KoraResizeHandle";
 import { useKoraEtherBridge, useKoraEtherRows } from "./useKoraEther";
 import {
-  KORA_NAV_DEFAULT,
-  KORA_NAV_MAX,
-  KORA_NAV_MIN,
   KORA_SIDE_DEFAULT,
   KORA_SIDE_MAX,
   KORA_SIDE_MIN,
-  readKoraLeftW,
   readKoraSideW,
-  writeKoraLeftW,
   writeKoraSideW,
 } from "./koraFrameStorage";
 import { NOOP_KORA_INTENT_EVENTS } from "./koraIntentEvents";
@@ -33,7 +29,7 @@ import {
   NOOP_KORA_FRAME_EVENTS,
   type KoraFrameEventPoints,
 } from "./koraFrameEvents";
-import { useIsFrameViewport, useIsWideFrame } from "./koraViewport";
+import { useIsFrameViewport } from "./koraViewport";
 import { buildKoraTree, koraSummary, type KoraQuickFilter } from "./koraWorkspaceModel";
 import {
   useKoraSessionPages,
@@ -46,52 +42,57 @@ import { pageGridClass } from "@/layout/pageGrid";
 import { useKoraEntered } from "@/telemetry/useKoraEntered"; // ME-041: kora.entered
 
 /**
- * The Kora workspace — the v7 frame in its KW1 «ТРИ КОЛОНКИ» cut
- * (kora-rethink blueprint §3–4): from ≥lg the page is a 100vh app frame —
- * NO page scroll, every surface scrolls inside itself (07l §1.2). Geometry:
- * the 40px-style header row (now carrying the real «ждут владельца» badge —
- * the ex-Пульт UI-30 counter), then ONE grid with THREE columns — the LEFT
- * navigation panel (Блок 1 tree + Блок 2 sessions + the pinned cluster-chat
- * entry + the hermes source line, `vesmaro.koraLeftW`), the central column
- * (the work zone as it stands — the chat split is KW2) and the RIGHT meta
- * panel (О СЕССИИ / ДАЙДЖЕСТ / ЭФИР / ПОКРЫТИЕ, one scroll, states.md §5
- * defaults). Both widths are REAL seams (07l §3: pointer drag + full
- * keyboard path + persist on commit). Below lg the frame reflows honestly
- * (07l §1.5): the seams leave, the page scrolls (nav → center → meta —
- * the ladder tuning is KW3).
+ * The Kora workspace — the KW4 «ПОЛЕ ХОСТА + ПРАВАЯ ПАНЕЛЬ» cut
+ * (blueprint-kw4 §2/§3/§6): from ≥lg the page is a 100vh app frame — NO
+ * page scroll, every surface scrolls inside itself (07l §1.2). Geometry:
+ * the 40px-style header row (the real «ждут владельца» badge), then ONE
+ * grid with TWO columns — the central column (the host FIELD at
+ * /kora/host/:host: chips + cwd/source-grouped sessions; the hermes split
+ * at /kora/hermes and the frozen session modes at /kora/:sessionId; the
+ * invitation at /kora) and the RIGHT panel «Дерево и мета» (the v2 tree —
+ * pin + search + hosts→agents — then the KW3 meta blocks, ONE panel
+ * scroll). ONE real seam (07l §3): the right panel width — pointer drag +
+ * full keyboard path + persist on commit, `--kora-right-w` (240–420,
+ * default 320 — canon). The LEFT zone is GONE (its content rehoused: the
+ * tree → the panel top, the sessions → the field grouped, the pin → the
+ * tree's first row, HermesSourceLine → the panel; `vesmaro.koraLeftW` is
+ * a dead key the safe getter ignores — blueprint-kw4 §5). Below lg the
+ * frame reflows honestly (07l §1.5, KW3 precedent): document flow — the
+ * tree card → the center card → the meta card, the page scrolls.
  *
- * The ПУЛЬТ is dissolved (blueprint §6): the strip leaves the structure,
- * the Дайджест/Эфир wings moved into the meta panel, the badge moved into
- * the header; the height hardware survives in useKoraBandHeight for KW2's
- * «Все ходы» zone. The Эфир ring now has ONE mount (the meta block).
+ * Selection is ROUTE-driven everywhere (blueprint-kw4 §4, the
+ * HostsRosterPage A1 precedent): the field's agent chips write ?agent=,
+ * the tree rows link /kora/host/:host (+?agent=), a session row links the
+ * frozen /kora/:sessionId. The retired header select-filter is GONE — the
+ * page context now IS the route (ТЛ verdict, blueprint-kw4 §2). The 401
+ * gate / error / not-found states keep the document flow (they are not
+ * the frame).
  *
- * Selection stays a ROUTE (/kora/:sessionId) — the frame never re-assembles,
- * the center's content changes. The 401 gate / error / not-found states
- * keep the document flow (they are not the frame).
- *
- * И1 honest cuts kept: no fake counters, the composer's send is deferred;
- * the Эфир feeds ONLY from the real bus (one stream per workspace, the ring
- * lives in koraEtherStore). Everything data-shaped reads the EXISTING slice
- * 1–2 seams (the paged session registry, the paged transcript cursor, the
- * executors registry, the UI-30 inbox).
+ * И1 honest cuts kept: no fake counters; the Эфир feeds ONLY from the real
+ * bus (one stream per workspace, the ring lives in koraEtherStore — ONE
+ * mount, the meta panel). Everything data-shaped reads the EXISTING
+ * slice 1–2 seams (the paged session registry, the paged transcript
+ * cursor, the executors registry, the UI-30 inbox).
  */
 
 const PAGE_SIZE = 50;
 
-/** The hermes source option VALUE in the ONE filter select (T004 slice 2).
- * Mirrors the reserved synthetic executor id — the registry filter branch
- * keys on harness=hermes, so the value only routes the select. */
-const HERMES_SOURCE = "hermes";
+/** The hermes session id prefix (T004 slice 3) — the canonical deep-link
+ * form for the source's sessions; the routing fact, not a filter value. */
+const HERMES_ID_PREFIX = "hermes:";
 
 export function KoraWorkspace({
   sessionId = null,
+  host = null,
   cluster = false,
   frameEvents = NOOP_KORA_FRAME_EVENTS,
 }: {
   sessionId?: string | null;
+  /** The decoded :host route param (/kora/host/:host) — null = not the
+   * field route (the invitation / hermes / a session mode). */
+  host?: string | null;
   /** The RESERVED /kora/hermes segment (kora-rethink blueprint §5): the
-   * cluster-chat mode is ROUTE-driven — it no longer depends on the filter
-   * being hermes with nothing selected. */
+   * cluster-chat mode is ROUTE-driven. */
   cluster?: boolean;
   /** The frame telemetry call points (KW3): seam commits ride them — a
    * no-op until the taxonomy v1 revision names the kinds. */
@@ -99,13 +100,15 @@ export function KoraWorkspace({
 }) {
   const t = useT();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const sessions = useKoraSessionPages(PAGE_SIZE);
   // T004 slice 3 — ONE transcript leg per source: the canonical
   // «hermes:<native>» deep link rides the LIVE hermes messages route, the
   // registry ids ride the zcode transcript route. The id prefix is the
   // routing fact (the FE only ever links the canonical form), so the
   // disabled hook stays a no-op instead of a guaranteed-404 call.
-  const hermesDeepLink = sessionId !== null && sessionId.startsWith(`${HERMES_SOURCE}:`);
+  const hermesDeepLink =
+    sessionId !== null && sessionId.startsWith(HERMES_ID_PREFIX);
   // T004 slice 3 — the chat anchor: the api_server session of the source,
   // the LAST ACTIVE one (live first, then freshest) — the conversation the
   // chat continues. No api_server row (pre-pull, or the cluster serves
@@ -142,9 +145,7 @@ export function KoraWorkspace({
   );
   const hermesTranscript = useKoraHermesTranscriptPages(hermesTarget, PAGE_SIZE);
   // kora.entered (taxonomy §1.2 #3): settle = first honest verdict of the
-  // page the visit entered (list vs deep-linked transcript). The cluster
-  // route settles on the registry read — the chat's own skeleton lives
-  // inside the split, the frame's verdict is the nav's.
+  // page the visit entered (field vs list vs deep-linked transcript).
   useKoraEntered(
     hermesDeepLink
       ? !hermesTranscript.isPending
@@ -155,12 +156,12 @@ export function KoraWorkspace({
   const executors = useExecutors();
 
   // The Эфир: ONE stream for the workspace; since KW1 the ring has ONE
-  // mount — the meta panel's Эфир block (the scene card left with the
-  // Пульт; koraEtherStore stays the single source).
+  // mount — the meta panel's Эфир block.
   useKoraEtherBridge();
   const etherRows = useKoraEtherRows();
 
-  // The right-panel (meta) seam (07l §3.1): width state + persist on commit.
+  // The right-panel («Дерево и мета») seam (07l §3.1): width state + persist
+  // on commit. The LEFT seam is retired with the left zone (KW4).
   const [sideW, setSideW] = useState<number>(readKoraSideW);
   const onSideValue = useCallback((next: number): void => setSideW(next), []);
   const onSideCommit = useCallback((): void => {
@@ -170,19 +171,6 @@ export function KoraWorkspace({
   const onSideReset = useCallback((): void => {
     setSideW(KORA_SIDE_DEFAULT);
     writeKoraSideW(KORA_SIDE_DEFAULT);
-  }, []);
-
-  // The LEFT navigation seam (kora-rethink blueprint §4, KW1): same seam
-  // hardware, `vesmaro.koraLeftW` (220–380, def 280).
-  const [leftW, setLeftW] = useState<number>(readKoraLeftW);
-  const onLeftValue = useCallback((next: number): void => setLeftW(next), []);
-  const onLeftCommit = useCallback((): void => {
-    writeKoraLeftW(leftW);
-    frameEvents.seamCommitted("nav");
-  }, [leftW, frameEvents]);
-  const onLeftReset = useCallback((): void => {
-    setLeftW(KORA_NAV_DEFAULT);
-    writeKoraLeftW(KORA_NAV_DEFAULT);
   }, []);
 
   // §9.3 honest-empty branching: the connect CTA only shows when the
@@ -225,42 +213,39 @@ export function KoraWorkspace({
   );
   const summary = useMemo(() => koraSummary(model, items), [model, items]);
 
-  // The ONE page filter (07j §3.2): the header select and the tree clicks
-  // write the same context; Блок 2 + the tree dimming follow it. The
-  // agents-hosts deep link (`/kora?host=<host>`, B1 «Сессии в Кору») lands
-  // with the host filter preset — INITIAL-ONLY: the select stays the owner
-  // of the context afterwards.
-  const [context, setContext] = useState<KoraBlock2Context>(() => {
-    if (typeof window === "undefined") return { kind: "all" };
-    const host = new URLSearchParams(window.location.search).get("host");
-    return host ? { kind: "host", host } : { kind: "all" };
-  });
-  const [quickFilter, setQuickFilter] = useState<KoraQuickFilter | null>(null);
-  const contextHost =
-    context.kind === "host"
-      ? context.host
-      : context.kind === "agent"
-        ? context.host
-        : null;
+  // states-kw4 §4 — the session-mode breadcrumb's host: the registry group
+  // that owns the session's executor. A registry miss (unknown-host group)
+  // reads «← Кора» — no invented host name, one way back.
+  const sessionHost = useMemo(() => {
+    if (session === null) return null;
+    for (const group of [...model.hosts, ...model.unknown]) {
+      if (group.agents.some((agent) => agent.executorId === session.executor_id)) {
+        return group.host;
+      }
+    }
+    return null;
+  }, [session, model]);
 
-  // T004 slice 2 — the hermes source (cluster) as a FIRST-CLASS filter: the
-  // status read is DATA (no live probe, no pulse); the pull runs ONLY on the
-  // explicit refresh button. The context branches read/writes stay local.
+  // The route IS the page context (KW4): ?agent= selects the field's agent
+  // (empty → the freshest default, K-CTX-NO-AGENT). The quick filter stays
+  // local UI state — the field owns the only chips that read it.
+  const agentParam = searchParams.get("agent");
+  const [quickFilter, setQuickFilter] = useState<KoraQuickFilter | null>(null);
+
+  // The field's agent chip click: writes ?agent= (route = selection); the
+  // selected chip's second click returns to the default agent.
+  const onSelectAgent = useCallback(
+    (executorId: string): void => {
+      if (searchParams.get("agent") === executorId) setSearchParams({});
+      else setSearchParams({ agent: executorId });
+    },
+    [searchParams, setSearchParams],
+  );
+
+  // T004 slice 2 — the hermes status read is DATA (no live probe, no
+  // pulse); the pull runs ONLY on the explicit panel refresh button.
   const hermesStatus = useKoraHermesStatus();
   const hermesPull = useKoraHermesPull();
-
-  const contextSessions = useMemo(() => {
-    if (context.kind === "all") return items;
-    if (context.kind === "host") {
-      return model.hosts
-        .filter((host) => host.host === context.host)
-        .flatMap((host) => host.agents.flatMap((agent) => [...agent.sessions]));
-    }
-    if (context.kind === "hermes") {
-      return items.filter((item) => item.harness === "hermes");
-    }
-    return items.filter((item) => item.executor_id === context.executorId);
-  }, [context, items, model]);
 
   const registryEmpty: KoraRegistryEmpty =
     !sessions.isPending && sessions.error === null && items.length === 0
@@ -278,45 +263,6 @@ export function KoraWorkspace({
     (!executors.isFetching && executors.isPending);
   const treeReady = !sessions.isPending && executorsSettled;
 
-  const selectHost = (host: string) => {
-    // The hermes SOURCE option (T004 slice 2) rides the same ONE filter
-    // select: value "hermes" selects the cluster-source context, "" clears.
-    if (host === HERMES_SOURCE) {
-      setContext({ kind: "hermes" });
-      return;
-    }
-    if (host === "") {
-      setContext({ kind: "all" });
-      return;
-    }
-    setContext((previous) =>
-      previous.kind === "host" && previous.host === host
-        ? { kind: "all" }
-        : { kind: "host", host },
-    );
-  };
-  const selectAgent = (executorId: string, harness: string, host: string | null) => {
-    setContext({ kind: "agent", executorId, harness, host });
-  };
-
-  const hostOptions = [
-    ...model.hosts.map((host) => host.host ?? ""),
-    ...model.unknown.map((host) => host.agents[0]?.executorId ?? ""),
-  ]
-    // The reserved synthetic hermes executor is NOT a host — its rows are
-    // the SOURCE option above (T004 slice 2); listing it twice splits the
-    // one source into two filter targets.
-    .filter((host) => host.length > 0 && host !== HERMES_SOURCE);
-
-  // The pinned «Чат с кластером» entry (blueprint §4–5): KW2 lands the
-  // dedicated route — the click WRITES /kora/hermes (deep-linkable, the
-  // reserved segment) and keeps the hermes filter context for the nav.
-  // KEPT ABOVE THE EARLY RETURNS: hooks never ride a render branch.
-  const onClusterChat = useCallback((): void => {
-    setContext({ kind: "hermes" });
-    navigate("/kora/hermes");
-  }, [navigate]);
-
   // The route seam of the chat's session switcher (blueprint §4): the
   // cluster option → /kora/hermes, a context session → /kora/:sessionId —
   // both deep-linkable, the frame never re-assembles.
@@ -332,7 +278,13 @@ export function KoraWorkspace({
   );
 
   // The hermes split contract (KW2): non-null iff a hermes mode is on
-  // stage — the cluster route or a selected hermes session.
+  // stage — the cluster route or a selected hermes session. The switcher's
+  // list: the hermes rows in the cluster mode (the pin-click parity), the
+  // whole registry slice in a session mode (the deep-link parity).
+  const hermesSessions = useMemo(
+    () => items.filter((item) => item.harness === "hermes"),
+    [items],
+  );
   const hermesSplit =
     cluster || session?.harness === "hermes"
       ? {
@@ -340,34 +292,64 @@ export function KoraWorkspace({
           pages: hermesTranscript,
           models: hermesStatus.data?.models ?? [],
           defaultModel: hermesStatus.data?.default_model ?? null,
-          sessions: contextSessions,
+          sessions: cluster ? hermesSessions : items,
           activeSessionId: cluster ? null : hermesDeepLink ? sessionId : null,
           onNavigateSession: onChatNavigateSession,
         }
       : null;
 
-  // The responsive ladder (states.md §6, KW3): the nav panel's PLACEMENT is
-  // a render fact. ≥xl — its own column; lg..xl — sections at the top of
-  // the META panel (one scroll, navigation first); <lg — its own card in
-  // the document flow. Exactly ONE instance mounts in every regime (the
-  // tree's aria-controls ids and the W2-1 uniqueness lesson forbid two).
-  const wideFrame = useIsWideFrame();
+  // The hermes context line + the ONE manual refresh (T004 slice 2) ride
+  // the right panel under the tree (blueprint-kw4 §2: HermesSourceLine →
+  // правая панель); shown only when a hermes mode is on stage.
+  const hermesMode = cluster || session?.harness === "hermes";
+  const hermesLine = hermesMode ? (
+    <div className="mt-3 space-y-1 border-t border-myelin-hairline pt-3">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        loading={hermesPull.isPending}
+        onClick={() => void hermesPull.mutate()}
+        className="min-h-12 px-2 font-mono text-xs text-foreground-secondary md:min-h-6"
+      >
+        {hermesPull.isPending
+          ? t("kora.hermes.refreshing")
+          : t("kora.hermes.refresh")}
+      </Button>
+      <HermesSourceLine
+        status={hermesStatus.data ?? null}
+        isPending={hermesStatus.isPending}
+        isError={hermesStatus.isError}
+        pullError={hermesPull.error}
+      />
+    </div>
+  ) : null;
+
+  // The right-panel tree element (blueprint-kw4 §3) — ONE element, two
+  // placements (the ladder): a section of the panel at ≥lg, its own card
+  // at the top of the document flow below lg. Exactly ONE instance mounts
+  // in every regime (the aria-controls id uniqueness lesson, W2-1).
+  const treePanel = (
+    <KoraTreePanel
+      model={model}
+      treeReady={treeReady}
+      activeHost={host ?? ""}
+      activeAgentId={agentParam}
+      clusterActive={cluster}
+      hermesLine={hermesLine}
+    />
+  );
+
+  // The responsive ladder (blueprint-kw4 §6): ≥lg — the two-zone 100vh
+  // frame; <lg — the document flow (tree → center → meta), the seams leave.
   const frameViewport = useIsFrameViewport();
-  const navInMeta = frameViewport && !wideFrame;
 
   // ── The 401 gate: the CTA replaces every data-shaped surface (the old
   // hotfix contract, kept verbatim through the rework). ──
   if (unauthorized) {
     return (
       <section aria-labelledby="kora-title" className={pageGridClass("operational", "space-y-4")}>
-        <Header
-          summary={null}
-          hostOptions={[]}
-          context={context}
-          onSelectHost={() => undefined}
-          quickFilter={null}
-          onQuickFilter={() => undefined}
-        />
+        <Header summary={null} />
         {sessionId !== null ? (
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="ghost" size="sm" asChild>
@@ -405,14 +387,7 @@ export function KoraWorkspace({
   if (sessions.error !== null) {
     return (
       <section aria-labelledby="kora-title" className={pageGridClass("operational", "space-y-4")}>
-        <Header
-          summary={null}
-          hostOptions={[]}
-          context={context}
-          onSelectHost={() => undefined}
-          quickFilter={null}
-          onQuickFilter={() => undefined}
-        />
+        <Header summary={null} />
         <EmptyState
           variant="error"
           title={t("kora.list.loadFailed")}
@@ -436,14 +411,7 @@ export function KoraWorkspace({
   ) {
     return (
       <section aria-labelledby="kora-title" className={pageGridClass("operational", "space-y-4")}>
-        <Header
-          summary={items.length > 0 ? summary : null}
-          hostOptions={hostOptions}
-          context={context}
-          onSelectHost={selectHost}
-          quickFilter={quickFilter}
-          onQuickFilter={setQuickFilter}
-        />
+        <Header summary={items.length > 0 ? summary : null} />
         <EmptyState
           variant="not-found"
           title={t("kora.session.notFound")}
@@ -458,53 +426,12 @@ export function KoraWorkspace({
     );
   }
 
-  // The nav panel element (kora-rethink blueprint §4) — ONE element, two
-  // placements (states.md §6): its own aside at ≥xl and below lg; sections
-  // at the top of the meta panel at lg..xl (one scroll, navigation first).
-  const navPanel = (
-    <KoraNavPanel
-      model={model}
-      treeReady={treeReady}
-      context={context}
-      contextSessions={contextSessions}
-      quickFilter={quickFilter}
-      onQuickFilter={setQuickFilter}
-      sessionId={sessionId}
-      selectedSessionId={sessionId}
-      noExecutors={noExecutors}
-      sessionsEmpty={registryEmpty !== null}
-      activeHost={contextHost ?? ""}
-      onSelectHostContext={selectHost}
-      onSelectAgentContext={(agent) =>
-        selectAgent(
-          agent.executorId,
-          agent.harness,
-          agent.executor?.host ?? null,
-        )
-      }
-      hermesRefresh={
-        context.kind === "hermes"
-          ? {
-              onRefresh: () => void hermesPull.mutate(),
-              pending: hermesPull.isPending,
-            }
-          : null
-      }
-      hermesStatus={hermesStatus.data ?? null}
-      hermesStatusPending={hermesStatus.isPending}
-      hermesStatusError={hermesStatus.isError}
-      hermesPullError={hermesPull.error}
-      clusterActive={cluster}
-      onClusterChat={onClusterChat}
-    />
-  );
-
   return (
     /* The v7 frame (07l §1.2): from lg the section IS the viewport minus
      * the shell chrome (topbar 48 + crumbs 40 + main's p-6 ×2 — and the
      * Vesma nest pad when on; the arithmetic lives in --kora-frame-h,
      * global.css) — no page scroll; below lg it degrades to the stacked
-     * document flow (nav → center → meta). */
+     * document flow (tree → center → meta). */
     <section
       aria-labelledby="kora-title"
       className={cn(
@@ -513,70 +440,36 @@ export function KoraWorkspace({
       )}
     >
       <div className="shrink-0">
-        <Header
-          summary={items.length > 0 ? summary : null}
-          hostOptions={hostOptions}
-          context={context}
-          onSelectHost={selectHost}
-          quickFilter={quickFilter}
-          onQuickFilter={setQuickFilter}
-        />
+        <Header summary={items.length > 0 ? summary : null} />
       </div>
 
       <div
         className={cn(
-          "relative grid min-h-0 min-w-0 flex-1 items-start gap-6 lg:items-stretch lg:gap-0",
-          wideFrame
-            ? "lg:grid-cols-[var(--kora-left-w)_minmax(0,1fr)_var(--kora-right-w)]"
-            : "lg:grid-cols-[minmax(0,1fr)_var(--kora-right-w)]",
+          "relative grid min-h-0 min-w-0 flex-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_var(--kora-right-w)] lg:items-stretch lg:gap-0",
         )}
         style={
           {
-            "--kora-left-w": `${leftW}px`,
             "--kora-right-w": `${sideW}px`,
           } as React.CSSProperties
         }
       >
-        {/* LEFT: the navigation column (≥xl; kora-rethink blueprint §4) —
-         * tree → sessions → the pinned cluster-chat entry → the hermes
-         * source line, ONE panel scroll. Flush inside the frame; below xl
-         * the panel travels: sections atop the meta panel at lg..xl, its
-         * own card in the document flow below lg (states.md §6). */}
-        {!navInMeta ? (
-          <aside
-            aria-label={t("kora.nav.region")}
-            className="kora-scroll min-h-0 min-w-0 overflow-y-auto rounded-md border border-myelin bg-well xl:rounded-none xl:border-0"
+        {/* The TREE CARD (<lg ladder): the v2 tree is the FIRST section of
+         * the document flow (blueprint-kw4 §6). At ≥lg it lives inside the
+         * panel instead — this card does not mount there (one instance). */}
+        {!frameViewport ? (
+          <section
+            aria-label={t("kora.panel.region")}
+            className="rounded-md border border-myelin bg-well px-3 py-3"
           >
-            {navPanel}
-          </aside>
+            {treePanel}
+          </section>
         ) : null}
 
-        {/* The LEFT SEAM (07l §3 anatomy, blueprint §4): col-resize on the
-         * nav panel's right edge — pointer drag + full keyboard path +
-         * dblclick reset, persist on commit. Grows RIGHTWARD (dragSign -1).
-         * Lives in the three-column frame only (≥xl) — at lg..xl the nav
-         * lives inside the meta panel and owns no width of its own, below
-         * lg the frame leaves; the CSS classes retire it there (display:
-         * none keeps it out of the a11y tree). */}
-        <KoraResizeHandle
-          orientation="vertical"
-          label={t("kora.resize.nav.label")}
-          tooltip={t("kora.resize.side.tooltip")}
-          min={KORA_NAV_MIN}
-          max={KORA_NAV_MAX}
-          value={leftW}
-          valueText={seamPx(leftW)}
-          dragSign={-1}
-          onValue={onLeftValue}
-          onCommit={onLeftCommit}
-          onReset={onLeftReset}
-          className="absolute inset-y-0 left-[var(--kora-left-w)] hidden -translate-x-1/2 xl:flex"
-        />
-
-        {/* CENTRAL column: the work zone — KW2 «Живой чат»: the hermes
-         * modes ride the SPLIT (chat + «Все ходы»), zcode/vscode/pi stay
-         * the full-page transcript. Flush inside the frame, a card below
-         * lg. The Пульт is gone (KW1): no strip, no wings here. */}
+        {/* CENTRAL column: the host FIELD at /kora/host/:host (chips +
+         * grouped sessions — Кора is a journal, NO composer/chat, §9.8);
+         * the KW2 hermes split / the frozen session modes / the invitation
+         * ride KoraWorkzone untouched. Flush inside the frame, a card
+         * below lg. */}
         <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-md border border-myelin bg-well lg:rounded-none lg:border-0">
           {sessions.isPending || resolvingDeepLink ? (
             <div
@@ -589,22 +482,57 @@ export function KoraWorkspace({
               <Skeleton className="h-4 w-4/5" />
               <Skeleton className="h-4 w-3/5" />
             </div>
-          ) : (
-            <KoraWorkzone
-              session={session}
-              registryEmpty={registryEmpty}
-              coverage={sessions.coverage}
-              transcript={transcript}
-              hermes={hermesSplit}
-              intentEvents={NOOP_KORA_INTENT_EVENTS}
-              frameEvents={frameEvents}
+          ) : host !== null ? (
+            <KoraHostField
+              host={host}
+              model={model}
+              quickFilter={quickFilter}
+              onQuickFilter={setQuickFilter}
+              selectedAgentId={agentParam}
+              onSelectAgent={onSelectAgent}
+              hasMore={sessions.hasMore}
+              isLoadingMore={sessions.isLoadingMore}
+              onLoadMore={() => void sessions.loadMore()}
             />
+          ) : (
+            <>
+              {/* states-kw4 §4: the breadcrumb above the session head —
+               * «← <хост> · поле» back to the field; unknown host → «←
+               * Кора» (no invented name). Session modes stay byte-identical
+               * — this rides ABOVE KoraWorkzone, the workzone is untouched. */}
+              {session !== null ? (
+                <div className="shrink-0 border-b border-myelin-hairline px-4 py-1">
+                  <Link
+                    to={
+                      sessionHost !== null
+                        ? `/kora/host/${encodeURIComponent(sessionHost)}`
+                        : "/kora"
+                    }
+                    className="inline-flex min-h-12 items-center gap-1 text-sm text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright md:min-h-6"
+                  >
+                    {sessionHost !== null
+                      ? t("kora.breadcrumb.field", { host: sessionHost })
+                      : t("kora.breadcrumb.kora")}
+                  </Link>
+                </div>
+              ) : null}
+              <KoraWorkzone
+                session={session}
+                registryEmpty={registryEmpty}
+                coverage={sessions.coverage}
+                transcript={transcript}
+                hermes={hermesSplit}
+                intentEvents={NOOP_KORA_INTENT_EVENTS}
+                frameEvents={frameEvents}
+              />
+            </>
           )}
         </div>
 
         {/* The RIGHT SEAM (07l §3): pointer drag with capture, the full
          * keyboard path (arrows/Home/End/Esc), dblclick reset, persist on
-         * commit. Lives only inside the frame (≥lg). */}
+         * commit. The frame's ONLY seam since KW4 (the left one retired
+         * with the left zone). Lives only inside the frame (≥lg). */}
         <KoraResizeHandle
           orientation="vertical"
           label={t("kora.resize.side.label")}
@@ -620,29 +548,27 @@ export function KoraWorkspace({
           className="absolute inset-y-0 left-[calc(100%-var(--kora-right-w))] hidden -translate-x-1/2 lg:flex"
         />
 
-        {/* RIGHT: the meta panel (kora-rethink blueprint §4) — О СЕССИИ /
-         * ДАЙДЖЕСТ / ЭФИР / ПОКРЫТИЕ, ONE panel scroll, the states.md §5
-         * defaults (about+ether open, digest+coverage folded). At lg..xl
-         * (states.md §6) the NAVIGATION sections ride at its top — the
-         * narrow frame's two columns are center + meta, one scroll with
-         * the navigation first. */}
+        {/* RIGHT: the «Дерево и мета» panel (blueprint-kw4 §2–3) — the v2
+         * tree on top (pin + search + hosts→agents + the hermes line),
+         * then the KW3 meta blocks (О СЕССИИ / ДАЙДЖЕСТ / ЭФИР /
+         * ПОКРЫТИЕ), ONE panel scroll. Below lg it is its own document-
+         * flow card (the last rung of the ladder). */}
         <aside
-          aria-label={t("kora.meta.region")}
+          aria-label={
+            frameViewport ? t("kora.panel.region") : t("kora.meta.region")
+          }
           className="kora-scroll min-h-0 min-w-0 overflow-y-auto rounded-md border border-myelin bg-well lg:rounded-none lg:border-0"
         >
-          {navInMeta ? (
-            <nav
-              aria-label={t("kora.nav.region")}
-              className="border-b border-myelin-hairline"
-            >
-              {navPanel}
-            </nav>
+          {frameViewport ? (
+            <div className="border-b border-myelin-hairline px-3 py-3">
+              {treePanel}
+            </div>
           ) : null}
           <KoraMetaPanel
             session={session}
             coverage={sessions.coverage}
             etherRows={etherRows}
-            hostFilter={contextHost}
+            hostFilter={host}
           />
         </aside>
       </div>
@@ -660,36 +586,19 @@ function useWaitingCount(): number | null {
 
 /** The 40px-style header row (07l §1.3, И1 in-flow form): H1 with the
  * «Кора» name explanation in its tooltip, the derived summary numbers
- * (mono; «идущие»/«за 24 ч» click into the Блок 2 quick filters), the
- * «ждут владельца» badge (the REAL UI-30 inbox counter — moved here from
- * the dissolved Пульт; hidden while the count is unknown, a fake 0 would
- * lie) and the ONE host filter. No numbers while data is pending. */
+ * (mono, plain — the quick filters moved into the field, KW4; the header
+ * numbers are DERIVATIVES, not controls) and the «ждут владельца» badge
+ * (the REAL UI-30 inbox counter — hidden while the count is unknown, a
+ * fake 0 would lie). The retired select-filter is GONE: the page context
+ * is the route now (blueprint-kw4 §2, ТЛ verdict). No numbers while data
+ * is pending. */
 function Header({
   summary,
-  hostOptions,
-  context,
-  onSelectHost,
-  quickFilter,
-  onQuickFilter,
 }: {
   summary: { hosts: number; running: number; day: number } | null;
-  hostOptions: readonly string[];
-  /** The page's ONE filter context — the select's value maps it verbatim. */
-  context: KoraBlock2Context;
-  onSelectHost: (host: string) => void;
-  quickFilter: KoraQuickFilter | null;
-  onQuickFilter: (filter: KoraQuickFilter | null) => void;
 }) {
   const t = useT();
   const waiting = useWaitingCount();
-  const contextHost =
-    context.kind === "host"
-      ? context.host
-      : context.kind === "agent"
-        ? context.host
-        : null;
-  const selectValue =
-    contextHost ?? (context.kind === "hermes" ? HERMES_SOURCE : "");
 
   return (
     <header className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -703,72 +612,24 @@ function Header({
       {summary !== null ? (
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs tabular-nums text-foreground-secondary">
           <span>{t("kora.summary.hosts", { n: summary.hosts })}</span>
-          <SummaryChip
-            active={quickFilter === "running"}
-            label={t("kora.summary.running", { n: summary.running })}
-            onClick={() => onQuickFilter(quickFilter === "running" ? null : "running")}
-          />
-          <SummaryChip
-            active={quickFilter === "day"}
-            label={t("kora.summary.day", { n: summary.day })}
-            onClick={() => onQuickFilter(quickFilter === "day" ? null : "day")}
-          />
+          <span>{t("kora.summary.running", { n: summary.running })}</span>
+          <span>{t("kora.summary.day", { n: summary.day })}</span>
         </p>
       ) : null}
-      <div className="ml-auto flex items-center gap-2">
-        {waiting !== null ? (
-          <Link
-            to="/tasks/inbox"
-            title={t("kora.header.waitingHint")}
-            className={cn(
-              "inline-flex min-h-12 md:min-h-6 shrink-0 items-center rounded-full border border-border-subtle px-2 font-mono text-xs tabular-nums focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
-              waiting === 0
-                ? "text-foreground-muted"
-                : "border-border-iris text-iris-bright",
-            )}
-          >
-            {t("kora.header.waiting", { n: waiting })}
-          </Link>
-        ) : null}
-        <label className="sr-only" htmlFor="kora-host-filter">
-          {t("kora.filter.label")}
-        </label>
-        <select
-          id="kora-host-filter"
-          value={selectValue}
-          onChange={(event) => onSelectHost(event.target.value)}
-          className="h-12 md:h-7 rounded-md border border-border-subtle bg-background px-2 text-xs text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+      {waiting !== null ? (
+        <Link
+          to="/tasks/inbox"
+          title={t("kora.header.waitingHint")}
+          className={cn(
+            "ml-auto inline-flex min-h-12 md:min-h-6 shrink-0 items-center rounded-full border border-border-subtle px-2 font-mono text-xs tabular-nums focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
+            waiting === 0
+              ? "text-foreground-muted"
+              : "border-border-iris text-iris-bright",
+          )}
         >
-          <option value="">{t("kora.filter.all")}</option>
-          <option value={HERMES_SOURCE}>{t("kora.hermes.filterOption")}</option>
-          {hostOptions.map((host) => (
-            <option key={host} value={host}>
-              {host}
-            </option>
-          ))}
-        </select>
-      </div>
+          {t("kora.header.waiting", { n: waiting })}
+        </Link>
+      ) : null}
     </header>
-  );
-}
-
-function SummaryChip({
-  active,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      className="min-h-12 md:min-h-6 rounded-sm px-1 underline-offset-2 transition-colors duration-instant hover:text-foreground hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright aria-pressed:text-iris-bright aria-pressed:underline"
-    >
-      {label}
-    </button>
   );
 }

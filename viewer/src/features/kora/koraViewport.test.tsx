@@ -3,20 +3,16 @@ import { afterEach, describe, expect, it } from "vitest";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 
-import {
-  KORA_FRAME_QUERY,
-  KORA_WIDE_QUERY,
-  useIsFrameViewport,
-  useIsWideFrame,
-} from "./koraViewport";
+import { KORA_FRAME_QUERY, useIsFrameViewport } from "./koraViewport";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 /**
- * The ladder's viewport hooks (states.md §6, KW3): the two query strings
- * must stay EXACTLY Tailwind's lg/xl (the `lg:`/`xl:` classes and the JS
- * placement branch have to agree), and a viewport change must re-render
- * the flag (useSyncExternalStore subscription).
+ * The ladder's viewport hook (blueprint-kw4 §6): KW4 has ONE JS seam left —
+ * the frame query must stay EXACTLY Tailwind's lg (the `lg:` classes and
+ * the JS placement branch have to agree), and a viewport crossing must
+ * re-render the flag (useSyncExternalStore subscription). The KW3 wide
+ * query is retired with the three-column frame it ruled.
  */
 
 interface FakeMql {
@@ -42,21 +38,20 @@ function installFakeMatchMedia(): Map<string, FakeMql> {
     registry.set(query, mql);
     return mql;
   };
-  // Seed BOTH ladder queries eagerly — the tests pin the regimes before
-  // the first render touches matchMedia.
-  make(KORA_WIDE_QUERY);
+  // Seed the ladder query eagerly — the tests pin the regime before the
+  // first render touches matchMedia.
   make(KORA_FRAME_QUERY);
   window.matchMedia = ((query: string) =>
     registry.get(query) ?? make(query)) as unknown as typeof window.matchMedia;
   return registry;
 }
 
-function probe(): { wide: boolean; frame: boolean } {
+function probe(): { frame: boolean } {
   const box = document.createElement("div");
-  let value = { wide: false, frame: false };
+  let value = { frame: false };
   const root = createRoot(box);
   const Probe = (): null => {
-    value = { wide: useIsWideFrame(), frame: useIsFrameViewport() };
+    value = { frame: useIsFrameViewport() };
     return null;
   };
   act(() => {
@@ -73,49 +68,41 @@ afterEach(() => {
 });
 
 describe("koraViewport ladder hooks", () => {
-  it("the queries stay Tailwind's xl/lg verbatim", () => {
-    expect(KORA_WIDE_QUERY).toBe("(min-width: 1280px)");
+  it("the query stays Tailwind's lg verbatim (the frame branch and the lg: classes agree)", () => {
     expect(KORA_FRAME_QUERY).toBe("(min-width: 1024px)");
   });
 
-  it("happy-dom's null viewport reads as the document flow (both false)", () => {
+  it("happy-dom's null viewport reads as the document flow (false)", () => {
     installFakeMatchMedia();
-    expect(probe()).toEqual({ wide: false, frame: false });
+    expect(probe()).toEqual({ frame: false });
   });
 
-  it("lg..xl answers frame=true / wide=false (the nav rides the meta panel)", () => {
+  it("≥lg answers frame=true (the two-zone 100vh frame)", () => {
     const registry = installFakeMatchMedia();
     registry.get(KORA_FRAME_QUERY)!.matches = true;
-    expect(probe()).toEqual({ wide: false, frame: true });
-  });
-
-  it("≥xl answers both true (the three-column frame)", () => {
-    const registry = installFakeMatchMedia();
-    registry.get(KORA_FRAME_QUERY)!.matches = true;
-    registry.get(KORA_WIDE_QUERY)!.matches = true;
-    expect(probe()).toEqual({ wide: true, frame: true });
+    expect(probe()).toEqual({ frame: true });
   });
 
   it("a viewport crossing re-renders the flag (the subscription is live)", async () => {
     const registry = installFakeMatchMedia();
-    let rendered = { wide: false, frame: false };
+    let rendered = { frame: false };
     const box = document.createElement("div");
     document.body.appendChild(box);
     const root = createRoot(box);
     const Probe = (): null => {
-      rendered = { wide: useIsWideFrame(), frame: useIsFrameViewport() };
+      rendered = { frame: useIsFrameViewport() };
       return null;
     };
     act(() => {
       root.render(<Probe />);
     });
-    expect(rendered).toEqual({ wide: false, frame: false });
-    // Cross into the wide frame: the MQL fires, the hook re-reads.
+    expect(rendered).toEqual({ frame: false });
+    // Cross into the frame: the MQL fires, the hook re-reads.
     act(() => {
-      registry.get(KORA_WIDE_QUERY)!.matches = true;
-      registry.get(KORA_WIDE_QUERY)!.listeners.forEach((l) => l());
+      registry.get(KORA_FRAME_QUERY)!.matches = true;
+      registry.get(KORA_FRAME_QUERY)!.listeners.forEach((l) => l());
     });
-    expect(rendered).toEqual({ wide: true, frame: false });
+    expect(rendered).toEqual({ frame: true });
     act(() => {
       root.unmount();
     });

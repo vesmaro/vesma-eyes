@@ -187,19 +187,10 @@ describe("ONE messages read per session (blueprint §6, gate §10.6)", () => {
     const adapter = new KoraMockAdapter({ latency: false });
     const { container } = mountSplit(adapter, { cluster: true });
     await settle();
-    // The refresh button lives in the hermes context — select it first
-    // (the ONE header filter, same as the left-panel grammar).
-    const filter = container.querySelector<HTMLSelectElement>("#kora-host-filter");
-    const setSelect = Object.getOwnPropertyDescriptor(
-      HTMLSelectElement.prototype,
-      "value",
-    )?.set;
-    await act(async () => {
-      setSelect?.call(filter, "hermes");
-      filter?.dispatchEvent(new Event("change", { bubbles: true }));
-    });
-    await settle();
-    // The pull fills the registry (the honest pre-pull board has no anchor);
+    // KW4: the hermes context IS the cluster route — the ONE refresh button
+    // rides the right panel directly (the retired header select is gone,
+    // blueprint-kw4 §2). The pull fills the registry (the honest pre-pull
+    // board has no anchor);
     // the anchor then resolves and its messages read EXACTLY once — the
     // chat and the zone consume the same pages.
     const refresh = [...container.querySelectorAll("button")].find((el) =>

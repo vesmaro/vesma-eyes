@@ -16,18 +16,20 @@ import { keys } from "@/lib/queryKeys";
 import { I18nProvider, type Lang } from "@/i18n";
 
 /**
- * Union И1 workspace snapshots (i1-dressing-map §1.2): pin the v7
- * composition — the header (H1 + derived summary + the ONE host filter),
- * the work zone invitation, the Блок 1 tree (host → agent → sessions over
- * the real registries), Блок 2 with state pills, the coverage legend and
- * the COLLAPSED Пульт strip with its honest tab labels. DOM-free
- * renderToString per the project pattern; the paged registry + the
- * executors registry are prefilled so the data branches render
+ * KW4 workspace snapshots (blueprint-kw4 §2/§3): pin the TWO-zone frame —
+ * the header (H1 + derived summary; the retired select-filter is GONE —
+ * the page context IS the route), the invitation scene, the right panel
+ * «Дерево и мета» (the v2 tree — pin + search + hosts→agents, depth 2, NO
+ * session leaves — then the KW3 meta blocks, ONE panel scroll) and the ONE
+ * seam (--kora-right-w; the LEFT zone and its seam are retired, gate §9.1).
+ * DOM-free renderToString per the project pattern (the SSR snapshot renders
+ * the FRAME — the documented default, koraViewport); the paged registry +
+ * the executors registry are prefilled so the data branches render
  * synchronously and byte-deterministically.
  *
  * The executor fixtures here MATCH the kora session executor ids (the mock
  * corpus drifts by design) so the tree tells the real story — hosts with
- * agents and sessions; the registry-miss grouping has its own unit tests
+ * agents; the registry-miss grouping has its own unit tests
  * (koraWorkspaceModel.test.ts).
  */
 
@@ -112,37 +114,43 @@ async function renderKoraPage(lang: Lang, path = "/kora"): Promise<string> {
   );
 }
 
-describe("Kora workspace snapshots (KW1 «Три колонки» → nav | center | meta)", () => {
-  it("pins the three-column frame: header + nav panel + center + meta panel (ru)", async () => {
+describe("Kora workspace snapshots (KW4 «Поле хоста + правая панель»)", () => {
+  it("pins the two-zone frame: header + invitation + «Дерево и мета» panel, ONE seam (ru)", async () => {
     const html = await renderKoraPage("ru");
-    // The header: H1 with the name explanation in the tooltip, the
-    // DERIVED summary numbers, the one host filter. The badge is hidden —
-    // no inbox prefill ⇒ the counter is unknown (no fake 0).
+    // The header: H1 with the name explanation in the tooltip, the DERIVED
+    // summary numbers. The retired select-filter is GONE (blueprint-kw4 §2).
+    // The badge is hidden — no inbox prefill ⇒ the counter is unknown.
     expect(html).toContain("Кора · сессии хостов");
     expect(html).toContain('title="Кора — журнал сессий всех хостов');
     expect(html).toContain("хостов: 2");
     expect(html).toContain("идёт сессий: 1");
     expect(html).toContain("за 24 ч: 2"); // 8940 s + 64920 s, the 47 h one is out
-    expect(html).toContain("Все хосты");
     expect(html).not.toContain("Входящие:");
-    // The LEFT navigation panel: the tree (hosts → agents), Блок 2 with
-    // state pills (dot + text, never colour alone), the steerable badge.
-    expect(html).toContain('aria-label="Навигация"');
+    expect(html).not.toContain("Все хосты");
+    // The KW4 panel landmark: the tree AND the meta share ONE aside.
+    expect(html).toContain('aria-label="Дерево и мета"');
+    // The v2 tree rides the panel: the pin FIRST (→ /kora/hermes), then the
+    // search, then the hosts (depth 2 — NO session leaves in the tree).
     expect(html).toContain("Хосты и агенты");
+    expect(html).toContain('href="/kora/hermes"');
+    expect(html).toContain("Чат с кластером");
+    expect(html).toContain('aria-label="Поиск по хостам и агентам"');
     expect(html).toContain("abyss-laptop");
     expect(html).toContain("pi-edge");
-    expect(html).toContain("Сессии · все хосты");
-    expect(html).toContain("идущие");
-    expect(html).toContain("за 24 ч"); // the quick filter chip
-    expect(html).toContain("можно рулить");
-    expect(html).toContain("реле");
-    expect(html).toContain("процесс мёртв"); // the dead pi row, honest state
-    // The scene invitation; the Эфир card LEFT the empty scene (KW1).
+    expect(html).toContain('href="/kora/host/abyss-laptop"');
+    // Gate §9.4: the tree has no leaf-session links (sessions live in the
+    // field, grouped).
+    expect(html).not.toContain('href="/kora/exec-zcode-main%3Asess_7f3a91"');
+    // The LEFT zone is retired: no nav panel, no nav seam, no nav session
+    // list, no nav quick filters (gate §9.1).
+    expect(html).not.toContain('aria-label="Навигация"');
+    expect(html).not.toContain("Сессии · все хосты");
+    expect(html).not.toContain("Ширина панели навигации");
+    // The scene invitation; the Эфир card lives in the meta panel.
     expect(html).toContain("Выберите сессию — здесь откроется её ход");
-    // The RIGHT meta panel: the states.md §5 defaults — О СЕССИИ collapsed
-    // with the honest line (no session), ЭФИР expanded (the ring's ONE
-    // mount; a silent bus = the honest empty), ДАЙДЖЕСТ + ПОКРЫТИЕ folded.
-    expect(html).toContain('aria-label="Мета-панель"');
+    // The meta defaults (states.md §5): О СЕССИИ collapsed with the honest
+    // line, ЭФИР expanded (the ring's ONE mount; a silent bus = the honest
+    // empty), ДАЙДЖЕСТ + ПОКРЫТИЕ folded.
     expect(html).toContain("О сессии");
     expect(html).toContain("Сессия не выбрана — свойства появятся здесь");
     expect(html).toContain("Дайджест");
@@ -150,20 +158,19 @@ describe("Kora workspace snapshots (KW1 «Три колонки» → nav | cent
     expect(html).toContain("Эфир");
     expect(html).toContain("Событий пока нет");
     expect(html).toContain("Что мы видим с ваших машин");
-    // The Пульт is dissolved (KW1): no strip, no expand button, no tabs.
+    // The Пульт is dissolved: no strip, no expand button, no tabs.
     expect(html).not.toContain("Пульт");
     expect(html).not.toContain("Развернуть");
     expect(html).not.toContain('role="tab"');
-    // The v7 seams (07l §3): BOTH panel widths are honest separators with
-    // the full aria geometry (the Пульт height seam left with the Пульт).
+    // The ONE seam (07l §3, KW4): the right panel width — an honest
+    // separator with the full aria geometry. The LEFT seam is gone.
     expect(html).toContain('role="separator"');
-    expect(html).toContain("Ширина панели навигации");
     expect(html).toContain("Ширина мета-панели");
     // The mock-era furniture is gone: no demo chip, no chat panel.
     expect(html).not.toContain("Демо-данные");
     expect(html).not.toContain("PIN");
-    // The nav panel precedes the meta panel's folded legend (П2).
-    expect(html.indexOf("Сессии · все хосты")).toBeLessThan(
+    // The panel's ONE scroll: the tree precedes the meta legend (П2).
+    expect(html.indexOf("Чат с кластером")).toBeLessThan(
       html.indexOf("Что мы видим с ваших машин"),
     );
     expect(html).toMatchSnapshot();
@@ -175,17 +182,25 @@ describe("Kora workspace snapshots (KW1 «Три колонки» → nav | cent
     expect(html).toContain("hosts: 2");
     expect(html).toContain("running sessions: 1");
     expect(html).toContain("in 24h: 2");
+    expect(html).not.toContain("All hosts"); // the retired filter
     expect(html).toContain("Hosts and agents");
-    expect(html).toContain("Sessions · all hosts");
-    expect(html).toContain('aria-label="Navigation"');
-    expect(html).toContain('aria-label="Meta panel"');
+    expect(html).toContain("Chat with the cluster");
+    expect(html).toContain('aria-label="Tree and meta"');
+    expect(html).toContain('aria-label="Search hosts and agents"');
     expect(html).toContain("Ether");
     expect(html).not.toContain("Demo data");
     expect(html).toMatchSnapshot();
   });
 
-  it("links the tree leaves and Блок 2 rows into the session route", async () => {
+  it("the v2 tree routes hosts (depth 2) — the session deep link lives in the FIELD", async () => {
     const html = await renderKoraPage("ru");
-    expect(html).toContain('href="/kora/exec-zcode-main%3Asess_7f3a91"');
+    expect(html).toContain('href="/kora/host/abyss-laptop"');
+    expect(html).toContain('href="/kora/host/pi-edge"');
+    // The agent ?agent= rows render EXPANDED only (the open-set seeds in a
+    // client effect — SSR renders the collapsed frame); the interaction pin
+    // lives in KoraTree.test.tsx («agent leaves carry ?agent=»).
+    expect(html).not.toContain("?agent=");
+    // Gate §9.4: no leaf-session links in the tree.
+    expect(html).not.toContain('href="/kora/exec-zcode-main%3Asess_7f3a91"');
   });
 });

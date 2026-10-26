@@ -4,9 +4,6 @@ import {
   DRAFT_PREFIX,
   KORA_BAND_MAX,
   KORA_BAND_MIN,
-  KORA_NAV_DEFAULT,
-  KORA_NAV_MAX,
-  KORA_NAV_MIN,
   KORA_SIDE_DEFAULT,
   KORA_SIDE_MAX,
   KORA_SIDE_MIN,
@@ -14,11 +11,11 @@ import {
   clearKoraMovesH,
   readFrameInt,
   readKoraDraft,
-  readKoraLeftW,
+  readKoraGroups,
   readKoraMovesH,
   readKoraSideW,
   writeKoraDraft,
-  writeKoraLeftW,
+  writeKoraGroups,
   writeKoraMovesH,
   writeKoraSideW,
 } from "./koraFrameStorage";
@@ -29,7 +26,9 @@ import {
  * ходы» auto mode = the key's ABSENCE), storage failures never throw, and
  * the draft round-trips under its per-session key. KW2: the Пульт-era
  * keepers (vesmaro.koraPultH / vesmaro.koraEtherW) are GONE — the height
- * key is vesmaro.koraMovesH now.
+ * key is vesmaro.koraMovesH now. KW4: vesmaro.koraLeftW is retired with
+ * the left column (blueprint-kw4 §5) — a stale value is ignored dead
+ * weight; vesmaro.koraGroups carries the field's group open-set.
  */
 
 afterEach(() => {
@@ -62,15 +61,27 @@ describe("the named frame keys (v7 §3.1 ranges)", () => {
     expect(KORA_SIDE_DEFAULT).toBe(320);
   });
 
-  it("nav width (KW1): default 280, clamped to 220..380, round-trips", () => {
-    expect(readKoraLeftW()).toBe(KORA_NAV_DEFAULT);
-    writeKoraLeftW(500);
-    expect(readKoraLeftW()).toBe(KORA_NAV_MAX);
-    writeKoraLeftW(10);
-    expect(readKoraLeftW()).toBe(KORA_NAV_MIN);
-    writeKoraLeftW(336);
-    expect(readKoraLeftW()).toBe(336);
-    expect(KORA_NAV_DEFAULT).toBe(280);
+  it("the retired left width (KW4): no keeper reads vesmaro.koraLeftW", () => {
+    // The left column died with the two-zone frame; its named helpers are
+    // gone. A stale value under the dead key is ignored dead weight — the
+    // storage version is NOT bumped (07l §5.2 covers breaking schemas,
+    // not ignored leftovers).
+    localStorage.setItem("vesmaro.koraLeftW", "300");
+    expect(readKoraSideW()).toBe(KORA_SIDE_DEFAULT);
+  });
+
+  it("group open-set (KW4, vesmaro.koraGroups): round-trips; garbage → null", () => {
+    expect(readKoraGroups()).toBeNull();
+    writeKoraGroups(["/home/a/proj", "__nocwd__"]);
+    expect(readKoraGroups()).toEqual(["/home/a/proj", "__nocwd__"]);
+    localStorage.setItem("vesmaro.koraGroups", "{not json");
+    expect(readKoraGroups()).toBeNull();
+    localStorage.setItem("vesmaro.koraGroups", JSON.stringify([1, 2]));
+    expect(readKoraGroups()).toBeNull();
+    localStorage.setItem("vesmaro.koraGroups", JSON.stringify({ open: [] }));
+    expect(readKoraGroups()).toBeNull();
+    localStorage.setItem("vesmaro.koraGroups", JSON.stringify([]));
+    expect(readKoraGroups()).toEqual([]);
   });
 
   it("«Все ходы» height (KW2, vesmaro.koraMovesH): the key's ABSENCE = auto (0), values clamp to 160..420", () => {

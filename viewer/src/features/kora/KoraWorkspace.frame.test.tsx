@@ -8,7 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { KoraWorkspace } from "./KoraWorkspace";
 import { KoraMockAdapter } from "./KoraMockAdapter";
 import { KoraGatewayContext } from "./koraGatewayContext";
-import { KORA_FRAME_QUERY, KORA_WIDE_QUERY } from "./koraViewport";
+import { KORA_FRAME_QUERY } from "./koraViewport";
 import { koraKeys } from "./useKora";
 import { KORA_FIXTURE_COVERAGE, KORA_FIXTURE_SESSIONS } from "./koraFixtures";
 import type { ExecutorsPage, TaskInbox } from "@/gateway/boardTypes";
@@ -20,26 +20,25 @@ import { I18nProvider } from "@/i18n";
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 /**
- * The frame at the WORKSPACE level in its KW1 «ТРИ КОЛОНКИ» cut
- * (kora-rethink blueprint §3–4): BOTH panel seams persist through the
- * workspace's OWN callbacks (vesmaro.koraLeftW / vesmaro.koraRightW), the
- * CSS variables carry the widths to the grid, dblclick resets to the
- * documented defaults, the header badge is the REAL UI-30 inbox counter
- * (hidden while unknown — the ex-Пульт honesty), and the Пульт is ABSENT
- * from the structure. The handle mechanics themselves are
- * KoraResizeHandle's tests; the Пульт height hardware lives on in
- * useKoraBandHeight.test.tsx (KW2's «Все ходы» zone).
+ * The frame at the WORKSPACE level in its KW4 «ПОЛЕ + ПРАВАЯ ПАНЕЛЬ» cut
+ * (blueprint-kw4 §2/§3): the ONE remaining seam persists through the
+ * workspace's OWN callback (vesmaro.koraRightW → --kora-right-w), the LEFT
+ * zone is GONE (no nav seam, no --kora-left-w — gate §9.1), dblclick resets
+ * to the documented default, the header badge is the REAL UI-30 inbox
+ * counter (hidden while unknown — the ex-Пульт honesty). The handle
+ * mechanics themselves are KoraResizeHandle's tests; the Пульт height
+ * hardware lives on in useKoraBandHeight.test.tsx (KW2's «Все ходы» zone).
  */
 
 const PAGE_SIZE = 50;
 
-/** Pin the viewport hooks (KW3 ladder) to the WIDE frame: these tests own
- * the ≥xl three-column geometry, and happy-dom answers every width query
+/** Pin the viewport hook (KW4 ladder) to the FRAME regime: these tests own
+ * the ≥lg two-zone geometry, and happy-dom answers every width query
  * false — the explicit stub states the regime instead of inheriting the
  * environment's null answer. */
 function stubWideFrame(): void {
   window.matchMedia = ((query: string) => ({
-    matches: query === KORA_WIDE_QUERY || query === KORA_FRAME_QUERY,
+    matches: query === KORA_FRAME_QUERY,
     addEventListener: () => undefined,
     removeEventListener: () => undefined,
   })) as unknown as typeof window.matchMedia;
@@ -147,6 +146,16 @@ const navSeam = (container: HTMLElement): HTMLElement => {
   return found;
 };
 
+const labelled = (container: HTMLElement, label: string): HTMLElement[] =>
+  [...container.querySelectorAll<HTMLElement>("[aria-label]")].filter(
+    (el) => el.getAttribute("aria-label") === label,
+  );
+
+const treeHeading = (container: HTMLElement): HTMLElement | null =>
+  [...container.querySelectorAll("h2")].find(
+    (el) => el.textContent === "Хосты и агенты",
+  ) ?? null;
+
 async function keyOn(
   element: HTMLElement,
   type: "keydown" | "keyup" | "dblclick" | "focusin",
@@ -186,15 +195,17 @@ describe("KoraWorkspace frame (U5, 07l §3; KW1 — three columns)", () => {
     expect(grid?.getAttribute("style")).toContain("--kora-right-w: 320px");
   });
 
-  it("the nav seam (KW1) is an honest separator bound to its grid variable", () => {
+  it("KW4 §9.1: the left zone is GONE — no nav seam, no --kora-left-w, one seam total", () => {
     const { container } = mountWorkspace();
-    const seam = navSeam(container);
-    expect(seam.getAttribute("aria-orientation")).toBe("vertical");
-    expect(seam.getAttribute("aria-valuemin")).toBe("220");
-    expect(seam.getAttribute("aria-valuemax")).toBe("380");
-    expect(seam.getAttribute("aria-valuenow")).toBe("280");
-    const grid = container.querySelector<HTMLElement>('[style*="--kora-left-w"]');
-    expect(grid?.getAttribute("style")).toContain("--kora-left-w: 280px");
+    // The retired left seam renders nowhere (gate §9.1: «левой зоны и
+    // koraLeftW в DOM нет»).
+    expect(() => navSeam(container)).toThrow("nav seam not rendered");
+    expect(container.querySelector<HTMLElement>('[style*="--kora-left-w"]')).toBeNull();
+    expect(container.innerHTML).not.toContain("--kora-left-w");
+    // The frame carries exactly ONE separator — the right panel's.
+    expect(container.querySelectorAll('[role="separator"]')).toHaveLength(1);
+    // …and the panel landmark is the KW4 «Дерево и мета» one.
+    expect(labelled(container, "Дерево и мета")).toHaveLength(1);
   });
 
   it("a keyboard series persists the width on keyup (vesmaro.koraRightW)", async () => {
@@ -207,17 +218,16 @@ describe("KoraWorkspace frame (U5, 07l §3; KW1 — three columns)", () => {
     expect(seam.getAttribute("aria-valuenow")).toBe("336");
   });
 
-  it("the nav seam persists its width on keyup (vesmaro.koraLeftW)", async () => {
+  it("KW4 §9.1: the two-zone grid — the tree rides INSIDE the panel, the center is the field's sibling", () => {
     const { container } = mountWorkspace();
-    const seam = navSeam(container);
-    await keyOn(seam, "focusin");
-    // The nav seam's edge is the RIGHT one (dragSign −1): the keyboard
-    // mirrors the visual movement — ArrowRight = wider, ArrowLeft = narrower.
-    // The right seam keeps the v12 ArrowLeft = wider rule (dragSign 1).
-    await keyOn(seam, "keydown", "ArrowRight");
-    await keyOn(seam, "keyup", "ArrowRight");
-    expect(localStorage.getItem("vesmaro.koraLeftW")).toBe("296");
-    expect(seam.getAttribute("aria-valuenow")).toBe("296");
+    const panel = labelled(container, "Дерево и мета")[0];
+    expect(panel.tagName).toBe("ASIDE");
+    // The v2 tree lives in the panel (the pin first, then the search, the
+    // hosts) — no standalone navigation column exists anymore.
+    expect(panel.contains(treeHeading(container))).toBe(true);
+    // The grid variable is the ONLY seam variable on the stage.
+    const grid = container.querySelector<HTMLElement>('[style*="--kora-right-w"]');
+    expect(grid?.getAttribute("style")).toContain("--kora-right-w: 320px");
   });
 
   it("dblclick resets to the default AND persists the reset", async () => {

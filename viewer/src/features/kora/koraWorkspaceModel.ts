@@ -329,3 +329,130 @@ export function koraTranscriptAnchorId(seq: number): string {
 export function koraTranscriptFoldId(seq: number): string {
   return `kora-fold-${seq}`;
 }
+
+/* ── KW4 «Поле хоста»: the session groups of ONE agent (blueprint-kw4 §1/§3)
+ * The owner directive (2026-10-23): sessions are NOT a disorderly pile —
+ * they group by project directory. The registry already carries `project`
+ * and `cwd` for every harness (server readers verified in blueprint-kw4 §1),
+ * so grouping is a PURE frontend derivation over the loaded registry — zero
+ * new requests, zero contract lines. The key is the FULL cwd (two
+ * directories with the same basename never merge); hermes rows have no cwd
+ * BY CONTRACT (hermes_client.py reports it honestly empty) — they group by
+ * source, the `hermes:<source>` project tag. Titles are NOT built here:
+ * the model returns structured data, the component maps it through i18n
+ * (ru/en stay in sync). */
+
+/** The sentinel group key for sessions with no cwd (the honest
+ * «Без каталога» group — the registry reports the absence, we name it). */
+export const KORA_GROUP_NO_CWD = "__nocwd__";
+
+/** The `hermes:` project-tag prefix (server: hermes_client.py, KORA_HERMES
+ * rows carry project `hermes:<source>`). */
+const HERMES_SOURCE_PREFIX = "hermes:";
+
+/** One session group of the host field. */
+export interface KoraProjectGroup {
+  /** Stable key: the full cwd path, the hermes project tag, or the no-cwd
+   * sentinel — the persistence identity (vesmaro.koraGroups). */
+  readonly key: string;
+  /** cwd path for a directory group, hermes source name for a source
+   * group; null for the no-cwd group. Titles ride i18n in the component. */
+  readonly kind: "cwd" | "source" | "none";
+  readonly cwd: string | null;
+  readonly source: string | null;
+  /** The group holds a live session — live groups open by default
+   * (states-kw4 K-GRP-DEFAULT). */
+  readonly hasLive: boolean;
+  /** The group's sessions, live-on-top sorted (sortKoraSessions). */
+  readonly sessions: readonly KoraSession[];
+}
+
+/** The basename of a posix path — a pure string cut (no Node path module in
+ * the browser); trailing slashes strip, "/" keeps its name, a bare segment
+ * is itself. */
+export function pathBasename(p: string): string {
+  const trimmed = p.replace(/\/+$/, "");
+  if (trimmed === "") return p;
+  const cut = trimmed.lastIndexOf("/");
+  return cut === -1 ? trimmed : trimmed.slice(cut + 1);
+}
+
+/** Freshest activity stamp of a session as a comparable number (a missing
+ * stamp is the oldest — the same floor the workspace's hermes anchor uses). */
+function freshestTs(session: KoraSession): number {
+  return Date.parse(session.last_activity_at ?? session.started_at ?? "") || 0;
+}
+
+/**
+ * Group ONE agent's sessions for the host field: by cwd (the full path is
+ * the key — basename collisions stay apart), hermes rows by source, empty
+ * cwd into the honest no-directory group. Deterministic order: live groups
+ * first, then freshest activity, then key — a stable journal, no invented
+ * facts. O(n) over the already-loaded registry slice.
+ */
+export function buildProjectGroups(
+  sessions: readonly KoraSession[],
+): readonly KoraProjectGroup[] {
+  interface Mutable {
+    kind: KoraProjectGroup["kind"];
+    cwd: string | null;
+    source: string | null;
+    sessions: KoraSession[];
+  }
+  const groups = new Map<string, Mutable>();
+
+  for (const session of sessions) {
+    let key: string;
+    let kind: KoraProjectGroup["kind"];
+    let cwd: string | null = null;
+    let source: string | null = null;
+    if (session.harness === "hermes") {
+      // hermes groups by SOURCE (blueprint-kw4 §1: cwd is honestly empty on
+      // the bridge; the project tag carries `hermes:<source>`).
+      const tag =
+        typeof session.project === "string" && session.project.length > 0
+          ? session.project
+          : null;
+      if (tag === null) {
+        key = KORA_GROUP_NO_CWD;
+        kind = "none";
+      } else {
+        key = tag;
+        kind = "source";
+        source = tag.startsWith(HERMES_SOURCE_PREFIX)
+          ? tag.slice(HERMES_SOURCE_PREFIX.length)
+          : tag;
+      }
+    } else if (typeof session.cwd === "string" && session.cwd.length > 0) {
+      key = session.cwd;
+      kind = "cwd";
+      cwd = session.cwd;
+    } else {
+      key = KORA_GROUP_NO_CWD;
+      kind = "none";
+    }
+    let group = groups.get(key);
+    if (group === undefined) {
+      group = { kind, cwd, source, sessions: [] };
+      groups.set(key, group);
+    }
+    group.sessions.push(session);
+  }
+
+  const nodes = [...groups.entries()].map(([key, group]) => ({
+    key,
+    kind: group.kind,
+    cwd: group.cwd,
+    source: group.source,
+    hasLive: group.sessions.some((session) => session.state === "live"),
+    sessions: sortKoraSessions(group.sessions),
+    freshest: Math.max(...group.sessions.map(freshestTs)),
+  }));
+  nodes.sort(
+    (a, b) =>
+      Number(b.hasLive) - Number(a.hasLive) ||
+      b.freshest - a.freshest ||
+      a.key.localeCompare(b.key),
+  );
+  return nodes.map(({ freshest: _freshest, ...node }) => node);
+}
