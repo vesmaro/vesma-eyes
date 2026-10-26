@@ -162,10 +162,17 @@ describe("ModelsHubPage — provider registry cards (MF2)", () => {
     expect(text).toContain("fp 3f9a21c0bde4");
     expect(text).toContain("The fingerprint is not the key");
     expect(text).toContain("set Oct 24, 2026");
-    // Owner acts + the MF3 roadmap note (no dead grant control).
+    // Owner acts + the MF3 slot facts + the REAL grants management (the
+    // MF2 roadmap note is gone — replaced by honest management).
     expect(text).toContain("Replace key");
     expect(text).toContain("Remove key");
-    expect(text).toContain("Access management arrives in the next wave");
+    expect(text).toContain("never used");
+    expect(text).toContain("Access");
+    expect(text).toContain("Grant access");
+    expect(text).toContain(
+      "No access granted — the provider is available to the board only");
+    expect(text).toContain(
+      "Pause and revoke act immediately: the next call from this address will fail.");
     // Red line: the metadata card carries no credential-shaped string.
     const lowered = text.toLowerCase();
     for (const banned of ["credential", "api_key", "apikey", "secret", "token"]) {

@@ -764,11 +764,36 @@ export type ModelsRosterPage = Schemas["ModelsRosterOut"];
  * One owner-registry provider row (board `ModelProviderOut`, MF2) —
  * METADATA ONLY by construction (security verdict §5): the truncated
  * fingerprint (SHA-256[:12]) is the only material-derived artifact allowed
- * to persist, and it is NOT the key. `status` is the closed slot enum:
- * `set | null` in MF2; `rejected` arrives with the MF3 enforcement wave
- * (provider.use.rejected). NO credential field exists in the family.
+ * to persist, and it is NOT the key. `status` is the closed slot enum
+ * (`set | rejected | null`); `last_used_at` / `rejected_at` are the MF3
+ * slot-machine facts. NO credential field exists in the family.
  */
 export type ModelProvider = Schemas["ModelProviderOut"];
+
+/**
+ * One sharing grant row (board `ModelGrantOut`, MF3 threat model §1): the
+ * OWNER authority record — the selector names ONE spine entity
+ * (`host:<name>` / `executor:<harness@host>`), never a wildcard. Metadata
+ * only; no credential field exists in the family.
+ */
+export type ModelGrant = Schemas["ModelGrantOut"];
+
+/**
+ * GET /api/models/providers/{key}/grants — the grant rows of one provider
+ * plus the LIVE selector registry (spine hosts / executor identities) the
+ * ux picker draws from (board `ModelsGrantsOut`, MF3).
+ */
+export type ModelsGrantsPage = Schemas["ModelsGrantsOut"];
+
+/**
+ * POST /api/models/providers/{key}/grants — the owner act (ui-token; red
+ * line 6). No material, no wildcard: the selector must name an EXISTING
+ * spine entity (unknown targets are refused 422 + audited server-side).
+ */
+export interface ModelGrantCreateInput {
+  selector_kind: "host" | "executor";
+  selector_value: string;
+}
 
 /**
  * POST /api/models/providers — the ONE body that ever carries credential
