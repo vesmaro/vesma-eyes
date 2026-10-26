@@ -6190,7 +6190,7 @@ async def models_roster() -> ModelsRosterOut:
     only material-derived artifact allowed to persist)."""
     return ModelsRosterOut(
         ok=True,
-        providers=[_provider_public(row)
+        providers=[_provider_public(row).model_dump()
                    for row in store.model_providers()],
         discovered=[],
         board=[
