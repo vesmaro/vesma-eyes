@@ -109,6 +109,16 @@ Every admitted or refused call writes a use row with the authenticated
 principal. The one carve-out: `GET /models` (listing) is also audited
 — "who saw the roster of a paid provider" is a use.
 
+Routing carve-out (amended at review, 2026-10-26): a `provider_key`
+that does not resolve to a registry row answers 404 and writes NO use
+row — the §4 field set requires `credential_fingerprint`, which cannot
+be fabricated for an unregistered name, and the outcome enum has no
+class for "no such provider". The attempt stays covered by the standard
+access log. The row family therefore begins at the first enforcement
+step that has a provider context; authn failures DO write `revoked`
+rows (§2-S), with the fingerprint stamped whenever the provider row
+resolves.
+
 ### I — information disclosure
 
 - **No payload persistence, ever.** Request and response bodies live in
