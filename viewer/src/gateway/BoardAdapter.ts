@@ -54,6 +54,9 @@ import type {
   ModelProvider,
   ModelProviderCreateInput,
   ModelProviderRotateInput,
+  ModelGrant,
+  ModelGrantCreateInput,
+  ModelsGrantsPage,
   LaunchesParams,
   DeviceGrantsResult,
   DeviceRevokedResult,
@@ -502,6 +505,47 @@ export interface BoardGateway extends MemoryGateway {
     providerKey: string,
     signal?: AbortSignal,
   ): Promise<ModelProvider>;
+  /**
+   * List the sharing grants of one provider + the LIVE selector registry
+   * (`GET /api/models/providers/{key}/grants`, OPEN read; MF3). Metadata
+   * only — no credential field exists in the family by construction.
+   */
+  listModelGrants(
+    providerKey: string,
+    signal?: AbortSignal,
+  ): Promise<ModelsGrantsPage>;
+  /**
+   * Grant access (`POST /api/models/providers/{key}/grants`, ui-token;
+   * MF3, red line 6 — owner-write-only). The selector must name an
+   * EXISTING spine entity: the {ok, code, message} envelope answers 422
+   * `grant_unknown_target` (audited server-side) / 409 duplicate /
+   * 409 credential_not_set / 404 unknown provider.
+   */
+  createModelGrant(
+    providerKey: string,
+    payload: ModelGrantCreateInput,
+    signal?: AbortSignal,
+  ): Promise<ModelGrant>;
+  /**
+   * Pause/resume a grant (`PATCH …/grants/{grant_id}`, ui-token; MF3).
+   * enabled=false answers the NEXT request 403 (pull: immediate); the
+   * row stays visible for audit.
+   */
+  setModelGrantEnabled(
+    providerKey: string,
+    grantId: string,
+    enabled: boolean,
+    signal?: AbortSignal,
+  ): Promise<ModelGrant>;
+  /**
+   * Revoke a grant (`DELETE …/grants/{grant_id}`, ui-token; MF3) — the
+   * row is REMOVED; revocation acts at the NEXT use (red line 7).
+   */
+  deleteModelGrant(
+    providerKey: string,
+    grantId: string,
+    signal?: AbortSignal,
+  ): Promise<void>;
   /**
    * Set the default/fallback pair (`PUT /api/settings/execution`,
    * ui-token). Amd 2 §5 gates answer 422: a default must exist, be
@@ -1189,6 +1233,54 @@ export class BoardAdapter implements BoardGateway {
   ): Promise<ModelProvider> {
     return this.request<ModelProvider>(
       `/models/providers/${encodeURIComponent(providerKey)}/credential`,
+      { method: "DELETE", signal, auth: true },
+    );
+  }
+
+  async listModelGrants(
+    providerKey: string,
+    signal?: AbortSignal,
+  ): Promise<ModelsGrantsPage> {
+    // OPEN read (roster-class facts, no material in the family): the
+    // default non-auth path rides the same-origin cookie — a browser
+    // with a paired device but no owner session still sees the facts,
+    // exactly like the roster itself.
+    return this.request<ModelsGrantsPage>(
+      `/models/providers/${encodeURIComponent(providerKey)}/grants`,
+      { method: "GET", signal },
+    );
+  }
+
+  async createModelGrant(
+    providerKey: string,
+    payload: ModelGrantCreateInput,
+    signal?: AbortSignal,
+  ): Promise<ModelGrant> {
+    return this.request<ModelGrant>(
+      `/models/providers/${encodeURIComponent(providerKey)}/grants`,
+      { method: "POST", body: payload, signal, auth: true },
+    );
+  }
+
+  async setModelGrantEnabled(
+    providerKey: string,
+    grantId: string,
+    enabled: boolean,
+    signal?: AbortSignal,
+  ): Promise<ModelGrant> {
+    return this.request<ModelGrant>(
+      `/models/providers/${encodeURIComponent(providerKey)}/grants/${encodeURIComponent(grantId)}`,
+      { method: "PATCH", body: { enabled }, signal, auth: true },
+    );
+  }
+
+  async deleteModelGrant(
+    providerKey: string,
+    grantId: string,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    await this.request<{ ok: boolean }>(
+      `/models/providers/${encodeURIComponent(providerKey)}/grants/${encodeURIComponent(grantId)}`,
       { method: "DELETE", signal, auth: true },
     );
   }

@@ -17,6 +17,9 @@ import type {
   ModelProvider,
   ModelProviderCreateInput,
   ModelProviderRotateInput,
+  ModelGrant,
+  ModelGrantCreateInput,
+  ModelsGrantsPage,
   PulseParams,
   TaskCreateInput,
   TaskHistory,
@@ -253,6 +256,16 @@ export interface AgentsSource {
    * on the browser, the honest 403 explanatory wall for mnd_ devices.
    */
   listTaskSessions(taskId: string, signal?: AbortSignal): Promise<TaskSessionsPage>;
+  /**
+   * List the sharing grants of one provider + the LIVE selector registry
+   * (`GET /api/models/providers/{key}/grants`, OPEN read; MF3). Metadata
+   * only — selectors name spine entities, no material exists in the
+   * family.
+   */
+  listModelGrants(
+    providerKey: string,
+    signal?: AbortSignal,
+  ): Promise<ModelsGrantsPage>;
 }
 
 /** Gateway type that also serves the agents-domain reads. */
@@ -265,7 +278,8 @@ export function isAgentsSource(gateway: MemoryGateway): gateway is AgentsGateway
     typeof (gateway as Partial<AgentsSource>).getExecutionSettings === "function" &&
     typeof (gateway as Partial<AgentsSource>).listHarnesses === "function" &&
     typeof (gateway as Partial<AgentsSource>).modelsRoster === "function" &&
-    typeof (gateway as Partial<AgentsSource>).listTaskSessions === "function"
+    typeof (gateway as Partial<AgentsSource>).listTaskSessions === "function" &&
+    typeof (gateway as Partial<AgentsSource>).listModelGrants === "function"
   );
 }
 
@@ -369,6 +383,37 @@ export interface AgentsMutationSource {
     providerKey: string,
     signal?: AbortSignal,
   ): Promise<ModelProvider>;
+  /**
+   * Grant access (`POST /api/models/providers/{key}/grants`, ui-token;
+   * MF3 red line 6 — owner-write-only). The selector must name an
+   * EXISTING spine entity: unknown targets are refused 422 + audited
+   * (`grant.rejected_unknown_target`), a duplicate selector 409.
+   */
+  createModelGrant(
+    providerKey: string,
+    payload: ModelGrantCreateInput,
+    signal?: AbortSignal,
+  ): Promise<ModelGrant>;
+  /**
+   * Pause/resume a grant (`PATCH …/grants/{grant_id}`, ui-token; MF3).
+   * enabled=false answers the NEXT request 403 (pull: immediate — the
+   * ux promise «следующий вызов — без доступа»); the row stays visible.
+   */
+  setModelGrantEnabled(
+    providerKey: string,
+    grantId: string,
+    enabled: boolean,
+    signal?: AbortSignal,
+  ): Promise<ModelGrant>;
+  /**
+   * Revoke a grant (`DELETE …/grants/{grant_id}`, ui-token; MF3) — the
+   * row is REMOVED; revocation acts at the NEXT use (red line 7).
+   */
+  deleteModelGrant(
+    providerKey: string,
+    grantId: string,
+    signal?: AbortSignal,
+  ): Promise<void>;
 }
 
 /** Gateway type that also speaks the agents-domain mutation wire. */
@@ -397,6 +442,12 @@ export function isAgentsMutationSource(
     typeof (gateway as Partial<AgentsMutationSource>).rotateModelProvider ===
       "function" &&
     typeof (gateway as Partial<AgentsMutationSource>).deleteModelProviderCredential ===
+      "function" &&
+    typeof (gateway as Partial<AgentsMutationSource>).createModelGrant ===
+      "function" &&
+    typeof (gateway as Partial<AgentsMutationSource>).setModelGrantEnabled ===
+      "function" &&
+    typeof (gateway as Partial<AgentsMutationSource>).deleteModelGrant ===
       "function"
   );
 }

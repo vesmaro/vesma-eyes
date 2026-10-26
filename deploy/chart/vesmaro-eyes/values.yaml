@@ -110,6 +110,47 @@ memoryRegistry:
     #     group: abyss
     #     primary: true
 
+# --- models fleet (MF2 credentials + MF3 grants/pull-proxy) ---------------
+models:
+  secretsDir:
+    # The credential vault (security verdict H1): a DEDICATED volume
+    # OUTSIDE the board data PVC — the data dir stays keyless BY
+    # CONSTRUCTION. The chart creates the empty volume and mounts it
+    # read-write; the OWNER installs keys through the board UI (the one
+    # write path, files 0600). deploy NEVER writes, copies or overwrites
+    # vault contents (the existingSecret discipline: referenced, never
+    # managed). Absent dir = credential features honestly off (503
+    # family), never a DB fallback.
+    enabled: true
+    # Empty -> chart-managed PVC "<fullname>-vault". A pre-provisioned
+    # volume can be referenced instead (operator-owned contents).
+    existingClaim: ""
+    storageClass: local-path
+    size: 64Mi
+    mountPath: /vault
+    keepOnUninstall: true
+  proxy:
+    # The MF3 inference pull-proxy (mf3-threat-model.md §2-D/§6). The
+    # numbers are SERVER-OWNED constants at the §2-D values; these env
+    # knobs are read once at boot and may only TIGHTEN them (clamped to
+    # the §2-D ceiling — "at the §2-D numbers (or stricter)"). They are
+    # never per-request tunable. enabled=false answers both infer routes
+    # with the honest 503 off. Natural default: on iff the secrets dir is
+    # configured.
+    enabled: true
+    bodyCapBytes: 4194304
+    modelIdMax: 200
+    timeouts:
+      connectSeconds: 5
+      firstByteSeconds: 30
+      idleReadSeconds: 60
+      totalSeconds: 300
+    limits:
+      perExecutorInFlight: 2
+      globalInFlight: 16
+      perExecutorPerMinute: 20
+      globalPerMinute: 120
+
 service:
   type: ClusterIP
   port: 8080

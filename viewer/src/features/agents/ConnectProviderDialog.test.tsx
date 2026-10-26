@@ -262,6 +262,8 @@ describe("ConnectProviderDialog — rotate mode (MF-CARD-ROTATE)", () => {
       createdAt: "2026-10-24T00:00:00+00:00",
       rotatedAt: null,
       status: "set",
+      lastUsedAt: null,
+      rejectedAt: null,
     });
     const nameField = input(harness, "provider-name");
     expect(nameField.value).toBe("openrouter");
@@ -289,6 +291,8 @@ describe("ConnectProviderDialog — rotate mode (MF-CARD-ROTATE)", () => {
       createdAt: null,
       rotatedAt: null,
       status: "set",
+      lastUsedAt: null,
+      rejectedAt: null,
     });
     const spy = vi.spyOn(harness.gateway, "rotateModelProvider");
     await type(harness, "provider-url", "https://api.deepseek.com/v1?key=1");

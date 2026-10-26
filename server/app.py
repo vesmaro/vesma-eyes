@@ -27,7 +27,7 @@ import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Annotated, Any, AsyncIterator, Literal
+from typing import Annotated, Any, AsyncIterator, Callable, Literal
 from urllib.parse import parse_qs, urlparse
 
 from fastapi import FastAPI, HTTPException, Query, Request, Response
@@ -40,9 +40,11 @@ from fastapi.responses import (
     StreamingResponse,
 )
 from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ValidationError as PydanticValidationError
 
 from . import mnemos_client
 from . import hermes_client
+from . import models_proxy
 from .kora import redaction as kora_redaction
 from .memory_registry import ServerRegistry, resolve_token, write_config_template
 from .profiles import build_profile
@@ -6208,8 +6210,35 @@ async def models_roster() -> ModelsRosterOut:
             # CTA WITH its reason when the credential features are off.
             # Metadata only — no credential-shaped name in the payload.
             "providers_off": not _providers_vault_ready(),
+            # §2-D presence-threshold pattern: the SERVER-OWNED proxy
+            # constants are operator-visible in meta (never per-request
+            # tunable); env knobs may only tighten them at boot.
+            "proxy": _proxy_meta(),
         },
     )
+
+
+def _proxy_meta() -> dict[str, Any]:
+    """The §6 operator-visibility block: enabled (on iff the secrets dir
+    is configured and the env kill-switch has not forced it off) + the
+    §2-D numbers as shipped."""
+    return {
+        "enabled": models_proxy.proxy_enabled() and _providers_vault_ready(),
+        "body_cap_bytes": models_proxy.BODY_CAP_BYTES,
+        "model_id_max": models_proxy.MODEL_ID_MAX_LEN,
+        "timeouts": {
+            "connect_seconds": models_proxy.CONNECT_TIMEOUT_S,
+            "first_byte_seconds": models_proxy.FIRST_BYTE_TIMEOUT_S,
+            "idle_read_seconds": models_proxy.IDLE_READ_TIMEOUT_S,
+            "total_seconds": models_proxy.TOTAL_TIMEOUT_S,
+        },
+        "limits": {
+            "per_executor_inflight": models_proxy.PER_EXECUTOR_INFLIGHT,
+            "global_inflight": models_proxy.GLOBAL_INFLIGHT,
+            "per_executor_per_minute": models_proxy.PER_EXECUTOR_RATE_PER_MIN,
+            "global_per_minute": models_proxy.GLOBAL_RATE_PER_MIN,
+        },
+    }
 
 
 # -------------------- models fleet: provider credentials (MF2 write leg)
@@ -6368,6 +6397,18 @@ def _validate_provider_base_url(raw: str) -> str:
     scheme = (parsed.scheme or "").lower()
     if scheme not in ("http", "https"):
         raise ValueError("base_url scheme must be http or https")
+    host = (parsed.hostname or "").lower()
+    if not host:
+        raise ValueError("base_url host is required")
+    # MF3 egress scheme gate (threat model §2-T, registration-time
+    # rejection): https for any non-loopback authority, http only for
+    # loopback (127.0.0.1, ::1, localhost — the on-cluster ollama
+    # class). The SAME rule re-fails CLOSED at use time (the proxy
+    # wave's backstop for rows registered before the rule).
+    if scheme == "http" and not models_proxy.is_loopback_authority(host):
+        raise ProviderCredentialError(
+            "Внешнему провайдеру нужен https — http допустим только для "
+            "локальных адресов (127.0.0.1, ::1, localhost).")
     netloc = parsed.netloc or ""
     if "@" in netloc:
         raise ProviderCredentialError(_CREDENTIAL_IN_URL_MESSAGE)
@@ -6377,9 +6418,6 @@ def _validate_provider_base_url(raw: str) -> str:
         raise ValueError("base_url has an invalid port") from exc
     if port is not None and not (1 <= port <= 65535):
         raise ValueError("base_url port is out of range")
-    host = (parsed.hostname or "").lower()
-    if not host:
-        raise ValueError("base_url host is required")
     path = parsed.path or ""
     if path and not path.startswith("/"):
         raise ValueError("base_url path must start with '/'")
@@ -6438,12 +6476,23 @@ def _providers_off_response() -> JSONResponse:
 
 
 def _disable_provider_grants_hook(provider_key: str) -> int:
-    """MF3 SEAM (verdict H1 consequences): removing a credential cascades
-    disable its grants — authority without material is dead. MF2 has no
-    grant table yet; the hook is called on the DELETE path so the cascade
-    cannot be forgotten when grants land. Returns the number of grants
-    disabled (0 in MF2; the count rides the audit payload)."""
-    return 0
+    """MF3 (verdict H1 consequences): removing a credential cascades
+    disable its grants — authority without material is dead. Every
+    ENABLED grant of the provider flips to disabled (the rows STAY —
+    audit visibility, MF-GRANT-DISABLED), each audited grant.disabled
+    with the named reason; the count rides the .removed audit payload.
+    Returns the number of grants disabled."""
+    disabled = store.model_grants_disable_for_provider(
+        provider_key, _now_iso())
+    for row in disabled:
+        store.log_models_audit("grant.disabled", {
+            "actor": "ui", "provider_key": provider_key,
+            "grant_id": row["id"], "credential_ref": row["credential_ref"],
+            "selector_kind": row["selector_kind"],
+            "selector_value": row["selector_value"],
+            "reason": "credential_removed",
+        })
+    return len(disabled)
 
 
 class ModelProviderCreateIn(BaseModel):
@@ -6469,32 +6518,46 @@ class ModelProviderOut(_ApiModel):
     """One registry row, metadata only — the roster providers[] shape
     (OQ-1 verdict: additive) and the mutation response body. NO credential
     field exists in this family by construction; fingerprint + status are
-    the honest «тот ли ключ» facts."""
+    the honest «тот ли ключ» facts. MF3 adds the slot-machine facts
+    (threat model §3): ``last_used_at`` ticks from ok use events,
+    ``rejected_at`` stamps the provider-401 that set the `rejected`
+    slot; grants never move the key slot."""
     provider_key: str
     base_url: str
     fingerprint: str | None = None
     created_at: str
     rotated_at: str | None = None
     status: Literal["set", "rejected"] | None = None
+    last_used_at: str | None = None
+    rejected_at: str | None = None
 
 
 def _provider_public(row: dict[str, Any]) -> ModelProviderOut:
-    """Registry row → the wire shape. status: «set» while the credential
-    ref+ fingerprint exist; None = honestly not connected; «rejected» is
-    minted by the MF3 enforcement wave (provider.use.rejected) — the enum
-    is declared now so the FE slot machine is closed (verdict §5)."""
+    """Registry row → the wire shape. status: the CLOSED slot machine
+    (verdict §5 / threat model §3) — «rejected» is minted by a provider
+    401 (provider.use.rejected), cleared by an ok call or a rotation;
+    None = honestly not connected; «set» while the credential ref +
+    fingerprint exist. last_used_at/rejected_at: metadata facts for the
+    ux slot («использован N назад» / «время последней попытки»)."""
+    fingerprint = row.get("fingerprint")
+    connected = bool(fingerprint and row.get("credential_ref"))
+    rejected_at = row.get("slot_rejected_at") or ""
     status: Literal["set", "rejected"] | None
-    if row.get("fingerprint") and row.get("credential_ref"):
+    if connected and rejected_at:
+        status = "rejected"
+    elif connected:
         status = "set"
     else:
         status = None
     return ModelProviderOut(
         provider_key=row["provider_key"],
         base_url=row["base_url"],
-        fingerprint=row.get("fingerprint") or None,
+        fingerprint=fingerprint or None,
         created_at=row["created_at"],
         rotated_at=row.get("rotated_at") or None,
         status=status,
+        last_used_at=row.get("last_used_at") or None,
+        rejected_at=rejected_at or None,
     )
 
 
@@ -6648,6 +6711,825 @@ async def delete_model_provider_credential(provider_key: str,
     })
     _broadcast({"kind": "model.inventory.changed", "provider": provider_key})
     return _provider_public(row)
+
+
+# -------------------- models fleet MF3: grants + pull-enforcement proxy
+# The wave contract is docs/design/models-fleet/mf3-threat-model.md
+# (APPROVED conditional on X/Y/Z; the code review walks the §8 ASVS
+# mapping: X → V3.5/V4.1, Y → V9.2/V12.2/V13.2/V14.3 + CWE-918,
+# Z → V7.1 + CWE-538).
+#
+# GRANTS (§1, §2-E): owner-write-only authority records (credential_ref,
+# selector, enabled). The selector names ONE existing spine entity —
+# `host:<name>` or `executor:<harness@host>` — validated against the
+# LIVE executors registry at write time: unknown → 422 + audit
+# grant.rejected_unknown_target, never auto-extend (the harness-
+# dictionary rule). Lifecycle audit: grant.created / .enabled /
+# .disabled / .removed (H4 dot-family). A grant NEVER moves the key
+# slot (§3 — grants are access, the slot is key health). Every
+# successful mutation broadcasts the additive model.inventory.changed
+# frame (the grants table rides the roster invalidation).
+#
+# ENFORCEMENT (§3 — the exact order, cheap → expensive, no oracle
+# bleed): 1. authn (ui class / executor token identity-match) → 401 +
+# audit `revoked`; 2. caps (rate + in-flight, the §2-D numbers) → 429 +
+# `capped`; 3. feature gate (secrets dir + credential set) → 503 honest-
+# off + `off`; 4. grant check (executor class) → 403 with ONE generic
+# reason for BOTH revoked and never-granted (no grant-table enumeration
+# oracle) — the audit row distinguishes (`revoked` vs `denied`);
+# 5. fingerprint check → mismatch fail-CLOSED 503 + audit
+# provider.credential.mismatch; 6. egress (server/models_proxy.py owns
+# the wire) — provider 401 → outcome `provider-401` + audit
+# provider.use.rejected + slot `rejected`. Revocation acts at the NEXT
+# use (red line 7 — the in-flight call completes honestly). A provider
+# row that does not resolve → 404 routing miss, NO use row (the §4
+# credential_fingerprint cannot be fabricated; the standard access log
+# covers the attempt).
+#
+# USE-AUDIT (§4): ONE row per proxied request with EXACTLY the §4 field
+# set; the principal derives from the AUTHENTICATED identity, never a
+# body field (CWE-284); content, headers (either direction), the
+# credential and URLs never enter any field (CWE-538, ASVS V7).
+# Retention 90d/50k rides the insert.
+#
+# RED LINES (§5, verbatim): no anonymous inference leg; no credential
+# material outbound to any caller; request/response bodies never
+# persisted, logged or echoed beyond the {status_code, message, type}
+# allowlist; the caller never influences the destination; audit never
+# carries content or material; grants stay owner-write-only; no
+# retroactive in-flight kill; fingerprint mismatch and missing secrets
+# dir fail CLOSED; ZERO automatic provider retries; the shim variant is
+# NOT this wave.
+
+_MODELS_PROXY_RATE_WINDOW = 60.0
+_models_rate_executor = RateLimiter(
+    limit=models_proxy.PER_EXECUTOR_RATE_PER_MIN,
+    window=_MODELS_PROXY_RATE_WINDOW)
+_models_rate_global = RateLimiter(
+    limit=models_proxy.GLOBAL_RATE_PER_MIN, window=_MODELS_PROXY_RATE_WINDOW)
+_models_inflight = models_proxy.InFlightLimiter(
+    global_cap=models_proxy.GLOBAL_INFLIGHT,
+    per_key_cap=models_proxy.PER_EXECUTOR_INFLIGHT)
+_provider_egress = models_proxy.ProviderEgress()
+
+# Display caps for the selector registry meta (the honest-caps family —
+# the spine registry is small; a runaway registry degrades to a cut
+# list, never to a huge payload).
+_GRANT_REGISTRY_SHOW = 100
+
+
+class ModelGrantOut(_ApiModel):
+    """One grant row (metadata only — selectors name spine entities, no
+    material). ``selector`` is the ux «Кому» display form
+    (`host:<name>` / `executor:<harness@host>`); created_by is the H4
+    audit actor field."""
+    grant_id: str
+    provider_key: str
+    selector_kind: Literal["host", "executor"]
+    selector_value: str
+    selector: str
+    enabled: bool
+    created_at: str
+    created_by: str
+
+
+def _grant_public(row: dict[str, Any]) -> ModelGrantOut:
+    return ModelGrantOut(
+        grant_id=row["id"],
+        provider_key=row["provider_key"],
+        selector_kind=row["selector_kind"],
+        selector_value=row["selector_value"],
+        selector=f"{row['selector_kind']}:{row['selector_value']}",
+        enabled=bool(row["enabled"]),
+        created_at=row["created_at"],
+        created_by=row["created_by"],
+    )
+
+
+def _spine_hosts() -> list[str]:
+    """Distinct non-empty hosts of registered executors — the host
+    half of the selector registry (the spine; the ux picker's
+    «Хосты» list)."""
+    return sorted({r["host"] for r in store.list_executors()
+                   if r.get("host")})[:_GRANT_REGISTRY_SHOW]
+
+
+def _spine_executor_identities() -> list[str]:
+    """The harness@host identities of registered executors — the
+    «Исполнители» half of the selector registry. An executor with an
+    empty host has no addressable identity and is honestly absent (it
+    cannot be a grant target)."""
+    rows = store.list_executors()
+    return sorted({f"{r['harness']}@{r['host']}" for r in rows
+                   if r.get("host")})[:_GRANT_REGISTRY_SHOW]
+
+
+def _validate_grant_selector(selector_kind: str,
+                             selector_value: str) -> str | None:
+    """Write-time validation against the LIVE registries (§2-E: unknown
+    → refused + audited, never auto-extend). Returns None when the
+    selector names an existing spine entity, else the honest refusal
+    message."""
+    value = selector_value.strip()
+    if selector_kind == "host":
+        if value in _spine_hosts():
+            return None
+        return ("Такого хоста нет в реестре — сначала подключите агента "
+                "(страница Агенты → Хосты); словарь никогда не "
+                "расширяется сам.")
+    if value in _spine_executor_identities():
+        return None
+    return ("Такого исполнителя нет в реестре — селектор должен называть "
+            "существующую пару harness@host; словарь никогда не "
+            "расширяется сам.")
+
+
+class ModelGrantCreateIn(BaseModel):
+    """POST /api/models/providers/{key}/grants — the owner act. No
+    credential material, no wildcard («всем» is not a v1 selector —
+    ux §3.3: the intent is «на выбранных агентов/хостов»)."""
+    model_config = ConfigDict(extra="forbid")
+
+    selector_kind: Literal["host", "executor"]
+    selector_value: str = Field(min_length=1, max_length=160)
+
+
+class ModelGrantPatchIn(BaseModel):
+    """PATCH — the pause/resume toggle (enabled=false = «приостановлен»;
+    the row stays for audit, MF-GRANT-DISABLED)."""
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool
+
+
+class ModelsGrantsOut(_ApiModel):
+    """GET /api/models/providers/{key}/grants — the grant rows + the LIVE
+    selector registry for the ux picker (metadata only; no material
+    exists in the family)."""
+    ok: bool
+    grants: list[ModelGrantOut] = Field(default_factory=list)
+    meta: dict[str, Any]
+
+
+@app.get("/api/models/providers/{provider_key}/grants",
+         response_model=ModelsGrantsOut)
+async def list_model_grants(provider_key: str) -> JSONResponse:
+    """Grant rows of one provider + the LIVE selector registry for the
+    ux picker («Хосты · Исполнители» из живого реестра, ux §3.3). OPEN
+    read: selectors and dates are roster-class facts (no material
+    exists in the family); the WRITES below carry the owner wall (red
+    line 6)."""
+    if store.model_provider(provider_key) is None:
+        return _kora_error(
+            404, "provider_not_found",
+            f"Провайдер {provider_key} не найден в реестре.")
+    return JSONResponse(content=ModelsGrantsOut(
+        ok=True,
+        grants=[_grant_public(row).model_dump()
+                for row in store.model_grants(provider_key)],
+        meta={
+            "selector_registry": {
+                "hosts": _spine_hosts(),
+                "executors": _spine_executor_identities(),
+            },
+        }).model_dump())
+
+
+@app.post("/api/models/providers/{provider_key}/grants",
+          status_code=201, response_model=ModelGrantOut)
+async def create_model_grant(provider_key: str, body: ModelGrantCreateIn,
+                             request: Request) -> Response:
+    """Grant access (owner act, ui-token; red line 6). Order: owner wall
+    → provider exists → credential set (authority without material is
+    dead) → selector validated against the LIVE spine (unknown → 422 +
+    audit grant.rejected_unknown_target) → duplicate selector 409 →
+    row + audit grant.created + SSE."""
+    denied = _providers_owner_denied(request)
+    if denied is not None:
+        return denied
+    row = store.model_provider(provider_key)
+    if row is None:
+        return _kora_error(
+            404, "provider_not_found",
+            f"Провайдер {provider_key} не найден в реестре — сначала "
+            "подключите его.")
+    if not row.get("credential_ref"):
+        return _kora_error(
+            409, "credential_not_set",
+            "У провайдера нет установленного ключа — доступ выдавать "
+            "некому: сначала установите ключ.")
+    reason = _validate_grant_selector(body.selector_kind,
+                                      body.selector_value)
+    if reason is not None:
+        store.log_models_audit("grant.rejected_unknown_target", {
+            "actor": "ui", "provider_key": provider_key,
+            "selector_kind": body.selector_kind,
+            "selector_value": body.selector_value.strip()[:160],
+        })
+        return _kora_error(422, "grant_unknown_target", reason)
+    selector_value = body.selector_value.strip()
+    try:
+        grant = store.model_grant_create(
+            provider_key, row["credential_ref"], body.selector_kind,
+            selector_value, "ui", _now_iso())
+    except sqlite3.IntegrityError:
+        return _kora_error(
+            409, "grant_exists",
+            "Такой доступ уже выдан — приостановите или отзовите "
+            "существующую строку.")
+    store.log_models_audit("grant.created", {
+        "actor": "ui", "provider_key": provider_key,
+        "grant_id": grant["id"], "credential_ref": grant["credential_ref"],
+        "fingerprint": row.get("fingerprint"),
+        "selector_kind": grant["selector_kind"],
+        "selector_value": grant["selector_value"],
+    })
+    _broadcast({"kind": "model.inventory.changed", "provider": provider_key})
+    return _grant_public(grant)
+
+
+def _provider_grant_or_none(provider_key: str,
+                            grant_id: str) -> dict[str, Any] | None:
+    """The grant row WHEN it belongs to this provider (a grant id from
+    another provider's path is a 404, never a cross-provider hit)."""
+    row = store.model_grant(grant_id)
+    if row is None or row["provider_key"] != provider_key:
+        return None
+    return row
+
+
+@app.patch("/api/models/providers/{provider_key}/grants/{grant_id}",
+           response_model=ModelGrantOut)
+async def patch_model_grant(provider_key: str, grant_id: str,
+                            body: ModelGrantPatchIn,
+                            request: Request) -> Response:
+    """Pause/resume one grant (owner act). enabled=false answers the
+    NEXT request with 403 (pull: immediate — the ux promise «следующий
+    вызов — без доступа»); the row stays visible for audit."""
+    denied = _providers_owner_denied(request)
+    if denied is not None:
+        return denied
+    if store.model_provider(provider_key) is None:
+        return _kora_error(404, "provider_not_found",
+                           f"Провайдер {provider_key} не найден в реестре.")
+    updated = store.model_grant_set_enabled(grant_id, body.enabled,
+                                            _now_iso())
+    if updated is None or updated["provider_key"] != provider_key:
+        return _kora_error(
+            404, "grant_not_found",
+            "Грант не найден — возможно, он уже отозван.")
+    store.log_models_audit(
+        "grant.enabled" if body.enabled else "grant.disabled", {
+            "actor": "ui", "provider_key": provider_key,
+            "grant_id": grant_id, "credential_ref": updated["credential_ref"],
+            "selector_kind": updated["selector_kind"],
+            "selector_value": updated["selector_value"],
+        })
+    _broadcast({"kind": "model.inventory.changed", "provider": provider_key})
+    return _grant_public(updated)
+
+
+@app.delete("/api/models/providers/{provider_key}/grants/{grant_id}")
+async def delete_model_grant(provider_key: str, grant_id: str,
+                             request: Request) -> Response:
+    """Revoke one grant (owner act; the row is REMOVED — MF-GRANT-REVOKE;
+    the audit event carries the removed selector). Revocation acts at
+    the NEXT use — the in-flight call completes honestly (red line 7)."""
+    denied = _providers_owner_denied(request)
+    if denied is not None:
+        return denied
+    if store.model_provider(provider_key) is None:
+        return _kora_error(404, "provider_not_found",
+                           f"Провайдер {provider_key} не найден в реестре.")
+    removed = store.model_grant_delete(grant_id)
+    if removed is None or removed["provider_key"] != provider_key:
+        return _kora_error(
+            404, "grant_not_found",
+            "Грант не найден — возможно, он уже отозван.")
+    store.log_models_audit("grant.removed", {
+        "actor": "ui", "provider_key": provider_key,
+        "grant_id": grant_id, "credential_ref": removed["credential_ref"],
+        "selector_kind": removed["selector_kind"],
+        "selector_value": removed["selector_value"],
+    })
+    _broadcast({"kind": "model.inventory.changed", "provider": provider_key})
+    return JSONResponse(content={"ok": True, "removed": _grant_public(
+        removed).model_dump()})
+
+
+# ------------------------------------------------- the inference proxy
+# Two caller classes (threat model §1), both ALREADY-authenticated
+# principals; no anonymous leg exists (red line 1):
+#   POST /api/models/{key}/infer, GET .../catalog — the BOARD's own use
+#     (ui-token session; grant check NONE by design — provider
+#     registered = usable by the board, «доступен только борду»);
+#   POST|GET /api/executors/{id}/models/{key}/... — the agent relay
+#     (executor token, identity-matched to {id}; grant check YES,
+#     against the AUTHENTICATED identity).
+# Devices (mnd_) and anything else → 401, no named reason (§1).
+
+class ModelInferIn(BaseModel):
+    """The proxy request body. The caller influences EXACTLY: model_id
+    (pinned into the outbound JSON body) and the message payload.
+    Outbound ``model`` is ALWAYS the audited model_id — a payload
+    ``model`` key cannot smuggle a different id (the §1 trust-boundary
+    statement)."""
+    model_config = ConfigDict(extra="forbid")
+
+    model_id: str = Field(min_length=1, max_length=models_proxy.MODEL_ID_MAX_LEN)
+    payload: dict[str, Any] = Field(default_factory=dict)
+
+
+def _model_use_row(*, principal: str, provider_key: str, fingerprint: str,
+                   model_id: str, outcome: str, status_code: int,
+                   started: float, req_bytes: int,
+                   resp_bytes: int) -> None:
+    """ONE §4 use row. Fields beyond the contract do not exist;
+    latency_bucket derives from the wall clock (the §4 buckets)."""
+    store.log_model_use({
+        "ts": _now_iso(),
+        "principal": principal,
+        "provider_key": provider_key,
+        "credential_fingerprint": fingerprint,
+        "model_id": model_id,
+        "outcome": outcome,
+        "status_code": status_code,
+        "latency_bucket": models_proxy.latency_bucket(
+            time.monotonic() - started),
+        "req_bytes": req_bytes,
+        "resp_bytes": resp_bytes,
+    })
+
+
+def _proxy_unauthorized(detail: str = "unauthorized") -> JSONResponse:
+    """401 with NO named reason (§1: «Anything else → 401, no named
+    reason») — the class wall for the inference routes; the audit row
+    carries the specifics, the response does not."""
+    return _kora_error(401, "unauthorized", detail)
+
+
+def _proxy_denied() -> JSONResponse:
+    """403 with ONE generic reason for BOTH revoked and never-granted
+    (§3.4 — no grant-table enumeration oracle to callers)."""
+    return _kora_error(
+        403, "provider_access_denied", "Нет доступа к этому провайдеру.")
+
+
+def _egress_error_response(error: models_proxy.ProviderError,
+                           ) -> JSONResponse:
+    """Relay a provider error through the §2-I allowlist: HTTP status =
+    the provider's (3xx from a no-follow proxy is a board 502 — the
+    caller must never be handed a redirect it might follow), body =
+    exactly {status_code, message, type} ≤1KiB. Provider headers never
+    ride out (red line 2)."""
+    status = error.status_code
+    if 300 <= status < 400:
+        status = 502
+    return JSONResponse(status_code=status,
+                        content=error.to_payload())
+
+
+def _egress_transport_failure(outcome: models_proxy.EgressOutcome,
+                              ) -> JSONResponse:
+    """The provider leg never answered (connect/reset/timeout — the
+    exception CLASS name only, never str(exc): it may carry URLs).
+    Timeout family → 504, the rest → 502; outcome provider_error."""
+    is_timeout = outcome.request_error in (
+        "ConnectTimeout", "ReadTimeout", "WriteTimeout", "PoolTimeout",
+        "TimeoutException")
+    return _kora_error(
+        504 if is_timeout else 502, "provider_unreachable",
+        "Провайдер не ответил "
+        f"({outcome.request_error or 'connection error'}).")
+
+
+async def _model_inference(request: Request, provider_key: str,
+                           executor_id: str | None, *,
+                           catalog: bool = False) -> Response:
+    """The shared enforcement pipeline (threat model §3 — the exact
+    order). ``executor_id=None`` is the board's own ui class (no grant
+    check by design); the executor class identity-matches the token to
+    the URL id and checks the grant against the AUTHENTICATED identity.
+    ``catalog`` switches the egress to the GET /models listing (also
+    audited — «who saw the roster of a paid provider» is a use, §2-R).
+    """
+    started = time.monotonic()
+    # ---- §3.1 authn (token class + identity-match) --------------------
+    principal: str | None = None
+    executor_row: dict[str, Any] | None = None
+    inflight_key: str | None = None
+    if executor_id is not None:
+        executor = _authenticate_executor(request)
+        if (executor is None or executor["id"] != executor_id
+                or executor["state"] != "approved"):
+            # Fail-closed on missing/unknown/mismatched token AND on a
+            # non-approved identity (an unapproved registry row is not
+            # yet a work identity — the _guard_machine_write rule). The
+            # outcome class is `revoked` per §2-S; the principal is the
+            # AUTHENTICATED identity when one exists (a URL-id mismatch
+            # still tells us who called).
+            known = executor if executor is not None else None
+            principal = (
+                f"executor:{known['harness']}@{known['host']}"
+                if known and known.get("host") else "unknown")
+            row = store.model_provider(provider_key)
+            _model_use_row(
+                principal=principal, provider_key=provider_key,
+                fingerprint=str(row.get("fingerprint") or "") if row else "",
+                model_id="", outcome="revoked", status_code=401,
+                started=started, req_bytes=0, resp_bytes=0)
+            return _proxy_unauthorized()
+        executor_row = executor
+        principal = f"executor:{executor['harness']}@{executor['host']}"
+        inflight_key = executor_id
+    else:
+        auth = request.headers.get("Authorization", "")
+        ui_token = _token_classes().get("ui", "")
+        if auth:
+            if not (ui_token and hmac.compare_digest(
+                    auth.encode("utf-8"),
+                    f"Bearer {ui_token}".encode("utf-8"))):
+                row = store.model_provider(provider_key)
+                _model_use_row(
+                    principal="unknown", provider_key=provider_key,
+                    fingerprint=str(row.get("fingerprint") or "")
+                    if row else "",
+                    model_id="", outcome="revoked", status_code=401,
+                    started=started, req_bytes=0, resp_bytes=0)
+                return _proxy_unauthorized()
+        elif not (_cookie_ui_ok(request)
+                  or _cookie_auth_session(request) is not None):
+            row = store.model_provider(provider_key)
+            _model_use_row(
+                principal="unknown", provider_key=provider_key,
+                fingerprint=str(row.get("fingerprint") or "") if row else "",
+                model_id="", outcome="revoked", status_code=401,
+                started=started, req_bytes=0, resp_bytes=0)
+            return _proxy_unauthorized()
+        principal = "ui"
+    assert principal is not None
+
+    # ---- route resolution (a routing miss, not a use) ------------------
+    provider_row = store.model_provider(provider_key)
+    if provider_row is None:
+        return _kora_error(
+            404, "provider_not_found",
+            f"Провайдер {provider_key} не найден в реестре.")
+    fingerprint = str(provider_row.get("fingerprint") or "")
+
+    # ---- §3.2 caps (rate, then in-flight; §2-D numbers) ----------------
+    # A sliding-window limiter records ATTEMPTS — a request refused by
+    # the concurrency cap still consumed its rate slot (the request DID
+    # arrive; bursts count attempts, honest at this scale).
+    rate_key = inflight_key or principal
+    if not _models_rate_executor.acquire(rate_key) \
+            or not _models_rate_global.acquire("global"):
+        _model_use_row(
+            principal=principal, provider_key=provider_key,
+            fingerprint=fingerprint,
+            model_id="", outcome="capped",
+            status_code=429, started=started, req_bytes=0, resp_bytes=0)
+        return _kora_error(
+            429, "rate_capped",
+            f"Слишком много вызовов провайдера: лимит "
+            f"{models_proxy.PER_EXECUTOR_RATE_PER_MIN}/мин на исполнителя, "
+            f"{models_proxy.GLOBAL_RATE_PER_MIN}/мин на борд.")
+    if not _models_inflight.acquire(inflight_key):
+        _model_use_row(
+            principal=principal, provider_key=provider_key,
+            fingerprint=fingerprint,
+            model_id="", outcome="capped",
+            status_code=429, started=started, req_bytes=0, resp_bytes=0)
+        return _kora_error(
+            429, "concurrency_capped",
+            f"Достигнут предел одновременных вызовов: "
+            f"{models_proxy.PER_EXECUTOR_INFLIGHT} на исполнителя, "
+            f"{models_proxy.GLOBAL_INFLIGHT} на борд.")
+    # The in-flight budget must cover the WHOLE provider call — including
+    # a streaming relay that keeps running AFTER this handler returns its
+    # StreamingResponse (review P2-2). The caller's finally fires at
+    # HANDLER RETURN — before the relay iterates — so the admitted half
+    # flags `with_relay` on the streaming branch and the RELAY's finally
+    # performs the real release; the guard here is then a no-op. For
+    # every completed answer (buffered ok, refused, transport failure)
+    # the branch releases immediately and the flag stays False. The
+    # residual leak window (a relay generator that is neither started
+    # nor closed) does not exist in practice: starlette closes a
+    # half-consumed generator on disconnect and asyncio closes an
+    # unstarted one on GC — the finally runs either way. The RATE budget
+    # is a sliding window of ATTEMPTS — a completed call keeps its
+    # recorded slot until the window passes (nothing to release).
+    slot = {"with_relay": False}
+
+    def _release_inflight() -> None:
+        if not slot["with_relay"]:
+            _models_inflight.release(inflight_key)
+
+    try:
+        return await _model_inference_admitted(
+            request, provider_row=provider_row, principal=principal,
+            executor_row=executor_row, inflight_key=inflight_key,
+            fingerprint=fingerprint, catalog=catalog, started=started,
+            slot=slot, release_inflight=_release_inflight)
+    finally:
+        _release_inflight()
+
+
+async def _model_inference_admitted(
+        request: Request, *, provider_row: dict[str, Any],
+        principal: str, executor_row: dict[str, Any] | None,
+        inflight_key: str | None, fingerprint: str, catalog: bool,
+        started: float, slot: dict[str, bool],
+        release_inflight: Callable[[], None]) -> Response:
+    """The admitted half of the pipeline: feature gate → grant check →
+    fingerprint → egress. The rate budgets are held by the caller. The
+    IN-FLIGHT slot: every completed answer releases through
+    ``release_inflight`` immediately; the streaming pass-through flags
+    ``slot["with_relay"] = True`` and the RELAY generator's finally
+    performs the real release — the §2-D per-executor/global caps bound
+    the whole provider call including the relay (review P2-2)."""
+    provider_key = provider_row["provider_key"]
+
+    # ---- §3.3 feature gate (honest-off family) -------------------------
+    if not models_proxy.proxy_enabled():
+        _model_use_row(
+            principal=principal, provider_key=provider_key,
+            fingerprint=fingerprint, model_id="",
+            outcome="off", status_code=503, started=started,
+            req_bytes=0, resp_bytes=0)
+        return _kora_error(
+            503, "providers_off",
+            "Инференс-прокси выключен на борде (MODELS_PROXY_ENABLED=0).")
+    directory = _providers_secrets_dir()
+    if directory is None:
+        _model_use_row(
+            principal=principal, provider_key=provider_key,
+            fingerprint=fingerprint, model_id="",
+            outcome="off", status_code=503, started=started,
+            req_bytes=0, resp_bytes=0)
+        return _providers_off_response()
+    if not provider_row.get("fingerprint") or not provider_row.get(
+            "credential_ref"):
+        _model_use_row(
+            principal=principal, provider_key=provider_key,
+            fingerprint=fingerprint, model_id="",
+            outcome="off", status_code=503, started=started,
+            req_bytes=0, resp_bytes=0)
+        return _kora_error(
+            503, "credential_not_set",
+            "Ключ провайдера не установлен — вызов невозможен "
+            "(«не подключён»).")
+
+    # ---- §3.4 grant check (executor class ONLY; §1 board self-use
+    # needs no grant) -----------------------------------------------------
+    if executor_row is not None:
+        identity = f"{executor_row['harness']}@{executor_row['host']}"
+        host = executor_row["host"]
+        grants = store.model_grants(provider_key)
+
+        def _matches(row: dict[str, Any], *, enabled: bool) -> bool:
+            if bool(row["enabled"]) != enabled:
+                return False
+            if row["selector_kind"] == "executor":
+                return row["selector_value"] == identity
+            return row["selector_value"] == host
+
+        if not any(_matches(g, enabled=True) for g in grants):
+            outcome = ("revoked" if any(_matches(g, enabled=False)
+                                        for g in grants) else "denied")
+            _model_use_row(
+                principal=principal, provider_key=provider_key,
+                fingerprint=fingerprint, model_id="",
+                outcome=outcome, status_code=403, started=started,
+                req_bytes=0, resp_bytes=0)
+            return _proxy_denied()
+
+    # ---- §3.5 fingerprint check (fail CLOSED) ---------------------------
+    credential_ref = str(provider_row["credential_ref"])
+    try:
+        material = (directory / credential_ref).read_text(encoding="utf-8")
+    except OSError:
+        # The vault file vanished out-of-band (operator removal): the
+        # honest-off family, never a silent empty Authorization.
+        _model_use_row(
+            principal=principal, provider_key=provider_key,
+            fingerprint=fingerprint, model_id="",
+            outcome="off", status_code=503, started=started,
+            req_bytes=0, resp_bytes=0)
+        return _kora_error(
+            503, "credential_not_set",
+            "Файл ключа отсутствует в хранилище — установите ключ "
+            "заново.")
+    live_fingerprint = _credential_fingerprint(material)
+    if live_fingerprint != fingerprint:
+        # Out-of-band rewrite → fail CLOSED (§3.5, red line 8): never
+        # silently send a foreign key.
+        store.log_models_audit("provider.credential.mismatch", {
+            "actor": principal, "provider_key": provider_key,
+            "credential_ref": credential_ref,
+            "registered_fingerprint": fingerprint,
+        })
+        _model_use_row(
+            principal=principal, provider_key=provider_key,
+            fingerprint=fingerprint, model_id="",
+            outcome="off", status_code=503, started=started,
+            req_bytes=0, resp_bytes=0)
+        return _kora_error(
+            503, "credential_mismatch",
+            "Ключ заменён вне борда — переустановите его (ротация), "
+            "вызов заблокирован.")
+
+    # ---- §3.6 egress (models_proxy owns the wire) -----------------------
+    base_url = provider_row["base_url"]
+    if catalog:
+        # The listing leg: a GET /models on the wire (the §2-T allowlist
+        # shape), audited like every use (§2-R).
+        path = models_proxy.PATH_MODELS
+        model_id = ""
+        payload: dict[str, Any] | None = None
+        req_bytes = 0
+        want_stream = False
+        method = "GET"
+    else:
+        method = "POST"
+        # §2-D pre-parse gate (review P2-3, the telemetry-family
+        # pattern): a DECLARED Content-Length over the cap refuses 413
+        # BEFORE a single body byte is read — a caller cannot force the
+        # board to buffer 4 MiB+ on the wire just to tell it no. The
+        # actual-size re-check below stays as the belt for chunked /
+        # lying headers; req_bytes in the refusal row is honestly 0
+        # (nothing was read).
+        declared = request.headers.get("content-length", "")
+        if (declared.isdigit()
+                and int(declared) > models_proxy.BODY_CAP_BYTES):
+            _model_use_row(
+                principal=principal, provider_key=provider_key,
+                fingerprint=fingerprint, model_id="",
+                outcome="capped", status_code=413, started=started,
+                req_bytes=0, resp_bytes=0)
+            return _kora_error(
+                413, "body_capped",
+                f"Тело запроса больше {models_proxy.BODY_CAP_BYTES} байт "
+                "(§2-D).")
+        raw = await request.body()
+        req_bytes = len(raw)
+        if req_bytes > models_proxy.BODY_CAP_BYTES:
+            _model_use_row(
+                principal=principal, provider_key=provider_key,
+                fingerprint=fingerprint, model_id="",
+                outcome="capped", status_code=413, started=started,
+                req_bytes=req_bytes, resp_bytes=0)
+            return _kora_error(
+                413, "body_capped",
+                f"Тело запроса больше {models_proxy.BODY_CAP_BYTES} байт "
+                "(§2-D).")
+        try:
+            parsed = json.loads(raw.decode("utf-8"))
+            body = ModelInferIn.model_validate(parsed)
+        except (ValueError, PydanticValidationError):
+            _model_use_row(
+                principal=principal, provider_key=provider_key,
+                fingerprint=fingerprint, model_id="",
+                outcome="capped", status_code=422, started=started,
+                req_bytes=req_bytes, resp_bytes=0)
+            return _kora_error(
+                422, "validation",
+                "Ожидается JSON: {model_id (≤200 символов), payload "
+                "(объект)}.")
+        model_id = body.model_id
+        # The outbound body is built FRESH: the caller's payload plus the
+        # pinned model. Nothing inbound (headers, raw bytes) is piped.
+        payload = {**body.payload, "model": model_id}
+        want_stream = payload.get("stream") is True
+        path = models_proxy.PATH_CHAT_COMPLETIONS
+
+    if want_stream:
+        opened = await _provider_egress.call_streaming(
+            base_url, path, material, payload or {})
+    else:
+        opened = await _provider_egress.call_buffered(
+            base_url, path, material, payload, method=method)
+
+    def _use(outcome: str, status_code: int, resp_bytes: int) -> None:
+        _model_use_row(
+            principal=principal, provider_key=provider_key,
+            fingerprint=fingerprint, model_id=model_id,
+            outcome=outcome, status_code=status_code, started=started,
+            req_bytes=req_bytes, resp_bytes=resp_bytes)
+
+    def _mark_ok_and_maybe_broadcast() -> None:
+        """The slot machine `ok` transition (§3): last_used ticks, a
+        prior `rejected` state clears; the TRANSITION broadcasts (a
+        state the owner must see), ordinary ok uses do not — per-request
+        frames would thrash the roster cache under agentic loops (the
+        use row is the audit of record)."""
+        was_rejected = bool(provider_row.get("slot_rejected_at"))
+        store.model_provider_mark_used(provider_key, _now_iso())
+        if was_rejected:
+            _broadcast({"kind": "model.inventory.changed",
+                        "provider": provider_key})
+
+    if isinstance(opened, models_proxy.EgressOutcome):
+        # Either a buffered success (bytes_) or a REFUSED call (the
+        # error/3xx allowlist outcome, or the transport never answered).
+        # Every branch here COMPLETES the provider call — the in-flight
+        # slot is released immediately (review P2-2).
+        if opened.request_error is not None:
+            release_inflight()
+            _use("provider_error", 504, 0)
+            return _egress_transport_failure(opened)
+        if opened.error is not None:
+            status = opened.error.status_code
+            if status == 401:
+                # §3.6: the provider refused the key — the named honest
+                # fact, the `rejected` slot, audit provider.use.rejected.
+                store.model_provider_mark_rejected(provider_key, _now_iso())
+                store.log_models_audit("provider.use.rejected", {
+                    "actor": principal, "provider_key": provider_key,
+                    "fingerprint": fingerprint, "model_id": model_id,
+                    "status_code": status,
+                })
+                _broadcast({"kind": "model.inventory.changed",
+                            "provider": provider_key})
+                release_inflight()
+                _use("provider-401", status, opened.resp_bytes)
+                return _egress_error_response(opened.error)
+            release_inflight()
+            _use("provider_error", status, opened.resp_bytes)
+            return _egress_error_response(opened.error)
+        # ---- provider answered 2xx (buffered): the slot `ok` transition
+        release_inflight()
+        _mark_ok_and_maybe_broadcast()
+        body_bytes = opened.bytes_ or b""
+        _use("ok", opened.status_code, len(body_bytes))
+        media_type = (opened.content_type
+                      if opened.content_type.startswith("application/json")
+                      else "application/json")
+        return Response(content=body_bytes, status_code=opened.status_code,
+                        media_type=media_type)
+
+    # ---- streaming pass-through (buffering disabled, no spool) ---------
+    # In-flight OWNERSHIP TRANSFERS to the relay generator (review P2-2):
+    # flag it so the caller's finally no-ops, and the relay's finally
+    # performs the real release — the §2-D caps then bound the whole
+    # provider call including the relay. The generator's finally runs on
+    # client disconnect (starlette closes it) and on GC of an unstarted
+    # generator — no leak window in practice.
+    stream = opened
+    slot["with_relay"] = True
+    _mark_ok_and_maybe_broadcast()
+
+    async def _relayed() -> AsyncIterator[bytes]:
+        try:
+            async for chunk in stream.aiter():
+                yield chunk
+        finally:
+            # The §4 row lands when the last byte left the board, and
+            # the in-flight slot with it (the caller's finally no-ops —
+            # with_relay is set).
+            _models_inflight.release(inflight_key)
+            _use("ok", stream.status_code, stream.relayed_bytes)
+
+    media_type = (stream.content_type
+                  if stream.content_type in ("text/event-stream",
+                                             "application/json")
+                  else "text/event-stream")
+    return StreamingResponse(_relayed(), status_code=stream.status_code,
+                             media_type=media_type)
+
+
+@app.post("/api/models/{provider_key}/infer")
+async def board_model_infer(provider_key: str,
+                            request: Request) -> Response:
+    """Board self-use inference (§1: the ui class — grant check NONE by
+    design, the provider being registered IS the board's access;
+    «доступен только борду», MF-GRANT-EMPTY)."""
+    return await _model_inference(request, provider_key, None)
+
+
+@app.get("/api/models/{provider_key}/catalog")
+async def board_model_catalog(provider_key: str, request: Request) -> Response:
+    """Board self-use listing (GET /models egress — audited like every
+    use: «who saw the roster of a paid provider», §2-R)."""
+    return await _model_inference(request, provider_key, None, catalog=True)
+
+
+@app.post("/api/executors/{executor_id}/models/{provider_key}/infer")
+async def executor_model_infer(executor_id: str, provider_key: str,
+                               request: Request) -> Response:
+    """Agent-relay inference (§1: the executor token class,
+    identity-matched to {id}; grant-checked against the AUTHENTICATED
+    identity — a body field naming an executor is ignored for both the
+    check and the audit attribution, CWE-284)."""
+    return await _model_inference(request, provider_key, executor_id)
+
+
+@app.get("/api/executors/{executor_id}/models/{provider_key}/catalog")
+async def executor_model_catalog(executor_id: str, provider_key: str,
+                                 request: Request) -> Response:
+    """Agent-relay listing (grant-checked like the infer leg)."""
+    return await _model_inference(request, provider_key, executor_id,
+                                  catalog=True)
 
 
 # ----------------------------- kora hermes bridge: transcript + chat (T004 s3)

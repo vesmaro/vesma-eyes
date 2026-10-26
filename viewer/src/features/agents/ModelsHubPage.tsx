@@ -10,6 +10,7 @@ import type { TranslationKey } from "@/i18n";
 import { pageGridClass } from "@/layout/pageGrid";
 import { AgentsUnsupported } from "./AgentsUnsupported";
 import { ConnectProviderDialog } from "./ConnectProviderDialog";
+import { GrantAccessDialog } from "./GrantAccessDialog";
 import { hubZones, isRosterEmpty, providersOff } from "./modelsModel";
 import type {
   BoardRosterRow,
@@ -18,8 +19,10 @@ import type {
   ProviderSlot,
 } from "./modelsModel";
 import { useModelsRoster } from "./useModels";
+import { useGrantMutations, useModelGrants } from "./useGrants";
 import { useProviderMutations } from "./useProviders";
 import { useI18n } from "@/i18n";
+import { formatRelativeActivityTime } from "@/features/tasks/activityGrammar";
 
 /**
  * `/agents/models` — хаб «Модели» (MF1 roster + MF2 provider connection,
@@ -211,10 +214,25 @@ function DiscoveredCard({ row }: { row: DiscoveredRosterRow }) {
   );
 }
 
-/** The owner-registry card (MF2): the STATUS SLOT is the only emphasized
- * element of the surface (blueprint «драматизм — ноль, кроме одного
- * места»); metadata only — fingerprint + dates; rotate/remove owner acts.
- * Removal confirms IN the card: «Ключ будет удалён из хранилища…». */
+/** Relative time for the slot facts («использован 2 мин назад») — the
+ * activityGrammar discipline, minute-scale honesty is enough for a
+ * metadata slot. */
+function relativeTime(iso: string | null, lang: string): string | null {
+  if (!iso) return null;
+  const rtf = formatRelativeActivityTime(
+    iso,
+    lang === "ru" ? "ru" : "en",
+    Date.now(),
+  );
+  return rtf;
+}
+
+/** The owner-registry card (MF2 + MF3): the STATUS SLOT is the only
+ * emphasized element of the surface (blueprint «драматизм — ноль, кроме
+ * одного места»); metadata only — fingerprint + dates + the slot-machine
+ * facts; rotate/remove owner acts. Removal confirms IN the card. The
+ * grants section (MF3) replaces the roadmap note with the real
+ * management. */
 function ProviderCard({
   row,
   onRotate,
@@ -227,6 +245,8 @@ function ProviderCard({
   const { removeCredential } = useProviderMutations();
   const [confirming, setConfirming] = useState(false);
   const setAt = formatDate(row.createdAt, lang);
+  const usedAt = relativeTime(row.lastUsedAt, lang);
+  const rejectedAt = relativeTime(row.rejectedAt, lang);
   return (
     <li className="rounded-md border border-border-subtle bg-well px-3 py-2 text-sm shadow-well">
       <div className="flex flex-wrap items-center gap-2">
@@ -303,16 +323,202 @@ function ProviderCard({
           {row.baseUrl}
         </p>
       ) : null}
+      {row.status === "rejected" && rejectedAt ? (
+        <p className="mt-1 text-xs text-foreground-muted">
+          {t("models.slot.rejectedAt", { when: rejectedAt })}
+        </p>
+      ) : row.status === "set" ? (
+        <p className="mt-1 text-xs text-foreground-muted">
+          {usedAt
+            ? t("models.slot.usedAt", { when: usedAt })
+            : t("models.slot.neverUsed")}
+        </p>
+      ) : null}
       {confirming ? (
         <p className="mt-1.5 text-xs text-foreground-secondary" role="note">
           {t("models.card.removeConfirm")}
         </p>
       ) : null}
-      {/* Grants are MF3: a roadmap note, never a dead control (07a). */}
-      <p className="mt-1 text-xs text-foreground-muted">
-        {t("models.grants.roadmap")}
-      </p>
+      {/* MF3: the real access management replaces the MF2 roadmap note. */}
+      <ProviderGrantsSection row={row} />
     </li>
+  );
+}
+
+/** The grants section of one provider card (MF3, ux §3.3): the semantic
+ * table (Кому/Тип/Статус/Выдан/Кем/Действие), the pause switch as a real
+ * checkbox (never colour-only), the revoke confirm with the pull
+ * consequence in the copy, and the PERMANENT pull promise note under the
+ * table — the promise is text, not a tooltip. MF-GRANT-EMPTY states the
+ * honest fact: no grants = the provider is board-only. */
+function ProviderGrantsSection({ row }: { row: ProviderRow }) {
+  const t = useT();
+  const { lang } = useI18n();
+  const { grants, selectorRegistry } = useModelGrants(row.providerKey);
+  const { setEnabled, revoke } = useGrantMutations(row.providerKey);
+  const [grantDialogOpen, setGrantDialogOpen] = useState(false);
+  const [revokingId, setRevokingId] = useState<string | null>(null);
+
+  const connected = row.status !== null;
+
+  return (
+    <section className="mt-2 border-t border-border-subtle pt-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <h3 className="text-xs font-medium text-foreground-secondary">
+          {t("models.grants.title")}
+        </h3>
+        <span className="font-mono text-xs text-foreground-muted">
+          {grants.length}
+        </span>
+        <Button
+          className="ml-auto"
+          variant="outline"
+          size="sm"
+          disabled={!connected}
+          title={connected ? undefined : t("models.grants.needsKey")}
+          onClick={() => setGrantDialogOpen(true)}
+        >
+          {t("models.grants.grantCta")}
+        </Button>
+      </div>
+      {!connected ? (
+        <p className="mt-1 text-xs text-foreground-muted">
+          {t("models.grants.needsKey")}
+        </p>
+      ) : grants.length === 0 ? (
+        <p className="mt-1.5 text-xs text-foreground-muted">
+          {t("models.grants.empty")}
+        </p>
+      ) : (
+        <table className="mt-1.5 w-full text-left text-xs">
+          <thead>
+            <tr className="text-foreground-muted">
+              <th scope="col" className="py-1 pr-2 font-medium">
+                {t("models.grants.colWho")}
+              </th>
+              <th scope="col" className="py-1 pr-2 font-medium">
+                {t("models.grants.colKind")}
+              </th>
+              <th scope="col" className="py-1 pr-2 font-medium">
+                {t("models.grants.colStatus")}
+              </th>
+              <th scope="col" className="py-1 pr-2 font-medium">
+                {t("models.grants.colGranted")}
+              </th>
+              <th scope="col" className="py-1 pr-2 font-medium">
+                {t("models.grants.colBy")}
+              </th>
+              <th scope="col" className="py-1 font-medium">
+                {t("models.grants.colAction")}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {grants.map((grant) => {
+              const revoking = revokingId === grant.grantId;
+              return (
+                <tr key={grant.grantId} className="border-t border-border-subtle">
+                  <td className="py-1 pr-2 font-mono">{grant.selectorValue}</td>
+                  <td className="py-1 pr-2">
+                    {grant.selectorKind === "host"
+                      ? t("models.grants.kindHostRow")
+                      : t("models.grants.kindExecutorRow")}
+                  </td>
+                  <td className="py-1 pr-2">
+                    <label className="flex min-h-6 items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={grant.enabled}
+                        disabled={setEnabled.isPending}
+                        onChange={(event) =>
+                          setEnabled.mutate({
+                            grantId: grant.grantId,
+                            enabled: event.target.checked,
+                          })
+                        }
+                        aria-label={t("models.grants.switchLabel", {
+                          who: grant.selectorValue,
+                        })}
+                        className="accent-iris-bright"
+                      />
+                      <span
+                        className={
+                          grant.enabled
+                            ? "text-foreground-secondary"
+                            : "text-foreground-muted"
+                        }
+                      >
+                        {grant.enabled
+                          ? t("models.grants.statusActive")
+                          : t("models.grants.statusPaused")}
+                      </span>
+                    </label>
+                  </td>
+                  <td className="py-1 pr-2">
+                    {formatDate(grant.createdAt, lang) ??
+                      t("models.grants.unknownDate")}
+                  </td>
+                  <td className="py-1 pr-2">{grant.createdBy}</td>
+                  <td className="py-1">
+                    {revoking ? (
+                      <span className="flex flex-wrap items-center gap-1.5">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={revoke.isPending}
+                          onClick={() =>
+                            revoke.mutate(grant.grantId, {
+                              onSuccess: () => setRevokingId(null),
+                            })
+                          }
+                        >
+                          {revoke.isPending
+                            ? t("models.grants.revoking")
+                            : t("models.grants.revokeConfirmCta")}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setRevokingId(null)}
+                        >
+                          {t("models.card.removeKeep")}
+                        </Button>
+                      </span>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setRevokingId(grant.grantId)}
+                      >
+                        {t("models.grants.revokeCta")}
+                      </Button>
+                    )}
+                    {revoking ? (
+                      <p className="mt-1 text-foreground-secondary" role="note">
+                        {t("models.grants.revokeConfirm", {
+                          who: grant.selectorValue,
+                        })}
+                      </p>
+                    ) : null}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+      {/* The pull promise, as text under the table (ux §3.3). */}
+      <p className="mt-1.5 text-xs text-foreground-muted" role="note">
+        {t("models.grants.pullPromise")}
+      </p>
+      <GrantAccessDialog
+        open={grantDialogOpen}
+        onOpenChange={setGrantDialogOpen}
+        providerKey={row.providerKey}
+        registry={selectorRegistry}
+        existing={grants}
+      />
+    </section>
   );
 }
 

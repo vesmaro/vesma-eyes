@@ -1,0 +1,24 @@
+{{- if and .Values.models.secretsDir.enabled (not .Values.models.secretsDir.existingClaim) -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "vesmaro-eyes.fullname" . }}-vault
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "vesmaro-eyes.labels" . | nindent 4 }}
+  {{- if .Values.models.secretsDir.keepOnUninstall }}
+  annotations:
+    # The credential vault (H1) must survive `helm uninstall` — the keys
+    # are operator data, never release artifacts.
+    helm.sh/resource-policy: keep
+  {{- end }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- with .Values.models.secretsDir.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.models.secretsDir.size }}
+{{- end }}

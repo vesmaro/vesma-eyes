@@ -139,6 +139,11 @@ export const keys = {
     models: {
       all: ["agents", "models"] as const,
       list: () => ["agents", "models", "list"] as const,
+      // MF3: the per-provider grants section (rows + the live selector
+      // registry). SSE model.inventory.changed invalidates the whole
+      // models family — grant mutations ride it.
+      grants: (providerKey: string) =>
+        ["agents", "models", "grants", providerKey] as const,
     },
     settings: {
       execution: () => ["agents", "settings", "execution"] as const,

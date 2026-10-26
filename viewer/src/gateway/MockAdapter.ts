@@ -84,6 +84,9 @@ import type {
   ModelProvider,
   ModelProviderCreateInput,
   ModelProviderRotateInput,
+  ModelGrant,
+  ModelGrantCreateInput,
+  ModelsGrantsPage,
   HarnessStateResult,
   HookCreateInput,
   HookPatchInput,
@@ -303,6 +306,10 @@ export class MockAdapter implements MemoryGateway {
    * material; the fingerprint is derived and the input dropped). Stored
    * writable: the wire type is immutable, mock mutations replace rows. */
   private modelProviders: WritableModelProvider[] = [];
+  /** MF3 sharing grants (metadata rows; the playground mirrors the
+   * server's write-time selector validation against the live spine). */
+  private modelGrants: WritableModelGrant[] = [];
+  private nextGrantNo = 1;
   private executionSettings: ExecutionSettings;
   /** Per-project defaults (board_meta `default_executor:project:<slug>`
    * mirror) — modelled through PUT /settings/execution with a project scope. */
@@ -1586,6 +1593,128 @@ export class MockAdapter implements MemoryGateway {
   }
 
   /**
+   * MF3 sharing grants — the playground mirrors the REAL gates loosely
+   * (unknown provider 404, credential-not-set 409, unknown selector
+   * target 422, duplicate 409) against the mock spine. The playground
+   * has no enforcement leg to attach (no vault, no agents calling), so
+   * these rows exist for the OWNER-side UX: the table, the toggle, the
+   * revoke with the pull promise in the copy.
+   */
+  async listModelGrants(
+    providerKey: string,
+    signal?: AbortSignal,
+  ): Promise<ModelsGrantsPage> {
+    await this.delay(signal);
+    if (!this.modelProviders.some((r) => r.provider_key === providerKey)) {
+      throw new ApiError(404, `Провайдер ${providerKey} не найден в реестре.`, {
+        url: `mock:/api/models/providers/${providerKey}/grants`,
+      });
+    }
+    return {
+      ok: true,
+      grants: this.modelGrants
+        .filter((row) => row.provider_key === providerKey)
+        .map((row) => ({ ...row })),
+      meta: {
+        selector_registry: {
+          hosts: [...new Set(this.executors.map((e) => e.host)
+            .filter((host) => host !== ""))].sort(),
+          executors: [...new Set(this.executors
+            .filter((e) => e.host !== "")
+            .map((e) => `${e.harness}@${e.host}`))].sort(),
+        },
+      },
+    };
+  }
+
+  async createModelGrant(
+    providerKey: string,
+    payload: ModelGrantCreateInput,
+    signal?: AbortSignal,
+  ): Promise<ModelGrant> {
+    await this.delay(signal);
+    const provider = this.modelProviders.find(
+      (r) => r.provider_key === providerKey);
+    if (!provider) {
+      throw new ApiError(404, `Провайдер ${providerKey} не найден в реестре.`, {
+        url: `mock:/api/models/providers/${providerKey}/grants`,
+      });
+    }
+    if (provider.status === null) {
+      throw new ApiError(409,
+        "У провайдера нет установленного ключа — доступ выдавать некому.",
+        { url: `mock:/api/models/providers/${providerKey}/grants` });
+    }
+    const selectorValue = payload.selector_value.trim();
+    const registry = payload.selector_kind === "host"
+      ? [...new Set(this.executors.map((e) => e.host))]
+      : [...new Set(
+          this.executors.filter((e) => e.host !== "")
+            .map((e) => `${e.harness}@${e.host}`))];
+    if (!registry.includes(selectorValue)) {
+      throw new ApiError(422,
+        payload.selector_kind === "host"
+          ? "Такого хоста нет в реестре — сначала подключите агента."
+          : "Такого исполнителя нет в реестре — селектор должен называть существующую пару harness@host.",
+        { url: `mock:/api/models/providers/${providerKey}/grants` });
+    }
+    if (this.modelGrants.some((row) =>
+      row.provider_key === providerKey
+      && row.selector_kind === payload.selector_kind
+      && row.selector_value === selectorValue)) {
+      throw new ApiError(409, "Такой доступ уже выдан.", {
+        url: `mock:/api/models/providers/${providerKey}/grants`,
+      });
+    }
+    const row: WritableModelGrant = {
+      grant_id: `mgr-mock-${this.nextGrantNo++}`,
+      provider_key: providerKey,
+      selector_kind: payload.selector_kind,
+      selector_value: selectorValue,
+      selector: `${payload.selector_kind}:${selectorValue}`,
+      enabled: true,
+      created_at: new Date(this.now()).toISOString(),
+      created_by: "ui",
+    };
+    this.modelGrants.push(row);
+    return { ...row };
+  }
+
+  async setModelGrantEnabled(
+    providerKey: string,
+    grantId: string,
+    enabled: boolean,
+    signal?: AbortSignal,
+  ): Promise<ModelGrant> {
+    await this.delay(signal);
+    const row = this.modelGrants.find(
+      (r) => r.grant_id === grantId && r.provider_key === providerKey);
+    if (!row) {
+      throw new ApiError(404, "Грант не найден — возможно, он уже отозван.", {
+        url: `mock:/api/models/providers/${providerKey}/grants/${grantId}`,
+      });
+    }
+    row.enabled = enabled;
+    return { ...row };
+  }
+
+  async deleteModelGrant(
+    providerKey: string,
+    grantId: string,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    await this.delay(signal);
+    const index = this.modelGrants.findIndex(
+      (r) => r.grant_id === grantId && r.provider_key === providerKey);
+    if (index === -1) {
+      throw new ApiError(404, "Грант не найден — возможно, он уже отозван.", {
+        url: `mock:/api/models/providers/${providerKey}/grants/${grantId}`,
+      });
+    }
+    this.modelGrants.splice(index, 1);
+  }
+
+  /**
    * ME-063 — `GET /api/tasks/{id}/sessions` mirror: honest 404 for an
    * unknown task (the server's task-not-found gate), oldest reported
    * first, `reported_age_s` computed against the mock clock like the
@@ -2748,6 +2877,12 @@ export class MockAdapter implements MemoryGateway {
  * mutates in place (a playground convenience, never exported). */
 type WritableModelProvider = {
   -readonly [K in keyof ModelProvider]: ModelProvider[K];
+};
+
+/** The wire's ModelGrant row is immutable; the mock's internal storage is
+ * writable (the WritableModelProvider precedent). */
+type WritableModelGrant = {
+  -readonly [K in keyof ModelGrant]: ModelGrant[K];
 };
 
 /**

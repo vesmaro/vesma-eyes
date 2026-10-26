@@ -1,7 +1,9 @@
 import type {
+  ModelGrant,
   ModelProvider,
   ModelsBoardRosterItem,
   ModelsDiscoveredItem,
+  ModelsGrantsPage,
   ModelsRosterPage,
 } from "@/gateway/boardTypes";
 
@@ -72,16 +74,17 @@ export interface DiscoveredRosterRow {
   readonly seenOnOverflow: number;
 }
 
-/** The key-status slot value on an owner-registry row — the CLOSED enum
- * from the security verdict §5: `set | rejected | null` («не подключён»).
- * `rejected` is minted by the MF3 enforcement wave; a wire value outside
- * the enum degrades to `null`, never invented. */
+/** The key-status slot value on an owner-registry row — the CLOSED
+ * verdict §5 machine: `set | rejected | null` («не подключён»).
+ * `rejected` is minted by a provider 401 (MF3 enforcement); a wire value
+ * outside the enum degrades to `null`, never invented. */
 export type ProviderSlot = "set" | "rejected" | null;
 
-/** One owner-registry provider card (MF2): METADATA ONLY — the
- * fingerprint is the single material-derived artifact allowed to persist
- * and it is NOT the key; no credential field is read even if a buggy wire
- * smuggles one. */
+/** One owner-registry provider card (MF2 metadata + the MF3 slot-machine
+ * facts): METADATA ONLY — the fingerprint is the single material-derived
+ * artifact allowed to persist and it is NOT the key; no credential field
+ * is read even if a buggy wire smuggles one. lastUsedAt/rejectedAt ride
+ * the ux slot («использован N назад» / «время последней попытки»). */
 export interface ProviderRow {
   readonly providerKey: string;
   readonly baseUrl: string;
@@ -89,6 +92,36 @@ export interface ProviderRow {
   readonly createdAt: string | null;
   readonly rotatedAt: string | null;
   readonly status: ProviderSlot;
+  readonly lastUsedAt: string | null;
+  readonly rejectedAt: string | null;
+}
+
+/** One sharing grant row (MF3): the selector is the «Кому» display form
+ * (`host:<name>` / `executor:<harness@host>`); created_by is the H4
+ * audit actor. Metadata only — no credential field is read. */
+export interface GrantRow {
+  readonly grantId: string;
+  readonly providerKey: string;
+  readonly selectorKind: "host" | "executor";
+  readonly selectorValue: string;
+  readonly selector: string;
+  readonly enabled: boolean;
+  readonly createdAt: string | null;
+  readonly createdBy: string;
+}
+
+/** The LIVE selector registry the «Выдать доступ» picker draws from
+ * (spine hosts + executor identities; ux §3.3 — только существующие
+ * сущности, no wildcard in v1). */
+export interface SelectorRegistry {
+  readonly hosts: readonly string[];
+  readonly executors: readonly string[];
+}
+
+/** The grants section payload of one provider card. */
+export interface GrantsPage {
+  readonly grants: readonly GrantRow[];
+  readonly selectorRegistry: SelectorRegistry;
 }
 
 /** The hub's three zones, narrowed (MF2: the owner registry renders REAL
@@ -262,7 +295,55 @@ function narrowProviderRow(row: ModelProvider): ProviderRow | null {
     createdAt: boundedString(record["created_at"], 40),
     rotatedAt: boundedString(record["rotated_at"], 40),
     status,
+    lastUsedAt: boundedString(record["last_used_at"], 40),
+    rejectedAt: boundedString(record["rejected_at"], 40),
   };
+}
+
+/** Defensive narrowing of one grant row (MF3). A selector_kind outside
+ * the closed enum degrades the row to null (honestly dropped), never
+ * invented; the selector display string is bounded. */
+function narrowGrantRow(row: ModelGrant): GrantRow | null {
+  if (row === null || typeof row !== "object") return null;
+  const record = row as unknown as Record<string, unknown>;
+  const grantId = boundedString(record["grant_id"], 40);
+  const selectorKind =
+    record["selector_kind"] === "host" || record["selector_kind"] === "executor"
+      ? record["selector_kind"]
+      : null;
+  const selectorValue = boundedString(record["selector_value"], 160);
+  if (!grantId || !selectorKind || !selectorValue) return null;
+  const providerKey = boundedString(record["provider_key"], NAME_BOUND) ?? "";
+  return {
+    grantId,
+    providerKey,
+    selectorKind,
+    selectorValue,
+    selector: boundedString(record["selector"], 180) ??
+      `${selectorKind}:${selectorValue}`,
+    enabled: record["enabled"] === true,
+    createdAt: boundedString(record["created_at"], 40),
+    createdBy: boundedString(record["created_by"], 40) ?? "",
+  };
+}
+
+/** Defensive narrowing of the grants page (rows + the live selector
+ * registry; the registry lists are bounded to the honest display cut). */
+export function narrowGrantsPage(page: ModelsGrantsPage | undefined): GrantsPage {
+  const grants = (Array.isArray(page?.grants) ? page.grants : [])
+    .map((row) =>
+      row === null || typeof row !== "object"
+        ? null
+        : narrowGrantRow(row as ModelGrant),
+    )
+    .filter((row): row is GrantRow => row !== null);
+  const meta = (page?.meta ?? {}) as Record<string, unknown>;
+  const registry = (meta["selector_registry"] ?? {}) as Record<string, unknown>;
+  const selectorRegistry: SelectorRegistry = {
+    hosts: boundedList(registry["hosts"], NAME_BOUND, 100),
+    executors: boundedList(registry["executors"], 160, 100),
+  };
+  return { grants, selectorRegistry };
 }
 
 /**
