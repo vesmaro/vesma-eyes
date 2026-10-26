@@ -36,7 +36,7 @@ describe("routes — /agents single object with an index redirect (P3-7, ME-014)
     expect(agents).toHaveLength(1);
   });
 
-  it("the /agents layout carries an INDEX child + the three live views", () => {
+  it("the /agents layout carries an INDEX child + the live views (MF1 adds the models hub)", () => {
     const [agents] = findRoutes(buildRoutes() as RouteJson[], "/agents");
     const index = agents.children?.find((child) => child.index === true);
     expect(index).toBeDefined();
@@ -45,13 +45,15 @@ describe("routes — /agents single object with an index redirect (P3-7, ME-014)
       .map((child) => child.path);
     // agents-redesign A1: the hosts view carries the OPTIONAL :host param —
     // ONE frame element, the selection never re-assembles it. W3 adds the
-    // session segment (states.md §3) on the SAME element — the route count
-    // grows by one, the three live views keep their paths.
+    // session segment (states.md §3) on the SAME element. MF1 (2026-10-26)
+    // adds the models fleet hub read view (ux-blueprint §2) — the older
+    // live views keep their paths.
     expect(paths).toEqual([
       "hosts/:host?",
       "hosts/:host/sessions/:sessionId",
       "execution",
       "harnesses",
+      "models",
     ]);
   });
 
