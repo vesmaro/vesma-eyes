@@ -760,6 +760,36 @@ export type ModelsDiscoveredItem = Schemas["ModelsDiscoveredItem"];
  */
 export type ModelsRosterPage = Schemas["ModelsRosterOut"];
 
+/**
+ * One owner-registry provider row (board `ModelProviderOut`, MF2) —
+ * METADATA ONLY by construction (security verdict §5): the truncated
+ * fingerprint (SHA-256[:12]) is the only material-derived artifact allowed
+ * to persist, and it is NOT the key. `status` is the closed slot enum:
+ * `set | null` in MF2; `rejected` arrives with the MF3 enforcement wave
+ * (provider.use.rejected). NO credential field exists in the family.
+ */
+export type ModelProvider = Schemas["ModelProviderOut"];
+
+/**
+ * POST /api/models/providers — the ONE body that ever carries credential
+ * material (verdict red line 1: the write path, provisioner precedent).
+ */
+export interface ModelProviderCreateInput {
+  provider_key: string;
+  base_url: string;
+  credential: string;
+}
+
+/**
+ * PUT /api/models/providers/{key} — rotation: new material → a new
+ * fingerprint + audit `provider.credential.rotated`; the address change
+ * is optional and passes the same red-line-5 URL gate.
+ */
+export interface ModelProviderRotateInput {
+  credential: string;
+  base_url?: string;
+}
+
 /** Execution settings read — board `ExecutionSettingsOut`. */
 export type ExecutionSettings = Schemas["ExecutionSettingsOut"];
 

@@ -9,16 +9,19 @@ import { ModelsHubPage } from "./ModelsHubPage";
 import { MockAdapter } from "@/gateway/MockAdapter";
 import { GatewayContext } from "@/gateway/GatewayContext";
 import { I18nProvider } from "@/i18n";
+import { ToastProvider } from "@/components/Toast/ToastProvider";
 import { actUnmount, actWaitUntil } from "@/test/actTools";
 import type { ModelsRosterPage } from "@/gateway/boardTypes";
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 /**
- * `/agents/models` hub integration (MF1): the REAL MockAdapter through the
- * REAL query path — the live shape (board hermes row + honest empty
- * zones), MF-HUB-EMPTY, the caps cut (8 + «…и ещё N»), the loading
- * skeleton, the error + retry state, and the red-line: no credential
- * field, no connect CTA (the form is MF2 — a dead button would be a lie).
+ * `/agents/models` hub integration (MF1 roster + MF2 provider
+ * connection): the REAL MockAdapter through the REAL query path — the
+ * live shape (owner-registry cards with key slots + the board hermes row),
+ * MF-HUB-EMPTY, MF-HUB-OFF (the honest-off card + disabled CTA), the caps
+ * cut (8 + «…и ещё N»), the loading skeleton, the error + retry state,
+ * and the red lines: no credential field, no show/copy surface (verdict
+ * §5).
  */
 
 function rosterPage(overrides: Partial<ModelsRosterPage> = {}): ModelsRosterPage {
@@ -35,7 +38,7 @@ function rosterPage(overrides: Partial<ModelsRosterPage> = {}): ModelsRosterPage
         provenance: "board",
       },
     ],
-    meta: { max_models_per_row: 50 },
+    meta: { max_models_per_row: 50, providers_off: false },
     ...overrides,
   };
 }
@@ -54,11 +57,13 @@ async function mountPage(
     root.render(
       <GatewayContext.Provider value={gateway}>
         <QueryClientProvider client={client}>
-          <I18nProvider initialLang="en">
-            <MemoryRouter initialEntries={[path]}>
-              <ModelsHubPage />
-            </MemoryRouter>
-          </I18nProvider>
+          <ToastProvider>
+            <I18nProvider initialLang="en">
+              <MemoryRouter initialEntries={[path]}>
+                <ModelsHubPage />
+              </MemoryRouter>
+            </I18nProvider>
+          </ToastProvider>
         </QueryClientProvider>
       </GatewayContext.Provider>,
     );
@@ -87,7 +92,7 @@ async function waitLoaded(container: HTMLElement, marker: string): Promise<void>
 }
 
 describe("ModelsHubPage — the live shape (MF-HUB-LIVE)", () => {
-  it("renders the three zones: connected empty note, mirror empty note, the hermes board card", async () => {
+  it("renders the three zones: the connect CTA, the connected empty note, the mirror note, the hermes board card", async () => {
     const page = await mountPage();
     mounted = page;
     await waitLoaded(page.container, "hermes");
@@ -95,10 +100,18 @@ describe("ModelsHubPage — the live shape (MF-HUB-LIVE)", () => {
 
     // Zones render in EVERY data state (the static-roster precedent).
     expect(text).toContain("Connected providers");
-    expect(text).toContain("No providers connected yet");
+    expect(text).toContain("No providers connected yet.");
     expect(text).toContain("Found by agents — not connected");
     expect(text).toContain("No models visible yet — waiting for agent reports");
     expect(text).toContain("Board roster");
+
+    // MF2: the owner act exists — the connect CTA (enabled: providers_off
+    // is false in the fixture meta).
+    const connect = Array.from(page.container.querySelectorAll("button")).find(
+      (b) => (b.textContent ?? "").includes("Connect provider"),
+    );
+    expect(connect).toBeDefined();
+    expect(connect?.hasAttribute("disabled")).toBe(false);
 
     // The board card grammar: name + (cluster) + provenance badge + no-key
     // fact + base_url + counter + default model. NO credential field.
@@ -114,16 +127,140 @@ describe("ModelsHubPage — the live shape (MF-HUB-LIVE)", () => {
     expect(text).toContain("default: hermes-4.5-405b");
 
     // Red line (verdict §5): no credential-shaped string anywhere.
+    // MF1 review P3-4: «token» joined the pin family.
     const lowered = text.toLowerCase();
-    for (const banned of ["credential", "api_key", "apikey", "secret"]) {
+    for (const banned of ["credential", "api_key", "apikey", "secret", "token"]) {
       expect(lowered).not.toContain(banned);
     }
+  });
+});
 
-    // MF1 honesty: NO connect CTA — the connect form is MF2.
-    const buttons = Array.from(page.container.querySelectorAll("button"));
-    expect(
-      buttons.filter((b) => (b.textContent ?? "").toLowerCase().includes("connect")),
-    ).toEqual([]);
+describe("ModelsHubPage — provider registry cards (MF2)", () => {
+  it("a `set` card: the slot text, the fingerprint with the not-the-key hint, the date, rotate/remove acts", async () => {
+    const page = await mountPage((gateway) => {
+      vi.spyOn(gateway, "modelsRoster").mockResolvedValue(
+        rosterPage({
+          providers: [
+            {
+              provider_key: "openrouter",
+              base_url: "https://openrouter.ai/api/v1",
+              fingerprint: "3f9a21c0bde4",
+              created_at: "2026-10-24T00:00:00+00:00",
+              rotated_at: null,
+              status: "set",
+            },
+          ],
+        }),
+      );
+    });
+    mounted = page;
+    await waitLoaded(page.container, "openrouter");
+    const text = page.container.textContent ?? "";
+    // The slot is the emphasized fact; the fingerprint is metadata, NOT
+    // the key — with its honest hint.
+    expect(text).toContain("Key set");
+    expect(text).toContain("fp 3f9a21c0bde4");
+    expect(text).toContain("The fingerprint is not the key");
+    expect(text).toContain("set Oct 24, 2026");
+    // Owner acts + the MF3 roadmap note (no dead grant control).
+    expect(text).toContain("Replace key");
+    expect(text).toContain("Remove key");
+    expect(text).toContain("Access management arrives in the next wave");
+    // Red line: the metadata card carries no credential-shaped string.
+    const lowered = text.toLowerCase();
+    for (const banned of ["credential", "api_key", "apikey", "secret", "token"]) {
+      expect(lowered).not.toContain(banned);
+    }
+  });
+
+  it("an unset card: the honest slot + the Set key act", async () => {
+    const page = await mountPage((gateway) => {
+      vi.spyOn(gateway, "modelsRoster").mockResolvedValue(
+        rosterPage({
+          providers: [
+            {
+              provider_key: "ollama-local",
+              base_url: "http://127.0.0.1:11434",
+              fingerprint: null,
+              created_at: "2026-10-24T00:00:00+00:00",
+              rotated_at: null,
+              status: null,
+            },
+          ],
+        }),
+      );
+    });
+    mounted = page;
+    await waitLoaded(page.container, "ollama-local");
+    const text = page.container.textContent ?? "";
+    expect(text).toContain("Not connected — no key set");
+    expect(text).toContain("Set key");
+  });
+
+  it("an out-of-enum status degrades to the honest unset (never invented)", async () => {
+    const page = await mountPage((gateway) => {
+      vi.spyOn(gateway, "modelsRoster").mockResolvedValue(
+        rosterPage({
+          providers: [
+            {
+              provider_key: "weird",
+              base_url: "https://x.example",
+              fingerprint: "abc",
+              created_at: "2026-10-24T00:00:00+00:00",
+              rotated_at: null,
+              status: "rejected" as never,
+            },
+          ],
+        }),
+      );
+    });
+    mounted = page;
+    // MF2 wire enum IS closed including `rejected` (minted by MF3): the
+    // slot machine renders the named fact, never a crash or a ghost «set».
+    await waitLoaded(page.container, "Key rejected by the provider");
+  });
+});
+
+describe("ModelsHubPage — MF-HUB-OFF (the honest 503 family)", () => {
+  it("providers_off meta renders the named-reason card and DISABLES the connect CTA", async () => {
+    const page = await mountPage((gateway) => {
+      vi.spyOn(gateway, "modelsRoster").mockResolvedValue(
+        rosterPage({
+          meta: { max_models_per_row: 50, providers_off: true },
+        }),
+      );
+    });
+    mounted = page;
+    await waitLoaded(page.container, "Provider connection is off");
+    const text = page.container.textContent ?? "";
+    // The reason is named; the FACTS below still render (no off-branch
+    // for facts — the roster zones stay).
+    expect(text).toContain("The board has no secrets directory configured");
+    expect(text).toContain("Board roster");
+    const connect = Array.from(page.container.querySelectorAll("button")).find(
+      (b) => (b.textContent ?? "").includes("Connect provider"),
+    );
+    expect(connect?.hasAttribute("disabled")).toBe(true);
+  });
+
+  it("MF-HUB-EMPTY with providers_off: the single CTA renders disabled", async () => {
+    const page = await mountPage((gateway) => {
+      vi.spyOn(gateway, "modelsRoster").mockResolvedValue(
+        rosterPage({
+          board: [],
+          discovered: [],
+          providers: [],
+          meta: { max_models_per_row: 50, providers_off: true },
+        }),
+      );
+    });
+    mounted = page;
+    await waitLoaded(page.container, "No models visible yet");
+    const connect = Array.from(page.container.querySelectorAll("button")).find(
+      (b) => (b.textContent ?? "").includes("Connect provider"),
+    );
+    expect(connect).toBeDefined();
+    expect(connect?.hasAttribute("disabled")).toBe(true);
   });
 });
 
@@ -154,11 +291,13 @@ describe("ModelsHubPage — honest states", () => {
         root.render(
           <GatewayContext.Provider value={gateway}>
             <QueryClientProvider client={client}>
-              <I18nProvider initialLang="en">
-                <MemoryRouter initialEntries={["/agents/models"]}>
-                  <ModelsHubPage />
-                </MemoryRouter>
-              </I18nProvider>
+              <ToastProvider>
+                <I18nProvider initialLang="en">
+                  <MemoryRouter initialEntries={["/agents/models"]}>
+                    <ModelsHubPage />
+                  </MemoryRouter>
+                </I18nProvider>
+              </ToastProvider>
             </QueryClientProvider>
           </GatewayContext.Provider>,
         );

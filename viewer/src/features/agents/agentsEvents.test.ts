@@ -242,6 +242,21 @@ describe("harness.* — dictionary sync (wave 3C)", () => {
     }
   });
 
+  it("reconnect marks the harness dictionary stale too (at-most-once stream)", () => {
+    const client = seededClient();
+    client.setQueryData(keys.agents.harnesses.list(), {
+      ok: true,
+      count: 10,
+      items: [],
+      meta: { seed_min_count: 10 },
+    });
+    applyAgentsReconnectToCache(client);
+    expect(isKeyInvalidated(client, keys.agents.harnesses.all)).toBe(true);
+  });
+});
+
+// MF1 review P3-1: top-level describe — the roster family is NOT a child
+// of the harness dictionary family.
 describe("model.inventory.changed — roster sync (MF1)", () => {
   it("invalidates the models roster family and nothing else (additive kind, the board emits nothing yet)", () => {
     const client = seededClient();
@@ -274,18 +289,5 @@ describe("model.inventory.changed — roster sync (MF1)", () => {
     client.setQueryData(keys.agents.models.list(), { ok: true });
     applyAgentsReconnectToCache(client);
     expect(isKeyInvalidated(client, keys.agents.models.all)).toBe(true);
-  });
-});
-
-  it("reconnect marks the harness dictionary stale too (at-most-once stream)", () => {
-    const client = seededClient();
-    client.setQueryData(keys.agents.harnesses.list(), {
-      ok: true,
-      count: 10,
-      items: [],
-      meta: { seed_min_count: 10 },
-    });
-    applyAgentsReconnectToCache(client);
-    expect(isKeyInvalidated(client, keys.agents.harnesses.all)).toBe(true);
   });
 });

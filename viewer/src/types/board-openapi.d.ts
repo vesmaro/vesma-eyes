@@ -1461,16 +1461,87 @@ export interface paths {
         };
         /**
          * Models Roster
-         * @description The models fleet roster (MF1): the board-reported hermes roster plus
-         *     the honestly-empty owner-registry and agent-mirror zones. OPEN read —
-         *     names/URLs/counts only, no credential field exists in the family; the
-         *     single aggregation point the hub «Модели» consumes (the hermes roster
-         *     stays served by /api/kora/hermes/status too — consumed, not moved).
+         * @description The models fleet roster (MF2 cut of the MF1 single aggregation
+         *     point): the owner provider registry (metadata only — OQ-1 additive
+         *     verdict), the agent-mirror zone (still honestly empty — the wire
+         *     carries no models slice yet) and the board-reported hermes roster.
+         *     OPEN read — names/URLs/counts/fingerprints only; no credential field
+         *     exists in the family (security verdict §5: the fingerprint is the
+         *     only material-derived artifact allowed to persist).
          */
         readonly get: operations["models_roster_api_models_get"];
         readonly put?: never;
         readonly post?: never;
         readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/models/providers": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Create Model Provider
+         * @description Register a provider credential (owner act; MF2). Validation order:
+         *     owner wall → secrets-dir availability (honest-off BEFORE anything
+         *     touches the DB) → URL red-line-5 → duplicate name → material written
+         *     atomically to the vault → metadata row + audit. The material exists
+         *     in this handler's memory and in the 0600 file — nowhere else.
+         */
+        readonly post: operations["create_model_provider_api_models_providers_post"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/models/providers/{provider_key}": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        /**
+         * Rotate Model Provider
+         * @description Rotate the credential (owner act): new material → new fingerprint,
+         *     the vault file replaced atomically, audit .rotated. The old key stays
+         *     valid until the rename lands (MF-CARD-ROTATE: the slot stays «set»).
+         */
+        readonly put: operations["rotate_model_provider_api_models_providers__provider_key__put"];
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/models/providers/{provider_key}/credential": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        readonly post?: never;
+        /**
+         * Delete Model Provider Credential
+         * @description Remove the credential (owner act): vault file unlinked, metadata
+         *     cleared — the provider row STAYS with the honest «не подключён» slot.
+         *     The grants-disable cascade rides its MF3 hook (nothing to disable in
+         *     MF2); audit .removed always names the consequence.
+         */
+        readonly delete: operations["delete_model_provider_credential_api_models_providers__provider_key__credential_delete"];
         readonly options?: never;
         readonly head?: never;
         readonly patch?: never;
@@ -4697,6 +4768,53 @@ export interface components {
             readonly nodes: readonly components["schemas"]["MeshNodeOut"][];
         } & {
             readonly [key: string]: unknown;
+        };
+        /**
+         * ModelProviderCreateIn
+         * @description POST /api/models/providers — the ONE body that ever carries
+         *     credential material (verdict §4 red line 1: the write path).
+         */
+        readonly ModelProviderCreateIn: {
+            /** Provider Key */
+            readonly provider_key: string;
+            /** Base Url */
+            readonly base_url: string;
+            /** Credential */
+            readonly credential: string;
+        };
+        /**
+         * ModelProviderOut
+         * @description One registry row, metadata only — the roster providers[] shape
+         *     (OQ-1 verdict: additive) and the mutation response body. NO credential
+         *     field exists in this family by construction; fingerprint + status are
+         *     the honest «тот ли ключ» facts.
+         */
+        readonly ModelProviderOut: {
+            /** Provider Key */
+            readonly provider_key: string;
+            /** Base Url */
+            readonly base_url: string;
+            /** Fingerprint */
+            readonly fingerprint?: string | null;
+            /** Created At */
+            readonly created_at: string;
+            /** Rotated At */
+            readonly rotated_at?: string | null;
+            /** Status */
+            readonly status?: ("set" | "rejected") | null;
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /**
+         * ModelProviderRotateIn
+         * @description PUT /api/models/providers/{key} — rotation: new material (a new
+         *     fingerprint, audit .rotated), optional address change.
+         */
+        readonly ModelProviderRotateIn: {
+            /** Credential */
+            readonly credential: string;
+            /** Base Url */
+            readonly base_url?: string | null;
         };
         /**
          * ModelsBoardRosterItem
@@ -8590,6 +8708,105 @@ export interface operations {
                 };
                 content: {
                     readonly "application/json": components["schemas"]["ModelsRosterOut"];
+                };
+            };
+        };
+    };
+    readonly create_model_provider_api_models_providers_post: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["ModelProviderCreateIn"];
+            };
+        };
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 201: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["ModelProviderOut"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly rotate_model_provider_api_models_providers__provider_key__put: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly provider_key: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["ModelProviderRotateIn"];
+            };
+        };
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["ModelProviderOut"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly delete_model_provider_credential_api_models_providers__provider_key__credential_delete: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly provider_key: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["ModelProviderOut"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

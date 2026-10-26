@@ -22,11 +22,13 @@ import os
 import re
 import secrets
 import sqlite3
+import tempfile
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Annotated, Any, AsyncIterator, Literal
+from urllib.parse import parse_qs, urlparse
 
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
@@ -6122,12 +6124,12 @@ async def kora_hermes_live_sessions(request: Request,
 #                route serves; consumed, not duplicated). No agent reports
 #                it; the endpoint is board config already surfaced on
 #                /api/kora/hermes/status.
-# - `providers`— the owner credential registry: MF2 territory. The field is
-#                declared now (the contract's shape) and is honestly empty
-#                until that wave; nothing in MF1 writes it.
+# - `providers`— the owner credential registry: MF2 landed the write leg
+#                (POST/PUT/DELETE below — metadata only, H1 vault rules);
+#                rows render here via _provider_public (OQ-1 additive).
 # - `discovered`—agent-reported provider facts (the discovery mirror). The
 #                agent wire carries NO `models` slice yet (contract §2.1 is
-#                the future shape), so MF1 is honestly empty here; the row
+#                the future shape), so the zone stays honestly empty; the row
 #                schema below is the ingest target the mirror wave fills,
 #                dedup identity (provider, base_url).
 #
@@ -6179,14 +6181,17 @@ class ModelsRosterOut(BaseModel):
 
 @app.get("/api/models")
 async def models_roster() -> ModelsRosterOut:
-    """The models fleet roster (MF1): the board-reported hermes roster plus
-    the honestly-empty owner-registry and agent-mirror zones. OPEN read —
-    names/URLs/counts only, no credential field exists in the family; the
-    single aggregation point the hub «Модели» consumes (the hermes roster
-    stays served by /api/kora/hermes/status too — consumed, not moved)."""
+    """The models fleet roster (MF2 cut of the MF1 single aggregation
+    point): the owner provider registry (metadata only — OQ-1 additive
+    verdict), the agent-mirror zone (still honestly empty — the wire
+    carries no models slice yet) and the board-reported hermes roster.
+    OPEN read — names/URLs/counts/fingerprints only; no credential field
+    exists in the family (security verdict §5: the fingerprint is the
+    only material-derived artifact allowed to persist)."""
     return ModelsRosterOut(
         ok=True,
-        providers=[],
+        providers=[_provider_public(row).model_dump()
+                   for row in store.model_providers()],
         discovered=[],
         board=[
             ModelsBoardRosterItem(
@@ -6197,8 +6202,452 @@ async def models_roster() -> ModelsRosterOut:
                 provenance="board",
             )
         ],
-        meta={"max_models_per_row": _MODELS_MAX_PER_ROW},
+        meta={
+            "max_models_per_row": _MODELS_MAX_PER_ROW,
+            # MF-HUB-OFF honesty (H1): the FE renders the disabled connect
+            # CTA WITH its reason when the credential features are off.
+            # Metadata only — no credential-shaped name in the payload.
+            "providers_off": not _providers_vault_ready(),
+        },
     )
+
+
+# -------------------- models fleet: provider credentials (MF2 write leg)
+# The owner credential registry — ux-blueprint wave MF2 under the H1
+# verdict (security-verdict §1/§4, gates 2–3). The invariants, verbatim:
+#
+# - VESMARO_SECRETS_DIR is REQUIRED for every credential write: unset or
+#   unusable ⇒ an honest 503-family refusal («providers_off»). NEVER a
+#   fallback into the DB (red line 8 — the data dir stays keyless BY
+#   CONSTRUCTION).
+# - One file per credential_ref, created 0600 via atomic temp+rename at
+#   mode 0600 (mkstemp family) — never chmod-after (the agent's
+#   readTokenFile discipline, mirrored board-side). Content = the
+#   credential material ONLY.
+# - The DB, responses, SSE and audit carry METADATA only: provider_key,
+#   base_url, created/rotated timestamps and the truncated fingerprint
+#   SHA-256(material)[:12hex] — the only material-derived artifact allowed
+#   to persist. The material passes through the write path EXACTLY ONCE
+#   (the provisioner claim precedent) and is never echoed back.
+# - Audit: provider.credential.set / .rotated / .removed (dot-family,
+#   actor + provider + ref + fingerprint — NEVER material, red line 9).
+# - Red line 5 / OQ-4 amendment 2 board-side: base_url is validated and
+#   normalized to scheme://authority[/base-path]; userinfo or a
+#   credential-shaped query param (?key=/?token=/…) is REFUSED with the
+#   inline message family the FE form speaks; an innocent query/fragment
+#   is silently stripped before persistence.
+# - PUT on the same provider_key = rotation (new material → new
+#   fingerprint, audit .rotated). DELETE = credential removal + the
+#   grants-disable cascade HOOK (no grant table exists in MF2 — the hook
+#   is the seam MF3 fills) + audit .removed.
+# - Owner ui-token ONLY (red line 6). A valid mnd_ device gets the
+#   explanatory 403 wall; a machine-class bearer gets the pinned
+#   cross-class 401 (the FE re-login flow keys on it).
+# - Every successful mutation broadcasts the additive
+#   `model.inventory.changed` SSE frame (the roster changed; the MF1 FE
+#   mapping already consumes the kind).
+
+MODELS_SECRETS_DIR_ENV = "VESMARO_SECRETS_DIR"
+_PROVIDER_KEY_RE = re.compile(r"^[a-z0-9-]{1,60}$")
+# Query parameter NAMES that mean «a credential rides in the URL» — red
+# line 5. The URL itself is refused, the parameter value is never parsed,
+# logged or echoed (verdict §2 amendment 2: never echoed).
+_CREDENTIAL_QUERY_PARAMS = frozenset({
+    "key", "token", "api_key", "apikey", "api-key", "access_token",
+    "access-key", "password", "secret", "auth",
+})
+_CREDENTIAL_IN_URL_MESSAGE = (
+    "В URL не должно быть логина или пароля — ключ вводится отдельным полем."
+)
+_PROVIDER_URL_BOUND = 500
+_CREDENTIAL_BOUND = 8192
+
+
+class ProviderCredentialError(ValueError):
+    """The credential-in-URL family rejection (red line 5): surfaces as the
+    named 422 whose message is the SAME family the FE inline validation
+    speaks (ux-blueprint §3.1)."""
+
+
+def _providers_vault_ready() -> bool:
+    """READ-ONLY availability check for the roster's meta fact
+    (MF-HUB-OFF): env set AND the path is an existing directory. A read
+    must never mkdir; the authoritative gate stays the write path's probe
+    (this hint may be optimistic where os.access lies — root — but the
+    mutations still refuse honestly there)."""
+    raw = os.environ.get(MODELS_SECRETS_DIR_ENV, "").strip()
+    if not raw:
+        return False
+    return Path(raw).is_dir()
+
+
+def _providers_secrets_dir() -> Path | None:
+    """The credential vault directory for WRITES, or None when credential
+    features are honestly OFF (H1: unset/unusable = refused, never a DB
+    fallback). Reads the env LIVE (the _hermes_api_key discipline): the
+    deploy channel can mount the volume without a code change. A
+    configured dir is created 0700 on demand (compose/dev convenience;
+    k8s provisions it out-of-band) and PROBED for writability — a
+    read-only or missing mount degrades to honest-off, never to a
+    half-written secret."""
+    raw = os.environ.get(MODELS_SECRETS_DIR_ENV, "").strip()
+    if not raw:
+        return None
+    path = Path(raw)
+    try:
+        path.mkdir(parents=True, exist_ok=True, mode=0o700)
+        probe = path / f".probe-{os.getpid()}"
+        fd = os.open(probe, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        os.close(fd)
+        os.unlink(probe)
+    except OSError:
+        return None
+    return path
+
+
+def _provider_credential_ref(provider_key: str) -> str:
+    """The stable vault file name for a provider (one file per
+    credential_ref, verdict H1). The key charset is pinned to [a-z0-9-],
+    so the ref is filesystem-safe by construction."""
+    return f"provider-{provider_key}"
+
+
+def _write_provider_credential(directory: Path, credential_ref: str,
+                               credential: str) -> None:
+    """Material → the vault file, ATOMIC at mode 0600: temp file created
+    0600 (mkstemp), material written, fsync'd, THEN renamed over the
+    final name (rotation replaces in one step; readers never observe a
+    half-written or wide-mode file). Never chmod-after."""
+    fd, tmp_name = tempfile.mkstemp(
+        prefix=f".{credential_ref}.", suffix=".tmp", dir=directory)
+    tmp_path = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(credential.encode("utf-8"))
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp_path, directory / credential_ref)
+    except OSError:
+        tmp_path.unlink(missing_ok=True)
+        raise
+
+
+def _remove_provider_credential(directory: Path,
+                                credential_ref: str) -> bool:
+    """Unlink the vault file (operator-pre-removed = already done — the
+    existingSecret rule: deploy never overwrites, we never resurrect).
+    Returns whether THIS call removed a file."""
+    try:
+        (directory / credential_ref).unlink()
+        return True
+    except FileNotFoundError:
+        return False
+
+
+def _credential_fingerprint(credential: str) -> str:
+    """SHA-256(material)[:12hex] — the only material-derived artifact
+    allowed to persist (verdict H1); enough to answer «тот ли ключ», never
+    enough to restore the value."""
+    return hashlib.sha256(credential.encode("utf-8")).hexdigest()[:12]
+
+
+def _validate_provider_base_url(raw: str) -> str:
+    """Red line 5 board-side: validate + normalize base_url to
+    scheme://authority[/base-path]. userinfo or a credential-shaped query
+    param ⇒ ProviderCredentialError (the FE form speaks the SAME message
+    family inline). An innocent query/fragment is silently stripped
+    (OQ-4 amendment 2: «query and fragment are ALWAYS stripped»).
+    Deliberately NO egress allowlist here (the memory-server SEC-1 policy
+    is a different surface): a local ollama http://127.0.0.1:11434 is a
+    FIRST-CLASS provider per the blueprint — MF2 never calls the URL,
+    the proxy wave owns its own threat model (red line 10)."""
+    url = (raw or "").strip()
+    if not url:
+        raise ValueError("base_url is required")
+    parsed = urlparse(url)
+    scheme = (parsed.scheme or "").lower()
+    if scheme not in ("http", "https"):
+        raise ValueError("base_url scheme must be http or https")
+    netloc = parsed.netloc or ""
+    if "@" in netloc:
+        raise ProviderCredentialError(_CREDENTIAL_IN_URL_MESSAGE)
+    try:
+        port = parsed.port  # raises ValueError on a malformed port
+    except ValueError as exc:
+        raise ValueError("base_url has an invalid port") from exc
+    if port is not None and not (1 <= port <= 65535):
+        raise ValueError("base_url port is out of range")
+    host = (parsed.hostname or "").lower()
+    if not host:
+        raise ValueError("base_url host is required")
+    path = parsed.path or ""
+    if path and not path.startswith("/"):
+        raise ValueError("base_url path must start with '/'")
+    if ".." in path:
+        raise ValueError("base_url path must not contain '..'")
+    if parsed.query:
+        for name in parse_qs(parsed.query, keep_blank_values=True):
+            if name.lower() in _CREDENTIAL_QUERY_PARAMS:
+                raise ProviderCredentialError(_CREDENTIAL_IN_URL_MESSAGE)
+    normalized = f"{scheme}://{netloc}{path}"
+    return normalized.rstrip("/")
+
+
+def _providers_owner_denied(request: Request) -> JSONResponse | None:
+    """The credential-registry owner wall (red line 6: owner-write-only,
+    ui-token). Response-shaped guard (the _kora_transcript_denied
+    precedent): returns the denial, or None when the write may proceed.
+    Leg order mirrors the Kora guards — device state FIRST (an mnd_
+    request carries its bearer in the Authorization header). A machine-
+    class bearer is refused with the pinned cross-class detail as 401
+    (the FE re-login flow keys on the code)."""
+    if getattr(request.state, "device", None) is not None:
+        return _kora_error(
+            403, "owner_only",
+            "Реестр учётных данных провайдеров — только владелец "
+            "(ui-класс). Устройства видят ростер моделей (факты), но не "
+            "управляют ключами: регистрация ключа — доверенное "
+            "владельческое действие (security-verdict §4, красная линия 6).")
+    auth = request.headers.get("Authorization", "")
+    if auth:
+        ui_token = _token_classes().get("ui", "")
+        if (ui_token and hmac.compare_digest(
+                auth.encode("utf-8"), f"Bearer {ui_token}".encode("utf-8"))):
+            return None
+        return _kora_error(
+            401, "unauthorized",
+            _token_mismatch_detail(auth, _token_classes(), ("ui",)))
+    if _cookie_ui_ok(request) or _cookie_auth_session(request) is not None:
+        return None
+    return _kora_error(
+        401, "unauthorized",
+        "owner session required — the provider credential registry is "
+        "owner-only (login at /api/auth/ui-token, ADR 0014)")
+
+
+def _providers_off_response() -> JSONResponse:
+    """H1 honest-off: no usable secrets dir ⇒ credential features refuse
+    (the HERMES_API_KEY-missing 503 family; red line 8 — NEVER a DB
+    fallback). Names the env var so the operator knows the one knob."""
+    return _kora_error(
+        503, "providers_off",
+        "Подключение провайдеров выключено: на борде не настроен каталог "
+        f"секретов ({MODELS_SECRETS_DIR_ENV}). Каталог подаётся через "
+        "deploy-канал (том/переменная окружения), после чего "
+        "регистрация ключей включится без изменения кода.")
+
+
+def _disable_provider_grants_hook(provider_key: str) -> int:
+    """MF3 SEAM (verdict H1 consequences): removing a credential cascades
+    disable its grants — authority without material is dead. MF2 has no
+    grant table yet; the hook is called on the DELETE path so the cascade
+    cannot be forgotten when grants land. Returns the number of grants
+    disabled (0 in MF2; the count rides the audit payload)."""
+    return 0
+
+
+class ModelProviderCreateIn(BaseModel):
+    """POST /api/models/providers — the ONE body that ever carries
+    credential material (verdict §4 red line 1: the write path)."""
+    model_config = ConfigDict(extra="forbid")
+
+    provider_key: str = Field(min_length=1, max_length=60)
+    base_url: str = Field(min_length=1, max_length=_PROVIDER_URL_BOUND)
+    credential: str = Field(min_length=1, max_length=_CREDENTIAL_BOUND)
+
+
+class ModelProviderRotateIn(BaseModel):
+    """PUT /api/models/providers/{key} — rotation: new material (a new
+    fingerprint, audit .rotated), optional address change."""
+    model_config = ConfigDict(extra="forbid")
+
+    credential: str = Field(min_length=1, max_length=_CREDENTIAL_BOUND)
+    base_url: str | None = Field(None, min_length=1, max_length=_PROVIDER_URL_BOUND)
+
+
+class ModelProviderOut(_ApiModel):
+    """One registry row, metadata only — the roster providers[] shape
+    (OQ-1 verdict: additive) and the mutation response body. NO credential
+    field exists in this family by construction; fingerprint + status are
+    the honest «тот ли ключ» facts."""
+    provider_key: str
+    base_url: str
+    fingerprint: str | None = None
+    created_at: str
+    rotated_at: str | None = None
+    status: Literal["set", "rejected"] | None = None
+
+
+def _provider_public(row: dict[str, Any]) -> ModelProviderOut:
+    """Registry row → the wire shape. status: «set» while the credential
+    ref+ fingerprint exist; None = honestly not connected; «rejected» is
+    minted by the MF3 enforcement wave (provider.use.rejected) — the enum
+    is declared now so the FE slot machine is closed (verdict §5)."""
+    status: Literal["set", "rejected"] | None
+    if row.get("fingerprint") and row.get("credential_ref"):
+        status = "set"
+    else:
+        status = None
+    return ModelProviderOut(
+        provider_key=row["provider_key"],
+        base_url=row["base_url"],
+        fingerprint=row.get("fingerprint") or None,
+        created_at=row["created_at"],
+        rotated_at=row.get("rotated_at") or None,
+        status=status,
+    )
+
+
+@app.post("/api/models/providers", status_code=201,
+          response_model=ModelProviderOut)
+async def create_model_provider(body: ModelProviderCreateIn,
+                                request: Request) -> Response:
+    """Register a provider credential (owner act; MF2). Validation order:
+    owner wall → secrets-dir availability (honest-off BEFORE anything
+    touches the DB) → URL red-line-5 → duplicate name → material written
+    atomically to the vault → metadata row + audit. The material exists
+    in this handler's memory and in the 0600 file — nowhere else."""
+    denied = _providers_owner_denied(request)
+    if denied is not None:
+        return denied
+    key = body.provider_key.strip()
+    if not _PROVIDER_KEY_RE.match(key):
+        return _kora_error(
+            422, "validation",
+            "provider_key: латиница в нижнем регистре, цифры и дефис, "
+            "до 60 символов (slug-дисциплина словаря харнесов).")
+    try:
+        base_url = _validate_provider_base_url(body.base_url)
+    except ProviderCredentialError as exc:
+        return _kora_error(422, "credential_in_url", str(exc))
+    except ValueError as exc:
+        return _kora_error(422, "validation", f"base_url: {exc}")
+    directory = _providers_secrets_dir()
+    if directory is None:
+        return _providers_off_response()
+    if store.model_provider(key) is not None:
+        return _kora_error(
+            409, "provider_exists",
+            "Провайдер с таким именем уже подключён. Замените ключ через "
+            "ротацию (PUT) или выберите другое имя.")
+    credential_ref = _provider_credential_ref(key)
+    try:
+        _write_provider_credential(directory, credential_ref, body.credential)
+    except OSError:
+        return _kora_error(
+            503, "providers_off",
+            "Каталог секретов недоступен для записи — регистрация "
+            f"отказана ({MODELS_SECRETS_DIR_ENV} неуспешен по правам/том). "
+            "Материал не сохранён, fallback в БД не выполняется.")
+    fingerprint = _credential_fingerprint(body.credential)
+    try:
+        row = store.model_provider_create(
+            key, base_url, fingerprint, credential_ref, _now_iso())
+    except sqlite3.IntegrityError:
+        # Raced a concurrent POST for the same name: the vault file of the
+        # loser is orphaned — remove it, report the named 409.
+        _remove_provider_credential(directory, credential_ref)
+        return _kora_error(
+            409, "provider_exists",
+            "Провайдер с таким именем уже подключён. Замените ключ через "
+            "ротацию (PUT) или выберите другое имя.")
+    store.log_models_audit("provider.credential.set", {
+        "actor": "ui", "provider_key": key, "credential_ref": credential_ref,
+        "fingerprint": fingerprint, "base_url": base_url,
+    })
+    _broadcast({"kind": "model.inventory.changed", "provider": key})
+    return _provider_public(row)
+
+
+@app.put("/api/models/providers/{provider_key}",
+         response_model=ModelProviderOut)
+async def rotate_model_provider(provider_key: str,
+                                body: ModelProviderRotateIn,
+                                request: Request) -> Response:
+    """Rotate the credential (owner act): new material → new fingerprint,
+    the vault file replaced atomically, audit .rotated. The old key stays
+    valid until the rename lands (MF-CARD-ROTATE: the slot stays «set»)."""
+    denied = _providers_owner_denied(request)
+    if denied is not None:
+        return denied
+    base_url: str | None = None
+    if body.base_url is not None:
+        try:
+            base_url = _validate_provider_base_url(body.base_url)
+        except ProviderCredentialError as exc:
+            return _kora_error(422, "credential_in_url", str(exc))
+        except ValueError as exc:
+            return _kora_error(422, "validation", f"base_url: {exc}")
+    directory = _providers_secrets_dir()
+    if directory is None:
+        return _providers_off_response()
+    row = store.model_provider(provider_key)
+    if row is None:
+        return _kora_error(
+            404, "provider_not_found",
+            f"Провайдер {provider_key} не найден в реестре — сначала "
+            "подключите его (POST).")
+    credential_ref = _provider_credential_ref(provider_key)
+    try:
+        _write_provider_credential(directory, credential_ref, body.credential)
+    except OSError:
+        return _kora_error(
+            503, "providers_off",
+            "Каталог секретов недоступен для записи — ротация отказана, "
+            "предыдущий ключ действует (материал не тронут).")
+    fingerprint = _credential_fingerprint(body.credential)
+    if base_url is not None and base_url != row["base_url"]:
+        row = store.model_provider_update_base_url(
+            provider_key, base_url) or row
+    row = store.model_provider_set_credential(
+        provider_key, fingerprint, credential_ref, _now_iso()) or row
+    store.log_models_audit("provider.credential.rotated", {
+        "actor": "ui", "provider_key": provider_key,
+        "credential_ref": credential_ref, "fingerprint": fingerprint,
+        "base_url": row["base_url"],
+    })
+    _broadcast({"kind": "model.inventory.changed", "provider": provider_key})
+    return _provider_public(row)
+
+
+@app.delete("/api/models/providers/{provider_key}/credential",
+            response_model=ModelProviderOut)
+async def delete_model_provider_credential(provider_key: str,
+                                           request: Request) -> Response:
+    """Remove the credential (owner act): vault file unlinked, metadata
+    cleared — the provider row STAYS with the honest «не подключён» slot.
+    The grants-disable cascade rides its MF3 hook (nothing to disable in
+    MF2); audit .removed always names the consequence."""
+    denied = _providers_owner_denied(request)
+    if denied is not None:
+        return denied
+    directory = _providers_secrets_dir()
+    if directory is None:
+        return _providers_off_response()
+    row = store.model_provider(provider_key)
+    if row is None:
+        return _kora_error(
+            404, "provider_not_found",
+            f"Провайдер {provider_key} не найден в реестре.")
+    if not row.get("fingerprint"):
+        return _kora_error(
+            409, "credential_not_set",
+            "У провайдера нет установленного ключа — удалять нечего "
+            "(слот уже «не подключён»).")
+    # Capture the removed credential's metadata BEFORE clearing the row —
+    # the audit names WHICH key left (fingerprint never material, H4).
+    removed_ref = str(row["credential_ref"])
+    removed_fingerprint = str(row["fingerprint"])
+    removed = _remove_provider_credential(directory, removed_ref)
+    row = store.model_provider_remove_credential(provider_key) or row
+    grants_disabled = _disable_provider_grants_hook(provider_key)
+    store.log_models_audit("provider.credential.removed", {
+        "actor": "ui", "provider_key": provider_key,
+        "credential_ref": removed_ref, "fingerprint": removed_fingerprint,
+        "file_removed": removed, "grants_disabled": grants_disabled,
+    })
+    _broadcast({"kind": "model.inventory.changed", "provider": provider_key})
+    return _provider_public(row)
 
 
 # ----------------------------- kora hermes bridge: transcript + chat (T004 s3)

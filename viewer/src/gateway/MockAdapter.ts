@@ -7,6 +7,7 @@ import {
   pageActivityRows,
 } from "./activityQuery";
 import { resolveRoutingAnnotation } from "./routing";
+import { isProviderKeyValid, validateProviderBaseUrl } from "./providerUrl";
 import { ApiError } from "@/lib/errors";
 import { EventStream } from "./events";
 import {
@@ -80,6 +81,9 @@ import type {
   HarnessesPage,
   HarnessItem,
   ModelsRosterPage,
+  ModelProvider,
+  ModelProviderCreateInput,
+  ModelProviderRotateInput,
   HarnessStateResult,
   HookCreateInput,
   HookPatchInput,
@@ -295,6 +299,10 @@ export class MockAdapter implements MemoryGateway {
    * fixture corpus; the nomination gates read THIS, like the server. */
   private harnesses: HarnessItem[];
   private modelsRosterPage: ModelsRosterPage;
+  /** MF2 owner registry (metadata rows only — the playground never holds
+   * material; the fingerprint is derived and the input dropped). Stored
+   * writable: the wire type is immutable, mock mutations replace rows. */
+  private modelProviders: WritableModelProvider[] = [];
   private executionSettings: ExecutionSettings;
   /** Per-project defaults (board_meta `default_executor:project:<slug>`
    * mirror) — modelled through PUT /settings/execution with a project scope. */
@@ -1475,13 +1483,106 @@ export class MockAdapter implements MemoryGateway {
   /**
    * Models fleet roster (MF1) — the playground serves the SAME honest
    * fresh-board shape as the real endpoint: the board hermes row, the
-   * owner-registry and agent-mirror zones empty. No auth wall — the
-   * ui-class question belongs to the real board (this is an open read
-   * there too).
+   * owner-registry and agent-mirror zones (providers populate via the
+   * MF2 mock mutations). No auth wall — the ui-class question belongs to
+   * the real board (this is an open read there too).
    */
   async modelsRoster(signal?: AbortSignal): Promise<ModelsRosterPage> {
     await this.delay(signal);
-    return this.modelsRosterPage;
+    return {
+      ...this.modelsRosterPage,
+      providers: this.modelProviders.map((row) => ({ ...row })),
+    };
+  }
+
+  /**
+   * MF2 provider credential mutations — the playground mirrors the real
+   * gates (name charset, duplicate 409, the credential-in-URL family,
+   * the metadata-only answers). NOTE: the mock holds the material ONLY
+   * long enough to derive the fingerprint — the row stores metadata
+   * exactly like the server (no key field exists anywhere downstream).
+   */
+  async createModelProvider(
+    payload: ModelProviderCreateInput,
+    signal?: AbortSignal,
+  ): Promise<ModelProvider> {
+    await this.delay(signal);
+    const key = payload.provider_key.trim();
+    if (!isProviderKeyValid(key)) {
+      throw new ApiError(
+        422,
+        "provider_key: латиница в нижнем регистре, цифры и дефис, до 60 символов (slug-дисциплина словаря харнесов).",
+        { url: "mock:/api/models/providers" },
+      );
+    }
+    const verdict = validateProviderBaseUrl(payload.base_url);
+    if (!verdict.ok) {
+      throw new ApiError(422, verdict.message, { url: "mock:/api/models/providers" });
+    }
+    if (this.modelProviders.some((row) => row.provider_key === key)) {
+      throw new ApiError(409, "Провайдер с таким именем уже подключён.", {
+        url: "mock:/api/models/providers",
+      });
+    }
+    const row: WritableModelProvider = {
+      provider_key: key,
+      base_url: verdict.normalized,
+      fingerprint: await fingerprint12(payload.credential),
+      created_at: new Date(this.now()).toISOString(),
+      rotated_at: null,
+      status: "set",
+    };
+    this.modelProviders.push(row);
+    return { ...row };
+  }
+
+  async rotateModelProvider(
+    providerKey: string,
+    payload: ModelProviderRotateInput,
+    signal?: AbortSignal,
+  ): Promise<ModelProvider> {
+    await this.delay(signal);
+    const row = this.modelProviders.find((r) => r.provider_key === providerKey);
+    if (!row) {
+      throw new ApiError(404, `Провайдер ${providerKey} не найден в реестре.`, {
+        url: `mock:/api/models/providers/${providerKey}`,
+      });
+    }
+    if (payload.base_url !== undefined) {
+      const verdict = validateProviderBaseUrl(payload.base_url);
+      if (!verdict.ok) {
+        throw new ApiError(422, verdict.message, {
+          url: `mock:/api/models/providers/${providerKey}`,
+        });
+      }
+      row.base_url = verdict.normalized;
+    }
+    row.fingerprint = await fingerprint12(payload.credential);
+    row.rotated_at = new Date(this.now()).toISOString();
+    row.status = "set";
+    return { ...row };
+  }
+
+  async deleteModelProviderCredential(
+    providerKey: string,
+    signal?: AbortSignal,
+  ): Promise<ModelProvider> {
+    await this.delay(signal);
+    const row = this.modelProviders.find((r) => r.provider_key === providerKey);
+    if (!row) {
+      throw new ApiError(404, `Провайдер ${providerKey} не найден в реестре.`, {
+        url: `mock:/api/models/providers/${providerKey}/credential`,
+      });
+    }
+    if (row.status !== "set") {
+      throw new ApiError(409, "У провайдера нет установленного ключа — удалять нечего.", {
+        url: `mock:/api/models/providers/${providerKey}/credential`,
+      });
+    }
+    row.fingerprint = null;
+    row.rotated_at = null;
+    row.status = null;
+    return { ...row };
   }
 
   /**
@@ -2643,6 +2744,41 @@ export class MockAdapter implements MemoryGateway {
 }
 
 /** Honest 404 mirror of the board routes for unknown task ids. */
+/** The wire's ModelProvider row is immutable; the mock's internal storage
+ * mutates in place (a playground convenience, never exported). */
+type WritableModelProvider = {
+  -readonly [K in keyof ModelProvider]: ModelProvider[K];
+};
+
+/**
+ * Mock-side credential fingerprint (SHA-256[:12hex] — the same shape the
+ * server persists; WebCrypto when the runtime provides it, a padded djb2
+ * fallback when subtle crypto is unavailable). Metadata only: the input
+ * material is dropped as soon as this returns.
+ */
+async function fingerprint12(material: string): Promise<string> {
+  const subtle = globalThis.crypto?.subtle;
+  if (subtle) {
+    try {
+      const digest = await subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(material),
+      );
+      return [...new Uint8Array(digest)]
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("")
+        .slice(0, 12);
+    } catch {
+      // fall through to the deterministic fallback
+    }
+  }
+  let hash = 5381;
+  for (let i = 0; i < material.length; i += 1) {
+    hash = ((hash << 5) + hash + material.charCodeAt(i)) >>> 0;
+  }
+  return hash.toString(16).padStart(12, "0").slice(0, 12);
+}
+
 function requireMockTask(
   taskId: string,
   tasks: readonly BoardTask[],
