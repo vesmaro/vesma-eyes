@@ -343,8 +343,16 @@ export function ModelsHubPage() {
   return (
     <div className={pageGridClass("operational", "flex flex-col gap-3")}>
       {/* The TopBar carries «Модели» (routeTitleKey → nav.agentsModels) —
-       * the h1 stays for the a11y outline only (registry-page precedent). */}
+       * the h1 stays for the a11y outline only (registry-page precedent).
+       * The connect CTA rides the page header row (wireframe §5.1: the
+       * act lives at the top, next to the title), disabled WITH its
+       * reason rendered in the zone card when the features are off. */}
       <h1 className="sr-only">{t("models.hub.title")}</h1>
+      <div className="flex justify-end">
+        <Button onClick={openConnect} disabled={off}>
+          {t("models.hub.connectCta")}
+        </Button>
+      </div>
 
       {roster.isPending ? (
         <div role="status" aria-label={t("models.hub.loading")}>
@@ -434,14 +442,6 @@ export function ModelsHubPage() {
               <BoardCard key={`${row.provider} ${row.baseUrl}`} row={row} />
             ))}
           </Zone>
-
-          {/* MF-HUB-OFF also disables the page-level CTA when the zones
-           * are non-empty (the off card above carries the reason). */}
-          <div className="flex justify-end">
-            <Button onClick={openConnect} disabled={off}>
-              {t("models.hub.connectCta")}
-            </Button>
-          </div>
         </>
       )}
 
