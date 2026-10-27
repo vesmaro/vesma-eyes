@@ -318,6 +318,7 @@
  * and asserted by tokens.test.ts. No frozen name is renamed or revalued. */
 [data-well-window] {
   --color-well-canvas: #051015;
+  --color-bg-elevated: #0f1f25; /* fix round W1b board sync (ADR 0006 parity gate): the legend panel surface */
   --hud-veil: rgb(5 16 21 / 0.78);
   --palette-scrim: rgb(5 16 21 / 0.55);
 

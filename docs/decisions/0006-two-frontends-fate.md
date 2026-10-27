@@ -65,4 +65,11 @@ architecture review.
 - The board server API is a **long-lived asset**: it gets typed schemas
   (OpenAPI) and contract tests (QA-1) before any L1 work.
 - Token files are synced between tracks by script (single source of
-  truth).
+  truth). The sync is **mechanically enforced** since the hygiene batch
+  (2026-10-27): the full-scope parity auto-gate in
+  `viewer/src/styles/tokens.test.ts` («viewer ↔ board token parity — FULL
+  scope identity») fails on any name/value drift in every cascade scope
+  the two tracks share (board-only appendix names excepted), and it is
+  blocking in the pre-commit hook (`scripts/githooks/pre-commit`) for
+  `viewer/` and `web/styles/tokens.css` changes — CI runs no viewer suite
+  (billing-locked), so the blocking lives in the gates that actually run.
