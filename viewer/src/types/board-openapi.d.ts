@@ -6550,10 +6550,7 @@ export interface components {
             readonly ok: boolean;
             /** Task Id */
             readonly task_id: string;
-            /** Task */
-            readonly task: {
-                readonly [key: string]: unknown;
-            };
+            readonly task: components["schemas"]["TaskOut"];
             readonly reports: components["schemas"]["SubstanceReportsOut"];
             readonly executors: components["schemas"]["SubstanceExecutorsOut"];
             readonly sessions: components["schemas"]["SubstanceSessionsOut"];

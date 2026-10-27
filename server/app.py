@@ -4018,7 +4018,7 @@ class TaskSubstanceOut(_ApiModel):
     ``task.summary``; the «итог» is ``reports.final``."""
     ok: bool
     task_id: str
-    task: dict[str, Any]
+    task: TaskOut  # typed projection of store.task() — never an anonymous dict
     reports: SubstanceReportsOut
     executors: SubstanceExecutorsOut
     sessions: SubstanceSessionsOut

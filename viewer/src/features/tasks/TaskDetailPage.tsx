@@ -488,11 +488,6 @@ function TaskDetailShell({ children }: { children: React.ReactNode }) {
  */
 type SubstanceQuery = ReturnType<typeof useTaskSubstance>;
 
-/** dict[str, Any] field guard — the substance task is an anonymous dict. */
-function substanceText(value: unknown): string {
-  return typeof value === "string" ? value : "";
-}
-
 /** Mirror of AssignmentLifecycleState — the wire state is a plain string. */
 const ASSIGNMENT_STATES: ReadonlySet<string> = new Set([
   "queued",
@@ -565,11 +560,13 @@ function SubstanceTab({ query, lang }: { query: SubstanceQuery; lang: "ru" | "en
   );
 }
 
-/** План: spec/summary exactly as the owner wrote them («как есть»). */
+/** План: spec/summary exactly as the owner wrote them («как есть»). The
+ * substance task is the TYPED board TaskOut (server regen — the runtime
+ * dict-guard is gone with the anonymous dict). */
 function SubstancePlan({ task }: { task: TaskSubstance["task"] }) {
   const t = useT();
-  const summary = substanceText(task.summary);
-  const spec = substanceText(task.spec);
+  const summary = task.summary;
+  const spec = task.spec;
   return (
     <section aria-label={t("tasks.substancePlan")}>
       <h2 className="text-sm font-medium text-foreground-secondary">
@@ -793,7 +790,14 @@ function SubstanceSessionsMemory({
             ))}
           </ul>
         </div>
-      ) : null}
+      ) : (
+        /* One source non-empty does not mute the other: the empty sessions
+         * half still states its emptiness in words (an empty is a fact,
+         * never an omitted section — ME-062 §5 honesty). */
+        <p className="text-sm text-foreground-muted" data-substance-sessions-empty>
+          {t("tasks.substanceSessionsEmpty")}
+        </p>
+      )}
       {!memoriesEmpty ? (
         <div>
           <p className="text-xs text-foreground-muted">{t("tasks.substanceMemoriesLabel")}</p>

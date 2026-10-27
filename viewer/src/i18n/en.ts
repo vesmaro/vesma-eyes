@@ -860,6 +860,7 @@ export const en: Record<TranslationKey, string> = {
     "No data from agents: no work sessions, no linked memories.",
   "tasks.substanceSessionsLabel": "Work sessions",
   "tasks.substanceSessionLive": "live session",
+  "tasks.substanceSessionsEmpty": "No work sessions",
   "tasks.substanceMemoriesLabel": "Linked memories",
   "tasks.substanceMemoriesEmpty": "No linked memories",
   "tasks.substanceReview": "Review",
