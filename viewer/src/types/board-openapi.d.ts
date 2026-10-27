@@ -1515,6 +1515,17 @@ export interface paths {
          * @description Rotate the credential (owner act): new material → new fingerprint,
          *     the vault file replaced atomically, audit .rotated. The old key stays
          *     valid until the rename lands (MF-CARD-ROTATE: the slot stays «set»).
+         *
+         *     Ordering limitation (MF-CARD-ROTATE, vault-before-DB): the vault file
+         *     is replaced BEFORE the registry row updates — a 0600 file and SQLite
+         *     have no cross-store transaction. A store failure AFTER the replace
+         *     leaves the file holding the NEW material while the DB fingerprint
+         *     still names the OLD key; the read side answers fail-CLOSED on the
+         *     mismatch (503 credential_mismatch — never a half-trusted use, §3.5)
+         *     and recovery is simply re-rotating: file+DB converge on the first
+         *     success. The SUCCESS invariant — after a 200 rotation the DB
+         *     fingerprint equals the fingerprint of the vault file's actual bytes —
+         *     is pinned by test (mf2-vault-db-consistency (c)).
          */
         readonly put: operations["rotate_model_provider_api_models_providers__provider_key__put"];
         readonly post?: never;

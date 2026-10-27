@@ -21,7 +21,15 @@ QA matrix (each test names its verdict line):
   403 (the scope middleware — credential writes are in no device
   granule); the roster read stays open;
 - rotation (PUT): new fingerprint, rotated_at set, .rotated audit, the
-  old vault file replaced atomically;
+  old vault file replaced atomically; the MF-CARD-ROTATE success
+  invariant — DB fingerprint == fingerprint of the file's actual bytes
+  after a 200 (vault-before-DB ordering converges on success, fail-closed
+  on the failure leg);
+- race/failure compensation (mf2-vault-db-consistency): the raced-POST
+  loser unlinks the vault file ONLY when it still holds ITS OWN bytes —
+  a concurrent winner's file is never touched (content-driven ownership
+  probe, not the shared name); a non-duplicate store failure after the
+  vault write compensates its own material too (no orphan secret);
 - DELETE: vault file unlinked, the registry row STAYS (the honest
   «не подключён» slot), .removed audit names the consequence, grants
   cascade hook present (0 in MF2), re-delete 409, unknown 404;
@@ -546,6 +554,120 @@ def test_name_bound_enforced(client, app_module, vault) -> None:
               "credential": CREDENTIAL},
         headers=_ui(client, app_module))
     assert resp.status_code == 422
+
+
+# ------------------------------------------- race/failure compensation (MF2
+# consistency tails — review mf2-vault-db-consistency a/b/c). The
+# credential_ref NAME is shared per provider key, so a raced POST's
+# compensation must be driven by the file's CONTENT (ownership probe),
+# never by the name alone.
+
+def test_race_post_loser_never_unlinks_the_winner_file(
+        client, app_module, vault, monkeypatch) -> None:
+    """(a) Deterministic race interleave «winner's file write lands
+    last»: the loser compensates ONLY its own material — the winner's
+    file bytes survive and the winner stays fully alive (row + material
+    + healthy slot). The pre-fix name-driven unlink deleted exactly this
+    file."""
+    vault_file = vault / "provider-prov-race"
+    assert _post(client, "prov-race", headers=_ui(client, app_module)).status_code == 201
+
+    # The loser's dup-check raced ahead of the winner's insert (saw
+    # nothing); the winner's vault write lands in the gap between the
+    # loser's write and the loser's insert. Reproduced at the seams.
+    monkeypatch.setattr(app_module.store, "model_provider", lambda key: None)
+
+    def raced_create(key, base_url, fingerprint, credential_ref, created_at):
+        # The winner's write lands LAST — the file holds the WINNER's
+        # material by the time the loser's insert fails.
+        app_module._write_provider_credential(
+            vault, credential_ref, CREDENTIAL)
+        raise sqlite3.IntegrityError(
+            "UNIQUE constraint failed: model_providers.provider_key")
+
+    monkeypatch.setattr(app_module.store, "model_provider_create", raced_create)
+    resp = _post(client, "prov-race", headers=_ui(client, app_module),
+                 credential=CREDENTIAL_2)
+    monkeypatch.undo()  # the dup-check lambda must not shadow real reads
+    assert resp.status_code == 409
+    assert resp.json()["code"] == "provider_exists"
+    # The winner is FULLY alive: the file still holds ITS bytes.
+    assert vault_file.read_bytes() == CREDENTIAL.encode("utf-8")
+    row = app_module.store.model_provider("prov-race")
+    assert row is not None
+    assert row["fingerprint"] == _fingerprint(CREDENTIAL)
+    # The loser's failed material lingers NOWHERE.
+    assert CREDENTIAL_2.encode("utf-8") not in vault_file.read_bytes()
+    rows = {p["provider_key"]: p
+            for p in client.get("/api/models").json()["providers"]}
+    assert rows["prov-race"]["status"] == "set"
+
+
+def test_race_post_loser_removes_its_own_material(
+        client, app_module, vault, monkeypatch) -> None:
+    """(a, loser-writes-last interleave) When the LOSER's write was the
+    last one, the file holds the loser's FAILED material — the
+    compensation removes it (a failed POST's secret never lingers on
+    disk); the winner ROW stays (its material was clobbered by the race
+    itself — the read side answers fail-closed on the missing file)."""
+    vault_file = vault / "provider-prov-race2"
+    assert _post(client, "prov-race2", headers=_ui(client, app_module)).status_code == 201
+    monkeypatch.setattr(app_module.store, "model_provider", lambda key: None)
+
+    def loser_insert_fails(key, base_url, fingerprint, credential_ref,
+                           created_at):
+        raise sqlite3.IntegrityError(
+            "UNIQUE constraint failed: model_providers.provider_key")
+
+    monkeypatch.setattr(app_module.store, "model_provider_create",
+                        loser_insert_fails)
+    resp = _post(client, "prov-race2", headers=_ui(client, app_module),
+                 credential=CREDENTIAL_2)
+    monkeypatch.undo()  # the dup-check lambda must not shadow real reads
+    assert resp.status_code == 409
+    # Own-bytes compensation: the loser's material is gone.
+    assert not vault_file.exists()
+    # The winner row survives the race.
+    row = app_module.store.model_provider("prov-race2")
+    assert row is not None
+    assert row["fingerprint"] == _fingerprint(CREDENTIAL)
+
+
+def test_store_failure_after_vault_write_compensates(
+        client, app_module, vault, monkeypatch) -> None:
+    """(b) A non-duplicate store failure AFTER the vault write: OUR file
+    is unlinked (no orphan 0600 secret beside no row) and the failure
+    surfaces honestly (the TestClient re-raises — the 500 is the
+    answer)."""
+    vault_file = vault / "provider-prov-err"
+
+    def broken_create(key, base_url, fingerprint, credential_ref, created_at):
+        raise sqlite3.OperationalError("database is locked")
+
+    monkeypatch.setattr(app_module.store, "model_provider_create", broken_create)
+    with pytest.raises(sqlite3.OperationalError):
+        _post(client, "prov-err", headers=_ui(client, app_module))
+    assert not vault_file.exists()
+    assert app_module.store.model_provider("prov-err") is None
+
+
+def test_successful_rotation_db_fingerprint_matches_file(
+        client, app_module, vault) -> None:
+    """(c) MF-CARD-ROTATE success invariant: after a 200 rotation the DB
+    fingerprint equals the fingerprint of the vault file's ACTUAL bytes
+    (the vault-before-DB ordering converges on every success; the
+    failure case is fail-closed on use — see the PUT docstring)."""
+    assert _post(client, "prov-rot", headers=_ui(client, app_module)).status_code == 201
+    resp = client.put("/api/models/providers/prov-rot",
+                      json={"credential": CREDENTIAL_2},
+                      headers=_ui(client, app_module))
+    assert resp.status_code == 200
+    file_bytes = (vault / "provider-prov-rot").read_bytes()
+    assert file_bytes == CREDENTIAL_2.encode("utf-8")
+    live = _fingerprint(file_bytes.decode("utf-8"))
+    assert resp.json()["fingerprint"] == live
+    row = app_module.store.model_provider("prov-rot")
+    assert row["fingerprint"] == live
 
 
 def test_sse_broadcast_on_mutations(client, app_module, vault) -> None:
