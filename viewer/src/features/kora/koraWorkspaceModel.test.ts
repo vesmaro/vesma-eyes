@@ -7,6 +7,7 @@ import {
   formatTranscriptTime,
   groupKoraTranscript,
   koraAgeUnit,
+  koraGroupListId,
   koraSessionName,
   koraSummary,
   koraTranscriptAnchorId,
@@ -15,6 +16,7 @@ import {
   quickFilterMatches,
   sessionCoverageSupport,
   sortKoraSessions,
+  KORA_GROUP_NO_CWD,
 } from "./koraWorkspaceModel";
 
 /**
@@ -474,6 +476,40 @@ describe("buildProjectGroups (KW4 «Поле хоста», blueprint-kw4 §1–3
     const frozen = [...input];
     buildProjectGroups(input);
     expect(input).toEqual(frozen);
+  });
+});
+
+describe("koraGroupListId (the disclosure id, hygiene-batch collision tail)", () => {
+  it("two different cwds that sanitize to the SAME slug get DIFFERENT ids", () => {
+    // The old bare form collided: `/data/proj+one` and `/data/proj.one`
+    // both flatten to `kora-group-_data_proj_one` — one DOM id for two
+    // disclosure lists, aria-controls resolving to the wrong element.
+    const plus = koraGroupListId("/data/proj+one");
+    const dot = koraGroupListId("/data/proj.one");
+    expect(plus.replace(/[0-9a-f]{8}$/, "").replace(/-/g, "")).toBe(
+      dot.replace(/[0-9a-f]{8}$/, "").replace(/-/g, ""),
+    ); // the slug collision is real (precondition)
+    expect(plus).not.toBe(dot); // the digest separates them
+  });
+
+  it("is deterministic and DOM-id-safe: stable across calls, no raw path chars", () => {
+    const id = koraGroupListId("/var/home/abyss/LABs/Projects/Project Vesma");
+    expect(id).toBe(koraGroupListId("/var/home/abyss/LABs/Projects/Project Vesma"));
+    expect(id.startsWith("kora-group-")).toBe(true);
+    // A DOM id must be usable in querySelector/CSS — every char stays in
+    // the [A-Za-z0-9_-] set even though the raw key carries a space.
+    expect(id).toMatch(/^kora-group-[A-Za-z0-9_-]+$/);
+    // The digest suffix is the fixed 8-hex FNV-1a of the raw key.
+    expect(id.split("-").at(-1)).toMatch(/^[0-9a-f]{8}$/);
+  });
+
+  it("the no-cwd sentinel keeps its honest distinct id", () => {
+    expect(koraGroupListId(KORA_GROUP_NO_CWD)).not.toBe(
+      koraGroupListId("/any/real/cwd"),
+    );
+    expect(koraGroupListId(KORA_GROUP_NO_CWD)).toBe(
+      koraGroupListId(KORA_GROUP_NO_CWD),
+    );
   });
 });
 

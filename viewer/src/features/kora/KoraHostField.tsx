@@ -13,6 +13,7 @@ import { readKoraGroups, writeKoraGroups } from "./koraFrameStorage";
 import {
   buildProjectGroups,
   koraAgeUnit,
+  koraGroupListId,
   koraSessionName,
   pathBasename,
   quickFilterMatches,
@@ -404,7 +405,9 @@ function SessionGroup({
       : group.kind === "source"
         ? t("kora.group.source", { source: group.source ?? "" })
         : t("kora.group.noCwd");
-  const listId = `kora-group-${group.key.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+  // The digest-suffixed id (koraGroupListId): two different cwds can
+  // sanitize to the same slug — the bare form collided the DOM ids.
+  const listId = koraGroupListId(group.key);
 
   return (
     <li>
