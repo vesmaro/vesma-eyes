@@ -77,10 +77,31 @@ export function TableScroll({
     // swap of the mono face, content changes) — observe both boxes.
     const observer = new ResizeObserver(measure);
     observer.observe(el);
-    if (el.firstElementChild !== null) observer.observe(el.firstElementChild);
+    let observedChild: Element | null = el.firstElementChild;
+    if (observedChild !== null) observer.observe(observedChild);
+    // Streaming markdown REPLACES the block node inside the wrapper: a
+    // half-streamed paragraph completes into a GFM table and the <p>
+    // element is swapped for a <table>. The child observation above then
+    // watches a detached node — and the wrapper's own content box does
+    // not move when its overflow grows, so nothing else would re-measure
+    // and the overflow state (scroll affordances, data-table-overflow,
+    // sticky first column) goes stale exactly mid-stream. The childList
+    // watch re-arms the child observation on every swap and re-measures
+    // at once (hygiene batch review tail).
+    const childWatcher = new MutationObserver(() => {
+      const child = el.firstElementChild;
+      if (child !== observedChild) {
+        if (observedChild !== null) observer.unobserve(observedChild);
+        observedChild = child;
+        if (child !== null) observer.observe(child);
+      }
+      measure();
+    });
+    childWatcher.observe(el, { childList: true });
     window.addEventListener("resize", measure);
     return () => {
       observer.disconnect();
+      childWatcher.disconnect();
       window.removeEventListener("resize", measure);
     };
   }, [measure]);
