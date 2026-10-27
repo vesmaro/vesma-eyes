@@ -142,3 +142,27 @@ describe("detail trail shrink (UI-18 §3.1: домен › сущность)", (
     expect(container!.querySelectorAll("a").length).toBe(1); // domain crumb only
   });
 });
+
+describe("crumb ellipsis contract (shell-breadcrumbs truncate fix)", () => {
+  // text-overflow paints on BLOCK containers only; the defect had truncate on
+  // the inline-flex carrier itself, so a squeezed trail cut mid-word with no
+  // ellipsis («Документацияvesma-m»). The pin is structural: happy-dom cannot
+  // paint CSS, so the contract is «truncate lives on the blockified inner
+  // span, never on the flex carrier» — every crumb, links included.
+  it("every crumb text sits in an inner truncate span, carriers stay clean", async () => {
+    await mount("/tasks/list", "/tasks/list", "");
+    const carriers = [
+      ...container!.querySelectorAll(
+        "nav ol li > a, nav ol li > span[aria-current]",
+      ),
+    ]; // separator spans (aria-hidden) are not crumb carriers
+    expect(carriers.length).toBeGreaterThan(0);
+    for (const carrier of carriers) {
+      expect(carrier.className).not.toContain("truncate");
+      const inner = carrier.querySelector(":scope > span");
+      expect(inner, "inner truncate span").not.toBeNull();
+      expect(inner!.className).toContain("truncate");
+      expect(inner!.textContent).toBeTruthy();
+    }
+  });
+});

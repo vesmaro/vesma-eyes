@@ -437,6 +437,19 @@ html[data-motion="reduced"] .vesma-body {
   display: none;
 }
 
+/* Narrow screens: the cloud never shows. A floating 240px panel has no safe
+ * placement over a <768px content column — the intro bubble («Я Весма,
+ * смотрю за памятью», up to 10s) covered the topmost reading content, and
+ * every later bubble would repeat the cover for its 4s hold. The meaning
+ * stays on surfaces the narrow shell already owns: the В1 pill (state +
+ * flash), the toasts (relay), the nest button title. Honest absence per the
+ * W2 narrowing precedent (background classes don't gesture either). */
+@media (max-width: 767px) {
+  .vesma-cloud {
+    display: none;
+  }
+}
+
 .vesma-ok {
   display: block;
   margin-top: 0.25rem;

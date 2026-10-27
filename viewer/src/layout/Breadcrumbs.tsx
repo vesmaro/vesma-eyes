@@ -77,16 +77,25 @@ export function Breadcrumbs({ pathname, search }: { pathname: string; search: st
                 {crumb.to && crumb.key && !last ? (
                   <Link
                     to={crumb.to}
-                    className="inline-flex min-h-12 md:min-h-12 md:min-h-6 items-center rounded-sm text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                    className="inline-flex min-h-12 md:min-h-12 md:min-h-6 items-center overflow-hidden rounded-sm text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                   >
-                    {t(crumb.key)}
+                    {/* text-overflow paints on BLOCK containers only — on the
+                     * old inline-flex carrier the clipped trail cut mid-word
+                     * with no ellipsis («Документацияvesma-m»). The inner span
+                     * blockifies as a flex item, so truncate really works;
+                     * the carrier's own overflow-hidden zeroes its automatic
+                     * min-content floor, so a squeezed trail shrinks to EXACT
+                     * fit (the widest word alone left a 1.1px residue). */}
+                    <span className="truncate">{t(crumb.key)}</span>
                   </Link>
                 ) : (
                   <span
                     aria-current="page"
-                    className="inline-flex min-h-12 md:min-h-6 items-center truncate font-medium text-foreground"
+                    className="inline-flex min-h-12 md:min-h-6 items-center overflow-hidden font-medium text-foreground"
                   >
-                    {crumb.label ?? (crumb.key ? t(crumb.key) : "")}
+                    <span className="truncate">
+                      {crumb.label ?? (crumb.key ? t(crumb.key) : "")}
+                    </span>
                   </span>
                 )}
               </li>

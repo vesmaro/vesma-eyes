@@ -78,11 +78,13 @@ describe("Shell snapshots (ru/en + density)", () => {
   it("keeps the last breadcrumb non-link and the trail in DOM order", () => {
     const html = renderShell({ lang: "en", density: "comfortable" });
     // Memory / Records — the last crumb is a span with aria-current,
-    // never an href; the trail order is Memory → Records.
-    expect(html).toMatch(/Memory<\/a>/);
-    expect(html).toMatch(/aria-current="page"[^>]*>Records<\/span>/);
+    // never an href; the trail order is Memory → Records. The crumb text
+    // lives in an inner truncate span (the ellipsis contract), so the
+    // link carrier closes as …Memory</span></a>.
+    expect(html).toMatch(/Memory<\/span><\/a>/);
+    expect(html).toMatch(/aria-current="page"[^>]*><span[^>]*>Records</);
     const memoryAt = html.indexOf(">Memory<");
-    const recordsAt = html.search(/aria-current="page"[^>]*>Records</);
+    const recordsAt = html.search(/aria-current="page"[^>]*><span[^>]*>Records</);
     expect(memoryAt).toBeGreaterThan(-1);
     expect(recordsAt).toBeGreaterThan(-1);
     expect(memoryAt).toBeLessThan(recordsAt);
