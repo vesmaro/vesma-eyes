@@ -12,6 +12,7 @@ import {
   type InventoryCategoryKey,
 } from "./harnessInventoryModel";
 import {
+  execEnvBadgeTitle,
   inventoryRowExecEnv,
   inventoryRowFoundTrail,
 } from "./execEnvModel";
@@ -144,11 +145,9 @@ function InventoryEnvironment({ env }: { env: HarnessInventoryEnvironment }) {
   // row carries it when present, duplicates included, for uniformity).
   const execEnv = inventoryRowExecEnv(env);
   // The dedupe trail rides the badge tooltip (audit data of one fact —
-  // the same wording the roster badge uses, same i18n keys).
-  const foundTrail = inventoryRowFoundTrail(env);
-  const execEnvTitle = foundTrail.length
-    ? `${t("agents.hosts.execEnvTooltip")}\n${t("agents.hosts.foundAtTooltip")}\n${foundTrail.join("\n")}`
-    : t("agents.hosts.execEnvTooltip");
+  // the same wording the roster badge uses, the SHARED execEnvBadgeTitle
+  // helper, same i18n keys).
+  const execEnvTitle = execEnvBadgeTitle(t, inventoryRowFoundTrail(env));
 
   return (
     <div className="flex flex-col gap-1 rounded-md border border-border-subtle bg-elevated px-2.5 py-2">
