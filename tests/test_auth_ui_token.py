@@ -3,8 +3,9 @@
 
 Pinned contract:
 - POST /api/auth/ui-token verifies the pasted value at the door:
-  200 {ok, token_class} for the ui token (and the board token in legacy
-  mode, honestly reported as "legacy"); 401 class-aware — a machine token
+  200 {ok, token_class} for the ui token (token_class "legacy" now names
+  ONLY the equal-tokens misconfiguration — the transitional
+  single-token fallback is retired); 401 class-aware — a machine token
   pasted at login says WHICH class arrived; 429 on the flat limiters
   (per-IP 10/60s, global 60/60s); 503 fail-closed while no class is
   configured; 422 outside 1..512;
@@ -110,10 +111,23 @@ class TestVerify:
         assert r.status_code == 200, r.text
         assert r.json() == {"ok": True, "token_class": "ui"}
 
-    def test_legacy_board_token_200_legacy_class(self, client):
-        """Transition env: no VESMARO_UI_TOKEN, the ui class is served by
-        the board token — the login must say "legacy", not pretend "ui"."""
+    def test_board_token_401_default_contour(self, client):
+        """Default contour (split closed, transitional retired): the board
+        token is machine-class — the login refuses it outright."""
         r = _verify(client, BOARD_TOKEN)
+        assert r.status_code == 401
+        detail = r.json()["detail"]
+        assert "machine-class token" in detail
+        assert "VESMARO_UI_TOKEN" in detail
+
+    def test_equal_tokens_misconfiguration_reports_legacy(self, client,
+                                                          app_module,
+                                                          monkeypatch):
+        """token_class "legacy" now names ONLY the operator misconfiguration
+        (both envs set to the SAME secret — the classes must be split),
+        never a supported mode."""
+        monkeypatch.setattr(app_module, "BOARD_WRITE_TOKEN", UI_TOKEN)
+        r = _verify(client, UI_TOKEN)
         assert r.status_code == 200, r.text
         assert r.json() == {"ok": True, "token_class": "legacy"}
 
@@ -422,13 +436,13 @@ class TestReviewGaps:
                         headers=machine_auth)
         assert r.status_code == 401
 
-    def test_legacy_verify_then_cookie_leg_mutates(self, client, auth):
-        """Legacy single-token mode: verify answers legacy, and the issued
-        cookie opens the ui leg afterwards (header absent)."""
-        r = _verify(client, BOARD_TOKEN)
+    def test_verify_then_cookie_leg_mutates(self, client):
+        """Verify answers ui, and the issued cookie opens the ui leg
+        afterwards (header absent)."""
+        r = _verify(client, UI_TOKEN)
         assert r.status_code == 200
-        assert r.json()["token_class"] == "legacy"
-        r2 = client.post("/api/tasks", json={"title": "gap-legacy"})
+        assert r.json()["token_class"] == "ui"
+        r2 = client.post("/api/tasks", json={"title": "gap-cookie-leg"})
         assert r2.status_code == 201
 
     def test_get_probe_does_not_set_cookie(self, client, split_tokens):

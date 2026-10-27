@@ -38,7 +38,9 @@ import uuid
 import pytest
 from starlette.requests import Request
 
-from conftest import DATA_DIR
+from conftest import DATA_DIR, BOARD_TOKEN
+
+MACHINE_HEADERS = {"Authorization": f"Bearer {BOARD_TOKEN}"}
 
 DB_PATH = DATA_DIR / "board.db"
 
@@ -550,7 +552,7 @@ class TestSseIsolation:
                 out = await am.ingest_ui_telemetry(
                     body, Request({**scope, "method": "POST",
                                    "headers": [(b"authorization",
-                                                f"Bearer {am.BOARD_WRITE_TOKEN}".encode())]}))
+                                                f"Bearer {am.UI_WRITE_TOKEN}".encode())]}))
                 assert out["accepted"] == 1
                 assert _telemetry_rows(visit), "the batch really landed"
                 # ... while the live subscriber queue stays silent

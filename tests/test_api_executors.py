@@ -44,6 +44,9 @@ import sqlite3
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from conftest import BOARD_TOKEN
+
+MACHINE_HEADERS = {"Authorization": f"Bearer {BOARD_TOKEN}"}
 
 from server.security import RateLimiter
 
@@ -81,9 +84,12 @@ def fresh_executor_state(app_module, monkeypatch):
 
 
 # ----------------------------------------------------------------- helpers
-def _register(client, headers, name: str, **extra) -> tuple[dict, str]:
+def _register(client, name: str, **extra) -> tuple[dict, str]:
+    """Registration is a MACHINE-token bootstrap (ADR 0009 A1: the ui
+    token must not mint executors) — the POST always rides the board
+    bearer, never a ui-class one."""
     payload = {"name": name, "harness": "zcode"} | extra
-    r = client.post("/api/executors", json=payload, headers=headers)
+    r = client.post("/api/executors", json=payload, headers=MACHINE_HEADERS)
     assert r.status_code == 201, r.text
     body = r.json()
     return body["executor"], body["executor_secret"]
@@ -100,13 +106,13 @@ def _ex_headers(secret: str) -> dict:
     return {"Authorization": f"Bearer {secret}"}
 
 
-def _make_executor(client, auth, name: str, *, caps: list[str] | None = None,
+def _make_executor(client, ui_auth, name: str, *, caps: list[str] | None = None,
                    online: bool = False, transport: str = "local-poll",
                    ) -> tuple[dict, str]:
     """register → approve + enable (+capabilities) → optional presence
     tick. Approval and enabled are two separate owner switches (AC1:
     routing considers approved+enabled); this helper flips both."""
-    executor, secret = _register(client, auth, name, transport=transport)
+    executor, secret = _register(client, name, transport=transport)
     patch: dict = {"state": "approved", "enabled": True}
     if caps is not None:
         patch["capabilities"] = caps
@@ -115,7 +121,7 @@ def _make_executor(client, auth, name: str, *, caps: list[str] | None = None,
                         headers=_ex_headers(secret))
         assert r.status_code == 200, r.text
     r = client.patch(f"/api/executors/{executor['id']}", json=patch,
-                     headers=auth)
+                     headers=ui_auth)
     assert r.status_code == 200, r.text
     return r.json()["executor"], secret
 
@@ -142,8 +148,8 @@ class TestRegistration:
     """AC1-3: machine-token bootstrap, pending state, secret mint."""
 
     def test_register_creates_pending_and_shows_secret_once(
-            self, client, auth):
-        executor, secret = _register(client, auth, "laptop-poller-a1")
+            self, client, ui_auth):
+        executor, secret = _register(client, "laptop-poller-a1")
         assert executor["state"] == "pending"
         assert executor["enabled"] is False
         assert executor["capabilities"] == []
@@ -156,8 +162,8 @@ class TestRegistration:
         assert "executor_secret" not in item
         assert "secret_hash" not in item
 
-    def test_secret_stored_as_sha256_only(self, client, auth, app_module):
-        executor, secret = _register(client, auth, "hashcheck-a2")
+    def test_secret_stored_as_sha256_only(self, client, ui_auth, app_module):
+        executor, secret = _register(client, "hashcheck-a2")
         with app_module.store._lock, app_module.store._conn() as db:
             row = db.execute(
                 "SELECT * FROM executors WHERE id=?",
@@ -168,7 +174,7 @@ class TestRegistration:
         assert secret not in json.dumps(dict(row))
 
     def test_register_is_machine_token_class(
-            self, client, auth, app_module, monkeypatch):
+            self, client, ui_auth, app_module, monkeypatch):
         r = client.post("/api/executors",
                         json={"name": "noauth-a3", "harness": "zcode"})
         assert r.status_code == 401
@@ -178,19 +184,19 @@ class TestRegistration:
                         headers={"Authorization": "Bearer qa-ui-token"})
         assert r.status_code == 401   # ui token must not mint executors
 
-    def test_register_validation(self, client, auth):
-        assert client.post("/api/executors", headers=auth,
+    def test_register_validation(self, client, ui_auth):
+        assert client.post("/api/executors", headers=MACHINE_HEADERS,
                            json={"name": "badh-a4", "harness": "no-such"}
                            ).status_code == 422
-        assert client.post("/api/executors", headers=auth,
+        assert client.post("/api/executors", headers=MACHINE_HEADERS,
                            json={"name": "badt-a4", "harness": "zcode",
                                  "transport": "carrier-pigeon"}
                            ).status_code == 422
-        assert client.post("/api/executors", headers=auth,
+        assert client.post("/api/executors", headers=MACHINE_HEADERS,
                            json={"name": "", "harness": "zcode"}
                            ).status_code == 422
-        _register(client, auth, "dup-a4")
-        r = client.post("/api/executors", headers=auth,
+        _register(client, "dup-a4")
+        r = client.post("/api/executors", headers=MACHINE_HEADERS,
                         json={"name": "dup-a4", "harness": "zcode"})
         assert r.status_code == 409
 
@@ -211,9 +217,9 @@ class TestGetSingle:
     material), 404 unknown, and the literal enrollment route keeps winning
     the match order over the parametric id."""
 
-    def test_found_same_projection_as_list(self, client, auth):
+    def test_found_same_projection_as_list(self, client, ui_auth):
         executor, secret = _make_executor(
-            client, auth, "single-g1", caps=["researcher"], online=True)
+            client, ui_auth, "single-g1", caps=["researcher"], online=True)
         r = client.get(f"/api/executors/{executor['id']}")
         assert r.status_code == 200, r.text
         body = r.json()
@@ -229,10 +235,10 @@ class TestGetSingle:
         assert r.status_code == 404
         assert "no-such-executor" in r.json()["detail"]
 
-    def test_enrollment_literal_not_shadowed(self, client, auth):
+    def test_enrollment_literal_not_shadowed(self, client, ui_auth):
         # match-order guard: GET /api/executors/enrollment must stay the
         # token list (ui-token class), never resolve as executor id 404/200.
-        r = client.get("/api/executors/enrollment", headers=auth)
+        r = client.get("/api/executors/enrollment", headers=ui_auth)
         assert r.status_code == 200
         assert "items" in r.json()
 
@@ -241,8 +247,8 @@ class TestGetSingle:
 class TestExecutorToken:
     """AC2-3: third bearer class — presence heartbeat semantics."""
 
-    def test_heartbeat_ticks_presence(self, client, auth):
-        executor, secret = _register(client, auth, "beat-b1")
+    def test_heartbeat_ticks_presence(self, client, ui_auth):
+        executor, secret = _register(client, "beat-b1")
         r = client.post(f"/api/executors/{executor['id']}/heartbeat",
                         headers=_ex_headers(secret))
         assert r.status_code == 200, r.text
@@ -250,9 +256,9 @@ class TestExecutorToken:
         assert out["last_seen"] != ""
         assert out["presence"] == "online"
 
-    def test_heartbeat_requires_own_token(self, client, auth):
-        executor, secret = _register(client, auth, "beat-b2")
-        other, other_secret = _register(client, auth, "beat-b2-other")
+    def test_heartbeat_requires_own_token(self, client, ui_auth):
+        executor, secret = _register(client, "beat-b2")
+        other, other_secret = _register(client, "beat-b2-other")
         assert client.post(
             f"/api/executors/{executor['id']}/heartbeat").status_code == 401
         assert client.post(
@@ -266,18 +272,18 @@ class TestExecutorToken:
             f"/api/executors/{other['id']}/heartbeat",
             headers=_ex_headers(secret)).status_code == 403
 
-    def test_pending_may_tick_revoked_may_not(self, client, auth):
-        executor, secret = _register(client, auth, "gate-b3")
+    def test_pending_may_tick_revoked_may_not(self, client, ui_auth):
+        executor, secret = _register(client, "gate-b3")
         # pending: the owner sees liveness before approving
         assert client.post(
             f"/api/executors/{executor['id']}/heartbeat",
             headers=_ex_headers(secret)).status_code == 200
-        _approve(client, auth, executor["id"])
+        _approve(client, ui_auth, executor["id"])
         assert client.post(
             f"/api/executors/{executor['id']}/heartbeat",
             headers=_ex_headers(secret)).status_code == 200
         r = client.patch(f"/api/executors/{executor['id']}",
-                         json={"state": "revoked"}, headers=auth)
+                         json={"state": "revoked"}, headers=ui_auth)
         assert r.status_code == 200
         assert client.post(
             f"/api/executors/{executor['id']}/heartbeat",
@@ -287,9 +293,9 @@ class TestExecutorToken:
 class TestRegistryLifecycle:
     """AC3+AC7: ui-token PATCH/DELETE with audit old→new."""
 
-    def test_approve_audits_old_to_new(self, client, auth, app_module):
-        executor, _ = _register(client, auth, "appr-c1")
-        out = _approve(client, auth, executor["id"])
+    def test_approve_audits_old_to_new(self, client, ui_auth, app_module):
+        executor, _ = _register(client, "appr-c1")
+        out = _approve(client, ui_auth, executor["id"])
         assert out["state"] == "approved"
         events = _board_events(app_module, "executor.approved")
         ev = next(e for e in events
@@ -297,11 +303,11 @@ class TestRegistryLifecycle:
         assert ev["payload"]["approver"] == "owner"
         assert ev["payload"]["changes"]["state"] == ["pending", "approved"]
 
-    def test_patch_capabilities_name_enabled_audit(self, client, auth,
+    def test_patch_capabilities_name_enabled_audit(self, client, ui_auth,
                                                    app_module):
-        executor, _ = _make_executor(client, auth, "patch-c2",
+        executor, _ = _make_executor(client, ui_auth, "patch-c2",
                                      caps=["gcw-tech-lead"])
-        r = client.patch(f"/api/executors/{executor['id']}", headers=auth,
+        r = client.patch(f"/api/executors/{executor['id']}", headers=ui_auth,
                          json={"capabilities": ["gcw-tech-lead",
                                                 "gcw-senior-dba"],
                                "name": "patch-c2-renamed",
@@ -318,13 +324,13 @@ class TestRegistryLifecycle:
         assert ev["payload"]["changes"]["enabled"] == [True, False]
         assert "secret_hash" not in json.dumps(ev["payload"])
 
-    def test_patch_is_ui_token_class(self, client, auth, app_module,
+    def test_patch_is_ui_token_class(self, client, ui_auth, app_module,
                                      monkeypatch):
-        executor, secret = _register(client, auth, "uiauth-c3")
+        executor, secret = _register(client, "uiauth-c3")
         monkeypatch.setattr(app_module, "UI_WRITE_TOKEN", "qa-ui-token")
-        # board (machine) token refused in split mode; executor never
+        # board (machine) token refused on a ui-class route; executor never
         r = client.patch(f"/api/executors/{executor['id']}",
-                         json={"state": "approved"}, headers=auth)
+                         json={"state": "approved"}, headers=MACHINE_HEADERS)
         assert r.status_code == 401
         r = client.patch(f"/api/executors/{executor['id']}",
                          json={"state": "approved"},
@@ -335,62 +341,62 @@ class TestRegistryLifecycle:
                          headers={"Authorization": "Bearer qa-ui-token"})
         assert r.status_code == 200
 
-    def test_revoked_is_terminal(self, client, auth):
-        executor, _ = _make_executor(client, auth, "revoke-c4")
+    def test_revoked_is_terminal(self, client, ui_auth):
+        executor, _ = _make_executor(client, ui_auth, "revoke-c4")
         r = client.patch(f"/api/executors/{executor['id']}",
-                         json={"state": "revoked"}, headers=auth)
+                         json={"state": "revoked"}, headers=ui_auth)
         assert r.status_code == 200
         # resurrection attempt → 409 (a revoked secret must stay dead)
         r = client.patch(f"/api/executors/{executor['id']}",
-                         json={"state": "approved"}, headers=auth)
+                         json={"state": "approved"}, headers=ui_auth)
         assert r.status_code == 409
         # pending is not a patchable target at all → 422
         assert client.patch(f"/api/executors/{executor['id']}",
                             json={"state": "pending"},
-                            headers=auth).status_code == 422
+                            headers=ui_auth).status_code == 422
         # pending is not a patchable target even from approved
-        executor2, _ = _make_executor(client, auth, "pend-c4")
+        executor2, _ = _make_executor(client, ui_auth, "pend-c4")
         assert client.patch(f"/api/executors/{executor2['id']}",
                             json={"state": "pending"},
-                            headers=auth).status_code == 422
+                            headers=ui_auth).status_code == 422
 
-    def test_duplicate_rename_409_and_unknown_404(self, client, auth):
-        _make_executor(client, auth, "name1-c5")
-        executor2, _ = _make_executor(client, auth, "name2-c5")
+    def test_duplicate_rename_409_and_unknown_404(self, client, ui_auth):
+        _make_executor(client, ui_auth, "name1-c5")
+        executor2, _ = _make_executor(client, ui_auth, "name2-c5")
         r = client.patch(f"/api/executors/{executor2['id']}",
-                         json={"name": "name1-c5"}, headers=auth)
+                         json={"name": "name1-c5"}, headers=ui_auth)
         assert r.status_code == 409
         assert client.patch("/api/executors/ex-nosuch",
                             json={"state": "approved"},
-                            headers=auth).status_code == 404
+                            headers=ui_auth).status_code == 404
 
-    def test_idempotent_patch_emits_nothing(self, client, auth, app_module):
-        executor, _ = _make_executor(client, auth, "idem-c6")
+    def test_idempotent_patch_emits_nothing(self, client, ui_auth, app_module):
+        executor, _ = _make_executor(client, ui_auth, "idem-c6")
         before = len(app_module.store.events(limit=1000))
         r = client.patch(f"/api/executors/{executor['id']}",
-                         json={"state": "approved"}, headers=auth)
+                         json={"state": "approved"}, headers=ui_auth)
         assert r.status_code == 200
         assert len(app_module.store.events(limit=1000)) == before
 
     def test_delete_keeps_active_assignment_attribution(
-            self, client, auth, make_task, app_module):
+            self, client, ui_auth, make_task, app_module):
         task = make_task(title="del-c7")
-        r = client.post("/api/assignments", headers=auth,
+        r = client.post("/api/assignments", headers=ui_auth,
                         json={"task_id": task["id"],
                               "specialist": "gcw-tech-lead"})
         assert r.status_code == 201
         aid = r.json()["assignment"]["id"]
-        executor, _ = _make_executor(client, auth, "del-c7-exec")
-        r = client.post(f"/api/assignments/{aid}/claim", headers=auth,
+        executor, _ = _make_executor(client, ui_auth, "del-c7-exec")
+        r = client.post(f"/api/assignments/{aid}/claim", headers=MACHINE_HEADERS,
                         json={"claimed_by": "poller",
                               "executor_id": executor["id"]})
         assert r.status_code == 200
         assert r.json()["assignment"]["claimed_by_executor"] == executor["id"]
 
-        r = client.delete(f"/api/executors/{executor['id']}", headers=auth)
+        r = client.delete(f"/api/executors/{executor['id']}", headers=ui_auth)
         assert r.status_code == 200
         assert client.delete(f"/api/executors/{executor['id']}",
-                             headers=auth).status_code == 404
+                             headers=ui_auth).status_code == 404
         # the live assignment keeps its attribution verbatim
         item = next(i for i in client.get("/api/assignments").json()["items"]
                     if i["id"] == aid)
@@ -402,16 +408,16 @@ class TestRegistryLifecycle:
 class TestPresenceSweeper:
     """AC4: transitions only, SSE payload, no row mutation."""
 
-    def test_first_sweep_seeds_baseline_silently(self, client, auth,
+    def test_first_sweep_seeds_baseline_silently(self, client, ui_auth,
                                                  app_module):
-        executor, secret = _register(client, auth, "seed-d1")
+        executor, secret = _register(client, "seed-d1")
         client.post(f"/api/executors/{executor['id']}/heartbeat",
                     headers=_ex_headers(secret))
         assert app_module._presence_sweep_once() == []
 
     def test_offline_transition_emits_and_never_mutates(
-            self, client, auth, app_module):
-        executor, secret = _register(client, auth, "off-d2")
+            self, client, ui_auth, app_module):
+        executor, secret = _register(client, "off-d2")
         client.post(f"/api/executors/{executor['id']}/heartbeat",
                     headers=_ex_headers(secret))
         app_module._presence_sweep_once()          # baseline: online
@@ -443,8 +449,8 @@ class TestPresenceSweeper:
         # idempotent: re-sweep without change emits nothing
         assert app_module._presence_sweep_once() == []
 
-    def test_stale_corridor_is_silent(self, client, auth, app_module):
-        executor, secret = _register(client, auth, "stale-d3")
+    def test_stale_corridor_is_silent(self, client, ui_auth, app_module):
+        executor, secret = _register(client, "stale-d3")
         client.post(f"/api/executors/{executor['id']}/heartbeat",
                     headers=_ex_headers(secret))
         app_module._presence_sweep_once()          # baseline: online
@@ -455,8 +461,8 @@ class TestPresenceSweeper:
                     if e["id"] == executor["id"])
         assert item["presence"] == "stale"
 
-    def test_back_online_transition(self, client, auth, app_module):
-        executor, secret = _register(client, auth, "back-d4")
+    def test_back_online_transition(self, client, ui_auth, app_module):
+        executor, secret = _register(client, "back-d4")
         app_module._presence_sweep_once()          # baseline: offline
         client.post(f"/api/executors/{executor['id']}/heartbeat",
                     headers=_ex_headers(secret))
@@ -465,8 +471,8 @@ class TestPresenceSweeper:
         assert emitted[0]["prev_state"] == "offline"
         assert emitted[0]["state"] == "online"
 
-    def test_presence_computed_on_read(self, client, auth, app_module):
-        executor, secret = _register(client, auth, "read-d5")
+    def test_presence_computed_on_read(self, client, ui_auth, app_module):
+        executor, secret = _register(client, "read-d5")
         by_id = {e["id"]: e for e in client.get("/api/executors").json()["items"]}
         assert by_id[executor["id"]]["presence"] == "offline"
         client.post(f"/api/executors/{executor['id']}/heartbeat",
@@ -481,11 +487,11 @@ class TestPresenceSweeper:
 class TestExplicitClaimEnforcement:
     """AC5: spoofing gate on pinned assignments (CWE-290)."""
 
-    def test_pinned_claim_matrix(self, client, auth, make_task):
+    def test_pinned_claim_matrix(self, client, ui_auth, make_task):
         task = make_task(title="pin-e1")
-        ex, ex_secret = _make_executor(client, auth, "pin-e1-x")
-        other, other_secret = _make_executor(client, auth, "pin-e1-y")
-        r = client.post("/api/assignments", headers=auth,
+        ex, ex_secret = _make_executor(client, ui_auth, "pin-e1-x")
+        other, other_secret = _make_executor(client, ui_auth, "pin-e1-y")
+        r = client.post("/api/assignments", headers=ui_auth,
                         json={"task_id": task["id"],
                               "specialist": "gcw-tech-lead",
                               "executor_id": ex["id"]})
@@ -493,7 +499,7 @@ class TestExplicitClaimEnforcement:
         aid = r.json()["assignment"]["id"]
 
         # board (machine) token: state-гейт класс → 409
-        r = client.post(f"/api/assignments/{aid}/claim", headers=auth,
+        r = client.post(f"/api/assignments/{aid}/claim", headers=MACHINE_HEADERS,
                         json={"claimed_by": "poller"})
         assert r.status_code == 409
         # another executor's token → 403
@@ -509,12 +515,12 @@ class TestExplicitClaimEnforcement:
         assert r.json()["assignment"]["claimed_by_executor"] == ex["id"]
         assert other["id"] != ex["id"]
 
-    def test_declared_executor_id_must_match_token(self, client, auth,
+    def test_declared_executor_id_must_match_token(self, client, ui_auth,
                                                    make_task):
         task = make_task(title="decl-e2")
-        ex, ex_secret = _make_executor(client, auth, "decl-e2-x")
-        other, _ = _make_executor(client, auth, "decl-e2-y")
-        r = client.post("/api/assignments", headers=auth,
+        ex, ex_secret = _make_executor(client, ui_auth, "decl-e2-x")
+        other, _ = _make_executor(client, ui_auth, "decl-e2-y")
+        r = client.post("/api/assignments", headers=ui_auth,
                         json={"task_id": task["id"],
                               "specialist": "gcw-tech-lead"})
         aid = r.json()["assignment"]["id"]
@@ -524,24 +530,24 @@ class TestExplicitClaimEnforcement:
                               "executor_id": other["id"]})
         assert r.status_code == 403
 
-    def test_unpinned_claim_keeps_f1_semantics(self, client, auth,
+    def test_unpinned_claim_keeps_f1_semantics(self, client, ui_auth,
                                                make_task):
         task = make_task(title="unpin-e3")
-        r = client.post("/api/assignments", headers=auth,
+        r = client.post("/api/assignments", headers=ui_auth,
                         json={"task_id": task["id"],
                               "specialist": "gcw-tech-lead"})
         aid = r.json()["assignment"]["id"]
         # board token + declared executor_id (Ф1 behavior, verbatim)
-        r = client.post(f"/api/assignments/{aid}/claim", headers=auth,
+        r = client.post(f"/api/assignments/{aid}/claim", headers=MACHINE_HEADERS,
                         json={"claimed_by": "poller",
                               "executor_id": "exec-declared"})
         assert r.status_code == 200
         assert r.json()["assignment"]["claimed_by_executor"] == "exec-declared"
 
-    def test_executor_token_claim_unpinned(self, client, auth, make_task):
+    def test_executor_token_claim_unpinned(self, client, ui_auth, make_task):
         task = make_task(title="unpin-e4")
-        ex, ex_secret = _make_executor(client, auth, "unpin-e4-x")
-        r = client.post("/api/assignments", headers=auth,
+        ex, ex_secret = _make_executor(client, ui_auth, "unpin-e4-x")
+        r = client.post("/api/assignments", headers=ui_auth,
                         json={"task_id": task["id"],
                               "specialist": "gcw-tech-lead"})
         aid = r.json()["assignment"]["id"]
@@ -551,11 +557,11 @@ class TestExplicitClaimEnforcement:
         assert r.status_code == 200
         assert r.json()["assignment"]["claimed_by_executor"] == ex["id"]
 
-    def test_pending_executor_token_cannot_claim(self, client, auth,
+    def test_pending_executor_token_cannot_claim(self, client, ui_auth,
                                                  make_task):
         task = make_task(title="pend-e5")
-        _, secret = _register(client, auth, "pend-e5-x")   # stays pending
-        r = client.post("/api/assignments", headers=auth,
+        _, secret = _register(client, "pend-e5-x")   # stays pending
+        r = client.post("/api/assignments", headers=ui_auth,
                         json={"task_id": task["id"],
                               "specialist": "gcw-tech-lead"})
         aid = r.json()["assignment"]["id"]
@@ -565,10 +571,10 @@ class TestExplicitClaimEnforcement:
         assert r.status_code == 403
 
     def test_assignment_heartbeat_piggybacks_presence(
-            self, client, auth, make_task, app_module):
+            self, client, ui_auth, make_task, app_module):
         task = make_task(title="piggy-e6")
-        ex, ex_secret = _make_executor(client, auth, "piggy-e6-x")
-        r = client.post("/api/assignments", headers=auth,
+        ex, ex_secret = _make_executor(client, ui_auth, "piggy-e6-x")
+        r = client.post("/api/assignments", headers=ui_auth,
                         json={"task_id": task["id"],
                               "specialist": "gcw-tech-lead"})
         aid = r.json()["assignment"]["id"]
@@ -589,10 +595,10 @@ class TestExplicitClaimEnforcement:
         assert item["presence"] == "online"   # ticked by the assignment hb
 
     def test_poll_get_with_executor_id_ticks_presence(
-            self, client, auth, make_task, app_module):
+            self, client, ui_auth, make_task, app_module):
         task = make_task(title="poll-e7")
-        ex, ex_secret = _make_executor(client, auth, "poll-e7-x")
-        client.post("/api/assignments", headers=auth,
+        ex, ex_secret = _make_executor(client, ui_auth, "poll-e7-x")
+        client.post("/api/assignments", headers=ui_auth,
                     json={"task_id": task["id"],
                           "specialist": "gcw-tech-lead"})
         _age_last_seen(app_module, ex["id"], 700)
@@ -613,22 +619,22 @@ class TestExplicitClaimEnforcement:
 class TestRoutingChain:
     """AC6: resolution tiers computed per GET, stored nowhere."""
 
-    def test_explicit_pin_tier(self, client, auth, make_task):
+    def test_explicit_pin_tier(self, client, ui_auth, make_task):
         task = make_task(title="rt-f1")
-        ex, _ = _make_executor(client, auth, "rt-f1-x")
-        aid = client.post("/api/assignments", headers=auth, json={
+        ex, _ = _make_executor(client, ui_auth, "rt-f1-x")
+        aid = client.post("/api/assignments", headers=ui_auth, json={
             "task_id": task["id"], "specialist": "gcw-tech-lead",
             "executor_id": ex["id"]}).json()["assignment"]["id"]
         assert _assignment_routing(client, aid) == {
             "resolved": ex["id"], "reason": "explicit", "waiting": None}
 
-    def test_specialist_tier_prefers_online_candidate(self, client, auth,
+    def test_specialist_tier_prefers_online_candidate(self, client, ui_auth,
                                                       make_task):
         task = make_task(title="rt-f2", specialists=["spec-f2"])
-        on, _ = _make_executor(client, auth, "rt-f2-on",
+        on, _ = _make_executor(client, ui_auth, "rt-f2-on",
                                caps=["spec-f2"], online=True)
-        off, _ = _make_executor(client, auth, "rt-f2-off", caps=["spec-f2"])
-        aid = client.post("/api/assignments", headers=auth, json={
+        off, _ = _make_executor(client, ui_auth, "rt-f2-off", caps=["spec-f2"])
+        aid = client.post("/api/assignments", headers=ui_auth, json={
             "task_id": task["id"], "specialist": "spec-f2"}
             ).json()["assignment"]["id"]
         routing = _assignment_routing(client, aid)
@@ -636,68 +642,68 @@ class TestRoutingChain:
                            "waiting": None}
         assert routing["resolved"] != off["id"]
 
-    def test_task_specialists_tier(self, client, auth, make_task):
+    def test_task_specialists_tier(self, client, ui_auth, make_task):
         task = make_task(title="rt-f3", specialists=["spec-f3-task"])
-        ex, _ = _make_executor(client, auth, "rt-f3-x",
+        ex, _ = _make_executor(client, ui_auth, "rt-f3-x",
                                caps=["spec-f3-task"])
-        aid = client.post("/api/assignments", headers=auth, json={
+        aid = client.post("/api/assignments", headers=ui_auth, json={
             "task_id": task["id"], "specialist": "spec-f3-assign"}
             ).json()["assignment"]["id"]
         assert _assignment_routing(client, aid) == {
             "resolved": ex["id"], "reason": "task-specialists", "waiting": None}
 
     def test_routing_considers_approved_enabled_only(
-            self, client, auth, make_task):
+            self, client, ui_auth, make_task):
         task = make_task(title="rt-f4", specialists=["spec-f4"])
-        pending, _ = _register(client, auth, "rt-f4-pend")
+        pending, _ = _register(client, "rt-f4-pend")
         client.patch(f"/api/executors/{pending['id']}",
-                     json={"capabilities": ["spec-f4"]}, headers=auth)
-        revoked, _ = _make_executor(client, auth, "rt-f4-rev",
+                     json={"capabilities": ["spec-f4"]}, headers=ui_auth)
+        revoked, _ = _make_executor(client, ui_auth, "rt-f4-rev",
                                     caps=["spec-f4"])
         client.patch(f"/api/executors/{revoked['id']}",
-                     json={"state": "revoked"}, headers=auth)
-        disabled, _ = _make_executor(client, auth, "rt-f4-dis",
+                     json={"state": "revoked"}, headers=ui_auth)
+        disabled, _ = _make_executor(client, ui_auth, "rt-f4-dis",
                                      caps=["spec-f4"], online=True)
         client.patch(f"/api/executors/{disabled['id']}",
-                     json={"enabled": False}, headers=auth)
-        aid = client.post("/api/assignments", headers=auth, json={
+                     json={"enabled": False}, headers=ui_auth)
+        aid = client.post("/api/assignments", headers=ui_auth, json={
             "task_id": task["id"], "specialist": "spec-f4"}
             ).json()["assignment"]["id"]
         assert _assignment_routing(client, aid)["resolved"] is None
 
-    def test_project_default_tier(self, client, auth, make_task):
+    def test_project_default_tier(self, client, ui_auth, make_task):
         task = make_task(title="rt-f5", project="proj-f5",
                          specialists=["spec-f5"])
-        ex, _ = _make_executor(client, auth, "rt-f5-x", online=True)
-        r = client.put("/api/settings/execution", headers=auth, json={
+        ex, _ = _make_executor(client, ui_auth, "rt-f5-x", online=True)
+        r = client.put("/api/settings/execution", headers=ui_auth, json={
             "default_executor": ex["id"], "scope": "project:proj-f5"})
         assert r.status_code == 200, r.text
-        aid = client.post("/api/assignments", headers=auth, json={
+        aid = client.post("/api/assignments", headers=ui_auth, json={
             "task_id": task["id"], "specialist": "spec-f5"}
             ).json()["assignment"]["id"]
         assert _assignment_routing(client, aid) == {
             "resolved": ex["id"], "reason": "project-default", "waiting": None}
 
     def test_global_default_tier_and_revoked_fallthrough(
-            self, client, auth, make_task):
+            self, client, ui_auth, make_task):
         task = make_task(title="rt-f6", project="proj-f6",
                          specialists=["spec-f6"])
-        revoked, _ = _make_executor(client, auth, "rt-f6-rev", online=True)
+        revoked, _ = _make_executor(client, ui_auth, "rt-f6-rev", online=True)
         client.patch(f"/api/executors/{revoked['id']}",
-                     json={"state": "revoked"}, headers=auth)
-        client.put("/api/settings/execution", headers=auth, json={
+                     json={"state": "revoked"}, headers=ui_auth)
+        client.put("/api/settings/execution", headers=ui_auth, json={
             "default_executor": revoked["id"], "scope": "project:proj-f6"})
-        glob, _ = _make_executor(client, auth, "rt-f6-glob", online=True)
-        client.put("/api/settings/execution", headers=auth, json={
+        glob, _ = _make_executor(client, ui_auth, "rt-f6-glob", online=True)
+        client.put("/api/settings/execution", headers=ui_auth, json={
             "default_executor": glob["id"]})
-        aid = client.post("/api/assignments", headers=auth, json={
+        aid = client.post("/api/assignments", headers=ui_auth, json={
             "task_id": task["id"], "specialist": "spec-f6"}
             ).json()["assignment"]["id"]
         # revoked project default falls through to the global tier
         assert _assignment_routing(client, aid) == {
             "resolved": glob["id"], "reason": "global-default", "waiting": None}
 
-    def test_auto_tier_live_local_worker(self, client, auth, make_task):
+    def test_auto_tier_live_local_worker(self, client, ui_auth, make_task):
         """Auto = generic live-worker fallback (caps-free): the nomination
         tiers above are presence-agnostic, so a caps-gated auto tier would
         be structurally unreachable — see the _routing_annotation design
@@ -705,8 +711,8 @@ class TestRoutingChain:
         task = make_task(title="rt-f7", specialists=["spec-f7"])
         # a competent-but-OFFLINE executor is still the nomination route
         # (no silent substitution) — auto never overrides it
-        off, _ = _make_executor(client, auth, "rt-f7-off", caps=["spec-f7"])
-        aid = client.post("/api/assignments", headers=auth, json={
+        off, _ = _make_executor(client, ui_auth, "rt-f7-off", caps=["spec-f7"])
+        aid = client.post("/api/assignments", headers=ui_auth, json={
             "task_id": task["id"], "specialist": "spec-f7"}
             ).json()["assignment"]["id"]
         assert _assignment_routing(client, aid) == {
@@ -715,29 +721,29 @@ class TestRoutingChain:
         # no caps anywhere: only a remote (mesh-r4) live worker → auto
         # cannot point at it (remote ineligible until R4) → unmatched
         task2 = make_task(title="rt-f7b", specialists=["spec-f7b"])
-        _make_executor(client, auth, "rt-f7-mesh", online=True,
+        _make_executor(client, ui_auth, "rt-f7-mesh", online=True,
                        transport="mesh-r4")
-        aid2 = client.post("/api/assignments", headers=auth, json={
+        aid2 = client.post("/api/assignments", headers=ui_auth, json={
             "task_id": task2["id"], "specialist": "spec-f7b"}
             ).json()["assignment"]["id"]
         assert _assignment_routing(client, aid2) == {
             "resolved": None, "reason": "unmatched", "waiting": None}
         # an offline local worker without caps does not qualify either
-        _make_executor(client, auth, "rt-f7-dead")
+        _make_executor(client, ui_auth, "rt-f7-dead")
         assert _assignment_routing(client, aid2) == {
             "resolved": None, "reason": "unmatched", "waiting": None}
         # a live local worker (no caps — the laptop-poller bootstrap
         # shape) resolves the auto tier; deterministic min-id pick
-        on1, _ = _make_executor(client, auth, "rt-f7-on1", online=True)
-        on2, _ = _make_executor(client, auth, "rt-f7-on2", online=True)
+        on1, _ = _make_executor(client, ui_auth, "rt-f7-on1", online=True)
+        on2, _ = _make_executor(client, ui_auth, "rt-f7-on2", online=True)
         routing = _assignment_routing(client, aid2)
         assert routing == {"resolved": min(on1["id"], on2["id"]),
                            "reason": "auto", "waiting": None}
 
-    def test_unmatched_and_no_storage(self, client, auth, make_task,
+    def test_unmatched_and_no_storage(self, client, ui_auth, make_task,
                                       app_module):
         task = make_task(title="rt-f8", specialists=["spec-f8"])
-        aid = client.post("/api/assignments", headers=auth, json={
+        aid = client.post("/api/assignments", headers=ui_auth, json={
             "task_id": task["id"], "specialist": "spec-f8"}
             ).json()["assignment"]["id"]
         assert _assignment_routing(client, aid) == {
@@ -753,10 +759,10 @@ class TestRoutingChain:
 class TestExecutionSettings:
     """AC6+AC7: default/fallback gates + default.changed audit."""
 
-    def test_put_requires_ui_token(self, client, auth, app_module,
+    def test_put_requires_ui_token(self, client, ui_auth, app_module,
                                     monkeypatch):
         monkeypatch.setattr(app_module, "UI_WRITE_TOKEN", "qa-ui-token")
-        assert client.put("/api/settings/execution", headers=auth,
+        assert client.put("/api/settings/execution", headers=MACHINE_HEADERS,
                           json={"default_executor": "ex-x"}
                           ).status_code == 401
         assert client.put(
@@ -764,29 +770,29 @@ class TestExecutionSettings:
             headers={"Authorization": "Bearer qa-ui-token"},
             json={"default_executor": ""}).status_code == 200
 
-    def test_put_gates(self, client, auth):
-        unknown = client.put("/api/settings/execution", headers=auth,
+    def test_put_gates(self, client, ui_auth):
+        unknown = client.put("/api/settings/execution", headers=ui_auth,
                              json={"default_executor": "ex-nosuch"})
         assert unknown.status_code == 422
-        pending, _ = _register(client, auth, "set-g2-pend")
-        assert client.put("/api/settings/execution", headers=auth, json={
+        pending, _ = _register(client, "set-g2-pend")
+        assert client.put("/api/settings/execution", headers=ui_auth, json={
             "default_executor": pending["id"]}).status_code == 422
-        disabled, _ = _make_executor(client, auth, "set-g2-dis", online=True)
+        disabled, _ = _make_executor(client, ui_auth, "set-g2-dis", online=True)
         client.patch(f"/api/executors/{disabled['id']}",
-                     json={"enabled": False}, headers=auth)
-        assert client.put("/api/settings/execution", headers=auth, json={
+                     json={"enabled": False}, headers=ui_auth)
+        assert client.put("/api/settings/execution", headers=ui_auth, json={
             "default_executor": disabled["id"]}).status_code == 422
-        offline, _ = _make_executor(client, auth, "set-g2-off")
-        assert client.put("/api/settings/execution", headers=auth, json={
+        offline, _ = _make_executor(client, ui_auth, "set-g2-off")
+        assert client.put("/api/settings/execution", headers=ui_auth, json={
             "default_executor": offline["id"]}).status_code == 422
-        remote, _ = _make_executor(client, auth, "set-g2-remote",
+        remote, _ = _make_executor(client, ui_auth, "set-g2-remote",
                                    online=True, transport="mesh-r4")
-        assert client.put("/api/settings/execution", headers=auth, json={
+        assert client.put("/api/settings/execution", headers=ui_auth, json={
             "default_executor": remote["id"]}).status_code == 422
 
-    def test_put_audit_old_to_new(self, client, auth, app_module):
-        ex, _ = _make_executor(client, auth, "set-g3", online=True)
-        r = client.put("/api/settings/execution", headers=auth,
+    def test_put_audit_old_to_new(self, client, ui_auth, app_module):
+        ex, _ = _make_executor(client, ui_auth, "set-g3", online=True)
+        r = client.put("/api/settings/execution", headers=ui_auth,
                        json={"default_executor": ex["id"],
                              "fallback_executor": ex["id"]})
         assert r.status_code == 200, r.text
@@ -801,25 +807,25 @@ class TestExecutionSettings:
         # idempotent PUT (full replace — omitted slots would clear): no
         # second audit event
         n = len(_board_events(app_module, "default.changed"))
-        client.put("/api/settings/execution", headers=auth,
+        client.put("/api/settings/execution", headers=ui_auth,
                    json={"default_executor": ex["id"],
                          "fallback_executor": ex["id"]})
         assert len(_board_events(app_module, "default.changed")) == n
 
     def test_project_scope_reserved_in_board_meta(
-            self, client, auth, app_module):
-        ex, _ = _make_executor(client, auth, "set-g4", online=True)
-        r = client.put("/api/settings/execution", headers=auth, json={
+            self, client, ui_auth, app_module):
+        ex, _ = _make_executor(client, ui_auth, "set-g4", online=True)
+        r = client.put("/api/settings/execution", headers=ui_auth, json={
             "default_executor": ex["id"], "scope": "project:proj-g4"})
         assert r.status_code == 200, r.text
         assert app_module.store.get_meta(
             "default_executor:project:proj-g4") == ex["id"]
         assert (app_module.store.get_meta("default_executor") or "") == ""
         # garbage scope and project-scoped fallback are refused
-        assert client.put("/api/settings/execution", headers=auth, json={
+        assert client.put("/api/settings/execution", headers=ui_auth, json={
             "default_executor": ex["id"], "scope": "team:foo"}
             ).status_code == 422
-        assert client.put("/api/settings/execution", headers=auth, json={
+        assert client.put("/api/settings/execution", headers=ui_auth, json={
             "default_executor": ex["id"], "fallback_executor": ex["id"],
             "scope": "project:proj-g4"}).status_code == 422
 
@@ -828,28 +834,28 @@ class TestTopics:
     """AC8: denormalized project/domain tags (metadata tier)."""
 
     def test_topics_from_mnemos_tags_plus_project(
-            self, client, auth, make_task):
+            self, client, ui_auth, make_task):
         task = make_task(title="top-h1", project="beta",
                          mnemos_tags=["project:alpha", "domain:d1",
                                       "noise-tag"])
-        r = client.post("/api/assignments", headers=auth,
+        r = client.post("/api/assignments", headers=ui_auth,
                         json={"task_id": task["id"],
                               "specialist": "gcw-tech-lead"})
         a = r.json()["assignment"]
         assert a["topics"] == ["project:beta", "project:alpha", "domain:d1"]
 
-    def test_no_duplicate_project_topic(self, client, auth, make_task):
+    def test_no_duplicate_project_topic(self, client, ui_auth, make_task):
         task = make_task(title="top-h2", project="gamma",
                          mnemos_tags=["project:gamma", "domain:d2"])
-        r = client.post("/api/assignments", headers=auth,
+        r = client.post("/api/assignments", headers=ui_auth,
                         json={"task_id": task["id"],
                               "specialist": "gcw-tech-lead"})
         assert r.json()["assignment"]["topics"] == [
             "project:gamma", "domain:d2"]
 
-    def test_topics_in_listing(self, client, auth, make_task):
+    def test_topics_in_listing(self, client, ui_auth, make_task):
         task = make_task(title="top-h3", mnemos_tags=["domain:d3"])
-        aid = client.post("/api/assignments", headers=auth,
+        aid = client.post("/api/assignments", headers=ui_auth,
                           json={"task_id": task["id"],
                                 "specialist": "gcw-tech-lead"}
                           ).json()["assignment"]["id"]
@@ -861,15 +867,15 @@ class TestTopics:
 class TestP3Fixes:
     """AC9: PR #13 review tails."""
 
-    def test_partial_unique_index_structural(self, client, auth, make_task,
+    def test_partial_unique_index_structural(self, client, ui_auth, make_task,
                                              app_module):
         task = make_task(title="p3a-i1")
-        r = client.post("/api/assignments", headers=auth,
+        r = client.post("/api/assignments", headers=ui_auth,
                         json={"task_id": task["id"],
                               "specialist": "gcw-tech-lead"})
         assert r.status_code == 201
         # API-level guard: second active assignment → 409
-        r = client.post("/api/assignments", headers=auth,
+        r = client.post("/api/assignments", headers=ui_auth,
                         json={"task_id": task["id"],
                               "specialist": "gcw-tech-lead"})
         assert r.status_code == 409
@@ -884,16 +890,16 @@ class TestP3Fixes:
                     "VALUES (?,?,?,'queued','sneak','','',?)",
                     (task["id"], "x", "zcode", "2026-01-01T00:00:00+00:00"))
 
-    def test_assignment_heartbeat_own_budget(self, client, auth, make_task,
+    def test_assignment_heartbeat_own_budget(self, client, ui_auth, make_task,
                                              app_module):
         task = make_task(title="p3b-i2")
         task2 = make_task(title="p3b-i2b")
-        ex, ex_secret = _make_executor(client, auth, "p3b-i2-x")
-        claim = client.post("/api/assignments", headers=auth, json={
+        ex, ex_secret = _make_executor(client, ui_auth, "p3b-i2-x")
+        claim = client.post("/api/assignments", headers=ui_auth, json={
             "task_id": task["id"], "specialist": "gcw-tech-lead",
             }).json()["assignment"]
         aid = claim["id"]
-        aid2 = client.post("/api/assignments", headers=auth, json={
+        aid2 = client.post("/api/assignments", headers=ui_auth, json={
             "task_id": task2["id"], "specialist": "gcw-tech-lead"}
             ).json()["assignment"]["id"]
         claimed = client.post(f"/api/assignments/{aid}/claim",
@@ -914,19 +920,19 @@ class TestP3Fixes:
                         json={"claim_token": claimed["claim_token"]})
         assert r.status_code == 200, r.text
         # while a machine-budget action (claim) is now rate-limited
-        r = client.post(f"/api/assignments/{aid2}/claim", headers=auth,
+        r = client.post(f"/api/assignments/{aid2}/claim", headers=MACHINE_HEADERS,
                         json={"claimed_by": "poller"})
         assert r.status_code == 429
 
-    def test_claim_after_archive_422(self, client, auth, make_task):
+    def test_claim_after_archive_422(self, client, ui_auth, make_task):
         task = make_task(title="p3c-i3")
-        aid = client.post("/api/assignments", headers=auth,
+        aid = client.post("/api/assignments", headers=ui_auth,
                           json={"task_id": task["id"],
                                 "specialist": "gcw-tech-lead"}
                           ).json()["assignment"]["id"]
-        r = client.post(f"/api/tasks/{task['id']}/archive", headers=auth)
+        r = client.post(f"/api/tasks/{task['id']}/archive", headers=ui_auth)
         assert r.status_code == 200, r.text
-        r = client.post(f"/api/assignments/{aid}/claim", headers=auth,
+        r = client.post(f"/api/assignments/{aid}/claim", headers=MACHINE_HEADERS,
                         json={"claimed_by": "poller"})
         assert r.status_code == 422
 
@@ -934,10 +940,10 @@ class TestP3Fixes:
 class TestIdentityMismatch:
     """AC7: report agent-string vs token-backed executor (spoof signal)."""
 
-    def test_mismatch_flagged_in_audit(self, client, auth, make_task,
+    def test_mismatch_flagged_in_audit(self, client, ui_auth, make_task,
                                        app_module):
         task = make_task(title="idm-j1")
-        ex, ex_secret = _make_executor(client, auth, "idm-j1-x")
+        ex, ex_secret = _make_executor(client, ui_auth, "idm-j1-x")
         r = client.post(f"/api/tasks/{task['id']}/reports",
                         headers=_ex_headers(ex_secret),
                         json={"kind": "intermediate", "body": "progress",
@@ -948,10 +954,10 @@ class TestIdentityMismatch:
               and e["task_id"] == task["id"]][-1]
         assert ev["payload"]["identity_mismatch"] is True
 
-    def test_consistent_agent_not_flagged(self, client, auth, make_task,
+    def test_consistent_agent_not_flagged(self, client, ui_auth, make_task,
                                           app_module):
         task = make_task(title="idm-j2")
-        ex, ex_secret = _make_executor(client, auth, "idm-j2-x")
+        ex, ex_secret = _make_executor(client, ui_auth, "idm-j2-x")
         for agent in ("idm-j2-x", "zcode-session-7"):   # name / harness
             r = client.post(f"/api/tasks/{task['id']}/reports",
                             headers=_ex_headers(ex_secret),
@@ -963,10 +969,10 @@ class TestIdentityMismatch:
         assert len(evs) == 2
         assert all("identity_mismatch" not in e["payload"] for e in evs)
 
-    def test_board_token_reports_never_flagged(self, client, auth, make_task,
+    def test_board_token_reports_never_flagged(self, client, ui_auth, make_task,
                                                app_module):
         task = make_task(title="idm-j3")
-        r = client.post(f"/api/tasks/{task['id']}/reports", headers=auth,
+        r = client.post(f"/api/tasks/{task['id']}/reports", headers=ui_auth,
                         json={"kind": "intermediate", "body": "progress",
                               "agent": "whoever"})
         assert r.status_code == 201
@@ -984,14 +990,14 @@ class TestSecurityReviewPR18:
 
     # ------------------------------------------------------------- F1
     def test_f1_foreign_executor_cannot_fail_by_declared_name(
-            self, client, auth, make_task):
+            self, client, ui_auth, make_task):
         """BLOCKER regression: claimed_by is self-asserted and openly
         readable — an approved executor must not fail a foreign claimed
         assignment by declaring the victim's name (no claim_token, wrong
         token identity → 403)."""
         task = make_task(title="f1-k1")
-        victim, victim_secret = _make_executor(client, auth, "f1-k1-victim")
-        aid = client.post("/api/assignments", headers=auth, json={
+        victim, victim_secret = _make_executor(client, ui_auth, "f1-k1-victim")
+        aid = client.post("/api/assignments", headers=ui_auth, json={
             "task_id": task["id"], "specialist": "gcw-tech-lead"}
             ).json()["assignment"]["id"]
         claimed = client.post(
@@ -999,7 +1005,7 @@ class TestSecurityReviewPR18:
             json={"claimed_by": "victim-poller"}).json()
         assert claimed["assignment"]["claimed_by"] == "victim-poller"
 
-        attacker, attacker_secret = _make_executor(client, auth, "f1-k1-attacker")
+        attacker, attacker_secret = _make_executor(client, ui_auth, "f1-k1-attacker")
         r = client.post(f"/api/assignments/{aid}/fail",
                         headers=_ex_headers(attacker_secret),
                         json={"reason": "hostile",
@@ -1012,30 +1018,30 @@ class TestSecurityReviewPR18:
         assert victim["id"] != attacker["id"]
 
     def test_f1_board_class_claimed_by_recovery_still_works(
-            self, client, auth, make_task):
+            self, client, ui_auth, make_task):
         """Recovery leg: the board-token poller sweep fails its own
         claimed records by claimed_by match after a restart (claim_token
         gone) — board-class trust keeps the string fallback."""
         task = make_task(title="f1-k2")
-        aid = client.post("/api/assignments", headers=auth, json={
+        aid = client.post("/api/assignments", headers=ui_auth, json={
             "task_id": task["id"], "specialist": "gcw-tech-lead"}
             ).json()["assignment"]["id"]
-        client.post(f"/api/assignments/{aid}/claim", headers=auth,
+        client.post(f"/api/assignments/{aid}/claim", headers=MACHINE_HEADERS,
                     json={"claimed_by": "laptop-poller"})
-        r = client.post(f"/api/assignments/{aid}/fail", headers=auth,
+        r = client.post(f"/api/assignments/{aid}/fail", headers=MACHINE_HEADERS,
                         json={"reason": "recovery sweep: no live process",
                               "claimed_by": "laptop-poller"})
         assert r.status_code == 200, r.text
         assert r.json()["assignment"]["state"] == "failed"
 
     def test_f1_own_executor_token_recovery_leg(
-            self, client, auth, make_task):
+            self, client, ui_auth, make_task):
         """Mesh-leg recovery: the claiming executor lost its claim_token
         but still holds its secret — token identity == claimed_by_executor
         authorizes the fail."""
         task = make_task(title="f1-k3")
-        ex, ex_secret = _make_executor(client, auth, "f1-k3-x")
-        aid = client.post("/api/assignments", headers=auth, json={
+        ex, ex_secret = _make_executor(client, ui_auth, "f1-k3-x")
+        aid = client.post("/api/assignments", headers=ui_auth, json={
             "task_id": task["id"], "specialist": "gcw-tech-lead"}
             ).json()["assignment"]["id"]
         client.post(f"/api/assignments/{aid}/claim",
@@ -1048,26 +1054,26 @@ class TestSecurityReviewPR18:
         assert r.json()["assignment"]["state"] == "failed"
 
     def test_f1_correct_claim_token_still_fails(
-            self, client, auth, make_task):
+            self, client, ui_auth, make_task):
         """(a) survives: a matching claim_token fails regardless of class."""
         task = make_task(title="f1-k4")
-        aid = client.post("/api/assignments", headers=auth, json={
+        aid = client.post("/api/assignments", headers=ui_auth, json={
             "task_id": task["id"], "specialist": "gcw-tech-lead"}
             ).json()["assignment"]["id"]
-        claimed = client.post(f"/api/assignments/{aid}/claim", headers=auth,
+        claimed = client.post(f"/api/assignments/{aid}/claim", headers=MACHINE_HEADERS,
                               json={"claimed_by": "p"}).json()
-        r = client.post(f"/api/assignments/{aid}/fail", headers=auth,
+        r = client.post(f"/api/assignments/{aid}/fail", headers=MACHINE_HEADERS,
                         json={"reason": "boom",
                               "claim_token": claimed["claim_token"]})
         assert r.status_code == 200, r.text
 
     # ------------------------------------------------------------- F3
-    def test_f3_token_boundary_and_casefold(self, client, auth, make_task,
+    def test_f3_token_boundary_and_casefold(self, client, ui_auth, make_task,
                                             app_module):
         task = make_task(title="f3-k1")
         # harness 'pi': substring 'pi' inside 'copilot' must NOT count
-        ex, ex_secret = _register(client, auth, "f3-k1-x", harness="pi")
-        _approve(client, auth, ex["id"])
+        ex, ex_secret = _register(client, "f3-k1-x", harness="pi")
+        _approve(client, ui_auth, ex["id"])
         r = client.post(f"/api/tasks/{task['id']}/reports",
                         headers=_ex_headers(ex_secret),
                         json={"kind": "intermediate", "body": "b",
@@ -1089,11 +1095,11 @@ class TestSecurityReviewPR18:
               and e["task_id"] == task2["id"]][-1]
         assert "identity_mismatch" not in ev["payload"]
 
-    def test_f3_final_report_in_complete_checked(self, client, auth,
+    def test_f3_final_report_in_complete_checked(self, client, ui_auth,
                                                  make_task, app_module):
         task = make_task(title="f3-k2")
-        ex, ex_secret = _make_executor(client, auth, "f3-k2-x")
-        aid = client.post("/api/assignments", headers=auth, json={
+        ex, ex_secret = _make_executor(client, ui_auth, "f3-k2-x")
+        aid = client.post("/api/assignments", headers=ui_auth, json={
             "task_id": task["id"], "specialist": "gcw-tech-lead"}
             ).json()["assignment"]["id"]
         claimed = client.post(f"/api/assignments/{aid}/claim",
@@ -1114,11 +1120,11 @@ class TestSecurityReviewPR18:
         assert ev["payload"]["kind"] == "final"
         assert ev["payload"]["identity_mismatch"] is True
 
-    def test_f3_final_report_consistent_not_flagged(self, client, auth,
+    def test_f3_final_report_consistent_not_flagged(self, client, ui_auth,
                                                     make_task, app_module):
         task = make_task(title="f3-k3")
-        ex, ex_secret = _make_executor(client, auth, "f3-k3-x")
-        aid = client.post("/api/assignments", headers=auth, json={
+        ex, ex_secret = _make_executor(client, ui_auth, "f3-k3-x")
+        aid = client.post("/api/assignments", headers=ui_auth, json={
             "task_id": task["id"], "specialist": "gcw-tech-lead"}
             ).json()["assignment"]["id"]
         claimed = client.post(f"/api/assignments/{aid}/claim",
@@ -1138,7 +1144,7 @@ class TestSecurityReviewPR18:
         assert "identity_mismatch" not in ev["payload"]
 
     # ------------------------------------------------------------- F5
-    def test_f5_pending_cap(self, client, auth, app_module, monkeypatch):
+    def test_f5_pending_cap(self, client, ui_auth, app_module, monkeypatch):
         from server.store import EXECUTOR_PENDING_CAP
         # pace limiter must not shadow the quota in this test
         monkeypatch.setattr(
@@ -1146,23 +1152,23 @@ class TestSecurityReviewPR18:
             RateLimiter(limit=1000, window=60.0))
         made = []
         for i in range(EXECUTOR_PENDING_CAP):
-            r = client.post("/api/executors", headers=auth,
+            r = client.post("/api/executors", headers=MACHINE_HEADERS,
                             json={"name": f"f5-cap-{i}", "harness": "zcode"})
             assert r.status_code == 201, r.text
             made.append(r.json()["executor"]["id"])
-        r = client.post("/api/executors", headers=auth,
+        r = client.post("/api/executors", headers=MACHINE_HEADERS,
                         json={"name": "f5-cap-over", "harness": "zcode"})
         assert r.status_code == 429
         assert "capped" in r.json()["detail"]
         # approving one frees quota
-        _approve(client, auth, made[0])
-        r = client.post("/api/executors", headers=auth,
+        _approve(client, ui_auth, made[0])
+        r = client.post("/api/executors", headers=MACHINE_HEADERS,
                         json={"name": "f5-cap-free", "harness": "zcode"})
         assert r.status_code == 201, r.text
 
-    def test_f5_notification_first_pending_per_host(self, client, auth):
+    def test_f5_notification_first_pending_per_host(self, client, ui_auth):
         def _register_with_host(name: str, host: str):
-            r = client.post("/api/executors", headers=auth,
+            r = client.post("/api/executors", headers=MACHINE_HEADERS,
                             json={"name": name, "harness": "zcode",
                                   "host": host})
             assert r.status_code == 201, r.text
@@ -1187,12 +1193,12 @@ class TestSecurityReviewPR18:
         assert names == {"f5-n1", "f5-n4"}, names
 
     # ------------------------------------------------------------ F6b
-    def test_f6b_transport_in_assignment_audit(self, client, auth, make_task,
+    def test_f6b_transport_in_assignment_audit(self, client, ui_auth, make_task,
                                                app_module):
         task = make_task(title="f6b-m1")
-        ex, ex_secret = _make_executor(client, auth, "f6b-m1-x",
+        ex, ex_secret = _make_executor(client, ui_auth, "f6b-m1-x",
                                        transport="mesh-r4")
-        aid = client.post("/api/assignments", headers=auth, json={
+        aid = client.post("/api/assignments", headers=ui_auth, json={
             "task_id": task["id"], "specialist": "gcw-tech-lead"}
             ).json()["assignment"]["id"]
         claimed = client.post(f"/api/assignments/{aid}/claim",

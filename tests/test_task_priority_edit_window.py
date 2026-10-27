@@ -134,30 +134,30 @@ class TestPriorityMigration:
 
 # ------------------------------------------------------- priority: create
 class TestCreatePriority:
-    def test_default_priority_is_normal(self, client, auth, make_task):
+    def test_default_priority_is_normal(self, client, ui_auth, make_task):
         task = make_task(title="be12-prio-default")
         assert task["priority"] == "normal"
 
-    def test_explicit_priority_honored(self, client, auth, make_task):
+    def test_explicit_priority_honored(self, client, ui_auth, make_task):
         task = make_task(title="be12-prio-explicit", priority="critical")
         assert task["priority"] == "critical"
 
     @pytest.mark.parametrize("bad", ["urgent", "", "HIGH", "top"])
-    def test_invalid_priority_422(self, client, auth, bad):
+    def test_invalid_priority_422(self, client, ui_auth, bad):
         r = client.post("/api/tasks",
                         json={"title": "be12-prio-bad", "priority": bad},
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 422
         assert "invalid priority" in r.text
 
 
 # ----------------------------------------------- priority: patch + board
 class TestPatchAndBoardPriority:
-    def test_patch_priority_and_event(self, client, auth, make_task,
+    def test_patch_priority_and_event(self, client, ui_auth, make_task,
                                       app_module):
         task = make_task(title="be12-prio-patch")
         r = client.patch(f"/api/tasks/{task['id']}",
-                         json={"priority": "high"}, headers=auth)
+                         json={"priority": "high"}, headers=ui_auth)
         assert r.status_code == 200
         assert r.json()["priority"] == "high"
         update_events = [e for e in app_module.store.task_events(task["id"])
@@ -165,14 +165,14 @@ class TestPatchAndBoardPriority:
         assert update_events, "priority edit must be audited"
         assert "priority" in update_events[0]["payload"]["fields"]
 
-    def test_patch_priority_garbage_422(self, client, auth, make_task):
+    def test_patch_priority_garbage_422(self, client, ui_auth, make_task):
         task = make_task(title="be12-prio-patch-bad")
         r = client.patch(f"/api/tasks/{task['id']}",
-                         json={"priority": "asap"}, headers=auth)
+                         json={"priority": "asap"}, headers=ui_auth)
         assert r.status_code == 422
         assert "invalid priority" in r.text
 
-    def test_board_tasks_carry_priority(self, client, auth, make_task):
+    def test_board_tasks_carry_priority(self, client, ui_auth, make_task):
         task = make_task(title="be12-board-prio", priority="low")
         board = client.get("/api/board").json()
         mine = next(t for t in board["tasks"] if t["id"] == task["id"])
@@ -190,12 +190,12 @@ class TestEditWindow:
         })
         assert EDIT_WINDOW_SECONDS == 86400
 
-    def test_old_task_content_edit_423(self, client, auth, make_task,
+    def test_old_task_content_edit_423(self, client, ui_auth, make_task,
                                        data_dir):
         task = make_task(title="be12-old", summary="before")
         _age_task_db(data_dir / "board.db", task["id"], hours=25)
         r = client.patch(f"/api/tasks/{task['id']}",
-                         json={"summary": "after"}, headers=auth)
+                         json={"summary": "after"}, headers=ui_auth)
         assert r.status_code == 423
         assert r.json()["detail"] == (
             "задача старше 24ч — редактирование заблокировано "
@@ -205,33 +205,33 @@ class TestEditWindow:
                           if t["id"] == task["id"])
         assert board_task["summary"] == "before"
 
-    def test_old_task_edit_with_force_succeeds(self, client, auth, make_task,
+    def test_old_task_edit_with_force_succeeds(self, client, ui_auth, make_task,
                                                data_dir):
         task = make_task(title="be12-forced", summary="before")
         _age_task_db(data_dir / "board.db", task["id"], hours=25)
         r = client.patch(f"/api/tasks/{task['id']}",
                          json={"summary": "after", "force": True},
-                         headers=auth)
+                         headers=ui_auth)
         assert r.status_code == 200
         body = r.json()
         assert body["summary"] == "after"
         assert body["forced"] is True
 
-    def test_young_task_edit_needs_no_force(self, client, auth, make_task):
+    def test_young_task_edit_needs_no_force(self, client, ui_auth, make_task):
         task = make_task(title="be12-young")
         r = client.patch(f"/api/tasks/{task['id']}",
-                         json={"summary": "fresh edit"}, headers=auth)
+                         json={"summary": "fresh edit"}, headers=ui_auth)
         assert r.status_code == 200
         assert "forced" not in r.json(), \
             "forced flag only appears on an actual force=true request"
         assert r.json()["summary"] == "fresh edit"
 
-    def test_force_is_never_persisted_as_a_task_field(self, client, auth,
+    def test_force_is_never_persisted_as_a_task_field(self, client, ui_auth,
                                                       make_task):
         task = make_task(title="be12-force-mode")
         r = client.patch(f"/api/tasks/{task['id']}",
                          json={"title": "renamed", "force": True},
-                         headers=auth)
+                         headers=ui_auth)
         assert r.status_code == 200
         assert "force" not in r.json()
         board_task = next(t for t in client.get("/api/board").json()["tasks"]
@@ -239,35 +239,35 @@ class TestEditWindow:
         assert board_task["title"] == "renamed"
         assert "force" not in board_task
 
-    def test_status_patch_free_at_any_age(self, client, auth, make_task,
+    def test_status_patch_free_at_any_age(self, client, ui_auth, make_task,
                                           data_dir):
         """UI-8 «Вернуть в работу»: PATCH status is a workflow transition,
         not a content edit — the 24h window never applies to it."""
         task = make_task(title="be12-status-free")
         _age_task_db(data_dir / "board.db", task["id"], hours=48)
         r = client.patch(f"/api/tasks/{task['id']}",
-                         json={"status": "in-progress"}, headers=auth)
+                         json={"status": "in-progress"}, headers=ui_auth)
         assert r.status_code == 200
         assert r.json()["status"] == "in-progress"
 
-    def test_col_patch_silently_ignored(self, client, auth, make_task):
+    def test_col_patch_silently_ignored(self, client, ui_auth, make_task):
         """Documented v1 semantics: ``col`` is not in the store allow-list
         (columns move via POST /move) — a PATCH carrying it is a no-op for
         that key (200 + unchanged col), NOT a 422."""
         task = make_task(title="be12-col-ignored")
         r = client.patch(f"/api/tasks/{task['id']}",
                          json={"col": "done", "summary": "kept"},
-                         headers=auth)
+                         headers=ui_auth)
         assert r.status_code == 200
         assert r.json()["col"] == "open", "col must not change via PATCH"
         assert r.json()["summary"] == "kept", "editable keys still apply"
 
-    def test_project_is_editable(self, client, auth, make_task):
+    def test_project_is_editable(self, client, ui_auth, make_task):
         """Allow-list confirmation: project editing stays available (and is
         window-guarded like every other content field)."""
         task = make_task(title="be12-project", project="vesma-eyes")
         r = client.patch(f"/api/tasks/{task['id']}",
-                         json={"project": "vesma-mesh"}, headers=auth)
+                         json={"project": "vesma-mesh"}, headers=ui_auth)
         assert r.status_code == 200
         assert r.json()["project"] == "vesma-mesh"
 

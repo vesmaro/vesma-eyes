@@ -189,10 +189,10 @@ class TestDeterminism:
         assert p1 == p2
 
     def test_refresh_all_idempotent_no_duplicate_cache(
-            self, client, auth, app_module, scoped_app, make_task):
+            self, client, ui_auth, app_module, scoped_app, make_task):
         make_task(title="be9 idempotency", specialists=["GCW: Alpha"])
 
-        r1 = client.post("/api/specialists/refresh-all", headers=auth)
+        r1 = client.post("/api/specialists/refresh-all", headers=ui_auth)
         assert r1.status_code == 200
         assert r1.json()["built"] == 1
         assert r1.json()["failed"] == 0
@@ -205,7 +205,7 @@ class TestDeterminism:
         assert p1["indexed"] is True
 
         # second run: same content, cache stays a single upserted row
-        r2 = client.post("/api/specialists/refresh-all", headers=auth)
+        r2 = client.post("/api/specialists/refresh-all", headers=ui_auth)
         assert r2.json()["built"] == 1
         p2 = client.get("/api/specialists/profile",
                         params={"name": "GCW: Alpha"}).json()

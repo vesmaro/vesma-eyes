@@ -34,7 +34,9 @@ import pytest
 from starlette.requests import Request
 
 import server.store
-from conftest import DATA_DIR
+from conftest import BOARD_TOKEN, DATA_DIR
+
+MACHINE_HEADERS = {"Authorization": f"Bearer {BOARD_TOKEN}"}
 
 DB_PATH = DATA_DIR / "board.db"
 
@@ -83,8 +85,8 @@ def _iso(dt: datetime) -> str:
     return dt.astimezone(timezone.utc).isoformat(timespec="seconds")
 
 
-def _seed_task(client, auth, title: str) -> str:
-    r = client.post("/api/tasks", json={"title": title}, headers=auth)
+def _seed_task(client, ui_auth, title: str) -> str:
+    r = client.post("/api/tasks", json={"title": title}, headers=ui_auth)
     assert r.status_code == 201, r.text
     return r.json()["id"]
 
@@ -97,24 +99,24 @@ def _items(client, headers=None, **params) -> dict:
 
 # ------------------------------------------------- Ф1: the лента contract
 class TestActivityFeedContract:
-    def test_open_read_anonymous(self, client, auth):
+    def test_open_read_anonymous(self, client, ui_auth):
         """§3.2: OPEN read like every listing — no token, no 401. The
         strip policy is the only leg difference (asserted below)."""
-        _seed_task(client, auth, "ui28-open")
+        _seed_task(client, ui_auth, "ui28-open")
         r = client.get("/api/activity")
         assert r.status_code == 200
 
-    def test_cursor_stability_under_live_landing(self, client, auth):
+    def test_cursor_stability_under_live_landing(self, client, ui_auth):
         """§8.8: before_id pages stay stable while new events land —
         strictly-descending ids, no dupes across pages, a fresh event
         does not shift an already-fetched page."""
-        task = _seed_task(client, auth, "ui28-cursor")
+        task = _seed_task(client, ui_auth, "ui28-cursor")
         for i in range(3):
             r = client.post(f"/api/tasks/{task}/reports",
                             json={"body": f"cursor {i}",
                                   "kind": "intermediate",
                                   "agent": "ui28-cursor-agent"},
-                            headers=auth)
+                            headers=ui_auth)
             assert r.status_code == 201, r.text
         page1 = _items(client, task_id=task, type="report", limit=2)
         assert page1["count"] == 2
@@ -125,7 +127,7 @@ class TestActivityFeedContract:
         r = client.post(f"/api/tasks/{task}/reports",
                         json={"body": "cursor live", "kind": "intermediate",
                               "agent": "ui28-cursor-agent"},
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 201
         page2 = _items(client, task_id=task, type="report",
                        limit=2, before_id=boundary)
@@ -137,17 +139,17 @@ class TestActivityFeedContract:
         # a client already walks stays byte-stable while events land
         assert page2["count"] == 1
 
-    def test_has_more_true_then_last_page_false(self, client, auth):
+    def test_has_more_true_then_last_page_false(self, client, ui_auth):
         """Reconciliation (TL verdict): has_more = rows exist below the
         last returned id under the same filters — the honest end of the
         journal. Middle page → true; the last page → false; the empty
         feed → false."""
-        task = _seed_task(client, auth, "ui28-has-more")
+        task = _seed_task(client, ui_auth, "ui28-has-more")
         for i in range(3):
             r = client.post(f"/api/tasks/{task}/reports",
                             json={"body": f"hm {i}", "kind": "intermediate",
                                   "agent": "ui28-hm-agent"},
-                            headers=auth)
+                            headers=ui_auth)
             assert r.status_code == 201, r.text
         page1 = _items(client, task_id=task, type="report", limit=2)
         assert page1["count"] == 2 and page1["has_more"] is True
@@ -158,16 +160,16 @@ class TestActivityFeedContract:
         empty = _items(client, task_id="t-does-not-exist")
         assert empty["count"] == 0 and empty["has_more"] is False
 
-    def test_report_kind_final_vs_intermediate(self, client, auth):
+    def test_report_kind_final_vs_intermediate(self, client, ui_auth):
         """Reconciliation (TL verdict): task.report rows carry
         report_kind ("intermediate" | "final"); non-report rows lack
         the key — additive, ABSENT not null."""
-        task = _seed_task(client, auth, "ui28-report-kind")
+        task = _seed_task(client, ui_auth, "ui28-report-kind")
         for kind in ("intermediate", "final"):
             r = client.post(f"/api/tasks/{task}/reports",
                             json={"body": f"rk {kind}", "kind": kind,
                                   "agent": "ui28-rk-agent"},
-                            headers=auth)
+                            headers=ui_auth)
             assert r.status_code == 201, r.text
         items = _items(client, task_id=task)["items"]
         reports = [i for i in items if i["kind"] == "task.report"]
@@ -191,14 +193,14 @@ class TestActivityFeedContract:
         assert client.get("/api/activity",
                           params={"limit": limit}).status_code == 422
 
-    def test_type_filter_families_and_exact_kinds(self, client, auth):
+    def test_type_filter_families_and_exact_kinds(self, client, ui_auth):
         """§3.2: type= accepts family names AND exact dictionary kinds;
         the csv is a union."""
-        task = _seed_task(client, auth, "ui28-types")
+        task = _seed_task(client, ui_auth, "ui28-types")
         r = client.post(f"/api/tasks/{task}/reports",
                         json={"body": "types", "kind": "final",
                               "agent": "ui28-types-agent"},
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 201, r.text
         assert {i["kind"] for i in
                 _items(client, task_id=task, type="task")["items"]} \
@@ -228,19 +230,19 @@ class TestActivityFeedContract:
         j = _items(client, task_id="t-does-not-exist")
         assert j["count"] == 0 and j["items"] == []
 
-    def test_task_filter_exact(self, client, auth):
-        task = _seed_task(client, auth, "ui28-task-filter")
+    def test_task_filter_exact(self, client, ui_auth):
+        task = _seed_task(client, ui_auth, "ui28-task-filter")
         rows = _items(client, task_id=task)["items"]
         assert rows and {i["task_id"] for i in rows} == {task}
 
-    def test_agent_filter_declared_identity(self, client, auth):
+    def test_agent_filter_declared_identity(self, client, ui_auth):
         """§2.3: report rows answer with their DECLARED identity
         (report.agent) — matched verbatim by agent=."""
-        task = _seed_task(client, auth, "ui28-agent")
+        task = _seed_task(client, ui_auth, "ui28-agent")
         r = client.post(f"/api/tasks/{task}/reports",
                         json={"body": "agent probe", "kind": "intermediate",
                               "agent": "ui28-dba"},
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 201, r.text
         rows = _items(client, agent="ui28-dba")["items"]
         assert rows
@@ -248,11 +250,11 @@ class TestActivityFeedContract:
                    for i in rows)
         assert _items(client, agent="ui28-nobody")["count"] == 0
 
-    def test_agent_filter_machine_actor_forms(self, client, auth):
+    def test_agent_filter_machine_actor_forms(self, client, ui_auth):
         """machine:<id> actors match by the full machine: form AND the
         bare id part. The audit carries machine actors only where the
         writers put them, so the shape is pinned on a synthetic row."""
-        task = _seed_task(client, auth, "ui28-machine")
+        task = _seed_task(client, ui_auth, "ui28-machine")
         _insert_event("task.updated", task, {"actor": "machine:reaper"},
                       _iso(datetime.now(timezone.utc)))
         full = _items(client, task_id=task, agent="machine:reaper")["items"]
@@ -262,15 +264,15 @@ class TestActivityFeedContract:
         assert _items(client, task_id=task,
                       agent="machine:ui")["count"] == 0
 
-    def test_host_filter_and_host_field(self, client, auth):
+    def test_host_filter_and_host_field(self, client, ui_auth):
         """§2.4/§3.2: host resolves through the executors registry AT
         READ TIME (best-effort); rows carry the resolved host; an
         unknown host is an empty page."""
-        task = _seed_task(client, auth, "ui28-host")
+        task = _seed_task(client, ui_auth, "ui28-host")
         r = client.post("/api/executors",
                         json={"name": "ui28-ex-host", "harness": "zcode",
                               "host": "ui28-host-a"},
-                        headers=auth)
+                        headers=MACHINE_HEADERS)
         assert r.status_code == 201, r.text
         ex_id = r.json()["executor"]["id"]
         try:
@@ -278,7 +280,7 @@ class TestActivityFeedContract:
                             json={"task_id": task,
                                   "specialist": "gcw-tech-lead",
                                   "executor_id": ex_id},
-                            headers=auth)
+                            headers=ui_auth)
             assert r.status_code == 201, r.text
             rows = _items(client, task_id=task, type="assignment",
                           host="ui28-host-a")["items"]
@@ -288,18 +290,18 @@ class TestActivityFeedContract:
             assert _items(client, host="ui28-host-none")["count"] == 0
         finally:
             assert client.delete(f"/api/executors/{ex_id}",
-                                 headers=auth).status_code == 200
+                                 headers=ui_auth).status_code == 200
         # the executor is gone → the resolve finds nothing → empty page
         assert _items(client, task_id=task, type="assignment",
                       host="ui28-host-a")["count"] == 0
 
-    def test_row_optional_keys_absent_not_null(self, client, auth):
+    def test_row_optional_keys_absent_not_null(self, client, ui_auth):
         """§3.2 additive contract: optional keys are ABSENT (not null)
         when there is nothing honest to put there; a deleted task keeps
         its audit rows with the raw id and NO task_title."""
-        task = _seed_task(client, auth, "ui28-gone")
+        task = _seed_task(client, ui_auth, "ui28-gone")
         assert client.delete(f"/api/tasks/{task}",
-                             headers=auth).status_code == 200
+                             headers=ui_auth).status_code == 200
         rows = _items(client, task_id=task)["items"]
         assert rows
         for i in rows:
@@ -309,14 +311,14 @@ class TestActivityFeedContract:
             assert i["task_id"] == task
         assert {i["kind"] for i in rows} >= {"task.created", "task.deleted"}
 
-    def test_report_row_detail_is_clipped_body(self, client, auth):
+    def test_report_row_detail_is_clipped_body(self, client, ui_auth):
         """detail carries the raw fact (report body excerpt, clip 200);
         task.created rows have none (the title already says it)."""
-        task = _seed_task(client, auth, "ui28-detail")
+        task = _seed_task(client, ui_auth, "ui28-detail")
         r = client.post(f"/api/tasks/{task}/reports",
                         json={"body": "d" * 500, "kind": "final",
                               "agent": "ui28-detail-agent"},
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 201, r.text
         rows = [i for i in _items(client, task_id=task)["items"]
                 if i["kind"] == "task.report"]
@@ -338,20 +340,20 @@ class TestActivityFeedContract:
 
 # --------------------------------------------- Ф1: the actor-strip policy
 class TestActivityActorStrip:
-    def test_anonymous_get_has_no_actor_key(self, client, auth):
+    def test_anonymous_get_has_no_actor_key(self, client, ui_auth):
         """§8.12: an anonymous leg reads rows with the actor key ABSENT
         (server-side strip, additive)."""
-        task = _seed_task(client, auth, "ui28-strip")
+        task = _seed_task(client, ui_auth, "ui28-strip")
         client.cookies.clear()
         rows = _items(client, task_id=task)["items"]
         assert rows and all("actor" not in i for i in rows)
 
-    def test_ui_bearer_sees_actor(self, client, auth):
-        task = _seed_task(client, auth, "ui28-strip-ui")
-        rows = _items(client, auth, task_id=task)["items"]
+    def test_ui_bearer_sees_actor(self, client, ui_auth):
+        task = _seed_task(client, ui_auth, "ui28-strip-ui")
+        rows = _items(client, ui_auth, task_id=task)["items"]
         assert rows and all(i["actor"] == "ui" for i in rows)
 
-    def test_ui_cookie_leg_sees_actor(self, client, auth, app_module,
+    def test_ui_cookie_leg_sees_actor(self, client, ui_auth, app_module,
                                       monkeypatch):
         """The cookie leg is authenticated (ADR 0014): login at the
         door, then a headerless GET reads attribution. The login
@@ -361,7 +363,7 @@ class TestActivityActorStrip:
                             RateLimiter(limit=10, window=60.0))
         monkeypatch.setattr(app_module, "_auth_verify_global_limiter",
                             RateLimiter(limit=10, window=60.0))
-        task = _seed_task(client, auth, "ui28-strip-cookie")
+        task = _seed_task(client, ui_auth, "ui28-strip-cookie")
         effective = app_module.UI_WRITE_TOKEN or app_module.BOARD_WRITE_TOKEN
         r = client.post("/api/auth/ui-token", json={"token": effective})
         assert r.status_code == 200, r.text
@@ -412,19 +414,19 @@ class TestActivityActorStrip:
 
 # ------------------------------------------------------ Ф2: bucket форма
 class TestActivityBuckets:
-    def test_bucket_shape_zero_filled_chronological(self, client, auth):
+    def test_bucket_shape_zero_filled_chronological(self, client, ui_auth):
         """§3.2 Ф2: hourly buckets ending at the current hour,
         zero-filled, oldest first, fixed by_type keys."""
-        task = _seed_task(client, auth, "ui28-bucket")
+        task = _seed_task(client, ui_auth, "ui28-bucket")
         r = client.post(f"/api/tasks/{task}/reports",
                         json={"body": "bucket", "kind": "intermediate",
                               "agent": "ui28-bucket-agent"},
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 201, r.text
         r = client.post("/api/assignments",
                         json={"task_id": task,
                               "specialist": "gcw-tech-lead"},
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 201, r.text
         j = _items(client, bucket="hour", task_id=task)
         assert j["bucket"] == "hour" and j["hours"] == 24
@@ -459,14 +461,14 @@ class TestActivityBuckets:
         assert client.get("/api/activity",
                           params={"bucket": "day"}).status_code == 422
 
-    def test_buckets_honor_type_filter(self, client, auth):
+    def test_buckets_honor_type_filter(self, client, ui_auth):
         """Ф2: the same filters as the лента — type=report counts only
         report rows into the report counter."""
-        task = _seed_task(client, auth, "ui28-bucket-type")
+        task = _seed_task(client, ui_auth, "ui28-bucket-type")
         r = client.post(f"/api/tasks/{task}/reports",
                         json={"body": "bt", "kind": "final",
                               "agent": "ui28-bt-agent"},
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 201, r.text
         j = _items(client, bucket="hour", hours=1, task_id=task,
                    type="report")
@@ -797,9 +799,11 @@ class TestSseActorStrip:
         assert frames[0]["task"] == {"id": "x"}
 
     def test_authenticated_subscription_keeps_actor(self, app_module,
-                                                    machine_auth):
+                                                    ui_auth):
+        """Authenticated = the ui bearer (a machine bearer is a service
+        credential: its leg reads WITHOUT attribution by policy)."""
         frames = asyncio.run(_subscribe_frames(
-            app_module, _sse_request(machine_auth),
+            app_module, _sse_request(ui_auth),
             [{"kind": "task.created", "task": {"id": "y"}, "actor": "ui"}],
             1))
         assert frames[0]["actor"] == "ui"

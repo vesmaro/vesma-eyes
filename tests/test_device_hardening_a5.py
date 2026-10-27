@@ -3,7 +3,7 @@ t-1790196252894-9b17): per-device mutation budget + actor in task.* SSE.
 
 Pinned contract:
 - mutation budget: the per-DEVICE flat budget (30/60s in production, the
-  auth-throttling engine) exhausts to 429 + Retry-After (int seconds,
+  ui_auth-throttling engine) exhausts to 429 + Retry-After (int seconds,
   1..window) with a detail that names the numbers; the sliding window
   releases the budget again; reads are NEVER counted; the ui class never
   enters the device middleware (unlimited by this limiter); the budget is
@@ -28,7 +28,9 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from conftest import DATA_DIR, UI_TOKEN
+from conftest import DATA_DIR, UI_TOKEN, BOARD_TOKEN
+
+MACHINE_HEADERS = {"Authorization": f"Bearer {BOARD_TOKEN}"}
 from server.security import RateLimiter
 
 DB_PATH = DATA_DIR / "board.db"
@@ -250,23 +252,29 @@ class TestTaskSseActor:
                           app_module.UI_WRITE_TOKEN
                           or app_module.BOARD_WRITE_TOKEN))
 
-    def test_ui_actor_header_and_transition_token(
+    def test_ui_actor_header_and_machine_refused(
             self, app_module, client, monkeypatch, capture_sse):
-        """The ui leg answers ``ui`` — the split-mode ui token AND the
-        transition-mode board token alike (the guard counts both as the
-        ui class; actor mirrors the guard's classification)."""
+        """The ui leg answers ``ui`` (the split-mode ui token). The
+        machine bearer is REFUSED on the ui-class route (the transitional
+        fallback is retired — a machine token mints nothing, so there is
+        no frame for it at all)."""
         split = {"Authorization": f"Bearer {UI_TOKEN}"}
-        legacy = {"Authorization": f"Bearer {app_module.BOARD_WRITE_TOKEN}"}
-        for headers in (split, legacy):
-            monkeypatch.setattr(app_module, "UI_WRITE_TOKEN",
-                                UI_TOKEN if headers is split else "")
-            capture_sse.clear()
-            r = client.post("/api/tasks", json={"title": "a5-ui"},
-                            headers=headers)
-            assert r.status_code == 201, r.text
-            (frame,) = _task_frames(capture_sse, "task.created")
-            assert frame["actor"] == "ui"
-            client.delete(f"/api/tasks/{r.json()['id']}", headers=headers)
+        monkeypatch.setattr(app_module, "UI_WRITE_TOKEN", UI_TOKEN)
+        capture_sse.clear()
+        r = client.post("/api/tasks", json={"title": "a5-ui"},
+                        headers=split)
+        assert r.status_code == 201, r.text
+        (frame,) = _task_frames(capture_sse, "task.created")
+        assert frame["actor"] == "ui"
+        created = r.json()
+        machine = {"Authorization":
+                   f"Bearer {app_module.BOARD_WRITE_TOKEN}"}
+        capture_sse.clear()
+        r = client.post("/api/tasks", json={"title": "a5-machine"},
+                        headers=machine)
+        assert r.status_code == 401
+        assert not capture_sse
+        client.delete(f"/api/tasks/{created['id']}", headers=split)
 
     def test_dictionary_pin_additive_only(
             self, app_module, client, dev, capture_sse):
@@ -289,19 +297,19 @@ class TestTaskSseActor:
                           or app_module.BOARD_WRITE_TOKEN))
 
     def test_machine_actor_board_token(
-            self, app_module, client, auth, make_task, capture_sse):
+            self, app_module, client, ui_auth, make_task, capture_sse):
         """A board-token claim moving the task answers
         ``machine:board`` (no per-caller identity on that token)."""
         task = make_task(title="a5-claim")
         r = client.post("/api/assignments",
                         json={"task_id": task["id"],
                               "specialist": "gcw-tech-lead"},
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 201, r.text
         aid = r.json()["assignment"]["id"]
         claim = client.post(f"/api/assignments/{aid}/claim",
                             json={"claimed_by": "a5-poller"},
-                            headers=auth)
+                            headers=MACHINE_HEADERS)
         assert claim.status_code == 200, claim.text
         (frame,) = [e for e in _task_frames(capture_sse, "task.moved")
                     if e["task"]["id"] == task["id"]]
@@ -314,7 +322,7 @@ class TestTaskSseActor:
         assert app_module._machine_actor({"id": "ex-1"}) == "machine:ex-1"
         assert app_module._machine_actor(None) == "machine:board"
 
-    def test_reaper_actor(self, app_module, client, auth, make_task,
+    def test_reaper_actor(self, app_module, client, ui_auth, make_task,
                           data_dir, capture_sse):
         """The reaper's expiry move names itself ``machine:reaper`` — a
         server-internal mutator with no request to classify (the
@@ -323,14 +331,14 @@ class TestTaskSseActor:
         r = client.post("/api/assignments",
                         json={"task_id": task["id"],
                               "specialist": "gcw-tech-lead"},
-                        headers=auth)
+                        headers=ui_auth)
         aid = r.json()["assignment"]["id"]
         claim = client.post(f"/api/assignments/{aid}/claim",
                             json={"claimed_by": "a5-poller"},
-                            headers=auth)
+                            headers=MACHINE_HEADERS)
         client.post(f"/api/assignments/{aid}/start",
                     json={"claim_token": claim.json()["claim_token"]},
-                    headers=auth)
+                    headers=MACHINE_HEADERS)
         db = sqlite3.connect(data_dir / "board.db")
         try:
             past = (datetime.now(timezone.utc)

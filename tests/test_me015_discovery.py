@@ -25,6 +25,9 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from conftest import BOARD_TOKEN
+
+MACHINE_HEADERS = {"Authorization": f"Bearer {BOARD_TOKEN}"}
 
 from server.security import RateLimiter
 
@@ -50,9 +53,9 @@ def fresh_me015_state(app_module, monkeypatch):
         db.execute("DELETE FROM executors")
 
 
-def _register(client, auth, name: str, **extra) -> tuple[dict, str]:
+def _register(client, name: str, **extra) -> tuple[dict, str]:
     payload = {"name": name, "harness": "zcode"} | extra
-    r = client.post("/api/executors", json=payload, headers=auth)
+    r = client.post("/api/executors", json=payload, headers=MACHINE_HEADERS)
     assert r.status_code == 201, r.text
     body = r.json()
     return body["executor"], body["executor_secret"]
@@ -100,8 +103,8 @@ class TestDiscoveryLeg:
         return client.post(f"/api/executors/{executor_id}/discovery",
                            json=payload, headers=_ex_headers(secret))
 
-    def test_known_names_accepted_into_mirror(self, client, auth):
-        executor, secret = _register(client, auth, "me015-c1")
+    def test_known_names_accepted_into_mirror(self, client, ui_auth):
+        executor, secret = _register(client, "me015-c1")
         r = self._post(client, executor["id"], secret, [
             {"name": "zcode", "version": "1.22.0", "path": "/usr/bin/zcode"},
             {"name": "aider", "version": "", "path": ""},
@@ -118,8 +121,8 @@ class TestDiscoveryLeg:
             out["executor"]["discovered"]
 
     def test_unknown_names_dropped_audited_dictionary_not_extended(
-            self, client, auth, app_module):
-        executor, secret = _register(client, auth, "me015-c2")
+            self, client, ui_auth, app_module):
+        executor, secret = _register(client, "me015-c2")
         r = self._post(client, executor["id"], secret, [
             {"name": "zcode", "version": "1.22.0"},
             {"name": "totally-unknown-x", "version": "9"},
@@ -139,15 +142,15 @@ class TestDiscoveryLeg:
         assert rejected[0]["payload"]["names"] == ["totally-unknown-x"]
         assert rejected[0]["payload"]["executor_id"] == executor["id"]
 
-    def test_capabilities_stay_owner_declared(self, client, auth):
-        executor, secret = _register(client, auth, "me015-c3")
+    def test_capabilities_stay_owner_declared(self, client, ui_auth):
+        executor, secret = _register(client, "me015-c3")
         r = self._post(client, executor["id"], secret,
                        [{"name": "zcode", "version": "1"}])
         assert r.status_code == 200, r.text
         assert r.json()["executor"]["capabilities"] == []
 
-    def test_last_report_wins(self, client, auth):
-        executor, secret = _register(client, auth, "me015-c4")
+    def test_last_report_wins(self, client, ui_auth):
+        executor, secret = _register(client, "me015-c4")
         self._post(client, executor["id"], secret,
                    [{"name": "zcode", "version": "1"}])
         r = self._post(client, executor["id"], secret,
@@ -156,7 +159,7 @@ class TestDiscoveryLeg:
         names = [d["name"] for d in r.json()["executor"]["discovered"]]
         assert names == ["pi"]
 
-    def test_identical_re_report_is_a_noop(self, client, auth, app_module,
+    def test_identical_re_report_is_a_noop(self, client, ui_auth, app_module,
                                            monkeypatch):
         """Two byte-identical reports land 90 s apart (fake clock — the
         real hourly cadence, not the same-second fluke): no update, no
@@ -168,7 +171,7 @@ class TestDiscoveryLeg:
             return clock["t"].isoformat(timespec="seconds")
 
         monkeypatch.setattr("server.store._now", fake_now)
-        executor, secret = _register(client, auth, "me015-c5")
+        executor, secret = _register(client, "me015-c5")
         report = [{"name": "zcode", "version": "1", "path": "/usr/bin/zcode"}]
         first = self._post(client, executor["id"], secret, report).json()
         before = first["executor"]["updated_at"]
@@ -182,12 +185,12 @@ class TestDiscoveryLeg:
         assert len(_board_events(
             app_module, "discovery.reported", executor["id"])) == 1
 
-    def test_all_unknown_report_never_wipes_mirror(self, client, auth,
+    def test_all_unknown_report_never_wipes_mirror(self, client, ui_auth,
                                                    app_module):
         """Review P3-1: a scan that finds NOTHING known must not replace
         the last valid mirror with an empty snapshot — the rejected-names
         audit is the trail, the mirror stays."""
-        executor, secret = _register(client, auth, "me015-c10")
+        executor, secret = _register(client, "me015-c10")
         self._post(client, executor["id"], secret,
                    [{"name": "zcode", "version": "1.22.0"}])
         mirror = _row(client, executor["id"])["discovered"]
@@ -209,16 +212,16 @@ class TestDiscoveryLeg:
         assert len(_board_events(
             app_module, "discovery.reported", executor["id"])) == 1
 
-    def test_report_proves_liveness(self, client, auth):
-        executor, secret = _register(client, auth, "me015-c6")
+    def test_report_proves_liveness(self, client, ui_auth):
+        executor, secret = _register(client, "me015-c6")
         r = self._post(client, executor["id"], secret,
                        [{"name": "zcode"}])
         assert r.status_code == 200, r.text
         assert r.json()["executor"]["presence"] == "online"
 
-    def test_auth_class_matches_heartbeat(self, client, auth):
-        executor, secret = _register(client, auth, "me015-c7")
-        _, other_secret = _register(client, auth, "me015-c7-other")
+    def test_auth_class_matches_heartbeat(self, client, ui_auth):
+        executor, secret = _register(client, "me015-c7")
+        _, other_secret = _register(client, "me015-c7-other")
         # no token → 401; another executor's token → 403 (identity error)
         assert client.post(
             f"/api/executors/{executor['id']}/discovery",
@@ -233,17 +236,17 @@ class TestDiscoveryLeg:
         assert r.status_code == 200, r.text
         # revoked is the kill-switch
         client.patch(f"/api/executors/{executor['id']}",
-                     json={"state": "revoked"}, headers=auth)
+                     json={"state": "revoked"}, headers=ui_auth)
         assert self._post(client, executor["id"], secret,
                           [{"name": "zcode"}]).status_code == 403
 
     def test_environments_field_never_pollutes_harness_mirror(
-            self, client, auth):
+            self, client, ui_auth):
         """AGW-17: the rich environment facts ride along additively and
         (ME-062) land in the SEPARATE harness_inventory snapshot — they
         must never leak into the ``discovered`` harness-name mirror
         (v2-payload compatibility)."""
-        executor, secret = _register(client, auth, "me015-c8")
+        executor, secret = _register(client, "me015-c8")
         r = self._post(client, executor["id"], secret,
                        [{"name": "zcode", "version": "1"}],
                        environments=[{"name": "copilot", "kind": "cli",
@@ -256,8 +259,8 @@ class TestDiscoveryLeg:
         assert all(d["name"] != "copilot"
                    for d in out["executor"]["discovered"])
 
-    def test_over_cap_is_explicit_422(self, client, auth):
-        executor, secret = _register(client, auth, "me015-c9")
+    def test_over_cap_is_explicit_422(self, client, ui_auth):
+        executor, secret = _register(client, "me015-c9")
         entries = [{"name": f"zcode{i}"} for i in range(33)]
         r = self._post(client, executor["id"], secret, entries)
         assert r.status_code == 422, r.text
@@ -270,8 +273,8 @@ class TestDiscoveryMirrorGet:
     honest answer is the LAST report mirror, an OPEN read on the same
     boundary as GET /api/executors."""
 
-    def test_get_returns_last_report_mirror(self, client, auth):
-        executor, secret = _register(client, auth, "me015-g1")
+    def test_get_returns_last_report_mirror(self, client, ui_auth):
+        executor, secret = _register(client, "me015-g1")
         _post_discovery(client, executor["id"], secret, [
             {"name": "zcode", "version": "1.22.0", "path": "/usr/bin/zcode"},
             {"name": "pi", "version": "5", "path": ""},
@@ -288,8 +291,8 @@ class TestDiscoveryMirrorGet:
         # the cap rides meta: clients read it, never hardcode
         assert out["meta"]["max_entries"] == 32
 
-    def test_never_reported_is_honest_empty(self, client, auth):
-        executor, _secret = _register(client, auth, "me015-g2")
+    def test_never_reported_is_honest_empty(self, client, ui_auth):
+        executor, _secret = _register(client, "me015-g2")
         r = client.get(f"/api/executors/{executor['id']}/discovery")
         assert r.status_code == 200, r.text
         assert r.json()["discovered"] == []
@@ -299,24 +302,24 @@ class TestDiscoveryMirrorGet:
         assert r.status_code == 404, r.text
         assert "application/json" in r.headers.get("content-type", "")
 
-    def test_open_read_no_token_class_required(self, client, auth):
+    def test_open_read_no_token_class_required(self, client, ui_auth):
         """Same boundary as GET /api/executors: the cluster ingress is the
-        auth boundary — an anonymous read is served, not 401'd."""
-        executor, secret = _register(client, auth, "me015-g3")
+        ui_auth boundary — an anonymous read is served, not 401'd."""
+        executor, secret = _register(client, "me015-g3")
         _post_discovery(client, executor["id"], secret,
                          [{"name": "zcode", "version": "1"}])
         r = client.get(f"/api/executors/{executor['id']}/discovery")
         assert r.status_code == 200, r.text
         assert r.json()["discovered"][0]["name"] == "zcode"
 
-    def test_get_survives_row_wipe_by_id(self, client, auth):
+    def test_get_survives_row_wipe_by_id(self, client, ui_auth):
         """The read is by id on the LIVE row — a deleted executor stops
         serving the mirror (404), never a stale snapshot."""
-        executor, secret = _register(client, auth, "me015-g4")
+        executor, secret = _register(client, "me015-g4")
         _post_discovery(client, executor["id"], secret,
                          [{"name": "zcode", "version": "1"}])
         assert client.delete(
-            f"/api/executors/{executor['id']}", headers=auth).status_code \
+            f"/api/executors/{executor['id']}", headers=ui_auth).status_code \
             == 200
         assert client.get(
             f"/api/executors/{executor['id']}/discovery").status_code == 404
@@ -327,9 +330,9 @@ class TestNoMigration:
     """The discovered column rides the additive ALTER — a pre-ME-015 row
     (discovered='') reads back as [] and nothing wipes."""
 
-    def test_legacy_empty_discovered_reads_as_empty_list(self, client, auth,
+    def test_legacy_empty_discovered_reads_as_empty_list(self, client, ui_auth,
                                                          app_module):
-        executor, _secret = _register(client, auth, "me015-d1")
+        executor, _secret = _register(client, "me015-d1")
         with app_module.store._lock, app_module.store._conn() as db:
             db.execute("UPDATE executors SET discovered='' WHERE id=?",
                        (executor["id"],))

@@ -23,6 +23,9 @@ import hashlib
 import json
 
 import pytest
+from conftest import BOARD_TOKEN, UI_TOKEN
+
+MACHINE_HEADERS = {"Authorization": f"Bearer {BOARD_TOKEN}"}
 
 from server.security import RateLimiter
 from server.store import SPEC_SNAPSHOT_CAP
@@ -49,10 +52,13 @@ def _create(client, headers, task_id: str, specialist: str = "gcw-tech-lead",
                        headers=headers)
 
 
-def _claim(client, headers, assignment_id: int, claimed_by: str = "poller-1",
+def _claim(client, assignment_id: int, claimed_by: str = "poller-1",
            **extra):
+    """Claim is a machine-class route (the poller claims; ADR 0009 A1) —
+    always rides the board bearer, never a ui-class one."""
     r = client.post(f"/api/assignments/{assignment_id}/claim",
-                    json={"claimed_by": claimed_by, **extra}, headers=headers)
+                    json={"claimed_by": claimed_by, **extra},
+                    headers=MACHINE_HEADERS)
     assert r.status_code == 200, r.text
     return r.json()
 
@@ -63,9 +69,9 @@ def _board_col(client, task_id: str) -> str:
 
 
 class TestHappyPath:
-    def test_create_claim_complete_lifecycle(self, client, auth, make_task):
+    def test_create_claim_complete_lifecycle(self, client, ui_auth, make_task):
         task = make_task(title="arch4 happy", spec="AC: сделать дело")
-        r = _create(client, auth, task["id"])
+        r = _create(client, ui_auth, task["id"])
         assert r.status_code == 201, r.text
         a = r.json()["assignment"]
         assert a["state"] == "queued"
@@ -82,7 +88,7 @@ class TestHappyPath:
         item = next(x for x in listed.json()["items"] if x["id"] == aid)
         assert "claim_token" not in item and "spec_snapshot" not in item
 
-        claim = _claim(client, auth, aid, claimed_by="poller-1",
+        claim = _claim(client, aid, claimed_by="poller-1",
                        executor_id="exec-alpha")
         assert claim["assignment"]["state"] == "claimed"
         assert claim["assignment"]["claimed_by_executor"] == "exec-alpha"
@@ -94,20 +100,20 @@ class TestHappyPath:
         assert claim["assignment"]["spec_snapshot"] == "AC: сделать дело"
 
         r = client.post(f"/api/assignments/{aid}/start",
-                        json={"claim_token": token}, headers=auth)
+                        json={"claim_token": token}, headers=MACHINE_HEADERS)
         assert r.status_code == 200
         assert r.json()["assignment"]["state"] == "running"
 
         r = client.post(f"/api/assignments/{aid}/heartbeat",
                         json={"claim_token": token, "note": "tick"},
-                        headers=auth)
+                        headers=MACHINE_HEADERS)
         assert r.status_code == 200
         assert r.json()["assignment"]["heartbeat_at"]
 
         r = client.post(f"/api/assignments/{aid}/complete",
                         json={"claim_token": token,
                               "final_report": "финальный отчёт: всё готово"},
-                        headers=auth)
+                        headers=MACHINE_HEADERS)
         assert r.status_code == 200, r.text
         body = r.json()
         assert body["assignment"]["state"] == "done"
@@ -129,18 +135,18 @@ class TestHappyPath:
         assert {"assignment.created", "assignment.claimed",
                 "assignment.done"} <= kinds
 
-    def test_complete_without_report_is_legal(self, client, auth, make_task):
+    def test_complete_without_report_is_legal(self, client, ui_auth, make_task):
         """The final report is optional at the API level — the launcher
         contract (always send one) is the poller's discipline, not the
         server's."""
         task = make_task(title="no report")
-        aid = _create(client, auth, task["id"]).json()["assignment"]["id"]
-        claim = _claim(client, auth, aid)
+        aid = _create(client, ui_auth, task["id"]).json()["assignment"]["id"]
+        claim = _claim(client, aid)
         client.post(f"/api/assignments/{aid}/start",
-                    json={"claim_token": claim["claim_token"]}, headers=auth)
+                    json={"claim_token": claim["claim_token"]}, headers=MACHINE_HEADERS)
         r = client.post(f"/api/assignments/{aid}/complete",
                         json={"claim_token": claim["claim_token"]},
-                        headers=auth)
+                        headers=MACHINE_HEADERS)
         assert r.status_code == 200
         assert r.json()["report"] is None
         assert client.get(f"/api/tasks/{task['id']}/reports"
@@ -148,181 +154,186 @@ class TestHappyPath:
 
 
 class TestFailures:
-    def test_double_claim_conflict(self, client, auth, make_task):
+    def test_double_claim_conflict(self, client, ui_auth, make_task):
         task = make_task(title="double claim")
-        aid = _create(client, auth, task["id"]).json()["assignment"]["id"]
-        _claim(client, auth, aid, claimed_by="poller-1")
+        aid = _create(client, ui_auth, task["id"]).json()["assignment"]["id"]
+        _claim(client, aid, claimed_by="poller-1")
         second = client.post(f"/api/assignments/{aid}/claim",
-                             json={"claimed_by": "poller-2"}, headers=auth)
+                             json={"claimed_by": "poller-2"}, headers=MACHINE_HEADERS)
         assert second.status_code == 409
 
-    def test_wrong_claim_token_forbidden(self, client, auth, make_task):
+    def test_wrong_claim_token_forbidden(self, client, ui_auth, make_task):
         task = make_task(title="wrong token")
-        aid = _create(client, auth, task["id"]).json()["assignment"]["id"]
-        _claim(client, auth, aid)
+        aid = _create(client, ui_auth, task["id"]).json()["assignment"]["id"]
+        _claim(client, aid)
         r = client.post(f"/api/assignments/{aid}/start",
-                        json={"claim_token": "0" * 32}, headers=auth)
+                        json={"claim_token": "0" * 32}, headers=MACHINE_HEADERS)
         assert r.status_code == 403
 
-    def test_wrong_token_on_start_and_complete(self, client, auth, make_task):
+    def test_wrong_token_on_start_and_complete(self, client, ui_auth, make_task):
         task = make_task(title="wrong token 2")
-        aid = _create(client, auth, task["id"]).json()["assignment"]["id"]
-        claim = _claim(client, auth, aid)
+        aid = _create(client, ui_auth, task["id"]).json()["assignment"]["id"]
+        claim = _claim(client, aid)
         bad = client.post(f"/api/assignments/{aid}/start",
-                          json={"claim_token": "f" * 32}, headers=auth)
+                          json={"claim_token": "f" * 32}, headers=MACHINE_HEADERS)
         assert bad.status_code == 403
         # finish the lifecycle with the good token, then confirm a stale
         # poller (wrong token) cannot complete a re-claimed assignment
         client.post(f"/api/assignments/{aid}/start",
-                    json={"claim_token": claim["claim_token"]}, headers=auth)
+                    json={"claim_token": claim["claim_token"]}, headers=MACHINE_HEADERS)
         # a second complete with the right token after done → 409, with a
         # wrong token → 403 (token checked before state)
         done = client.post(f"/api/assignments/{aid}/complete",
                            json={"claim_token": claim["claim_token"]},
-                           headers=auth)
+                           headers=MACHINE_HEADERS)
         assert done.status_code == 200
         stale = client.post(f"/api/assignments/{aid}/complete",
-                            json={"claim_token": "f" * 32}, headers=auth)
+                            json={"claim_token": "f" * 32}, headers=MACHINE_HEADERS)
         assert stale.status_code == 403
 
-    def test_heartbeat_requires_running(self, client, auth, make_task):
+    def test_heartbeat_requires_running(self, client, ui_auth, make_task):
         task = make_task(title="hb not running")
-        aid = _create(client, auth, task["id"]).json()["assignment"]["id"]
-        claim = _claim(client, auth, aid)   # claimed, not running
+        aid = _create(client, ui_auth, task["id"]).json()["assignment"]["id"]
+        claim = _claim(client, aid)   # claimed, not running
         r = client.post(f"/api/assignments/{aid}/heartbeat",
                         json={"claim_token": claim["claim_token"]},
-                        headers=auth)
+                        headers=MACHINE_HEADERS)
         assert r.status_code == 409
 
-    def test_fail_by_claimed_only_recovery(self, client, auth, make_task):
+    def test_fail_by_claimed_only_recovery(self, client, ui_auth, make_task):
         """Poller recovery sweep: fail own record with no token around."""
         task = make_task(title="recovery fail")
-        aid = _create(client, auth, task["id"]).json()["assignment"]["id"]
-        _claim(client, auth, aid, claimed_by="poller-9")
+        aid = _create(client, ui_auth, task["id"]).json()["assignment"]["id"]
+        _claim(client, aid, claimed_by="poller-9")
         r = client.post(f"/api/assignments/{aid}/fail",
                         json={"reason": "no live local process",
                               "claimed_by": "poller-9"},
-                        headers=auth)
+                        headers=MACHINE_HEADERS)
         assert r.status_code == 200, r.text
         assert r.json()["assignment"]["state"] == "failed"
         assert r.json()["task"]["col"] == "blocked"   # fail → blocked
         wrong = client.post(f"/api/assignments/{aid}/fail",
-                            json={"claimed_by": "someone-else"}, headers=auth)
+                            json={"claimed_by": "someone-else"}, headers=MACHINE_HEADERS)
         assert wrong.status_code == 403
 
-    def test_fail_without_any_identity_forbidden(self, client, auth, make_task):
+    def test_fail_without_any_identity_forbidden(self, client, ui_auth, make_task):
         task = make_task(title="fail no identity")
-        aid = _create(client, auth, task["id"]).json()["assignment"]["id"]
-        _claim(client, auth, aid)
+        aid = _create(client, ui_auth, task["id"]).json()["assignment"]["id"]
+        _claim(client, aid)
         r = client.post(f"/api/assignments/{aid}/fail",
-                        json={"reason": "x"}, headers=auth)
+                        json={"reason": "x"}, headers=MACHINE_HEADERS)
         assert r.status_code == 403
 
 
 class TestBoundaries:
-    def test_one_active_assignment_invariant(self, client, auth, make_task):
+    def test_one_active_assignment_invariant(self, client, ui_auth, make_task):
         task = make_task(title="invariant")
-        assert _create(client, auth, task["id"]).status_code == 201
-        assert _create(client, auth, task["id"]).status_code == 409
+        assert _create(client, ui_auth, task["id"]).status_code == 201
+        assert _create(client, ui_auth, task["id"]).status_code == 409
         # still 409 after claim (active = queued|claimed|running)
         aid = client.get("/api/assignments",
                          params={"task_id": task["id"]}).json()["items"][0]["id"]
-        claim = _claim(client, auth, aid)
-        assert _create(client, auth, task["id"]).status_code == 409
+        claim = _claim(client, aid)
+        assert _create(client, ui_auth, task["id"]).status_code == 409
         client.post(f"/api/assignments/{aid}/start",
-                    json={"claim_token": claim["claim_token"]}, headers=auth)
-        assert _create(client, auth, task["id"]).status_code == 409
+                    json={"claim_token": claim["claim_token"]}, headers=MACHINE_HEADERS)
+        assert _create(client, ui_auth, task["id"]).status_code == 409
         # terminal state frees the task for a fresh attempt. NOTE: a
         # COMPLETED attempt leaves the task resolved (terminal) → creating
         # again is a 422 by design; the fail path (task → blocked) is the
         # re-take route, asserted here.
         client.post(f"/api/assignments/{aid}/fail",
-                    json={"claim_token": claim["claim_token"]}, headers=auth)
-        assert _create(client, auth, task["id"]).status_code == 201
+                    json={"claim_token": claim["claim_token"]}, headers=MACHINE_HEADERS)
+        assert _create(client, ui_auth, task["id"]).status_code == 201
 
     @pytest.mark.parametrize("col", ["resolved", "done"])
-    def test_terminal_task_rejected(self, client, auth, make_task, col):
+    def test_terminal_task_rejected(self, client, ui_auth, make_task, col):
         task = make_task(title=f"terminal {col}")
         moved = client.post(f"/api/tasks/{task['id']}/move",
-                            json={"col": col}, headers=auth)
+                            json={"col": col}, headers=ui_auth)
         assert moved.status_code == 200
-        assert _create(client, auth, task["id"]).status_code == 422
+        assert _create(client, ui_auth, task["id"]).status_code == 422
 
-    def test_archived_task_rejected(self, client, auth, make_task):
+    def test_archived_task_rejected(self, client, ui_auth, make_task):
         task = make_task(title="archived")
         assert client.post(f"/api/tasks/{task['id']}/archive",
-                           headers=auth).status_code == 200
-        assert _create(client, auth, task["id"]).status_code == 422
+                           headers=ui_auth).status_code == 200
+        assert _create(client, ui_auth, task["id"]).status_code == 422
 
-    def test_blocked_task_is_reAssignable(self, client, auth, make_task):
+    def test_blocked_task_is_reAssignable(self, client, ui_auth, make_task):
         """blocked is NOT terminal — a failed attempt can be re-taken."""
         task = make_task(title="blocked retry")
-        aid = _create(client, auth, task["id"]).json()["assignment"]["id"]
-        _claim(client, auth, aid)
+        aid = _create(client, ui_auth, task["id"]).json()["assignment"]["id"]
+        _claim(client, aid)
         client.post(f"/api/assignments/{aid}/fail",
-                    json={"claimed_by": "poller-1"}, headers=auth)
+                    json={"claimed_by": "poller-1"}, headers=MACHINE_HEADERS)
         assert _board_col(client, task["id"]) == "blocked"
-        assert _create(client, auth, task["id"]).status_code == 201
+        assert _create(client, ui_auth, task["id"]).status_code == 201
 
-    def test_unknown_task_404(self, client, auth):
-        assert _create(client, auth, "t-no-such-task").status_code == 404
+    def test_unknown_task_404(self, client, ui_auth):
+        assert _create(client, ui_auth, "t-no-such-task").status_code == 404
 
-    def test_unknown_harness_422(self, client, auth, make_task):
+    def test_unknown_harness_422(self, client, ui_auth, make_task):
         task = make_task(title="bad harness")
-        r = _create(client, auth, task["id"], harness="totally-bogus")
+        r = _create(client, ui_auth, task["id"], harness="totally-bogus")
         assert r.status_code == 422
 
     def test_invalid_state_filter_422(self, client):
         assert client.get("/api/assignments?state=wat").status_code == 422
 
-    def test_cancel_from_queued_returns_task_open(self, client, auth, make_task):
+    def test_cancel_from_queued_returns_task_open(self, client, ui_auth, make_task):
         task = make_task(title="cancel queued")
-        aid = _create(client, auth, task["id"]).json()["assignment"]["id"]
+        aid = _create(client, ui_auth, task["id"]).json()["assignment"]["id"]
         r = client.post(f"/api/assignments/{aid}/cancel",
-                        json={"reason": "owner changed mind"}, headers=auth)
+                        json={"reason": "owner changed mind"}, headers=ui_auth)
         assert r.status_code == 200
         assert r.json()["assignment"]["state"] == "cancelled"
         assert _board_col(client, task["id"]) == "open"  # never left open
-        assert _create(client, auth, task["id"]).status_code == 201
+        assert _create(client, ui_auth, task["id"]).status_code == 201
 
-    def test_cancel_from_running_moves_task_back(self, client, auth, make_task):
+    def test_cancel_from_running_moves_task_back(self, client, ui_auth, make_task):
         task = make_task(title="cancel running")
-        aid = _create(client, auth, task["id"]).json()["assignment"]["id"]
-        claim = _claim(client, auth, aid)
+        aid = _create(client, ui_auth, task["id"]).json()["assignment"]["id"]
+        claim = _claim(client, aid)
         client.post(f"/api/assignments/{aid}/start",
-                    json={"claim_token": claim["claim_token"]}, headers=auth)
-        r = client.post(f"/api/assignments/{aid}/cancel", json={}, headers=auth)
+                    json={"claim_token": claim["claim_token"]}, headers=MACHINE_HEADERS)
+        r = client.post(f"/api/assignments/{aid}/cancel", json={}, headers=ui_auth)
         assert r.status_code == 200
         assert r.json()["moved"] == ["in-progress", "open"]
         assert _board_col(client, task["id"]) == "open"
 
 
 class TestTokenSplit:
-    def test_legacy_single_token_serves_both(self, client, auth, make_task,
-                                             app_module):
-        """conftest pins VESMARO_BOARD_TOKEN and no VESMARO_UI_TOKEN: the
-        import-time legacy fallback must let the board token serve the UI
-        class too."""
-        assert app_module.UI_WRITE_TOKEN == app_module.BOARD_WRITE_TOKEN
+    def test_legacy_single_token_mode_is_gone(self, client, ui_auth,
+                                              machine_auth, make_task,
+                                              app_module):
+        """The transitional single-token mode is RETIRED (split closed
+        2026-10): the two classes are distinct bearers and the machine
+        token no longer serves ui-class mutations."""
+        assert app_module.UI_WRITE_TOKEN == UI_TOKEN
+        assert app_module.BOARD_WRITE_TOKEN == BOARD_TOKEN
+        assert UI_TOKEN != BOARD_TOKEN
         task = make_task(title="legacy")
-        assert _create(client, auth, task["id"]).status_code == 201
+        assert _create(client, ui_auth, task["id"]).status_code == 201
+        assert _create(client, machine_auth, task["id"]).status_code == 401
         aid = client.get("/api/assignments",
                          params={"task_id": task["id"]}).json()["items"][0]["id"]
         assert client.post(f"/api/assignments/{aid}/cancel", json={},
-                           headers=auth).status_code == 200
+                           headers=ui_auth).status_code == 200
 
     def test_no_token_401(self, client, make_task):
         task = make_task(title="anon")
         assert _create(client, None, task["id"]).status_code == 401
 
-    def test_split_mode(self, client, auth, make_task, app_module, monkeypatch):
+    def test_split_mode(self, client, ui_auth, machine_auth, make_task,
+                        app_module, monkeypatch):
         """A1 split: UI token serves create/cancel, board token serves the
         machine loop; the board token is REFUSED on UI routes (a machine
         token must not mint assignments)."""
         monkeypatch.setattr(app_module, "UI_WRITE_TOKEN", "qa-ui-token")
         ui = {"Authorization": "Bearer qa-ui-token"}
         task = make_task(title="split")
-        assert _create(client, auth, task["id"]).status_code == 401  # board≠UI
+        assert _create(client, machine_auth, task["id"]).status_code == 401  # board≠UI
         assert _create(client, ui, task["id"]).status_code == 201
         aid = client.get("/api/assignments",
                          params={"task_id": task["id"]}).json()["items"][0]["id"]
@@ -330,17 +341,17 @@ class TestTokenSplit:
         assert client.post(f"/api/assignments/{aid}/claim",
                            json={"claimed_by": "p"}, headers=ui
                            ).status_code == 401
-        claim = _claim(client, auth, aid)
+        claim = _claim(client, aid)
         assert client.post(f"/api/assignments/{aid}/start",
                            json={"claim_token": claim["claim_token"]},
                            headers=ui).status_code == 401
         # cancel is UI class: board token refused, UI token accepted
         assert client.post(f"/api/assignments/{aid}/cancel", json={},
-                           headers=auth).status_code == 401
+                           headers=machine_auth).status_code == 401
         assert client.post(f"/api/assignments/{aid}/cancel", json={},
                            headers=ui).status_code == 200
 
-    def test_fail_closed_503(self, client, auth, make_task, app_module,
+    def test_fail_closed_503(self, client, ui_auth, make_task, app_module,
                              monkeypatch):
         """Neither token configured → UI mutation 503 (fail-closed), same
         semantics as the board guard."""
@@ -352,11 +363,11 @@ class TestTokenSplit:
 
 
 class TestSpecSnapshot:
-    def test_snapshot_cap_and_hash(self, client, auth, make_task):
+    def test_snapshot_cap_and_hash(self, client, ui_auth, make_task):
         full = "спека " + "x" * 20000
         task = make_task(title="big spec", spec=full)
-        aid = _create(client, auth, task["id"]).json()["assignment"]["id"]
-        claim = _claim(client, auth, aid)
+        aid = _create(client, ui_auth, task["id"]).json()["assignment"]["id"]
+        claim = _claim(client, aid)
         snap = claim["assignment"]["spec_snapshot"]
         assert len(snap) == SPEC_SNAPSHOT_CAP            # plain truncation
         assert snap == full[:SPEC_SNAPSHOT_CAP]
@@ -364,23 +375,23 @@ class TestSpecSnapshot:
         assert claim["assignment"]["spec_hash"] == \
             hashlib.sha256(full.encode("utf-8")).hexdigest()
 
-    def test_hash_is_frozen_at_creation(self, client, auth, make_task):
+    def test_hash_is_frozen_at_creation(self, client, ui_auth, make_task):
         """A2 TOCTOU: editing the task spec after the assignment was created
         does not change the snapshot the poller receives."""
         task = make_task(title="toctou", spec="VERSION 1")
-        aid = _create(client, auth, task["id"]).json()["assignment"]["id"]
+        aid = _create(client, ui_auth, task["id"]).json()["assignment"]["id"]
         patched = client.patch(f"/api/tasks/{task['id']}",
-                               json={"spec": "VERSION 2"}, headers=auth)
+                               json={"spec": "VERSION 2"}, headers=ui_auth)
         assert patched.status_code == 200
-        claim = _claim(client, auth, aid)
+        claim = _claim(client, aid)
         assert claim["assignment"]["spec_snapshot"] == "VERSION 1"
         assert claim["assignment"]["spec_hash"] == \
             hashlib.sha256(b"VERSION 1").hexdigest()
 
-    def test_open_list_leaks_nothing(self, client, auth, make_task):
+    def test_open_list_leaks_nothing(self, client, ui_auth, make_task):
         task = make_task(title="leak", spec="secret-ish spec")
-        aid = _create(client, auth, task["id"]).json()["assignment"]["id"]
-        _claim(client, auth, aid)
+        aid = _create(client, ui_auth, task["id"]).json()["assignment"]["id"]
+        _claim(client, aid)
         raw = client.get("/api/assignments").json()["items"]
         item = next(x for x in raw if x["id"] == aid)
         assert set(item) & {"claim_token", "spec_snapshot"} == set()
@@ -388,20 +399,20 @@ class TestSpecSnapshot:
 
 
 class TestRateLimit:
-    def test_create_rate_limited_429(self, client, auth, make_task,
+    def test_create_rate_limited_429(self, client, ui_auth, make_task,
                                      app_module, monkeypatch):
         monkeypatch.setattr(app_module, "_assignment_ui_limiter",
                             RateLimiter(limit=2, window=60.0))
         tasks = [make_task(title=f"rl {i}") for i in range(3)]
-        assert _create(client, auth, tasks[0]["id"]).status_code == 201
-        assert _create(client, auth, tasks[1]["id"]).status_code == 201
-        r = _create(client, auth, tasks[2]["id"])
+        assert _create(client, ui_auth, tasks[0]["id"]).status_code == 201
+        assert _create(client, ui_auth, tasks[1]["id"]).status_code == 201
+        r = _create(client, ui_auth, tasks[2]["id"])
         assert r.status_code == 429
         assert "rate limit" in r.json()["detail"]
 
 
 class TestSseEmission:
-    def test_assignment_events_stream(self, app_module, client, auth, make_task):
+    def test_assignment_events_stream(self, app_module, client, ui_auth, make_task):
         """assignment.* SSE per ui-contract §11: payload {assignment,
         task_id} (+notification where noted), NO claim_token and NO
         spec_snapshot in any frame; claim also emits task.moved. Raw-ASGI:
@@ -445,7 +456,8 @@ class TestSseEmission:
             # while the stream is open
             post_status: list[int] = []
 
-            async def do_post(path: str, payload: dict) -> None:
+            async def do_post(path: str, payload: dict,
+                                  bearer: bytes) -> None:
                 body = json.dumps(payload).encode()
                 got: list[dict] = []
                 seen = {"body": False}
@@ -469,8 +481,7 @@ class TestSseEmission:
                     "query_string": b"", "root_path": "",
                     "headers": [
                         (b"host", b"testserver"),
-                        (b"authorization",
-                         auth["Authorization"].encode()),
+                        (b"authorization", bearer),
                         (b"content-type", b"application/json"),
                         (b"content-length", str(len(body)).encode()),
                     ],
@@ -480,11 +491,13 @@ class TestSseEmission:
                 await app_module.app(scope, receive, send)
 
             await do_post("/api/assignments",
-                          {"task_id": task["id"], "specialist": "gcw-tech-lead"})
+                          {"task_id": task["id"], "specialist": "gcw-tech-lead"},
+                          ui_auth["Authorization"].encode())
             aid = client.get("/api/assignments",
                              params={"task_id": task["id"]}).json()["items"][0]["id"]
             await do_post(f"/api/assignments/{aid}/claim",
-                          {"claimed_by": "poller-sse"})
+                          {"claimed_by": "poller-sse"},
+                          MACHINE_HEADERS["Authorization"].encode())
 
             await asyncio.wait_for(done.wait(), timeout=5)
             sse_task.cancel()
@@ -516,42 +529,42 @@ class TestReviewGaps:
     """PR #13 review: negative state-transition matrix and 404s on unknown
     assignment ids for the machine-class routes."""
 
-    def test_double_start_and_double_complete_409(self, client, auth, make_task):
+    def test_double_start_and_double_complete_409(self, client, ui_auth, make_task):
         task = make_task(title="neg-matrix")
-        r = _create(client, auth, task["id"])
+        r = _create(client, ui_auth, task["id"])
         assert r.status_code == 201, r.text
         aid = r.json()["assignment"]["id"]
-        claim = _claim(client, auth, aid)
+        claim = _claim(client, aid)
         assert client.post(f"/api/assignments/{aid}/start",
                            json={"claim_token": claim["claim_token"]},
-                           headers=auth).status_code == 200
+                           headers=MACHINE_HEADERS).status_code == 200
         # a second start is a state violation, not an idempotent replay
         assert client.post(f"/api/assignments/{aid}/start",
                            json={"claim_token": claim["claim_token"]},
-                           headers=auth).status_code == 409
+                           headers=MACHINE_HEADERS).status_code == 409
         assert client.post(f"/api/assignments/{aid}/complete",
                            json={"claim_token": claim["claim_token"]},
-                           headers=auth).status_code == 200
+                           headers=MACHINE_HEADERS).status_code == 200
         assert client.post(f"/api/assignments/{aid}/complete",
                            json={"claim_token": claim["claim_token"]},
-                           headers=auth).status_code == 409
+                           headers=MACHINE_HEADERS).status_code == 409
 
-    def test_complete_from_claimed_without_start_409(self, client, auth, make_task):
+    def test_complete_from_claimed_without_start_409(self, client, ui_auth, make_task):
         task = make_task(title="claimed-complete")
-        aid = _create(client, auth, task["id"]).json()["assignment"]["id"]
-        claim = _claim(client, auth, aid)
+        aid = _create(client, ui_auth, task["id"]).json()["assignment"]["id"]
+        claim = _claim(client, aid)
         r = client.post(f"/api/assignments/{aid}/complete",
                         json={"claim_token": claim["claim_token"],
-                              "final_report": "early"}, headers=auth)
+                              "final_report": "early"}, headers=MACHINE_HEADERS)
         assert r.status_code == 409
 
-    def test_unknown_assignment_404_machine_routes(self, client, auth):
+    def test_unknown_assignment_404_machine_routes(self, client, ui_auth):
         assert client.post("/api/assignments/999999/claim",
                            json={"claimed_by": "x"},
-                           headers=auth).status_code == 404
+                           headers=MACHINE_HEADERS).status_code == 404
         assert client.post("/api/assignments/999999/complete",
                            json={"claim_token": "x"},
-                           headers=auth).status_code == 404
+                           headers=MACHINE_HEADERS).status_code == 404
         assert client.post("/api/assignments/999999/start",
                            json={"claim_token": "x"},
-                           headers=auth).status_code == 404
+                           headers=MACHINE_HEADERS).status_code == 404

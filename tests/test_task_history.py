@@ -31,10 +31,10 @@ def fake_server(app_module, fake_mnemos):
 
 
 class TestHistoryContract:
-    def test_shape_and_order(self, client, auth, make_task):
+    def test_shape_and_order(self, client, ui_auth, make_task):
         task = make_task(title="hist-shape")
         r = client.post(f"/api/tasks/{task['id']}/move",
-                        json={"col": "done"}, headers=auth)
+                        json={"col": "done"}, headers=ui_auth)
         assert r.status_code == 200
         resp = client.get(f"/api/tasks/{task['id']}/history")
         assert resp.status_code == 200
@@ -52,7 +52,7 @@ class TestHistoryContract:
     def test_unknown_task_404(self, client):
         assert client.get("/api/tasks/no-such-task/history").status_code == 404
 
-    def test_fresh_task_has_created_event_only(self, client, auth, make_task):
+    def test_fresh_task_has_created_event_only(self, client, ui_auth, make_task):
         task = make_task(title="hist-empty")
         out = client.get(f"/api/tasks/{task['id']}/history").json()
         assert [e["title"] for e in out["events"]] == ["task.created"]
@@ -60,14 +60,14 @@ class TestHistoryContract:
 
 
 class TestEventDetailMapping:
-    def test_move_update_created_details(self, client, auth, make_task):
+    def test_move_update_created_details(self, client, ui_auth, make_task):
         task = make_task(title="hist-detail")
         client.patch(f"/api/tasks/{task['id']}", json={"summary": "s"},
-                     headers=auth)
+                     headers=ui_auth)
         client.post(f"/api/tasks/{task['id']}/move",
-                    json={"col": "in-progress"}, headers=auth)
+                    json={"col": "in-progress"}, headers=ui_auth)
         client.post(f"/api/tasks/{task['id']}/move",
-                    json={"col": "resolved"}, headers=auth)
+                    json={"col": "resolved"}, headers=ui_auth)
         events = client.get(f"/api/tasks/{task['id']}/history").json()["events"]
         by_kind: dict[str, list[str]] = {}
         for e in events:
@@ -78,10 +78,10 @@ class TestEventDetailMapping:
         assert by_kind["task.moved"] == ["in-progress → resolved",
                                          "open → in-progress"]
 
-    def test_archived_event_detail(self, client, auth, make_task):
+    def test_archived_event_detail(self, client, ui_auth, make_task):
         task = make_task(title="hist-archived")
         assert client.post(f"/api/tasks/{task['id']}/archive",
-                           headers=auth).status_code == 200
+                           headers=ui_auth).status_code == 200
         out = client.get(f"/api/tasks/{task['id']}/history")  # archived: still 200
         assert out.status_code == 200
         archived = next(e for e in out.json()["events"]
@@ -90,7 +90,7 @@ class TestEventDetailMapping:
 
 
 class TestHistoryMemories:
-    def test_memory_checkpoint_resolved(self, client, auth, make_task,
+    def test_memory_checkpoint_resolved(self, client, ui_auth, make_task,
                                         fake_server):
         fake_server["fake"].memory_cards["mem-hist-1"] = {
             "id": "mem-hist-1",
@@ -113,7 +113,7 @@ class TestHistoryMemories:
         assert m["ts"] == "2026-09-01T10:00:00+00:00"
         assert len(m["detail"]) == 200, "excerpt must be capped at 200"
 
-    def test_task_without_memories_has_empty_list(self, client, auth,
+    def test_task_without_memories_has_empty_list(self, client, ui_auth,
                                                   make_task, fake_server):
         task = make_task(title="hist-nomem")
         out = client.get(f"/api/tasks/{task['id']}/history").json()

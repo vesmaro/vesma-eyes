@@ -2,18 +2,20 @@
 
 Two bearer classes guard mutations — ui (VESMARO_UI_TOKEN) and machine
 (VESMARO_BOARD_TOKEN, legacy env name kept deliberately for the poller
-track). The default conftest env pins the TRANSITION state (machine token
-only, ui class falls back to it); ``split_tokens`` turns on the full split
-per test.
+track). The split is CLOSED (transitional closed 2026-10, prod has run
+the ui token since the RUNBOOK.md §8 step-2 upgrade): the default
+conftest env pins the SPLIT state, and the transitional ui<-machine
+fallback is retired server-side — this file pins the post-transition
+truth table.
 
 Pinned contract:
-- split mode: machine token is REJECTED on ui-class routes (401, not 503 —
-  the ui class is configured), and vice versa the ui token is not
-  machine-class;
+- default contour (split): machine token is REJECTED on ui-class routes
+  (401, not 503 — the ui class is configured), and vice versa the ui
+  token is not machine-class;
 - reports POST accepts BOTH classes (agents write reports, ADR 0009
   checkpoint channel);
-- transition mode: the board token still passes ui-class guards, so the
-  currently deployed single-token setup survives the upgrade;
+- ui class unset = fail-closed 503 on ui mutations — NO board-token
+  fallback (the transition mode is gone);
 - fail-closed: with NO class configured every mutation is 503, even with
   an ad-hoc bearer;
 - a class configured but the bearer wrong → 401; a class not configured
@@ -146,27 +148,47 @@ class TestSplitMode:
             client.delete(f"/api/tasks/{task['id']}", headers=ui_auth)
 
 
-# -------------------------------------------------------- transition mode
-class TestTransitionMode:
-    """Default conftest env: only the board token configured — the state
-    of today's deployment at upgrade time. The ui class falls back to it,
-    so nothing breaks before VESMARO_UI_TOKEN lands in the chart."""
+# -------------------------------------------------- ui class unconfigured
+class TestUiClassUnconfigured:
+    """VESMARO_UI_TOKEN unset = the fail-closed 503 — the transitional
+    ui<-machine fallback is RETIRED, so the machine token can no longer
+    stand in for the missing ui class (transitional closed 2026-10)."""
 
-    def test_board_token_still_passes_ui_guard_201(self, client, auth):
-        task = _make_task(client, auth)
-        assert client.delete(f"/api/tasks/{task['id']}",
-                             headers=auth).status_code == 200
+    @pytest.fixture()
+    def no_ui_token(self, app_module, monkeypatch):
+        monkeypatch.setattr(app_module, "UI_WRITE_TOKEN", "")
 
-    def test_reports_accept_board_token_201(self, client, auth,
-                                            fresh_report_limiter):
-        """Poller compatibility: scripts/assignment_poller.py writes
-        reports with Bearer $VESMARO_BOARD_TOKEN today."""
-        task = _make_task(client, auth)
+    def test_ui_mutation_without_ui_token_503(self, client, no_ui_token,
+                                              machine_auth):
+        """Fail-closed, NOT a board-token pass-through: even the machine
+        bearer gets the 503 (the ui class is unconfigured)."""
+        r = client.post("/api/tasks", json={"title": "cls-no-ui"},
+                        headers=machine_auth)
+        assert r.status_code == 503
+        assert "set VESMARO_UI_TOKEN" in r.json()["detail"]
+
+    def test_ui_mutation_anon_without_ui_token_503(self, client,
+                                                   no_ui_token):
+        assert client.post(
+            "/api/tasks", json={"title": "cls-no-ui-anon"}).status_code == 503
+
+    def test_reports_still_accept_machine_token_201(self, client, app_module,
+                                                    monkeypatch, auth,
+                                                    ui_auth,
+                                                    fresh_report_limiter):
+        """Poller compatibility (unaffected by the retirement): killing
+        the ui class mid-flight does not disable the reports route — it
+        503s only when ALL its classes are unconfigured, so the machine
+        bearer still writes. Task created while ui is alive, ui unset for
+        the report, restored for the ui-class cleanup delete."""
+        task = _make_task(client, ui_auth)
+        monkeypatch.setattr(app_module, "UI_WRITE_TOKEN", "")
         try:
             assert _post_report(client, auth,
                                 task["id"]).status_code == 201
         finally:
-            client.delete(f"/api/tasks/{task['id']}", headers=auth)
+            monkeypatch.setattr(app_module, "UI_WRITE_TOKEN", UI_TOKEN)
+            client.delete(f"/api/tasks/{task['id']}", headers=ui_auth)
 
 
 # ------------------------------------------------- machine-class retired
@@ -210,14 +232,21 @@ class TestFailClosedBothClasses:
 
 # ------------------------------------------------------- resolver (unit)
 class TestTokenClassesResolver:
-    """_token_classes() is the single place the transition lives — pin
-    its truth table directly (values are test constants, not secrets)."""
+    """_token_classes() pins the closed-split truth table directly (values
+    are test constants, not secrets). No fallback leg exists anymore."""
 
-    def test_transition_fallback(self, app_module):
+    def test_default_contour_is_split(self, app_module):
         assert app_module._token_classes() == {
-            "ui": BOARD_TOKEN, "machine": BOARD_TOKEN}
+            "ui": UI_TOKEN, "machine": BOARD_TOKEN}
 
-    def test_split(self, app_module, split_tokens):
+    def test_ui_unset_never_falls_back(self, app_module, monkeypatch):
+        """The retired transitional leg: ui unset must NOT surface the
+        machine token as the ui class."""
+        monkeypatch.setattr(app_module, "UI_WRITE_TOKEN", "")
+        assert app_module._token_classes() == {
+            "ui": "", "machine": BOARD_TOKEN}
+
+    def test_split_pin(self, app_module, split_tokens):
         assert app_module._token_classes() == {
             "ui": UI_TOKEN, "machine": BOARD_TOKEN}
 

@@ -16,7 +16,7 @@ QA matrix (each test names its verdict line):
 - red line 5: userinfo and credential-shaped query params in base_url
   are refused 422 ``credential_in_url`` with the SAME message family the
   FE form speaks inline; innocent query/fragment is silently stripped;
-- owner/machine semantics: ui bearer 201; no auth 401; machine-class
+- owner/machine semantics: ui bearer 201; no ui_auth 401; machine-class
   bearer 401 with the pinned cross-class detail; a paired mnd_ device
   403 (the scope middleware — credential writes are in no device
   granule); the roster read stays open;
@@ -47,7 +47,9 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from conftest import BOARD_TOKEN, DATA_DIR
+from conftest import BOARD_TOKEN, DATA_DIR, UI_TOKEN
+
+MACHINE_HEADERS = {"Authorization": f"Bearer {BOARD_TOKEN}"}
 
 
 # ---------------------------------------------------------------- fixtures
@@ -394,9 +396,10 @@ def test_device_post_is_403_wall(client, app_module, vault) -> None:
 
 
 def test_cookie_leg_writes(client, app_module, vault) -> None:
-    """The owner session cookie (transition contour: the cookie value IS
-    the effective ui token) opens the same owner act."""
-    client.cookies.set("vesmaro_ui", BOARD_TOKEN)
+    """The owner session cookie (its value must match the ui token —
+    the split is closed, the board token no longer passes ui guards)
+    opens the same owner act."""
+    client.cookies.set("vesmaro_ui", UI_TOKEN)
     try:
         resp = _post(client, "prov-n")
         assert resp.status_code == 201

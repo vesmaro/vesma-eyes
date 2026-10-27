@@ -36,6 +36,8 @@ import yaml
 from fastapi.testclient import TestClient
 from conftest import BOARD_TOKEN, UI_TOKEN
 
+MACHINE_HEADERS = {"Authorization": f"Bearer {BOARD_TOKEN}"}
+
 SPEC_PATH = Path(__file__).resolve().parent.parent / "docs" / "kora" / "openapi.yaml"
 
 _NOW_MS = int(time.time() * 1000)
@@ -116,7 +118,7 @@ def kora_spec() -> dict:
 _EXECUTOR_CACHE: dict[str, tuple[str, dict]] = {}
 
 
-def _register_executor(client: TestClient, auth: dict, name: str) -> tuple[str, str]:
+def _register_executor(client: TestClient, ui_auth: dict, name: str) -> tuple[str, str]:
     """Register + approve an executor; returns (id, secret-headers).
     Module-level cache: the shared board DB persists across tests in the
     session-scoped client, so a name is registered exactly ONCE (the
@@ -125,13 +127,13 @@ def _register_executor(client: TestClient, auth: dict, name: str) -> tuple[str, 
     if name in _EXECUTOR_CACHE:
         return _EXECUTOR_CACHE[name]
     resp = client.post(
-        "/api/executors", headers=auth,
+        "/api/executors", headers=MACHINE_HEADERS,
         json={"name": name, "harness": "zcode", "host": "laptop-1"})
     assert resp.status_code == 201, resp.text
     body = resp.json()
     executor_id = body["executor"]["id"]
     resp = client.patch(
-        f"/api/executors/{executor_id}", headers=auth,
+        f"/api/executors/{executor_id}", headers=ui_auth,
         json={"state": "approved"})
     assert resp.status_code == 200, resp.text
     headers = {"Authorization": f"Bearer {body['executor_secret']}"}
@@ -148,11 +150,11 @@ def _scan(client: TestClient, h: dict, executor_id: str,
     return resp.json()
 
 
-def _ingest_session(client: TestClient, auth: dict, name: str,
+def _ingest_session(client: TestClient, ui_auth: dict, name: str,
                     native_id: str, harness: str = "zcode") -> str:
     """Register+approve an executor and ingest one session row; returns
     the opaque board handle."""
-    executor_id, h = _register_executor(client, auth, name)
+    executor_id, h = _register_executor(client, ui_auth, name)
     _scan(client, h, executor_id,
           [{"native_id": native_id, "harness": harness,
             "project": "p", "cwd": "/p", "state": "live"}])
@@ -174,11 +176,11 @@ def _get_transcript(client: TestClient, session_id: str,
 
 
 @pytest.fixture()
-def transcript_env(client: TestClient, auth: dict, app_module,
+def transcript_env(client: TestClient, ui_auth: dict, app_module,
                    monkeypatch, tmp_path) -> tuple[str, Path]:
     """Executor + ingested zcode session + VESMARO_KORA_ZCODE_DB pointed
     at a synthetic store carrying the SAME native id."""
-    executor_id, h = _register_executor(client, auth, "kora-s2-tr")
+    executor_id, h = _register_executor(client, ui_auth, "kora-s2-tr")
     _scan(client, h, executor_id,
           [{"native_id": "sess_kora2", "harness": "zcode",
             "project": "kora2", "cwd": "/proj/kora2", "state": "live"}])
@@ -374,10 +376,10 @@ class TestTranscriptValidation:
             assert resp.json()["code"] == "session_not_found"
 
     def test_vscode_session_transcript_is_honest_422(
-            self, client: TestClient, auth: dict):
+            self, client: TestClient, ui_auth: dict):
         """The known kind:1 gap must speak: 422 validation with the
         explanation, never a fake empty page."""
-        handle = _ingest_session(client, auth, "kora-s2-vs", "vs-1",
+        handle = _ingest_session(client, ui_auth, "kora-s2-vs", "vs-1",
                                  harness="vscode")
         resp = _get_transcript(client, handle)
         assert resp.status_code == 422
@@ -386,15 +388,15 @@ class TestTranscriptValidation:
         assert "kind:1" in body["message"]
 
     def test_pi_session_transcript_is_honest_422(
-            self, client: TestClient, auth: dict):
-        handle = _ingest_session(client, auth, "kora-s2-pi", "pi-1",
+            self, client: TestClient, ui_auth: dict):
+        handle = _ingest_session(client, ui_auth, "kora-s2-pi", "pi-1",
                                  harness="pi")
         resp = _get_transcript(client, handle)
         assert resp.status_code == 422
         assert resp.json()["code"] == "validation"
 
     def test_registry_row_without_store_row_404(self, client: TestClient,
-                                                auth: dict, monkeypatch,
+                                                ui_auth: dict, monkeypatch,
                                                 tmp_path):
         """A remote-host session (registry yes, local store no) resolves
         as absent with the W4 explanation — not a 500."""
@@ -404,7 +406,7 @@ class TestTranscriptValidation:
         con.commit()
         con.close()
         monkeypatch.setenv("VESMARO_KORA_ZCODE_DB", str(db))
-        handle = _ingest_session(client, auth, "kora-s2-remote",
+        handle = _ingest_session(client, ui_auth, "kora-s2-remote",
                                  "sess_remote")
         resp = _get_transcript(client, handle)
         assert resp.status_code == 404
@@ -514,8 +516,8 @@ class TestListingPaginationApi:
     frozen envelope untouched, pages over the SAME params disjoint."""
 
     @pytest.fixture()
-    def five_sessions(self, client: TestClient, auth: dict) -> str:
-        executor_id, h = _register_executor(client, auth, "kora-s2-page")
+    def five_sessions(self, client: TestClient, ui_auth: dict) -> str:
+        executor_id, h = _register_executor(client, ui_auth, "kora-s2-page")
         rows = [{"native_id": f"sess_p{i}", "harness": "zcode",
                  "project": f"p{i}", "state": "idle"} for i in range(5)]
         _scan(client, h, executor_id, rows, drop_missing=True)
@@ -569,7 +571,7 @@ class TestSlice2Pipeline:
     """Real readers → real ingest → real listing for the new harnesses."""
 
     def test_vscode_reader_to_registry_to_api(self, client: TestClient,
-                                              auth: dict):
+                                              ui_auth: dict):
         import os
         import tempfile
         from server.kora.vscode_reader import scan_vscode_stores
@@ -587,7 +589,7 @@ class TestSlice2Pipeline:
             + "\n", encoding="utf-8")
         scan = scan_vscode_stores(user, now=time.time())
         assert len(scan.sessions) == 1
-        executor_id, h = _register_executor(client, auth, "kora-s2-pipe")
+        executor_id, h = _register_executor(client, ui_auth, "kora-s2-pipe")
         _scan(client, h, executor_id, scan.sessions, drop_missing=True)
         from conftest import get_app_module
         effective = (get_app_module().UI_WRITE_TOKEN
@@ -601,7 +603,7 @@ class TestSlice2Pipeline:
         assert item["last_line_preview"] == "fix ui"
 
     def test_pi_reader_to_registry_to_api(self, client: TestClient,
-                                          auth: dict):
+                                          ui_auth: dict):
         from server.kora.pi_reader import scan_pi_stores
         tmp = Path(tempfile.mkdtemp(prefix="kora-pi-"))
         root = tmp / "sessions"
@@ -617,7 +619,7 @@ class TestSlice2Pipeline:
             ]) + "\n", encoding="utf-8")
         scan = scan_pi_stores(root, now=time.time())
         assert len(scan.sessions) == 1
-        executor_id, h = _register_executor(client, auth,
+        executor_id, h = _register_executor(client, ui_auth,
                                             "kora-s2-pipe-pi")
         _scan(client, h, executor_id, scan.sessions, drop_missing=True)
         from conftest import get_app_module

@@ -149,43 +149,28 @@ if _raw_root_app and _raw_root_app.lower() not in ("board", "app"):
 # boundary); vesma credentials stay server-side. Since SEC-3 the write
 # guard is FAIL-CLOSED: mutations require a bearer token, and when none of
 # the requested classes is configured every mutation answers 503. The Helm
-# chart generates the tokens; compose.yaml ships a dev default for local
+# chart generates the tokens; compose.yaml ships dev defaults for local
 # runs.
 #
-# Token classes (ADR 0009 amendment A1, phase 1 — token split):
+# Token classes (ADR 0009 amendment A1, phase 1 — token split CLOSED:
+# the transitional single-token mode is retired. VESMARO_UI_TOKEN has
+# been live in every chart deployment since the RUNBOOK.md §8 step-2
+# upgrade and is now REQUIRED for the ui class):
 #   ui      — VESMARO_UI_TOKEN: every board mutation driven from the owner
 #             UI (tasks CRUD/move/archive, task-drafts, inbox refresh/adopt,
 #             notifications/read, memory servers/groups CRUD, board-reflect,
-#             specialists/refresh-all).
+#             specialists/refresh-all). Unset = the ui class fail-closes to
+#             503 (mutations and owner login); there is NO board-token
+#             fallback anymore.
 #   machine — VESMARO_BOARD_TOKEN: the poller/agents (task reports today;
 #             future assignment claim/start/heartbeat/complete/fail routes
 #             annotate classes=("machine",)). The legacy env name is kept
 #             DELIBERATELY: scripts/assignment_poller.py and the deployed
-#             chart already ship it; renaming would break both.
-# Transitional v1 (documented migration order in the chart RUNBOOK.md):
-# while VESMARO_UI_TOKEN is NOT set, VESMARO_BOARD_TOKEN is also accepted
-# on ui-class mutations, so the single-token deployment of today keeps
-# working across the upgrade that lands this code. Once VESMARO_UI_TOKEN
-# is set, the machine token no longer passes ui-class guards. Fail-closed
-# holds either way: with neither token configured every mutation is 503.
+#             chart already ship it; renaming would break both. A machine
+#             token is REFUSED on ui-class routes — it must not mint
+#             assignments (closes the create-assignment injection vector).
 UI_WRITE_TOKEN = os.environ.get("VESMARO_UI_TOKEN", "")
 BOARD_WRITE_TOKEN = os.environ.get("VESMARO_BOARD_TOKEN", "")
-
-# A1 (ADR 0009): two token classes from day one. UI token — owner-UI
-# assignment actions (create/cancel). Board (machine) token — the poller /
-# agent loop (claim/start/heartbeat/complete/fail) plus the existing
-# mutation surface (reports, moves, task CRUD). Legacy single-token mode:
-# when VESMARO_UI_TOKEN is unset, VESMARO_BOARD_TOKEN serves BOTH classes
-# and a warning is logged at startup; in split mode the board token is
-# REFUSED on UI routes — a machine token must not mint assignments (closes
-# the create-assignment injection vector). Env name is pinned by the Helm
-# chart (parallel task ARCH-6) — do not rename.
-UI_WRITE_TOKEN = os.environ.get("VESMARO_UI_TOKEN", "")
-if not UI_WRITE_TOKEN:
-    logging.getLogger("vesmaro.auth").warning(
-        "VESMARO_UI_TOKEN is not set — single-token legacy mode: "
-        "VESMARO_BOARD_TOKEN serves both UI and machine token classes")
-    UI_WRITE_TOKEN = BOARD_WRITE_TOKEN
 
 # ADR 0014 Ф1 (archcom open question #2): login security rests on the
 # ui token's entropy — the verify limiter only slows a guesser down. One
@@ -9168,13 +9153,16 @@ _TOKEN_CLASS_ENV = {"ui": "VESMARO_UI_TOKEN", "machine": "VESMARO_BOARD_TOKEN"}
 def _token_classes() -> dict[str, str]:
     """Effective bearer token per class ('' = class not configured).
 
-    ui falls back to the machine token while the token split is rolling
-    out (transitional v1, see the token-classes note at module top);
-    machine is exactly VESMARO_BOARD_TOKEN. Reads the module globals at
-    call time so tests can monkeypatch the configuration per test.
+    ui is exactly VESMARO_UI_TOKEN and machine is exactly
+    VESMARO_BOARD_TOKEN. The transitional ui<-machine fallback is
+    retired (the token split CLOSED with the ui token live in every
+    chart deployment since RUNBOOK.md §8 step 2): an unset ui class is
+    fail-closed 503, never served by the board token. Reads the module
+    globals at call time so tests can monkeypatch the configuration per
+    test.
     """
     return {
-        "ui": UI_WRITE_TOKEN or BOARD_WRITE_TOKEN,
+        "ui": UI_WRITE_TOKEN,
         "machine": BOARD_WRITE_TOKEN,
     }
 
@@ -9341,8 +9329,8 @@ def _leg_is_authenticated(request: Request) -> bool:
     board token is a service credential, not a person — its reads are
     OPEN-reading surfaces, not attribution). Header-leg determinism rule
     (ADR 0014 Ф2): a header present → the header leg ONLY, the cookie is
-    not consulted; the transition-mode board token counts as ui because
-    that is what _bearer_is_class verifies against.
+    not consulted. (The transition-mode note is historical: the split is
+    closed, the board token is never a ui bearer anymore.)
 
     Read-surface helper (no 401 semantics): the answer only decides
     whether ``actor`` is projected, never whether the read proceeds."""
@@ -9383,17 +9371,16 @@ def _ui_session_expired_detail(classes: tuple[str, ...]) -> str:
 def _guard_ui_write(request: Request) -> None:
     """UI-class mutation guard (ADR 0009 A1): assignment create/cancel are
     owner-UI actions and take VESMARO_UI_TOKEN. Fail-closed exactly like
-    _guard_write: when the effective UI token is empty (neither class
-    configured) every UI mutation answers 503. Legacy single-token mode
-    (VESMARO_UI_TOKEN unset → falls back to the board token at import) keeps
-    existing deployments working; in split mode the board token is REFUSED
-    here — a machine token must not mint assignments. Constant-time compare."""
+    _guard_write: when the ui class is unconfigured every UI mutation
+    answers 503 (the transitional board-token fallback is retired — an
+    unset VESMARO_UI_TOKEN is never served by the machine token). The
+    machine token is REFUSED here — a machine token must not mint
+    assignments. Constant-time compare."""
     if not UI_WRITE_TOKEN:
         raise HTTPException(
             503,
             "ui mutation auth is not configured: set VESMARO_UI_TOKEN "
-            "(or VESMARO_BOARD_TOKEN for single-token legacy mode) to "
-            "enable assignment UI actions (fail-closed)",
+            "to enable assignment UI actions (fail-closed)",
         )
     auth = request.headers.get("Authorization", "")
     if auth:
@@ -9644,8 +9631,10 @@ async def verify_ui_token(body: UiTokenVerifyIn, request: Request,
     session (Ф2): on success the ``vesmaro_ui`` cookie is set right here —
     HttpOnly, SameSite=Strict, Secure when the request is https, Max-Age
     21600 (sliding idle TTL; guards reissue on activity). ``token_class``
-    is honest about legacy mode: with no dedicated VESMARO_UI_TOKEN the ui
-    class is served by the board token and the login says ``legacy``.
+    answers ``ui``; ``legacy`` now reports only the equal-tokens
+    misconfiguration (both envs set to the SAME secret — the operator
+    must split them), never a supported mode: the transitional
+    single-token fallback is retired.
     Errors: 401 class-aware (never a generic "not accepted"), 429 on the
     flat limiters each counting down and carrying its ``Retry-After``
     hint (F4, ME-090 — the device-mutation/telemetry limiter pattern),
@@ -9657,8 +9646,7 @@ async def verify_ui_token(body: UiTokenVerifyIn, request: Request,
     if not _token_classes().get("ui"):
         raise HTTPException(
             503,
-            "owner login is not configured: set VESMARO_UI_TOKEN "
-            "(or VESMARO_BOARD_TOKEN for single-token legacy mode) to "
+            "owner login is not configured: set VESMARO_UI_TOKEN to "
             "enable it (fail-closed)",
         )
     client_ip = request.client.host if request.client else "unknown"
@@ -9737,8 +9725,7 @@ async def probe_ui_session(request: Request) -> Response:
     if not _token_classes().get("ui"):
         raise HTTPException(
             503,
-            "owner login is not configured: set VESMARO_UI_TOKEN "
-            "(or VESMARO_BOARD_TOKEN for single-token legacy mode) to "
+            "owner login is not configured: set VESMARO_UI_TOKEN to "
             "enable it (fail-closed)",
         )
     client_ip = request.client.host if request.client else "unknown"
@@ -10464,7 +10451,7 @@ async def exchange_pairing(body: PairingExchangeBody,
         raise HTTPException(
             503,
             "pairing is disabled: no ui token configured (fail-closed; "
-            "set VESMARO_UI_TOKEN or VESMARO_BOARD_TOKEN to enable)",
+            "set VESMARO_UI_TOKEN to enable)",
         )
     client_ip = request.client.host if request.client else "unknown"
     if not _pairing_ip_limiter.acquire(client_ip):

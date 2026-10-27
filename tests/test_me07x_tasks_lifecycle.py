@@ -88,10 +88,10 @@ class TestLifecycleStampColumns:
         reordered = store.move_task(task["id"], "done", position=0)
         assert reordered["done_at"] == done["done_at"]
 
-    def test_task_out_exposes_stamps_via_api(self, client, make_task, auth):
+    def test_task_out_exposes_stamps_via_api(self, client, make_task, ui_auth):
         task = make_task()
         r = client.post(f"/api/tasks/{task['id']}/move",
-                        json={"col": "resolved"}, headers=auth)
+                        json={"col": "resolved"}, headers=ui_auth)
         assert r.status_code == 200, r.text
         body = r.json()
         assert body["resolved_at"]
@@ -119,10 +119,10 @@ class TestBoardDateFilters:
         assert fresh["id"] not in ids
 
     def test_completed_bounds_use_first_completion_stamp(
-            self, client, app_module, make_task, auth):
+            self, client, app_module, make_task, ui_auth):
         finished = make_task(title="finished")
         client.post(f"/api/tasks/{finished['id']}/move",
-                    json={"col": "resolved"}, headers=auth)
+                    json={"col": "resolved"}, headers=ui_auth)
         _backdate(app_module, finished["id"], resolved_at=_iso_ago(days=2))
         open_task = make_task(title="never-finished")
 
@@ -161,7 +161,7 @@ class TestBoardDateFilters:
 
 
 @pytest.fixture()
-def batch_inbox_env(client, auth, fake_mnemos, allow_hosts, app_module):
+def batch_inbox_env(client, ui_auth, fake_mnemos, allow_hosts, app_module):
     """The test_task_inbox inbox_env pattern, local to this module: one
     active memory server backed by this test's FakeMnemos."""
     allow_hosts(f"127.0.0.1:{fake_mnemos.port}")
@@ -199,13 +199,13 @@ def _seed_mirror(store, memory_id: str, title: str) -> None:
 
 class TestAdoptBatch:
     def test_batch_adopts_every_record(
-            self, batch_inbox_env, client, auth):
+            self, batch_inbox_env, client, ui_auth):
         store = batch_inbox_env.store
         _seed_mirror(store, "m-b1", "first")
         _seed_mirror(store, "m-b2", "second")
 
         r = client.post("/api/tasks/inbox/adopt-batch",
-                        json={"memory_ids": ["m-b1", "m-b2"]}, headers=auth)
+                        json={"memory_ids": ["m-b1", "m-b2"]}, headers=ui_auth)
         assert r.status_code == 200, r.text
         body = r.json()
         assert body["adopted"] == 2
@@ -217,12 +217,12 @@ class TestAdoptBatch:
         assert store.get_inbox_item("m-b1")["adopted_task_id"]
 
     def test_one_failure_does_not_abort_the_rest(
-            self, batch_inbox_env, client, auth):
+            self, batch_inbox_env, client, ui_auth):
         store = batch_inbox_env.store
         _seed_mirror(store, "m-good", "good")
         r = client.post("/api/tasks/inbox/adopt-batch",
                         json={"memory_ids": ["m-good", "m-unknown"]},
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 200, r.text
         body = r.json()
         assert body["adopted"] == 1
@@ -233,14 +233,14 @@ class TestAdoptBatch:
         assert "not found" in by_id["m-unknown"]["detail"]
 
     def test_double_adopt_reports_existing_task_id(
-            self, batch_inbox_env, client, auth):
+            self, batch_inbox_env, client, ui_auth):
         store = batch_inbox_env.store
         _seed_mirror(store, "m-dup", "dup")
         first = client.post("/api/tasks/inbox/adopt-batch",
-                            json={"memory_ids": ["m-dup"]}, headers=auth)
+                            json={"memory_ids": ["m-dup"]}, headers=ui_auth)
         assert first.status_code == 200
         second = client.post("/api/tasks/inbox/adopt-batch",
-                             json={"memory_ids": ["m-dup"]}, headers=auth)
+                             json={"memory_ids": ["m-dup"]}, headers=ui_auth)
         assert second.status_code == 200
         row = second.json()["results"][0]
         assert row["ok"] is False
@@ -248,26 +248,26 @@ class TestAdoptBatch:
         assert "already adopted" in row["detail"]
 
     def test_single_adopt_keeps_historical_409_shape(
-            self, batch_inbox_env, client, auth):
+            self, batch_inbox_env, client, ui_auth):
         """The pre-ME-073 409 body (top-level task_id) is a contract the
         viewer parses (parseTaskIdFromBody) — the refactor must keep it."""
         store = batch_inbox_env.store
         _seed_mirror(store, "m-shape", "shape")
-        first = client.post("/api/tasks/inbox/m-shape/adopt", headers=auth)
+        first = client.post("/api/tasks/inbox/m-shape/adopt", headers=ui_auth)
         assert first.status_code == 201
-        second = client.post("/api/tasks/inbox/m-shape/adopt", headers=auth)
+        second = client.post("/api/tasks/inbox/m-shape/adopt", headers=ui_auth)
         assert second.status_code == 409
         body = second.json()
         assert body["task_id"] == first.json()["id"]
         assert "already adopted" in body["detail"]
 
-    def test_empty_and_oversized_batches_are_422(self, client, auth):
+    def test_empty_and_oversized_batches_are_422(self, client, ui_auth):
         r = client.post("/api/tasks/inbox/adopt-batch",
-                        json={"memory_ids": []}, headers=auth)
+                        json={"memory_ids": []}, headers=ui_auth)
         assert r.status_code == 422
         r = client.post("/api/tasks/inbox/adopt-batch",
                         json={"memory_ids": [f"m{i}" for i in range(101)]},
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 422
 
     def test_batch_needs_the_token(self, client):

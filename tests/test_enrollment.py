@@ -35,6 +35,8 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from conftest import BOARD_TOKEN, DATA_DIR
+
+MACHINE_HEADERS = {"Authorization": f"Bearer {BOARD_TOKEN}"}
 from server.security import RateLimiter
 
 DB_PATH = DATA_DIR / "board.db"
@@ -363,10 +365,10 @@ class TestRegisterLeg:
         assert statuses == [201, 410]            # one winner, honest loser
         assert len(client.get("/api/executors").json()["items"]) == 1
 
-    def test_machine_leg_keeps_registered_via_empty(self, client, auth):
+    def test_machine_leg_keeps_registered_via_empty(self, client, ui_auth):
         r = client.post("/api/executors",
                         json={"name": "legacy", "harness": "zcode"},
-                        headers=auth)
+                        headers=MACHINE_HEADERS)
         assert r.status_code == 201
         assert r.json()["executor"]["registered_via"] == ""
 
@@ -399,7 +401,7 @@ class TestRevokeLeg:
 
 # ------------------------------------------------------------- guard classes
 class TestGuardClasses:
-    def test_mne_token_opens_nothing_else(self, client, ui_auth, auth,
+    def test_mne_token_opens_nothing_else(self, client, ui_auth,
                                           make_task):
         """Scope = registration ONLY: heartbeat, assignment claim and ui
         PATCH all refuse an mne_ bearer."""
@@ -410,7 +412,7 @@ class TestGuardClasses:
         assert r.status_code == 401
         # assignment claim → not a board token, not an approved executor
         task = make_task(title="guard-enroll")
-        r = client.post("/api/assignments", headers=auth,
+        r = client.post("/api/assignments", headers=ui_auth,
                         json={"task_id": task["id"],
                               "specialist": "gcw-tech-lead"})
         aid = r.json()["assignment"]["id"]
@@ -462,7 +464,7 @@ class TestHygiene:
 
 # ------------------------------------------------------------------- E2E-lite
 class TestEnrolledExecutorEndToEnd:
-    def test_enroll_to_done_full_chain(self, client, ui_auth, auth,
+    def test_enroll_to_done_full_chain(self, client, ui_auth,
                                        make_task):
         """enroll → register → approve+enable → pinned assignment →
         claim/start/heartbeat/complete WITH THE EXECUTOR'S OWN SECRET."""
@@ -473,10 +475,10 @@ class TestEnrolledExecutorEndToEnd:
         r = client.patch(f"/api/executors/{executor['id']}",
                          json={"state": "approved", "enabled": True,
                                "capabilities": ["backend"]},
-                         headers=auth)
+                         headers=ui_auth)
         assert r.status_code == 200
         task = make_task(title="e2e-enroll")
-        r = client.post("/api/assignments", headers=auth,
+        r = client.post("/api/assignments", headers=ui_auth,
                         json={"task_id": task["id"],
                               "specialist": "gcw-senior-system-engineer",
                               "executor_id": executor["id"]})

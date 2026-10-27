@@ -34,6 +34,9 @@ from pathlib import Path
 
 import httpx
 import pytest
+from conftest import BOARD_TOKEN
+
+MACHINE_HEADERS = {"Authorization": f"Bearer {BOARD_TOKEN}"}
 
 from scripts.assignment_poller import (
     FINISH_RETRIES,
@@ -72,7 +75,7 @@ STUBBORN_CMD = [sys.executable, "-c",
 # ----------------------------------------------------------------- fakes
 class FakeBoard:
     """In-memory double of the phase-1 assignment API surface. Mirrors the
-    real state machine (CAS claim, fail auth via token OR claimed_by)."""
+    real state machine (CAS claim, fail ui_auth via token OR claimed_by)."""
 
     def __init__(self):
         self.assignments: dict[int, dict] = {}
@@ -620,7 +623,7 @@ class TestLaunch:
         # ...and the assignment left 'claimed' via fail with the token
         fail = next(c for c in board.calls if c[0] == "fail")
         assert fail[1] == 8
-        assert fail[3] == board.tokens[8]           # claim_token auth
+        assert fail[3] == board.tokens[8]           # claim_token ui_auth
         assert fail[2].startswith("start failed:")
         assert board.assignments[8]["state"] == "failed"
         assert not poller.active_assignment_ids
@@ -680,7 +683,7 @@ class TestSupervision:
         assert fail[1] == 12
         assert fail[2].startswith("process exit 1:")
         assert "boom" in fail[2]
-        assert fail[3] == board.tokens[12]      # claim_token auth
+        assert fail[3] == board.tokens[12]      # claim_token ui_auth
         assert board.assignments[12]["state"] == "failed"
         assert read_audit(cfg.audit_path)[-1]["outcome"] == "failed"
 
@@ -1091,7 +1094,7 @@ class TestLaunchErrors:
         assert fail[1] == 83
         assert fail[2].startswith("launch failed:")
         assert "nonexistent" in fail[2]
-        assert fail[3] == board.tokens[83]       # claim_token auth
+        assert fail[3] == board.tokens[83]       # claim_token ui_auth
         assert board.assignments[83]["state"] == "failed"
         assert not poller.active_assignment_ids
         audit = read_audit(cfg.audit_path)
@@ -1306,7 +1309,7 @@ class TestEndToEndAgainstRealApp:
     subprocess → exit 0 → complete with the fallback final report → task
     column resolved."""
 
-    def test_full_lifecycle(self, client, auth, make_task, app_module,
+    def test_full_lifecycle(self, client, ui_auth, make_task, app_module,
                             tmp_path):
         task = make_task(
             title="e2e poller",
@@ -1314,7 +1317,7 @@ class TestEndToEndAgainstRealApp:
         created = client.post(
             "/api/assignments",
             json={"task_id": task["id"], "specialist": "gcw-tester"},
-            headers=auth)
+            headers=ui_auth)
         assert created.status_code == 201, created.text
         aid = created.json()["assignment"]["id"]
 
@@ -1352,7 +1355,7 @@ class TestEndToEndAgainstRealApp:
         outcomes = [a["outcome"] for a in read_audit(cfg.audit_path)]
         assert outcomes == ["launched", "complete"]
 
-    def test_recovery_sweep_fails_own_stale_record(self, client, auth,
+    def test_recovery_sweep_fails_own_stale_record(self, client, ui_auth,
                                                    make_task, app_module,
                                                    tmp_path):
         """Sweep against the real fail contract: claimed_by match, no
@@ -1361,11 +1364,11 @@ class TestEndToEndAgainstRealApp:
         created = client.post(
             "/api/assignments",
             json={"task_id": task["id"], "specialist": "gcw-tester"},
-            headers=auth)
+            headers=ui_auth)
         aid = created.json()["assignment"]["id"]
         claimed = client.post(f"/api/assignments/{aid}/claim",
                               json={"claimed_by": "test-poller"},
-                              headers=auth)
+                              headers=MACHINE_HEADERS)
         assert claimed.status_code == 200
 
         base_url, server = _live_uvicorn(app_module.app)
