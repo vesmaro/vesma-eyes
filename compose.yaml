@@ -31,10 +31,11 @@ services:
       # SEC-3: mutations are fail-closed — a dev default keeps the local
       # scenario working; production must override via the chart secret.
       - VESMARO_BOARD_TOKEN=${VESMARO_BOARD_TOKEN:-dev-board-token-change-me}
-      # ADR 0009 A1 token split: ui-class guard. Empty default = transition
-      # mode (board token passes ui mutations too); set a distinct value to
-      # exercise the split locally.
-      - VESMARO_UI_TOKEN=${VESMARO_UI_TOKEN:-}
+      # ADR 0009 A1 token split — CLOSED (transitional retired in 1.93):
+      # ui-class guard. The dev default keeps the local scenario usable
+      # (the server no longer falls back to the board token); production
+      # overrides via the chart secret.
+      - VESMARO_UI_TOKEN=${VESMARO_UI_TOKEN:-dev-ui-token-change-me}
       # SEC-1: egress allowlist for memory-server hosts (dev: local vesma).
       - VESMARO_ALLOWED_MEMORY_HOSTS=${VESMARO_ALLOWED_MEMORY_HOSTS:-host.containers.internal,localhost,127.0.0.1}
     healthcheck:

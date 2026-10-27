@@ -35,6 +35,13 @@ No new secret class in MF3. No anonymous leg exists.**
 | Agent relay | the agent's EXISTING executor token (discovery-leg authn class, identity-match per protocol §3) | `POST /api/executors/{id}/models/{provider_key}/infer` — token must match the `{id}` executor row, same discipline as discovery | YES — against the AUTHENTICATED executor identity |
 | Anything else | — | 401, no named reason | — |
 
+Footnote (transitional closed, 2026-10-27): the ADR 0009 A1 token split
+is closed — `VESMARO_UI_TOKEN` has been live in the chart deployment
+since the RUNBOOK §8 step-2 upgrade, and the transitional single-token
+mode (the board token serving the ui class) is retired server-side
+(1.93). The ui class in this table means exactly the `VESMARO_UI_TOKEN`
+session; the machine/board token never reaches these routes.
+
 Rationale. Harnesses never talk to the board directly: the harness's
 inference endpoint is a credential-free localhost URL served by its
 own host's agent (exact mesh-mode-shim precedent: child env carries NO
