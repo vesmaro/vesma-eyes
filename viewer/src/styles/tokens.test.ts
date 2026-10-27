@@ -1058,6 +1058,88 @@ describe("viewer ↔ board token parity (ADR 0006 — single source of truth)", 
   });
 });
 
+// ── Full-scope parity auto-gate (ADR 0006; hygiene batch review tail) ───────
+//
+// The parity guarantee above covers :root + the light theme only. The two
+// tracks share MORE cascade scopes (density pair, the well window, the
+// reduced-motion ladders), and the W1b drift this gate caught on its first
+// run lived in one of those (`--color-bg-elevated` inside
+// [data-well-window]: viewer had it, the board never mirrored it). This
+// gate walks EVERY scope both files define and demands name-and-value
+// identity, with the board-only names bounded by the frozen appendix.
+// Track-local scopes (the viewer's appearance presets, the well legend
+// pair) are skipped by construction — the intersection is the contract.
+
+/** Top-level scope selectors of one stylesheet. Uses the same selector
+ * normalization as themeDecls (wrapped selector lists land on ONE line),
+ * so the sets are comparable across the two files. */
+function scopeSelectors(rawCss: string): string[] {
+  const css = rawCss.replace(/,\s*\n/g, ", ");
+  const selectors = new Set<string>();
+  let depth = 0;
+  for (const line of css.split("\n")) {
+    if (depth === 0) {
+      const match = /([^{]+)\{/.exec(line);
+      if (match !== null) {
+        for (const part of match[1].split(",")) selectors.add(part.trim());
+        depth = 1;
+        continue;
+      }
+    }
+    if (depth > 0) {
+      const closes = (line.match(/\}/g) ?? []).length;
+      const opens = (line.match(/\{/g) ?? []).length;
+      depth += opens - closes;
+      if (depth <= 0) depth = 0;
+    }
+  }
+  return [...selectors];
+}
+
+describe("viewer ↔ board token parity — FULL scope identity (ADR 0006 auto-gate)", () => {
+  const viewerScopes = scopeSelectors(tokensCss);
+  const boardScopes = new Set(scopeSelectors(boardTokensCss));
+  const sharedScopes = viewerScopes.filter((scope) => boardScopes.has(scope));
+
+  it("the shared scope set is non-trivial (a silent empty intersection must not disable the gate)", () => {
+    expect(sharedScopes).toEqual(
+      expect.arrayContaining([
+        ":root",
+        '[data-theme="light"]',
+        '[data-density="comfortable"]',
+        '[data-density="compact"]',
+        "[data-well-window]",
+        '[data-motion="reduced"]',
+        "@media (prefers-reduced-motion: reduce)",
+      ]),
+    );
+  });
+
+  it("every shared scope is name-and-value identical; board-only names stay inside the frozen appendix", () => {
+    for (const scope of sharedScopes) {
+      const viewerDecls = themeDecls(tokensCss, scope);
+      const boardDecls = themeDecls(boardTokensCss, scope);
+      expect(
+        viewerDecls.size,
+        `scope ${scope} must parse to a non-empty declaration map`,
+      ).toBeGreaterThan(0);
+      for (const [name, value] of viewerDecls) {
+        expect(
+          boardDecls.get(name),
+          `${name} in scope ${scope}: the board must mirror the viewer value (ADR 0006)`,
+        ).toBe(value);
+      }
+      const boardBeyondAppendix = [...boardDecls.keys()].filter(
+        (name) => !viewerDecls.has(name) && !BOARD_ONLY_TOKENS.includes(name),
+      );
+      expect(
+        boardBeyondAppendix,
+        `scope ${scope}: board-only names outside the frozen appendix`,
+      ).toEqual([]);
+    }
+  });
+});
+
 describe("self-hosted fonts (T4)", () => {
   it("stacks the self-hosted variable families ahead of the static names", () => {
     expect(tokensCss).toMatch(/--font-ui:\s*"Inter Variable", "Inter"/);

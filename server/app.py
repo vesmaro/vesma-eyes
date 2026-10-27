@@ -4018,7 +4018,7 @@ class TaskSubstanceOut(_ApiModel):
     ``task.summary``; the «итог» is ``reports.final``."""
     ok: bool
     task_id: str
-    task: dict[str, Any]
+    task: TaskOut  # typed projection of store.task() — never an anonymous dict
     reports: SubstanceReportsOut
     executors: SubstanceExecutorsOut
     sessions: SubstanceSessionsOut
@@ -6373,6 +6373,32 @@ def _remove_provider_credential(directory: Path,
         return False
 
 
+def _credential_file_holds(directory: Path, credential_ref: str,
+                           credential: str) -> bool:
+    """Whether the vault file currently holds EXACTLY this material — the
+    ownership probe behind the failure compensations (review tail
+    mf2-vault-db-consistency). The credential_ref name is shared per
+    provider key, so a concurrent racer's write can land in the same
+    file: an unlink driven by the NAME alone would delete a stranger's
+    material."""
+    try:
+        return (directory / credential_ref).read_bytes() == \
+            credential.encode("utf-8")
+    except OSError:
+        return False
+
+
+def _unlink_provider_credential_if_ours(directory: Path, credential_ref: str,
+                                        credential: str) -> bool:
+    """Compensation for a FAILED registration/insert: remove the vault
+    file ONLY when it still holds OUR OWN material (a failed POST's
+    secret must never linger on disk); a concurrent winner's file is
+    never touched. Returns whether THIS call removed a file."""
+    if not _credential_file_holds(directory, credential_ref, credential):
+        return False
+    return _remove_provider_credential(directory, credential_ref)
+
+
 def _credential_fingerprint(credential: str) -> str:
     """SHA-256(material)[:12hex] — the only material-derived artifact
     allowed to persist (verdict H1); enough to answer «тот ли ключ», never
@@ -6607,13 +6633,25 @@ async def create_model_provider(body: ModelProviderCreateIn,
         row = store.model_provider_create(
             key, base_url, fingerprint, credential_ref, _now_iso())
     except sqlite3.IntegrityError:
-        # Raced a concurrent POST for the same name: the vault file of the
-        # loser is orphaned — remove it, report the named 409.
-        _remove_provider_credential(directory, credential_ref)
+        # Raced a concurrent POST for the same name: the loser of the
+        # insert compensates ITS OWN material only — the vault file is
+        # unlinked iff it still holds the loser's bytes (mf2-vault-db-
+        # consistency (a)); a file holding the concurrent winner's
+        # material is never touched (name-shared ref ≠ ownership).
+        _unlink_provider_credential_if_ours(
+            directory, credential_ref, body.credential)
         return _kora_error(
             409, "provider_exists",
             "Провайдер с таким именем уже подключён. Замените ключ через "
             "ротацию (PUT) или выберите другое имя.")
+    except sqlite3.Error:
+        # The insert failed for a non-duplicate reason AFTER the vault
+        # write: compensate OUR OWN material — no orphan 0600 secret may
+        # outlive its failed registration (mf2-vault-db-consistency (b));
+        # the failure itself surfaces as the honest 500.
+        _unlink_provider_credential_if_ours(
+            directory, credential_ref, body.credential)
+        raise
     store.log_models_audit("provider.credential.set", {
         "actor": "ui", "provider_key": key, "credential_ref": credential_ref,
         "fingerprint": fingerprint, "base_url": base_url,
@@ -6629,7 +6667,18 @@ async def rotate_model_provider(provider_key: str,
                                 request: Request) -> Response:
     """Rotate the credential (owner act): new material → new fingerprint,
     the vault file replaced atomically, audit .rotated. The old key stays
-    valid until the rename lands (MF-CARD-ROTATE: the slot stays «set»)."""
+    valid until the rename lands (MF-CARD-ROTATE: the slot stays «set»).
+
+    Ordering limitation (MF-CARD-ROTATE, vault-before-DB): the vault file
+    is replaced BEFORE the registry row updates — a 0600 file and SQLite
+    have no cross-store transaction. A store failure AFTER the replace
+    leaves the file holding the NEW material while the DB fingerprint
+    still names the OLD key; the read side answers fail-CLOSED on the
+    mismatch (503 credential_mismatch — never a half-trusted use, §3.5)
+    and recovery is simply re-rotating: file+DB converge on the first
+    success. The SUCCESS invariant — after a 200 rotation the DB
+    fingerprint equals the fingerprint of the vault file's actual bytes —
+    is pinned by test (mf2-vault-db-consistency (c))."""
     denied = _providers_owner_denied(request)
     if denied is not None:
         return denied

@@ -891,6 +891,7 @@ export const ru = {
     "Нет данных от агентов: ни рабочих сессий, ни связанных памятей.",
   "tasks.substanceSessionsLabel": "Рабочие сессии",
   "tasks.substanceSessionLive": "живая сессия",
+  "tasks.substanceSessionsEmpty": "Рабочих сессий нет",
   "tasks.substanceMemoriesLabel": "Связанные памяти",
   "tasks.substanceMemoriesEmpty": "Связанных памятей нет",
   "tasks.substanceReview": "Ревью",

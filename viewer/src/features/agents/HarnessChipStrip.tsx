@@ -7,7 +7,7 @@ import type {
 } from "@/gateway/boardTypes";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
-import { executorExecEnv, executorFoundTrail } from "./execEnvModel";
+import { execEnvBadgeTitle, executorExecEnv, executorFoundTrail } from "./execEnvModel";
 import {
   PRESENCE_DOT,
   presenceFromLastSeen,
@@ -139,11 +139,9 @@ function HarnessChip({
   const presenceKey = presence ?? "unknown";
   const execEnv = executorExecEnv(member);
   // AGW-23: the dedupe trail of the SAME installation rides the badge
-  // tooltip (audit data of one fact — the chip geometry stays compact).
-  const foundTrail = executorFoundTrail(member);
-  const execEnvTitle = foundTrail.length
-    ? `${t("agents.hosts.execEnvTooltip")}\n${t("agents.hosts.foundAtTooltip")}\n${foundTrail.join("\n")}`
-    : t("agents.hosts.execEnvTooltip");
+  // tooltip (audit data of one fact — the chip geometry stays compact);
+  // the composition is the SHARED execEnvBadgeTitle helper.
+  const execEnvTitle = execEnvBadgeTitle(t, executorFoundTrail(member));
   const chipTitle = [
     t(presenceLabelKey(presenceKey)),
     ...(presenceKey === "unknown" ? [t("agents.presence.unknownHint")] : []),

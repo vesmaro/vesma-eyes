@@ -14,6 +14,7 @@ import { ToastProvider } from "@/components/Toast/ToastProvider";
 import { UiTokenProvider } from "@/features/ui-token/UiTokenProvider";
 import { ApiError } from "@/lib/errors";
 import type {
+  BoardTask,
   SubstanceAssignment,
   SubstanceReport,
   TaskSubstance,
@@ -84,6 +85,36 @@ function makeAssignment(
   };
 }
 
+/** The typed board TaskOut (server regen — TaskSubstanceOut.task is no
+ * longer an anonymous dict); mirrors the server-side make_task shape. */
+function makeTaskOut(overrides: Partial<BoardTask>): BoardTask {
+  return {
+    id: TASK_ID,
+    col: "open",
+    position: 0,
+    title: "Substance fixture card",
+    summary: "",
+    spec: "",
+    agents: [],
+    specialists: [],
+    env: "local",
+    project: "repro",
+    memory_ids: [],
+    mnemos_tags: [],
+    created_at: "2026-10-22T08:00:00Z",
+    updated_at: "2026-10-22T08:00:00Z",
+    archived: 0,
+    status: "open",
+    priority: "normal",
+    archived_from: "",
+    validating_since: "",
+    resolved_at: "",
+    done_at: "",
+    human_view: "",
+    ...overrides,
+  };
+}
+
 /** Full composite, mirroring the server corpus: slug hits AND the honest
  * slug miss, a superseded final kept flagged, a live final picked, one
  * nomination history with a live active pick, one session fact with the
@@ -102,11 +133,10 @@ function fullSubstance(): TaskSubstance {
   return {
     ok: true,
     task_id: TASK_ID,
-    task: {
-      id: TASK_ID,
+    task: makeTaskOut({
       summary: "Fix the login redirect loop",
       spec: "Steps: reproduce, patch the guard, add a regression test.",
-    },
+    }),
     reports: {
       count: 3,
       live_count: 2,
@@ -202,12 +232,23 @@ function emptySubstance(): TaskSubstance {
   return {
     ok: true,
     task_id: TASK_ID,
-    task: { id: TASK_ID, summary: "Card the loop never touched" },
+    task: makeTaskOut({ summary: "Card the loop never touched", spec: "" }),
     reports: { count: 0, live_count: 0, final: null, items: [] },
     executors: { count: 0, active: null, items: [] },
     sessions: { count: 0, items: [] },
     memories: { count: 0, linked: [], items: {}, unresolved: [], sources: {} },
     review: null,
+  };
+}
+
+/** The asymmetric empty (review tail task-substance-p3-tail (г)): the
+ * agents produced NO session facts but the owner DID link memories — the
+ * sessions half must still state its emptiness in words. */
+function sessionsEmptyMemoriesLinked(): TaskSubstance {
+  return {
+    ...emptySubstance(),
+    task: makeTaskOut({ summary: "Card with memories but no sessions", spec: "" }),
+    memories: { count: 1, linked: ["m-7"], items: {}, unresolved: [], sources: {} },
   };
 }
 
@@ -452,6 +493,69 @@ describe("TaskDetailPage — substance tab vs the wire contract (P1)", () => {
     const alert = document.querySelector('[role="alert"]');
     expect(alert?.textContent).toContain(
       "No access to the task substance (owner session required)",
+    );
+  });
+
+  it("a generic error (500) keeps the Retry escape; clicking it refetches and recovers", async () => {
+    // Review tail task-substance-p3-tail (в): the failure classes the
+    // contract pins (401/404) speak for themselves; everything else must
+    // keep the retry leg LIVE — asserted here with a real second fetch.
+    const payload = fullSubstance();
+    let calls = 0;
+    const taskSubstanceMock = await mountSubstanceTab(async () => {
+      calls += 1;
+      if (calls === 1) throw new ApiError(500, "transient collector failure");
+      return payload;
+    });
+    await settle();
+
+    expect(taskSubstanceMock).toHaveBeenCalledTimes(1);
+    const alert = document.querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain("Could not load the card substance");
+    expect(alert?.textContent).toContain("transient collector failure");
+
+    // The Retry button is the tab's only way forward — click it.
+    const retry = Array.from(document.querySelectorAll("button")).find(
+      (button) => button.textContent === "Retry",
+    );
+    expect(retry, "the generic error leg renders a Retry button").toBeDefined();
+    await act(async () => {
+      retry!.click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    await settle();
+
+    // The refetch fired and the tab recovered into the full payload.
+    expect(taskSubstanceMock).toHaveBeenCalledTimes(2);
+    expect(
+      document.querySelector('[role="alert"]'),
+    ).toBeNull();
+    expect(textOf(section("Plan"))).toContain("Fix the login redirect loop");
+    expect(
+      document.querySelector('p[data-substance-review="none"]')?.textContent,
+    ).toBe("No review source exists in the database.");
+  });
+
+  it("sessions empty + memories linked: the sessions half states its emptiness in words, the memory ids still render", async () => {
+    // Review tail task-substance-p3-tail (г): the BOTH-empty sentence must
+    // not swallow the asymmetric case — an empty half is a stated fact,
+    // never an omitted section (ME-062 §5 honesty).
+    await mountSubstanceTab(async () => sessionsEmptyMemoriesLinked());
+    await settle();
+
+    const sessionsMemory = section("Sessions and memory");
+    expect(sessionsMemory).not.toBeNull();
+    const verbalEmpty = sessionsMemory!.querySelector(
+      "p[data-substance-sessions-empty]",
+    );
+    expect(verbalEmpty?.textContent).toBe("No work sessions");
+    // The linked memories (board-DB truth) render next to the words.
+    expect(textOf(sessionsMemory)).toContain("Linked memories");
+    expect(textOf(sessionsMemory)).toContain("m-7");
+    // ...and NOT the BOTH-empty sentence (it names two absences, only one
+    // is true here).
+    expect(textOf(sessionsMemory)).not.toContain(
+      "No data from agents: no work sessions, no linked memories.",
     );
   });
 });

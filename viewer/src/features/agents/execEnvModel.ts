@@ -2,6 +2,7 @@ import type {
   ExecutorItem,
   HarnessInventoryEnvironment,
 } from "@/gateway/boardTypes";
+import type { TranslateFn } from "@/i18n";
 
 /**
  * AGW-23/24 pure projections: the «среда исполнения» badge value and the
@@ -128,6 +129,22 @@ export function inventoryRowFoundTrail(
   env: HarnessInventoryEnvironment,
 ): readonly string[] {
   return narrowTrail(env["found_at"]);
+}
+
+/**
+ * The AGW-23 badge tooltip composition, SHARED by its two consumers —
+ * the roster chip (HarnessChipStrip) and the inventory row badge
+ * (HarnessInventorySection): the surface line, and when the dedupe trail
+ * exists, the «also found at» header + the trail lines. One wording, one
+ * composition — the duplication the hygiene batch review flagged.
+ */
+export function execEnvBadgeTitle(
+  t: TranslateFn,
+  foundTrail: readonly string[],
+): string {
+  return foundTrail.length
+    ? `${t("agents.hosts.execEnvTooltip")}\n${t("agents.hosts.foundAtTooltip")}\n${foundTrail.join("\n")}`
+    : t("agents.hosts.execEnvTooltip");
 }
 
 // -- AGW-23/24: the surface-facts mirror (the card's k8s/distrobox view) --

@@ -5,8 +5,9 @@ board DB really holds about a card. Contract pinned here:
 - honest empties (ME-062 §5 precedent): a fresh task answers count 0 /
   items [] / final null for every source — never a skeleton/stub;
 - 404 on an unknown task; anonymous → 401; a machine-class bearer under
-  split_tokens → 401 (the composite carries session facts with host
-  paths — the /sessions wall);
+  split_tokens → 401; a VALID mnd_ device → the explanatory 403 wall
+  (the composite carries session facts with host paths — the /sessions
+  wall);
 - reports: chronological, slug pair per agent (display name
   «@GCW: Tech Lead» → ``gcw-tech-lead``), live final picked, superseded
   finals stay in items flagged (BE-11a semantics unchanged);
@@ -172,6 +173,35 @@ class TestSubstanceAuth:
         r = client.get(f"/api/tasks/{task['id']}/substance",
                        headers=ui_auth)
         assert r.status_code == 200
+
+    def test_mnd_device_hits_explanatory_wall(self, client, auth, app_module,
+                                              make_task):
+        """A VALID mnd_ device reaches the handler (the /api/tasks* read
+        table) and gets the EXPLANATORY 403 wall — the composite carries
+        session facts with host paths, never device-readable (the
+        /sessions wall, ME-020/062 §7); the same device still reads the
+        open task surface (test_me062 pattern)."""
+        task = make_task(title="subst-mnd-wall")
+        row, _ = app_module.store.create_pairing_request(
+            device_name="subst-dev")
+        app_module.store.scan_pairing(row["id"], device_name="subst-dev",
+                                      source_ip="testclient")
+        app_module.store.confirm_pairing(row["id"], allow=True)
+        _device, token = app_module.store.issue_device_session(row["id"])
+        try:
+            r = _substance(client, task["id"],
+                           headers={"Authorization": f"Bearer {token}"})
+            assert r.status_code == 403, r.text
+            assert "ui-класс" in r.json()["detail"]
+            assert client.get(f"/api/tasks/{task['id']}",
+                              headers={"Authorization": f"Bearer {token}"}
+                              ).status_code == 200
+        finally:
+            # the shared session DB must not leak the device row into
+            # the ≤5-active quota (test_device_scope_v1 pattern)
+            with app_module.store._lock, app_module.store._conn() as db:
+                db.execute("DELETE FROM device_sessions WHERE id=?",
+                           (_device["id"],))
 
 
 class TestSubstanceExecutors:

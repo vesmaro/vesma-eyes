@@ -367,6 +367,27 @@ export interface KoraProjectGroup {
   readonly sessions: readonly KoraSession[];
 }
 
+/**
+ * The DOM id of one project group's disclosure list (the
+ * aria-controls ↔ id pair). The sanitized key alone COLLIDES: two
+ * different cwds can flatten to the same slug (`/a/proj+one` and
+ * `/a/proj-one` — every non-word char becomes `_`), and a duplicated id
+ * breaks the disclosure link (an idref must resolve to exactly one
+ * element; getElementById returns the first). A full 32-bit FNV-1a
+ * digest of the RAW key suffixes the slug — deterministic, stable across
+ * sessions, distinct for the colliding pair (hygiene batch review tail
+ * kora-tree-listid-collision).
+ */
+export function koraGroupListId(key: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < key.length; i++) {
+    hash ^= key.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  const digest = (hash >>> 0).toString(16).padStart(8, "0");
+  return `kora-group-${key.replace(/[^a-zA-Z0-9_-]/g, "_")}-${digest}`;
+}
+
 /** The basename of a posix path — a pure string cut (no Node path module in
  * the browser); trailing slashes strip, "/" keeps its name, a bare segment
  * is itself. */

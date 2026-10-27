@@ -207,8 +207,10 @@ function hubStats(
           ? formatSyncDate(latest, true)
           : `v${latest}`,
     // The card's provenance line speaks the DISPLAY name too (directive
-    // 2026-10-23) — the slug stays an internal namespace.
-    prov: provenance ? (provenance.repoDisplay ?? provenance.repo) : null,
+    // 2026-10-23) — the slug stays an internal namespace. repoDisplay is
+    // a REQUIRED manifest field (manifest.ts: always minted from repo),
+    // so the fallback is gone — no dead `??` (hygiene batch review).
+    prov: provenance ? provenance.repoDisplay : null,
     sources: provenance?.sourceCount ?? 0,
   };
 }

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { ExecutorItem } from "@/gateway/boardTypes";
+import type { TranslateFn, TranslationKey } from "@/i18n";
 import {
+  execEnvBadgeTitle,
   executorExecEnv,
   executorFoundTrail,
   executorSurfaceFacts,
@@ -234,6 +236,32 @@ describe("inventoryRowExecEnv / inventoryRowFoundTrail (the row distinguisher, h
     expect(inventoryRowFoundTrail({ name: "x", found_at: [1, null, "  "] as never })).toEqual(
       [],
     );
+  });
+});
+
+describe("execEnvBadgeTitle (the shared tooltip composition, hygiene-batch DRY)", () => {
+  // Key-echo translator: the composition structure is pinned exactly,
+  // independent of any locale's wording.
+  const t = ((key: TranslationKey) => key) as TranslateFn;
+
+  it("a trail composes: surface line, «also found at» header, then the paths", () => {
+    expect(
+      execEnvBadgeTitle(t, ["/home/u/.zcode", "/var/home/abyss/.zcode"]),
+    ).toBe(
+      "agents.hosts.execEnvTooltip\nagents.hosts.foundAtTooltip\n/home/u/.zcode\n/var/home/abyss/.zcode",
+    );
+  });
+
+  it("an empty trail is the bare surface line — no dangling header", () => {
+    expect(execEnvBadgeTitle(t, [])).toBe("agents.hosts.execEnvTooltip");
+  });
+
+  it("one consumer contract: the roster chip and the row badge pass the SAME shape", () => {
+    // The helper takes exactly what executorFoundTrail /
+    // inventoryRowFoundTrail return — a readonly string list — so the two
+    // call sites cannot drift apart again.
+    const trail: readonly string[] = ["/only/path"];
+    expect(execEnvBadgeTitle(t, trail).split("\n")).toHaveLength(3);
   });
 });
 
