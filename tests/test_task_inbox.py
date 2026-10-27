@@ -20,8 +20,9 @@ from server.store import Store
 from server.task_inbox import record_from_memory
 
 # Listing primitive contract (prod 1.3.1 root cause): GET /memories with a
-# tags query-param is a true listing — parsed back for the request-shape test
-LISTING_QUERY = {"tags": ["task:queue"], "limit": ["200"]}
+# tags query-param is a true listing — parsed back for the request-shape test.
+# The 2026-10-27 walk is offset-paginated: the first request carries offset=0.
+LISTING_QUERY = {"tags": ["task:queue"], "limit": ["200"], "offset": ["0"]}
 
 
 def hit(memory_id: str, title: str = "queue item", content: str = "body",
@@ -203,7 +204,9 @@ class TestScanEngine:
         r = client.post("/api/tasks/inbox/refresh", headers=ui_auth)
         assert r.status_code == 200, r.text
         assert r.json() == {"scanned_servers": 1, "found": 2, "new": 2,
-                            "errors": []}
+                            "errors": [],
+                            "sources": [{"server": "qa-inbox", "found": 2,
+                                         "error": None}]}
         # second scan: same records, no new mirror rows (idempotent)
         r2 = client.post("/api/tasks/inbox/refresh", headers=ui_auth)
         assert r2.json()["new"] == 0
@@ -222,8 +225,88 @@ class TestScanEngine:
         ]
         r = client.post("/api/tasks/inbox/refresh", headers=ui_auth)
         assert r.json() == {"scanned_servers": 1, "found": 38, "new": 38,
-                            "errors": []}
+                            "errors": [],
+                            "sources": [{"server": "qa-inbox", "found": 38,
+                                         "error": None}]}
         assert client.get("/api/tasks/inbox").json()["count"] == 38
+
+    def test_walk_paginates_beyond_single_page_cap(self, inbox_env, client,
+                                                   ui_auth, fake_mnemos):
+        """Prod 2026-10-27: a live store held 238 task:queue records — more
+        than one SCAN_LIMIT page. The walk must continue via offset until a
+        short page, so the WHOLE backlog arrives."""
+        from server.task_inbox import SCAN_LIMIT
+        total = SCAN_LIMIT + 38  # one full page + a short one
+        fake_mnemos.listing_results = [
+            hit(f"m-{i:03d}", title=f"queue item {i}", tags=["task:queue"])
+            for i in range(total)
+        ]
+        r = client.post("/api/tasks/inbox/refresh", headers=ui_auth)
+        assert r.status_code == 200
+        assert r.json()["found"] == total
+        assert r.json()["sources"][0]["found"] == total
+        assert client.get("/api/tasks/inbox").json()["count"] == total
+        # the walk: page 0 (full) + page 1 (short → stop)
+        queries = [parse_qs(q) for q in fake_mnemos.listing_requests()]
+        assert [q["offset"][0] for q in queries] == ["0", str(SCAN_LIMIT)]
+
+    def test_walk_hard_cap_bounds_the_requests(self, inbox_env, client,
+                                               ui_auth, fake_mnemos):
+        """SCAN_MAX_PAGES bounds the walk: a source listing MORE than the
+        cap cannot turn one refresh into an unbounded request series."""
+        from server.task_inbox import SCAN_LIMIT, SCAN_MAX_PAGES
+        total = SCAN_LIMIT * (SCAN_MAX_PAGES + 2)
+        fake_mnemos.listing_results = [
+            hit(f"m-{i:04d}", tags=["task:queue"]) for i in range(total)
+        ]
+        r = client.post("/api/tasks/inbox/refresh", headers=ui_auth)
+        assert r.status_code == 200
+        assert r.json()["found"] == SCAN_LIMIT * SCAN_MAX_PAGES
+        queries = fake_mnemos.listing_requests()
+        assert len(queries) == SCAN_MAX_PAGES
+
+    def test_scan_report_exposes_per_server_verdict(self, inbox_env, client,
+                                                    ui_auth, fake_mnemos):
+        """The honesty contract: GET /api/tasks/inbox carries the last
+        scan's per-server verdict (found counts / errors) so the UI can say
+        WHY records are stale instead of a silent «исчезли»."""
+        assert client.get("/api/tasks/inbox").json()["scan"] is None
+        fake_mnemos.listing_results = [hit("m1")]
+        client.post("/api/tasks/inbox/refresh", headers=ui_auth)
+        scan = client.get("/api/tasks/inbox").json()["scan"]
+        assert scan["sources"] == [{"server": "qa-inbox", "found": 1,
+                                    "error": None}]
+        assert scan["scanned_servers"] == 1 and scan["found"] == 1
+        assert scan["at"] == inbox_env.store.inbox_refreshed_at()
+        # an unreachable source shows up as an error row, scan still 200
+        inbox_env.store.upsert_server({
+            "name": "qa-dead", "url": "http://127.0.0.1:9",
+            "group_name": "default", "description": "", "token_ref": "",
+        })
+        inbox_env.registry.set_enabled("qa-dead", True)
+        try:
+            client.post("/api/tasks/inbox/refresh", headers=ui_auth)
+            scan = client.get("/api/tasks/inbox").json()["scan"]
+            by_server = {s["server"]: s for s in scan["sources"]}
+            assert by_server["qa-dead"]["found"] == 0
+            assert by_server["qa-dead"]["error"]
+            assert by_server["qa-inbox"]["error"] is None
+        finally:
+            inbox_env.store.delete_server("qa-dead")
+
+    def test_scan_zero_found_is_the_stale_cause_signal(self, inbox_env,
+                                                       client, ui_auth,
+                                                       fake_mnemos):
+        """Prod 2026-10-27 shape: sources answer healthy but return ZERO
+        task:queue records (the store was recreated empty) — the report
+        must show found=0 per source so the banner can name the cause."""
+        fake_mnemos.listing_results = []
+        client.post("/api/tasks/inbox/refresh", headers=ui_auth)
+        scan = client.get("/api/tasks/inbox").json()["scan"]
+        assert scan["scanned_servers"] == 1
+        assert scan["found"] == 0
+        assert scan["sources"] == [{"server": "qa-inbox", "found": 0,
+                                    "error": None}]
 
     def test_field_mapping_and_excerpt_cap(self, inbox_env, client, ui_auth,
                                            fake_mnemos):
@@ -278,6 +361,7 @@ class TestScanEngine:
             assert body["scanned_servers"] == 1
             assert body["found"] == 1
             assert [e["server"] for e in body["errors"]] == ["qa-dead"]
+            assert [s["server"] for s in body["sources"]] == ["qa-inbox", "qa-dead"]
         finally:
             inbox_env.store.delete_server("qa-dead")
 
@@ -299,7 +383,7 @@ class TestScanEngine:
         store = Store(tmp_path / "board.db")
         result = asyncio.run(refresh_inbox(_Reg(), store))
         assert result == {"scanned_servers": 0, "found": 0, "new": 0,
-                          "errors": []}
+                          "errors": [], "sources": []}
         assert store.inbox_refreshed_at() != ""
 
     def test_edge_form_hits_are_mirrored(self, inbox_env, client, ui_auth,
@@ -313,7 +397,9 @@ class TestScanEngine:
         }]
         r = client.post("/api/tasks/inbox/refresh", headers=ui_auth)
         assert r.json() == {"scanned_servers": 1, "found": 1, "new": 1,
-                            "errors": []}
+                            "errors": [],
+                            "sources": [{"server": "qa-inbox", "found": 1,
+                                         "error": None}]}
         item = client.get("/api/tasks/inbox").json()["items"][0]
         assert item["memory_id"] == "4d20edbf-4f22-4fdc-aabd-5f1c1b584a2e"
         assert item["excerpt"] == "probe body"

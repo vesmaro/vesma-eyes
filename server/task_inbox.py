@@ -37,8 +37,11 @@ INBOX_TAG = "task:queue"
 # records; the tag drill shares this defect — backlog ticket, not fixed
 # here). GET /memories supports ``tags`` as a TRUE listing (the same
 # primitive mnemos_list_recent serves) and returns the full Memory[] array.
-SCAN_LIMIT = 200  # one request per scan; offset pagination is a deliberate
-#                  v1 omission — 200 covers any real task:queue backlog
+SCAN_LIMIT = 200  # per listing PAGE; the walk continues via offset until a
+#                  short page or SCAN_MAX_PAGES (prod 2026-10-27: a live
+#                  store held 238 task:queue records — the old single-request
+#                  premise "200 covers any real backlog" is false)
+SCAN_MAX_PAGES = 5  # hard walk cap: 1000 records per server per scan
 SCAN_INTERVAL_SECONDS = 300.0
 EXCERPT_CHARS = 300
 
@@ -128,35 +131,73 @@ def _hits_of(body: Any) -> list[dict[str, Any]] | None:
     return None
 
 
+async def _fetch_server_hits(server: dict[str, Any]) -> tuple[int, list[dict[str, Any]], str]:
+    """Every task:queue hit ONE server returns: an offset-paginated
+    GET /memories?tags= listing walk (a short page ends it; SCAN_MAX_PAGES
+    bounds the walk). Returns ``(last_code, hits, error_detail)`` —
+    ``error_detail`` is '' on success. A failing page aborts the walk and
+    DISCARDS the collected hits: refreshing last_seen for a half-answered
+    source would mark its other records stale mid-scan."""
+    hits: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    code = 0
+    for page in range(SCAN_MAX_PAGES):
+        code, body = await mnemos_client.fetch_json(
+            server, "/memories",
+            {"tags": INBOX_TAG, "limit": SCAN_LIMIT,
+             "offset": page * SCAN_LIMIT},
+        )
+        if code != 200:
+            detail = str(body.get("detail"))[:200] if isinstance(body, dict) else ""
+            return code, [], detail or f"HTTP {code}"
+        page_hits = _hits_of(body)
+        if page_hits is None:
+            return code, [], "unrecognized listing body"
+        for item in page_hits:
+            mid = item.get("id")
+            if mid and mid not in seen_ids:
+                seen_ids.add(mid)
+                hits.append(item)
+        if len(page_hits) < SCAN_LIMIT:
+            break  # short page: the source listing is exhausted
+    return 200, hits, ""
+
+
 async def refresh_inbox(registry: ServerRegistry, store: Store) -> dict[str, Any]:
-    """One full scan across all active memory servers: per server a
-    GET /memories?tags=task:queue listing (async, never blocks the loop).
-    Error-isolated per server: a server that fails (HTTP error /
-    unreachable / unrecognized body) contributes an entry to ``errors`` and
-    nothing else. Returns the scan counters ``{scanned_servers, found,
-    new, errors}`` and stamps the ``task_inbox_refreshed_at`` board_meta
-    marker for the GET endpoint."""
+    """One full scan across all active memory servers: per server an
+    offset-paginated GET /memories?tags=task:queue listing walk (async,
+    never blocks the loop). Error-isolated per server: a server that fails
+    (HTTP error / unreachable / unrecognized body) contributes an entry to
+    ``errors``/``sources`` and nothing else — its mirror rows simply age
+    into stale. Returns the scan counters ``{scanned_servers, found, new,
+    errors, sources}`` where ``sources`` carries the per-server verdict
+    (``found`` count / ``error`` detail) — the honest signal behind the
+    inbox banner. The full report is stamped into the ``task_inbox_last_scan``
+    board_meta marker for the GET endpoint, together with the
+    ``task_inbox_refreshed_at`` marker."""
     servers = registry.active_servers()
-    results = await asyncio.gather(*(
-        mnemos_client.fetch_json(
-            s, "/memories", {"tags": INBOX_TAG, "limit": SCAN_LIMIT},
-        ) for s in servers
-    ))
+    results = await asyncio.gather(*(_fetch_server_hits(s) for s in servers))
     scanned = 0
     errors: list[dict[str, Any]] = []
+    sources: list[dict[str, Any]] = []
     batch: list[dict[str, Any]] = []
     seen: set[str] = set()
-    for server, (code, body) in zip(servers, results):
-        hits = _hits_of(body)
-        if code != 200 or hits is None:
+    for server, (code, hits, detail) in zip(servers, results):
+        if code != 200 or detail:
             errors.append({
                 "server": server["name"],
                 "status": code,
-                "detail": str(body.get("detail"))[:200]
-                if isinstance(body, dict) else "",
+                "detail": detail,
+            })
+            sources.append({
+                "server": server["name"],
+                "found": len(hits),
+                "error": detail or "listing failed",
             })
             continue
         scanned += 1
+        sources.append({"server": server["name"], "found": len(hits),
+                        "error": None})
         for item in hits:
             rec = record_from_memory(server["name"], item)
             if rec is None or rec["memory_id"] in seen:
@@ -166,11 +207,20 @@ async def refresh_inbox(registry: ServerRegistry, store: Store) -> dict[str, Any
     seen_at = _now()
     found, new = store.upsert_inbox_records(batch, seen_at)
     store.set_meta(Store.INBOX_REFRESHED_AT_KEY, seen_at)
+    report = {
+        "at": seen_at,
+        "scanned_servers": scanned,
+        "found": found,
+        "new": new,
+        "sources": sources,
+    }
+    store.save_inbox_scan_report(report)
     return {
         "scanned_servers": scanned,
         "found": found,
         "new": new,
         "errors": errors,
+        "sources": sources,
     }
 
 
@@ -257,11 +307,20 @@ async def background_refresher(registry: ServerRegistry, store: Store,
     while True:
         try:
             result = await refresh_inbox(registry, store)
-            log.info(
-                "task inbox scanned: servers=%d found=%d new=%d errors=%d",
-                result["scanned_servers"], result["found"], result["new"],
-                len(result["errors"]),
-            )
+            if result["errors"]:
+                # INFO lines vanish under the default root WARNING level in
+                # containers (prod 2026-10-27: months of silent scan
+                # failures) — a degraded scan must be visible in pod logs.
+                log.warning(
+                    "task inbox scan degraded: servers=%d found=%d new=%d errors=%s",
+                    result["scanned_servers"], result["found"], result["new"],
+                    json.dumps(result["errors"], ensure_ascii=False)[:500],
+                )
+            else:
+                log.info(
+                    "task inbox scanned: servers=%d found=%d new=%d errors=0",
+                    result["scanned_servers"], result["found"], result["new"],
+                )
         except asyncio.CancelledError:
             raise
         except Exception:  # noqa: BLE001 — background loop must never die

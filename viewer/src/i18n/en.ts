@@ -908,6 +908,19 @@ export const en: Record<TranslationKey, string> = {
   "tasks.inboxStaleNote":
     "Vanished from their memory store — a record that is gone cannot be adopted:",
   "tasks.inboxStaleLabel": "Disappeared records",
+  // 2026-10-27 honesty banner: the scan health block explains WHY records
+  // are stale (source answered empty vs unreachable) instead of a silent
+  // «vanished».
+  "tasks.inboxScanEmptyTitle":
+    "The stores answer but return no task:queue records — the sources no longer hold these tasks (a store was recreated or emptied):",
+  "tasks.inboxScanDeadTitle":
+    "The scanner could not reach any memory store:",
+  "tasks.inboxScanMixedTitle":
+    "The last scan saw problems with the sources:",
+  "tasks.inboxScanSourceOk": "{{server}} — {{found}} records",
+  "tasks.inboxScanSourceErr": "{{server}} — error: {{error}}",
+  "tasks.inboxScanHint":
+    "Until a source returns a record again, it cannot be adopted. Check the board's memory-server registry (Settings → Memory).",
   "tasks.inboxSource": "server: {{server}}",
   "tasks.inboxAdoptedLink": "adopted → {{id}}",
   // W-B (D6, review P1): specialist comes from the record's owner: tag and

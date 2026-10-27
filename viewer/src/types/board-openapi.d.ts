@@ -6326,6 +6326,8 @@ export interface components {
             readonly count: number;
             /** Refreshed At */
             readonly refreshed_at: string;
+            /** Scan */
+            readonly scan?: components["schemas"]["TaskInboxScanOut"] | null;
         } & {
             readonly [key: string]: unknown;
         };
@@ -6341,6 +6343,34 @@ export interface components {
             readonly errors: readonly {
                 readonly [key: string]: unknown;
             }[];
+            /** Sources */
+            readonly sources?: readonly components["schemas"]["TaskInboxScanSource"][];
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /** TaskInboxScanSource */
+        readonly TaskInboxScanSource: {
+            /** Server */
+            readonly server: string;
+            /** Found */
+            readonly found: number;
+            /** Error */
+            readonly error?: string | null;
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /** TaskInboxScanOut */
+        readonly TaskInboxScanOut: {
+            /** At */
+            readonly at: string;
+            /** Scanned Servers */
+            readonly scanned_servers: number;
+            /** Found */
+            readonly found: number;
+            /** New */
+            readonly new: number;
+            /** Sources */
+            readonly sources?: readonly components["schemas"]["TaskInboxScanSource"][];
         } & {
             readonly [key: string]: unknown;
         };

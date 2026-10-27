@@ -147,7 +147,14 @@ class _FakeMnemosHandler(BaseHTTPRequestHandler):
             from urllib.parse import parse_qs, urlparse
             q = parse_qs(urlparse(self.path).query)
             if "tags" in q:
-                self._reply(200, fake.listing_results)
+                # AGG-1 paginated walk: honor limit/offset like the real
+                # engine (a short page ends the walk); defaults keep the
+                # legacy whole-body reply intact for old tests
+                offset = int(q.get("offset", ["0"])[0])
+                limit = int(q.get("limit", ["0"])[0])
+                window = (fake.listing_results[offset:offset + limit]
+                          if limit else fake.listing_results)
+                self._reply(200, window)
             else:
                 if fake.fail_list:
                     self._reply(500, {"detail": "fake mnemos: intentional failure"})

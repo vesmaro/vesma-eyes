@@ -7548,6 +7548,26 @@ class Store:
     # same way — it is an overlay the API merges over the base fields.
     INBOX_STALE_SECONDS = 30 * 60
     INBOX_REFRESHED_AT_KEY = "task_inbox_refreshed_at"
+    INBOX_LAST_SCAN_KEY = "task_inbox_last_scan"
+
+    def save_inbox_scan_report(self, report: dict[str, Any]) -> None:
+        """Stamp the last scan's per-server verdict (sources found/error)
+        as JSON into board_meta — the GET endpoint's honest ``scan`` block,
+        so the UI can say WHY records went stale (source answered empty vs
+        unreachable) instead of a silent «исчезли из памяти»."""
+        self.set_meta(self.INBOX_LAST_SCAN_KEY,
+                      json.dumps(report, ensure_ascii=False))
+
+    def inbox_scan_report(self) -> dict[str, Any]:
+        """The last scan report ({} when no scan has completed yet)."""
+        raw = self.get_meta(self.INBOX_LAST_SCAN_KEY) or ""
+        if not raw:
+            return {}
+        try:
+            data = json.loads(raw)
+        except ValueError:
+            return {}
+        return data if isinstance(data, dict) else {}
 
     def upsert_inbox_records(self, records: list[dict[str, Any]],
                              seen_at: str) -> tuple[int, int]:

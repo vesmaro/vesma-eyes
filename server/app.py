@@ -1614,10 +1614,31 @@ class TaskInboxEditSpec(_ApiModel):
     project: str | None = Field(default=None, max_length=80)
 
 
+class TaskInboxScanSource(_ApiModel):
+    """Per-server verdict of the last scan (AGG-1 honesty): ``found`` = how
+    many task:queue records the source LISTING returned, ``error`` = why it
+    contributed nothing (None = healthy). A healthy source answering 0 is
+    the «запись исчезла из источника» signal — distinct from an error."""
+    server: str
+    found: int
+    error: str | None = None
+
+
+class TaskInboxScanOut(_ApiModel):
+    """The last completed scan's health (board_meta ``task_inbox_last_scan``),
+    exposed so the UI can explain stale rows instead of a silent «исчезли»."""
+    at: str
+    scanned_servers: int
+    found: int
+    new: int
+    sources: list[TaskInboxScanSource] = []
+
+
 class TaskInboxOut(_ApiModel):
     items: list[TaskInboxItem]
     count: int
     refreshed_at: str
+    scan: TaskInboxScanOut | None = None
 
 
 class TaskInboxRefreshOut(_ApiModel):
@@ -1625,6 +1646,7 @@ class TaskInboxRefreshOut(_ApiModel):
     found: int
     new: int
     errors: list[dict[str, Any]]
+    sources: list[TaskInboxScanSource] = []
 
 
 # Merged memory list + aggregated tags (Ф0b, ADR 0011 §6/§11 — the two
@@ -8680,10 +8702,12 @@ async def tasks_inbox(scope: str = "all", project: str = "",
     """
     items = store.list_inbox(scope=scope, project=project,
                              include_adopted=include_adopted)
+    report = store.inbox_scan_report()
     return TaskInboxOut(
         items=[TaskInboxItem(**i) for i in items],
         count=len(items),
         refreshed_at=store.inbox_refreshed_at(),
+        scan=TaskInboxScanOut(**report) if report else None,
     )
 
 
@@ -8721,6 +8745,16 @@ async def tasks_inbox_refresh(request: Request) -> TaskInboxRefreshOut:
             f"({_INBOX_REFRESH_RATE_LIMIT} per {_INBOX_REFRESH_RATE_WINDOW:.0f}s per client)",
         )
     result = await refresh_inbox(registry, store)
+    # Server-side audit of the manual path (the background loop logs its
+    # own): a degraded scan must exist in pod logs, not only in a toast.
+    if result["errors"]:
+        logging.getLogger("vesmaro.inbox").warning(
+            "manual inbox scan degraded: servers=%d found=%d errors=%s",
+            result["scanned_servers"], result["found"], result["errors"])
+    else:
+        logging.getLogger("vesmaro.inbox").info(
+            "manual inbox scan: servers=%d found=%d new=%d errors=0",
+            result["scanned_servers"], result["found"], result["new"])
     return TaskInboxRefreshOut(**result)
 
 

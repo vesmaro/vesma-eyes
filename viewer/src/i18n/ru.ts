@@ -939,6 +939,18 @@ export const ru = {
   "tasks.inboxStaleNote":
     "Исчезли из памяти-источника — пока записи нет на месте, принять её в борд нельзя:",
   "tasks.inboxStaleLabel": "Исчезнувшие записи",
+  // 2026-10-27 честный баннер: scan-health объясняет, ПОЧЕМУ записи стали
+  // «исчезнувшими» (источник ответил пустотой vs недоступен), а не молчит.
+  "tasks.inboxScanEmptyTitle":
+    "Хранилища отвечают, но task:queue-записей не возвращают — записи исчезли из источников (стор пересоздан или вычищен):",
+  "tasks.inboxScanDeadTitle":
+    "Сканер не смог достучаться ни до одного хранилища:",
+  "tasks.inboxScanMixedTitle":
+    "Последний скан увидел проблемы с источниками:",
+  "tasks.inboxScanSourceOk": "{{server}} — записей: {{found}}",
+  "tasks.inboxScanSourceErr": "{{server}} — ошибка: {{error}}",
+  "tasks.inboxScanHint":
+    "Пока источник снова не вернёт запись, принять её в борд нельзя. Проверьте registry memory-серверов борда (Настройки → Память).",
   "tasks.inboxSource": "сервер: {{server}}",
   "tasks.inboxAdoptedLink": "принята → {{id}}",
   // W-B (D6, ревью P1): specialist приходит из тега owner: записи и при
