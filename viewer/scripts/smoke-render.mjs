@@ -480,16 +480,43 @@ async function runSmoke(page) {
   await page.waitForSelector("main", { timeout: 20_000 });
   await page.waitForLoadState("networkidle").catch(() => {});
   await page.waitForTimeout(1500); // a lazy diagram would need to fail LOUD
-  const overcapFigures = await page.locator("main figure").count();
-  const overcapSvgs = await page.locator("main .mermaid-diagram svg").count();
-  assert(overcapFigures === 0, `over-cap surface mounts no diagram figure (got ${overcapFigures})`);
-  assert(overcapSvgs === 0, `over-cap surface renders no diagram svg (got ${overcapSvgs})`);
   const overcapText = await mainText(page);
-  for (let i = 1; i <= 6; i += 1) {
-    assert(
-      (overcapText ?? "").includes(`F${i}-->R${i}`),
-      `over-cap fence #${i} source stays visible (auditable fallback)`,
+  // Mounting guard (issue #3 — mirrors the [7/8] guard): the inert-fallback
+  // asserts are only meaningful where the fixture memory actually MOUNTED.
+  // A gated deployment (ME-043) renders the sign-in gate preview for
+  // /memory/:id — the fixture fetch never fires, and the gate chrome's own
+  // <figure data-testid="gate-preview"> plus the missing fence sources turn
+  // the same non-mount class [7/8] skips honestly into 7 loud reds. The
+  // marker is the fixture's TITLE (MemoryScroll renders `title ?? id`, so
+  // the title only ever appears on a mounted memory — the not-found wall
+  // spells the ID, never the title). Absent on a DEPLOYED session → honest
+  // SKIP; in LOCAL mode the mock build is deterministic, so a missing mount
+  // there is a regression and the asserts must fail loudly — never skip.
+  const overcapMounted = (overcapText ?? "").includes(
+    "Mermaid over-cap fixture (smoke)",
+  );
+  if (!LOCAL_MODE && !overcapMounted) {
+    skip(
+      "over-cap inert fallback asserts",
+      "this deployment did not mount the fixture memory for this session (sign-in gate or pane drift) — surface covered in local mode",
     );
+  } else {
+    const overcapFigures = await page.locator("main figure").count();
+    const overcapSvgs = await page.locator("main .mermaid-diagram svg").count();
+    assert(
+      overcapFigures === 0,
+      `over-cap surface mounts no diagram figure (got ${overcapFigures})`,
+    );
+    assert(
+      overcapSvgs === 0,
+      `over-cap surface renders no diagram svg (got ${overcapSvgs})`,
+    );
+    for (let i = 1; i <= 6; i += 1) {
+      assert(
+        (overcapText ?? "").includes(`F${i}-->R${i}`),
+        `over-cap fence #${i} source stays visible (auditable fallback)`,
+      );
+    }
   }
 }
 
