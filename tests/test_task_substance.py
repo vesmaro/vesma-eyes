@@ -174,7 +174,7 @@ class TestSubstanceAuth:
                        headers=ui_auth)
         assert r.status_code == 200
 
-    def test_mnd_device_hits_explanatory_wall(self, client, auth, app_module,
+    def test_mnd_device_hits_explanatory_wall(self, client, app_module,
                                               make_task):
         """A VALID mnd_ device reaches the handler (the /api/tasks* read
         table) and gets the EXPLANATORY 403 wall — the composite carries
