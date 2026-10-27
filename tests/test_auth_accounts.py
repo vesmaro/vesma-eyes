@@ -1,7 +1,7 @@
 """ME-080 (login+password accounts): the /api/auth/{register,login,logout,me}
 surface and the password-session leg inside the ui guards.
 
-Pinned contract (docs/design/2026-10-01-accounts-password-auth.md):
+Pinned contract (docs/design/2026-10-01-accounts-password-ui_auth.md):
 - register: OPEN only while the accounts table is empty — the first
   account is the board owner (owner verdict 07k §10-аддендум); then 403
   closed unless VESMARO_ALLOW_REGISTRATION=1 (member accounts); 409
@@ -36,6 +36,8 @@ import re
 
 import pytest
 from conftest import BOARD_TOKEN, UI_TOKEN
+
+MACHINE_HEADERS = {"Authorization": f"Bearer {BOARD_TOKEN}"}
 from fastapi.testclient import TestClient
 from server.security import RateLimiter, hash_password, verify_password
 
@@ -371,7 +373,7 @@ class TestSessionGuardLeg:
         assert _register(client).status_code == 201
         assert _login(client).status_code == 200
         r = client.post("/api/tasks", json={"title": "hdr-leg"},
-                        headers={"Authorization": f"Bearer {BOARD_TOKEN}"})
+                        headers={"Authorization": f"Bearer {UI_TOKEN}"})
         assert r.status_code == 201
         assert "vesmaro_auth" not in r.headers.get("set-cookie", "")
 
@@ -442,7 +444,7 @@ class TestSessionGuardLeg:
         device_id = issued.json()["device_id"]
         assert client.delete(
             f"/api/devices/{device_id}",
-            headers={"Authorization": f"Bearer {BOARD_TOKEN}"}).status_code == 200
+            headers={"Authorization": f"Bearer {UI_TOKEN}"}).status_code == 200
 
     def test_legacy_ui_token_path_untouched(self, client, split_tokens):
         """Regression guard: paste-the-token login (ADR 0014) keeps working

@@ -5,12 +5,13 @@ Shared fixtures:
                       (session-scoped; lifespan NOT started, so the
                       background profile refresher never runs)
 - ``auth``          — valid Authorization headers for the test board token
-                      (machine class; also passes ui-class guards in the
-                      default transition env, see ``split_tokens``)
+                      (machine class ONLY: the token split is closed — the
+                      board token no longer passes ui-class guards)
 - ``ui_auth``       — Authorization headers for the ui-class test token
 - ``machine_auth``  — alias of ``auth`` for tests that care about the class
-- ``split_tokens``  — ADR 0009 A1 split mode: ui token configured with a
-                      value distinct from the board token
+- ``split_tokens``  — explicit ADR 0009 A1 split-mode pin (now also the
+                      default contour; kept for tests that toggle the
+                      module globals)
 - ``no_board_token`` — fail-closed mode (no token class configured -> 503)
 - ``fake_mnemos``   — local threaded HTTP double of the vesma engine that
                       records every request (method, path, Authorization
@@ -57,10 +58,12 @@ DATA_DIR = Path(tempfile.mkdtemp(prefix="vesmaro-qa-"))
 SECRETS_DIR = DATA_DIR / "secrets"
 SECRETS_DIR.mkdir(parents=True, exist_ok=True)
 BOARD_TOKEN = "qa-board-token"
-# ADR 0009 A1: the ui-class token. Deliberately NOT pinned into the env —
-# the default test contour mirrors today's deployment (transition: board
-# token only), so existing guard tests exercise the ui fallback. Tests
-# that need the full split opt in via the ``split_tokens`` fixture.
+# ADR 0009 A1: the ui-class token. Pinned into the env with a value
+# DISTINCT from the board token — the default test contour now mirrors
+# PRODUCTION (the split is closed: VESMARO_UI_TOKEN live since the
+# RUNBOOK.md §8 step-2 upgrade; the transitional ui<-machine fallback is
+# retired server-side). The legacy fallback tests were rewritten to pin
+# the new semantics in test_token_classes.py.
 UI_TOKEN = "qa-ui-token"
 LEGACY_SECRET = "mnk_qa_fake_legacy_secret"  # synthetic; never printed
 
@@ -68,7 +71,7 @@ os.environ["VESMARO_DATA"] = str(DATA_DIR)
 os.environ["VESMARO_SECRET_DIRS"] = str(SECRETS_DIR)
 os.environ["VESMARO_MEMORY_CONFIG"] = str(DATA_DIR / "memories.yaml")  # absent
 os.environ["VESMARO_BOARD_TOKEN"] = BOARD_TOKEN
-os.environ.pop("VESMARO_UI_TOKEN", None)
+os.environ["VESMARO_UI_TOKEN"] = UI_TOKEN
 for _var in ("VESMARO_ALLOWED_MEMORY_HOSTS", "VESMARO_MEMORY_SERVERS",
              "MNEMOS_URL", "VESMARO_WEB", "VESMARO_ROOT_APP"):
     os.environ.pop(_var, None)
@@ -393,19 +396,19 @@ def _clean_session_cookie(client):
 
 @pytest.fixture()
 def auth():
-    """Board (machine-class) token headers; passes ui-class guards too in
-    the default transition env — mirrors today's single-token deploy."""
+    """Board (machine-class) token headers. The split is closed: this
+    bearer passes machine-class guards (reports) only — ui-class routes
+    answer 401."""
     return {"Authorization": f"Bearer {BOARD_TOKEN}"}
 
 
 @pytest.fixture()
 def ui_auth(app_module):
     """Ui-class token headers — the CURRENTLY effective ui token (module
-    globals read live, so tests that enable ``split_tokens`` before the
-    request still get the right bearer; transition env falls back to the
-    board token, mirroring _token_classes())."""
-    effective = app_module.UI_WRITE_TOKEN or app_module.BOARD_WRITE_TOKEN
-    return {"Authorization": f"Bearer {effective}"}
+    globals read live, so tests that monkeypatch UI_WRITE_TOKEN before
+    the request still get the right bearer; mirrors _token_classes(),
+    which has no board-token fallback anymore)."""
+    return {"Authorization": f"Bearer {app_module.UI_WRITE_TOKEN}"}
 
 
 @pytest.fixture()
@@ -417,9 +420,11 @@ def machine_auth():
 
 @pytest.fixture()
 def split_tokens(app_module, monkeypatch):
-    """ADR 0009 A1 split mode: ui token configured with a value distinct
-    from the board token. From here on the machine token must STOP passing
-    ui-class guards (and vice versa: the ui token is not machine-class)."""
+    """ADR 0009 A1 split mode pin: ui token configured with a value
+    distinct from the board token. The default contour is already split
+    (VESMARO_UI_TOKEN pinned in the env), so this is an explicit no-op
+    marker for split-sensitive tests — kept so per-test global toggles
+    (and future contour changes) stay honest."""
     monkeypatch.setattr(app_module, "UI_WRITE_TOKEN", UI_TOKEN)
 
 
@@ -497,14 +502,13 @@ def make_task(client, app_module):
 
     Task creation is a ui mutation (ADR 0009 A1); the bearer is resolved
     per call from the module globals so tests that toggle the split
-    before creating still work; transition mode falls back to the board
-    token.
+    before creating still work. No board-token fallback: with the ui
+    class unset this fixture fails loudly (as the server fail-closes).
     """
     created: list[str] = []
 
     def _make(**overrides) -> dict:
-        effective = app_module.UI_WRITE_TOKEN or app_module.BOARD_WRITE_TOKEN
-        headers = {"Authorization": f"Bearer {effective}"}
+        headers = {"Authorization": f"Bearer {app_module.UI_WRITE_TOKEN}"}
         payload = {"title": "qa task"} | overrides
         r = client.post("/api/tasks", json=payload, headers=headers)
         assert r.status_code == 201, r.text

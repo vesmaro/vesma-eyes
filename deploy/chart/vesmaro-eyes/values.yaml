@@ -66,16 +66,15 @@ boardToken:
   existingSecretKey: VESMARO_BOARD_TOKEN
 
 uiToken:
-  # VESMARO_UI_TOKEN (ui-class write guard, ADR 0009 A1 token split).
-  # disabled = transition mode: no secret is created and no env reaches
-  # the pod, so VESMARO_BOARD_TOKEN keeps passing ui-class mutations —
-  # the upgrade that lands this chart cannot break the running UI.
-  # Enable ONLY as migration step 2 (RUNBOOK.md §8): the moment the env
-  # reaches the pod, the board token STOPS working for the owner UI —
-  # have the ui token value ready first (existingSecret with your own
-  # value, or fetch the generated one right after rollout).
-  # Generation semantics mirror boardToken: randAlphaNum(48) on first
-  # enable, lookup-stable across upgrades, kept on uninstall.
+  # VESMARO_UI_TOKEN (ui-class write guard, ADR 0009 A1 token split —
+  # the split is CLOSED, transitional closed: the server no longer
+  # accepts the board token on ui-class mutations). MANDATORY for the
+  # owner UI: with enabled=false no secret is created and no env reaches
+  # the pod, so every ui-class mutation AND the owner login answer
+  # fail-closed 503 (the transition mode that let the board token serve
+  # the UI was retired server-side in 1.93). Keep enabled=true; the value
+  # is chart-generated on first enable (randAlphaNum(48), lookup-stable
+  # across upgrades, kept on uninstall) or referenced via existingSecret.
   enabled: true
   existingSecret: ""
   existingSecretKey: VESMARO_UI_TOKEN
@@ -121,6 +120,12 @@ models:
     # vault contents (the existingSecret discipline: referenced, never
     # managed). Absent dir = credential features honestly off (503
     # family), never a DB fallback.
+    # Dir perms (issue #5, MF3 threat model §6 "dir not world-readable"):
+    # the local-path provisioner creates the vault dir world-writable +
+    # setgid (drwxrwsrwx), so the chart ships a `vault-perms` initContainer
+    # that chowns the dir to runAsUser/runAsGroup and chmods it 0700 on
+    # every pod start. Vault FILES stay 0600 by the server's construction
+    # and are never touched by the init.
     enabled: true
     # Empty -> chart-managed PVC "<fullname>-vault". A pre-provisioned
     # volume can be referenced instead (operator-owned contents).

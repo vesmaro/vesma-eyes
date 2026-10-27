@@ -35,6 +35,8 @@ import sqlite3
 import pytest
 
 from conftest import BOARD_TOKEN, DATA_DIR
+
+MACHINE_HEADERS = {"Authorization": f"Bearer {BOARD_TOKEN}"}
 from server.security import RateLimiter
 from server.store import Store
 
@@ -211,7 +213,7 @@ class TestDelete:
         assert _add(client, ui_auth).status_code == 201
         r = client.post("/api/executors",
                         json={"name": "exec-1", "harness": CUSTOM},
-                        headers=ui_auth)
+                        headers=MACHINE_HEADERS)
         assert r.status_code == 201, r.text
         r = _delete(client, ui_auth)
         assert r.status_code == 409
@@ -244,16 +246,16 @@ class TestDelete:
         aid = r.json()["assignment"]["id"]
         # claim → start → complete with the claim_token chain
         r = client.post(f"/api/assignments/{aid}/claim",
-                        json={"claimed_by": "s"}, headers=ui_auth)
+                        json={"claimed_by": "s"}, headers=MACHINE_HEADERS)
         assert r.status_code == 200, r.text
         token = r.json()["claim_token"]
         assert client.post(f"/api/assignments/{aid}/start",
                            json={"claim_token": token},
-                           headers=ui_auth).status_code == 200
+                           headers=MACHINE_HEADERS).status_code == 200
         assert client.post(f"/api/assignments/{aid}/complete",
                            json={"claim_token": token,
                                  "final_report": "done"},
-                           headers=ui_auth).status_code == 200
+                           headers=MACHINE_HEADERS).status_code == 200
         assert _delete(client, ui_auth).status_code == 200
         assert CUSTOM not in _names()
 
@@ -317,7 +319,7 @@ class TestGatesReadTheTable:
         # 1. registration
         r = client.post("/api/executors",
                         json={"name": "exec-c", "harness": CUSTOM},
-                        headers=ui_auth)
+                        headers=MACHINE_HEADERS)
         assert r.status_code == 201, r.text
         # 2. enrollment hint
         r = client.post("/api/executors/enrollment",
@@ -356,7 +358,7 @@ class TestGatesReadTheTable:
         bogus = "never-added"
         assert client.post(
             "/api/executors", json={"name": "e", "harness": bogus},
-            headers=ui_auth).status_code == 422
+            headers=MACHINE_HEADERS).status_code == 422
         assert client.post(
             "/api/executors/enrollment",
             json={"harness_hint": bogus}, headers=ui_auth).status_code == 422

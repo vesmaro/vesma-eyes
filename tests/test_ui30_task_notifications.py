@@ -22,12 +22,16 @@ from __future__ import annotations
 
 import pytest
 
-from conftest import BOARD_TOKEN
+from conftest import BOARD_TOKEN, UI_TOKEN
+
+MACHINE_HEADERS = {"Authorization": f"Bearer {BOARD_TOKEN}"}
 
 
 # ------------------------------------------------------------------ helpers
 def _ui_headers() -> dict[str, str]:
-    return {"Authorization": f"Bearer {BOARD_TOKEN}"}
+    # ui-class mutations take the ui token (the split is closed — the
+    # board token no longer passes ui guards)
+    return {"Authorization": f"Bearer {UI_TOKEN}"}
 
 
 def _paired_control_device(store, name: str = "ui30-dev") -> dict:

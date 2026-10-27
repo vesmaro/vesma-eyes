@@ -12,8 +12,8 @@ Authorization header, and the API surface must stay token-free.
 from __future__ import annotations
 
 
-def _add(client, auth, payload):
-    return client.post("/api/mesh/nodes", json=payload, headers=auth)
+def _add(client, ui_auth, payload):
+    return client.post("/api/mesh/nodes", json=payload, headers=ui_auth)
 
 
 def _allow(fake_mesh_node, allow_hosts):
@@ -23,9 +23,9 @@ def _allow(fake_mesh_node, allow_hosts):
 # ------------------------------------------------------------- CRUD + health
 class TestMeshNodeCrud:
     def test_add_probes_healthz_and_parses_contract(
-            self, client, auth, fake_mesh_node, allow_hosts):
+            self, client, ui_auth, fake_mesh_node, allow_hosts):
         _allow(fake_mesh_node, allow_hosts)
-        r = _add(client, auth, {"name": "cluster-a",
+        r = _add(client, ui_auth, {"name": "cluster-a",
                                 "base_url": fake_mesh_node.base_url,
                                 "description": "кластерный узел"})
         assert r.status_code == 201, r.text
@@ -44,27 +44,27 @@ class TestMeshNodeCrud:
                   client.get("/api/mesh/nodes").json()["nodes"]}
         assert listed["cluster-a"]["status"] == "ok"
         assert listed["cluster-a"]["health"]["peers_reachable"] == 1
-        client.delete("/api/mesh/nodes/cluster-a", headers=auth)
+        client.delete("/api/mesh/nodes/cluster-a", headers=ui_auth)
 
-    def test_duplicate_name_409(self, client, auth, fake_mesh_node,
+    def test_duplicate_name_409(self, client, ui_auth, fake_mesh_node,
                                 allow_hosts):
         _allow(fake_mesh_node, allow_hosts)
         payload = {"name": "dup-node", "base_url": fake_mesh_node.base_url}
-        assert _add(client, auth, payload).status_code == 201
-        assert _add(client, auth, payload).status_code == 409
-        client.delete("/api/mesh/nodes/dup-node", headers=auth)
+        assert _add(client, ui_auth, payload).status_code == 201
+        assert _add(client, ui_auth, payload).status_code == 409
+        client.delete("/api/mesh/nodes/dup-node", headers=ui_auth)
 
-    def test_patch_updates_and_disables(self, client, auth, fake_mesh_node,
+    def test_patch_updates_and_disables(self, client, ui_auth, fake_mesh_node,
                                         allow_hosts):
         _allow(fake_mesh_node, allow_hosts)
-        assert _add(client, auth, {"name": "patch-node",
+        assert _add(client, ui_auth, {"name": "patch-node",
                                    "base_url": fake_mesh_node.base_url,
                                    "description": "до"}).status_code == 201
         r = client.patch("/api/mesh/nodes/patch-node",
                          json={"name": "patch-node",
                                "base_url": fake_mesh_node.base_url,
                                "description": "после", "enabled": False},
-                         headers=auth)
+                         headers=ui_auth)
         assert r.status_code == 200, r.text
         assert r.json()["description"] == "после"
         assert r.json()["enabled"] is False
@@ -75,58 +75,58 @@ class TestMeshNodeCrud:
         assert listed["patch-node"]["status"] == "disabled"
         assert listed["patch-node"]["ok"] is None
         assert len(fake_mesh_node.healthz_requests()) == before
-        client.delete("/api/mesh/nodes/patch-node", headers=auth)
+        client.delete("/api/mesh/nodes/patch-node", headers=ui_auth)
 
-    def test_patch_unknown_404(self, client, auth, fake_mesh_node,
+    def test_patch_unknown_404(self, client, ui_auth, fake_mesh_node,
                                allow_hosts):
         _allow(fake_mesh_node, allow_hosts)
         r = client.patch("/api/mesh/nodes/ghost",
                          json={"name": "ghost",
                                "base_url": fake_mesh_node.base_url},
-                         headers=auth)
+                         headers=ui_auth)
         assert r.status_code == 404
 
-    def test_delete_and_redelete_404(self, client, auth, fake_mesh_node,
+    def test_delete_and_redelete_404(self, client, ui_auth, fake_mesh_node,
                                      allow_hosts):
         _allow(fake_mesh_node, allow_hosts)
-        _add(client, auth, {"name": "doomed-node",
+        _add(client, ui_auth, {"name": "doomed-node",
                             "base_url": fake_mesh_node.base_url})
         assert client.delete("/api/mesh/nodes/doomed-node",
-                             headers=auth).status_code == 200
+                             headers=ui_auth).status_code == 200
         assert client.delete("/api/mesh/nodes/doomed-node",
-                             headers=auth).status_code == 404
+                             headers=ui_auth).status_code == 404
 
-    def test_no_token_field_anywhere(self, client, auth, fake_mesh_node,
+    def test_no_token_field_anywhere(self, client, ui_auth, fake_mesh_node,
                                      allow_hosts):
         """A mesh node holds no secret by contract — the API surface must
         not even model one."""
         _allow(fake_mesh_node, allow_hosts)
-        _add(client, auth, {"name": "tokcheck", "base_url": fake_mesh_node.base_url})
+        _add(client, ui_auth, {"name": "tokcheck", "base_url": fake_mesh_node.base_url})
         r = client.get("/api/mesh/nodes")
         assert "token" not in r.text
-        client.delete("/api/mesh/nodes/tokcheck", headers=auth)
+        client.delete("/api/mesh/nodes/tokcheck", headers=ui_auth)
 
 
 # ------------------------------------------------------- honest-offline probes
 class TestHealthzFailureModes:
-    def test_probe_carries_no_authorization(self, client, auth,
+    def test_probe_carries_no_authorization(self, client, ui_auth,
                                             fake_mesh_node, allow_hosts):
         _allow(fake_mesh_node, allow_hosts)
-        _add(client, auth, {"name": "noauth-node",
+        _add(client, ui_auth, {"name": "noauth-node",
                             "base_url": fake_mesh_node.base_url})
         client.get("/api/mesh/nodes")
         probes = fake_mesh_node.healthz_requests()
         assert probes, "healthz probe must have been sent"
         assert not any(p["auth_present"] for p in probes), \
             "healthz is unauthenticated by contract — no Authorization header"
-        client.delete("/api/mesh/nodes/noauth-node", headers=auth)
+        client.delete("/api/mesh/nodes/noauth-node", headers=ui_auth)
 
     def test_unreachable_node_is_offline_not_error(
-            self, client, auth, allow_hosts):
+            self, client, ui_auth, allow_hosts):
         """Connection-refused port (allowlisted): the registry keeps the
         node, health honestly says offline (store error-state pattern)."""
         allow_hosts("127.0.0.1:1")   # nothing listens there
-        r = _add(client, auth, {"name": "dead-node",
+        r = _add(client, ui_auth, {"name": "dead-node",
                                 "base_url": "http://127.0.0.1:1"})
         assert r.status_code == 201, r.text
         body = r.json()
@@ -137,12 +137,12 @@ class TestHealthzFailureModes:
         listed = {n["name"]: n for n in
                   client.get("/api/mesh/nodes").json()["nodes"]}
         assert listed["dead-node"]["status"] == "offline"
-        client.delete("/api/mesh/nodes/dead-node", headers=auth)
+        client.delete("/api/mesh/nodes/dead-node", headers=ui_auth)
 
-    def test_degraded_status_passthrough(self, client, auth, fake_mesh_node,
+    def test_degraded_status_passthrough(self, client, ui_auth, fake_mesh_node,
                                          allow_hosts):
         _allow(fake_mesh_node, allow_hosts)
-        _add(client, auth, {"name": "deg-node",
+        _add(client, ui_auth, {"name": "deg-node",
                             "base_url": fake_mesh_node.base_url})
         fake_mesh_node.degraded = True
         listed = {n["name"]: n for n in
@@ -150,35 +150,35 @@ class TestHealthzFailureModes:
         assert listed["deg-node"]["status"] == "degraded"
         assert listed["deg-node"]["ok"] is True
         assert listed["deg-node"]["health"]["core_connected"] is False
-        client.delete("/api/mesh/nodes/deg-node", headers=auth)
+        client.delete("/api/mesh/nodes/deg-node", headers=ui_auth)
 
-    def test_non_json_healthz_is_offline(self, client, auth, fake_mesh_node,
+    def test_non_json_healthz_is_offline(self, client, ui_auth, fake_mesh_node,
                                          allow_hosts):
         _allow(fake_mesh_node, allow_hosts)
-        _add(client, auth, {"name": "garbage-node",
+        _add(client, ui_auth, {"name": "garbage-node",
                             "base_url": fake_mesh_node.base_url})
         fake_mesh_node.non_json = True
         listed = {n["name"]: n for n in
                   client.get("/api/mesh/nodes").json()["nodes"]}
         assert listed["garbage-node"]["status"] == "offline"
         assert listed["garbage-node"]["error"]
-        client.delete("/api/mesh/nodes/garbage-node", headers=auth)
+        client.delete("/api/mesh/nodes/garbage-node", headers=ui_auth)
 
-    def test_http_500_healthz_is_offline(self, client, auth, fake_mesh_node,
+    def test_http_500_healthz_is_offline(self, client, ui_auth, fake_mesh_node,
                                          allow_hosts):
         _allow(fake_mesh_node, allow_hosts)
-        _add(client, auth, {"name": "fivehundred",
+        _add(client, ui_auth, {"name": "fivehundred",
                             "base_url": fake_mesh_node.base_url})
         fake_mesh_node.fail_healthz = True
         listed = {n["name"]: n for n in
                   client.get("/api/mesh/nodes").json()["nodes"]}
         assert listed["fivehundred"]["status"] == "offline"
-        client.delete("/api/mesh/nodes/fivehundred", headers=auth)
+        client.delete("/api/mesh/nodes/fivehundred", headers=ui_auth)
 
 
 # ------------------------------------------------------- SEC-1 egress (SSRF)
 class TestMeshNodeEgressPolicy:
-    def test_rejected_base_url_never_connects(self, client, auth,
+    def test_rejected_base_url_never_connects(self, client, ui_auth,
                                               fake_mesh_node, decoy,
                                               allow_hosts):
         """422 + decoy stays silent for every attacker-shaped base_url —
@@ -191,41 +191,41 @@ class TestMeshNodeEgressPolicy:
             ("ftp://example.com", "non-http scheme"),
         ]
         for url, label in cases:
-            r = _add(client, auth, {"name": "evil-node", "base_url": url})
+            r = _add(client, ui_auth, {"name": "evil-node", "base_url": url})
             assert r.status_code == 422, f"{label}: {r.status_code} {r.text}"
             assert decoy.connections() == 0, \
                 f"{label}: rejected base_url was actually contacted"
 
-    def test_patch_to_disallowed_host_422(self, client, auth, fake_mesh_node,
+    def test_patch_to_disallowed_host_422(self, client, ui_auth, fake_mesh_node,
                                           allow_hosts):
         _allow(fake_mesh_node, allow_hosts)
-        assert _add(client, auth, {"name": "patch-egress",
+        assert _add(client, ui_auth, {"name": "patch-egress",
                                    "base_url": fake_mesh_node.base_url}
                     ).status_code == 201
         r = client.patch("/api/mesh/nodes/patch-egress",
                          json={"name": "patch-egress",
                                "base_url": "http://10.255.255.1"},
-                         headers=auth)
+                         headers=ui_auth)
         assert r.status_code == 422
-        client.delete("/api/mesh/nodes/patch-egress", headers=auth)
+        client.delete("/api/mesh/nodes/patch-egress", headers=ui_auth)
 
 
 # ---------------------------------------------------------------- SSE events
 class TestMeshNodeSse:
-    def test_mutations_broadcast_mesh_node_changed(self, client, auth,
+    def test_mutations_broadcast_mesh_node_changed(self, client, ui_auth,
                                                    fake_mesh_node,
                                                    allow_hosts, app_module,
                                                    monkeypatch):
         _allow(fake_mesh_node, allow_hosts)
         captured: list[dict] = []
         monkeypatch.setattr(app_module, "_broadcast", captured.append)
-        _add(client, auth, {"name": "sse-node",
+        _add(client, ui_auth, {"name": "sse-node",
                             "base_url": fake_mesh_node.base_url})
         client.patch("/api/mesh/nodes/sse-node",
                      json={"name": "sse-node",
                            "base_url": fake_mesh_node.base_url},
-                     headers=auth)
-        client.delete("/api/mesh/nodes/sse-node", headers=auth)
+                     headers=ui_auth)
+        client.delete("/api/mesh/nodes/sse-node", headers=ui_auth)
         kinds = [(e["kind"], e.get("node")) for e in captured]
         assert ("mesh.node.changed", "sse-node") in kinds
         assert kinds.count(("mesh.node.changed", "sse-node")) == 3, \
@@ -234,10 +234,10 @@ class TestMeshNodeSse:
 
 # ------------------------------------------------------------ /api/health mesh
 class TestHealthBlock:
-    def test_health_carries_mesh_nodes(self, client, auth, fake_mesh_node,
+    def test_health_carries_mesh_nodes(self, client, ui_auth, fake_mesh_node,
                                        allow_hosts):
         _allow(fake_mesh_node, allow_hosts)
-        _add(client, auth, {"name": "health-node",
+        _add(client, ui_auth, {"name": "health-node",
                             "base_url": fake_mesh_node.base_url})
         h = client.get("/api/health").json()
         mesh = h.get("mesh", {}).get("nodes", [])
@@ -245,14 +245,14 @@ class TestHealthBlock:
         assert entry is not None, "mesh block missing from /api/health"
         assert entry["status"] == "ok"
         assert entry["health"]["version"] == "v1.2.3"
-        client.delete("/api/mesh/nodes/health-node", headers=auth)
+        client.delete("/api/mesh/nodes/health-node", headers=ui_auth)
 
     def test_health_mesh_empty_when_no_nodes(self, client):
         h = client.get("/api/health").json()
         assert h["mesh"]["nodes"] == []
 
 
-# ------------------------------------------------------------- auth boundary
+# ------------------------------------------------------------- ui_auth boundary
 class TestMeshNodeAuth:
     def test_mutation_requires_token(self, client, no_board_token):
         """Fail-closed (SEC-3): with no token class configured, every

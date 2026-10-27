@@ -129,23 +129,23 @@ class TestMigrationPreservesTasks:
 
 # ------------------------------------------------------------------ create
 class TestCreateDerivesStatus:
-    def test_status_defaults_to_col(self, client, auth, make_task):
+    def test_status_defaults_to_col(self, client, ui_auth, make_task):
         task = make_task(title="be10-derive", col="done")
         assert task["status"] == "done"
 
-    def test_explicit_status_honored(self, client, auth, make_task):
+    def test_explicit_status_honored(self, client, ui_auth, make_task):
         task = make_task(title="be10-explicit", col="open", status="blocked")
         assert task["col"] == "open"
         assert task["status"] == "blocked"
 
     @pytest.mark.parametrize("bad", ["cancelled", "in progress", "OPEN", ""])
-    def test_invalid_status_422(self, client, auth, bad):
+    def test_invalid_status_422(self, client, ui_auth, bad):
         r = client.post("/api/tasks",
                         json={"title": "be10-bad", "status": bad},
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 422
 
-    def test_client_supplied_id_request_still_accepted(self, client, auth):
+    def test_client_supplied_id_request_still_accepted(self, client, ui_auth):
         """UI-7 v1.1.3-era clients may include an ``id`` in the create
         payload. Pinned contract: such a request is accepted (201) and
         returns a well-formed TaskOut — adding the status field must not
@@ -155,53 +155,53 @@ class TestCreateDerivesStatus:
         r = client.post("/api/tasks",
                         json={"id": "be10-client-id-1", "title": "client id",
                               "col": "blocked"},
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 201, r.text
         body = r.json()
         assert body["id"]  # server always returns a concrete task id
         assert body["title"] == "client id"
         assert body["col"] == "blocked"
         assert body["status"] == "blocked"
-        client.delete(f"/api/tasks/{body['id']}", headers=auth)
+        client.delete(f"/api/tasks/{body['id']}", headers=ui_auth)
 
 
 # -------------------------------------------------------------------- patch
 class TestPatchStatus:
-    def test_patch_status_valid(self, client, auth, make_task):
+    def test_patch_status_valid(self, client, ui_auth, make_task):
         task = make_task(title="be10-patch")
         r = client.patch(f"/api/tasks/{task['id']}",
-                         json={"status": "blocked"}, headers=auth)
+                         json={"status": "blocked"}, headers=ui_auth)
         assert r.status_code == 200
         assert r.json()["status"] == "blocked"
         # col untouched — status is a separate dimension in v1
         assert r.json()["col"] == "open"
 
-    def test_patch_status_withdrawn_allowed(self, client, auth, make_task):
+    def test_patch_status_withdrawn_allowed(self, client, ui_auth, make_task):
         """`withdrawn` is in the workflow dictionary though it has no board
         column (cancelled tasks are archived, WF-1 §7)."""
         task = make_task(title="be10-withdrawn")
         r = client.patch(f"/api/tasks/{task['id']}",
-                         json={"status": "withdrawn"}, headers=auth)
+                         json={"status": "withdrawn"}, headers=ui_auth)
         assert r.status_code == 200
         assert r.json()["status"] == "withdrawn"
         assert r.json()["col"] == "open"
 
-    def test_patch_status_garbage_422(self, client, auth, make_task):
+    def test_patch_status_garbage_422(self, client, ui_auth, make_task):
         task = make_task(title="be10-patch-bad")
         r = client.patch(f"/api/tasks/{task['id']}",
-                         json={"status": "finished"}, headers=auth)
+                         json={"status": "finished"}, headers=ui_auth)
         assert r.status_code == 422
         assert "invalid status" in r.text
 
-    def test_move_overwrites_patched_status(self, client, auth, make_task):
+    def test_move_overwrites_patched_status(self, client, ui_auth, make_task):
         """Documented v1 semantics: move re-derives status from the column;
         a manual PATCH lives only until the next move (filter stays honest
         with the kanban state)."""
         task = make_task(title="be10-move-wins")
         client.patch(f"/api/tasks/{task['id']}",
-                     json={"status": "blocked"}, headers=auth)
+                     json={"status": "blocked"}, headers=ui_auth)
         r = client.post(f"/api/tasks/{task['id']}/move",
-                        json={"col": "done"}, headers=auth)
+                        json={"col": "done"}, headers=ui_auth)
         assert r.status_code == 200
         assert r.json()["col"] == "done"
         assert r.json()["status"] == "done"
@@ -209,13 +209,13 @@ class TestPatchStatus:
 
 # ------------------------------------------------------------------- board
 class TestBoardStatusFieldAndFilter:
-    def test_board_tasks_carry_status(self, client, auth, make_task):
+    def test_board_tasks_carry_status(self, client, ui_auth, make_task):
         task = make_task(title="be10-board-shape")
         board = client.get("/api/board").json()
         mine = next(t for t in board["tasks"] if t["id"] == task["id"])
         assert mine["status"] == "open"
 
-    def test_status_filter(self, client, auth, make_task):
+    def test_status_filter(self, client, ui_auth, make_task):
         task = make_task(title="be10-filter-hit", status="blocked")
         r = client.get("/api/board", params={"status": "blocked"})
         assert r.status_code == 200
@@ -223,7 +223,7 @@ class TestBoardStatusFieldAndFilter:
         assert task["id"] in ids
         assert all(t["status"] == "blocked" for t in r.json()["tasks"])
 
-    def test_status_filter_excludes_other_statuses(self, client, auth,
+    def test_status_filter_excludes_other_statuses(self, client, ui_auth,
                                                    make_task):
         make_task(title="be10-filter-miss")  # status=open
         r = client.get("/api/board", params={"status": "withdrawn"})
@@ -234,7 +234,7 @@ class TestBoardStatusFieldAndFilter:
         r = client.get("/api/board", params={"status": "nonsense"})
         assert r.status_code == 422
 
-    def test_counts_not_affected_by_filter(self, client, auth, make_task):
+    def test_counts_not_affected_by_filter(self, client, ui_auth, make_task):
         make_task(title="be10-counts")
         unfiltered = client.get("/api/board").json()["counts"]
         filtered = client.get("/api/board",

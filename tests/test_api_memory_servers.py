@@ -25,8 +25,8 @@ from server.security import ValidationError, validate_memory_url
 QA_SECRET = "mnk_qa_masking_probe_secret_value"
 
 
-def _add(client, auth, payload):
-    return client.post("/api/memories/servers", json=payload, headers=auth)
+def _add(client, ui_auth, payload):
+    return client.post("/api/memories/servers", json=payload, headers=ui_auth)
 
 
 @pytest.fixture(autouse=True)
@@ -80,9 +80,9 @@ class TestLegacyPlainMigrationOnBoot:
 # ------------------------------------------------- SEC-1 add-time probe
 class TestAddServerProbeHygiene:
     def test_valid_add_probes_fake_without_authorization(
-            self, client, auth, fake_mnemos, allow_hosts):
+            self, client, ui_auth, fake_mnemos, allow_hosts):
         allow_hosts(f"127.0.0.1:{fake_mnemos.port}")
-        r = _add(client, auth, {
+        r = _add(client, ui_auth, {
             "name": "fakesrv", "url": fake_mnemos.url,
             "token_ref": "env:NO_SUCH_VAR",
         })
@@ -95,7 +95,7 @@ class TestAddServerProbeHygiene:
         assert not any(p["auth_present"] for p in probes), \
             "SEC-1: the probe must carry NO Authorization header"
 
-    def test_rejected_url_never_connects(self, client, auth, fake_mnemos,
+    def test_rejected_url_never_connects(self, client, ui_auth, fake_mnemos,
                                          decoy, allow_hosts):
         """422 + decoy stays silent for every attacker-shaped URL.
         Validation happens before any network activity, so no sleep/wait:
@@ -108,33 +108,33 @@ class TestAddServerProbeHygiene:
             ("ftp://example.com", "non-http scheme"),
         ]
         for url, label in cases:
-            r = _add(client, auth, {"name": "evil", "url": url})
+            r = _add(client, ui_auth, {"name": "evil", "url": url})
             assert r.status_code == 422, f"{label}: {r.status_code} {r.text}"
             assert decoy.connections() == 0, \
                 f"{label}: rejected URL was actually contacted"
 
-    def test_duplicate_name_409(self, client, auth, fake_mnemos, allow_hosts):
+    def test_duplicate_name_409(self, client, ui_auth, fake_mnemos, allow_hosts):
         allow_hosts(f"127.0.0.1:{fake_mnemos.port}")
         payload = {"name": "dup-srv", "url": fake_mnemos.url}
-        assert _add(client, auth, payload).status_code == 201
-        assert _add(client, auth, payload).status_code == 409
+        assert _add(client, ui_auth, payload).status_code == 201
+        assert _add(client, ui_auth, payload).status_code == 409
 
-    def test_patch_to_disallowed_host_422(self, client, auth, fake_mnemos,
+    def test_patch_to_disallowed_host_422(self, client, ui_auth, fake_mnemos,
                                           allow_hosts):
         allow_hosts(f"127.0.0.1:{fake_mnemos.port}")
-        assert _add(client, auth, {
+        assert _add(client, ui_auth, {
             "name": "patchme", "url": fake_mnemos.url}).status_code == 201
         r = client.patch("/api/memories/servers/patchme",
                          json={"name": "patchme", "url": "http://10.255.255.1"},
-                         headers=auth)
+                         headers=ui_auth)
         assert r.status_code == 422
 
-    def test_patch_unknown_server_404(self, client, auth, fake_mnemos,
+    def test_patch_unknown_server_404(self, client, ui_auth, fake_mnemos,
                                       allow_hosts):
         allow_hosts(f"127.0.0.1:{fake_mnemos.port}")
         r = client.patch("/api/memories/servers/ghost",
                          json={"name": "ghost", "url": fake_mnemos.url},
-                         headers=auth)
+                         headers=ui_auth)
         assert r.status_code == 404
 
 
@@ -145,20 +145,20 @@ class TestTokenRefValidation:
         ("file:/etc/passwd", "file: outside provisioned secrets dir"),
         ("env:bad-name", "env: var name must match [A-Z_][A-Z0-9_]*"),
     ])
-    def test_bad_token_ref_422(self, client, auth, fake_mnemos, allow_hosts,
+    def test_bad_token_ref_422(self, client, ui_auth, fake_mnemos, allow_hosts,
                                ref, label):
         allow_hosts(f"127.0.0.1:{fake_mnemos.port}")
-        r = _add(client, auth, {"name": "eviltoken", "url": fake_mnemos.url,
+        r = _add(client, ui_auth, {"name": "eviltoken", "url": fake_mnemos.url,
                                 "token_ref": ref})
         assert r.status_code == 422, f"{label}: {r.status_code}"
 
-    def test_file_under_provisioned_dir_accepted(self, client, auth,
+    def test_file_under_provisioned_dir_accepted(self, client, ui_auth,
                                                  fake_mnemos, allow_hosts,
                                                  secrets_dir):
         allow_hosts(f"127.0.0.1:{fake_mnemos.port}")
         secret_file = secrets_dir / "qa-provisioned.token"
         secret_file.write_text(QA_SECRET)
-        r = _add(client, auth, {
+        r = _add(client, ui_auth, {
             "name": "filesrv", "url": fake_mnemos.url,
             "token_ref": f"file:{secret_file}",
         })
@@ -167,17 +167,17 @@ class TestTokenRefValidation:
         assert body["has_token"] is True
         assert QA_SECRET not in r.text, "secret value must never be echoed"
 
-    def test_empty_token_ref_ok_no_token(self, client, auth, fake_mnemos,
+    def test_empty_token_ref_ok_no_token(self, client, ui_auth, fake_mnemos,
                                          allow_hosts):
         allow_hosts(f"127.0.0.1:{fake_mnemos.port}")
-        r = _add(client, auth, {"name": "tokenless", "url": fake_mnemos.url})
+        r = _add(client, ui_auth, {"name": "tokenless", "url": fake_mnemos.url})
         assert r.status_code == 201
         assert r.json()["has_token"] is False
 
 
 # ------------------------------- SEC-2 masking of a still-plain row (fallback)
 class TestMaskingFallback:
-    def test_plain_row_masked_in_api_response(self, client, auth,
+    def test_plain_row_masked_in_api_response(self, client, ui_auth,
                                               fake_mnemos, allow_hosts,
                                               app_module):
         """A plain: row written after boot (migration already ran) stays
@@ -197,7 +197,7 @@ class TestMaskingFallback:
         finally:
             app_module.store.delete_server("maskme")
 
-    def test_server_log_masked_on_write(self, client, auth, app_module):
+    def test_server_log_masked_on_write(self, client, ui_auth, app_module):
         app_module.store.log_server_action(
             "maskme", "test",
             f"echo plain:{QA_SECRET} Bearer abc123 mnk_xyz")
@@ -215,37 +215,37 @@ class TestServerLifecycle:
                  client.get("/api/memories/servers").json()["servers"]]
         assert "legacy1" in names
 
-    def test_enable_disable_action(self, client, auth, fake_mnemos,
+    def test_enable_disable_action(self, client, ui_auth, fake_mnemos,
                                    allow_hosts):
         allow_hosts(f"127.0.0.1:{fake_mnemos.port}")
-        _add(client, auth, {"name": "lifesrv", "url": fake_mnemos.url})
+        _add(client, ui_auth, {"name": "lifesrv", "url": fake_mnemos.url})
         r = client.post("/api/memories/servers/lifesrv/action",
-                        json={"action": "disable"}, headers=auth)
+                        json={"action": "disable"}, headers=ui_auth)
         assert r.status_code == 200 and r.json()["server"]["enabled"] is False
         r = client.post("/api/memories/servers/lifesrv/action",
-                        json={"action": "enable"}, headers=auth)
+                        json={"action": "enable"}, headers=ui_auth)
         assert r.status_code == 200 and r.json()["server"]["enabled"] is True
 
-    def test_unknown_action_422(self, client, auth):
+    def test_unknown_action_422(self, client, ui_auth):
         r = client.post("/api/memories/servers/legacy1/action",
-                        json={"action": "detonate"}, headers=auth)
+                        json={"action": "detonate"}, headers=ui_auth)
         assert r.status_code == 422
 
-    def test_action_unknown_server_404(self, client, auth):
+    def test_action_unknown_server_404(self, client, ui_auth):
         r = client.post("/api/memories/servers/ghost/action",
-                        json={"action": "enable"}, headers=auth)
+                        json={"action": "enable"}, headers=ui_auth)
         assert r.status_code == 404
 
-    def test_delete_server(self, client, auth, fake_mnemos, allow_hosts):
+    def test_delete_server(self, client, ui_auth, fake_mnemos, allow_hosts):
         allow_hosts(f"127.0.0.1:{fake_mnemos.port}")
-        _add(client, auth, {"name": "doomed-srv", "url": fake_mnemos.url})
-        r = client.delete("/api/memories/servers/doomed-srv", headers=auth)
+        _add(client, ui_auth, {"name": "doomed-srv", "url": fake_mnemos.url})
+        r = client.delete("/api/memories/servers/doomed-srv", headers=ui_auth)
         assert r.status_code == 200
         names = [s["name"] for s in
                  client.get("/api/memories/servers").json()["servers"]]
         assert "doomed-srv" not in names
         assert client.delete("/api/memories/servers/doomed-srv",
-                             headers=auth).status_code == 404
+                             headers=ui_auth).status_code == 404
 
 
 # ------------------------------- default egress policy (no allowlist env)

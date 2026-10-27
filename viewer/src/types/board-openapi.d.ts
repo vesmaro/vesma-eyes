@@ -2547,8 +2547,10 @@ export interface paths {
          *     session (Ф2): on success the ``vesmaro_ui`` cookie is set right here —
          *     HttpOnly, SameSite=Strict, Secure when the request is https, Max-Age
          *     21600 (sliding idle TTL; guards reissue on activity). ``token_class``
-         *     is honest about legacy mode: with no dedicated VESMARO_UI_TOKEN the ui
-         *     class is served by the board token and the login says ``legacy``.
+         *     answers ``ui``; ``legacy`` now reports only the equal-tokens
+         *     misconfiguration (both envs set to the SAME secret — the operator
+         *     must split them), never a supported mode: the transitional
+         *     single-token fallback is retired.
          *     Errors: 401 class-aware (never a generic "not accepted"), 429 on the
          *     flat limiters each counting down and carrying its ``Retry-After``
          *     hint (F4, ME-090 — the device-mutation/telemetry limiter pattern),

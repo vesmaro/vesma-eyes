@@ -43,6 +43,8 @@ import pytest
 
 from conftest import BOARD_TOKEN, DATA_DIR
 
+MACHINE_HEADERS = {"Authorization": f"Bearer {BOARD_TOKEN}"}
+
 DB_PATH = DATA_DIR / "board.db"
 
 
@@ -799,7 +801,7 @@ class TestIdempotencyAndSse:
         assert r.json()["verify"] == p["verify"]
 
 
-# ----------------------------------------------------------- auth classes
+# ----------------------------------------------------------- ui_auth classes
 class TestAuthClasses:
     def test_pairing_requires_ui_token(self, client):
         assert client.post("/api/pairing", json={}).status_code == 401
@@ -819,23 +821,23 @@ class TestAuthClasses:
 
 # ------------------------------------------- poller compatibility (blocking)
 class TestPollerCompatibility:
-    def test_legacy_board_token_rides_existing_guards(self, client, auth,
+    def test_legacy_board_token_rides_existing_guards(self, client, ui_auth,
                                                       fresh_report_limiter):
         """The deployed systemd poller sends a prefix-less board token —
         the scope middleware must be invisible to it: reads open, ui-fallback
         mutations and reports still pass (transition mode)."""
         assert client.get("/api/board").status_code == 200
         r = client.post("/api/tasks", json={"title": "poller-compat"},
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 201, r.text
         task_id = r.json()["id"]
         try:
             r = client.post(f"/api/tasks/{task_id}/reports",
                             json={"body": "ok", "kind": "intermediate",
-                                  "agent": "poller"}, headers=auth)
+                                  "agent": "poller"}, headers=ui_auth)
             assert r.status_code == 201, r.text
         finally:
-            client.delete(f"/api/tasks/{task_id}", headers=auth)
+            client.delete(f"/api/tasks/{task_id}", headers=ui_auth)
 
     def test_device_token_never_passes_machine_guard(self, client, ui_auth):
         """A device bearer on a machine-class route: scope answers 403

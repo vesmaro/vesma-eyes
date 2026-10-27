@@ -12,7 +12,7 @@ from __future__ import annotations
 
 # ------------------------------------------------------- mutation guard
 class TestMutationGuard:
-    """SEC-3: with a token configured, mutations need Bearer auth."""
+    """SEC-3: with a token configured, mutations need Bearer ui_auth."""
 
     def test_missing_token_401(self, client):
         r = client.post("/api/tasks", json={"title": "x"})
@@ -23,12 +23,12 @@ class TestMutationGuard:
                         headers={"Authorization": "Bearer wrong"})
         assert r.status_code == 401
 
-    def test_correct_token_201_and_shape(self, client, auth):
+    def test_correct_token_201_and_shape(self, client, ui_auth):
         r = client.post("/api/tasks", json={"title": "guarded"},
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 201, r.text
         body = r.json()
-        client.delete(f"/api/tasks/{body['id']}", headers=auth)
+        client.delete(f"/api/tasks/{body['id']}", headers=ui_auth)
         for key in ("id", "title", "col", "env", "position", "agents",
                     "specialists", "created_at", "updated_at"):
             assert key in body
@@ -53,81 +53,81 @@ class TestFailClosedNoToken:
 
 # ------------------------------------------------------------- CRUD + move
 class TestTaskCrudApi:
-    def test_create_and_visible_on_board(self, client, auth, make_task):
+    def test_create_and_visible_on_board(self, client, ui_auth, make_task):
         task = make_task(title="crud-1", env="laptop")
         board = client.get("/api/board").json()
         assert task["id"] in [t["id"] for t in board["tasks"]]
         assert task["env"] == "laptop"
 
-    def test_create_invalid_col_422(self, client, auth):
+    def test_create_invalid_col_422(self, client, ui_auth):
         # WF-1: 'backlog'/'validating' became VALID columns — garbage only
         r = client.post("/api/tasks", json={"title": "x", "col": "nowhere"},
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 422
 
-    def test_create_missing_title_422(self, client, auth):
-        r = client.post("/api/tasks", json={}, headers=auth)
+    def test_create_missing_title_422(self, client, ui_auth):
+        r = client.post("/api/tasks", json={}, headers=ui_auth)
         assert r.status_code == 422
 
-    def test_create_empty_title_422(self, client, auth):
-        r = client.post("/api/tasks", json={"title": ""}, headers=auth)
+    def test_create_empty_title_422(self, client, ui_auth):
+        r = client.post("/api/tasks", json={"title": ""}, headers=ui_auth)
         assert r.status_code == 422
 
-    def test_patch_title_and_summary(self, client, auth, make_task):
+    def test_patch_title_and_summary(self, client, ui_auth, make_task):
         task = make_task(title="before")
         r = client.patch(f"/api/tasks/{task['id']}",
                          json={"title": "after", "summary": "s"},
-                         headers=auth)
+                         headers=ui_auth)
         assert r.status_code == 200
         assert r.json()["title"] == "after"
         assert r.json()["summary"] == "s"
 
-    def test_patch_unknown_task_404(self, client, auth):
+    def test_patch_unknown_task_404(self, client, ui_auth):
         r = client.patch("/api/tasks/no-such-id", json={"title": "x"},
-                         headers=auth)
+                         headers=ui_auth)
         assert r.status_code == 404
 
-    def test_move_task_200(self, client, auth, make_task):
+    def test_move_task_200(self, client, ui_auth, make_task):
         task = make_task(title="mover")
         r = client.post(f"/api/tasks/{task['id']}/move",
-                        json={"col": "done"}, headers=auth)
+                        json={"col": "done"}, headers=ui_auth)
         assert r.status_code == 200
         assert r.json()["col"] == "done"
 
-    def test_move_invalid_col_422(self, client, auth, make_task):
+    def test_move_invalid_col_422(self, client, ui_auth, make_task):
         task = make_task(title="mover2")
         r = client.post(f"/api/tasks/{task['id']}/move",
-                        json={"col": "nowhere"}, headers=auth)
+                        json={"col": "nowhere"}, headers=ui_auth)
         assert r.status_code == 422
 
-    def test_move_unknown_task_404(self, client, auth):
+    def test_move_unknown_task_404(self, client, ui_auth):
         r = client.post("/api/tasks/no-such-id/move", json={"col": "done"},
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 404
 
-    def test_delete_then_404(self, client, auth, make_task):
+    def test_delete_then_404(self, client, ui_auth, make_task):
         task = make_task(title="doomed")
         assert client.delete(f"/api/tasks/{task['id']}",
-                             headers=auth).status_code == 200
+                             headers=ui_auth).status_code == 200
         assert client.delete(f"/api/tasks/{task['id']}",
-                             headers=auth).status_code == 404
+                             headers=ui_auth).status_code == 404
 
-    def test_archive_unarchive_endpoints(self, client, auth, make_task):
+    def test_archive_unarchive_endpoints(self, client, ui_auth, make_task):
         task = make_task(title="arch-me")
         base = f"/api/tasks/{task['id']}"
-        assert client.post(f"{base}/archive", headers=auth).status_code == 200
+        assert client.post(f"{base}/archive", headers=ui_auth).status_code == 200
         board_ids = [t["id"] for t in client.get("/api/board").json()["tasks"]]
         assert task["id"] not in board_ids
-        assert client.post(f"{base}/archive", headers=auth).status_code == 404
+        assert client.post(f"{base}/archive", headers=ui_auth).status_code == 404
 
-        assert client.post(f"{base}/unarchive", headers=auth).status_code == 200
+        assert client.post(f"{base}/unarchive", headers=ui_auth).status_code == 200
         board_ids = [t["id"] for t in client.get("/api/board").json()["tasks"]]
         assert task["id"] in board_ids
         assert client.post(f"{base}/unarchive",
-                           headers=auth).status_code == 404
+                           headers=ui_auth).status_code == 404
 
-    def test_archive_unknown_task_404(self, client, auth):
-        r = client.post("/api/tasks/no-such-id/archive", headers=auth)
+    def test_archive_unknown_task_404(self, client, ui_auth):
+        r = client.post("/api/tasks/no-such-id/archive", headers=ui_auth)
         assert r.status_code == 404
 
 
@@ -142,7 +142,7 @@ class TestTaskDetailGet:
     token class must pass exactly as for the other task reads."""
 
     def test_active_task_byte_identical_to_created_and_board(
-            self, client, auth, make_task):
+            self, client, ui_auth, make_task):
         task = make_task(title="detail-active")
         r = client.get(f"/api/tasks/{task['id']}")
         assert r.status_code == 200, r.text
@@ -154,11 +154,11 @@ class TestTaskDetailGet:
         assert r.json() == board_row
 
     def test_archived_task_resolvable_same_shape(
-            self, client, auth, make_task):
+            self, client, ui_auth, make_task):
         active = make_task(title="detail-shape-ref")
         task = make_task(title="detail-archived")
         assert client.post(f"/api/tasks/{task['id']}/archive",
-                           headers=auth).status_code == 200
+                           headers=ui_auth).status_code == 200
 
         r = client.get(f"/api/tasks/{task['id']}")
         assert r.status_code == 200, r.text
@@ -180,10 +180,10 @@ class TestTaskDetailGet:
         task = make_task(title="detail-no-token")
         assert client.get(f"/api/tasks/{task['id']}").status_code == 200
 
-    def test_detail_get_open_for_machine_token(self, client, auth,
+    def test_detail_get_open_for_machine_token(self, client, ui_auth,
                                                make_task):
         task = make_task(title="detail-machine-read")
-        r = client.get(f"/api/tasks/{task['id']}", headers=auth)
+        r = client.get(f"/api/tasks/{task['id']}", headers=ui_auth)
         assert r.status_code == 200
 
     def test_missing_task_404(self, client):
@@ -194,20 +194,20 @@ class TestBE1InvalidEnvIs422Never500:
     """BE-1: store-level ValueError (unknown env / col) must surface as
     HTTP 422 from POST and PATCH, never as an unhandled 500."""
 
-    def test_post_invalid_env_422(self, client, auth):
+    def test_post_invalid_env_422(self, client, ui_auth):
         r = client.post("/api/tasks", json={"title": "x", "env": "staging"},
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 422
 
-    def test_patch_invalid_env_422(self, client, auth, make_task):
+    def test_patch_invalid_env_422(self, client, ui_auth, make_task):
         task = make_task(title="env-patch")
         r = client.patch(f"/api/tasks/{task['id']}", json={"env": "prod"},
-                         headers=auth)
+                         headers=ui_auth)
         assert r.status_code == 422
 
-    def test_post_invalid_col_422_not_500(self, client, auth):
+    def test_post_invalid_col_422_not_500(self, client, ui_auth):
         r = client.post("/api/tasks", json={"title": "x", "col": "nowhere"},
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 422
 
 
@@ -216,37 +216,37 @@ class TestAgentsAreHarnessesNotRoles:
     ...). Role-shaped values (@GCW: ... / gcw-*) are SPECIALISTS and must
     be rejected with 422 on create AND patch (BE-5)."""
 
-    def test_create_rejects_gcw_role_slug(self, client, auth):
+    def test_create_rejects_gcw_role_slug(self, client, ui_auth):
         r = client.post("/api/tasks", json={"title": "x",
                                             "agents": ["gcw-sre-devops"]},
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 422
         assert "specialists" in r.text
 
-    def test_create_rejects_at_role_prefix(self, client, auth):
+    def test_create_rejects_at_role_prefix(self, client, ui_auth):
         r = client.post("/api/tasks", json={"title": "x",
                                             "agents": ["@GCW: SRE/DevOps"]},
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 422
 
-    def test_patch_rejects_gcw_role_slug(self, client, auth, make_task):
+    def test_patch_rejects_gcw_role_slug(self, client, ui_auth, make_task):
         task = make_task(title="patch-agents")
         r = client.patch(f"/api/tasks/{task['id']}",
-                         json={"agents": ["gcw-tech-lead"]}, headers=auth)
+                         json={"agents": ["gcw-tech-lead"]}, headers=ui_auth)
         assert r.status_code == 422
 
-    def test_create_accepts_harness_name(self, client, auth):
+    def test_create_accepts_harness_name(self, client, ui_auth):
         r = client.post("/api/tasks", json={"title": "harnessed",
                                             "agents": ["zcode"]},
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 201
         assert r.json()["agents"] == ["zcode"]
-        client.delete(f"/api/tasks/{r.json()['id']}", headers=auth)
+        client.delete(f"/api/tasks/{r.json()['id']}", headers=ui_auth)
 
-    def test_patch_accepts_harness_list(self, client, auth, make_task):
+    def test_patch_accepts_harness_list(self, client, ui_auth, make_task):
         task = make_task(title="patch-agents-ok")
         r = client.patch(f"/api/tasks/{task['id']}",
-                         json={"agents": ["zcode", "hermes"]}, headers=auth)
+                         json={"agents": ["zcode", "hermes"]}, headers=ui_auth)
         assert r.status_code == 200
         assert r.json()["agents"] == ["zcode", "hermes"]
 
@@ -259,31 +259,31 @@ class TestUnknownFieldsRejected422:
     Patch.col) stay tolerated — pinned in test_task_status_field.py and
     test_task_priority_edit_window.py."""
 
-    def test_create_unknown_field_422_names_it(self, client, auth):
+    def test_create_unknown_field_422_names_it(self, client, ui_auth):
         r = client.post("/api/tasks",
                         json={"title": "x", "description": "junk"},
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 422
         assert "description" in r.text
 
-    def test_patch_unknown_field_422_names_it(self, client, auth, make_task):
+    def test_patch_unknown_field_422_names_it(self, client, ui_auth, make_task):
         task = make_task(title="be15-patch")
         r = client.patch(f"/api/tasks/{task['id']}",
-                         json={"description": "junk"}, headers=auth)
+                         json={"description": "junk"}, headers=ui_auth)
         assert r.status_code == 422
         assert "description" in r.text
 
-    def test_create_accepts_every_known_field(self, client, auth):
+    def test_create_accepts_every_known_field(self, client, ui_auth):
         r = client.post("/api/tasks", json={
             "title": "be15 full", "summary": "sum", "spec": "spec",
             "col": "open", "status": "open", "priority": "high",
             "env": "laptop", "agents": ["zcode"], "specialists": ["@GCW: QA"],
             "project": "be15", "memory_ids": ["m-1"],
             "mnemos_tags": ["be15"],
-        }, headers=auth)
+        }, headers=ui_auth)
         assert r.status_code == 201, r.text
         body = r.json()
-        client.delete(f"/api/tasks/{body['id']}", headers=auth)
+        client.delete(f"/api/tasks/{body['id']}", headers=ui_auth)
         for key, expected in (("summary", "sum"), ("spec", "spec"),
                               ("col", "open"), ("status", "open"),
                               ("priority", "high"), ("env", "laptop"),
@@ -294,24 +294,24 @@ class TestUnknownFieldsRejected422:
                               ("mnemos_tags", ["be15"])):
             assert body[key] == expected, key
 
-    def test_patch_accepts_every_content_field(self, client, auth, make_task):
+    def test_patch_accepts_every_content_field(self, client, ui_auth, make_task):
         task = make_task(title="be15 patch-all")
         r = client.patch(f"/api/tasks/{task['id']}", json={
             "title": "be15 patched", "summary": "sum2", "spec": "spec2",
             "priority": "low", "env": "local", "agents": ["hermes"],
             "specialists": ["@GCW: Tech Lead"], "project": "be15b",
             "memory_ids": [], "mnemos_tags": [],
-        }, headers=auth)
+        }, headers=ui_auth)
         assert r.status_code == 200, r.text
         body = r.json()
         assert body["title"] == "be15 patched"
         assert body["env"] == "local"
         assert body["agents"] == ["hermes"]
 
-    def test_patch_partial_does_not_break(self, client, auth, make_task):
+    def test_patch_partial_does_not_break(self, client, ui_auth, make_task):
         task = make_task(title="be15 partial", summary="keep me")
         r = client.patch(f"/api/tasks/{task['id']}",
-                         json={"summary": "only this"}, headers=auth)
+                         json={"summary": "only this"}, headers=ui_auth)
         assert r.status_code == 200, r.text
         assert r.json()["summary"] == "only this"
         assert r.json()["title"] == "be15 partial"

@@ -12,8 +12,8 @@ Three layers:
 3. CHOKE-POINT on the serving path — a secret planted in a stored
    preview NEVER reaches the response body masked-less.
 
-Ingest auth uses the executor-token leg (the poller family): a pending
-executor mints via register → approve → scan. ``auth``/``machine_auth``
+Ingest ui_auth uses the executor-token leg (the poller family): a pending
+executor mints via register → approve → scan. ``ui_auth``/``machine_auth``
 (the board token) ride the same machine class.
 """
 
@@ -25,6 +25,8 @@ from fastapi.testclient import TestClient
 from pathlib import Path
 from conftest import BOARD_TOKEN, UI_TOKEN
 
+MACHINE_HEADERS = {"Authorization": f"Bearer {BOARD_TOKEN}"}
+
 SPEC_PATH = Path(__file__).resolve().parent.parent / "docs" / "kora" / "openapi.yaml"
 
 
@@ -35,7 +37,7 @@ def kora_spec() -> dict:
     return loaded
 
 
-def _register_executor(client: TestClient, auth: dict, name: str) -> tuple[str, str]:
+def _register_executor(client: TestClient, ui_auth: dict, name: str) -> tuple[str, str]:
     """Register + approve an executor; returns (id, secret).
 
     Registration is rate-limited (10/min per client — the real gate). The
@@ -43,13 +45,13 @@ def _register_executor(client: TestClient, auth: dict, name: str) -> tuple[str, 
     distinct ones reuse ``_reuse_executor`` below.
     """
     resp = client.post(
-        "/api/executors", headers=auth,
+        "/api/executors", headers=MACHINE_HEADERS,
         json={"name": name, "harness": "zcode", "host": "laptop-1"})
     assert resp.status_code == 201, resp.text
     body = resp.json()
     executor_id = body["executor"]["id"]
     resp = client.patch(
-        f"/api/executors/{executor_id}", headers=auth,
+        f"/api/executors/{executor_id}", headers=ui_auth,
         json={"state": "approved"})
     assert resp.status_code == 200, resp.text
     return executor_id, body["executor_secret"]
@@ -81,7 +83,7 @@ _EXECUTOR_CACHE: dict[str, tuple[str, dict]] = {}
 
 
 @pytest.fixture()
-def one_executor(client: TestClient, auth: dict) -> tuple[str, dict]:
+def one_executor(client: TestClient, ui_auth: dict) -> tuple[str, dict]:
     """One approved executor for the ingest suite (the registration
     limiter — 10/min per client — forbids one fresh executor per test;
     the ingest itself is idempotent, tests use distinct native_ids).
@@ -89,7 +91,7 @@ def one_executor(client: TestClient, auth: dict) -> tuple[str, dict]:
     tests reuse the same (id, token) pair."""
     if "exec" in _EXECUTOR_CACHE:
         return _EXECUTOR_CACHE["exec"]
-    executor_id, secret = _register_executor(client, auth, "kora-ingest-1")
+    executor_id, secret = _register_executor(client, ui_auth, "kora-ingest-1")
     _EXECUTOR_CACHE["exec"] = (
         executor_id, {"Authorization": f"Bearer {secret}"})
     return _EXECUTOR_CACHE["exec"]
@@ -152,10 +154,10 @@ class TestListContract:
         for row in coverage["harnesses"]:
             assert {"harness", "support"} <= set(row.keys())
 
-    def test_session_item_frozen_fields(self, client: TestClient, auth: dict,
+    def test_session_item_frozen_fields(self, client: TestClient, ui_auth: dict,
                                        kora_spec: dict):
         executor_id, secret = _register_executor(
-            client, auth, "kora-ct-executor")
+            client, ui_auth, "kora-ct-executor")
         resp = client.post(
             f"/api/executors/{executor_id}/kora-scan",
             headers={"Authorization": f"Bearer {secret}"},
@@ -176,9 +178,9 @@ class TestListContract:
         assert item["id"] == f"{item['executor_id']}:{item['native_id']}"
 
     def test_preview_clamped_160_and_redacted(self, client: TestClient,
-                                             auth: dict):
+                                             ui_auth: dict):
         executor_id, secret = _register_executor(
-            client, auth, "kora-ct-clamp")
+            client, ui_auth, "kora-ct-clamp")
         secret_preview = (
             "текст " + "a" * 100
             + " ghp_AbCdEf1234567890aBcDeF1234567890" + "b" * 200)
@@ -197,9 +199,9 @@ class TestListContract:
         assert "ghp_AbCdEf" not in item["last_line_preview"]
         assert "gh*_<redacted>" in item["last_line_preview"]
 
-    def test_null_preview_for_empty(self, client: TestClient, auth: dict):
+    def test_null_preview_for_empty(self, client: TestClient, ui_auth: dict):
         executor_id, secret = _register_executor(
-            client, auth, "kora-ct-null")
+            client, ui_auth, "kora-ct-null")
         client.post(
             f"/api/executors/{executor_id}/kora-scan",
             headers={"Authorization": f"Bearer {secret}"},
@@ -224,9 +226,9 @@ class TestListContract:
                         headers=auth_headers)
         assert ok.status_code == 200
 
-    def test_harness_filter_narrows(self, client: TestClient, auth: dict):
+    def test_harness_filter_narrows(self, client: TestClient, ui_auth: dict):
         executor_id, secret = _register_executor(
-            client, auth, "kora-ct-filter")
+            client, ui_auth, "kora-ct-filter")
         client.post(
             f"/api/executors/{executor_id}/kora-scan",
             headers={"Authorization": f"Bearer {secret}"},
@@ -255,9 +257,9 @@ class TestListContract:
 
 class TestIngest:
     def test_executor_token_binds_identity(self, client: TestClient,
-                                          auth: dict, one_executor):
+                                          ui_auth: dict, one_executor):
         executor_id, h = one_executor
-        other_id, _ = _register_executor(client, auth, "kora-ig-other")
+        other_id, _ = _register_executor(client, ui_auth, "kora-ig-other")
         # pushing under ANOTHER executor's id with my token → 403
         resp = client.post(
             f"/api/executors/{other_id}/kora-scan",
@@ -329,8 +331,8 @@ class TestIngest:
         assert len(items) == 2
 
     def test_scan_ticks_executor_presence(self, client: TestClient,
-                                          auth: dict):
-        executor_id, secret = _register_executor(client, auth, "kora-ig-pres")
+                                          ui_auth: dict):
+        executor_id, secret = _register_executor(client, ui_auth, "kora-ig-pres")
         before = client.get(f"/api/executors/{executor_id}").json()
         assert before["last_seen"] == ""   # never heartbeated (flat row)
         client.post(f"/api/executors/{executor_id}/kora-scan",
@@ -339,13 +341,13 @@ class TestIngest:
         after = client.get(f"/api/executors/{executor_id}").json()
         assert after["last_seen"] != ""
 
-    def test_revoked_executor_refused(self, client: TestClient, auth: dict):
+    def test_revoked_executor_refused(self, client: TestClient, ui_auth: dict):
         """``revoked`` is TERMINAL (the kill-switch — no un-revoke), so
         this test owns a FRESH executor: the shared one must never be
         sacrificed to a terminal state."""
-        executor_id, secret = _register_executor(client, auth, "kora-ig-rev")
+        executor_id, secret = _register_executor(client, ui_auth, "kora-ig-rev")
         h = {"Authorization": f"Bearer {secret}"}
-        client.patch(f"/api/executors/{executor_id}", headers=auth,
+        client.patch(f"/api/executors/{executor_id}", headers=ui_auth,
                      json={"state": "revoked"})
         resp = client.post(
             f"/api/executors/{executor_id}/kora-scan",
@@ -575,7 +577,7 @@ class TestListingAccessGuard:
 
 
 class TestLiveScanPipeline:
-    def test_reader_to_registry_to_api(self, client: TestClient, auth: dict,
+    def test_reader_to_registry_to_api(self, client: TestClient, ui_auth: dict,
                                        one_executor, monkeypatch):
         """The slice-1 pipeline against a SYNTHETIC store: the real reader
         (scan_zcode_store) → the real ingest → the real serving path."""

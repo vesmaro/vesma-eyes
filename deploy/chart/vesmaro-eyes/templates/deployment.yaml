@@ -38,6 +38,43 @@ spec:
       {{- end }}
       securityContext:
         {{- toYaml .Values.securityContext | nindent 8 }}
+      {{- if .Values.models.secretsDir.enabled }}
+      {{- /* Issue #5 (MF3 threat model §6: "vault files 0600, dir not
+           world-readable"): the local-path provisioner creates the vault
+           dir 0777+setgid (drwxrwsrwx) and kubelet's fsGroup pass cannot
+           produce 0700, so the pod fixes the ROOT dir itself on start —
+           chown to the run-as uid/gid, chmod 0700 (setgid cleared).
+           Vault FILES are never touched here: the server writes them
+           0600 by construction. The init re-runs on every pod start and
+           is idempotent; kubelet's OnRootMismatch pass stays quiet
+           because uid/gid already match fsGroup afterwards. Runs as root
+           (deliberate override of the pod securityContext — a non-owner
+           cannot chmod) with every capability dropped except CHOWN and
+           FOWNER. */}}
+      initContainers:
+        - name: vault-perms
+          image: {{ include "vesmaro-eyes.image" . }}
+          # IfNotPresent on purpose: same pinned tag as the main container
+          # (already on the node) — a pod start never depends on registry
+          # reachability for a perms fix.
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - >-
+              chown {{ .Values.securityContext.runAsUser }}:{{ .Values.securityContext.runAsGroup }} {{ .Values.models.secretsDir.mountPath }}
+              && chmod 0700 {{ .Values.models.secretsDir.mountPath }}
+          securityContext:
+            runAsNonRoot: false
+            runAsUser: 0
+            runAsGroup: 0
+            capabilities:
+              drop: ["ALL"]
+              add: ["CHOWN", "FOWNER"]
+          volumeMounts:
+            - name: vault
+              mountPath: {{ .Values.models.secretsDir.mountPath }}
+      {{- end }}
       containers:
         - name: eyes
           image: {{ include "vesmaro-eyes.image" . }}
@@ -67,9 +104,10 @@ spec:
                   name: {{ include "vesmaro-eyes.boardTokenSecretName" . }}
                   key: {{ .Values.boardToken.existingSecretKey }}
             {{- if .Values.uiToken.enabled }}
-            # ADR 0009 A1 token split: once this env reaches the pod, the
-            # board token no longer passes ui-class mutations (transition
-            # ends). Enable as RUNBOOK.md §8 migration step 2 only.
+            # ADR 0009 A1 token split — CLOSED (transitional retired
+            # server-side in 1.93): the ui class takes ONLY this token;
+            # the board token stays machine-class (poller/agents). With
+            # uiToken.enabled=false the ui class fail-closes to 503.
             - name: VESMARO_UI_TOKEN
               valueFrom:
                 secretKeyRef:

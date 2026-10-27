@@ -30,7 +30,7 @@ def _fresh_limiter(fresh_draft_limiter):
 
 
 @pytest.fixture()
-def wired(client, auth, fake_mnemos, allow_hosts, app_module):
+def wired(client, ui_auth, fake_mnemos, allow_hosts, app_module):
     """One active memory server pointed at this test's FakeMnemos.
 
     Earlier files (test_api_memory_servers) leave ENABLED rows (fakesrv,
@@ -55,27 +55,27 @@ def wired(client, auth, fake_mnemos, allow_hosts, app_module):
         app_module.registry.set_enabled(name, True)
 
 
-def _draft(client, auth, **overrides):
+def _draft(client, ui_auth, **overrides):
     payload = {"text": "починить дребезг реле в гараже",
                "project": "", "tags": ""} | overrides
-    return client.post("/api/task-drafts", json=payload, headers=auth)
+    return client.post("/api/task-drafts", json=payload, headers=ui_auth)
 
 
 class TestDraftContract:
-    def test_success_201_returns_memory_id(self, client, auth, wired):
-        r = _draft(client, auth)
+    def test_success_201_returns_memory_id(self, client, ui_auth, wired):
+        r = _draft(client, ui_auth)
         assert r.status_code == 201, r.text
         body = r.json()
         assert body["ok"] is True
         assert body["memory_id"] == "fake-mem-1"
         assert body["server"] == "qa-mnemos"
 
-    def test_tags_pinned_exactly(self, client, auth, wired):
+    def test_tags_pinned_exactly(self, client, ui_auth, wired):
         """SEC-4 + vesma strict contract: records carry EXACTLY the
         sanitized project slug, the board's own agent stamp, and the
         mnemos:open-question + task-draft + source:board subtypes — a draft
         is an open question, not a decision."""
-        assert _draft(client, auth).status_code == 201
+        assert _draft(client, ui_auth).status_code == 201
         writes = wired.memories_bodies()
         assert writes
         assert writes[-1]["tags"] == [
@@ -83,23 +83,23 @@ class TestDraftContract:
             "mnemos:open-question", "task-draft", "source:board",
         ]
 
-    def test_project_slug_sanitized_into_tag(self, client, auth, wired):
+    def test_project_slug_sanitized_into_tag(self, client, ui_auth, wired):
         """A clean project value becomes project:<slug>; a hostile or
         malformed one falls back to the default slug instead of leaking."""
-        r = _draft(client, auth, project="garage_iot")
+        r = _draft(client, ui_auth, project="garage_iot")
         assert r.status_code == 201
         assert wired.memories_bodies()[-1]["tags"][0] == "project:garage-iot"
-        _draft(client, auth, project="project:evil")
+        _draft(client, ui_auth, project="project:evil")
         assert wired.memories_bodies()[-1]["tags"][0] == "project:vesma-eyes"
 
     def test_user_project_and_tags_never_become_memory_tags(self, client,
-                                                            auth, wired):
+                                                            ui_auth, wired):
         """Poisoning invariant (ui-contract §12): whatever the owner types
         into the project/tags fields must NOT leak verbatim into the memory
         TAGS — the project value only lands as a sanitized slug stamp, tags
         live in content metadata only."""
         user_tags = "agent:gcw-something, project:secret, mnemos:decision"
-        r = _draft(client, auth,
+        r = _draft(client, ui_auth,
                    project="project:evil", tags=user_tags)
         assert r.status_code == 201
         write = wired.memories_bodies()[-1]
@@ -112,44 +112,44 @@ class TestDraftContract:
         assert f"теги: {user_tags}" in write["content"]
         assert "проект: project:evil" in write["content"]
 
-    def test_project_and_tags_travel_in_content(self, client, auth, wired):
-        r = _draft(client, auth, project="vesma-eyes", tags="research, api")
+    def test_project_and_tags_travel_in_content(self, client, ui_auth, wired):
+        r = _draft(client, ui_auth, project="vesma-eyes", tags="research, api")
         assert r.status_code == 201
         write = wired.memories_bodies()[-1]
         assert "проект: vesma-eyes" in write["content"]
         assert "теги: research, api" in write["content"]
 
-    def test_note_type_and_mcp_source(self, client, auth, wired):
-        assert _draft(client, auth).status_code == 201
+    def test_note_type_and_mcp_source(self, client, ui_auth, wired):
+        assert _draft(client, ui_auth).status_code == 201
         write = wired.memories_bodies()[-1]
         assert write["memory_type"] == "note"
         assert write["source"] == "mcp"
 
-    def test_title_prefix_and_truncation(self, client, auth, wired):
+    def test_title_prefix_and_truncation(self, client, ui_auth, wired):
         long_text = "x" * 200
-        assert _draft(client, auth, text=long_text).status_code == 201
+        assert _draft(client, ui_auth, text=long_text).status_code == 201
         write = wired.memories_bodies()[-1]
         assert write["title"] == f"task-draft: {long_text[:60]}"
 
-    def test_writes_to_first_active_server(self, client, auth, wired,
+    def test_writes_to_first_active_server(self, client, ui_auth, wired,
                                            app_module):
-        assert _draft(client, auth).status_code == 201
+        assert _draft(client, ui_auth).status_code == 201
         # qa-mnemos is the only active server (legacy1 disabled in conftest)
         assert wired.memories_bodies()[-1]["title"].startswith("task-draft: ")
 
 
 class TestDraftValidation:
     @pytest.mark.parametrize("text", ["", "   \n\t "])
-    def test_empty_text_422_and_nothing_written(self, client, auth, wired,
+    def test_empty_text_422_and_nothing_written(self, client, ui_auth, wired,
                                                 text):
-        r = _draft(client, auth, text=text)
+        r = _draft(client, ui_auth, text=text)
         assert r.status_code == 422
         assert wired.memories_bodies() == []
 
 
 class TestDraftRateLimit:
-    def test_11th_call_429(self, client, auth, wired):
-        statuses = [_draft(client, auth).status_code for _ in range(12)]
+    def test_11th_call_429(self, client, ui_auth, wired):
+        statuses = [_draft(client, ui_auth).status_code for _ in range(12)]
         assert statuses[0] == 201
         assert 429 in statuses and statuses[-1] == 429
         writes = wired.memories_bodies()
@@ -157,16 +157,16 @@ class TestDraftRateLimit:
 
 
 class TestDraftFailures:
-    def test_no_active_server_503(self, client, auth, wired, app_module):
+    def test_no_active_server_503(self, client, ui_auth, wired, app_module):
         app_module.registry.set_enabled("qa-mnemos", False)
-        r = _draft(client, auth)
+        r = _draft(client, ui_auth)
         assert r.status_code == 503
         assert "no active memory server" in r.text
         assert client.get("/api/board").status_code == 200
 
-    def test_mnemos_500_is_handled_board_still_up(self, client, auth, wired):
+    def test_mnemos_500_is_handled_board_still_up(self, client, ui_auth, wired):
         wired.fail_memories = True
-        r = _draft(client, auth)
+        r = _draft(client, ui_auth)
         assert r.status_code in (500, 503), "handled error, not a crash"
         assert "mnemos" in r.text.lower()
         assert client.get("/api/board").status_code == 200
@@ -176,9 +176,9 @@ class TestDraftToBoardChore:
     """AC3: after the draft, the SPA files the chore task with the exact
     payload contract — verified here server-side (UI posts the same JSON)."""
 
-    def test_chore_task_payload_contract(self, client, auth, wired,
+    def test_chore_task_payload_contract(self, client, ui_auth, wired,
                                          make_task):
-        draft = _draft(client, auth, project="vesma-eyes").json()
+        draft = _draft(client, ui_auth, project="vesma-eyes").json()
         mid = draft["memory_id"]
         task = make_task(
             title=f"Оформить черновик задачи (memory {mid})",

@@ -161,12 +161,12 @@ class TestBackfillStore:
 
 
 class TestStartupHook:
-    def test_lifespan_backfill_only_under_env_flag(self, client, auth,
+    def test_lifespan_backfill_only_under_env_flag(self, client, ui_auth,
                                                    make_task, app_module,
                                                    monkeypatch):
         task = make_task(title="boot-backfill")
         assert client.post(f"/api/tasks/{task['id']}/move",
-                           json={"col": "done"}, headers=auth).status_code == 200
+                           json={"col": "done"}, headers=ui_auth).status_code == 200
         # order-independent: clear a possibly armed flag from earlier tests
         app_module.store.set_meta(Store.BACKFILL_META_KEY, "0")
 

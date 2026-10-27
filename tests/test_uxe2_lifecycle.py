@@ -28,7 +28,9 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from conftest import DATA_DIR
+from conftest import DATA_DIR, BOARD_TOKEN
+
+MACHINE_HEADERS = {"Authorization": f"Bearer {BOARD_TOKEN}"}
 from server.security import RateLimiter
 from server.store import executor_lifecycle_status
 
@@ -46,9 +48,10 @@ def _iso_past(seconds: float) -> str:
             - timedelta(seconds=seconds)).isoformat(timespec="seconds")
 
 
-def _register(client, headers, name: str, **extra) -> tuple[dict, str]:
+def _register(client, name: str, **extra) -> tuple[dict, str]:
+    # registration is machine-class (ADR 0009 A1): board bearer only
     payload = {"name": name, "harness": "zcode"} | extra
-    r = client.post("/api/executors", json=payload, headers=headers)
+    r = client.post("/api/executors", json=payload, headers=MACHINE_HEADERS)
     assert r.status_code == 201, r.text
     body = r.json()
     return body["executor"], body["executor_secret"]
@@ -153,8 +156,8 @@ class TestExecutorLifecycleHelper:
 class TestExecutorApiExposure:
     """UXE-2: the registry reads carry the computed status object."""
 
-    def test_list_and_single_carry_status(self, client, auth, app_module):
-        executor, secret = _register(client, auth, "ux-list-a1")
+    def test_list_and_single_carry_status(self, client, ui_auth, app_module):
+        executor, secret = _register(client, "ux-list-a1")
         listed = client.get("/api/executors").json()
         item = next(e for e in listed["items"] if e["id"] == executor["id"])
         assert item["status"]["state"] == "awaiting-approval"
@@ -163,9 +166,9 @@ class TestExecutorApiExposure:
         assert listed["meta"]["lifecycle"]["silent_max_age_s"] == 600
         assert len(listed["meta"]["lifecycle"]["states"]) == 8
 
-    def test_heartbeat_transitions_to_online(self, client, auth):
-        executor, secret = _register(client, auth, "ux-beat-b1")
-        _approve(client, auth, executor["id"], enabled=True)
+    def test_heartbeat_transitions_to_online(self, client, ui_auth):
+        executor, secret = _register(client, "ux-beat-b1")
+        _approve(client, ui_auth, executor["id"], enabled=True)
         _beat(client, secret, executor["id"])
         body = client.get(f"/api/executors/{executor['id']}").json()
         assert body["status"]["state"] == "online"
@@ -173,9 +176,9 @@ class TestExecutorApiExposure:
         assert body["status"]["next_action"] == ""   # nothing to do — honest
 
     def test_silent_and_offline_after_time_travel(
-            self, client, auth, app_module):
-        executor, secret = _register(client, auth, "ux-sil-c1")
-        _approve(client, auth, executor["id"], enabled=True)
+            self, client, ui_auth, app_module):
+        executor, secret = _register(client, "ux-sil-c1")
+        _approve(client, ui_auth, executor["id"], enabled=True)
         _beat(client, secret, executor["id"])
         for age_s, expected in ((301, "silent"), (3600, "offline")):
             ts = (datetime.now(timezone.utc)
@@ -187,23 +190,23 @@ class TestExecutorApiExposure:
             assert body["status"]["state"] == expected, body["status"]
             assert "check the host" in body["status"]["next_action"]
 
-    def test_disabled_keeps_report_age_visible(self, client, auth, app_module):
+    def test_disabled_keeps_report_age_visible(self, client, ui_auth, app_module):
         """07a: «Выключен владельцем» — новые задачи не получает; доклады
         продолжаются. The state is disabled, the report clock stays live."""
-        executor, secret = _register(client, auth, "ux-dis-d1")
-        _approve(client, auth, executor["id"], enabled=True)
+        executor, secret = _register(client, "ux-dis-d1")
+        _approve(client, ui_auth, executor["id"], enabled=True)
         _beat(client, secret, executor["id"])
-        _approve(client, auth, executor["id"], enabled=False)
+        _approve(client, ui_auth, executor["id"], enabled=False)
         body = client.get(f"/api/executors/{executor['id']}").json()
         assert body["status"]["state"] == "disabled"
         assert isinstance(body["status"]["last_report_age_s"], int)
         assert "re-enable" in body["status"]["next_action"]
 
-    def test_revoked_carries_next_action(self, client, auth):
-        executor, _ = _register(client, auth, "ux-rev-e1")
-        _approve(client, auth, executor["id"], enabled=True)
+    def test_revoked_carries_next_action(self, client, ui_auth):
+        executor, _ = _register(client, "ux-rev-e1")
+        _approve(client, ui_auth, executor["id"], enabled=True)
         r = client.patch(f"/api/executors/{executor['id']}",
-                         json={"state": "revoked"}, headers=auth)
+                         json={"state": "revoked"}, headers=ui_auth)
         assert r.status_code == 200
         body = r.json()["executor"]
         assert body["status"]["state"] == "revoked"
@@ -294,7 +297,7 @@ class TestEnrollmentLifecycle:
         # the owner runs the bootstrap manually before the TTL expires.
         assert row["status"]["state"] == "created"
 
-    def test_used_token_since_is_used_at(self, client, ui_auth, auth):
+    def test_used_token_since_is_used_at(self, client, ui_auth):
         body = self._mint(client, ui_auth)
         r = client.post("/api/executors",
                         json={"name": "ux-enr-f1", "harness": "zcode"},
@@ -339,10 +342,10 @@ class TestLifecycleWalk:
     first report → online → silent → offline → disabled → revoked, each
     step's status read from the API (time-travel on last_seen)."""
 
-    def test_full_walk(self, client, auth, ui_auth, app_module):
+    def test_full_walk(self, client, ui_auth, app_module):
         # 1. token minted
         body = client.post("/api/executors/enrollment",
-                           json={"label": "walk"}, headers=auth).json()
+                           json={"label": "walk"}, headers=ui_auth).json()
         token = body["token"]
         created = body["enrollment"]["created_at"]
         enr_id = body["enrollment"]["enrollment_id"]
@@ -372,7 +375,7 @@ class TestLifecycleWalk:
         item = next(e for e in listed["items"] if e["id"] == executor["id"])
         assert item["status"]["state"] == "awaiting-approval"
         # 4. approved, no report yet → awaiting-first-report
-        _approve(client, auth, executor["id"], enabled=True)
+        _approve(client, ui_auth, executor["id"], enabled=True)
         item = next(e for e in client.get(
             "/api/executors").json()["items"] if e["id"] == executor["id"])
         assert item["status"]["state"] == "awaiting-first-report"
@@ -400,13 +403,13 @@ class TestLifecycleWalk:
             "/api/executors").json()["items"] if e["id"] == executor["id"])
         assert item["status"]["state"] == "offline"
         # 8. owner disables → disabled
-        _approve(client, auth, executor["id"], enabled=False)
+        _approve(client, ui_auth, executor["id"], enabled=False)
         item = next(e for e in client.get(
             "/api/executors").json()["items"] if e["id"] == executor["id"])
         assert item["status"]["state"] == "disabled"
         # 9. revoke → revoked (terminal)
         client.patch(f"/api/executors/{executor['id']}",
-                     json={"state": "revoked"}, headers=auth)
+                     json={"state": "revoked"}, headers=ui_auth)
         item = next(e for e in client.get(
             "/api/executors").json()["items"] if e["id"] == executor["id"])
         assert item["status"]["state"] == "revoked"

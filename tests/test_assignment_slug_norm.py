@@ -26,6 +26,9 @@ Coverage:
 from __future__ import annotations
 
 import pytest
+from conftest import BOARD_TOKEN
+
+MACHINE_HEADERS = {"Authorization": f"Bearer {BOARD_TOKEN}"}
 
 from server.security import RateLimiter
 from server.store import normalize_specialist, specialist_matches
@@ -53,16 +56,17 @@ def fresh_routing_env(app_module, monkeypatch):
         db.execute("DELETE FROM task_assignments")
 
 
-def _make_executor(client, auth, name: str, *, caps: list[str] | None = None,
+def _make_executor(client, ui_auth, name: str, *, caps: list[str] | None = None,
                    enabled: bool = True) -> dict:
     r = client.post("/api/executors",
-                    json={"name": name, "harness": "zcode"}, headers=auth)
+                    json={"name": name, "harness": "zcode"},
+                    headers=MACHINE_HEADERS)
     assert r.status_code == 201, r.text
     executor = r.json()["executor"]
     r = client.patch(f"/api/executors/{executor['id']}",
                      json={"state": "approved", "enabled": enabled,
                            **({"capabilities": caps} if caps else {})},
-                     headers=auth)
+                     headers=ui_auth)
     assert r.status_code == 200, r.text
     return r.json()["executor"]
 
@@ -114,7 +118,7 @@ def test_specialist_matches(declared, cap, want):
 
 
 # ----------------------------------------------- mint-time normalization
-def test_create_stores_slug_and_keeps_raw_in_audit(client, auth, make_task,
+def test_create_stores_slug_and_keeps_raw_in_audit(client, ui_auth, make_task,
                                                    app_module):
     """id=16/24 redressed: «@GCW: Tech Lead» is stored (and served) as the
     slug the poller allowlists match on; the raw name rides the audit."""
@@ -122,7 +126,7 @@ def test_create_stores_slug_and_keeps_raw_in_audit(client, auth, make_task,
     r = client.post("/api/assignments",
                     json={"task_id": task["id"],
                           "specialist": "@GCW: Tech Lead"},
-                    headers=auth)
+                    headers=ui_auth)
     assert r.status_code == 201, r.text
     item = _assignment_item(client, r.json()["assignment"]["id"])
     assert item["specialist"] == "gcw-tech-lead"
@@ -132,14 +136,14 @@ def test_create_stores_slug_and_keeps_raw_in_audit(client, auth, make_task,
     assert created["payload"]["specialist_raw"] == "@GCW: Tech Lead"
 
 
-def test_unknown_name_journaled_not_dropped(client, auth, make_task,
+def test_unknown_name_journaled_not_dropped(client, ui_auth, make_task,
                                              app_module):
     """S-step 1 honesty clause: a name that does not normalize stays
     verbatim on the card AND lands in the journal with the reason."""
     task = make_task(title="s1 honest miss")
     r = client.post("/api/assignments",
                     json={"task_id": task["id"], "specialist": "Мой агент"},
-                    headers=auth)
+                    headers=ui_auth)
     assert r.status_code == 201, r.text
     item = _assignment_item(client, r.json()["assignment"]["id"])
     assert item["specialist"] == "Мой агент"
@@ -153,15 +157,15 @@ def test_unknown_name_journaled_not_dropped(client, auth, make_task,
 
 # ------------------------------------------------------- routing matching
 def test_routing_matches_display_name_against_slug_capability(
-        client, auth, make_task):
+        client, ui_auth, make_task):
     """The verdict's routing half: a display-name nomination resolves to
     the executor whose capability carries the slug form."""
-    _make_executor(client, auth, "routed-1", caps=["gcw-tech-lead"])
+    _make_executor(client, ui_auth, "routed-1", caps=["gcw-tech-lead"])
     task = make_task(title="s1 routing")
     r = client.post("/api/assignments",
                     json={"task_id": task["id"],
                           "specialist": "@GCW: Tech Lead"},
-                    headers=auth)
+                    headers=ui_auth)
     assert r.status_code == 201, r.text
     item = _assignment_item(client, r.json()["assignment"]["id"])
     assert item["routing"]["reason"] == "specialist"
@@ -170,18 +174,18 @@ def test_routing_matches_display_name_against_slug_capability(
 
 
 # ------------------------------------------------- waiting (S-step 2)
-def test_waiting_status_on_disabled_pin(client, auth, make_task):
+def test_waiting_status_on_disabled_pin(client, ui_auth, make_task):
     """id=9 redressed live: pin onto a disabled executor → the card
     carries the honest waiting block with human words."""
-    executor = _make_executor(client, auth, "ghosted-1")
+    executor = _make_executor(client, ui_auth, "ghosted-1")
     r = client.patch(f"/api/executors/{executor['id']}",
-                     json={"enabled": False}, headers=auth)
+                     json={"enabled": False}, headers=ui_auth)
     assert r.status_code == 200, r.text
     task = make_task(title="s2 waiting")
     r = client.post("/api/assignments",
                     json={"task_id": task["id"], "specialist": "smoke-probe",
                           "executor_id": executor["id"]},
-                    headers=auth)
+                    headers=ui_auth)
     assert r.status_code == 201, r.text
     item = _assignment_item(client, r.json()["assignment"]["id"])
     assert item["state"] == "queued"
@@ -192,27 +196,27 @@ def test_waiting_status_on_disabled_pin(client, auth, make_task):
     assert "выключен" in waiting["reason"]
 
 
-def test_eligible_pin_has_no_waiting(client, auth, make_task):
-    executor = _make_executor(client, auth, "live-1")
+def test_eligible_pin_has_no_waiting(client, ui_auth, make_task):
+    executor = _make_executor(client, ui_auth, "live-1")
     task = make_task(title="s2 no waiting")
     r = client.post("/api/assignments",
                     json={"task_id": task["id"], "specialist": "smoke-probe",
                           "executor_id": executor["id"]},
-                    headers=auth)
+                    headers=ui_auth)
     assert r.status_code == 201, r.text
     item = _assignment_item(client, r.json()["assignment"]["id"])
     assert "waiting" not in item
     assert item["routing"]["waiting"] is None
 
 
-def test_mint_journals_pin_waiting(client, auth, make_task, app_module):
+def test_mint_journals_pin_waiting(client, ui_auth, make_task, app_module):
     """Mint-time leg of the rule: a pin onto an executor that is ALREADY
     ineligible is journaled with the reason from the first second."""
     task = make_task(title="s2 pin journal")
     r = client.post("/api/assignments",
                     json={"task_id": task["id"], "specialist": "smoke-probe",
                           "executor_id": "ex-not-in-registry"},
-                    headers=auth)
+                    headers=ui_auth)
     assert r.status_code == 201, r.text
     aid = r.json()["assignment"]["id"]
     events = _task_events(app_module, task["id"])
@@ -225,21 +229,21 @@ def test_mint_journals_pin_waiting(client, auth, make_task, app_module):
 
 
 def test_waiting_appears_when_executor_disabled_after_nomination(
-        client, auth, make_task):
+        client, ui_auth, make_task):
     """The ghost story in its actual order: nominated while alive,
     switched off a day later — the card turns honest on the next read
     (waiting is computed, never stored stale)."""
-    executor = _make_executor(client, auth, "late-off-1")
+    executor = _make_executor(client, ui_auth, "late-off-1")
     task = make_task(title="s2 late off")
     r = client.post("/api/assignments",
                     json={"task_id": task["id"], "specialist": "smoke-probe",
                           "executor_id": executor["id"]},
-                    headers=auth)
+                    headers=ui_auth)
     assert r.status_code == 201, r.text
     aid = r.json()["assignment"]["id"]
     assert "waiting" not in _assignment_item(client, aid)
     r = client.patch(f"/api/executors/{executor['id']}",
-                     json={"enabled": False}, headers=auth)
+                     json={"enabled": False}, headers=ui_auth)
     assert r.status_code == 200, r.text
     item = _assignment_item(client, aid)
     assert item["waiting"]["code"] == "executor-disabled"

@@ -65,10 +65,10 @@ def fake_server(app_module, fake_mnemos):
     app_module.store.delete_server(name)
 
 
-def _report(client, auth, task_id, kind, agent, body="тело отчёта"):
+def _report(client, ui_auth, task_id, kind, agent, body="тело отчёта"):
     r = client.post(f"/api/tasks/{task_id}/reports",
                     json={"kind": kind, "agent": agent, "body": body},
-                    headers=auth)
+                    headers=ui_auth)
     assert r.status_code == 201, r.text
     return r.json()["report"]
 
@@ -79,10 +79,10 @@ def _substance(client, task_id, headers=None, **params):
 
 
 class TestSubstanceContract:
-    def test_honest_empty_fresh_task(self, client, auth, make_task):
+    def test_honest_empty_fresh_task(self, client, ui_auth, make_task):
         """A task the loop never touched: every source honestly empty."""
         task = make_task(title="subst-empty")
-        r = _substance(client, task["id"], headers=auth)
+        r = _substance(client, task["id"], headers=ui_auth)
         assert r.status_code == 200
         out = r.json()
         assert out["ok"] is True
@@ -97,20 +97,20 @@ class TestSubstanceContract:
                                    "unresolved": [], "sources": {}}
         assert out["review"] is None  # no review source in the board DB
 
-    def test_unknown_task_404(self, client, auth):
+    def test_unknown_task_404(self, client, ui_auth):
         # authed caller: the guard passes, the unknown id is a plain 404
         # (an anonymous caller gets the 401 first — no existence leak)
         assert _substance(client, "no-such-task",
-                          headers=auth).status_code == 404
+                          headers=ui_auth).status_code == 404
 
-    def test_reports_slugs_final_and_chronology(self, client, auth,
+    def test_reports_slugs_final_and_chronology(self, client, ui_auth,
                                                 make_task):
         task = make_task(title="subst-reports")
-        _report(client, auth, task["id"], "intermediate",
+        _report(client, ui_auth, task["id"], "intermediate",
                 "@GCW: Tech Lead", "промежуточный")
-        _report(client, auth, task["id"], "final",
+        _report(client, ui_auth, task["id"], "final",
                 "gcw-senior-system-engineer", "финальный")
-        out = _substance(client, task["id"], headers=auth).json()
+        out = _substance(client, task["id"], headers=ui_auth).json()
         reports = out["reports"]
         assert reports["count"] == 2
         assert reports["live_count"] == 2
@@ -127,26 +127,26 @@ class TestSubstanceContract:
         assert by_kind["final"]["agent_slug"] == "gcw-senior-system-engineer"
         assert all("human_body" in i for i in reports["items"])
 
-    def test_superseded_final_stays_flagged(self, client, auth, make_task):
+    def test_superseded_final_stays_flagged(self, client, ui_auth, make_task):
         task = make_task(title="subst-supersede")
-        _report(client, auth, task["id"], "final", "gcw-tech-lead", "v1")
-        _report(client, auth, task["id"], "final", "gcw-tech-lead", "v2")
+        _report(client, ui_auth, task["id"], "final", "gcw-tech-lead", "v1")
+        _report(client, ui_auth, task["id"], "final", "gcw-tech-lead", "v2")
         out = _substance(client, task["id"],
-                         headers=auth).json()["reports"]
+                         headers=ui_auth).json()["reports"]
         assert out["count"] == 2
         assert out["live_count"] == 1
         assert out["final"]["body"] == "v2"
         assert [i["superseded"] for i in out["items"]] == [True, False]
 
-    def test_slug_miss_is_honest(self, client, auth, make_task):
+    def test_slug_miss_is_honest(self, client, ui_auth, make_task):
         """A name that does not normalize stays verbatim with slug_ok=false
         (allowlist-miss is SIGNALLED, never silently dropped); an explicit
         gcw- head is never doubled."""
         task = make_task(title="subst-slug-miss")
-        _report(client, auth, task["id"], "intermediate", "Максим")
-        _report(client, auth, task["id"], "final", "@gcw-product-architect")
+        _report(client, ui_auth, task["id"], "intermediate", "Максим")
+        _report(client, ui_auth, task["id"], "final", "@gcw-product-architect")
         items = _substance(client, task["id"],
-                           headers=auth).json()["reports"]["items"]
+                           headers=ui_auth).json()["reports"]["items"]
         miss = items[0]
         assert miss["agent"] == "Максим"
         assert miss["agent_slug"] == ""
@@ -205,16 +205,16 @@ class TestSubstanceAuth:
 
 
 class TestSubstanceExecutors:
-    def test_nomination_projection_and_secrets(self, client, auth,
+    def test_nomination_projection_and_secrets(self, client, ui_auth,
                                                make_task):
         task = make_task(title="subst-assign")
         r = client.post("/api/assignments",
                         json={"task_id": task["id"],
                               "specialist": "@GCW: QA Engineer"},
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 201, r.text
         out = _substance(client, task["id"],
-                         headers=auth).json()["executors"]
+                         headers=ui_auth).json()["executors"]
         assert out["count"] == 1
         assert out["active"] is not None
         assert out["active"]["state"] == "queued"
@@ -223,23 +223,23 @@ class TestSubstanceExecutors:
         assert out["active"]["specialist_slug"] == "gcw-qa-engineer"
         assert out["active"]["specialist_slug_ok"] is True
         raw = json.dumps(_substance(client, task["id"],
-                                    headers=auth).json())
+                                    headers=ui_auth).json())
         assert "claim_token" not in raw
         assert "spec_snapshot" not in raw
 
     def test_cancelled_assignment_leaves_history_no_active(self, client,
-                                                           auth, make_task):
+                                                           ui_auth, make_task):
         task = make_task(title="subst-assign-cancel")
         r = client.post("/api/assignments",
                         json={"task_id": task["id"],
                               "specialist": "gcw-qa-engineer"},
-                        headers=auth)
+                        headers=ui_auth)
         assignment_id = r.json()["assignment"]["id"]
         r = client.post(f"/api/assignments/{assignment_id}/cancel",
-                        json={"reason": "тест"}, headers=auth)
+                        json={"reason": "тест"}, headers=ui_auth)
         assert r.status_code == 200, r.text
         out = _substance(client, task["id"],
-                         headers=auth).json()["executors"]
+                         headers=ui_auth).json()["executors"]
         assert out["count"] == 1  # history kept
         assert out["active"] is None
         assert out["items"][0]["state"] == "cancelled"
@@ -247,11 +247,11 @@ class TestSubstanceExecutors:
 
 
 class TestSubstanceSessions:
-    def test_fact_row_served_with_glue_id(self, client, auth, app_module,
+    def test_fact_row_served_with_glue_id(self, client, ui_auth, app_module,
                                           make_task):
         task = make_task(title="subst-sessions")
         assert _substance(client, task["id"],
-                          headers=auth).json()["sessions"] == \
+                          headers=ui_auth).json()["sessions"] == \
             {"count": 0, "items": []}  # honest empty first
         with app_module.store._lock, app_module.store._conn() as db:
             db.execute(
@@ -264,7 +264,7 @@ class TestSubstanceSessions:
                  12, 340, "2026-10-22T10:04:11Z", "2026-10-22T10:09:51Z",
                  "", "2026-10-22T10:04:12Z", "2026-10-22T10:09:52Z"))
         out = _substance(client, task["id"],
-                         headers=auth).json()["sessions"]
+                         headers=ui_auth).json()["sessions"]
         assert out["count"] == 1
         fact = out["items"][0]
         assert fact["session_id"] == "exec-1:sess_abc"
@@ -274,22 +274,22 @@ class TestSubstanceSessions:
 
 
 class TestSubstanceMemories:
-    def test_linked_ids_no_egress_by_default(self, client, auth, decoy,
+    def test_linked_ids_no_egress_by_default(self, client, ui_auth, decoy,
                                              make_task):
         """Default answer: board-DB truth only — linked ids served, zero
         network egress (the decoy must stay at zero connections)."""
         task = make_task(title="subst-mem")
         r = client.patch(f"/api/tasks/{task['id']}",
-                         json={"memory_ids": ["m-1", "m-2"]}, headers=auth)
+                         json={"memory_ids": ["m-1", "m-2"]}, headers=ui_auth)
         assert r.status_code == 200, r.text
         out = _substance(client, task["id"],
-                         headers=auth).json()["memories"]
+                         headers=ui_auth).json()["memories"]
         assert out["count"] == 2
         assert out["linked"] == ["m-1", "m-2"]
         assert out["items"] == {}
         assert decoy.connections() == 0
 
-    def test_resolve_opt_in_resolves_cards(self, client, auth, fake_server,
+    def test_resolve_opt_in_resolves_cards(self, client, ui_auth, fake_server,
                                            make_task):
         fake = fake_server["fake"]
         fake.memory_cards["m-1"] = {
@@ -298,25 +298,25 @@ class TestSubstanceMemories:
         }
         task = make_task(title="subst-mem-resolve")
         r = client.patch(f"/api/tasks/{task['id']}",
-                         json={"memory_ids": ["m-1"]}, headers=auth)
+                         json={"memory_ids": ["m-1"]}, headers=ui_auth)
         assert r.status_code == 200, r.text
         out = _substance(client, task["id"],
-                         headers=auth,
+                         headers=ui_auth,
                          resolve_memories=True).json()["memories"]
         assert out["items"]["m-1"]["title"] == \
             "Промежуточный отчёт — 22.10"
         assert out["sources"] == {"m-1": fake_server["name"]}
         assert out["unresolved"] == []
 
-    def test_resolve_opt_in_honest_unresolved(self, client, auth,
+    def test_resolve_opt_in_honest_unresolved(self, client, ui_auth,
                                               fake_server, make_task):
         """A linked id no server resolves stays honestly unresolved —
         never dropped, never stubbed."""
         task = make_task(title="subst-mem-unresolved")
         client.patch(f"/api/tasks/{task['id']}",
-                     json={"memory_ids": ["ghost-id"]}, headers=auth)
+                     json={"memory_ids": ["ghost-id"]}, headers=ui_auth)
         out = _substance(client, task["id"],
-                         headers=auth,
+                         headers=ui_auth,
                          resolve_memories=True).json()["memories"]
         assert out["items"] == {}
         assert any(u["id"] == "ghost-id" for u in out["unresolved"])

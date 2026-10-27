@@ -28,6 +28,9 @@ import itertools
 import json
 
 import pytest
+from conftest import BOARD_TOKEN
+
+MACHINE_HEADERS = {"Authorization": f"Bearer {BOARD_TOKEN}"}
 
 from server.security import RateLimiter
 from server.store import HOOK_EVENT_WHITELIST
@@ -50,7 +53,7 @@ def fresh_automation_limiter(app_module, monkeypatch):
                     window=app_module._AUTOMATION_RATE_WINDOW))
 
 
-def _mk_schedule(client, auth, **overrides) -> dict:
+def _mk_schedule(client, ui_auth, **overrides) -> dict:
     payload = {
         "name": _uname("sched"),
         "task_id": "t-unknown",
@@ -58,14 +61,14 @@ def _mk_schedule(client, auth, **overrides) -> dict:
         "trigger_kind": "interval",
         "trigger_value": "PT6H",
     } | overrides
-    r = client.post("/api/automation/schedules", json=payload, headers=auth)
+    r = client.post("/api/automation/schedules", json=payload, headers=ui_auth)
     assert r.status_code == 201, r.text
     return r.json()
 
 
-def _mk_hook(client, auth, **overrides) -> dict:
+def _mk_hook(client, ui_auth, **overrides) -> dict:
     payload = {"name": _uname("hook"), "on": "assignment.failed"} | overrides
-    r = client.post("/api/automation/hooks", json=payload, headers=auth)
+    r = client.post("/api/automation/hooks", json=payload, headers=ui_auth)
     assert r.status_code == 201, r.text
     return r.json()
 
@@ -75,80 +78,80 @@ def _board_events(app_module) -> list[dict]:
 
 
 class TestScheduleCrudValidation:
-    def test_interval_below_60s_422(self, client, auth):
+    def test_interval_below_60s_422(self, client, ui_auth):
         r = client.post("/api/automation/schedules", json={
             "name": _uname("fast"), "task_id": "t-1",
             "specialist": "x", "trigger_kind": "interval",
-            "trigger_value": "PT30S"}, headers=auth)
+            "trigger_value": "PT30S"}, headers=ui_auth)
         assert r.status_code == 422
         assert "60" in r.json()["detail"]
 
-    def test_garbage_duration_422(self, client, auth):
+    def test_garbage_duration_422(self, client, ui_auth):
         r = client.post("/api/automation/schedules", json={
             "name": _uname("garbage"), "task_id": "t-1",
             "specialist": "x", "trigger_kind": "interval",
-            "trigger_value": "every 5 minutes"}, headers=auth)
+            "trigger_value": "every 5 minutes"}, headers=ui_auth)
         assert r.status_code == 422
 
-    def test_bad_time_of_day_422(self, client, auth):
+    def test_bad_time_of_day_422(self, client, ui_auth):
         r = client.post("/api/automation/schedules", json={
             "name": _uname("tod"), "task_id": "t-1", "specialist": "x",
             "trigger_kind": "time-of-day", "trigger_value": "25:00"},
-            headers=auth)
+            headers=ui_auth)
         assert r.status_code == 422
 
-    def test_unknown_trigger_kind_422(self, client, auth):
+    def test_unknown_trigger_kind_422(self, client, ui_auth):
         r = client.post("/api/automation/schedules", json={
             "name": _uname("cron"), "task_id": "t-1", "specialist": "x",
             "trigger_kind": "cron", "trigger_value": "* * * * *"},
-            headers=auth)
+            headers=ui_auth)
         assert r.status_code == 422
 
-    def test_non_task_target_kind_422(self, client, auth):
+    def test_non_task_target_kind_422(self, client, ui_auth):
         r = client.post("/api/automation/schedules", json={
             "name": _uname("tpl"), "target_kind": "template",
             "task_id": "t-1", "specialist": "x", "trigger_kind": "interval",
-            "trigger_value": "PT1H"}, headers=auth)
+            "trigger_value": "PT1H"}, headers=ui_auth)
         assert r.status_code == 422
         assert "task" in r.json()["detail"]
 
-    def test_duplicate_name_422(self, client, auth):
+    def test_duplicate_name_422(self, client, ui_auth):
         name = _uname("dup")
         first = client.post("/api/automation/schedules", json={
             "name": name, "task_id": "t-1", "specialist": "x",
             "trigger_kind": "interval", "trigger_value": "PT1H"},
-            headers=auth)
+            headers=ui_auth)
         assert first.status_code == 201
         again = client.post("/api/automation/schedules", json={
             "name": name, "task_id": "t-2", "specialist": "x",
             "trigger_kind": "interval", "trigger_value": "PT2H"},
-            headers=auth)
+            headers=ui_auth)
         assert again.status_code == 422
         assert "already exists" in again.json()["detail"]
 
-    def test_duplicate_name_on_rename_422(self, client, auth):
-        a = _mk_schedule(client, auth)
-        b = _mk_schedule(client, auth)
+    def test_duplicate_name_on_rename_422(self, client, ui_auth):
+        a = _mk_schedule(client, ui_auth)
+        b = _mk_schedule(client, ui_auth)
         r = client.patch(f"/api/automation/schedules/{b['id']}",
-                         json={"name": a["name"]}, headers=auth)
+                         json={"name": a["name"]}, headers=ui_auth)
         assert r.status_code == 422
 
-    def test_unknown_harness_422(self, client, auth):
+    def test_unknown_harness_422(self, client, ui_auth):
         r = client.post("/api/automation/schedules", json={
             "name": _uname("h"), "task_id": "t-1", "specialist": "x",
             "harness": "skynet", "trigger_kind": "interval",
-            "trigger_value": "PT1H"}, headers=auth)
+            "trigger_value": "PT1H"}, headers=ui_auth)
         assert r.status_code == 422
 
-    def test_half_window_422(self, client, auth):
+    def test_half_window_422(self, client, ui_auth):
         r = client.post("/api/automation/schedules", json={
             "name": _uname("w"), "task_id": "t-1", "specialist": "x",
             "trigger_kind": "interval", "trigger_value": "PT1H",
-            "window_from": "09:00"}, headers=auth)
+            "window_from": "09:00"}, headers=ui_auth)
         assert r.status_code == 422
 
-    def test_creation_is_disabled_and_defaults(self, client, auth):
-        rule = _mk_schedule(client, auth, enabled=True)  # client flag ignored
+    def test_creation_is_disabled_and_defaults(self, client, ui_auth):
+        rule = _mk_schedule(client, ui_auth, enabled=True)  # client flag ignored
         assert rule["enabled"] is False          # creation is disabled (ADR §2)
         assert rule["harness"] == "zcode"
         assert rule["executor_id"] == ""
@@ -166,95 +169,95 @@ class TestScheduleCrudValidation:
         assert client.get("/api/automation/status").status_code == 200
         assert client.get("/api/automation/settings").status_code == 200
 
-    def test_unknown_schedule_404(self, client, auth):
+    def test_unknown_schedule_404(self, client, ui_auth):
         assert client.patch("/api/automation/schedules/999999",
                             json={"enabled": True},
-                            headers=auth).status_code == 404
+                            headers=ui_auth).status_code == 404
         assert client.delete("/api/automation/schedules/999999",
-                             headers=auth).status_code == 404
+                             headers=ui_auth).status_code == 404
 
 
 class TestNextRunServerOwned:
-    def test_client_next_run_at_ignored_on_create(self, client, auth):
-        rule = _mk_schedule(client, auth, next_run_at="1999-01-01T00:00:00+00:00")
+    def test_client_next_run_at_ignored_on_create(self, client, ui_auth):
+        rule = _mk_schedule(client, ui_auth, next_run_at="1999-01-01T00:00:00+00:00")
         assert rule["next_run_at"] != "1999-01-01T00:00:00+00:00"
         assert rule["next_run_at"] >= "2026"      # server clock, not client's
 
-    def test_client_next_run_at_ignored_on_patch(self, client, auth):
-        rule = _mk_schedule(client, auth)
+    def test_client_next_run_at_ignored_on_patch(self, client, ui_auth):
+        rule = _mk_schedule(client, ui_auth)
         r = client.patch(f"/api/automation/schedules/{rule['id']}",
                          json={"next_run_at": "1999-01-01T00:00:00+00:00"},
-                         headers=auth)
+                         headers=ui_auth)
         assert r.status_code == 200
         # an empty patch changes nothing — next_run_at stays as computed
         assert r.json()["next_run_at"] == rule["next_run_at"]
 
-    def test_patch_recomputes_next_run_from_now(self, client, auth):
-        rule = _mk_schedule(client, auth, trigger_value="PT1H")
+    def test_patch_recomputes_next_run_from_now(self, client, ui_auth):
+        rule = _mk_schedule(client, ui_auth, trigger_value="PT1H")
         r = client.patch(f"/api/automation/schedules/{rule['id']}",
-                         json={"trigger_value": "PT2H"}, headers=auth)
+                         json={"trigger_value": "PT2H"}, headers=ui_auth)
         assert r.status_code == 200
         assert r.json()["next_run_at"] > rule["next_run_at"]  # later horizon
 
-    def test_enable_is_a_recompute_too(self, client, auth):
-        rule = _mk_schedule(client, auth)
+    def test_enable_is_a_recompute_too(self, client, ui_auth):
+        rule = _mk_schedule(client, ui_auth)
         r = client.patch(f"/api/automation/schedules/{rule['id']}",
-                         json={"enabled": True}, headers=auth)
+                         json={"enabled": True}, headers=ui_auth)
         assert r.status_code == 200
         assert r.json()["enabled"] is True
         assert r.json()["next_run_at"] >= rule["next_run_at"]
 
-    def test_idempotent_patch_emits_no_audit(self, client, auth, app_module):
-        rule = _mk_schedule(client, auth)
+    def test_idempotent_patch_emits_no_audit(self, client, ui_auth, app_module):
+        rule = _mk_schedule(client, ui_auth)
         before = len(_board_events(app_module))
         r = client.patch(f"/api/automation/schedules/{rule['id']}",
-                         json={"enabled": False}, headers=auth)  # no-op
+                         json={"enabled": False}, headers=ui_auth)  # no-op
         assert r.status_code == 200
         assert len(_board_events(app_module)) == before
 
 
 class TestHookValidation:
-    def test_unknown_on_422(self, client, auth):
+    def test_unknown_on_422(self, client, ui_auth):
         r = client.post("/api/automation/hooks", json={
-            "name": _uname("bad"), "on": "task.report"}, headers=auth)
+            "name": _uname("bad"), "on": "task.report"}, headers=ui_auth)
         assert r.status_code == 422
 
-    def test_automation_event_cannot_be_whitelisted(self, client, auth):
+    def test_automation_event_cannot_be_whitelisted(self, client, ui_auth):
         r = client.post("/api/automation/hooks", json={
             "name": _uname("loop"), "on": "scheduler.launched"},
-            headers=auth)
+            headers=ui_auth)
         assert r.status_code == 422
 
-    def test_unknown_condition_field_422(self, client, auth):
+    def test_unknown_condition_field_422(self, client, ui_auth):
         r = client.post("/api/automation/hooks", json={
             "name": _uname("cf"), "on": "task.moved",
             "condition": [{"field": "spec", "op": "eq", "value": "x"}]},
-            headers=auth)
+            headers=ui_auth)
         assert r.status_code == 422
 
-    def test_unknown_condition_op_422(self, client, auth):
+    def test_unknown_condition_op_422(self, client, ui_auth):
         r = client.post("/api/automation/hooks", json={
             "name": _uname("co"), "on": "task.moved",
             "condition": [{"field": "col", "op": "contains", "value": "x"}]},
-            headers=auth)
+            headers=ui_auth)
         assert r.status_code == 422
 
-    def test_condition_value_outside_enum_422(self, client, auth):
+    def test_condition_value_outside_enum_422(self, client, ui_auth):
         r = client.post("/api/automation/hooks", json={
             "name": _uname("cv"), "on": "task.moved",
             "condition": [{"field": "col", "op": "eq", "value": "sideways"}]},
-            headers=auth)
+            headers=ui_auth)
         assert r.status_code == 422
 
-    def test_condition_extra_clause_key_422(self, client, auth):
+    def test_condition_extra_clause_key_422(self, client, ui_auth):
         r = client.post("/api/automation/hooks", json={
             "name": _uname("cx"), "on": "task.moved",
             "condition": [{"field": "col", "op": "eq", "value": "open",
-                           "evil": "inject"}]}, headers=auth)
+                           "evil": "inject"}]}, headers=ui_auth)
         assert r.status_code == 422
 
-    def test_valid_condition_stored_normalized(self, client, auth):
-        rule = _mk_hook(client, auth, on="task.moved", condition=[
+    def test_valid_condition_stored_normalized(self, client, ui_auth):
+        rule = _mk_hook(client, ui_auth, on="task.moved", condition=[
             {"field": "col", "op": "ne", "value": "open"},
             {"field": "project", "op": "in", "value": ["b", "a", "b"]},
         ])
@@ -263,27 +266,27 @@ class TestHookValidation:
             {"field": "project", "op": "in", "value": ["a", "b"]},  # dedup+sort
         ]
 
-    def test_source_allowlist_defaults_by_action(self, client, auth):
-        notify = _mk_hook(client, auth)                     # action defaults notify
+    def test_source_allowlist_defaults_by_action(self, client, ui_auth):
+        notify = _mk_hook(client, ui_auth)                     # action defaults notify
         assert notify["action"] == "notify"
         assert notify["source_allowlist"] == ["machine", "server", "ui"]
-        create = _mk_hook(client, auth, on="task.moved",
+        create = _mk_hook(client, ui_auth, on="task.moved",
                           action="create_assignment")
         assert create["source_allowlist"] == ["server", "ui"]
 
-    def test_automation_origin_never_allowlisted(self, client, auth):
+    def test_automation_origin_never_allowlisted(self, client, ui_auth):
         r = client.post("/api/automation/hooks", json={
             "name": _uname("src"), "on": "assignment.failed",
-            "source_allowlist": ["ui", "automation"]}, headers=auth)
+            "source_allowlist": ["ui", "automation"]}, headers=ui_auth)
         assert r.status_code == 422
 
-    def test_machine_optin_is_audited_old_to_new(self, client, auth, app_module):
-        rule = _mk_hook(client, auth, on="task.moved",
+    def test_machine_optin_is_audited_old_to_new(self, client, ui_auth, app_module):
+        rule = _mk_hook(client, ui_auth, on="task.moved",
                         action="create_assignment")
         before = _board_events(app_module)
         r = client.patch(f"/api/automation/hooks/{rule['id']}",
                          json={"source_allowlist": ["machine", "ui"]},
-                         headers=auth)
+                         headers=ui_auth)
         assert r.status_code == 200
         assert r.json()["source_allowlist"] == ["machine", "ui"]
         new = [e for e in _board_events(app_module)[len(before):]
@@ -291,17 +294,17 @@ class TestHookValidation:
         assert new and new[0]["payload"]["changes"]["source_allowlist"] == [
             ["server", "ui"], ["machine", "ui"]]
 
-    def test_action_switch_resets_source_default(self, client, auth):
-        rule = _mk_hook(client, auth)              # notify: machine,server,ui
+    def test_action_switch_resets_source_default(self, client, ui_auth):
+        rule = _mk_hook(client, ui_auth)              # notify: machine,server,ui
         r = client.patch(f"/api/automation/hooks/{rule['id']}",
-                         json={"action": "create_assignment"}, headers=auth)
+                         json={"action": "create_assignment"}, headers=ui_auth)
         assert r.status_code == 200
         assert r.json()["source_allowlist"] == ["server", "ui"]
 
-    def test_harness_condition_field_valid(self, client, auth):
+    def test_harness_condition_field_valid(self, client, ui_auth):
         """meta and validator share one source: every advertised field
         (incl. the late-bound harness enum) validates at CRUD time."""
-        rule = _mk_hook(client, auth, on="assignment.failed",
+        rule = _mk_hook(client, ui_auth, on="assignment.failed",
                         condition=[{"field": "harness", "op": "eq",
                                     "value": "zcode"}])
         assert rule["condition"] == [
@@ -310,19 +313,19 @@ class TestHookValidation:
         assert "harness" in meta["fields"]
         assert "zcode" in meta["values_hint"]["harness"]
 
-    def test_unknown_action_422(self, client, auth):
+    def test_unknown_action_422(self, client, ui_auth):
         r = client.post("/api/automation/hooks", json={
             "name": _uname("act"), "on": "assignment.failed",
-            "action": "webhook"}, headers=auth)
+            "action": "webhook"}, headers=ui_auth)
         assert r.status_code == 422
 
 
 class TestRunNow:
-    def test_run_now_happy_path(self, client, auth, make_task, app_module):
+    def test_run_now_happy_path(self, client, ui_auth, make_task, app_module):
         task = make_task(title="run-now happy", spec="AC: сделать дело")
-        rule = _mk_schedule(client, auth, task_id=task["id"])
+        rule = _mk_schedule(client, ui_auth, task_id=task["id"])
         r = client.post(f"/api/automation/schedules/{rule['id']}/run",
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 200, r.text
         body = r.json()
         assert body["decision"] == "launched"
@@ -357,20 +360,20 @@ class TestRunNow:
         # reuses the whole assignment state machine, not a side door)
         claim = client.post(f"/api/assignments/{body['assignment_id']}/claim",
                             json={"claimed_by": "poller-run-now"},
-                            headers=auth)
+                            headers=MACHINE_HEADERS)
         assert claim.status_code == 200
         tasks = {t["id"]: t for t in client.get("/api/board").json()["tasks"]}
         assert tasks[task["id"]]["col"] == "in-progress"
 
-    def test_run_now_invariant_409_journals_skipped(self, client, auth,
+    def test_run_now_invariant_409_journals_skipped(self, client, ui_auth,
                                                     make_task):
         task = make_task(title="run-now 409")
-        rule = _mk_schedule(client, auth, task_id=task["id"])
+        rule = _mk_schedule(client, ui_auth, task_id=task["id"])
         first = client.post(f"/api/automation/schedules/{rule['id']}/run",
-                            headers=auth)
+                            headers=ui_auth)
         assert first.status_code == 200
         second = client.post(f"/api/automation/schedules/{rule['id']}/run",
-                             headers=auth)
+                             headers=ui_auth)
         assert second.status_code == 409            # ≤1 active invariant
         page = client.get("/api/automation/launches",
                           params={"rule_id": rule["id"]}).json()
@@ -378,67 +381,67 @@ class TestRunNow:
         assert [i["decision"] for i in page["items"]] == ["skipped", "launched"]
         assert "active assignment" in page["items"][0]["reason"]
 
-    def test_run_now_archived_task_422(self, client, auth, make_task):
+    def test_run_now_archived_task_422(self, client, ui_auth, make_task):
         task = make_task(title="run-now archived")
-        rule = _mk_schedule(client, auth, task_id=task["id"])
+        rule = _mk_schedule(client, ui_auth, task_id=task["id"])
         assert client.post(f"/api/tasks/{task['id']}/archive",
-                           headers=auth).status_code == 200
+                           headers=ui_auth).status_code == 200
         r = client.post(f"/api/automation/schedules/{rule['id']}/run",
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 422
 
-    def test_run_now_terminal_task_422(self, client, auth, make_task):
+    def test_run_now_terminal_task_422(self, client, ui_auth, make_task):
         task = make_task(title="run-now terminal", col="done")
-        rule = _mk_schedule(client, auth, task_id=task["id"])
+        rule = _mk_schedule(client, ui_auth, task_id=task["id"])
         r = client.post(f"/api/automation/schedules/{rule['id']}/run",
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 422
 
-    def test_run_now_unknown_task_404_journals_skipped(self, client, auth):
-        rule = _mk_schedule(client, auth, task_id="t-no-such-task")
+    def test_run_now_unknown_task_404_journals_skipped(self, client, ui_auth):
+        rule = _mk_schedule(client, ui_auth, task_id="t-no-such-task")
         r = client.post(f"/api/automation/schedules/{rule['id']}/run",
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 404
         page = client.get("/api/automation/launches",
                           params={"rule_id": rule["id"]}).json()
         assert page["total"] == 1 and page["items"][0]["decision"] == "skipped"
 
-    def test_run_now_unknown_schedule_404(self, client, auth):
+    def test_run_now_unknown_schedule_404(self, client, ui_auth):
         assert client.post("/api/automation/schedules/999999/run",
-                           headers=auth).status_code == 404
+                           headers=ui_auth).status_code == 404
 
-    def test_run_now_works_on_disabled_rule(self, client, auth, make_task):
+    def test_run_now_works_on_disabled_rule(self, client, ui_auth, make_task):
         """enabled=0 stops the (S2) engine, not the owner's hand — manual
         run-now is the conscious replacement for missed occurrences."""
         task = make_task(title="run-now disabled")
-        rule = _mk_schedule(client, auth, task_id=task["id"])
+        rule = _mk_schedule(client, ui_auth, task_id=task["id"])
         assert rule["enabled"] is False
         r = client.post(f"/api/automation/schedules/{rule['id']}/run",
-                        headers=auth)
+                        headers=ui_auth)
         assert r.status_code == 200
         assert r.json()["decision"] == "launched"
 
-    def test_manual_runs_do_not_touch_daily_used(self, client, auth, make_task):
+    def test_manual_runs_do_not_touch_daily_used(self, client, ui_auth, make_task):
         task = make_task(title="run-now budget")
-        rule = _mk_schedule(client, auth, task_id=task["id"])
+        rule = _mk_schedule(client, ui_auth, task_id=task["id"])
         assert client.post(f"/api/automation/schedules/{rule['id']}/run",
-                           headers=auth).status_code == 200
+                           headers=ui_auth).status_code == 200
         status = client.get("/api/automation/status").json()
         assert status["daily_used"] == 0     # manual ≠ automation budget
 
 
 class TestLaunchesCursor:
-    def test_cursor_contract(self, client, auth, make_task, app_module,
+    def test_cursor_contract(self, client, ui_auth, make_task, app_module,
                              monkeypatch):
         # a bigger budget for this bulk test (7 runs on one rule)
         monkeypatch.setattr(
             app_module, "_automation_limiter",
             RateLimiter(limit=100, window=60.0))
         task = make_task(title="cursor journal")
-        rule = _mk_schedule(client, auth, task_id=task["id"])
+        rule = _mk_schedule(client, ui_auth, task_id=task["id"])
         for _ in range(7):
             client.post(f"/api/automation/schedules/{rule['id']}/run",
-                        headers=auth)
+                        headers=ui_auth)
         page = client.get("/api/automation/launches",
                           params={"rule_id": rule["id"]}).json()
         assert page["total"] == 7
@@ -474,7 +477,7 @@ class TestLaunchesCursor:
         assert all(i["rule_kind"] == "schedule" for i in schedules_only["items"])
         assert schedules_only["total"] >= 7
 
-    def test_truncated_on_limit_above_cap(self, client, auth):
+    def test_truncated_on_limit_above_cap(self, client, ui_auth):
         p = client.get("/api/automation/launches",
                        params={"limit": 500}).json()
         assert p["truncated"] is True
@@ -519,11 +522,11 @@ class TestSettingsAndStatus:
         s = client.get("/api/automation/settings").json()
         assert s == {"ok": True, "enabled": False, "cap_global_per_day": 10}
 
-    def test_settings_put_audited_old_to_new(self, client, auth, app_module):
+    def test_settings_put_audited_old_to_new(self, client, ui_auth, app_module):
         before = _board_events(app_module)
         r = client.put("/api/automation/settings",
                        json={"enabled": True, "cap_global_per_day": 25},
-                       headers=auth)
+                       headers=ui_auth)
         assert r.status_code == 200
         assert r.json() == {"ok": True, "enabled": True,
                             "cap_global_per_day": 25}
@@ -540,7 +543,7 @@ class TestSettingsAndStatus:
         mark = len(_board_events(app_module))
         assert client.put("/api/automation/settings",
                           json={"enabled": True, "cap_global_per_day": 25},
-                          headers=auth).status_code == 200
+                          headers=ui_auth).status_code == 200
         assert len(_board_events(app_module)) == mark
         # status banner reads the same flags
         status = client.get("/api/automation/status").json()
@@ -549,18 +552,18 @@ class TestSettingsAndStatus:
         # engine stays false in S1 regardless of the flag (inert data)
         assert status["engine"] is False
 
-    def test_settings_put_garbage_cap_422(self, client, auth):
+    def test_settings_put_garbage_cap_422(self, client, ui_auth):
         r = client.put("/api/automation/settings",
-                       json={"cap_global_per_day": 0}, headers=auth)
+                       json={"cap_global_per_day": 0}, headers=ui_auth)
         assert r.status_code == 422
 
 
 class TestAuditOldToNew:
-    def test_patch_audits_rule_updated(self, client, auth, app_module):
-        rule = _mk_schedule(client, auth, trigger_value="PT1H")
+    def test_patch_audits_rule_updated(self, client, ui_auth, app_module):
+        rule = _mk_schedule(client, ui_auth, trigger_value="PT1H")
         before = _board_events(app_module)
         r = client.patch(f"/api/automation/schedules/{rule['id']}",
-                         json={"trigger_value": "PT3H"}, headers=auth)
+                         json={"trigger_value": "PT3H"}, headers=ui_auth)
         assert r.status_code == 200
         events = [e for e in _board_events(app_module)[len(before):]
                   if e["kind"].startswith("rule.")]
@@ -569,31 +572,31 @@ class TestAuditOldToNew:
         assert p["rule_kind"] == "schedule" and p["rule_id"] == rule["id"]
         assert p["changes"]["trigger_value"] == ["PT1H", "PT3H"]
 
-    def test_enable_audits_rule_toggled(self, client, auth, app_module):
-        rule = _mk_schedule(client, auth)
+    def test_enable_audits_rule_toggled(self, client, ui_auth, app_module):
+        rule = _mk_schedule(client, ui_auth)
         before = _board_events(app_module)
         client.patch(f"/api/automation/schedules/{rule['id']}",
-                     json={"enabled": True}, headers=auth)
+                     json={"enabled": True}, headers=ui_auth)
         events = [e for e in _board_events(app_module)[len(before):]
                   if e["kind"].startswith("rule.")]
         assert [e["kind"] for e in events] == ["rule.toggled"]
         assert events[0]["payload"]["changes"]["enabled"] == [False, True]
 
-    def test_create_audits_rule_created(self, client, auth, app_module):
+    def test_create_audits_rule_created(self, client, ui_auth, app_module):
         before = _board_events(app_module)
-        rule = _mk_hook(client, auth)
+        rule = _mk_hook(client, ui_auth)
         events = [e for e in _board_events(app_module)[len(before):]
                   if e["kind"] == "rule.created"]
         assert events and events[0]["payload"]["rule_kind"] == "hook"
         assert events[0]["payload"]["name"] == rule["name"]
 
-    def test_delete_is_soft_disable_retention(self, client, auth, app_module):
-        rule = _mk_schedule(client, auth)
+    def test_delete_is_soft_disable_retention(self, client, ui_auth, app_module):
+        rule = _mk_schedule(client, ui_auth)
         client.patch(f"/api/automation/schedules/{rule['id']}",
-                     json={"enabled": True}, headers=auth)
+                     json={"enabled": True}, headers=ui_auth)
         before = _board_events(app_module)
         r = client.delete(f"/api/automation/schedules/{rule['id']}",
-                          headers=auth)
+                          headers=ui_auth)
         assert r.status_code == 200
         # retention: the row survives, disabled
         items = client.get("/api/automation/schedules").json()["items"]
@@ -606,7 +609,7 @@ class TestAuditOldToNew:
             True, False]
         # the retained row can be re-enabled (it was never destroyed)
         r2 = client.patch(f"/api/automation/schedules/{rule['id']}",
-                          json={"enabled": True}, headers=auth)
+                          json={"enabled": True}, headers=ui_auth)
         assert r2.status_code == 200 and r2.json()["enabled"] is True
 
 
@@ -617,13 +620,13 @@ class TestTokenAndRate:
             "trigger_kind": "interval", "trigger_value": "PT1H"}
         ).status_code == 401
 
-    def test_split_mode_board_token_refused(self, client, auth, app_module,
+    def test_split_mode_board_token_refused(self, client, ui_auth, app_module,
                                             monkeypatch):
         monkeypatch.setattr(app_module, "UI_WRITE_TOKEN", "qa-ui-token")
         r = client.post("/api/automation/schedules", json={
             "name": _uname("split"), "task_id": "t-1", "specialist": "x",
             "trigger_kind": "interval", "trigger_value": "PT1H"},
-            headers=auth)  # board (machine) token
+            headers=MACHINE_HEADERS)  # board (machine) token
         assert r.status_code == 401
         ui = {"Authorization": "Bearer qa-ui-token"}
         ok = client.post("/api/automation/schedules", json={
@@ -632,13 +635,13 @@ class TestTokenAndRate:
             headers=ui)
         assert ok.status_code == 201
 
-    def test_rate_limit_10_per_60s(self, client, auth):
+    def test_rate_limit_10_per_60s(self, client, ui_auth):
         statuses = []
         for i in range(11):
             r = client.post("/api/automation/schedules", json={
                 "name": _uname(f"rl"), "task_id": "t-1", "specialist": "x",
                 "trigger_kind": "interval", "trigger_value": "PT1H"},
-                headers=auth)
+                headers=ui_auth)
             statuses.append(r.status_code)
         assert statuses[:10] == [201] * 10
         assert statuses[10] == 429
@@ -647,7 +650,7 @@ class TestTokenAndRate:
 
 class TestSseEmission:
     def test_rule_events_and_no_scheduler_launched(self, app_module, client,
-                                                   auth, make_task):
+                                                   ui_auth, make_task):
         """automation.rule.* emitted by the CRUD routes (S1); run-now emits
         assignment.created through the standard path and NEVER
         scheduler.launched (manual is not automation). Raw-ASGI pattern:
@@ -706,7 +709,7 @@ class TestSseEmission:
                     "query_string": b"", "root_path": "",
                     "headers": [
                         (b"host", b"testserver"),
-                        (b"authorization", auth["Authorization"].encode()),
+                        (b"authorization", ui_auth["Authorization"].encode()),
                         *([(b"content-type", b"application/json"),
                            (b"content-length",
                             str(len(body)).encode())] if payload is not None else []),
@@ -755,7 +758,7 @@ class TestSseEmission:
         assert b"scheduler.missed" not in stream
 
 
-def test_review_fixes_by_automation_filter_and_caps(client, auth, make_task):
+def test_review_fixes_by_automation_filter_and_caps(client, ui_auth, make_task):
     """PR #20 review: by=automation filter (P2), global cap default = ADR §6
     10/day (P3), huge-but-valid interval → 422 not 500 (P3), and
     executor.offline + create_assignment rejected at CRUD (P3)."""
@@ -768,18 +771,18 @@ def test_review_fixes_by_automation_filter_and_caps(client, auth, make_task):
     # (the default cap == 10 is pinned by test_settings_get_defaults; here
     # the settings may be overridden by earlier tests, so no cap assert)
     # overflow-guard: a 1e5-year interval is 422, not 500
-    r = client.post("/api/automation/schedules", headers=auth, json={
+    r = client.post("/api/automation/schedules", headers=ui_auth, json={
         "name": "huge-interval", "trigger_kind": "interval",
         "trigger_value": "PT99999999999H", "task_id": task["id"],
         "specialist": "gcw-tech-lead"})
     assert r.status_code == 422
     # notify-only enforcement: executor.offline + create_assignment → 422
-    r = client.post("/api/automation/hooks", headers=auth, json={
+    r = client.post("/api/automation/hooks", headers=ui_auth, json={
         "name": "offline-creator", "on": "executor.offline",
         "action": "create_assignment", "action_payload": {}})
     assert r.status_code == 422
     # ... while notify on the same event is fine
-    r = client.post("/api/automation/hooks", headers=auth, json={
+    r = client.post("/api/automation/hooks", headers=ui_auth, json={
         "name": "offline-notifier", "on": "executor.offline",
         "action": "notify", "action_payload": {"message": "down"}})
     assert r.status_code == 201

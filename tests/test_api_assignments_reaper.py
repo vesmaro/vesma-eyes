@@ -27,6 +27,9 @@ import time
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from conftest import BOARD_TOKEN
+
+MACHINE_HEADERS = {"Authorization": f"Bearer {BOARD_TOKEN}"}
 
 from fastapi.testclient import TestClient
 
@@ -100,9 +103,10 @@ def _create(client, headers, task_id: str, **extra):
                        headers=headers)
 
 
-def _claim(client, headers, assignment_id: int, claimed_by: str = "poller-1"):
+def _claim(client, assignment_id: int, claimed_by: str = "poller-1"):
+    # claim is machine-class: the board bearer, never a ui-class one
     r = client.post(f"/api/assignments/{assignment_id}/claim",
-                    json={"claimed_by": claimed_by}, headers=headers)
+                    json={"claimed_by": claimed_by}, headers=MACHINE_HEADERS)
     assert r.status_code == 200, r.text
     return r.json()
 
@@ -126,15 +130,15 @@ def _task_notifications(client, task_id: str, title_part: str) -> list[dict]:
 
 class TestReaperExpiry:
     def test_claimed_without_start_expired_after_downtime(
-            self, client, auth, make_task, app_module, data_dir):
+            self, client, ui_auth, make_task, app_module, data_dir):
         """Restart-safe catch-up: the claim happened '40 min ago' (server
         down ever since); the first tick after boot must act on it. Loop
         S-step 3: with live budget the act is a transport REQUEUE (the
         nomination survives); with the budget spent the same single tick
         expires it — the pre-S-step contract, kept verbatim."""
         task = make_task(title="reaper claimed")
-        aid = _create(client, auth, task["id"]).json()["assignment"]["id"]
-        _claim(client, auth, aid)
+        aid = _create(client, ui_auth, task["id"]).json()["assignment"]["id"]
+        _claim(client, aid)
         assert _board_col(client, task["id"]) == "in-progress"
         _backdate(data_dir, aid, claimed_at=40)
 
@@ -148,7 +152,7 @@ class TestReaperExpiry:
         # row must be in a reapable (claimed) state, so the poller's
         # post-backoff claim starts the next cycle first
         _clear_backoff(data_dir, aid)
-        _claim(client, auth, aid)
+        _claim(client, aid)
         _spend_budget(data_dir, aid)
         _backdate(data_dir, aid, claimed_at=40)
         result = app_module._assignment_reaper_tick()
@@ -171,16 +175,16 @@ class TestReaperExpiry:
         assert "assignment.expired" in {e["title"] for e in hist["events"]}
 
         # blocked is not terminal: the owner can re-take immediately
-        assert _create(client, auth, task["id"]).status_code == 201
+        assert _create(client, ui_auth, task["id"]).status_code == 201
 
     def test_running_without_heartbeat_expired(
-            self, client, auth, make_task, app_module, data_dir):
+            self, client, ui_auth, make_task, app_module, data_dir):
         task = make_task(title="reaper running")
-        aid = _create(client, auth, task["id"]).json()["assignment"]["id"]
-        claim = _claim(client, auth, aid)
+        aid = _create(client, ui_auth, task["id"]).json()["assignment"]["id"]
+        claim = _claim(client, aid)
         started = client.post(f"/api/assignments/{aid}/start",
                               json={"claim_token": claim["claim_token"]},
-                              headers=auth)
+                              headers=MACHINE_HEADERS)
         assert started.status_code == 200
         _backdate(data_dir, aid, heartbeat_at=45, started_at=45)
 
@@ -191,10 +195,10 @@ class TestReaperExpiry:
         # stale pass expires honestly (a queued row is out of the stale
         # scan by construction: the queue is alive, only attempts burn)
         _clear_backoff(data_dir, aid)
-        claim2 = _claim(client, auth, aid)
+        claim2 = _claim(client, aid)
         started = client.post(f"/api/assignments/{aid}/start",
                               json={"claim_token": claim2["claim_token"]},
-                              headers=auth)
+                              headers=MACHINE_HEADERS)
         assert started.status_code == 200
         _spend_budget(data_dir, aid)
         _backdate(data_dir, aid, heartbeat_at=45, started_at=45)
@@ -206,11 +210,11 @@ class TestReaperExpiry:
         assert len(notes) == 1 and "heartbeat" in notes[0]["message"]
 
     def test_idempotent_second_tick_changes_nothing(
-            self, client, auth, make_task, app_module, data_dir):
+            self, client, ui_auth, make_task, app_module, data_dir):
         """A second tick must not double-notify or touch the terminal row."""
         task = make_task(title="reaper idempotent")
-        aid = _create(client, auth, task["id"]).json()["assignment"]["id"]
-        _claim(client, auth, aid)
+        aid = _create(client, ui_auth, task["id"]).json()["assignment"]["id"]
+        _claim(client, aid)
         _backdate(data_dir, aid, claimed_at=40)
         first = app_module._assignment_reaper_tick()
         second = app_module._assignment_reaper_tick()
@@ -219,7 +223,7 @@ class TestReaperExpiry:
         assert first["requeued"] == 1
         assert second["requeued"] == 0 and second["expired"] == 0
         _clear_backoff(data_dir, aid)
-        _claim(client, auth, aid)
+        _claim(client, aid)
         _spend_budget(data_dir, aid)
         _backdate(data_dir, aid, claimed_at=40)
         third = app_module._assignment_reaper_tick()
@@ -228,21 +232,21 @@ class TestReaperExpiry:
         assert fourth["expired"] == 0
         assert len(_task_notifications(client, task["id"], "истекло")) == 1
 
-    def test_live_assignments_untouched(self, client, auth, make_task,
+    def test_live_assignments_untouched(self, client, ui_auth, make_task,
                                         app_module):
         """Fresh queue entry / claim / heartbeat — none is stale, nothing
         is requeued, nothing expires, nothing is notified, task stays
         in-progress."""
         t_queued = make_task(title="live queued")
-        _create(client, auth, t_queued["id"])
+        _create(client, ui_auth, t_queued["id"])
         t_claimed = make_task(title="live claimed")
-        aid_c = _create(client, auth, t_claimed["id"]).json()["assignment"]["id"]
-        _claim(client, auth, aid_c)
+        aid_c = _create(client, ui_auth, t_claimed["id"]).json()["assignment"]["id"]
+        _claim(client, aid_c)
         t_running = make_task(title="live running")
-        aid_r = _create(client, auth, t_running["id"]).json()["assignment"]["id"]
-        claim = _claim(client, auth, aid_r)
+        aid_r = _create(client, ui_auth, t_running["id"]).json()["assignment"]["id"]
+        claim = _claim(client, aid_r)
         client.post(f"/api/assignments/{aid_r}/start",
-                    json={"claim_token": claim["claim_token"]}, headers=auth)
+                    json={"claim_token": claim["claim_token"]}, headers=MACHINE_HEADERS)
 
         result = app_module._assignment_reaper_tick()
         assert result == {"expired": 0, "requeued": 0,
@@ -254,56 +258,56 @@ class TestReaperExpiry:
 
 class TestHeartbeatOnExpired:
     def test_heartbeat_409_is_the_kill_signal(
-            self, client, auth, make_task, app_module, data_dir):
+            self, client, ui_auth, make_task, app_module, data_dir):
         """ADR 0009 §10: a heartbeat against an assignment the reaper took
         away answers 409 with the valid token (the poller's kill signal) —
         after a transport requeue (state gate, row is queued) AND after an
         honest expiry. A wrong token stays 403 — the token gate precedes
         the state gate (pinned in Ф1)."""
         task = make_task(title="kill signal")
-        aid = _create(client, auth, task["id"]).json()["assignment"]["id"]
-        claim = _claim(client, auth, aid)
+        aid = _create(client, ui_auth, task["id"]).json()["assignment"]["id"]
+        claim = _claim(client, aid)
         token = claim["claim_token"]
         client.post(f"/api/assignments/{aid}/start",
-                    json={"claim_token": token}, headers=auth)
+                    json={"claim_token": token}, headers=MACHINE_HEADERS)
         _backdate(data_dir, aid, heartbeat_at=45)
         app_module._assignment_reaper_tick()
 
         r = client.post(f"/api/assignments/{aid}/heartbeat",
-                        json={"claim_token": token}, headers=auth)
+                        json={"claim_token": token}, headers=MACHINE_HEADERS)
         assert r.status_code == 409
         assert "queued" in r.json()["detail"]   # requeued: state gate
         wrong = client.post(f"/api/assignments/{aid}/heartbeat",
-                            json={"claim_token": "f" * 32}, headers=auth)
+                            json={"claim_token": "f" * 32}, headers=MACHINE_HEADERS)
         assert wrong.status_code == 403
 
         # the same kill signal after an honest expiry (budget spent in the
         # NEXT claimed cycle; the fresh claim rotates the token, so the
         # kill signal is checked with the CURRENT claim_token)
         _clear_backoff(data_dir, aid)
-        claim2 = _claim(client, auth, aid)
+        claim2 = _claim(client, aid)
         token2 = claim2["claim_token"]
         _spend_budget(data_dir, aid)
         _backdate(data_dir, aid, claimed_at=40)
         app_module._assignment_reaper_tick()
         r = client.post(f"/api/assignments/{aid}/heartbeat",
-                        json={"claim_token": token2}, headers=auth)
+                        json={"claim_token": token2}, headers=MACHINE_HEADERS)
         assert r.status_code == 409
         assert "expired" in r.json()["detail"]
 
 
 class TestReaperSse:
-    def test_assignment_expired_sse(self, app_module, client, auth, make_task,
+    def test_assignment_expired_sse(self, app_module, client, ui_auth, make_task,
                                     data_dir):
         """ui-contract §11: reaper expiry emits task.moved (in-progress →
         blocked) + assignment.expired with {assignment, task_id} +
         notification; claim_token/spec_snapshot never appear in frames.
         Raw-ASGI pattern — the TestClient buffers streaming responses."""
         task = make_task(title="reaper sse")
-        aid = _create(client, auth, task["id"]).json()["assignment"]["id"]
-        claim = _claim(client, auth, aid)
+        aid = _create(client, ui_auth, task["id"]).json()["assignment"]["id"]
+        claim = _claim(client, aid)
         client.post(f"/api/assignments/{aid}/start",
-                    json={"claim_token": claim["claim_token"]}, headers=auth)
+                    json={"claim_token": claim["claim_token"]}, headers=MACHINE_HEADERS)
         _backdate(data_dir, aid, heartbeat_at=45)
         _spend_budget(data_dir, aid)   # spent budget → expiry (and its SSE)
 
@@ -359,7 +363,7 @@ class TestReaperSse:
 
 class TestReaperLoopWiring:
     def test_lifespan_loop_expires_automatically(
-            self, app_module, client, auth, make_task, data_dir, monkeypatch):
+            self, app_module, client, ui_auth, make_task, data_dir, monkeypatch):
         """The loop itself (not the manual tick): with the stagger and
         interval patched to 50 ms, entering the lifespan context must
         expire a stale assignment without any explicit call — proves the
@@ -367,10 +371,10 @@ class TestReaperLoopWiring:
         monkeypatch.setattr(app_module, "_REAPER_START_STAGGER_S", 0.05)
         monkeypatch.setattr(app_module, "_REAPER_INTERVAL_S", 0.05)
         task = make_task(title="loop wiring")
-        aid = _create(client, auth, task["id"]).json()["assignment"]["id"]
-        claim = _claim(client, auth, aid)
+        aid = _create(client, ui_auth, task["id"]).json()["assignment"]["id"]
+        claim = _claim(client, aid)
         client.post(f"/api/assignments/{aid}/start",
-                    json={"claim_token": claim["claim_token"]}, headers=auth)
+                    json={"claim_token": claim["claim_token"]}, headers=MACHINE_HEADERS)
         _backdate(data_dir, aid, heartbeat_at=45)
         _spend_budget(data_dir, aid)   # spent budget → expiry path
 
@@ -386,16 +390,16 @@ class TestReaperLoopWiring:
 
 class TestReaperRobustness:
     def test_race_with_api_transition_skips_row(
-            self, app_module, client, auth, make_task, monkeypatch):
+            self, app_module, client, ui_auth, make_task, monkeypatch):
         """A row that went terminal between the scan and the finish must be
         skipped quietly (AssignmentError), not crash the tick."""
         task = make_task(title="reaper race")
-        aid = _create(client, auth, task["id"]).json()["assignment"]["id"]
-        claim = _claim(client, auth, aid)
+        aid = _create(client, ui_auth, task["id"]).json()["assignment"]["id"]
+        claim = _claim(client, aid)
         client.post(f"/api/assignments/{aid}/start",
-                    json={"claim_token": claim["claim_token"]}, headers=auth)
+                    json={"claim_token": claim["claim_token"]}, headers=MACHINE_HEADERS)
         client.post(f"/api/assignments/{aid}/complete",
-                    json={"claim_token": claim["claim_token"]}, headers=auth)
+                    json={"claim_token": claim["claim_token"]}, headers=MACHINE_HEADERS)
         # the scan returns a row that is ALREADY done — as if the poller
         # completed it right after the reaper's SELECT
         monkeypatch.setattr(
@@ -439,12 +443,12 @@ class TestReaperRobustness:
 
 class TestQueuedStagnation:
     def test_stagnation_notification_once_per_assignment(
-            self, client, auth, make_task, app_module, data_dir):
+            self, client, ui_auth, make_task, app_module, data_dir):
         """queued > 30 мин → ONE work notification; every later tick is a
         no-op (dedup). A NEW assignment on the same task still gets its own
         notice — the dedup key carries the assignment id."""
         task = make_task(title="stagnation")
-        aid = _create(client, auth, task["id"]).json()["assignment"]["id"]
+        aid = _create(client, ui_auth, task["id"]).json()["assignment"]["id"]
         _backdate(data_dir, aid, created_at=40)
 
         first = app_module._assignment_reaper_tick()
@@ -461,15 +465,15 @@ class TestQueuedStagnation:
         # the stagnant attempt is cancelled (owner's call) → a fresh attempt
         # that also stagnates must NOT be silenced by the old notification
         cancelled = client.post(f"/api/assignments/{aid}/cancel", json={},
-                                headers=auth)
+                                headers=ui_auth)
         assert cancelled.status_code == 200
-        aid2 = _create(client, auth, task["id"]).json()["assignment"]["id"]
+        aid2 = _create(client, ui_auth, task["id"]).json()["assignment"]["id"]
         _backdate(data_dir, aid2, created_at=40)
         third = app_module._assignment_reaper_tick()
         assert third["stagnation_notified"] == 1
         assert len(_task_notifications(client, task["id"], "зависло")) == 2
 
-    def test_fresh_queued_not_stagnant(self, client, auth, make_task,
+    def test_fresh_queued_not_stagnant(self, client, ui_auth, make_task,
                                        app_module):
         make_task(title="fresh queue")
         # created seconds ago — covered by the shared live-assignments
@@ -551,18 +555,18 @@ class TestScanBoundaries:
         assert store.notification_exists(None, "msg")
 
 
-def test_expire_guard_never_kills_live_assignment(client, auth, make_task, app_module):
+def test_expire_guard_never_kills_live_assignment(client, ui_auth, make_task, app_module):
     """Review P2: a heartbeat landing in the scan→UPDATE window must not
     let finish_assignment('expired') reap a live assignment; ditto for
     empty-string (hand-migrated) timestamps — undatable, never reaped."""
     store = app_module.store
     task = make_task(title="expire-guard")
-    aid = _create(client, auth, task["id"]).json()["assignment"]["id"]
-    claim = _claim(client, auth, aid)
+    aid = _create(client, ui_auth, task["id"]).json()["assignment"]["id"]
+    claim = _claim(client, aid)
     client.post(f"/api/assignments/{aid}/start",
-                json={"claim_token": claim["claim_token"]}, headers=auth)
+                json={"claim_token": claim["claim_token"]}, headers=MACHINE_HEADERS)
     client.post(f"/api/assignments/{aid}/heartbeat",
-                json={}, headers=auth)  # fresh liveness, right now
+                json={}, headers=MACHINE_HEADERS)  # fresh liveness, right now
     import pytest
     from server.store import AssignmentConflictError
     with pytest.raises(AssignmentConflictError):

@@ -20,7 +20,7 @@ def _fresh_limiter(fresh_reflect_limiter):
 
 
 @pytest.fixture()
-def wired(client, auth, fake_mnemos, allow_hosts, app_module):
+def wired(client, ui_auth, fake_mnemos, allow_hosts, app_module):
     """One active memory server pointed at this test's FakeMnemos."""
     allow_hosts(f"127.0.0.1:{fake_mnemos.port}")
     app_module.store.upsert_server({
@@ -33,26 +33,26 @@ def wired(client, auth, fake_mnemos, allow_hosts, app_module):
     app_module.store.delete_server("qa-mnemos")
 
 
-def _reflect(client, auth, **overrides):
+def _reflect(client, ui_auth, **overrides):
     payload = {"specialist": "gcw-sre-devops", "problem": "check", "kind":
                "agent-refine-request"} | overrides
-    return client.post("/api/board-reflect", json=payload, headers=auth)
+    return client.post("/api/board-reflect", json=payload, headers=ui_auth)
 
 
 class TestReflectContract:
-    def test_success_returns_memory_id(self, client, auth, wired):
-        r = _reflect(client, auth)
+    def test_success_returns_memory_id(self, client, ui_auth, wired):
+        r = _reflect(client, ui_auth)
         assert r.status_code == 200, r.text
         body = r.json()
         assert body["ok"] is True
         assert body["memory_id"] == "fake-mem-1"
         assert body["server"] == "qa-mnemos"
 
-    def test_tags_pinned_exactly(self, client, auth, wired):
+    def test_tags_pinned_exactly(self, client, ui_auth, wired):
         """SEC-4 + vesma strict contract: records carry EXACTLY the board
         project/agent stamps + mnemos:open-question + source:board — board
         reflections are data, never decisions or instructions."""
-        assert _reflect(client, auth).status_code == 200
+        assert _reflect(client, ui_auth).status_code == 200
         writes = wired.memories_bodies()
         assert writes
         assert writes[-1]["tags"] == [
@@ -60,13 +60,13 @@ class TestReflectContract:
             "mnemos:open-question", "source:board",
         ]
 
-    def test_no_decision_tag_anywhere_in_payload(self, client, auth, wired):
-        assert _reflect(client, auth).status_code == 200
+    def test_no_decision_tag_anywhere_in_payload(self, client, ui_auth, wired):
+        assert _reflect(client, ui_auth).status_code == 200
         writes = wired.memories_bodies()
         assert "mnemos:decision" not in json.dumps(writes[-1])
 
-    def test_commit_kind_ok(self, client, auth, wired):
-        r = _reflect(client, auth, kind="agent-refine-commit")
+    def test_commit_kind_ok(self, client, ui_auth, wired):
+        r = _reflect(client, ui_auth, kind="agent-refine-commit")
         assert r.status_code == 200
         assert wired.memories_bodies()[-1]["title"].startswith(
             "agent-refine commit marker")
@@ -74,16 +74,16 @@ class TestReflectContract:
 
 class TestKindAllowlist:
     @pytest.mark.parametrize("kind", ["mnemos:decision", "bogus-kind"])
-    def test_unknown_kind_422_and_nothing_written(self, client, auth, wired,
+    def test_unknown_kind_422_and_nothing_written(self, client, ui_auth, wired,
                                                   kind):
-        r = _reflect(client, auth, kind=kind)
+        r = _reflect(client, ui_auth, kind=kind)
         assert r.status_code == 422
         assert wired.memories_bodies() == []
 
 
 class TestRateLimit:
-    def test_11th_call_429(self, client, auth, wired):
-        statuses = [_reflect(client, auth).status_code for _ in range(12)]
+    def test_11th_call_429(self, client, ui_auth, wired):
+        statuses = [_reflect(client, ui_auth).status_code for _ in range(12)]
         assert statuses[0] == 200
         assert 429 in statuses and statuses[-1] == 429
         writes = wired.memories_bodies()
@@ -94,16 +94,16 @@ class TestBE4ReflectDoesNotCrashRoute:
     """BE-4: reflect stays async and survives vesma failures — the route
     answers with a handled error, and the board keeps serving."""
 
-    def test_mnemos_500_is_handled_board_still_up(self, client, auth, wired):
+    def test_mnemos_500_is_handled_board_still_up(self, client, ui_auth, wired):
         wired.fail_memories = True
-        r = _reflect(client, auth)
+        r = _reflect(client, ui_auth)
         assert r.status_code in (500, 503), "handled error, not a crash"
         assert "mnemos" in r.text.lower()
         assert client.get("/api/board").status_code == 200
 
-    def test_no_active_server_503(self, client, auth, wired, app_module):
+    def test_no_active_server_503(self, client, ui_auth, wired, app_module):
         app_module.registry.set_enabled("qa-mnemos", False)
-        r = _reflect(client, auth)
+        r = _reflect(client, ui_auth)
         assert r.status_code == 503
         assert "no active memory server" in r.text
         assert client.get("/api/board").status_code == 200
