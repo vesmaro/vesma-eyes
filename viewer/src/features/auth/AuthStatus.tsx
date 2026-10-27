@@ -64,12 +64,20 @@ export function AuthStatus() {
           aria-label={t("auth.signOutAria")}
         >
           <LogOut className="size-4" aria-hidden="true" />
-          {t("auth.signOut")}
+          {/* Narrow screens collapse the auth action to the icon (the TopBar
+           * brand-label pattern): the text label owns the 375px status-cluster
+           * overflow. The accessible name stays the translated aria-label. */}
+          <span className="hidden sm:inline">{t("auth.signOut")}</span>
         </Button>
       ) : (
-        <Button variant="outline" size="sm" onClick={openOverlay}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={openOverlay}
+          aria-label={t("auth.signInAria")}
+        >
           <LogIn className="size-4" aria-hidden="true" />
-          {t("auth.signIn")}
+          <span className="hidden sm:inline">{t("auth.signIn")}</span>
         </Button>
       )}
     </div>

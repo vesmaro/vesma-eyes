@@ -286,6 +286,7 @@ export const en: Record<TranslationKey, string> = {
   "auth.offline": "offline",
   "auth.connecting": "connecting…",
   "auth.signIn": "Sign in",
+  "auth.signInAria": "Sign in to vesma",
   "auth.signOut": "Sign out",
   "auth.signOutAria": "Sign out of vesma",
   "auth.title": "Sign in to vesma",

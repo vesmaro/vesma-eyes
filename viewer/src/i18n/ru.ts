@@ -312,6 +312,7 @@ export const ru = {
   "auth.offline": "нет соединения",
   "auth.connecting": "подключение…",
   "auth.signIn": "Войти",
+  "auth.signInAria": "Войти в vesma",
   "auth.signOut": "Выйти",
   "auth.signOutAria": "Выйти из vesma",
   "auth.title": "Вход в vesma",
