@@ -122,11 +122,15 @@ class TestSeed:
         """A second boot on a NON-empty table must not duplicate or
         resurrect: owner deletions survive restarts (the one-time
         board-mirror seed flag is already set, so the migration does not
-        re-add either)."""
+        re-add either). QA-F3: a deleted MODEL_SERVER_HARNESS_SEEDS
+        member (vllm) must stay gone too — proving the
+        harness_seed_models_v1 flag actually protects the dictionary-act
+        rows, not just the original ten."""
         path = tmp_path / "board.db"
         store = Store(path)
         store.add_harness(CUSTOM)
         store.delete_harness("windsurf")
+        store.delete_harness("vllm")
         Store(path)  # re-boot on the same file
         with sqlite3.connect(path) as db:
             db.row_factory = sqlite3.Row
@@ -134,7 +138,8 @@ class TestSeed:
                      db.execute("SELECT name FROM harnesses").fetchall()]
         assert names.count(CUSTOM) == 1
         assert "windsurf" not in names
-        assert len(names) == 14
+        assert "vllm" not in names
+        assert len(names) == 13
 
     def test_open_read_no_bearer(self, client):
         r = client.get("/api/harnesses")

@@ -536,10 +536,43 @@ class TestCredentialDetector:
         assert r.json()["models_accepted"] == 1  # the ROW facts stay
         incidents = _board_events(
             app_module, "models.credential_leak_suspected", executor["id"])
-        assert incidents[0]["payload"]["field"] == "notes"
+        # SEC-4: the offending ENTRY is fingerprinted (field/len/sha12),
+        # the blob drops whole — no value, no zero-length stub.
+        assert incidents[0]["payload"]["field"] == "notes.default_model"
+        assert incidents[0]["payload"]["value_len"] == len(SENTINEL)
+        assert len(incidents[0]["payload"]["value_sha12"]) == 12
+        assert SENTINEL not in json.dumps(incidents[0]["payload"])
         mirror = _mirror(client, executor["id"])
         assert mirror["models"]["installations"]
         assert "notes" not in mirror["models"]  # the blob never stores
+
+    def test_credential_in_unknown_extra_field_trips_detector(
+            self, client, app_module):
+        """SEC-6: a key parked in an UNKNOWN row field trips the same
+        incident — the scan covers every string value of the raw row."""
+        executor, secret = _register(client, "mm-x3b")
+        r = _post_discovery(client, executor["id"], secret,
+                            models={"installations": [
+                                MODEL_ROW | {"provider": "extrakey",
+                                             "custom_field": SENTINEL}]})
+        assert r.status_code == 200, r.text
+        assert r.json()["models_accepted"] == 0
+        assert r.json()["models_dropped"] == 1
+        incidents = _board_events(
+            app_module, "models.credential_leak_suspected", executor["id"])
+        assert incidents[0]["payload"]["field"] == \
+            "installations[].custom_field"
+
+    def test_mcp_exec_env_plant_trips_detector(self, client, app_module):
+        """QA-F2: exec_env is a scanned mcp field too."""
+        executor, secret = _register(client, "mm-x3c")
+        r = _post_discovery(client, executor["id"], secret,
+                            mcp_servers=[MCP_ENTRY | {"exec_env": SENTINEL}])
+        assert r.status_code == 200, r.text
+        assert r.json()["mcp_accepted"] == 0
+        incidents = _board_events(
+            app_module, "models.credential_leak_suspected", executor["id"])
+        assert incidents[0]["payload"]["field"] == "mcp_servers[].exec_env"
 
     def test_sentinel_sweep_planted_key_appears_nowhere(
             self, client, app_module):
@@ -590,6 +623,66 @@ def _raw_columns(app_module, executor_id: str) -> dict:
             (executor_id,)).fetchone()
     return {"models_mirror": row["models_mirror"],
             "mcp_mirror": row["mcp_mirror"]}
+
+
+SHORT_SECRET = "hunter2"   # too short for every shape class — SEC-P1
+
+
+class TestUrlRedaction:
+    """SEC-P1 (red line §4.5 board-side): the §3.3.6 grammar applies to
+    the mirror ingest — query/fragment/userinfo always stripped; a
+    userinfo-bearing or credential-param-bearing URL omits the base_url
+    fact entirely. A SHORT secret defeats every shape regex, so the
+    structural grammar is the authoritative line."""
+
+    def test_userinfo_and_query_secret_redacted_everywhere(
+            self, client, app_module):
+        executor, secret = _register(client, "mm-u1")
+        with FakeSse(app_module) as sse:
+            r = _post_discovery(client, executor["id"], secret,
+                                models={"installations": [
+                                    MODEL_ROW | {
+                                        "provider": "with-userinfo",
+                                        "base_url":
+                                        f"https://admin:{SHORT_SECRET}"
+                                        f"@host/v1"},
+                                    MODEL_ROW | {
+                                        "provider": "with-query-key",
+                                        "base_url":
+                                        f"https://host/v1"
+                                        f"?key={SHORT_SECRET}"}]})
+            assert r.status_code == 200, r.text
+            assert r.json()["models_accepted"] == 2  # row facts survive
+            frames = sse.drain()
+        surfaces = {
+            "mirror": json.dumps(_mirror(client, executor["id"])),
+            "roster": json.dumps(_roster(client)),
+            "executor": json.dumps(client.get(
+                f"/api/executors/{executor['id']}").json()),
+            "events": json.dumps(_board_events(
+                app_module, "models.reported", executor["id"])),
+            "sse": json.dumps(frames),
+            "columns": json.dumps(_raw_columns(app_module, executor["id"])),
+        }
+        for where, blob in surfaces.items():
+            assert SHORT_SECRET not in blob, f"short secret leaked into {where}"
+            assert "admin:" not in blob, f"userinfo leaked into {where}"
+            assert "?key=" not in blob, f"credential query leaked into {where}"
+        # the URL FACT omits; the row's other facts stay honest
+        rows = _mirror(client, executor["id"])["models"]["installations"]
+        by_provider = {r["provider"]: r for r in rows}
+        assert "base_url" not in by_provider["with-userinfo"]
+        assert "base_url" not in by_provider["with-query-key"]
+        # an INNOCENT query is silently stripped, the URL fact stays
+        r = _post_discovery(client, executor["id"], secret,
+                            models={"installations": [
+                                MODEL_ROW | {"base_url":
+                                             "https://host/v1"
+                                             "?api-version=2024"}]})
+        assert r.status_code == 200, r.text
+        rows = _mirror(client, executor["id"])["models"]["installations"]
+        assert any(row.get("base_url") == "https://host/v1"
+                   for row in rows)
 
 
 # ------------------------------------------------------- roster (MF1)
@@ -730,6 +823,76 @@ class TestSseDelta:
         assert {r["provider"] for r in frames[0]["removed"]} == \
             {"openrouter"}
 
+    def test_content_change_under_stable_identity_writes_and_frames(
+            self, client, app_module):
+        """QA-BLOCKER F1: a re-report that keeps the identity tuple but
+        changes CONTENT (the models list grows) is a WRITE — the mirror
+        updates (stale mirror forever was the bug) — and exactly ONE
+        frame fires, carrying the updated tuple (added/removed stay
+        empty; the `updated` channel is the F1/F7 reconciliation)."""
+        executor, secret = _register(client, "mm-e3")
+        _post_discovery(client, executor["id"], secret,
+                        models={"installations": [MODEL_ROW]})
+        with FakeSse(app_module) as sse:
+            r = _post_discovery(client, executor["id"], secret,
+                                models={"installations": [
+                                    MODEL_ROW | {"models":
+                                                 MODEL_ROW["models"]
+                                                 + ["z-ai/glm-5.3"]}]})
+            assert r.status_code == 200, r.text
+            rows = _mirror(
+                client, executor["id"])["models"]["installations"]
+            assert rows[0]["models"] == \
+                sorted(MODEL_ROW["models"] + ["z-ai/glm-5.3"])
+            frames = sse.inventory_frames()
+        assert len(frames) == 1
+        assert frames[0]["added"] == []
+        assert frames[0]["removed"] == []
+        assert frames[0]["updated"] == [
+            {"provider": "openrouter",
+             "base_url": "https://openrouter.ai/api/v1",
+             "harness": "zcode", "exec_env": "metal"}]
+        # an auth flip is content too — same grammar
+        with FakeSse(app_module) as sse:
+            _post_discovery(client, executor["id"], secret,
+                            models={"installations": [
+                                MODEL_ROW | {"auth": "anonymous"}]})
+            frames = sse.inventory_frames()
+        assert len(frames) == 1
+        assert frames[0]["updated"] and not frames[0]["added"] \
+            and not frames[0]["removed"]
+
+    def test_notes_only_change_writes_without_frame(
+            self, client, app_module):
+        """QA-F7: a notes-only change is a WRITE (snapshot semantics:
+        the report is the whole object) but emits NO frame — a frame
+        whose added/removed/updated are all empty says nothing and
+        would thrash the FE cache. Absent-vs-absent stays the no-op."""
+        executor, secret = _register(client, "mm-e4")
+        _post_discovery(client, executor["id"], secret,
+                        models={"installations": [MODEL_ROW],
+                                "notes": {"default_model": "z-ai/glm-4.6"}})
+        with FakeSse(app_module) as sse:
+            r = _post_discovery(client, executor["id"], secret,
+                                models={"installations": [MODEL_ROW],
+                                        "notes": {"default_model":
+                                                  "z-ai/glm-5.3"}})
+            assert r.status_code == 200, r.text
+            mirror = _mirror(client, executor["id"])["models"]
+            assert mirror["notes"] == {"default_model": "z-ai/glm-5.3"}
+            assert sse.inventory_frames() == []
+        # absent-vs-absent: an identical notes-less re-report is silent,
+        # and the notes DROP itself is the last-report-wins semantics
+        # (a report without notes after one with notes drops the blob —
+        # a write, still no frame)
+        with FakeSse(app_module) as sse:
+            r = _post_discovery(client, executor["id"], secret,
+                                models={"installations": [MODEL_ROW]})
+            assert r.status_code == 200, r.text
+            assert "notes" not in _mirror(
+                client, executor["id"])["models"]
+            assert sse.inventory_frames() == []
+
 
 # -------------------------------------------------------- legacy ALTER
 
@@ -743,3 +906,28 @@ class TestLegacyColumns:
         assert mirror["models"] == {}
         assert mirror["mcp_servers"] == []
         assert _roster(client)["discovered"] == []
+
+
+# ------------------------------------------------- SEC-3 body cap
+
+class TestDiscoveryBodyCap:
+    def test_oversize_declared_body_413_before_auth_or_parse(
+            self, client, app_module):
+        """SEC-3: the pre-parse Content-Length cap (the telemetry
+        precedent) extends to the discovery POST — a huge DECLARED body
+        gets the contract 413 before a single body byte is read (the
+        413 fires before routing, so even an unknown executor id answers
+        it — the refusal is not the route's 404)."""
+        cap = app_module._DISCOVERY_BODY_MAX_BYTES
+        r = client.post("/api/executors/ex-nosuch/discovery",
+                        content=b"x" * (cap + 1),
+                        headers={"Content-Type": "application/json"})
+        assert r.status_code == 413, r.text
+        assert "pre-parse" in r.json()["detail"]
+        # a legal body sails through the cap (then answers the route's
+        # own 401 for a token-less unknown id — proving the cap did not
+        # swallow the route)
+        r = client.post("/api/executors/ex-nosuch/discovery",
+                        json={"harnesses": []},
+                        headers={"Content-Type": "application/json"})
+        assert r.status_code == 401
