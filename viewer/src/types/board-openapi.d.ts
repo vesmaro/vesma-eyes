@@ -6326,7 +6326,6 @@ export interface components {
             readonly count: number;
             /** Refreshed At */
             readonly refreshed_at: string;
-            /** Scan */
             readonly scan?: components["schemas"]["TaskInboxScanOut"] | null;
         } & {
             readonly [key: string]: unknown;
@@ -6343,23 +6342,19 @@ export interface components {
             readonly errors: readonly {
                 readonly [key: string]: unknown;
             }[];
-            /** Sources */
-            readonly sources?: readonly components["schemas"]["TaskInboxScanSource"][];
+            /**
+             * Sources
+             * @default []
+             */
+            readonly sources: readonly components["schemas"]["TaskInboxScanSource"][];
         } & {
             readonly [key: string]: unknown;
         };
-        /** TaskInboxScanSource */
-        readonly TaskInboxScanSource: {
-            /** Server */
-            readonly server: string;
-            /** Found */
-            readonly found: number;
-            /** Error */
-            readonly error?: string | null;
-        } & {
-            readonly [key: string]: unknown;
-        };
-        /** TaskInboxScanOut */
+        /**
+         * TaskInboxScanOut
+         * @description The last completed scan's health (board_meta ``task_inbox_last_scan``),
+         *     exposed so the UI can explain stale rows instead of a silent «исчезли».
+         */
         readonly TaskInboxScanOut: {
             /** At */
             readonly at: string;
@@ -6369,8 +6364,37 @@ export interface components {
             readonly found: number;
             /** New */
             readonly new: number;
-            /** Sources */
-            readonly sources?: readonly components["schemas"]["TaskInboxScanSource"][];
+            /**
+             * Sources
+             * @default []
+             */
+            readonly sources: readonly components["schemas"]["TaskInboxScanSource"][];
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /**
+         * TaskInboxScanSource
+         * @description Per-server verdict of the last scan (AGG-1 honesty): ``found`` = how
+         *     many task:queue records the source LISTING returned, ``error`` = why it
+         *     contributed nothing (None = healthy). A healthy source answering 0 is
+         *     the «запись исчезла из источника» signal — distinct from an error.
+         *     ``truncated`` = the listing walk hit SCAN_MAX_PAGES with the last page
+         *     still FULL (P2-1): ``found`` is then a floor, records beyond the cap
+         *     never reached the scan — the banner names that instead of letting those
+         *     rows silently age into stale.
+         */
+        readonly TaskInboxScanSource: {
+            /** Server */
+            readonly server: string;
+            /** Found */
+            readonly found: number;
+            /** Error */
+            readonly error?: string | null;
+            /**
+             * Truncated
+             * @default false
+             */
+            readonly truncated: boolean;
         } & {
             readonly [key: string]: unknown;
         };

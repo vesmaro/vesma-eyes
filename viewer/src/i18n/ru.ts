@@ -949,6 +949,10 @@ export const ru = {
     "Последний скан увидел проблемы с источниками:",
   "tasks.inboxScanSourceOk": "{{server}} — записей: {{found}}",
   "tasks.inboxScanSourceErr": "{{server}} — ошибка: {{error}}",
+  // Review P2-1: скан упёрся в предел страниц — found это минимум, хвост до
+  // борда не дошёл и читается как «исчез», хотя источник его держит.
+  "tasks.inboxScanSourceTruncated":
+    "{{server}} — обход обрезан на {{found}} записях (предел скана): записи сверх предела до борда не дошли",
   "tasks.inboxScanHint":
     "Пока источник снова не вернёт запись, принять её в борд нельзя. Проверьте registry memory-серверов борда (Настройки → Память).",
   "tasks.inboxSource": "сервер: {{server}}",

@@ -919,6 +919,10 @@ export const en: Record<TranslationKey, string> = {
     "The last scan saw problems with the sources:",
   "tasks.inboxScanSourceOk": "{{server}} — {{found}} records",
   "tasks.inboxScanSourceErr": "{{server}} — error: {{error}}",
+  // Review P2-1: the scan hit its page cap — found is a floor, the tail
+  // never reached the board and reads as vanished while the source holds it.
+  "tasks.inboxScanSourceTruncated":
+    "{{server}} — listing truncated at {{found}} records (scan cap): records beyond the cap never reached the board",
   "tasks.inboxScanHint":
     "Until a source returns a record again, it cannot be adopted. Check the board's memory-server registry (Settings → Memory).",
   "tasks.inboxSource": "server: {{server}}",

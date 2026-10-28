@@ -206,7 +206,7 @@ class TestScanEngine:
         assert r.json() == {"scanned_servers": 1, "found": 2, "new": 2,
                             "errors": [],
                             "sources": [{"server": "qa-inbox", "found": 2,
-                                         "error": None}]}
+                                         "error": None, "truncated": False}]}
         # second scan: same records, no new mirror rows (idempotent)
         r2 = client.post("/api/tasks/inbox/refresh", headers=ui_auth)
         assert r2.json()["new"] == 0
@@ -227,7 +227,7 @@ class TestScanEngine:
         assert r.json() == {"scanned_servers": 1, "found": 38, "new": 38,
                             "errors": [],
                             "sources": [{"server": "qa-inbox", "found": 38,
-                                         "error": None}]}
+                                         "error": None, "truncated": False}]}
         assert client.get("/api/tasks/inbox").json()["count"] == 38
 
     def test_walk_paginates_beyond_single_page_cap(self, inbox_env, client,
@@ -245,6 +245,8 @@ class TestScanEngine:
         assert r.status_code == 200
         assert r.json()["found"] == total
         assert r.json()["sources"][0]["found"] == total
+        # a walk ended by a SHORT page is not a capped walk: no truncation
+        assert r.json()["sources"][0]["truncated"] is False
         assert client.get("/api/tasks/inbox").json()["count"] == total
         # the walk: page 0 (full) + page 1 (short → stop)
         queries = [parse_qs(q) for q in fake_mnemos.listing_requests()]
@@ -253,7 +255,10 @@ class TestScanEngine:
     def test_walk_hard_cap_bounds_the_requests(self, inbox_env, client,
                                                ui_auth, fake_mnemos):
         """SCAN_MAX_PAGES bounds the walk: a source listing MORE than the
-        cap cannot turn one refresh into an unbounded request series."""
+        cap cannot turn one refresh into an unbounded request series — and
+        the verdict says so honestly (review P2-1): truncated=true, because
+        a silent cut would read healthy found=1000 while rows beyond the
+        cap falsely age into stale."""
         from server.task_inbox import SCAN_LIMIT, SCAN_MAX_PAGES
         total = SCAN_LIMIT * (SCAN_MAX_PAGES + 2)
         fake_mnemos.listing_results = [
@@ -261,9 +266,64 @@ class TestScanEngine:
         ]
         r = client.post("/api/tasks/inbox/refresh", headers=ui_auth)
         assert r.status_code == 200
-        assert r.json()["found"] == SCAN_LIMIT * SCAN_MAX_PAGES
+        body = r.json()
+        assert body["found"] == SCAN_LIMIT * SCAN_MAX_PAGES
         queries = fake_mnemos.listing_requests()
         assert len(queries) == SCAN_MAX_PAGES
+        assert body["sources"][0]["truncated"] is True
+        # the stored report carries the flag to the GET/banner path too
+        scan = client.get("/api/tasks/inbox").json()["scan"]
+        assert scan["sources"][0]["truncated"] is True
+
+    def test_broken_hit_does_not_read_as_a_short_page(self, inbox_env, client,
+                                                      ui_auth, fake_mnemos):
+        """Review P3-2: the short-page heuristic counts the RAW page (what
+        the server sent), not the defensively-filtered list — one broken
+        hit in a full page (200 raw → 199 dicts) must not stop the walk
+        and silently drop the tail."""
+        from server.task_inbox import SCAN_LIMIT
+        page = [{"id": f"m-{i:03d}", "title": "t", "tags": ["task:queue"],
+                 "content": "b", "created_at": "2026-09-01T00:00:00+00:00"}
+                for i in range(SCAN_LIMIT)]
+        page[-1] = "not-a-dict"  # filtered list: 199 < SCAN_LIMIT
+        fake_mnemos.listing_results = page + [hit("m-tail", tags=["task:queue"])]
+        r = client.post("/api/tasks/inbox/refresh", headers=ui_auth)
+        assert r.status_code == 200
+        assert r.json()["found"] == SCAN_LIMIT  # 199 good + the page-1 tail
+        queries = [parse_qs(q) for q in fake_mnemos.listing_requests()]
+        assert [q["offset"][0] for q in queries] == ["0", str(SCAN_LIMIT)]
+
+    def test_mid_walk_failure_discards_hits_and_freezes_markers(
+            self, inbox_env, client, ui_auth, fake_mnemos):
+        """Central discard contract (review P3-1): a page failing MID-WALK
+        (page 0 ok, page 1 dead) aborts the source's walk and DISCARDS its
+        collected hits — refreshing last_seen (or the refreshed_at marker)
+        from a half-answered source would mark its other records falsely
+        fresh. The source degrades into errors/sources with the failure."""
+        from server.task_inbox import SCAN_LIMIT
+        total = SCAN_LIMIT + 38  # page 0 full, page 1 short
+        fake_mnemos.listing_results = [
+            hit(f"m-{i:04d}", tags=["task:queue"]) for i in range(total)
+        ]
+        # a healthy scan first: anchors last_seen / refreshed_at
+        assert client.post("/api/tasks/inbox/refresh",
+                           headers=ui_auth).status_code == 200
+        before_seen = inbox_env.store.get_inbox_item("m-0000")["last_seen"]
+        before_at = inbox_env.store.inbox_refreshed_at()
+        fake_mnemos.fail_listing_pages = {1}
+        r = client.post("/api/tasks/inbox/refresh", headers=ui_auth)
+        assert r.status_code == 200
+        body = r.json()
+        assert [e["server"] for e in body["errors"]] == ["qa-inbox"]
+        by_server = {s["server"]: s for s in body["sources"]}
+        assert by_server["qa-inbox"]["error"]
+        assert by_server["qa-inbox"]["found"] == 0
+        # the discard: collected page-0 hits never reach the mirror, and
+        # both freshness markers stay frozen at the last GOOD scan
+        assert inbox_env.store.get_inbox_item("m-0000")["last_seen"] == before_seen
+        assert inbox_env.store.inbox_refreshed_at() == before_at
+        assert client.get("/api/tasks/inbox").json()["count"] == total
+        fake_mnemos.fail_listing_pages = set()
 
     def test_scan_report_exposes_per_server_verdict(self, inbox_env, client,
                                                     ui_auth, fake_mnemos):
@@ -275,7 +335,7 @@ class TestScanEngine:
         client.post("/api/tasks/inbox/refresh", headers=ui_auth)
         scan = client.get("/api/tasks/inbox").json()["scan"]
         assert scan["sources"] == [{"server": "qa-inbox", "found": 1,
-                                    "error": None}]
+                                    "error": None, "truncated": False}]
         assert scan["scanned_servers"] == 1 and scan["found"] == 1
         assert scan["at"] == inbox_env.store.inbox_refreshed_at()
         # an unreachable source shows up as an error row, scan still 200
@@ -306,7 +366,7 @@ class TestScanEngine:
         assert scan["scanned_servers"] == 1
         assert scan["found"] == 0
         assert scan["sources"] == [{"server": "qa-inbox", "found": 0,
-                                    "error": None}]
+                                    "error": None, "truncated": False}]
 
     def test_field_mapping_and_excerpt_cap(self, inbox_env, client, ui_auth,
                                            fake_mnemos):
@@ -399,7 +459,7 @@ class TestScanEngine:
         assert r.json() == {"scanned_servers": 1, "found": 1, "new": 1,
                             "errors": [],
                             "sources": [{"server": "qa-inbox", "found": 1,
-                                         "error": None}]}
+                                         "error": None, "truncated": False}]}
         item = client.get("/api/tasks/inbox").json()["items"][0]
         assert item["memory_id"] == "4d20edbf-4f22-4fdc-aabd-5f1c1b584a2e"
         assert item["excerpt"] == "probe body"

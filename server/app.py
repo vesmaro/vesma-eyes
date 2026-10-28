@@ -1618,10 +1618,15 @@ class TaskInboxScanSource(_ApiModel):
     """Per-server verdict of the last scan (AGG-1 honesty): ``found`` = how
     many task:queue records the source LISTING returned, ``error`` = why it
     contributed nothing (None = healthy). A healthy source answering 0 is
-    the «запись исчезла из источника» signal — distinct from an error."""
+    the «запись исчезла из источника» signal — distinct from an error.
+    ``truncated`` = the listing walk hit SCAN_MAX_PAGES with the last page
+    still FULL (P2-1): ``found`` is then a floor, records beyond the cap
+    never reached the scan — the banner names that instead of letting those
+    rows silently age into stale."""
     server: str
     found: int
     error: str | None = None
+    truncated: bool = False
 
 
 class TaskInboxScanOut(_ApiModel):
@@ -8748,9 +8753,12 @@ async def tasks_inbox_refresh(request: Request) -> TaskInboxRefreshOut:
     # Server-side audit of the manual path (the background loop logs its
     # own): a degraded scan must exist in pod logs, not only in a toast.
     if result["errors"]:
+        # Same shape as the background path (json dump + [:500]): a long
+        # error list must stay one bounded log line, not a log flood.
         logging.getLogger("vesmaro.inbox").warning(
-            "manual inbox scan degraded: servers=%d found=%d errors=%s",
-            result["scanned_servers"], result["found"], result["errors"])
+            "manual inbox scan degraded: servers=%d found=%d new=%d errors=%s",
+            result["scanned_servers"], result["found"], result["new"],
+            json.dumps(result["errors"], ensure_ascii=False)[:500])
     else:
         logging.getLogger("vesmaro.inbox").info(
             "manual inbox scan: servers=%d found=%d new=%d errors=0",

@@ -64,8 +64,8 @@ const EMPTY_SOURCES_SCAN: NonNullable<TaskInbox["scan"]> = {
   found: 0,
   new: 0,
   sources: [
-    { server: "cluster", found: 0, error: null },
-    { server: "core-51", found: 0, error: null },
+    { server: "cluster", found: 0, error: null, truncated: false },
+    { server: "core-51", found: 0, error: null, truncated: false },
   ],
 };
 
@@ -75,8 +75,8 @@ const DEAD_SOURCES_SCAN: NonNullable<TaskInbox["scan"]> = {
   found: 0,
   new: 0,
   sources: [
-    { server: "cluster", found: 0, error: "cluster: unreachable (ConnectError)" },
-    { server: "core-51", found: 0, error: "core-51: unreachable (ConnectError)" },
+    { server: "cluster", found: 0, error: "cluster: unreachable (ConnectError)", truncated: false },
+    { server: "core-51", found: 0, error: "core-51: unreachable (ConnectError)", truncated: false },
   ],
 };
 
@@ -85,7 +85,17 @@ const HEALTHY_SOURCES_SCAN: NonNullable<TaskInbox["scan"]> = {
   scanned_servers: 1,
   found: 2,
   new: 0,
-  sources: [{ server: "cluster", found: 2, error: null }],
+  sources: [{ server: "cluster", found: 2, error: null, truncated: false }],
+};
+
+// Review P2-1: the walk hit SCAN_MAX_PAGES with the last page still full —
+// found is a floor and the banner must name the cut, not read healthy.
+const TRUNCATED_SOURCES_SCAN: NonNullable<TaskInbox["scan"]> = {
+  at: "2026-10-27T16:53:29+00:00",
+  scanned_servers: 1,
+  found: 1000,
+  new: 0,
+  sources: [{ server: "cluster", found: 1000, error: null, truncated: true }],
 };
 
 describe("TaskInboxPage scan-health banner", () => {
@@ -104,6 +114,17 @@ describe("TaskInboxPage scan-health banner", () => {
     const html = await renderInbox(new StaleSourcesAdapter(DEAD_SOURCES_SCAN));
     expect(html).toContain("The scanner could not reach any memory store");
     expect(html).toContain("cluster — error: cluster: unreachable (ConnectError)");
+  });
+
+  it("names a capped walk instead of reading it healthy", async () => {
+    const html = await renderInbox(
+      new StaleSourcesAdapter(TRUNCATED_SOURCES_SCAN),
+    );
+    expect(html).toContain(
+      "cluster — listing truncated at 1000 records (scan cap)",
+    );
+    // The healthy line would lie here: the tail never reached the scan.
+    expect(html).not.toContain("cluster — 1000 records");
   });
 
   it("stays silent when healthy sources still return records", async () => {

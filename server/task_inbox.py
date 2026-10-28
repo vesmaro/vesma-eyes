@@ -131,16 +131,47 @@ def _hits_of(body: Any) -> list[dict[str, Any]] | None:
     return None
 
 
-async def _fetch_server_hits(server: dict[str, Any]) -> tuple[int, list[dict[str, Any]], str]:
+def _raw_page_len(body: Any) -> int | None:
+    """RAW length of a listing page BEFORE _hits_of's defensive filtering
+    (review P3-2): the short-page heuristic must count what the server SENT,
+    not what survived parsing — a full page carrying one broken hit filters
+    to 199 dicts, and reading THAT as a short page would stop the walk and
+    silently drop the tail. None when the shape is unrecognized."""
+    if isinstance(body, list):
+        return len(body)
+    if isinstance(body, dict):
+        for key in ("items", "results"):
+            hits = body.get(key)
+            if isinstance(hits, list):
+                return len(hits)
+    return None
+
+
+async def _fetch_server_hits(
+        server: dict[str, Any]) -> tuple[int, list[dict[str, Any]], str, bool]:
     """Every task:queue hit ONE server returns: an offset-paginated
     GET /memories?tags= listing walk (a short page ends it; SCAN_MAX_PAGES
-    bounds the walk). Returns ``(last_code, hits, error_detail)`` —
-    ``error_detail`` is '' on success. A failing page aborts the walk and
+    bounds the walk). Returns ``(last_code, hits, error_detail, truncated)``
+    — ``error_detail`` is '' on success. A failing page aborts the walk and
     DISCARDS the collected hits: refreshing last_seen for a half-answered
-    source would mark its other records stale mid-scan."""
+    source would mark its other records stale mid-scan.
+
+    ``truncated`` is the honest cap signal (review P2-1): True when the walk
+    ended on SCAN_MAX_PAGES with the last page still FULL (no short page
+    seen) — records beyond the cap never reached this scan, and without the
+    flag the verdict would read healthy ``found=N`` while those rows silently
+    age into stale.
+
+    Known limitation, conscious (cursor paging stays backlog): offset paging
+    can DRIFT between page requests — an insertion/deletion on the source
+    between two pages shifts the window, so one record may be skipped (a
+    duplicate is absorbed by dedup). A skipped record ages into stale for
+    one scan cycle and returns on the next scan (SCAN_INTERVAL_SECONDS) —
+    a one-shot false stale, never a data loss on the source."""
     hits: list[dict[str, Any]] = []
     seen_ids: set[str] = set()
     code = 0
+    truncated = False
     for page in range(SCAN_MAX_PAGES):
         code, body = await mnemos_client.fetch_json(
             server, "/memories",
@@ -149,18 +180,21 @@ async def _fetch_server_hits(server: dict[str, Any]) -> tuple[int, list[dict[str
         )
         if code != 200:
             detail = str(body.get("detail"))[:200] if isinstance(body, dict) else ""
-            return code, [], detail or f"HTTP {code}"
+            return code, [], detail or f"HTTP {code}", False
         page_hits = _hits_of(body)
-        if page_hits is None:
-            return code, [], "unrecognized listing body"
+        raw_len = _raw_page_len(body)
+        if page_hits is None or raw_len is None:
+            return code, [], "unrecognized listing body", False
         for item in page_hits:
             mid = item.get("id")
             if mid and mid not in seen_ids:
                 seen_ids.add(mid)
                 hits.append(item)
-        if len(page_hits) < SCAN_LIMIT:
+        if raw_len < SCAN_LIMIT:
             break  # short page: the source listing is exhausted
-    return 200, hits, ""
+    else:
+        truncated = True  # cap reached on a FULL page: the wave was cut
+    return 200, hits, "", truncated
 
 
 async def refresh_inbox(registry: ServerRegistry, store: Store) -> dict[str, Any]:
@@ -171,10 +205,12 @@ async def refresh_inbox(registry: ServerRegistry, store: Store) -> dict[str, Any
     ``errors``/``sources`` and nothing else — its mirror rows simply age
     into stale. Returns the scan counters ``{scanned_servers, found, new,
     errors, sources}`` where ``sources`` carries the per-server verdict
-    (``found`` count / ``error`` detail) — the honest signal behind the
-    inbox banner. The full report is stamped into the ``task_inbox_last_scan``
-    board_meta marker for the GET endpoint, together with the
-    ``task_inbox_refreshed_at`` marker."""
+    (``found`` count / ``error`` detail / ``truncated`` cap flag) — the
+    honest signal behind the inbox banner. The full report is stamped into
+    the ``task_inbox_last_scan`` board_meta marker for the GET endpoint,
+    together with the ``task_inbox_refreshed_at`` marker (the refreshed_at
+    stamp is skipped when the scan is FULLY degraded — untouched mirror rows
+    must not read as fresh)."""
     servers = registry.active_servers()
     results = await asyncio.gather(*(_fetch_server_hits(s) for s in servers))
     scanned = 0
@@ -182,7 +218,7 @@ async def refresh_inbox(registry: ServerRegistry, store: Store) -> dict[str, Any
     sources: list[dict[str, Any]] = []
     batch: list[dict[str, Any]] = []
     seen: set[str] = set()
-    for server, (code, hits, detail) in zip(servers, results):
+    for server, (code, hits, detail, truncated) in zip(servers, results):
         if code != 200 or detail:
             errors.append({
                 "server": server["name"],
@@ -193,11 +229,12 @@ async def refresh_inbox(registry: ServerRegistry, store: Store) -> dict[str, Any
                 "server": server["name"],
                 "found": len(hits),
                 "error": detail or "listing failed",
+                "truncated": False,
             })
             continue
         scanned += 1
         sources.append({"server": server["name"], "found": len(hits),
-                        "error": None})
+                        "error": None, "truncated": truncated})
         for item in hits:
             rec = record_from_memory(server["name"], item)
             if rec is None or rec["memory_id"] in seen:
@@ -206,7 +243,11 @@ async def refresh_inbox(registry: ServerRegistry, store: Store) -> dict[str, Any
             batch.append(rec)
     seen_at = _now()
     found, new = store.upsert_inbox_records(batch, seen_at)
-    store.set_meta(Store.INBOX_REFRESHED_AT_KEY, seen_at)
+    # The refreshed_at marker means "the mirror was refreshed at T" — a
+    # FULLY degraded scan (every source errored, nothing mirrored) must not
+    # move it: the UI would present untouched rows as fresh (review P3-1).
+    if scanned or not errors:
+        store.set_meta(Store.INBOX_REFRESHED_AT_KEY, seen_at)
     report = {
         "at": seen_at,
         "scanned_servers": scanned,

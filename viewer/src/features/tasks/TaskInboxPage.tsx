@@ -142,7 +142,7 @@ export function TaskInboxPage() {
   const scanExplainsStale =
     stale.length > 0 &&
     sources.length > 0 &&
-    sources.some((s) => s.error || s.found === 0);
+    sources.some((s) => s.error || s.found === 0 || s.truncated);
 
   return (
     <InboxShell>
@@ -251,10 +251,12 @@ function InboxShell({ children }: { children: React.ReactNode }) {
  * 2026-10-27 honesty banner (prod: 58 rows frozen stale for days while the
  * scan was healthy-but-empty — «исчезли» explained nothing). Shown when the
  * last scan has a per-source signal that explains the stale rows: a source
- * answered EMPTY (store recreated/emptied — the prod case) or is UNREACHABLE.
- * Lists every source with its found count / error; the empty case carries
- * the registry hint. Pure projection of the server's scan block — no extra
- * wire call.
+ * answered EMPTY (store recreated/emptied — the prod case), is UNREACHABLE,
+ * or was TRUNCATED by the scan page cap (review P2-1 — records beyond the
+ * cap never reached the scan, so they read as vanished while the source
+ * still holds them). Lists every source with its found count / error /
+ * truncation; the empty case carries the registry hint. Pure projection of
+ * the server's scan block — no extra wire call.
  */
 function ScanHealthBanner({ scan }: { scan: NonNullable<TaskInbox["scan"]> }) {
   const t = useT();
@@ -279,7 +281,9 @@ function ScanHealthBanner({ scan }: { scan: NonNullable<TaskInbox["scan"]> }) {
           <li key={s.server}>
             {s.error
               ? t("tasks.inboxScanSourceErr", { server: s.server, error: s.error })
-              : t("tasks.inboxScanSourceOk", { server: s.server, found: s.found })}
+              : s.truncated
+                ? t("tasks.inboxScanSourceTruncated", { server: s.server, found: s.found })
+                : t("tasks.inboxScanSourceOk", { server: s.server, found: s.found })}
           </li>
         ))}
       </ul>

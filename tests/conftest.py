@@ -152,6 +152,11 @@ class _FakeMnemosHandler(BaseHTTPRequestHandler):
                 # legacy whole-body reply intact for old tests
                 offset = int(q.get("offset", ["0"])[0])
                 limit = int(q.get("limit", ["0"])[0])
+                # Fail-switch (review P3-1): page indices (0-based) that
+                # answer 500 — pins the mid-walk failure discard contract.
+                if limit and (offset // limit) in fake.fail_listing_pages:
+                    self._reply(500, {"detail": "fake mnemos: intentional failure"})
+                    return
                 window = (fake.listing_results[offset:offset + limit]
                           if limit else fake.listing_results)
                 self._reply(200, window)
@@ -196,7 +201,9 @@ class _FakeMnemosHandler(BaseHTTPRequestHandler):
 class FakeMnemos:
     """Loopback vesma engine double. ``fail_memories`` / ``fail_search`` /
     ``fail_list`` flip its write/search/listing endpoints to 500 to
-    exercise failure paths."""
+    exercise failure paths. ``fail_listing_pages`` names page indices
+    (0-based, computed from the walk's offset/limit) of the tags listing
+    that answer 500 — a MID-WALK failure (page 0 ok, page 1 dead)."""
 
     def __init__(self) -> None:
         self.requests: list[dict] = []
@@ -204,6 +211,7 @@ class FakeMnemos:
         self.fail_memories = False
         self.fail_search = False
         self.fail_list = False
+        self.fail_listing_pages: set[int] = set()
         self.mem_count = 0
         # AGG-1: hits returned by POST /search (generic tags-filter callers);
         # default [] keeps legacy replies intact
