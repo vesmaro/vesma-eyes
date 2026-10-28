@@ -2611,6 +2611,27 @@ export const en: Record<TranslationKey, string> = {
   "kora.resize.side.label": "Meta panel width",
   "kora.resize.side.tooltip": "Drag to resize. Double-click to restore",
   "kora.resize.nav.label": "Navigation panel width",
+  // The LEFT sessions DOCK (Kora IDE В1, kora-ide contract §2.1/§3.1):
+  // the pinned sessions panel — views, search, filters, honest empties.
+  "kora.dock.region": "Sessions",
+  "kora.dock.viewLabel": "Session list view",
+  "kora.dock.view.work": "By work",
+  "kora.dock.view.host": "By host",
+  "kora.dock.view.timeline": "Timeline",
+  "kora.dock.searchLabel": "Search sessions",
+  "kora.dock.searchPlaceholder": "Find a session…",
+  "kora.dock.found": "found: {{n}}",
+  "kora.dock.noMatches": "Nothing found",
+  "kora.dock.emptyFiltered": "No sessions match this filter",
+  "kora.dock.resetFilter": "Reset the filter",
+  "kora.dock.persistFail": "Not saved — browser storage is unavailable",
+  "kora.resize.dock.label": "Sessions panel width",
+  // The center context bar («where am I», kora-ide contract §2.2): only the
+  // fields that ARE real; model/specialist arrive with their data (В2/В3).
+  "kora.context.mode.field": "field",
+  "kora.context.mode.transcript": "transcript",
+  "kora.context.mode.chat": "chat",
+  "kora.context.mode.invite": "no session",
   // The Ether (U5, 15-WOW §3.2): a live feed from REAL bus events only;
   // a silent bus = the honest empty and zero movement.
   "kora.ether.caps": "Ether — everything happening in the sessions right now",

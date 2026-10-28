@@ -128,11 +128,19 @@ afterEach(async () => {
 });
 
 describe("KoraPage routes (gate §9.3, states-kw4 K-CTX-COMPAT)", () => {
+  // The field's own headline: scoped to the field section — the В1 dock
+  // renders the page's FIRST h2 («Сессии») before the center (kora-ide
+  // contract §2).
+  const fieldH2 = (container: HTMLElement): string | null | undefined =>
+    [...container.querySelectorAll("section")]
+      .find((el) => el.getAttribute("aria-label") === "Поле хоста")
+      ?.querySelector("h2")?.textContent;
+
   it("K-CTX-COMPAT: /kora?host=X replace-redirects into the field route", () => {
     const { container } = mountKoraPageAt("/kora?host=abyss-laptop");
     // The redirect LANDED: the field headline is on stage, not the
     // invitation (a Navigate rides the layout effect — act flushes it).
-    expect(container.querySelector("h2")?.textContent).toBe("abyss-laptop");
+    expect(fieldH2(container)).toBe("abyss-laptop");
     expect(
       [...container.querySelectorAll("section")].some(
         (el) => el.getAttribute("aria-label") === "Поле хоста",
@@ -165,7 +173,7 @@ describe("KoraPage routes (gate §9.3, states-kw4 K-CTX-COMPAT)", () => {
     const { container } = mountKoraPageAt(
       "/kora/host/abyss-laptop?agent=exec-vscode-lab",
     );
-    expect(container.querySelector("h2")?.textContent).toBe("abyss-laptop");
+    expect(fieldH2(container)).toBe("abyss-laptop");
     const pressed = [
       ...container.querySelectorAll("button[aria-pressed='true']"),
     ];

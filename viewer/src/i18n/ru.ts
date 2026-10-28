@@ -2664,6 +2664,27 @@ export const ru = {
   "kora.resize.side.tooltip":
     "Потяните, чтобы изменить ширину. Двойной клик — вернуть как было",
   "kora.resize.nav.label": "Ширина панели навигации",
+  // Левый ДОК «Сессии» (Kora IDE В1, kora-ide contract §2.1/§3.1):
+  // закреплённая панель сессий — виды, поиск, фильтры, честные пустые.
+  "kora.dock.region": "Сессии",
+  "kora.dock.viewLabel": "Вид списка сессий",
+  "kora.dock.view.work": "По работе",
+  "kora.dock.view.host": "По хосту",
+  "kora.dock.view.timeline": "Таймлайн",
+  "kora.dock.searchLabel": "Поиск по сессиям",
+  "kora.dock.searchPlaceholder": "Найти сессию…",
+  "kora.dock.found": "найдено: {{n}}",
+  "kora.dock.noMatches": "Ничего не найдено",
+  "kora.dock.emptyFiltered": "Под этот фильтр сессий нет",
+  "kora.dock.resetFilter": "Сбросить фильтр",
+  "kora.dock.persistFail": "Не сохранилось — хранилище браузера недоступно",
+  "kora.resize.dock.label": "Ширина панели сессий",
+  // Контекст-бар центра («где я сейчас», kora-ide contract §2.2): только
+  // реально доступные поля; модель/специалист появятся с их данными (В2/В3).
+  "kora.context.mode.field": "поле",
+  "kora.context.mode.transcript": "транскрипт",
+  "kora.context.mode.chat": "чат",
+  "kora.context.mode.invite": "без сессии",
   // Эфир (U5, 15-WOW §3.2): живая лента только из реальных событий шины;
   // тихая шина = честное пустое и ноль движения.
   "kora.ether.caps": "Эфир — всё, что происходит в сессиях сейчас",

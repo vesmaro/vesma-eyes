@@ -12,16 +12,22 @@ import { isKoraUnauthorized } from "./koraGateway";
 import { KoraSignInCta } from "./KoraSignInCta";
 import { KoraMetaPanel } from "./KoraMetaPanel";
 import { KoraWorkzone, type KoraRegistryEmpty } from "./KoraWorkzone";
+import { KoraDock } from "./KoraDock";
 import { KoraHostField } from "./KoraHostField";
 import { KoraTreePanel } from "./KoraTree";
 import { HermesSourceLine } from "./KoraHermesSource";
 import { KoraResizeHandle, seamPx } from "./KoraResizeHandle";
 import { useKoraEtherBridge, useKoraEtherRows } from "./useKoraEther";
 import {
+  KORA_DOCK_DEFAULT,
+  KORA_DOCK_MAX,
+  KORA_DOCK_MIN,
   KORA_SIDE_DEFAULT,
   KORA_SIDE_MAX,
   KORA_SIDE_MIN,
+  readKoraDockW,
   readKoraSideW,
+  writeKoraDockW,
   writeKoraSideW,
 } from "./koraFrameStorage";
 import { NOOP_KORA_INTENT_EVENTS } from "./koraIntentEvents";
@@ -42,31 +48,33 @@ import { pageGridClass } from "@/layout/pageGrid";
 import { useKoraEntered } from "@/telemetry/useKoraEntered"; // ME-041: kora.entered
 
 /**
- * The Kora workspace — the KW4 «ПОЛЕ ХОСТА + ПРАВАЯ ПАНЕЛЬ» cut
- * (blueprint-kw4 §2/§3/§6): from ≥lg the page is a 100vh app frame — NO
- * page scroll, every surface scrolls inside itself (07l §1.2). Geometry:
- * the 40px-style header row (the real «ждут владельца» badge), then ONE
- * grid with TWO columns — the central column (the host FIELD at
- * /kora/host/:host: chips + cwd/source-grouped sessions; the hermes split
- * at /kora/hermes and the frozen session modes at /kora/:sessionId; the
- * invitation at /kora) and the RIGHT panel «Дерево и мета» (the v2 tree —
- * pin + search + hosts→agents — then the KW3 meta blocks, ONE panel
- * scroll). ONE real seam (07l §3): the right panel width — pointer drag +
- * full keyboard path + persist on commit, `--kora-right-w` (240–420,
- * default 320 — canon). The LEFT zone is GONE (its content rehoused: the
- * tree → the panel top, the sessions → the field grouped, the pin → the
- * tree's first row, HermesSourceLine → the panel; `vesmaro.koraLeftW` is
- * a dead key the safe getter ignores — blueprint-kw4 §5). Below lg the
- * frame reflows honestly (07l §1.5, KW3 precedent): document flow — the
- * tree card → the center card → the meta card, the page scrolls.
+ * The Kora workspace — the Kora IDE В1 THREE-zone frame (kora-ide contract
+ * §2, wave В1; the KW4 «ПОЛЕ ХОСТА + ПРАВАЯ ПАНЕЛЬ» cut is the base it
+ * extends): from ≥lg the page is a 100vh app frame — NO page scroll, every
+ * surface scrolls inside itself (07l §1.2). Geometry: the 40px-style header
+ * row (the real «ждут владельца» badge), then ONE grid with THREE columns —
+ * the permanent LEFT DOCK «Сессии» (K-INV-1: immoveable — selection never
+ * changes its composition/width/scroll/focus; the pin «Чат с кластером»
+ * moved here from the tree; three views over the loaded registry), the
+ * CENTRAL column (the context bar «хост · харнес · режим» — only the fields
+ * that ARE real today; then the host FIELD at /kora/host/:host, the hermes
+ * split at /kora/hermes, the frozen session modes at /kora/:sessionId, the
+ * invitation at /kora — the modes byte-for-byte, K-INV-4) and the RIGHT
+ * panel «Дерево и мета» (the v2 tree — search + hosts→agents, the pin
+ * lives in the dock now — then the KW3 meta blocks, ONE panel scroll).
+ * TWO real seams (07l §3): the dock width `--kora-dock-w` (220–380,
+ * default 300 — the NEW vesmaro.koraDockW key; the dead vesmaro.koraLeftW
+ * stays unread) and the right panel width `--kora-right-w` (240–420,
+ * default 320) — both the KoraResizeHandle mechanics: pointer drag + full
+ * keyboard path + persist on commit. Below lg the frame reflows honestly
+ * (07l §1.5, KW3 precedent): document flow — dock card → center card →
+ * tree card → meta card, the page scrolls.
  *
- * Selection is ROUTE-driven everywhere (blueprint-kw4 §4, the
- * HostsRosterPage A1 precedent): the field's agent chips write ?agent=,
- * the tree rows link /kora/host/:host (+?agent=), a session row links the
- * frozen /kora/:sessionId. The retired header select-filter is GONE — the
- * page context now IS the route (ТЛ verdict, blueprint-kw4 §2). The 401
- * gate / error / not-found states keep the document flow (they are not
- * the frame).
+ * Selection is ROUTE-driven everywhere (K-INV-2, blueprint-kw4 §4): the
+ * field's agent chips write ?agent=, the tree rows link /kora/host/:host
+ * (+?agent=), the dock rows link the frozen /kora/:sessionId, the dock pin
+ * links /kora/hermes. The 401 gate / error / not-found states keep the
+ * document flow (they are not the frame).
  *
  * И1 honest cuts kept: no fake counters; the Эфир feeds ONLY from the real
  * bus (one stream per workspace, the ring lives in koraEtherStore — ONE
@@ -161,7 +169,10 @@ export function KoraWorkspace({
   const etherRows = useKoraEtherRows();
 
   // The right-panel («Дерево и мета») seam (07l §3.1): width state + persist
-  // on commit. The LEFT seam is retired with the left zone (KW4).
+  // on commit. The DOCK seam (kora-ide contract §2): the returned left
+  // zone's width — the NEW vesmaro.koraDockW key (the dead koraLeftW stays
+  // unread, KW4 §5 precedent). A failed write sets the honest
+  // K-PERSIST-FAIL bit — the dock names it, nothing pretends to persist.
   const [sideW, setSideW] = useState<number>(readKoraSideW);
   const onSideValue = useCallback((next: number): void => setSideW(next), []);
   const onSideCommit = useCallback((): void => {
@@ -172,6 +183,19 @@ export function KoraWorkspace({
     setSideW(KORA_SIDE_DEFAULT);
     writeKoraSideW(KORA_SIDE_DEFAULT);
   }, []);
+
+  const [dockW, setDockW] = useState<number>(readKoraDockW);
+  const [persistFail, setPersistFail] = useState(false);
+  const onDockValue = useCallback((next: number): void => setDockW(next), []);
+  const onDockCommit = useCallback((): void => {
+    if (!writeKoraDockW(dockW)) setPersistFail(true);
+    frameEvents.seamCommitted("dock");
+  }, [dockW, frameEvents]);
+  const onDockReset = useCallback((): void => {
+    setDockW(KORA_DOCK_DEFAULT);
+    if (!writeKoraDockW(KORA_DOCK_DEFAULT)) setPersistFail(true);
+  }, []);
+  const onPersistFail = useCallback((): void => setPersistFail(true), []);
 
   // §9.3 honest-empty branching: the connect CTA only shows when the
   // executor registry zero is a FACT; undefined (pending/failed/ incapable
@@ -335,9 +359,62 @@ export function KoraWorkspace({
       treeReady={treeReady}
       activeHost={host ?? ""}
       activeAgentId={agentParam}
-      clusterActive={cluster}
       hermesLine={hermesLine}
     />
+  );
+
+  // The sessions DOCK element (kora-ide contract §2.1) — ONE element, the
+  // same two placements as the tree: the frame's left column at ≥lg, its
+  // own document-flow card (FIRST in the flow) below lg. Props are
+  // registry-derived only — route changes never remount or re-seed it
+  // (K-INV-1: the dock does not move when the selection does).
+  const dockPanel = (
+    <KoraDock
+      items={items}
+      model={model}
+      dockReady={treeReady}
+      registryEmpty={registryEmpty}
+      hasMore={sessions.hasMore}
+      isLoadingMore={sessions.isLoadingMore}
+      onLoadMore={() => void sessions.loadMore()}
+      selectedSessionId={sessionId}
+      clusterActive={cluster}
+      persistFail={persistFail}
+      onPersistFail={onPersistFail}
+    />
+  );
+
+  // The CENTER context bar (kora-ide contract §2.2) — «где я сейчас», only
+  // the fields that ARE real today: the host (route or the session's
+  // registry owner), the harness (the session's, or hermes in the cluster
+  // mode), the mode word. The model/specialist segments arrive with their
+  // data lines (В2/В3) — an absent fact is NOT rendered as a placeholder.
+  // Skipped while the registry/deep-link resolves (no invented «where»).
+  const resolvingContext = sessions.isPending || resolvingDeepLink;
+  const centerMode = host !== null
+    ? "field"
+    : session !== null
+      ? session.harness === "hermes"
+        ? "chat"
+        : "transcript"
+      : cluster
+        ? "chat"
+        : "invite";
+  const contextSegments = resolvingContext
+    ? null
+    : [
+        host ?? sessionHost,
+        session?.harness ?? (cluster ? "hermes" : null),
+        t(`kora.context.mode.${centerMode}`),
+      ]
+        .filter((segment): segment is string => segment !== null && segment !== "")
+        .join(" · ");
+  const contextBar = contextSegments === null ? null : (
+    <div className="shrink-0 border-b border-myelin-hairline px-4 py-1">
+      <p className="truncate font-mono text-xs text-foreground-secondary">
+        {contextSegments}
+      </p>
+    </div>
   );
 
   // The responsive ladder (blueprint-kw4 §6): ≥lg — the two-zone 100vh
@@ -445,32 +522,44 @@ export function KoraWorkspace({
 
       <div
         className={cn(
-          "relative grid min-h-0 min-w-0 flex-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_var(--kora-right-w)] lg:items-stretch lg:gap-0",
+          "relative grid min-h-0 min-w-0 flex-1 items-start gap-4 lg:grid-cols-[var(--kora-dock-w)_minmax(0,1fr)_var(--kora-right-w)] lg:items-stretch lg:gap-0",
         )}
         style={
           {
+            "--kora-dock-w": `${dockW}px`,
             "--kora-right-w": `${sideW}px`,
           } as React.CSSProperties
         }
       >
-        {/* The TREE CARD (<lg ladder): the v2 tree is the FIRST section of
-         * the document flow (blueprint-kw4 §6). At ≥lg it lives inside the
-         * panel instead — this card does not mount there (one instance). */}
-        {!frameViewport ? (
+        {/* The DOCK «Сессии» (kora-ide contract §2.1) — the frame's FIRST
+         * column at ≥lg (a flush panel, its own scroll), its own document-
+         * flow card below lg (the ladder's first rung: док → центр →
+         * панель). ONE instance in every regime. */}
+        {frameViewport ? (
+          <aside
+            aria-label={t("kora.dock.region")}
+            className="kora-scroll min-h-0 min-w-0 overflow-y-auto"
+          >
+            {dockPanel}
+          </aside>
+        ) : (
           <section
-            aria-label={t("kora.panel.region")}
+            aria-label={t("kora.dock.region")}
             className="rounded-md border border-myelin bg-well px-3 py-3"
           >
-            {treePanel}
+            {dockPanel}
           </section>
-        ) : null}
+        )}
 
-        {/* CENTRAL column: the host FIELD at /kora/host/:host (chips +
-         * grouped sessions — Кора is a journal, NO composer/chat, §9.8);
-         * the KW2 hermes split / the frozen session modes / the invitation
-         * ride KoraWorkzone untouched. Flush inside the frame, a card
-         * below lg. */}
+        {/* CENTRAL column: the context bar (контекст «хост · харнес ·
+         * режим» — kora-ide contract §2.2) above the host FIELD at
+         * /kora/host/:host (chips + grouped sessions — the В1 keeps the
+         * field as the honest host-context presentation; the composer
+         * chat-surface replaces it in В2), the KW2 hermes split / the
+         * frozen session modes / the invitation ride KoraWorkzone
+         * untouched. Flush inside the frame, a card below lg. */}
         <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-md border border-myelin bg-well lg:rounded-none lg:border-0">
+          {contextBar}
           {sessions.isPending || resolvingDeepLink ? (
             <div
               role="status"
@@ -529,10 +618,29 @@ export function KoraWorkspace({
           )}
         </div>
 
+        {/* The DOCK SEAM (07l §3, kora-ide contract §2): pointer drag with
+         * capture, the full keyboard path (arrows/Home/End/Esc), dblclick
+         * reset, persist on commit — vesmaro.koraDockW. The dock's edge is
+         * its RIGHT one (dragSign −1: drag right / ArrowRight widen). Lives
+         * only inside the frame (≥lg). */}
+        <KoraResizeHandle
+          orientation="vertical"
+          label={t("kora.resize.dock.label")}
+          tooltip={t("kora.resize.side.tooltip")}
+          min={KORA_DOCK_MIN}
+          max={KORA_DOCK_MAX}
+          value={dockW}
+          valueText={seamPx(dockW)}
+          dragSign={-1}
+          onValue={onDockValue}
+          onCommit={onDockCommit}
+          onReset={onDockReset}
+          className="absolute inset-y-0 left-[var(--kora-dock-w)] hidden -translate-x-1/2 lg:flex"
+        />
+
         {/* The RIGHT SEAM (07l §3): pointer drag with capture, the full
          * keyboard path (arrows/Home/End/Esc), dblclick reset, persist on
-         * commit. The frame's ONLY seam since KW4 (the left one retired
-         * with the left zone). Lives only inside the frame (≥lg). */}
+         * commit. Lives only inside the frame (≥lg). */}
         <KoraResizeHandle
           orientation="vertical"
           label={t("kora.resize.side.label")}
@@ -547,6 +655,19 @@ export function KoraWorkspace({
           onReset={onSideReset}
           className="absolute inset-y-0 left-[calc(100%-var(--kora-right-w))] hidden -translate-x-1/2 lg:flex"
         />
+
+        {/* The TREE CARD (<lg ladder): the v2 tree is its own document-
+         * flow section AFTER the center (kora-ide contract §2.5: док →
+         * центр → панель). At ≥lg it lives inside the panel instead —
+         * this card does not mount there (one instance). */}
+        {!frameViewport ? (
+          <section
+            aria-label={t("kora.panel.region")}
+            className="rounded-md border border-myelin bg-well px-3 py-3"
+          >
+            {treePanel}
+          </section>
+        ) : null}
 
         {/* RIGHT: the «Дерево и мета» panel (blueprint-kw4 §2–3) — the v2
          * tree on top (pin + search + hosts→agents + the hermes line),

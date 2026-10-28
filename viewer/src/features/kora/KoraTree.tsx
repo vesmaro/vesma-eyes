@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
-import { ChevronDown, ChevronRight, Search, Star } from "lucide-react";
+import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
@@ -13,13 +13,13 @@ import type {
 import type { KoraSession } from "./koraTypes";
 
 /**
- * Дерево v2 (KW4, blueprint-kw4 §2–3/§7): the RIGHT panel's «ХОСТЫ И
- * АГЕНТЫ» block. Depth 2 — hosts → agents; LEAF SESSIONS ARE GONE (the
- * sessions live in the host field, grouped — «красивее и удобнее» = depth
- * 2 instead of 3, without the noisy listing). The pinned «★ Чат с
- * кластером» row is the block's FIRST row (route /kora/hermes). A search
- * input filters client-side over the already-derived model (zero new
- * requests, gate §9.2); zero matches read honestly (K-TREE-SEARCH).
+ * Дерево v2 (KW4, blueprint-kw4 §2–3/§7; Kora IDE В1 tail): the RIGHT
+ * panel's «ХОСТЫ И АГЕНТЫ» block. Depth 2 — hosts → agents; LEAF SESSIONS
+ * ARE GONE (the sessions live in the left DOCK, grouped — kora-ide contract
+ * §2.1). The pinned «★ Чат с кластером» row MOVED to the dock's pin section
+ * (contract §2.1) — the tree leads with the search now. A search input
+ * filters client-side over the already-derived model (zero new requests,
+ * gate §9.2); zero matches read honestly (K-TREE-SEARCH).
  *
  * Selection is a ROUTE (blueprint-kw4 §4): a host row links
  * /kora/host/:host, an agent row links /kora/host/:host?agent=<id>; the
@@ -47,7 +47,6 @@ export function KoraTreePanel({
   treeReady,
   activeHost,
   activeAgentId,
-  clusterActive,
   hermesLine = null,
 }: {
   model: KoraWorkspaceModel;
@@ -57,8 +56,6 @@ export function KoraTreePanel({
   activeHost: string;
   /** The route's ?agent= — its row reads current. */
   activeAgentId: string | null;
-  /** The reserved /kora/hermes route is ON STAGE (the pin reads current). */
-  clusterActive: boolean;
   /** The hermes context rides its source line under the tree
    * (blueprint-kw4 §2: HermesSourceLine → правая панель). */
   hermesLine?: React.ReactNode;
@@ -91,25 +88,6 @@ export function KoraTreePanel({
         {t("kora.tree.title")}
       </h2>
       <p className="mt-1 text-xs text-foreground-muted">{t("kora.tree.explain")}</p>
-
-      {/* The pinned «Чат с кластером» — the block's FIRST row (blueprint-kw4
-       * §2): a surface ABOVE the hosts, its route is the reserved segment. */}
-      <Link
-        to="/kora/hermes"
-        aria-current={clusterActive ? "page" : undefined}
-        title={t("kora.nav.clusterChatHint")}
-        className={cn(
-          "mt-2 flex min-h-12 items-center gap-2 rounded-md border-l-2 px-2 py-1.5 transition-colors duration-instant hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright md:min-h-7",
-          clusterActive
-            ? "border-iris bg-iris-tint text-foreground"
-            : "border-transparent text-foreground-secondary",
-        )}
-      >
-        <Star aria-hidden className="size-3.5 shrink-0 text-iris-bright" />
-        <span className="min-w-0 flex-1 truncate font-medium">
-          {t("kora.nav.clusterChat")}
-        </span>
-      </Link>
 
       {/* K-TREE-SEARCH: the client filter over the derived model. */}
       <div className="relative mt-2">

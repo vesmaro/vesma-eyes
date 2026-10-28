@@ -16,12 +16,13 @@ import { keys } from "@/lib/queryKeys";
 import { I18nProvider, type Lang } from "@/i18n";
 
 /**
- * KW4 workspace snapshots (blueprint-kw4 §2/§3): pin the TWO-zone frame —
- * the header (H1 + derived summary; the retired select-filter is GONE —
- * the page context IS the route), the invitation scene, the right panel
- * «Дерево и мета» (the v2 tree — pin + search + hosts→agents, depth 2, NO
- * session leaves — then the KW3 meta blocks, ONE panel scroll) and the ONE
- * seam (--kora-right-w; the LEFT zone and its seam are retired, gate §9.1).
+ * Kora IDE В1 workspace snapshots (kora-ide contract §2): pin the
+ * THREE-zone frame — the header (H1 + derived summary), the LEFT dock
+ * «Сессии» (the pin + the view switcher + the session deep links — K-INV-2),
+ * the invitation scene with the context bar in the center, the right panel
+ * «Дерево и мета» (the v2 tree — search + hosts→agents, depth 2, NO session
+ * leaves — then the KW3 meta blocks, ONE panel scroll) and the TWO seams
+ * (--kora-dock-w + --kora-right-w; the dead koraLeftW stays unread).
  * DOM-free renderToString per the project pattern (the SSR snapshot renders
  * the FRAME — the documented default, koraViewport); the paged registry +
  * the executors registry are prefilled so the data branches render
@@ -114,8 +115,8 @@ async function renderKoraPage(lang: Lang, path = "/kora"): Promise<string> {
   );
 }
 
-describe("Kora workspace snapshots (KW4 «Поле хоста + правая панель»)", () => {
-  it("pins the two-zone frame: header + invitation + «Дерево и мета» panel, ONE seam (ru)", async () => {
+describe("Kora workspace snapshots (Kora IDE В1 «док + чат + правая панель»)", () => {
+  it("pins the three-zone frame: header + dock + invitation + «Дерево и мета» panel, TWO seams (ru)", async () => {
     const html = await renderKoraPage("ru");
     // The header: H1 with the name explanation in the tooltip, the DERIVED
     // summary numbers. The retired select-filter is GONE (blueprint-kw4 §2).
@@ -127,25 +128,37 @@ describe("Kora workspace snapshots (KW4 «Поле хоста + правая п�
     expect(html).toContain("за 24 ч: 2"); // 8940 s + 64920 s, the 47 h one is out
     expect(html).not.toContain("Входящие:");
     expect(html).not.toContain("Все хосты");
-    // The KW4 panel landmark: the tree AND the meta share ONE aside.
-    expect(html).toContain('aria-label="Дерево и мета"');
-    // The v2 tree rides the panel: the pin FIRST (→ /kora/hermes), then the
-    // search, then the hosts (depth 2 — NO session leaves in the tree).
-    expect(html).toContain("Хосты и агенты");
+    // The В1 DOCK landmark: the sessions dock is the frame's first column.
+    expect(html).toContain('aria-label="Сессии"');
+    // The dock owns the pin now (contract §2.1): the FIRST dock row leads
+    // to the reserved /kora/hermes.
     expect(html).toContain('href="/kora/hermes"');
     expect(html).toContain("Чат с кластером");
+    // The dock's view switcher (По работе / По хосту / Таймлайн).
+    expect(html).toContain("По работе");
+    expect(html).toContain("По хосту");
+    expect(html).toContain("Таймлайн");
+    expect(html).toContain('aria-label="Поиск по сессиям"');
+    // The dock rows CARRY the session deep links (K-INV-2) — the tree does
+    // not (its own no-leaves pin lives in KoraTree.test.tsx).
+    expect(html).toContain('href="/kora/exec-zcode-main%3Asess_7f3a91"');
+    // The KW4 panel landmark: the tree AND the meta share ONE aside.
+    expect(html).toContain('aria-label="Дерево и мета"');
+    // The v2 tree rides the panel: the search, then the hosts (depth 2 —
+    // NO session leaves in the tree; the pin moved to the dock).
+    expect(html).toContain("Хосты и агенты");
     expect(html).toContain('aria-label="Поиск по хостам и агентам"');
     expect(html).toContain("abyss-laptop");
     expect(html).toContain("pi-edge");
     expect(html).toContain('href="/kora/host/abyss-laptop"');
-    // Gate §9.4: the tree has no leaf-session links (sessions live in the
-    // field, grouped).
-    expect(html).not.toContain('href="/kora/exec-zcode-main%3Asess_7f3a91"');
-    // The LEFT zone is retired: no nav panel, no nav seam, no nav session
-    // list, no nav quick filters (gate §9.1).
+    // The dock's honest empties don't fire on a populated registry; the
+    // invitation scene carries the center's context bar («без сессии»).
+    expect(html).toContain("без сессии");
+    // The LEFT zone is retired under its KW1 name: no «Навигация» region,
+    // no nav seam label, no KW4 field title over the dock.
     expect(html).not.toContain('aria-label="Навигация"');
-    expect(html).not.toContain("Сессии · все хосты");
     expect(html).not.toContain("Ширина панели навигации");
+    expect(html).not.toContain("--kora-left-w");
     // The scene invitation; the Эфир card lives in the meta panel.
     expect(html).toContain("Выберите сессию — здесь откроется её ход");
     // The meta defaults (states.md §5): О СЕССИИ collapsed with the honest
@@ -162,14 +175,16 @@ describe("Kora workspace snapshots (KW4 «Поле хоста + правая п�
     expect(html).not.toContain("Пульт");
     expect(html).not.toContain("Развернуть");
     expect(html).not.toContain('role="tab"');
-    // The ONE seam (07l §3, KW4): the right panel width — an honest
-    // separator with the full aria geometry. The LEFT seam is gone.
-    expect(html).toContain('role="separator"');
+    // The TWO seams (07l §3; kora-ide contract §2): the dock's and the
+    // panel's — honest separators with the full aria geometry. The dead
+    // nav seam label is gone.
+    expect(html.match(/role="separator"/g)?.length).toBe(2);
+    expect(html).toContain("Ширина панели сессий");
     expect(html).toContain("Ширина мета-панели");
     // The mock-era furniture is gone: no demo chip, no chat panel.
     expect(html).not.toContain("Демо-данные");
     expect(html).not.toContain("PIN");
-    // The panel's ONE scroll: the tree precedes the meta legend (П2).
+    // The dock precedes the panel's meta legend (the pin-first dock).
     expect(html.indexOf("Чат с кластером")).toBeLessThan(
       html.indexOf("Что мы видим с ваших машин"),
     );
@@ -183,8 +198,10 @@ describe("Kora workspace snapshots (KW4 «Поле хоста + правая п�
     expect(html).toContain("running sessions: 1");
     expect(html).toContain("in 24h: 2");
     expect(html).not.toContain("All hosts"); // the retired filter
-    expect(html).toContain("Hosts and agents");
+    expect(html).toContain('aria-label="Sessions"');
     expect(html).toContain("Chat with the cluster");
+    expect(html).toContain("By work");
+    expect(html).toContain("Timeline");
     expect(html).toContain('aria-label="Tree and meta"');
     expect(html).toContain('aria-label="Search hosts and agents"');
     expect(html).toContain("Ether");
@@ -192,7 +209,7 @@ describe("Kora workspace snapshots (KW4 «Поле хоста + правая п�
     expect(html).toMatchSnapshot();
   });
 
-  it("the v2 tree routes hosts (depth 2) — the session deep link lives in the FIELD", async () => {
+  it("the v2 tree routes hosts (depth 2) — the session deep links live in the DOCK", async () => {
     const html = await renderKoraPage("ru");
     expect(html).toContain('href="/kora/host/abyss-laptop"');
     expect(html).toContain('href="/kora/host/pi-edge"');
@@ -200,7 +217,8 @@ describe("Kora workspace snapshots (KW4 «Поле хоста + правая п�
     // client effect — SSR renders the collapsed frame); the interaction pin
     // lives in KoraTree.test.tsx («agent leaves carry ?agent=»).
     expect(html).not.toContain("?agent=");
-    // Gate §9.4: no leaf-session links in the tree.
-    expect(html).not.toContain('href="/kora/exec-zcode-main%3Asess_7f3a91"');
+    // Gate §9.4 narrowed, В1: the session deep links ride the DOCK rows
+    // (the frozen /kora/:sessionId grammar), never the tree.
+    expect(html).toContain('href="/kora/exec-zcode-main%3Asess_7f3a91"');
   });
 });

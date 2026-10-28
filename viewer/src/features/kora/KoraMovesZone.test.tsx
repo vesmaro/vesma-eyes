@@ -5,7 +5,10 @@ import { createRoot, type Root } from "react-dom/client";
 import { I18nProvider } from "@/i18n";
 import { actUnmount } from "@/test/actTools";
 import { KoraMovesZone } from "./KoraMovesZone";
-import { type KoraFrameEventPoints } from "./koraFrameEvents";
+import {
+  type KoraFrameEventPoints,
+  type KoraSeamName,
+} from "./koraFrameEvents";
 import type { HermesMessage } from "./koraTypes";
 import type { KoraHermesTranscriptPages } from "./useKora";
 
@@ -288,7 +291,7 @@ describe("KoraMovesZone — the ex-Пульт seam hardware (vesmaro.koraMovesH)
 
   it("the frame telemetry call points ride the toggle and the seam commit (KW3; no-op client until taxonomy v1)", async () => {
     const toggled: Array<"expanded" | "collapsed"> = [];
-    const seams: Array<"nav" | "meta" | "moves"> = [];
+    const seams: KoraSeamName[] = [];
     const container = mountZone(pages(), {
       movesZoneToggled: (to) => toggled.push(to),
       seamCommitted: (seam) => seams.push(seam),

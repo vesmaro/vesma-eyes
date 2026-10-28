@@ -17,8 +17,10 @@
  * nothing inside the zones changes.
  */
 
-/** A resize seam that can report its committed geometry. */
-export type KoraSeamName = "nav" | "meta" | "moves";
+/** A resize seam that can report its committed geometry. Kora IDE В1
+ * returns the left seam — the dock's («nav» was its KW1-era name; the
+ * kora-ide contract §2 names the surface «Сессии»). */
+export type KoraSeamName = "nav" | "dock" | "meta" | "moves";
 
 export interface KoraFrameEventPoints {
   /** The «Все ходы» strip toggled (taxonomy candidate: kora.zone_toggled).
