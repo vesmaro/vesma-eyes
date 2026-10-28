@@ -68,3 +68,4 @@
 2026-10-26T13:39:29+0300 | gws-1.91.0-train | deploy | rev 135>136 | image 1.91.0 | chart 1.91.0 | HEAD 519eef1 | auto-waived: image.tag drift = previous release (deployed-revision appVersion)
 2026-10-27T12:57:44+0300 | gws-1.92.0-train | deploy | rev 136>137 | image 1.92.0 | chart 1.92.0 | HEAD b5d86aa | auto-waived: image.tag drift = previous release (deployed-revision appVersion)
 2026-10-27T17:08:29+0300 | abyss@core-51 | deploy | rev 137>138 | image 1.93.0 | chart 1.93.0 | HEAD 1ababa3 | auto-waived: image.tag drift = previous release (deployed-revision appVersion) | docs-drift: allowed (VESMARO_DEPLOY_DOCS_DRIFT=allow) — drifted corpora: mnemos
+2026-10-28T15:37:23+0300 | gws-1.94.0-train | deploy | rev 138>139 | image 1.94.0 | chart 1.94.0 | HEAD 2fdffce | auto-waived: image.tag drift = previous release (deployed-revision appVersion) | docs-drift: allowed (VESMARO_DEPLOY_DOCS_DRIFT=allow) — drifted corpora: mnemos
