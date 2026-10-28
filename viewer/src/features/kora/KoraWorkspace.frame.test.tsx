@@ -354,6 +354,96 @@ describe("KoraWorkspace frame (07l §3; Kora IDE В1 — three zones)", () => {
     expect(document.activeElement).toBe(input);
   });
 
+  it("K-DOCK-PENDING: the dock waits with skeletons — no invented rows", () => {
+    // NO cache prefill: the session registry stays pending.
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(keys.agents.executors.list(), {
+      ok: true,
+      count: 0,
+      items: [],
+      meta: {
+        presence: { online_max_age_s: 120, stale_max_age_s: 600 },
+        sweeper_interval_s: 60,
+      },
+    });
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    act(() => {
+      root.render(
+        <GatewayContext.Provider value={new MockAdapter({ latency: false })}>
+          <KoraGatewayContext.Provider value={new KoraMockAdapter({ latency: false })}>
+            <QueryClientProvider client={queryClient}>
+              <I18nProvider initialLang="ru">
+                <MemoryRouter initialEntries={["/kora"]}>
+                  <KoraWorkspace />
+                </MemoryRouter>
+              </I18nProvider>
+            </QueryClientProvider>
+          </KoraGatewayContext.Provider>
+        </GatewayContext.Provider>,
+      );
+    });
+    const dock = labelled(container, "Сессии")[0];
+    const loading = dock.querySelector("[role='status'][aria-label]");
+    expect(loading?.getAttribute("aria-label")).toBe("Загружаем сессии");
+    expect(dock.querySelectorAll("a")).toHaveLength(1); // the pin ONLY
+  });
+
+  it("K-GRP-MORE in the dock: «Показать ещё» rides the existing limit/offset cursor", () => {
+    // A FULL page (count === pageSize) means more may exist (P4-7 honesty).
+    const full = Array.from(
+      { length: PAGE_SIZE },
+      (_, i) => KORA_FIXTURE_SESSIONS[i % KORA_FIXTURE_SESSIONS.length]!,
+    );
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(koraKeys.sessionsPaged(PAGE_SIZE), {
+      pages: [
+        {
+          ok: true as const,
+          count: PAGE_SIZE,
+          items: full,
+          coverage: KORA_FIXTURE_COVERAGE,
+          meta: { generated_at: "2026-09-24T11:45:00Z" },
+        },
+      ],
+      pageParams: [0],
+    });
+    queryClient.setQueryData(keys.agents.executors.list(), {
+      ok: true,
+      count: 3,
+      items: executorsPage(),
+      meta: {
+        presence: { online_max_age_s: 120, stale_max_age_s: 600 },
+        sweeper_interval_s: 60,
+      },
+    });
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    act(() => {
+      root.render(
+        <GatewayContext.Provider value={new MockAdapter({ latency: false })}>
+          <KoraGatewayContext.Provider value={new KoraMockAdapter({ latency: false })}>
+            <QueryClientProvider client={queryClient}>
+              <I18nProvider initialLang="ru">
+                <MemoryRouter initialEntries={["/kora"]}>
+                  <KoraWorkspace />
+                </MemoryRouter>
+              </I18nProvider>
+            </QueryClientProvider>
+          </KoraGatewayContext.Provider>
+        </GatewayContext.Provider>,
+      );
+    });
+    const dock = labelled(container, "Сессии")[0];
+    expect(dock.textContent).toContain("Показать ещё");
+  });
+
   it("the dock rows deep-link the frozen /kora/:sessionId (K-INV-2)", () => {
     const { container } = mountWorkspace();
     const hrefs = dockHrefs(container);
