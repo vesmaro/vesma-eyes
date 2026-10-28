@@ -819,6 +819,91 @@ class TestAuthClasses:
         assert _create(client, ui_auth)["state"] == "created"
 
 
+# -------------------------------- owner channel: the ME-080 password session
+@pytest.fixture()
+def fresh_owner_channel_state(app_module, monkeypatch, client):
+    """The fresh_password_state contour (tests/test_auth_password.py),
+    scoped to the devices-channel tests: register is OPEN only while the
+    accounts table is empty, so the wipe runs before AND after; auth
+    limiters isolated per test; scrypt on the low-cost profile; the shared
+    cookie jar cleaned both ways (register signs the account in)."""
+    from server import security
+    from server.security import RateLimiter
+
+    monkeypatch.delenv("VESMARO_ALLOW_REGISTRATION", raising=False)
+    monkeypatch.setattr(
+        app_module, "hash_password",
+        lambda pw: security.hash_password(pw, n=2 ** 12, r=8, p=1))
+    for name in ("_auth_login_ip_limiter", "_auth_login_global_limiter",
+                 "_auth_register_ip_limiter",
+                 "_auth_register_global_limiter"):
+        monkeypatch.setattr(
+            app_module, name,
+            RateLimiter(limit=getattr(app_module, name).limit,
+                        window=getattr(app_module, name).window))
+    app_module._auth_reissue_last.clear()
+
+    def _wipe():
+        with app_module.store._lock, app_module.store._conn() as db:
+            db.execute("DELETE FROM auth_sessions")
+            db.execute("DELETE FROM accounts")
+            db.execute("DELETE FROM server_log WHERE server='auth'")
+
+    _wipe()
+    client.cookies.clear()
+    yield
+    _wipe()
+    client.cookies.clear()
+
+
+class TestOwnerPasswordChannel:
+    """fix/devices-owner-access: «я залогинен, а пишет что требуется войти».
+    The devices domain is ui-class end to end (ADR 0009 A1, ME-081): EVERY
+    owner channel passes _guard_ui_write — the bearer ui token (pinned by
+    every ui_auth test above), the vesmaro_ui cookie AND the ME-080
+    password session. The prod bug was FE-side (the page gated on the raw
+    token mirror and idled the query); these tests pin the SERVER contract
+    the fixed page relies on: a password-session owner reads AND revokes
+    devices with no Authorization header at all."""
+
+    def test_password_session_reads_devices(self, client,
+                                            fresh_owner_channel_state):
+        assert client.post(
+            "/api/auth/register",
+            json={"username": "dev-cookie-owner",
+                  "password": "parol-dev-cookie-1"},
+        ).status_code == 201
+        assert client.post(
+            "/api/auth/login",
+            json={"username": "dev-cookie-owner",
+                  "password": "parol-dev-cookie-1"},
+        ).status_code == 200
+        r = client.get("/api/devices")  # cookie leg, no Authorization header
+        assert r.status_code == 200, r.text
+        assert r.json()["ok"] is True
+        assert isinstance(r.json()["items"], list)
+
+    def test_password_session_revokes_device(self, client, ui_auth,
+                                             fresh_owner_channel_state):
+        assert client.post(
+            "/api/auth/register",
+            json={"username": "dev-cookie-owner-2",
+                  "password": "parol-dev-cookie-2"},
+        ).status_code == 201
+        assert client.post(
+            "/api/auth/login",
+            json={"username": "dev-cookie-owner-2",
+                  "password": "parol-dev-cookie-2"},
+        ).status_code == 200
+        dev = _paired_device(client, ui_auth)
+        # pin: the password-session leg only — the reissue wrapper would shadow it
+        client.cookies.delete("vesmaro_ui")
+        r = client.delete(f"/api/devices/{dev['device_id']}")  # cookie only
+        assert r.status_code == 200, r.text
+        assert r.json()["device"]["state"] == "revoked"
+        assert _device_row(dev["device_id"])["state"] == "revoked"
+
+
 # ------------------------------------------- poller compatibility (blocking)
 class TestPollerCompatibility:
     def test_legacy_board_token_rides_existing_guards(self, client, ui_auth,

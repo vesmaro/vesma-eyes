@@ -26,13 +26,16 @@ import type { TranslationKey, TranslateFn } from "@/i18n";
  * state conflict, 410 expired, 404 unknown id — text from the API, never
  * invented).
  *
- * The DEVICES list is ui-gated by token PRESENCE (GET /api/devices answers
- * _guard_ui_write): without a live session the query idles and the page
- * shows its honest login hint. Framework-free factory + thin React hook.
+ * The DEVICES list is ui-gated by the LAYERED session verdict (GET
+ * /api/devices answers _guard_ui_write, which admits every owner channel —
+ * the bearer/cookie ui token AND the ME-080 password session). The query
+ * enables on that layered verdict (useAuthSession's "user"); without any
+ * live session it idles and the page shows its honest login hint.
+ * Framework-free factory + thin React hook.
  */
 
 /** Device sessions for the owner panel (`GET /api/devices`). */
-export function useDevices(options: { tokenPresent: boolean }) {
+export function useDevices(options: { sessionReady: boolean }) {
   const gateway = useGateway();
   const capable = isPairingSource(gateway);
   return useQuery({
@@ -43,7 +46,7 @@ export function useDevices(options: { tokenPresent: boolean }) {
       }
       return gateway.listDevices(signal);
     },
-    enabled: capable && options.tokenPresent,
+    enabled: capable && options.sessionReady,
     staleTime: STALE_TIMES.agentsExecutors,
     gcTime: GC_TIMES.agentsExecutors,
   });
