@@ -162,7 +162,7 @@
       },
       "category": "api-board",
       "order": 4,
-      "lastVerified": "2026-10-22",
+      "lastVerified": "2026-10-29",
       "locales": [
         "en",
         "ru"
@@ -170,8 +170,8 @@
       "provenance": {
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
-        "commit_date": "2026-10-22T13:35:10+03:00"
+        "sha": "d7db20cbf0b2920a83f9171874728d7574cb9b2b",
+        "commit_date": "2026-10-29T00:43:28+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -186,7 +186,7 @@
       },
       "category": "api-board",
       "order": 6,
-      "lastVerified": "2026-10-22",
+      "lastVerified": "2026-10-29",
       "locales": [
         "en",
         "ru"
@@ -194,8 +194,8 @@
       "provenance": {
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
-        "commit_date": "2026-10-22T13:35:10+03:00"
+        "sha": "d7db20cbf0b2920a83f9171874728d7574cb9b2b",
+        "commit_date": "2026-10-29T00:43:28+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -210,7 +210,7 @@
       },
       "category": "api-board",
       "order": 7,
-      "lastVerified": "2026-10-22",
+      "lastVerified": "2026-10-29",
       "locales": [
         "en",
         "ru"
@@ -218,8 +218,8 @@
       "provenance": {
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
-        "commit_date": "2026-10-22T13:35:10+03:00"
+        "sha": "d7db20cbf0b2920a83f9171874728d7574cb9b2b",
+        "commit_date": "2026-10-29T00:43:28+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -234,7 +234,7 @@
       },
       "category": "api-board",
       "order": 5,
-      "lastVerified": "2026-10-22",
+      "lastVerified": "2026-10-29",
       "locales": [
         "en",
         "ru"
@@ -242,8 +242,8 @@
       "provenance": {
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
-        "commit_date": "2026-10-22T13:35:10+03:00"
+        "sha": "d7db20cbf0b2920a83f9171874728d7574cb9b2b",
+        "commit_date": "2026-10-29T00:43:28+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -258,7 +258,7 @@
       },
       "category": "api-board",
       "order": 11,
-      "lastVerified": "2026-10-22",
+      "lastVerified": "2026-10-29",
       "locales": [
         "en",
         "ru"
@@ -266,8 +266,8 @@
       "provenance": {
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
-        "commit_date": "2026-10-22T13:35:10+03:00"
+        "sha": "d7db20cbf0b2920a83f9171874728d7574cb9b2b",
+        "commit_date": "2026-10-29T00:43:28+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -282,7 +282,7 @@
       },
       "category": "api-board",
       "order": 1,
-      "lastVerified": "2026-10-22",
+      "lastVerified": "2026-10-29",
       "locales": [
         "en",
         "ru"
@@ -290,8 +290,8 @@
       "provenance": {
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
-        "commit_date": "2026-10-22T13:35:10+03:00"
+        "sha": "d7db20cbf0b2920a83f9171874728d7574cb9b2b",
+        "commit_date": "2026-10-29T00:43:28+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -306,7 +306,7 @@
       },
       "category": "api-board",
       "order": 8,
-      "lastVerified": "2026-10-22",
+      "lastVerified": "2026-10-29",
       "locales": [
         "en",
         "ru"
@@ -314,8 +314,8 @@
       "provenance": {
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
-        "commit_date": "2026-10-22T13:35:10+03:00"
+        "sha": "d7db20cbf0b2920a83f9171874728d7574cb9b2b",
+        "commit_date": "2026-10-29T00:43:28+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -330,7 +330,7 @@
       },
       "category": "api-board",
       "order": 3,
-      "lastVerified": "2026-10-22",
+      "lastVerified": "2026-10-29",
       "locales": [
         "en",
         "ru"
@@ -338,8 +338,8 @@
       "provenance": {
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
-        "commit_date": "2026-10-22T13:35:10+03:00"
+        "sha": "d7db20cbf0b2920a83f9171874728d7574cb9b2b",
+        "commit_date": "2026-10-29T00:43:28+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -354,7 +354,7 @@
       },
       "category": "api-board",
       "order": 9,
-      "lastVerified": "2026-10-22",
+      "lastVerified": "2026-10-29",
       "locales": [
         "en",
         "ru"
@@ -362,8 +362,32 @@
       "provenance": {
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
-        "commit_date": "2026-10-22T13:35:10+03:00"
+        "sha": "d7db20cbf0b2920a83f9171874728d7574cb9b2b",
+        "commit_date": "2026-10-29T00:43:28+03:00"
+      },
+      "contentClass": {
+        "en": "corpus",
+        "ru": "corpus"
+      }
+    },
+    {
+      "slug": "api/vesmaro-eyes/models",
+      "titles": {
+        "en": "Models and providers",
+        "ru": "Модели и провайдеры"
+      },
+      "category": "api-board",
+      "order": 12,
+      "lastVerified": "2026-10-29",
+      "locales": [
+        "en",
+        "ru"
+      ],
+      "provenance": {
+        "repo": "vesma-eyes",
+        "source_path": "viewer/board-openapi-snapshot.json",
+        "sha": "d7db20cbf0b2920a83f9171874728d7574cb9b2b",
+        "commit_date": "2026-10-29T00:43:28+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -378,7 +402,7 @@
       },
       "category": "api-board",
       "order": 10,
-      "lastVerified": "2026-10-22",
+      "lastVerified": "2026-10-29",
       "locales": [
         "en",
         "ru"
@@ -386,8 +410,8 @@
       "provenance": {
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
-        "commit_date": "2026-10-22T13:35:10+03:00"
+        "sha": "d7db20cbf0b2920a83f9171874728d7574cb9b2b",
+        "commit_date": "2026-10-29T00:43:28+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -401,8 +425,8 @@
         "ru": "Борд и служебные эндпоинты"
       },
       "category": "api-board",
-      "order": 12,
-      "lastVerified": "2026-10-22",
+      "order": 13,
+      "lastVerified": "2026-10-29",
       "locales": [
         "en",
         "ru"
@@ -410,8 +434,8 @@
       "provenance": {
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
-        "commit_date": "2026-10-22T13:35:10+03:00"
+        "sha": "d7db20cbf0b2920a83f9171874728d7574cb9b2b",
+        "commit_date": "2026-10-29T00:43:28+03:00"
       },
       "contentClass": {
         "en": "corpus",
@@ -426,7 +450,7 @@
       },
       "category": "api-board",
       "order": 2,
-      "lastVerified": "2026-10-22",
+      "lastVerified": "2026-10-29",
       "locales": [
         "en",
         "ru"
@@ -434,8 +458,8 @@
       "provenance": {
         "repo": "vesma-eyes",
         "source_path": "viewer/board-openapi-snapshot.json",
-        "sha": "79f37cd8a3ff1e4333144e60dce737b9380a89df",
-        "commit_date": "2026-10-22T13:35:10+03:00"
+        "sha": "d7db20cbf0b2920a83f9171874728d7574cb9b2b",
+        "commit_date": "2026-10-29T00:43:28+03:00"
       },
       "contentClass": {
         "en": "corpus",
