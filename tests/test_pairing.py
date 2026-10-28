@@ -896,6 +896,8 @@ class TestOwnerPasswordChannel:
                   "password": "parol-dev-cookie-2"},
         ).status_code == 200
         dev = _paired_device(client, ui_auth)
+        # pin: the password-session leg only — the reissue wrapper would shadow it
+        client.cookies.delete("vesmaro_ui")
         r = client.delete(f"/api/devices/{dev['device_id']}")  # cookie only
         assert r.status_code == 200, r.text
         assert r.json()["device"]["state"] == "revoked"
