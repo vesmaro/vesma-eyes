@@ -10,6 +10,15 @@ workflow — this file is the repo-side trail).
 
 ## [Unreleased]
 
+## [1.95.0] — 2026-10-28
+
+### Added
+
+- **МОДЕЛИ+MCP — DISCOVERY INGEST НА БОРДЕ (board-mirror wave, FC-6/FC-7, релизный поезд 1.95.0).** Агентные отчёты discoveries больше не молча теряются (`extra=ignore`): discovery-маршрут принимает и хранит аддитивные `models` и `mcp_servers`-ноги. Честные 422-капы на входе (shrink-to-fit семья): models ≤64 установок, ≤50 строк/установка, ≤16 KiB весь объект, provider ≤60 — 422 без значения; mcp_servers ≤32 записей, ≤30 имён, ≤8 KiB/запись. No-wipe зеркала (AGW-23/24 семья): `None` = нога не отчиталась — зеркало не тронуто; явный пустой = реальный ноль; last-report-wins, идентичный повтор = тихий no-op, all-dropped отчёт никогда не стирает (P3-1). Аудиты: `models.reported` / `mcp.reported` / `discovery.rejected` (с ногой-маркером).
+- **ДЕТЕКТОР УТЕЧКИ КРЕДЕНШЕЛОВ НА INGEST (security-verdict H4).** Credential-образная строка в любом поле models/mcp роняет СТРОКУ/ЗАПИСЬ (никогда не хранится) и пишет аудит `models.credential_leak_suspected` — payload несёт имя поля, длину и sha256[:12], никогда само значение; только на ingest-пути. Каскад SEC+QA поезда — accept-after-fix (фикс-слайс в поезде: board-side redaction base_url, content-delta comparator, value-free 422, pre-parse cap, coverage детектора).
+- **РОСТЕР МОДЕЛЕЙ + SSE.** Roster-проекция моделей: `discovered[]` + `seen_on` (по одной записи на executor_id+harness+exec_env — ГДЕ факт виден) + provenance-agent; live-обновления ростера по SSE-событию `model.inventory.changed`.
+- **СЛОВАРЬ — ЧЕТЫРЕ MODEL-SERVER ПОВЕРХНОСТИ (owner-approved 2026-10-28).** ollama / lmstudio / llama-server / vllm — сознательные члены словаря модельных серверов: сидятся с пометкой (seed пустой таблицы + один insert с board_meta-флагом для существующих БД, удаления владельца не воскрешаются). Неизвестные имена остаются drop+audit. ТЛ-гейт поезда (merge-дерево): pytest 1958 passed / 8 env-skips (полный сьют, последовательно), реран ТЛ совпал.
+
 ## [1.94.0] — 2026-10-28
 
 ### Fixed
