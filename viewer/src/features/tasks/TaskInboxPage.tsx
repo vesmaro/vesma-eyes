@@ -15,7 +15,7 @@ import { TagBadge } from "@/components/TagBadge/TagBadge";
 import { TextEngine } from "@/components/TextEngine";
 import { isTaskMutationSource, isTaskSource } from "@/gateway/capabilities";
 import { useGateway } from "@/gateway/GatewayContext";
-import type { InboxEditInput, TaskInboxEntry } from "@/gateway/boardTypes";
+import type { InboxEditInput, TaskInbox, TaskInboxEntry } from "@/gateway/boardTypes";
 import { withReturn } from "@/lib/returnParams";
 import { useI18n, useT } from "@/i18n";
 import {
@@ -134,6 +134,15 @@ export function TaskInboxPage() {
   const items = inbox.data?.items ?? [];
   const active = items.filter((item) => !item.stale);
   const stale = items.filter((item) => item.stale);
+  // 2026-10-27 honesty: the scan health block explains WHY rows are stale
+  // (a source answered empty vs unreachable) — the banner shows whenever
+  // the last scan has such a signal and stale rows actually exist.
+  const scan = inbox.data?.scan ?? null;
+  const sources = scan?.sources ?? [];
+  const scanExplainsStale =
+    stale.length > 0 &&
+    sources.length > 0 &&
+    sources.some((s) => s.error || s.found === 0 || s.truncated);
 
   return (
     <InboxShell>
@@ -201,6 +210,7 @@ export function TaskInboxPage() {
           </ul>
           {stale.length > 0 ? (
             <div className="space-y-2">
+              {scanExplainsStale && scan ? <ScanHealthBanner scan={scan} /> : null}
               <p className="text-xs text-foreground-muted">{t("tasks.inboxStaleNote")}</p>
               <ul className="space-y-2 opacity-60" aria-label={t("tasks.inboxStaleLabel")}>
                 {stale.map((item) => (
@@ -234,6 +244,53 @@ function InboxShell({ children }: { children: React.ReactNode }) {
       </h1>
       {children}
     </section>
+  );
+}
+
+/**
+ * 2026-10-27 honesty banner (prod: 58 rows frozen stale for days while the
+ * scan was healthy-but-empty — «исчезли» explained nothing). Shown when the
+ * last scan has a per-source signal that explains the stale rows: a source
+ * answered EMPTY (store recreated/emptied — the prod case), is UNREACHABLE,
+ * or was TRUNCATED by the scan page cap (review P2-1 — records beyond the
+ * cap never reached the scan, so they read as vanished while the source
+ * still holds them). Lists every source with its found count / error /
+ * truncation; the empty case carries the registry hint. Pure projection of
+ * the server's scan block — no extra wire call.
+ */
+function ScanHealthBanner({ scan }: { scan: NonNullable<TaskInbox["scan"]> }) {
+  const t = useT();
+  const sources = scan.sources ?? [];
+  const allDead = sources.length > 0 && sources.every((s) => s.error);
+  const allEmpty =
+    !allDead && sources.length > 0 && sources.every((s) => s.found === 0);
+  const title = allDead
+    ? t("tasks.inboxScanDeadTitle")
+    : allEmpty
+      ? t("tasks.inboxScanEmptyTitle")
+      : t("tasks.inboxScanMixedTitle");
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="rounded-md border border-border-subtle bg-well px-3 py-2 text-xs text-foreground-secondary"
+    >
+      <p className="font-medium text-foreground">{title}</p>
+      <ul className="mt-1 space-y-0.5">
+        {sources.map((s) => (
+          <li key={s.server}>
+            {s.error
+              ? t("tasks.inboxScanSourceErr", { server: s.server, error: s.error })
+              : s.truncated
+                ? t("tasks.inboxScanSourceTruncated", { server: s.server, found: s.found })
+                : t("tasks.inboxScanSourceOk", { server: s.server, found: s.found })}
+          </li>
+        ))}
+      </ul>
+      {allEmpty ? (
+        <p className="mt-1 text-foreground-muted">{t("tasks.inboxScanHint")}</p>
+      ) : null}
+    </div>
   );
 }
 

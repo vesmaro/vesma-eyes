@@ -1345,6 +1345,10 @@ export class MockAdapter implements MemoryGateway {
       found: this.inboxItems.length,
       new: 0,
       errors: [],
+      sources: [
+        { server: "laptop", found: this.inboxItems.length, error: null, truncated: false },
+        { server: "cluster", found: 0, error: null, truncated: false },
+      ],
     };
   }
 
