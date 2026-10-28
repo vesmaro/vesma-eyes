@@ -2,12 +2,16 @@
 design 2026-09-22 §C).
 
 QA matrix (each test names its line):
-- seed: a fresh Store boots with EXACTLY the 10 KNOWN_HARNESSES rows
-  (added_via='seed'), alphabetical; re-boot is idempotent (no duplicates);
+- seed: a fresh Store boots with EXACTLY the KNOWN_HARNESSES rows (14
+  since the board-mirror wave dictionary act 2026-10-28: the ten CLI
+  harnesses + the four model-server probe surfaces ollama/lmstudio/
+  llama-server/vllm, marked via their seed note), added_via='seed',
+  alphabetical; re-boot is idempotent (no duplicates);
   a DELETED seed row stays deleted across restarts (seed fills an EMPTY
   table only);
 - open read: GET /api/harnesses needs no bearer and carries
-  meta.seed_min_count = 10;
+  meta.seed_min_count = len(KNOWN_HARNESSES) (14 since the dictionary
+  act);
 - create leg (ui): 201 row added_via='owner'; 409 duplicate; 422 bad name
   (uppercase/space/leading dot/over-long); 422 dictionary cap (≤64, entry
   validation — the count returns to normal after deletions); 401/503 guard
@@ -97,16 +101,28 @@ def _delete(client, ui_auth, name=CUSTOM):
 
 # --------------------------------------------------------------------- seed
 class TestSeed:
-    def test_seed_exactly_the_ten_constants(self, app_module):
+    def test_seed_exactly_the_known_constants(self, app_module):
+        """The dictionary act (board-mirror wave, owner-approved
+        2026-10-28): the seed is the ten CLI harnesses PLUS the four
+        model-server probe surfaces — the latter marked in their note so
+        the UI renders them honestly as model-server surfaces, not CLI
+        harnesses."""
+        from server.store import MODEL_SERVER_HARNESS_SEEDS
         rows = app_module.store.list_harnesses()
         assert [r["name"] for r in rows] == sorted(app_module.store.KNOWN_HARNESSES)
-        assert len(rows) == 10
+        assert len(rows) == 14
         assert all(r["added_via"] == "seed" for r in rows)
-        assert all(r["note"] == "" for r in rows)
+        for row in rows:
+            if row["name"] in MODEL_SERVER_HARNESS_SEEDS:
+                assert row["note"] == MODEL_SERVER_HARNESS_SEEDS[row["name"]]
+            else:
+                assert row["note"] == ""
 
     def test_reboot_idempotent_and_deletions_stick(self, tmp_path):
         """A second boot on a NON-empty table must not duplicate or
-        resurrect: owner deletions survive restarts."""
+        resurrect: owner deletions survive restarts (the one-time
+        board-mirror seed flag is already set, so the migration does not
+        re-add either)."""
         path = tmp_path / "board.db"
         store = Store(path)
         store.add_harness(CUSTOM)
@@ -118,15 +134,15 @@ class TestSeed:
                      db.execute("SELECT name FROM harnesses").fetchall()]
         assert names.count(CUSTOM) == 1
         assert "windsurf" not in names
-        assert len(names) == 10
+        assert len(names) == 14
 
     def test_open_read_no_bearer(self, client):
         r = client.get("/api/harnesses")
         assert r.status_code == 200
         body = r.json()
         assert body["ok"] is True
-        assert body["count"] == 10
-        assert body["meta"] == {"seed_min_count": 10}
+        assert body["count"] == 14
+        assert body["meta"] == {"seed_min_count": 14}
         assert {i["name"] for i in body["items"]} >= {"zcode", "claude-code"}
 
 
@@ -169,8 +185,9 @@ class TestCreate:
         monkeypatch.setattr(
             app_module, "_harness_write_limiter",
             RateLimiter(limit=1000, window=60.0))
-        # 10 seeds + adds up to the ceiling of 64 → the 55th add must 422.
-        for i in range(54):
+        # 14 seeds (10 CLI + 4 model-server surfaces) + adds up to the
+        # ceiling of 64 → the 51st add must 422.
+        for i in range(50):
             assert _add(client, ui_auth, name=f"h-{i:02d}").status_code == 201
         r = _add(client, ui_auth, name="overflow")
         assert r.status_code == 422
