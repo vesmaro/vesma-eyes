@@ -1015,9 +1015,22 @@ api_hub:
           en: >-
             The board feed: notifications and read marking, activity, task
             reports and the report feed, archive.
+      - slug: vesmaro-eyes/models
+        prefixes: [models]
+        order: 12
+        title:
+          ru: Модели и провайдеры
+          en: Models and providers
+        about:
+          ru: >-
+            Ростер моделей борда, провайдеры и ротация их учётных данных,
+            гранты на провайдеров, каталог моделей и вызов инференса.
+          en: >-
+            The board model roster, providers and credential rotation,
+            provider grants, the model catalog, and inference calls.
       - slug: vesmaro-eyes/system
         prefixes: [board, board-reflect, health, settings, auth, events]
-        order: 12
+        order: 13
         subgroups:
           - keys: [board, board-reflect]
             title:
