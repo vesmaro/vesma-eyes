@@ -3,7 +3,9 @@
 
 Runs the agreed acceptance cases end-to-end against a local uvicorn
 instance with throwaway data dirs and a fake vesma engine. Never prints
-secret values (only booleans/status codes).
+secret values (only booleans/status codes). The fixture generates its own
+test-scoped bearer tokens in-process (UI + machine classes, ADR 0009 A1)
+and injects them via the boot env — no operator secrets, no CI secrets.
 
 Run (from the repo root):
     python3 -m venv /tmp/sec-venv
@@ -35,7 +37,14 @@ sys.path.insert(0, str(ROOT))
 
 # Synthetic test secret — never printed, only compared.
 FAKE_SECRET = "mnk_test_fake_secret_do_not_print"
-DEV_TOKEN = "dev-verify-token"
+# ADR 0009 A1 token classes (split CLOSED): the fixture pins BOTH classes,
+# mirroring the chart contour — same pattern as tests/conftest.py. The ui
+# token is the bearer phase B carries on its mutations (tasks CRUD, memory
+# servers CRUD, board-reflect are all classes=("ui",)); the machine token
+# stays configured-but-unused so phase B runs in the production both-classes
+# mode and a machine bearer can never silently satisfy a ui guard.
+UI_TOKEN = "dev-verify-ui-token"
+MACHINE_TOKEN = "dev-verify-machine-token"
 
 RESULTS: list[tuple[str, bool, str]] = []
 
@@ -143,15 +152,22 @@ class FakeMnemos:
 
 # ----------------------------------------------------------------- server
 def start_uvicorn(data_dir: Path, port: int, *, token: str | None,
+                  ui_token: str | None = None,
                   allowlist: str | None) -> subprocess.Popen:
     env = os.environ.copy()
     env["VESMARO_DATA"] = str(data_dir)
-    for var in ("VESMARO_BOARD_TOKEN", "VESMARO_ALLOWED_MEMORY_HOSTS",
-                "VESMARO_MEMORY_SERVERS", "VESMARO_MEMORY_CONFIG",
-                "VESMARO_SECRET_DIRS", "VESMARO_SECRET_DIR"):
+    # VESMARO_UI_TOKEN is popped too: a dev box that exports it must not
+    # leak into the fixture (phase A asserts the NO-token fail-closed
+    # posture; on a clean CI runner the var is absent anyway).
+    for var in ("VESMARO_BOARD_TOKEN", "VESMARO_UI_TOKEN",
+                "VESMARO_ALLOWED_MEMORY_HOSTS", "VESMARO_MEMORY_SERVERS",
+                "VESMARO_MEMORY_CONFIG", "VESMARO_SECRET_DIRS",
+                "VESMARO_SECRET_DIR"):
         env.pop(var, None)
     if token is not None:
         env["VESMARO_BOARD_TOKEN"] = token
+    if ui_token is not None:
+        env["VESMARO_UI_TOKEN"] = ui_token
     if allowlist is not None:
         env["VESMARO_ALLOWED_MEMORY_HOSTS"] = allowlist
     # legacy plain: migration materializes secrets here; default /data/secrets
@@ -196,13 +212,13 @@ def phase_a() -> None:
     data = Path(tempfile.mkdtemp(prefix="sec-a-"))
     port = free_port()
     base = f"http://127.0.0.1:{port}"
-    proc = start_uvicorn(data, port, token=None, allowlist=None)
+    proc = start_uvicorn(data, port, token=None, ui_token=None, allowlist=None)
     try:
         check("A1: server boots without token", wait_health(base))
         r = httpx.post(f"{base}/api/tasks", json={"title": "x"}, timeout=5)
         check("A2: mutation without token -> 503", r.status_code == 503, str(r.status_code))
         r = httpx.post(f"{base}/api/tasks", json={"title": "x"},
-                       headers={"Authorization": f"Bearer {DEV_TOKEN}"}, timeout=5)
+                       headers={"Authorization": f"Bearer {UI_TOKEN}"}, timeout=5)
         check("A3: mutation with ad-hoc token while unset -> 503 (fail-closed)",
               r.status_code == 503, str(r.status_code))
         # Default (no allowlist env) URL policy — validation happens before
@@ -231,11 +247,15 @@ def phase_b() -> None:
     fake = FakeMnemos()
     port = free_port()
     base = f"http://127.0.0.1:{port}"
-    auth = {"Authorization": f"Bearer {DEV_TOKEN}"}
+    # Phase B mutations are ui-class (ADR 0009 A1): the bearer below is the
+    # ui token; the machine token is configured alongside (both-classes
+    # contour, like the chart) but must satisfy none of these routes.
+    auth = {"Authorization": f"Bearer {UI_TOKEN}"}
     allowlist = f"127.0.0.1:{fake.port}"
 
     seed_plain_server(data, fake.url)  # legacy plain: row pre-boot
-    proc = start_uvicorn(data, port, token=DEV_TOKEN, allowlist=allowlist)
+    proc = start_uvicorn(data, port, token=MACHINE_TOKEN, ui_token=UI_TOKEN,
+                         allowlist=allowlist)
     try:
         check("B1: server boots with token+allowlist", wait_health(base))
 
