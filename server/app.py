@@ -5265,46 +5265,47 @@ def _validate_discovery_models(body: ExecutorDiscoveryBody) -> None:
         if size > _MODELS_MAX_BYTES:
             raise HTTPException(
                 422, f"models object exceeds 16 KiB ({size} bytes)")
-        for row in installations:
+        for i, row in enumerate(installations):
             if not isinstance(row, dict):
-                raise HTTPException(422, "models installation row must be "
-                                         "an object")
+                raise HTTPException(422, f"models installation row {i}: "
+                                         "must be an object")
+            # SEC-2/QA-F6: value-free messages — a row index, never the
+            # provider/harness value (a reflected value could itself be
+            # credential-shaped; the detector runs downstream).
             provider = str(row.get("provider") or "").strip()
             if not provider:
                 raise HTTPException(
-                    422, "models installation row without a provider")
+                    422, f"models installation row {i}: missing provider")
             if len(provider) > _MODELS_MAX_PROVIDER:
-                # The over-cap value is NEVER echoed — it may itself be
-                # credential-shaped (the detector runs downstream; the
-                # 422 stays value-free, the mask-first discipline).
                 raise HTTPException(
-                    422, f"models provider exceeds the cap "
-                         f"({len(provider)} > {_MODELS_MAX_PROVIDER})")
+                    422, f"models installation row {i}: provider exceeds "
+                         f"the cap ({len(provider)} > "
+                         f"{_MODELS_MAX_PROVIDER})")
             harness = str(row.get("harness") or "").strip()
             if not harness:
                 raise HTTPException(
-                    422, f"models installation {provider} without a "
-                         f"harness attribution")
+                    422, f"models installation row {i}: missing harness "
+                         f"attribution")
             auth = str(row.get("auth") or "").strip()
             if auth not in _MODEL_AUTH_ENUM:
                 raise HTTPException(
-                    422, f"models installation {provider}: auth must be "
-                         f"one of {sorted(_MODEL_AUTH_ENUM)}")
+                    422, f"models installation row {i}: auth must be one "
+                         f"of {sorted(_MODEL_AUTH_ENUM)}")
             source = str(row.get("source") or "").strip()
             if source not in _MODEL_SOURCE_ENUM:
                 raise HTTPException(
-                    422, f"models installation {provider}: source must be "
+                    422, f"models installation row {i}: source must be "
                          f"one of {sorted(_MODEL_SOURCE_ENUM)}")
             model_ids = row.get("models")
             if model_ids is not None:
                 if not isinstance(model_ids, list) or \
                         not all(isinstance(m, str) for m in model_ids):
                     raise HTTPException(
-                        422, f"models installation {provider}: models must "
+                        422, f"models installation row {i}: models must "
                              f"be a list of strings")
                 if len(model_ids) > _MODELS_MAX_PER_ROW:
                     raise HTTPException(
-                        422, f"models installation {provider}: model list "
+                        422, f"models installation row {i}: model list "
                              f"exceeds the cap ({len(model_ids)} > "
                              f"{_MODELS_MAX_PER_ROW})")
     mcp_servers = body.mcp_servers
@@ -5313,33 +5314,34 @@ def _validate_discovery_models(body: ExecutorDiscoveryBody) -> None:
             raise HTTPException(
                 422, f"too many mcp_servers entries: {len(mcp_servers)} "
                      f"(cap {_MCP_MAX_ENTRIES})")
-        for entry in mcp_servers:
+        for i, entry in enumerate(mcp_servers):
             if not isinstance(entry, dict):
-                raise HTTPException(422, "mcp_servers entry must be an "
-                                         "object")
+                raise HTTPException(422, f"mcp_servers entry {i}: must be "
+                                         "an object")
             harness = str(entry.get("harness") or "").strip()
             if not harness:
                 raise HTTPException(
-                    422, "mcp_servers entry without a harness attribution")
+                    422, f"mcp_servers entry {i}: missing harness "
+                         f"attribution")
             servers = entry.get("servers")
             if not isinstance(servers, list) or \
                     not all(isinstance(s, str) for s in servers):
                 raise HTTPException(
-                    422, f"mcp_servers entry {harness}: servers must be a "
-                         f"list of strings")
+                    422, f"mcp_servers entry {i}: servers must be a list "
+                         f"of strings")
             if len(servers) > _MCP_MAX_NAMES:
                 raise HTTPException(
-                    422, f"mcp_servers entry {harness}: server list exceeds "
-                         f"the cap ({len(servers)} > {_MCP_MAX_NAMES})")
+                    422, f"mcp_servers entry {i}: server list exceeds the "
+                         f"cap ({len(servers)} > {_MCP_MAX_NAMES})")
             count = entry.get("count")
             if not isinstance(count, int) or isinstance(count, bool):
                 raise HTTPException(
-                    422, f"mcp_servers entry {harness}: count must be an "
+                    422, f"mcp_servers entry {i}: count must be an "
                          f"integer (the full total, even when truncated)")
             size = len(json.dumps(entry, ensure_ascii=False).encode("utf-8"))
             if size > _MCP_ENTRY_BYTES:
                 raise HTTPException(
-                    422, f"mcp_servers entry {harness} exceeds "
+                    422, f"mcp_servers entry {i} exceeds "
                          f"8 KiB ({size} bytes)")
 
 
@@ -5503,16 +5505,23 @@ async def executor_discovery(executor_id: str, body: ExecutorDiscoveryBody,
     # models snapshot broadcasts the additive roster-invalidation frame
     # (the model_providers mutation pattern); an identical re-report is
     # a silent no-op — no frame, no churn.
-    models_result = {"changed": False, "accepted": 0, "dropped": 0}
+    models_result = {"changed": False, "accepted": 0, "dropped": 0,
+                     "added": [], "removed": [], "updated": []}
     if body.models is not None:
         models_result = store.report_models_mirror(executor_id, body.models)
-        if models_result["changed"]:
+        # QA-F7: the frame fires only on a VISIBLE delta — added,
+        # removed or content-updated tuples. A notes-only change (or an
+        # empty-delta write) emits nothing: a frame that says nothing
+        # would thrash the FE cache for no roster-visible fact.
+        if (models_result["added"] or models_result["removed"]
+                or models_result["updated"]):
             _broadcast({
                 "kind": "model.inventory.changed",
                 "origin": "agent",
                 "executor_id": executor_id,
                 "added": models_result["added"],
                 "removed": models_result["removed"],
+                "updated": models_result["updated"],
                 "at": _now_iso(),
             })
     mcp_result = {"changed": False, "accepted": 0, "dropped": 0}
@@ -11112,28 +11121,39 @@ _telemetry_limiter = RateLimiter(
 # below: the 60/60s limiter bounds such legs' frequency and the LAN
 # ingress is the trust boundary (residual risk accepted for v0).
 _TELEMETRY_BODY_MAX_BYTES = 1_048_576   # 1 MiB pre-parse Content-Length cap
+# SEC-3 (cascade 2026-10-28): the discovery ingest gets the same pre-parse
+# gate — an executor-token leg could otherwise buffer/parse hundreds of MB
+# of JSON before the honest-422 caps could answer. 256 KiB is ~15x the
+# largest legal models object (16 KiB) + the mcp leg + the inventory legs,
+# with an order of magnitude of headroom. Chunked (no Content-Length)
+# rides the post-parse caps, as for telemetry (residual risk accepted).
+_DISCOVERY_BODY_MAX_BYTES = 262_144     # 256 KiB pre-parse Content-Length cap
 
 
 @app.middleware("http")
 async def telemetry_body_cap(request: Request, call_next):
-    """C1 pre-parse gate (CWE-400): refuse an oversized DECLARED body on
-    the telemetry ingest before the body is read — the same contract 413
-    the batch cap answers, just at the earliest possible point. Header
-    only: no body buffering, no parsing; every other route passes through
-    untouched (one method+path string compare)."""
-    if (request.method == "POST"
-            and request.url.path == "/api/events/ui"):
-        declared = request.headers.get("Content-Length", "")
-        if (declared.isdigit()
-                and int(declared) > _TELEMETRY_BODY_MAX_BYTES):
-            logging.getLogger("vesmaro.telemetry").warning(
-                "ui telemetry body over pre-parse cap declared=%s",
-                declared)
-            return JSONResponse(
-                status_code=413,
-                content={"detail": "request body exceeds "
-                                   f"{_TELEMETRY_BODY_MAX_BYTES} bytes "
-                                   "(pre-parse Content-Length cap)"})
+    """C1 pre-parse gate (CWE-400), the telemetry precedent extended to
+    the discovery ingest (SEC-3, cascade 2026-10-28): refuse an oversized
+    DECLARED body BEFORE the body is read — header only, no body
+    buffering, no parsing; every other route passes through untouched."""
+    if request.method == "POST":
+        path = request.url.path
+        is_telemetry = path == "/api/events/ui"
+        is_discovery = (path.startswith("/api/executors/")
+                        and path.endswith("/discovery"))
+        if is_telemetry or is_discovery:
+            cap = (_TELEMETRY_BODY_MAX_BYTES if is_telemetry
+                   else _DISCOVERY_BODY_MAX_BYTES)
+            declared = request.headers.get("Content-Length", "")
+            if declared.isdigit() and int(declared) > cap:
+                logging.getLogger("vesmaro.telemetry").warning(
+                    "ingest body over pre-parse cap path=%s declared=%s",
+                    path, declared)
+                return JSONResponse(
+                    status_code=413,
+                    content={"detail": "request body exceeds "
+                                       f"{cap} bytes "
+                                       "(pre-parse Content-Length cap)"})
     return await call_next(request)
 
 # The frozen v0 kind registry (taxonomy §1.2) — the single dictionary the

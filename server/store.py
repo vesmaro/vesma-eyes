@@ -20,6 +20,7 @@ import re
 import secrets
 import sqlite3
 import threading
+import urllib.parse
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -498,6 +499,53 @@ _EXEC_ENV_RE = re.compile(
 def exec_env_known(value: str) -> bool:
     """True when the value is a legal v4 surface spelling."""
     return bool(_EXEC_ENV_RE.match((value or "").strip()))
+
+
+# Red line §4.5 board-side (security-verdict §4; host-intake §3.3.6 —
+# «OQ-4 amendment 2 applies board-side too»): the mirror ingest applies
+# the base_url grammar the AGENT is bound to, for symmetry of the trust
+# boundary — the board never trusts the wire to have redacted. Query,
+# fragment and userinfo are ALWAYS stripped (scheme://authority[/path]);
+# a URL carrying userinfo or a credential-shaped query-param NAME is
+# OMITTED entirely (the row's other facts stay) — a SHORT secret defeats
+# every shape regex, so the structural grammar is the authoritative line,
+# the shape detector only the second one. Unparsable/authority-less →
+# omit, never guess (the §3.4 honest-absence rule).
+_CRED_URL_PARAM_NAMES = frozenset({
+    "key", "token", "api_key", "apikey", "api-key", "access_token",
+    "access-token", "access_key", "password", "passwd", "secret", "auth",
+    "authorization", "credential", "session_key", "sig", "signature",
+})
+_BASE_URL_MAX = 200
+
+
+def redact_base_url(value: str) -> str:
+    """Board-side §3.3.6 grammar for an agent-posted ``base_url``. Returns
+    '' (omit) for anything unparsable, authority-less, non-http(s),
+    userinfo-bearing or credential-param-bearing; otherwise the
+    normalized scheme://authority[/path] with query/fragment stripped."""
+    s = (value or "").strip()
+    if not s:
+        return ""
+    try:
+        parts = urllib.parse.urlsplit(s)
+    except ValueError:
+        return ""
+    if parts.scheme.lower() not in ("http", "https") or not parts.netloc:
+        return ""
+    if "@" in parts.netloc:   # userinfo (user:pass@host) — omit entirely
+        return ""
+    try:
+        query = urllib.parse.parse_qsl(parts.query, keep_blank_values=True)
+    except ValueError:
+        query = []
+    if any(name.strip().lower() in _CRED_URL_PARAM_NAMES
+           for name, _ in query):
+        return ""
+    authority = parts.netloc
+    path = parts.path.rstrip("/")
+    out = f"{parts.scheme.lower()}://{authority}{path}"
+    return out[:_BASE_URL_MAX]
 # Dictionary ceiling: a sane select list and a junk-abuse bound. A cap hit
 # is a 422 (entry validation), not a 429 — the dictionary is not a rate
 # resource, it is a form the owner controls.
@@ -5101,12 +5149,17 @@ class Store:
     # discovery.rejected (dictionary drops), models.credential_leak_
     # suspected (incident drops).
 
-    @staticmethod
-    def _installation_row_scan(row: dict[str, Any]) -> str:
-        """Credential-shape scan over one installation row: every string
-        value (provider, base_url, note, harness, exec_env, model ids).
-        Returns the offending FIELD path ('' when clean). The scanned
-        VALUE never leaves this function — only the field name."""
+    _INSTALLATION_NAMED_FIELDS = frozenset({
+        "provider", "base_url", "harness", "exec_env", "note", "models"})
+
+    @classmethod
+    def _installation_row_scan(cls, row: dict[str, Any]) -> str:
+        """Credential-shape scan over one installation row: every named
+        field (provider, base_url, harness, exec_env, note, model ids)
+        AND every UNKNOWN extra key the row may carry — a key parked in
+        an unexpected field trips the same incident (SEC-6). Returns the
+        offending FIELD path ('' when clean). The scanned VALUE never
+        leaves this function — only the field name."""
         for field in ("provider", "base_url", "harness", "exec_env", "note"):
             value = row.get(field)
             if isinstance(value, str) and looks_like_credential(value):
@@ -5116,6 +5169,23 @@ class Store:
             for i, model_id in enumerate(models):
                 if isinstance(model_id, str) and looks_like_credential(model_id):
                     return f"installations[].models[{i}]"
+        for key, value in row.items():
+            if key in cls._INSTALLATION_NAMED_FIELDS:
+                continue
+            if isinstance(value, str):
+                if looks_like_credential(value):
+                    return f"installations[].{key}"
+            elif isinstance(value, list):
+                for i, item in enumerate(value[:32]):
+                    if looks_like_credential(str(item)):
+                        return f"installations[].{key}[{i}]"
+            elif isinstance(value, dict):
+                for k2, v2 in list(value.items())[:32]:
+                    if looks_like_credential(str(k2)) or \
+                            looks_like_credential(str(v2)):
+                        return f"installations[].{key}.{k2}"
+            elif looks_like_credential(str(value)):
+                return f"installations[].{key}"
         return ""
 
     def report_models_mirror(
@@ -5133,9 +5203,11 @@ class Store:
         blob is the untrusted free text), auditing field ``notes``.
 
         Returns {"accepted", "dropped", "drop_reasons", "notes_dropped",
-        "changed", "added", "removed"} — added/removed are (provider,
-        base_url, harness, exec_env) tuples vs the previous snapshot (the
-        SSE delta; empty when the snapshot did not change).
+        "changed", "added", "removed", "updated"} — added/removed are
+        (provider, base_url, harness, exec_env) IDENTITY tuples vs the
+        previous snapshot, ``updated`` the same-shape tuples whose
+        CONTENT changed under a stable identity (QA-F1); all three feed
+        the SSE delta and are empty when nothing roster-visible moved.
         """
         installations = models.get("installations")
         if not isinstance(installations, list):  # defensive: route validated
@@ -5143,14 +5215,25 @@ class Store:
         notes = models.get("notes")
         notes_clean: dict[str, Any] = {}
         notes_dropped = False
+        notes_incident: dict[str, Any] | None = None
         if isinstance(notes, dict):
             for key, value in list(notes.items())[:16]:
-                if looks_like_credential(str(key)) or \
-                        looks_like_credential(str(value)):
+                key_hits = looks_like_credential(str(key))
+                value_hits = looks_like_credential(str(value))
+                if key_hits or value_hits:
+                    # SEC-4: the blob drops WHOLE (the untrusted free
+                    # text never partially persists) and the offending
+                    # entry is fingerprinted (field/len/sha12 — never
+                    # the value).
                     notes_dropped = True
+                    notes_incident = {
+                        "executor_id": executor_id,
+                        "field": f"notes.{key}",
+                        **credential_fingerprint(
+                            str(key) if key_hits else str(value))}
                     break
                 notes_clean[str(key)[:60]] = value
-        drops: list[tuple[str, str]] = []   # (provider-or-'', reason)
+        drops: list[tuple[str, str]] = []   # (harness-or-'', reason)
         reasons: dict[str, int] = {}
         accepted: list[dict[str, Any]] = []
         with self._lock, self._conn() as db:
@@ -5159,7 +5242,8 @@ class Store:
             if row is None or row["state"] == "revoked":
                 return {"accepted": 0, "dropped": len(installations),
                         "drop_reasons": {}, "notes_dropped": False,
-                        "changed": False, "added": [], "removed": []}
+                        "changed": False, "added": [], "removed": [],
+                        "updated": []}
             known = self._harness_names_db(db)
             for raw in installations:
                 if not isinstance(raw, dict):
@@ -5168,13 +5252,12 @@ class Store:
                 harness = str(raw.get("harness") or "").strip()
                 exec_env = str(raw.get("exec_env") or "").strip()
                 # The credential detector is the FIRST gate: a shaped
-                # string in ANY field (provider, base_url, note, model
-                # ids, harness, exec_env) drops the WHOLE row before any
-                # dictionary check — the incident is data about a leak
-                # attempt, never stored material.
+                # string in ANY field — named or unknown (SEC-6) — drops
+                # the WHOLE row before any dictionary check; the incident
+                # is data about a leak attempt, never stored material.
                 field = self._installation_row_scan(raw)
                 if field:
-                    drops.append((provider, "credential_shape"))
+                    drops.append((harness, "credential_shape"))
                     reasons["credential_shape"] = \
                         reasons.get("credential_shape", 0) + 1
                     self._log(db, "models.credential_leak_suspected", None, {
@@ -5190,11 +5273,17 @@ class Store:
                     drops.append((harness, "exec_env"))
                     reasons["exec_env"] = reasons.get("exec_env", 0) + 1
                     continue
-                base_url = str(raw.get("base_url") or "").strip()
+                # SEC-P1: the §3.3.6 grammar applies BOARD-SIDE too — the
+                # wire is never trusted to have redacted (red line §4.5).
+                # Query/fragment/userinfo always stripped; userinfo or a
+                # credential-shaped param NAME → the URL fact omits
+                # entirely (the row's other facts stay); unparsable →
+                # omit, never guess.
+                base_url = redact_base_url(str(raw.get("base_url") or ""))
                 model_ids = raw.get("models")
                 accepted.append({
                     "provider": provider[:60],
-                    **({"base_url": base_url[:200]} if base_url else {}),
+                    **({"base_url": base_url} if base_url else {}),
                     "auth": str(raw.get("auth") or "").strip(),
                     "models": sorted({str(m).strip()[:200]
                                       for m in model_ids}) if model_ids else [],
@@ -5204,16 +5293,15 @@ class Store:
                     **({"note": str(raw.get("note")).strip()[:200]}
                        if str(raw.get("note") or "").strip() else {}),
                 })
-            if notes_dropped:
-                self._log(db, "models.credential_leak_suspected", None, {
-                    "executor_id": executor_id, "field": "notes",
-                    "value_len": 0, "value_sha12": ""})
+            if notes_incident is not None:
+                self._log(db, "models.credential_leak_suspected", None,
+                          notes_incident)
             rejected_names = sorted({d[0] for d in drops
                                      if d[1] in ("harness", "exec_env")})
             if rejected_names:
                 self._log(db, "discovery.rejected", None, {
                     "executor_id": executor_id, "names": rejected_names,
-                    "count": len(drops), "leg": "models"})
+                    "count": len(rejected_names), "leg": "models"})
             accepted.sort(key=lambda r: (r["provider"], r.get("base_url", ""),
                                          r["harness"], r["exec_env"]))
 
@@ -5228,9 +5316,19 @@ class Store:
                            if isinstance(r, dict)]
             before = {row_tuple(r) for r in stored_rows}
             after = {row_tuple(r) for r in accepted}
-            # ABSENT notes == absent notes (an identical re-report without
-            # the free-form blob is a no-op, not a notes-wipe).
+            # QA-F7, snapshot semantics (§3.10 «хранится ПОСЛЕДНИЙ
+            # отчёт»): a report WITHOUT notes after one WITH notes DROPS
+            # the stored blob (the report is the whole object); only
+            # absent-vs-absent is the no-op.
             notes_equal = (notes_clean or None) == (stored.get("notes") or None)
+            # QA-F1: the comparator is the FULL normalized content
+            # (report_executor_inventory family) — an identity-stable
+            # re-report with changed models/auth/note is a WRITE, never
+            # a silent drop. The identity-tuple sets stay the SSE delta
+            # grammar (added/removed); ``updated`` carries the
+            # content-changed tuples.
+            content_changed = False
+            updated_tuples: list[tuple[str, str, str, str]] = []
             # Explicit-empty wipe (real zero-and-ran) vs all-dropped
             # no-wipe (P3-1): an empty ACCEPTED set only wipes when the
             # agent itself reported zero installations.
@@ -5238,7 +5336,8 @@ class Store:
                 candidate = {"installations": accepted}
                 if notes_clean:
                     candidate["notes"] = notes_clean
-                if after != before or not notes_equal:
+                if candidate["installations"] != stored_rows or not notes_equal:
+                    content_changed = True
                     snapshot = dict(candidate)
                     snapshot["reported_at"] = _now()
                     db.execute(
@@ -5251,36 +5350,46 @@ class Store:
                         "installations": len(accepted),
                         "added": len(after - before),
                         "removed": len(before - after)})
-                    changed = True
-                else:
-                    changed = False
-            else:
-                changed = False
-        if changed:
+                stored_by_tuple: dict[tuple[str, str, str, str], dict] = {}
+                for r in stored_rows:
+                    stored_by_tuple.setdefault(row_tuple(r), r)
+                for r in accepted:
+                    t = row_tuple(r)
+                    if t in before and stored_by_tuple.get(t) != r:
+                        updated_tuples.append(t)
+        if content_changed:
             added_tuples = sorted(after - before)
             removed_tuples = sorted(before - after)
         else:
             added_tuples, removed_tuples = [], []
+            updated_tuples = []
+        updated_tuples.sort()
         return {
             "accepted": len(accepted),
             "dropped": len(drops),
             "drop_reasons": reasons,
             "notes_dropped": notes_dropped,
-            "changed": changed,
+            "changed": content_changed,
             "added": [{"provider": p, "base_url": b, "harness": h,
                        "exec_env": e} for p, b, h, e in added_tuples],
             "removed": [{"provider": p, "base_url": b, "harness": h,
                          "exec_env": e} for p, b, h, e in removed_tuples],
+            "updated": [{"provider": p, "base_url": b, "harness": h,
+                         "exec_env": e} for p, b, h, e in updated_tuples],
         }
 
     @staticmethod
     def _mcp_entry_scan(entry: dict[str, Any]) -> str:
         """Credential-shape scan over one mcp_servers entry: harness,
-        server names, transport kinds. Returns the offending FIELD path
-        ('' when clean); the VALUE never leaves this function."""
+        exec_env (QA-F2), server names, transport kinds. Returns the
+        offending FIELD path ('' when clean); the VALUE never leaves
+        this function."""
         harness = entry.get("harness")
         if isinstance(harness, str) and looks_like_credential(harness):
             return "mcp_servers[].harness"
+        exec_env = entry.get("exec_env")
+        if isinstance(exec_env, str) and looks_like_credential(exec_env):
+            return "mcp_servers[].exec_env"
         servers = entry.get("servers")
         if isinstance(servers, list):
             for i, name in enumerate(servers):
@@ -5361,7 +5470,7 @@ class Store:
             if rejected_names:
                 self._log(db, "discovery.rejected", None, {
                     "executor_id": executor_id, "names": rejected_names,
-                    "count": len(drops), "leg": "mcp_servers"})
+                    "count": len(rejected_names), "leg": "mcp_servers"})
             accepted.sort(key=lambda r: (r["harness"], r["exec_env"]))
             stored = [r for r in _loads(row["mcp_mirror"])
                       if isinstance(r, dict)]
