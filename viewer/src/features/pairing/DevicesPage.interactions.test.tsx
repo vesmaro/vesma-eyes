@@ -15,6 +15,10 @@ import { crumbsFor, NAV_DOMAINS } from "@/layout/navItems";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
 import { ToastViewport } from "@/components/Toast/ToastViewport";
 import { UiTokenContext } from "@/features/ui-token/UiTokenContext";
+import {
+  resetPasswordSessionForTests,
+  setPasswordUser,
+} from "@/features/auth/passwordSession";
 import { actUnmount, actWaitUntil } from "@/test/actTools";
 
 /**
@@ -23,7 +27,9 @@ import { actUnmount, actWaitUntil } from "@/test/actTools";
  * hint WITHOUT a session (the query idles — no wire call), the empty state
  * renders, and the REVOKE is terminal-behind-confirm: no wire call until
  * the owner accepts the irreversible warning, then DELETE + toast + list
- * refetch.
+ * refetch. fix/devices-owner-access: the page gates on the LAYERED session
+ * verdict (useAuthSession) — a ME-080 password-session owner without any
+ * stored token sees the list, exactly what the server already admitted.
  */
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -34,7 +40,11 @@ const mountedRoots: Root[] = [];
 
 function mount(
   script: PairingGatewayScript = {},
-  options: { tokenPresent?: boolean; confirmAnswer?: boolean } = {},
+  options: {
+    tokenPresent?: boolean;
+    passwordUser?: boolean;
+    confirmAnswer?: boolean;
+  } = {},
   scriptOverride: PairingGatewayScript = {},
 ): {
   calls: ReturnType<typeof createPairingTestGateway>["calls"];
@@ -49,6 +59,9 @@ function mount(
   const root = createRoot(document.body);
   mountedRoots.push(root);
   const tokenPresent = options.tokenPresent ?? true;
+  if (options.passwordUser) {
+    setPasswordUser({ username: "abyss", role: "owner" });
+  }
   act(() => {
     root.render(
       <GatewayContext.Provider value={gateway}>
@@ -110,6 +123,7 @@ afterEach(async () => {
     await actUnmount(root);
   }
   document.body.innerHTML = "";
+  resetPasswordSessionForTests();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -141,6 +155,21 @@ describe("DevicesPage — list", () => {
       expect(document.body.textContent).toContain("owner session");
     });
     expect(calls.listDevices).toBe(0);
+  });
+
+  it("renders the list for a password-session owner with NO stored token", async () => {
+    // fix/devices-owner-access regression: the ME-080 password person
+    // («abyss» + the владелец badge in the TopBar) gates the page even when
+    // the token mirror is empty — the server admits the vesmaro_auth cookie
+    // on GET /api/devices, the page must not idle behind the login hint.
+    const { calls } = mount(devicesScript(), {
+      tokenPresent: false,
+      passwordUser: true,
+    });
+    await actWaitUntil(() => {
+      expect(document.body.textContent).toContain("Телефон");
+    });
+    expect(calls.listDevices).toBeGreaterThan(0);
   });
 
   it("shows the honest empty state for a deviceless board", async () => {

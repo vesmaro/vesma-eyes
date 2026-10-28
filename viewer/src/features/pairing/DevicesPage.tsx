@@ -14,7 +14,7 @@ import { useGateway } from "@/gateway/GatewayContext";
 import { useT } from "@/i18n";
 import type { TranslationKey } from "@/i18n";
 import { useI18n } from "@/i18n";
-import { useUiToken } from "@/features/ui-token/UiTokenContext";
+import { useAuthSession } from "@/features/ui-token/useAuthSession";
 import { formatTaskDate } from "@/features/tasks/taskStatus";
 import { PairingDialog } from "./PairingDialog";
 import { useDevices, useDevicesEventBridge, usePairingActions } from "./usePairing";
@@ -35,19 +35,27 @@ import { pageGridClass } from "@/layout/pageGrid";
  * source of truth: the PUT's 200 row replaces the cached one and a
  * failure reverts the flip via the list refetch.
  *
- * The list read is ui-token gated server-side (`_guard_ui_write`), so
- * without a live session the page shows its honest login hint instead of
- * an error. `pairing.revoked` frames carrying a device_id and every SSE
- * reconnect refresh the list (ADR §5 п.9 — at-most-once transport ⇒ the
- * list never trusts a silent gap).
+ * The list read is ui-gated server-side (`_guard_ui_write` admits every
+ * owner channel — the bearer/cookie ui token AND the ME-080 password
+ * session), so the page gates on the LAYERED session verdict
+ * (useAuthSession, union И1 / 07k §5.1): a signed-in owner — either
+ * channel — sees the list; an anonymous browser sees the honest login
+ * hint; the boot-pending hold keeps the skeleton (no flash of the hint
+ * while the verdict is still settling). fix/devices-owner-access: the
+ * page used to key on the raw token mirror only, so a password-session
+ * owner («я залогинен, а пишет что требуется войти») was shown the login
+ * hint although the server would have answered the read. `pairing.revoked`
+ * frames carrying a device_id and every SSE reconnect refresh the list
+ * (ADR §5 п.9 — at-most-once transport ⇒ the list never trusts a silent
+ * gap).
  */
 export function DevicesPage() {
   const t = useT();
   const { lang } = useI18n();
   const gateway = useGateway();
   const capable = isPairingSource(gateway);
-  const uiToken = useUiToken();
-  const devices = useDevices({ tokenPresent: uiToken.tokenPresent });
+  const { status: sessionStatus } = useAuthSession();
+  const devices = useDevices({ sessionReady: sessionStatus === "user" });
   const actions = usePairingActions();
   useDevicesEventBridge();
 
@@ -74,12 +82,15 @@ export function DevicesPage() {
       </header>
 
       {devices.isPending ? (
-        uiToken.tokenPresent ? (
+        sessionStatus === "anonymous" ? (
+          <LoginHint />
+        ) : (
+          // The "user" fetch in flight AND the boot-pending hold render the
+          // same skeleton — neither content nor the login hint until the
+          // session verdict settles (07k §5.1 p.3).
           <div role="status" aria-label={t("pairing.devices.loading")}>
             <TableRowSkeleton rows={3} columns={3} />
           </div>
-        ) : (
-          <LoginHint />
         )
       ) : devices.isError ? (
         <EmptyState
@@ -92,7 +103,7 @@ export function DevicesPage() {
             </Button>
           }
         />
-      ) : !uiToken.tokenPresent ? (
+      ) : sessionStatus !== "user" ? (
         <LoginHint />
       ) : items.length === 0 ? (
         <EmptyState
