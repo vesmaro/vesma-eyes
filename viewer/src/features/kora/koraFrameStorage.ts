@@ -24,7 +24,18 @@
  * gone with the last reader. A stale value under the dead key is IGNORED
  * by the safe getters (nothing reads it) — the storage version is NOT
  * bumped: the 07l §5.2 contract covers BREAKING schema changes, not
- * ignored leftovers.
+ * ignored leftovers. (Kora IDE contract В1, 2026-10-29: the left zone is
+ * BACK as the permanent sessions DOCK — it reads the NEW `vesmaro.koraDockW`
+ * key, never the dead `koraLeftW`; the dead key keeps rotting untouched.)
+ *
+ * KORA-IDE В1 (kora-ide contract §2.5): the dock hardware adds three keys —
+ * `vesmaro.koraDockW` (the dock width, 220..380 px, def 300 — the DEAD
+ * `vesmaro.koraLeftW` is ignored by the safe getter, the storage version is
+ * NOT bumped: the KW4 §5 precedent), `vesmaro.koraDockView` (the dock view
+ * switcher) and `vesmaro.koraDockGroups` (the dock group open-set; the
+ * KW4 host-field key `vesmaro.koraGroups` stays the FIELD's own — the two
+ * surfaces keep separate open-sets). The dock writes return the honest
+ * «persisted?» boolean the K-PERSIST-FAIL bit reads.
  *
  * Guards (07l §5.2 «безопасные геттеры»): every read/write is try/catch —
  * private mode, disabled storage and SSR all degrade to the in-memory
@@ -102,6 +113,103 @@ export const readKoraSideW = (): number =>
   readFrameInt(RIGHT_W_KEY, KORA_SIDE_DEFAULT, KORA_SIDE_MIN, KORA_SIDE_MAX);
 export const writeKoraSideW = (w: number): void =>
   writeFrameValue(RIGHT_W_KEY, String(w));
+
+// --- the dock hardware (Kora IDE В1; vesmaro.koraDock*) -------------------------
+
+/** v-range of the dock seam (kora-ide contract §2.1: 220–380, default 300).
+ * The DEAD KW4 key `vesmaro.koraLeftW` is deliberately NOT read — a stale
+ * value there stays a rotting leftover (no version bump, KW4 §5 precedent). */
+export const KORA_DOCK_MIN = 220;
+export const KORA_DOCK_MAX = 380;
+export const KORA_DOCK_DEFAULT = 300;
+
+const DOCK_W_KEY = "vesmaro.koraDockW";
+/** The dock view switcher («По работе» / «По хосту» / «Таймлайн»). */
+const DOCK_VIEW_KEY = "vesmaro.koraDockView";
+/** The dock group open-set (cwd / source / host keys — ONE set for all
+ * views; host-view keys carry a `host:`/`harness:` prefix so they can never
+ * collide with the cwd-path keys of the «По работе» view). */
+const DOCK_GROUPS_KEY = "vesmaro.koraDockGroups";
+
+export const readKoraDockW = (): number =>
+  readFrameInt(DOCK_W_KEY, KORA_DOCK_DEFAULT, KORA_DOCK_MIN, KORA_DOCK_MAX);
+/** true = persisted; false = storage refused (the honest K-PERSIST-FAIL bit). */
+export const writeKoraDockW = (w: number): boolean => {
+  const storage = safeLocalStorage();
+  if (storage === undefined) return false;
+  try {
+    storage.setItem(DOCK_W_KEY, String(w));
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/** The three dock views (kora-ide contract §3.1); «По работе» is the
+ * KW4-inherited default (verdict Q6 §7: преемственность группировок). */
+export type KoraDockView = "work" | "host" | "timeline";
+
+const DOCK_VIEWS: readonly KoraDockView[] = ["work", "host", "timeline"];
+
+/** Read the persisted view; null = absent or garbage (the caller renders
+ * the default). Any non-member string resets, never throws. */
+export function readKoraDockView(): KoraDockView | null {
+  const storage = safeLocalStorage();
+  if (storage === undefined) return null;
+  try {
+    const raw = storage.getItem(DOCK_VIEW_KEY);
+    return DOCK_VIEWS.find((view) => view === raw) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeKoraDockView(view: KoraDockView): boolean {
+  const storage = safeLocalStorage();
+  if (storage === undefined) return false;
+  try {
+    storage.setItem(DOCK_VIEW_KEY, view);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Read the dock group open-set; null when absent or garbage. Same payload
+ * discipline as `readKoraGroups`: a JSON array of strings, anything else
+ * resets, never throws.
+ */
+export function readKoraDockGroups(): readonly string[] | null {
+  const storage = safeLocalStorage();
+  if (storage === undefined) return null;
+  try {
+    const raw = storage.getItem(DOCK_GROUPS_KEY);
+    if (raw === null) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      Array.isArray(parsed) &&
+      parsed.every((key) => typeof key === "string")
+    ) {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Persist the open-set; true = persisted (K-PERSIST-FAIL reads the lie). */
+export function writeKoraDockGroups(keys: readonly string[]): boolean {
+  const storage = safeLocalStorage();
+  if (storage === undefined) return false;
+  try {
+    storage.setItem(DOCK_GROUPS_KEY, JSON.stringify([...keys]));
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 // --- the host-field group open-set (KW4; vesmaro.koraGroups) -------------------
 

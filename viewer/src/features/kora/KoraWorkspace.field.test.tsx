@@ -156,23 +156,27 @@ afterEach(async () => {
 describe("KoraWorkspace host field (gate §9.8, states-kw4 §4)", () => {
   it("§9.8: on /kora/host/:host the center is the FIELD — no composer, no chat anywhere", () => {
     const { container } = mountWorkspaceAt("/kora/host/abyss-laptop");
-    // The field region is on stage with its honest headline.
-    expect(
-      [...container.querySelectorAll("section")].some(
-        (el) => el.getAttribute("aria-label") === "Поле хоста",
-      ),
-    ).toBe(true);
-    expect(container.querySelector("h2")?.textContent).toBe("abyss-laptop");
+    // The field region is on stage with its honest headline (scoped to the
+    // field — the В1 dock owns the page's FIRST h2 «Сессии»).
+    const field = [...container.querySelectorAll("section")].find(
+      (el) => el.getAttribute("aria-label") === "Поле хоста",
+    );
+    expect(field).not.toBeUndefined();
+    expect(field?.querySelector("h2")?.textContent).toBe("abyss-laptop");
     // THE GUARD: a journal — no write surface, no chat furniture (the
     // composer's sr-only label, the reading tools, the moves zone's chat).
     expect(container.querySelector("textarea")).toBeNull();
     expect(container.textContent).not.toContain("Написать агенту");
     expect(container.textContent).not.toContain("Следить за хвостом");
-    expect(container.querySelectorAll("[role='textbox']")).toHaveLength(0);
-    // …and the session rows deep-link the frozen /kora/:sessionId.
+    // The В1 frame's ONLY text inputs are the two read-only FILTERS (the
+    // dock's session search + the tree's host search) — the field itself
+    // carries none.
+    expect(container.querySelectorAll("input[type='search']")).toHaveLength(2);
+    // …and the session rows deep-link the frozen /kora/:sessionId — from
+    // BOTH the dock rows and the field groups.
     expect(
-      container.querySelector('a[href="/kora/exec-zcode-main%3Asess_7f3a91"]'),
-    ).not.toBeNull();
+      container.querySelectorAll('a[href="/kora/exec-zcode-main%3Asess_7f3a91"]').length,
+    ).toBeGreaterThanOrEqual(1);
   });
 
   it("states-kw4 §4: the session breadcrumb reads «← <хост> · поле» and links the field route", () => {

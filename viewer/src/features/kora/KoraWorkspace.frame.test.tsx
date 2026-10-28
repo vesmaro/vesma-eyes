@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MemoryRouter } from "react-router";
@@ -9,6 +9,7 @@ import { KoraWorkspace } from "./KoraWorkspace";
 import { KoraMockAdapter } from "./KoraMockAdapter";
 import { KoraGatewayContext } from "./koraGatewayContext";
 import { KORA_FRAME_QUERY } from "./koraViewport";
+import { koraGroupListId } from "./koraWorkspaceModel";
 import { koraKeys } from "./useKora";
 import { KORA_FIXTURE_COVERAGE, KORA_FIXTURE_SESSIONS } from "./koraFixtures";
 import type { ExecutorsPage, TaskInbox } from "@/gateway/boardTypes";
@@ -20,20 +21,23 @@ import { I18nProvider } from "@/i18n";
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 /**
- * The frame at the WORKSPACE level in its KW4 «ПОЛЕ + ПРАВАЯ ПАНЕЛЬ» cut
- * (blueprint-kw4 §2/§3): the ONE remaining seam persists through the
- * workspace's OWN callback (vesmaro.koraRightW → --kora-right-w), the LEFT
- * zone is GONE (no nav seam, no --kora-left-w — gate §9.1), dblclick resets
- * to the documented default, the header badge is the REAL UI-30 inbox
- * counter (hidden while unknown — the ex-Пульт honesty). The handle
- * mechanics themselves are KoraResizeHandle's tests; the Пульт height
- * hardware lives on in useKoraBandHeight.test.tsx (KW2's «Все ходы» zone).
+ * The frame at the WORKSPACE level in its Kora IDE В1 THREE-zone cut
+ * (kora-ide contract §2): the LEFT dock «Сессии» — permanent, immoveable
+ * (K-INV-1: a session/host/harness selection never changes the dock's
+ * composition, width, scroll or focus — the explicit fix of the owner's
+ * «панель улетает вниз при выборе» defect), its seam persists through the
+ * workspace's OWN callback (vesmaro.koraDockW → --kora-dock-w, 220–380,
+ * def 300 — the dead vesmaro.koraLeftW stays unread), and the pin «Чат с
+ * кластером» lives in the dock now. The RIGHT panel keeps its KW4 seam
+ * (vesmaro.koraRightW → --kora-right-w, 240–420, def 320). TWO seams on
+ * stage. The handle mechanics themselves are KoraResizeHandle's tests; the
+ * Пульт height hardware lives on in useKoraBandHeight.test.tsx.
  */
 
 const PAGE_SIZE = 50;
 
-/** Pin the viewport hook (KW4 ladder) to the FRAME regime: these tests own
- * the ≥lg two-zone geometry, and happy-dom answers every width query
+/** Pin the viewport hook (the ladder) to the FRAME regime: these tests own
+ * the ≥lg three-zone geometry, and happy-dom answers every width query
  * false — the explicit stub states the regime instead of inheriting the
  * environment's null answer. */
 function stubWideFrame(): void {
@@ -73,9 +77,17 @@ function executorsPage(): ExecutorsPage["items"] {
   ];
 }
 
-function mountWorkspace(options: { inboxCount?: number } = {}): {
+interface MountOptions {
+  inboxCount?: number;
+  sessionId?: string | null;
+  host?: string | null;
+  cluster?: boolean;
+}
+
+function mountWorkspace(options: MountOptions = {}): {
   container: HTMLElement;
   root: Root;
+  rerender: (next: MountOptions) => void;
 } {
   stubWideFrame();
   const queryClient = new QueryClient({
@@ -112,39 +124,51 @@ function mountWorkspace(options: { inboxCount?: number } = {}): {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
-  act(() => {
+  const render = (next: MountOptions): void => {
     root.render(
       <GatewayContext.Provider value={new MockAdapter({ latency: false })}>
         <KoraGatewayContext.Provider value={new KoraMockAdapter({ latency: false })}>
           <QueryClientProvider client={queryClient}>
             <I18nProvider initialLang="ru">
               <MemoryRouter initialEntries={["/kora"]}>
-                <KoraWorkspace />
+                <KoraWorkspace
+                  sessionId={next.sessionId ?? null}
+                  host={next.host ?? null}
+                  cluster={next.cluster ?? false}
+                />
               </MemoryRouter>
             </I18nProvider>
           </QueryClientProvider>
         </KoraGatewayContext.Provider>
       </GatewayContext.Provider>,
     );
+  };
+  act(() => {
+    render(options);
   });
-  return { container, root };
+  return {
+    container,
+    root,
+    rerender: (next: MountOptions) => {
+      act(() => {
+        render(next);
+      });
+    },
+  };
 }
 
-const sideSeam = (container: HTMLElement): HTMLElement => {
+const seamByLabel = (container: HTMLElement, label: string): HTMLElement => {
   const found = [...container.querySelectorAll<HTMLElement>('[role="separator"]')].find(
-    (el) => el.getAttribute("aria-label") === "Ширина мета-панели",
+    (el) => el.getAttribute("aria-label") === label,
   );
-  if (found === undefined) throw new Error("side seam not rendered");
+  if (found === undefined) throw new Error(`seam not rendered: ${label}`);
   return found;
 };
 
-const navSeam = (container: HTMLElement): HTMLElement => {
-  const found = [...container.querySelectorAll<HTMLElement>('[role="separator"]')].find(
-    (el) => el.getAttribute("aria-label") === "Ширина панели навигации",
-  );
-  if (found === undefined) throw new Error("nav seam not rendered");
-  return found;
-};
+const sideSeam = (container: HTMLElement): HTMLElement =>
+  seamByLabel(container, "Ширина мета-панели");
+const dockSeam = (container: HTMLElement): HTMLElement =>
+  seamByLabel(container, "Ширина панели сессий");
 
 const labelled = (container: HTMLElement, label: string): HTMLElement[] =>
   [...container.querySelectorAll<HTMLElement>("[aria-label]")].filter(
@@ -178,16 +202,33 @@ async function keyOn(
   });
 }
 
+const dockHrefs = (container: HTMLElement): string[] => {
+  const dock = labelled(container, "Сессии")[0];
+  if (dock === undefined) throw new Error("dock not rendered");
+  return [...dock.querySelectorAll("a")].map((el) => el.getAttribute("href") ?? "");
+};
+
 afterEach(async () => {
   document.body.innerHTML = "";
+  vi.unstubAllGlobals();
   localStorage.clear();
 });
 
-describe("KoraWorkspace frame (U5, 07l §3; KW1 — three columns)", () => {
-  it("the side seam is an honest separator bound to the grid variable", () => {
+describe("KoraWorkspace frame (07l §3; Kora IDE В1 — three zones)", () => {
+  it("the dock seam is an honest separator bound to the grid variable (vesmaro.koraDockW)", () => {
+    const { container } = mountWorkspace();
+    const seam = dockSeam(container);
+    expect(seam.getAttribute("aria-orientation")).toBe("vertical");
+    expect(seam.getAttribute("aria-valuemin")).toBe("220");
+    expect(seam.getAttribute("aria-valuemax")).toBe("380");
+    expect(seam.getAttribute("aria-valuenow")).toBe("300");
+    const grid = container.querySelector<HTMLElement>('[style*="--kora-dock-w"]');
+    expect(grid?.getAttribute("style")).toContain("--kora-dock-w: 300px");
+  });
+
+  it("the side seam keeps its KW4 contract (240–420, def 320, vesmaro.koraRightW)", () => {
     const { container } = mountWorkspace();
     const seam = sideSeam(container);
-    expect(seam.getAttribute("aria-orientation")).toBe("vertical");
     expect(seam.getAttribute("aria-valuemin")).toBe("240");
     expect(seam.getAttribute("aria-valuemax")).toBe("420");
     expect(seam.getAttribute("aria-valuenow")).toBe("320");
@@ -195,89 +236,302 @@ describe("KoraWorkspace frame (U5, 07l §3; KW1 — three columns)", () => {
     expect(grid?.getAttribute("style")).toContain("--kora-right-w: 320px");
   });
 
-  it("KW4 §9.1: the left zone is GONE — no nav seam, no --kora-left-w, one seam total", () => {
+  it("THREE zones: dock + center + panel, TWO seams, the dead left key stays dead", () => {
     const { container } = mountWorkspace();
-    // The retired left seam renders nowhere (gate §9.1: «левой зоны и
-    // koraLeftW в DOM нет»).
-    expect(() => navSeam(container)).toThrow("nav seam not rendered");
-    expect(container.querySelector<HTMLElement>('[style*="--kora-left-w"]')).toBeNull();
+    // The dead KW4 key/var is never read nor rendered (gate: koraLeftW ignored).
     expect(container.innerHTML).not.toContain("--kora-left-w");
-    // The frame carries exactly ONE separator — the right panel's.
-    expect(container.querySelectorAll('[role="separator"]')).toHaveLength(1);
-    // …and the panel landmark is the KW4 «Дерево и мета» one.
+    expect(container.innerHTML).not.toContain("koraLeftW");
+    // Exactly TWO separators — the dock's and the panel's.
+    expect(container.querySelectorAll('[role="separator"]')).toHaveLength(2);
+    // The three-column cut: dock var | center 1fr | right var.
+    const grid = container.querySelector<HTMLElement>('[style*="--kora-dock-w"]');
+    expect(grid?.className).toContain(
+      "lg:grid-cols-[var(--kora-dock-w)_minmax(0,1fr)_var(--kora-right-w)]",
+    );
+    // The landmarks: the dock «Сессии» and the panel «Дерево и мета», one each.
+    expect(labelled(container, "Сессии")).toHaveLength(1);
     expect(labelled(container, "Дерево и мета")).toHaveLength(1);
+    // The v2 tree still rides INSIDE the panel (not a standalone column).
+    expect(labelled(container, "Дерево и мета")[0].contains(treeHeading(container))).toBe(
+      true,
+    );
   });
 
-  it("a keyboard series persists the width on keyup (vesmaro.koraRightW)", async () => {
+  it("the pin «Чат с кластером» lives in the DOCK now (route /kora/hermes untouched)", () => {
     const { container } = mountWorkspace();
-    const seam = sideSeam(container);
-    await keyOn(seam, "focusin");
-    await keyOn(seam, "keydown", "ArrowLeft");
-    await keyOn(seam, "keyup", "ArrowLeft");
-    expect(localStorage.getItem("vesmaro.koraRightW")).toBe("336");
-    expect(seam.getAttribute("aria-valuenow")).toBe("336");
-  });
-
-  it("KW4 §9.1: the two-zone grid — the tree rides INSIDE the panel, the center is the field's sibling", () => {
-    const { container } = mountWorkspace();
+    const dock = labelled(container, "Сессии")[0];
     const panel = labelled(container, "Дерево и мета")[0];
-    expect(panel.tagName).toBe("ASIDE");
-    // The v2 tree lives in the panel (the pin first, then the search, the
-    // hosts) — no standalone navigation column exists anymore.
-    expect(panel.contains(treeHeading(container))).toBe(true);
-    // The grid variable is the ONLY seam variable on the stage.
-    const grid = container.querySelector<HTMLElement>('[style*="--kora-right-w"]');
-    expect(grid?.getAttribute("style")).toContain("--kora-right-w: 320px");
+    const pin = dock.querySelector<HTMLAnchorElement>('a[href="/kora/hermes"]');
+    expect(pin).not.toBeNull();
+    expect(pin?.textContent).toContain("Чат с кластером");
+    // The panel is pin-free — the tree leads with the search.
+    expect(panel.querySelector('a[href="/kora/hermes"]')).toBeNull();
   });
 
-  it("dblclick resets to the default AND persists the reset", async () => {
-    localStorage.setItem("vesmaro.koraRightW", "400");
+  it("a keyboard series persists the dock width on keyup (vesmaro.koraDockW)", async () => {
     const { container } = mountWorkspace();
-    const seam = sideSeam(container);
-    expect(seam.getAttribute("aria-valuenow")).toBe("400");
+    const seam = dockSeam(container);
+    await keyOn(seam, "focusin");
+    // The dock's edge is its RIGHT one (dragSign −1): ArrowRight widens.
+    await keyOn(seam, "keydown", "ArrowRight");
+    await keyOn(seam, "keyup", "ArrowRight");
+    expect(localStorage.getItem("vesmaro.koraDockW")).toBe("316");
+    expect(seam.getAttribute("aria-valuenow")).toBe("316");
+  });
+
+  it("dblclick resets the dock to the default AND persists the reset", async () => {
+    localStorage.setItem("vesmaro.koraDockW", "360");
+    const { container } = mountWorkspace();
+    const seam = dockSeam(container);
+    expect(seam.getAttribute("aria-valuenow")).toBe("360");
     await keyOn(seam, "dblclick");
-    expect(localStorage.getItem("vesmaro.koraRightW")).toBe("320");
-    expect(seam.getAttribute("aria-valuenow")).toBe("320");
+    expect(localStorage.getItem("vesmaro.koraDockW")).toBe("300");
+    expect(seam.getAttribute("aria-valuenow")).toBe("300");
   });
 
-  it("the Пульт is ABSENT from the structure (KW1 роспуск): no strip, no tabs", () => {
-    const { container } = mountWorkspace();
-    const html = container.innerHTML;
-    expect(html).not.toContain("Пульт");
-    expect(html).not.toContain("Развернуть");
-    expect(container.querySelectorAll('[role="tab"]')).toHaveLength(0);
-    // The Эфир lives in the meta panel now — the ring's ONE mount, and the
-    // silent bus keeps its honest empty line.
-    expect(container.textContent).toContain(
-      "Событий пока нет — лента собирает то, что происходит в сессиях, пока вы на странице",
+  it("K-INV-1 «док неподвижен»: selecting a session changes nothing in the dock", () => {
+    const first = mountWorkspace();
+    const dock = labelled(first.container, "Сессии")[0];
+    const seam = dockSeam(first.container);
+    const before = {
+      hrefs: dockHrefs(first.container),
+      seamNow: seam.getAttribute("aria-valuenow"),
+      style: first.container
+        .querySelector<HTMLElement>('[style*="--kora-dock-w"]')
+        ?.getAttribute("style"),
+      scroll: (() => {
+        dock.scrollTop = 25;
+        return dock.scrollTop;
+      })(),
+    };
+    expect(before.hrefs.length).toBeGreaterThan(0);
+
+    // THE selection: the center turns into the frozen session mode.
+    first.rerender({ sessionId: "exec-zcode-main:sess_7f3a91" });
+
+    const dockAfter = labelled(first.container, "Сессии")[0];
+    expect(dockAfter).toBe(dock); // the SAME node — no remount, no re-seed
+    expect(dockHrefs(first.container)).toEqual(before.hrefs);
+    expect(dockSeam(first.container).getAttribute("aria-valuenow")).toBe(
+      before.seamNow,
     );
-    expect(container.textContent).toContain("Эфир");
-  });
-
-  it("the header badge is the REAL inbox counter: shown with data, muted at 0", () => {
-    const { container } = mountWorkspace({ inboxCount: 2 });
-    const badge = container.querySelector<HTMLAnchorElement>('a[href="/tasks/inbox"]');
-    expect(badge).not.toBeNull();
-    expect(badge?.textContent).toContain("Входящие: 2");
-    expect(badge?.className).not.toContain("text-foreground-muted");
-
-    const zero = mountWorkspace({ inboxCount: 0 });
-    const zeroBadge = zero.container.querySelector<HTMLAnchorElement>(
-      'a[href="/tasks/inbox"]',
+    expect(
+      first.container
+        .querySelector<HTMLElement>('[style*="--kora-dock-w"]')
+        ?.getAttribute("style"),
+    ).toBe(before.style);
+    expect(dockAfter.scrollTop).toBe(before.scroll); // scroll untouched
+    // The selection reads on the row (aria-current) — and nowhere moves.
+    const current = dockAfter.querySelector<HTMLAnchorElement>('[aria-current="page"]');
+    expect(current?.getAttribute("href")).toBe(
+      `/kora/${encodeURIComponent("exec-zcode-main:sess_7f3a91")}`,
     );
-    expect(zeroBadge?.textContent).toContain("Входящие: 0");
-    expect(zeroBadge?.className).toContain("text-foreground-muted"); // 0 — muted
   });
 
-  it("hides the badge while the inbox source is unknown (no fake 0)", () => {
-    const { container } = mountWorkspace(); // no inbox prefill ⇒ the query stays pending
-    expect(container.querySelector('a[href="/tasks/inbox"]')).toBeNull();
+  it("K-INV-1: a host selection and the cluster route leave the dock byte-still; focus never jumps", () => {
+    const first = mountWorkspace();
+    const dock = labelled(first.container, "Сессии")[0];
+    const input = dock.querySelector<HTMLInputElement>("input[type='search']");
+    act(() => {
+      input?.focus();
+    });
+    expect(document.activeElement).toBe(input);
+    const beforeHrefs = dockHrefs(first.container);
+    const beforeSeam = dockSeam(first.container).getAttribute("aria-valuenow");
+
+    // Host context: the center turns into the field, the dock holds still.
+    first.rerender({ host: "abyss-laptop" });
+    expect(labelled(first.container, "Сессии")[0]).toBe(dock);
+    expect(dockHrefs(first.container)).toEqual(beforeHrefs);
+    expect(dockSeam(first.container).getAttribute("aria-valuenow")).toBe(beforeSeam);
+
+    // Cluster route: same stillness.
+    first.rerender({ cluster: true });
+    expect(labelled(first.container, "Сессии")[0]).toBe(dock);
+    expect(dockHrefs(first.container)).toEqual(beforeHrefs);
+    // The focus STAYED on the dock's search input through all selections —
+    // no reflow, no focus theft (the anti-pattern the dock exists to kill).
+    expect(document.activeElement).toBe(input);
   });
 
-  it("the Эфир empty state is honest on the scene (a silent bus = zero rows)", () => {
+  it("K-DOCK-PENDING: the dock waits with skeletons — no invented rows", () => {
+    // NO cache prefill: the session registry stays pending.
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(keys.agents.executors.list(), {
+      ok: true,
+      count: 0,
+      items: [],
+      meta: {
+        presence: { online_max_age_s: 120, stale_max_age_s: 600 },
+        sweeper_interval_s: 60,
+      },
+    });
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    act(() => {
+      root.render(
+        <GatewayContext.Provider value={new MockAdapter({ latency: false })}>
+          <KoraGatewayContext.Provider value={new KoraMockAdapter({ latency: false })}>
+            <QueryClientProvider client={queryClient}>
+              <I18nProvider initialLang="ru">
+                <MemoryRouter initialEntries={["/kora"]}>
+                  <KoraWorkspace />
+                </MemoryRouter>
+              </I18nProvider>
+            </QueryClientProvider>
+          </KoraGatewayContext.Provider>
+        </GatewayContext.Provider>,
+      );
+    });
+    const dock = labelled(container, "Сессии")[0];
+    const loading = dock.querySelector("[role='status'][aria-label]");
+    expect(loading?.getAttribute("aria-label")).toBe("Загружаем сессии");
+    expect(dock.querySelectorAll("a")).toHaveLength(1); // the pin ONLY
+  });
+
+  it("K-GRP-MORE in the dock: «Показать ещё» rides the existing limit/offset cursor", () => {
+    // A FULL page (count === pageSize) means more may exist (P4-7 honesty).
+    const full = Array.from(
+      { length: PAGE_SIZE },
+      (_, i) => KORA_FIXTURE_SESSIONS[i % KORA_FIXTURE_SESSIONS.length]!,
+    );
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(koraKeys.sessionsPaged(PAGE_SIZE), {
+      pages: [
+        {
+          ok: true as const,
+          count: PAGE_SIZE,
+          items: full,
+          coverage: KORA_FIXTURE_COVERAGE,
+          meta: { generated_at: "2026-09-24T11:45:00Z" },
+        },
+      ],
+      pageParams: [0],
+    });
+    queryClient.setQueryData(keys.agents.executors.list(), {
+      ok: true,
+      count: 3,
+      items: executorsPage(),
+      meta: {
+        presence: { online_max_age_s: 120, stale_max_age_s: 600 },
+        sweeper_interval_s: 60,
+      },
+    });
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    act(() => {
+      root.render(
+        <GatewayContext.Provider value={new MockAdapter({ latency: false })}>
+          <KoraGatewayContext.Provider value={new KoraMockAdapter({ latency: false })}>
+            <QueryClientProvider client={queryClient}>
+              <I18nProvider initialLang="ru">
+                <MemoryRouter initialEntries={["/kora"]}>
+                  <KoraWorkspace />
+                </MemoryRouter>
+              </I18nProvider>
+            </QueryClientProvider>
+          </KoraGatewayContext.Provider>
+        </GatewayContext.Provider>,
+      );
+    });
+    const dock = labelled(container, "Сессии")[0];
+    expect(dock.textContent).toContain("Показать ещё");
+  });
+
+  it("the dock rows deep-link the frozen /kora/:sessionId (K-INV-2)", () => {
     const { container } = mountWorkspace();
+    const hrefs = dockHrefs(container);
+    expect(hrefs).toContain("/kora/hermes"); // the pin
+    expect(hrefs).toContain(`/kora/${encodeURIComponent("exec-zcode-main:sess_7f3a91")}`);
+    expect(hrefs.some((href) => href.startsWith("/kora/host/"))).toBe(false);
+  });
+
+  it("K-DOCK-SEARCH-0: the dock search is honest about zero matches", () => {
+    const { container } = mountWorkspace();
+    const dock = labelled(container, "Сессии")[0];
+    const input = dock.querySelector<HTMLInputElement>("input[type='search']");
+    const setter = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      "value",
+    )?.set;
+    act(() => {
+      setter?.call(input, "такого-нет-нигде");
+      input?.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    expect(dock.textContent).toContain("Ничего не найдено");
+    const status = dock.querySelector("p[role='status']");
+    expect(status?.textContent).toContain("найдено: 0");
+    // No session rows anywhere in the dock while the query holds.
+    expect(dock.querySelectorAll('a[href^="/kora/exec-"], a[aria-current]')).toHaveLength(
+      0,
+    );
+  });
+
+  it("the dock view switcher persists its choice (vesmaro.koraDockView) and regroups", () => {
+    const { container } = mountWorkspace();
+    const dock = labelled(container, "Сессии")[0];
+    const hostViewButton = [...dock.querySelectorAll("button")].find(
+      (el) => el.textContent === "По хосту",
+    );
+    expect(hostViewButton?.getAttribute("aria-pressed")).toBe("false");
+    act(() => {
+      hostViewButton?.click();
+    });
+    expect(localStorage.getItem("vesmaro.koraDockView")).toBe("host");
+    expect(hostViewButton?.getAttribute("aria-pressed")).toBe("true");
+    // The host view: host → harness disclosure groups carry the sessions.
+    expect(dock.textContent).toContain("abyss-laptop");
+    expect(dock.textContent).toContain("pi-edge");
+  });
+
+  it("the dock group toggle persists the open-set (vesmaro.koraDockGroups)", () => {
+    const { container } = mountWorkspace();
+    const dock = labelled(container, "Сессии")[0];
+    const toggle = dock.querySelector<HTMLButtonElement>("button[aria-expanded]");
+    expect(toggle).not.toBeNull();
+    const wasOpen = toggle?.getAttribute("aria-expanded") === "true";
+    const controls = toggle?.getAttribute("aria-controls");
+    act(() => {
+      toggle?.click();
+    });
+    const stored = JSON.parse(localStorage.getItem("vesmaro.koraDockGroups") ?? "[]");
+    expect(Array.isArray(stored)).toBe(true);
+    // The stored keys are the RAW group keys; the DOM id is their digest
+    // form (koraGroupListId) — the flip mirrors into storage exactly.
+    expect(stored.every((key: unknown) => typeof key === "string")).toBe(true);
+    expect(
+      stored.some((key: string) => koraGroupListId(key) === controls),
+    ).toBe(!wasOpen);
+    expect(toggle?.getAttribute("aria-expanded")).toBe(String(!wasOpen));
+  });
+
+  it("K-PERSIST-FAIL: a refused write names itself — nothing pretends to persist", () => {
+    // The storage keeps reads but refuses every write (private-mode quota).
+    vi.stubGlobal("localStorage", {
+      getItem: () => null,
+      setItem: () => {
+        throw new Error("quota");
+      },
+      removeItem: () => undefined,
+      clear: () => undefined,
+    });
+    const { container } = mountWorkspace();
+    expect(container.textContent).not.toContain("Не сохранилось");
+    const dock = labelled(container, "Сессии")[0];
+    // A dock view write fails → the honest bit appears.
+    act(() => {
+      [...dock.querySelectorAll("button")]
+        .find((el) => el.textContent === "По хосту")
+        ?.click();
+    });
     expect(container.textContent).toContain(
-      "Событий пока нет — лента собирает то, что происходит в сессиях, пока вы на странице",
+      "Не сохранилось — хранилище браузера недоступно",
     );
   });
 });

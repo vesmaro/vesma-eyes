@@ -20,20 +20,22 @@ import { I18nProvider } from "@/i18n";
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 /**
- * The responsive ladder (blueprint-kw4 §6, states-kw4 §5), workspace-level:
- * KW4 collapsed the ladder to TWO regimes and the tree's PLACEMENT is a
- * render fact between them —
+ * The responsive ladder (blueprint-kw4 §6, states-kw4 §5; Kora IDE В1 cut),
+ * workspace-level: the dock's PLACEMENT is a render fact between the two
+ * regimes —
  *
  * - ≥lg (1024+, covering both ≥xl and lg..xl — the frame survives the
- *   narrow half, the panel just rides at its minimum width): the TWO-zone
- *   100vh frame — the field | the «Дерево и мета» panel; the tree lives
- *   INSIDE the panel (ONE scroll); ONE seam.
- * - <lg: the document flow — tree card → center card → meta card; the
- *   seam retires (CSS-hidden, the DOM keeps the node).
+ *   narrow half, the dock/panel just ride at their minimum widths): the
+ *   THREE-zone 100vh frame — the dock | the center | the «Дерево и мета»
+ *   panel; the tree lives INSIDE the panel (ONE scroll); TWO seams.
+ * - <lg: the document flow — dock card → center card → tree card → meta
+ *   card (kora-ide contract §2.5: док → центр → панель); the seams retire
+ *   (CSS-hidden, the DOM keeps the nodes).
  *
  * happy-dom answers every width query false, so each regime pins its
- * matchMedia answers explicitly; exactly ONE KoraTreePanel instance mounts
- * in all of them (the tree's aria-controls ids must never double — W2-1).
+ * matchMedia answers explicitly; exactly ONE KoraTreePanel and ONE dock
+ * instance mount in all of them (the aria-controls ids must never double —
+ * W2-1).
  */
 
 const PAGE_SIZE = 50;
@@ -136,27 +138,33 @@ afterEach(async () => {
   localStorage.clear();
 });
 
-describe("KoraWorkspace ladder (blueprint-kw4 §6, states-kw4 §5)", () => {
-  it("≥lg: the two-zone 100vh frame — the panel owns the right column, the tree rides INSIDE it", () => {
+describe("KoraWorkspace ladder (blueprint-kw4 §6, states-kw4 §5; Kora IDE В1)", () => {
+  it("≥lg: the three-zone 100vh frame — dock | center | panel, the tree rides INSIDE the panel", () => {
     const { container } = mountLadder("frame");
     // The frame is the 100vh section: no page scroll, every surface scrolls
     // inside itself (07l §1.2 through the KW4 cut).
     const stage = container.querySelector("section[aria-labelledby='kora-title']");
     expect(stage?.className).toContain("lg:h-[var(--kora-frame-h)]");
     expect(stage?.className).toContain("lg:overflow-hidden");
+    // The dock is the frame's FIRST column (a flush panel, its own scroll).
+    const dock = labelled(container, "Сессии");
+    expect(dock).toHaveLength(1);
+    expect(dock[0].tagName).toBe("ASIDE");
+    expect(dock[0].className).toContain("kora-scroll");
     // ONE panel landmark — the KW4 «Дерево и мета» aside; the tree is
-    // inside it (the rehoused left zone), NOT a standalone column.
+    // inside it, NOT a standalone column.
     const panels = labelled(container, "Дерево и мета");
     expect(panels).toHaveLength(1);
     expect(panels[0].tagName).toBe("ASIDE");
     expect(panels[0].contains(treeHeading(container))).toBe(true);
-    // The grid template carries the TWO-zone cut: center 1fr + the seam var.
-    const grid = container.querySelector<HTMLElement>('[style*="--kora-right-w"]');
+    // The grid template carries the THREE-zone cut: dock var | center 1fr |
+    // right var.
+    const grid = container.querySelector<HTMLElement>('[style*="--kora-dock-w"]');
     expect(grid?.className).toContain(
-      "lg:grid-cols-[minmax(0,1fr)_var(--kora-right-w)]",
+      "lg:grid-cols-[var(--kora-dock-w)_minmax(0,1fr)_var(--kora-right-w)]",
     );
-    // ONE seam on stage (the right panel's; the left one retired, §9.1).
-    expect(container.querySelectorAll('[role="separator"]')).toHaveLength(1);
+    // TWO seams on stage (the dock's and the panel's).
+    expect(container.querySelectorAll('[role="separator"]')).toHaveLength(2);
   });
 
   it("≥lg: the panel scrolls ONCE — the tree and the meta share the aside (lg..xl keeps the frame)", () => {
@@ -172,11 +180,17 @@ describe("KoraWorkspace ladder (blueprint-kw4 §6, states-kw4 §5)", () => {
     // Exactly ONE tree instance — a second panel would double the
     // aria-controls ids (W2-1).
     expect(treeTitleCount(container)).toBe(1);
+    // …and exactly ONE dock instance.
+    expect(labelled(container, "Сессии")).toHaveLength(1);
   });
 
-  it("<lg: the document flow — tree card, then the center, then the meta card", () => {
+  it("<lg: the document flow — dock card, then the center, then the tree card, then the meta card", () => {
     const { container } = mountLadder("flow");
-    // The tree is its own card SECTION in the flow; the meta is the aside.
+    // The dock is its own card SECTION first in the flow; the tree follows
+    // the center; the meta is the aside (kora-ide contract §2.5).
+    const dockCard = labelled(container, "Сессии");
+    expect(dockCard).toHaveLength(1);
+    expect(dockCard[0].tagName).toBe("SECTION");
     const treeCard = labelled(container, "Дерево и мета");
     expect(treeCard).toHaveLength(1);
     expect(treeCard[0].tagName).toBe("SECTION");
@@ -184,34 +198,42 @@ describe("KoraWorkspace ladder (blueprint-kw4 §6, states-kw4 §5)", () => {
     const meta = labelled(container, "Мета-панель");
     expect(meta).toHaveLength(1);
     expect(meta[0].tagName).toBe("ASIDE");
-    // DOM order: tree → center → meta (the flow reads top-down). The
-    // center at /kora is the invitation scene («Ход сессии»); a session
+    // DOM order: dock → center → tree → meta (the flow reads top-down).
+    // The center at /kora is the invitation scene («Ход сессии»); a session
     // mode adds the #kora-workzone id — the locator covers both.
     const center = container.querySelector(
       "#kora-workzone, section[aria-label='Ход сессии']",
     );
     expect(center).not.toBeNull();
     expect(
-      treeCard[0].compareDocumentPosition(center!) &
+      dockCard[0].compareDocumentPosition(center!) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(
-      center!.compareDocumentPosition(meta[0]) &
+      center!.compareDocumentPosition(treeCard[0]) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(
-      meta[0].compareDocumentPosition(treeCard[0]) &
+      treeCard[0].compareDocumentPosition(meta[0]) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      meta[0].compareDocumentPosition(dockCard[0]) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeFalsy();
-    // The seam handle is retired from the flow — CSS-hidden, the DOM keeps
-    // the node (happy-dom applies no styles, so the test pins the classes).
-    const seam = container.querySelector<HTMLElement>('[role="separator"]');
-    expect(seam?.className).toContain("hidden");
-    expect(seam?.className).toContain("lg:flex");
+    // The seam handles retire from the flow — CSS-hidden, the DOM keeps
+    // the nodes (happy-dom applies no styles, so the test pins the classes).
+    const seams = container.querySelectorAll<HTMLElement>('[role="separator"]');
+    expect(seams).toHaveLength(2);
+    for (const seam of seams) {
+      expect(seam.className).toContain("hidden");
+      expect(seam.className).toContain("lg:flex");
+    }
   });
 
-  it("<lg: exactly ONE tree instance mounts (no doubled tree ids)", () => {
+  it("<lg: exactly ONE tree instance and ONE dock instance mount (no doubled ids)", () => {
     const { container } = mountLadder("flow");
     expect(treeTitleCount(container)).toBe(1);
+    expect(labelled(container, "Сессии")).toHaveLength(1);
   });
 });

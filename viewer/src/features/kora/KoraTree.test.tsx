@@ -13,12 +13,13 @@ import { I18nProvider } from "@/i18n";
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 /**
- * The v2 tree block (blueprint-kw4 §3, gate §9.4, states-kw4 §3): the pin
- * FIRST and only it leads to /kora/hermes; depth 2 — NO session leaves (the
- * sessions live in the field); the search is client-side with the honest
- * zero-match (K-TREE-SEARCH); every disclosure carries aria-expanded/
- * aria-controls (07j §6.1); the unknown-host group stays a mono executor id
- * and does NOT route (K-TREE-UNKNOWN).
+ * The v2 tree block (blueprint-kw4 §3, gate §9.4, states-kw4 §3; Kora IDE
+ * В1 tail): the pin MOVED to the dock (kora-ide contract §2.1) — the tree
+ * routes hosts/agents ONLY; depth 2 — NO session leaves (the sessions live
+ * in the left dock); the search is client-side with the honest zero-match
+ * (K-TREE-SEARCH); every disclosure carries aria-expanded/aria-controls
+ * (07j §6.1); the unknown-host group stays a mono executor id and does NOT
+ * route (K-TREE-UNKNOWN).
  */
 
 function executor(id: string, harness: string, host: string): ExecutorItem {
@@ -110,7 +111,6 @@ function mountTree(
             treeReady={true}
             activeHost=""
             activeAgentId={null}
-            clusterActive={false}
             {...props}
           />
         </MemoryRouter>
@@ -137,21 +137,18 @@ afterEach(async () => {
 });
 
 describe("KoraTreePanel v2 (KW4, gate §9.4 / states-kw4 §3)", () => {
-  it("K-TREE-PIN: the FIRST row is «Чат с кластером» → /kora/hermes; current on the cluster route", () => {
+  it("Kora IDE В1: the pin is GONE from the tree — «Чат с кластером» lives in the dock now", () => {
     const { container } = mountTree();
-    const links = [...container.querySelectorAll("a")];
-    const pin = links[0];
-    expect(pin?.getAttribute("href")).toBe("/kora/hermes");
-    expect(pin?.textContent).toContain("Чат с кластером");
-    expect(pin?.getAttribute("aria-current")).toBeNull();
-
-    const onCluster = mountTree({ clusterActive: true });
-    const clusterPin = onCluster.container.querySelector("a");
-    expect(clusterPin?.getAttribute("href")).toBe("/kora/hermes");
-    expect(clusterPin?.getAttribute("aria-current")).toBe("page");
+    // The reserved /kora/hermes route is served by the dock's pin section
+    // (kora-ide contract §2.1); the tree carries NO hermes link at all.
+    const hrefs = [...container.querySelectorAll("a")].map((el) =>
+      el.getAttribute("href"),
+    );
+    expect(hrefs).not.toContain("/kora/hermes");
+    expect(container.textContent).not.toContain("Чат с кластером");
   });
 
-  it("depth 2: NO session leaves — the only non-host link is the pin", () => {
+  it("depth 2: NO session leaves — the tree routes hosts and agents only", () => {
     const { container } = mountTree();
     const hrefs = [...container.querySelectorAll("a")].map((el) =>
       el.getAttribute("href"),
@@ -246,11 +243,12 @@ describe("KoraTreePanel v2 (KW4, gate §9.4 / states-kw4 §3)", () => {
     // Quiet bg-elevated placeholders (skeleton.tsx), not fabricated rows.
     expect(loading?.querySelectorAll("div[aria-hidden='true'].bg-elevated").length).toBe(2);
     // The registry data rides along but renders NO host/agent rows until it
-    // is ready — the only anchor is the always-on cluster pin (K-TREE-PIN).
+    // is ready — and there is NO pin anymore (it moved to the dock): zero
+    // anchors until the tree is ready.
     const hrefs = [...container.querySelectorAll("a")].map((el) =>
       el.getAttribute("href"),
     );
-    expect(hrefs).toEqual(["/kora/hermes"]);
+    expect(hrefs).toEqual([]);
     expect(container.querySelector("button[aria-expanded]")).toBeNull();
   });
 });
