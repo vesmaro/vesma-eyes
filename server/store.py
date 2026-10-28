@@ -5851,6 +5851,28 @@ class Store:
                 (executor_id, native_id)).fetchone()
         return dict(row) if row else None
 
+    def kora_host_conflict(self, executor_id: str) -> list[dict[str, Any]]:
+        """Loud host-conflict resolution for the slice-3 SEND path (ADR
+        0019 security gate 6: ``UNIQUE executors.host`` is the registry
+        invariant, but the schema does not enforce it at write time —
+        the ADR designates the SEND path as the loud resolver, never
+        blocking visibility). Returns every OTHER approved executor
+        sharing this executor's host; a non-empty answer means the store
+        ownership of the triple is ambiguous and the send must answer
+        409 host_conflict. An empty host binds no store — never
+        conflicts."""
+        with self._lock, self._conn() as db:
+            row = db.execute(
+                "SELECT host FROM executors WHERE id=?",
+                (executor_id,)).fetchone()
+            if row is None or not row["host"]:
+                return []
+            others = db.execute(
+                "SELECT id, name, host FROM executors "
+                "WHERE host=? AND id<>? AND state='approved'",
+                (row["host"], executor_id)).fetchall()
+        return [dict(r) for r in others]
+
     def log_kora_audit(self, kind: str, payload: dict[str, Any]) -> None:
         """Kora audit events into the board's EXISTING audit trail (the
         events table — the same store.task_history/journal source): the

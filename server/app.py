@@ -46,6 +46,7 @@ from . import mnemos_client
 from . import hermes_client
 from . import models_proxy
 from .kora import redaction as kora_redaction
+from .kora import relay as kora_relay
 from .memory_registry import ServerRegistry, resolve_token, write_config_template
 from .profiles import build_profile
 from .security import (
@@ -1155,6 +1156,19 @@ _DEVICE_READ_ROUTES: tuple[tuple[str, str], ...] = (
     # 403; the handler guard stops every device BEFORE any content or an
     # outbound hermes call happens.
     ("GET", "/api/kora/hermes/sessions/*/messages"),
+    # Kora slice-3 steering (ADR 0019: ui-only by construction — «mnd_ =
+    # metadata-only», steering is forbidden for devices). These POSTs ride
+    # the read table ONLY so a VALID device reaches the handler's
+    # explanatory wall (403 KoraErrorOut code=metadata_only — the frozen
+    # contract's 403 body schema) instead of the bare middleware 403; the
+    # handler guard (_kora_steering_denied) stops every device FIRST,
+    # before any queue state, PIN verification or registry lookup runs.
+    # An INVALID mnd_ still answers 401 in the middleware; devices never
+    # enter the grant tables for steering and the mutation budget is not
+    # spent on the wall (a 403 noise flood burns nothing).
+    ("POST", "/api/kora/sessions"),
+    ("POST", "/api/kora/sessions/*/messages"),
+    ("POST", "/api/kora/steering/step-up"),
 )
 
 # The old control scope, decomposed into per-device granules (§A.7). Each
@@ -6132,6 +6146,424 @@ async def get_kora_session_transcript(
         next_after_seq=result.next_after_seq,
         has_more=result.has_more,
     )
+
+
+# ---------------------------------------------------- kora slice 3 (ADR 0019)
+# The «порулить» surface: relay steering (frozen contract POST /kora/sessions
+# + POST /kora/sessions/{id}/messages) and the step-up PIN ritual under
+# /api/kora/steering (rev.2 #4: TTL ≤ 15 min, OFF by default, reading never
+# requires step-up). State lives in server/kora/relay.py (in-memory queue +
+# grants; restart = clean slate — the safe direction).
+#
+# Access discipline: steering is ui-ONLY (ADR 0019 §4: the phone is the ui
+# class; «mnd_ = metadata-only» — steering is forbidden for devices, and the
+# machine token is not an owner either — ADR 0009 A1 split). The guard is
+# _kora_steering_denied: device state FIRST (the mnd_ bearer rides the
+# Authorization header), then the ui bearer/cookie legs WITH the
+# sliding-session reissue — the same admission as _guard_ui_write, wrapped
+# in the frozen KoraErrorOut envelope the contract mandates for Kora
+# surfaces. Every POST route also rides _DEVICE_READ_ROUTES so a VALID
+# device reaches THIS explanatory wall instead of the bare middleware 403
+# (the slice-2 transcript precedent).
+#
+# Honest delivery (NO-DRIFT, rev.2 #3/#4): the relay unit
+# (vesmaro-session-relay.service) is an executor-side line — until its
+# transport plugs into kora_relay.transport, accepted prompts answer
+# failed (retryable, «не доставлено — повторите»), and POST /api/kora/sessions
+# answers 501 (honest limitation outside the frozen response table — the
+# transcript 503 precedent; the board cannot spawn a harness on an executor
+# host, and a registry row for a never-spawned session would be a phantom).
+#
+# Logging hygiene (security gate 3): audits carry prompt sha256 + byte
+# length, NEVER the text; queue items are never served; transport failures
+# log the exception TYPE only. The PIN is never logged in ANY form —
+# deliberately stricter than the contract's «hash + length» analogy: a
+# human PIN is low-entropy, even a hash of attempts would be
+# brute-forceable.
+
+_KORA_STEER_RATE_LIMIT = 30           # steering actions per client ...
+_KORA_STEER_RATE_WINDOW = 60.0        # ... per sliding minute
+_kora_steer_limiter = RateLimiter(
+    limit=_KORA_STEER_RATE_LIMIT, window=_KORA_STEER_RATE_WINDOW)
+
+_KORA_STEPUP_RATE_LIMIT = 10          # PIN attempts per client ...
+_KORA_STEPUP_RATE_WINDOW = 60.0       # ... per sliding minute — the same
+                                      # number as the auth verify door
+                                      # (_AUTH_VERIFY_RATE_LIMIT); the
+                                      # exponential lockout stays postponed
+                                      # (ADR 0014 logic, the same threat
+                                      # model: a runaway client).
+_kora_stepup_limiter = RateLimiter(
+    limit=_KORA_STEPUP_RATE_LIMIT, window=_KORA_STEPUP_RATE_WINDOW)
+
+_MND_STEERING_WALL = (
+    "Руление сессиями (промпты, новые relay-сессии, step-up PIN) — "
+    "действие владельца. Устройству с mnd_-токеном доступен список сессий "
+    "и маскированные превью — метаданные; руление запрещено решением "
+    "комитета (ADR 0019 §4). Откройте Кору в браузере под owner-сессией.")
+
+
+def _kora_steering_denied(request: Request) -> JSONResponse | None:
+    """The ui-only STEERING guard (slice 3). Leg order mirrors
+    _kora_transcript_denied — device state FIRST (a device request carries
+    its mnd_ bearer in the Authorization header) — and the ui legs carry
+    the _guard_ui_write admission (sliding-session reissue included):
+    steering is a mutation family. Returns the DENIAL response (403 mnd_
+    wall / 401 KoraErrorOut) or None when the caller may proceed."""
+    if getattr(request.state, "device", None) is not None:
+        return _kora_error(403, "metadata_only", _MND_STEERING_WALL)
+    auth = request.headers.get("Authorization", "")
+    if auth:
+        ui_token = _token_classes().get("ui", "")
+        if (ui_token and hmac.compare_digest(
+                auth.encode("utf-8"), f"Bearer {ui_token}".encode("utf-8"))):
+            _schedule_ui_cookie_reissue(request)
+            return None
+        return _kora_error(
+            401, "unauthorized",
+            _token_mismatch_detail(auth, _token_classes(), ("ui",)))
+    if _cookie_ui_ok(request):
+        _schedule_ui_cookie_reissue(request)
+        return None
+    if _cookie_auth_session(request) is not None:
+        return None  # its own reissue is already scheduled in-state
+    return _kora_error(
+        401, "unauthorized",
+        "owner session required — Kora steering is ui-only (login at "
+        "/api/auth/ui-token, ADR 0014; mnd_ devices see metadata only)")
+
+
+def _kora_step_up_required() -> JSONResponse:
+    """The frozen 403 step_up_required body — the ritual front door:
+    steering (sends AND new relay sessions) requires an active grant."""
+    return _kora_error(
+        403, "step_up_required",
+        "Руление требует подтверждения step-up: включите руление PIN-ритуалом "
+        "(POST /api/kora/steering/step-up). Чтение — без step-up.")
+
+
+def _kora_session_steerable(row: dict[str, Any]) -> bool:
+    """Provenance-only continuation (ADR security gate 2): relay-origin
+    by construction OR adopted (the registry's steerable flag — set by
+    typed-confirm adoption / relay scans; hermes rows carry False). The
+    SEND path enforces this server-side: a non-steerable triple resolves
+    as absent (404 session_not_found, gate 1) — the same answer as an
+    unknown session, so probes learn nothing about existence."""
+    return bool(row["steerable"]) or row["origin"] == "relay"
+
+
+def _prompt_trace(text: str) -> dict[str, Any]:
+    """The ONLY prompt material audits may carry: sha256 + byte length
+    (ADR security gate 3 — «логи hash+длина»; the North-Star
+    falsifiability trail rides the same fields)."""
+    data = text.encode("utf-8")
+    return {"prompt_len": len(data),
+            "prompt_sha256": hashlib.sha256(data).hexdigest()}
+
+
+class KoraSessionCreate(BaseModel):
+    """The frozen KoraSessionCreate body (new relay session from the
+    phone). extra=forbid — BE-15: a typo'd field is an honest 422, and
+    no client key can smuggle a mode/yolo flag past the resolver."""
+    model_config = ConfigDict(extra="forbid")
+
+    executor_id: str = Field(min_length=1, max_length=120)
+    project: str = Field(min_length=1, max_length=300)
+    prompt: str = Field(min_length=1, max_length=32000)
+
+
+class KoraMessageCreate(BaseModel):
+    """The frozen KoraMessageCreate body (steering prompt). NOTE: no
+    client idempotency key — the ADR does not define one, and
+    additionalProperties:false forbids inventing it; each accepted POST
+    is exactly one queue entry, «повторите» means a deliberate new send."""
+    model_config = ConfigDict(extra="forbid")
+
+    text: str = Field(min_length=1, max_length=32000)
+
+
+class KoraStepUpIn(BaseModel):
+    """The frozen KoraStepUpIn body. The PIN is validated (4..64) and
+    verified against the scrypt verifier; it is never echoed, stored or
+    logged in any form."""
+    model_config = ConfigDict(extra="forbid")
+
+    pin: str = Field(min_length=4, max_length=64)
+
+
+class KoraDeliveryOut(_ApiModel):
+    """The frozen KoraDeliveryOut shape — the honest relay delivery
+    state (queued → delivered/failed; failed is retryable, «не
+    доставлено — повторите»)."""
+    status: str
+    queued_at: str | None = None
+    delivered_at: str | None = None
+    retryable: bool = True
+    error: str | None = None
+
+
+class KoraMessageAcceptedOut(_ApiModel):
+    """The frozen KoraMessageAcceptedOut shape (202): accepted ≠
+    delivered — the body carries the CURRENT delivery state."""
+    ok: bool
+    session_id: str
+    delivery: KoraDeliveryOut
+    confirm_required: bool
+
+
+class KoraStepUpOut(_ApiModel):
+    """The frozen KoraStepUpOut shape (grant minted)."""
+    ok: bool
+    granted_until: str
+    ttl_seconds: int
+
+
+class KoraStepUpStatusOut(_ApiModel):
+    """The frozen KoraStepUpStatusOut shape (nulls when inactive)."""
+    active: bool
+    granted_until: str | None = None
+    ttl_remaining_seconds: int | None = None
+
+
+@app.post("/api/kora/sessions")
+async def create_kora_session(body: KoraSessionCreate, request: Request):
+    # No return annotation on purpose: this handler answers the frozen
+    # KoraSessionCreatedOut NEVER (see the honest 501 below) and
+    # KoraErrorOut denials otherwise — a union annotation would make
+    # FastAPI document a 201 this build cannot produce.
+    """Slice 3: NEW session from Kora (frozen contract POST
+    /kora/sessions) — the FIRST relay scenario. Gates, in order: ui-only
+    steering guard → step-up PIN → rate limit → executor registry
+    validation (approved, exists) → loud host-conflict resolution.
+
+    HONEST LIMITATION (the brief's «честная 501, не притворство»): the
+    harness-side spawn (headless harness on the store-owner host via the
+    executor-side relay unit) is NOT wired in this slice —
+    vesmaro-session-relay.service is a separate line. The route answers
+    501 AFTER every gate so the ritual is fully exercised, and it does
+    NOT register a phantom registry row (a board-invented native_id would
+    never appear in a harness store — NO-DRIFT). When the relay
+    transport lands, only this tail changes to the 201 path."""
+    denied = _kora_steering_denied(request)
+    if denied is not None:
+        return denied
+    if not kora_relay.step_up_active():
+        return _kora_step_up_required()
+    client_ip = request.client.host if request.client else "unknown"
+    if not _kora_steer_limiter.acquire(client_ip):
+        raise HTTPException(
+            429, "kora steering rate limit exceeded "
+                 f"({_KORA_STEER_RATE_LIMIT} per "
+                 f"{_KORA_STEER_RATE_WINDOW:.0f}s per client)")
+    executor = store.get_executor(body.executor_id)
+    if executor is None:
+        raise HTTPException(
+            400, f"kora session create: unknown executor "
+                 f"{body.executor_id} — pick an enrolled executor "
+                 "(the registry lists hosts with their executors)")
+    if executor["state"] != "approved":
+        raise HTTPException(
+            400, f"kora session create: executor {body.executor_id} is "
+                 f"{executor['state']} — only approved executors can "
+                 "host a relay session")
+    conflicts = store.kora_host_conflict(body.executor_id)
+    if conflicts:
+        # Loud host-conflict resolution (security gate 6): the store
+        # ownership of the would-be session is ambiguous — visibility is
+        # never blocked, the SEND path answers 409 and the audit says so.
+        store.log_kora_audit("kora.session.create", {
+            "executor_id": body.executor_id,
+            "project": body.project,
+            "network_path": _kora_network_path(request),
+            "outcome": "host_conflict",
+            **_prompt_trace(body.prompt),
+        })
+        return _kora_error(
+            409, "host_conflict",
+            "Хост исполнителя закреплён более чем за одним approved-"
+            f"исполнителем ({', '.join(c['id'] for c in conflicts)}): "
+            "инвариант UNIQUE executors.host нарушен. Разрешите конфликт "
+            "в реестре исполнителей — руление отвеча�� 409, видимость "
+            "сессий не блокируется (ADR 0019, gate 6).")
+    store.log_kora_audit("kora.session.create", {
+        "executor_id": body.executor_id,
+        "project": body.project,
+        "network_path": _kora_network_path(request),
+        "outcome": "unavailable_relay_transport",
+        **_prompt_trace(body.prompt),
+    })
+    raise HTTPException(
+        501, "kora relay session spawn is not wired yet: the executor-side "
+             "relay unit (vesmaro-session-relay.service) is a separate "
+             "line — the board cannot spawn a headless harness on an "
+             "executor host, and no phantom registry row is created. "
+             "The steering API perimeter (step-up PIN, validation, "
+             "host-conflict, queue semantics) is live; the 201 path "
+             "activates with the relay transport.")
+
+
+@app.post("/api/kora/sessions/{session_id}/messages")
+async def send_kora_session_message(session_id: str, body: KoraMessageCreate,
+                                    request: Request):
+    # No return annotation on purpose (the transcript precedent): this
+    # handler answers EITHER the frozen KoraMessageAcceptedOut (202) OR a
+    # KoraErrorOut JSONResponse — a union annotation would make FastAPI
+    # build an impossible response model.
+    """Slice 3 steering (frozen contract POST /kora/sessions/{id}/
+    messages): a relay COMMAND, never a store write (NO-DRIFT — the
+    harness appends to its own store; the browser observes via the
+    transcript GET). Gates: ui-only steering guard → step-up PIN → rate
+    limit → triple resolution (unknown/foreign/not-steerable resolves as
+    404 session_not_found, server-side, gates 1+2) → loud host conflict
+    (409, gate 6) → in-memory queue with honest KoraDelivery.
+
+    Delivery is honest: accepted ≠ delivered — the 202 body carries the
+    CURRENT status; with the executor-side relay transport not wired,
+    every accepted prompt resolves failed (retryable, «не доставлено —
+    повторите»). The prompt rides the queue in-memory only: never
+    served, never logged (audits carry sha256 + length)."""
+    denied = _kora_steering_denied(request)
+    if denied is not None:
+        return denied
+    if not kora_relay.step_up_active():
+        return _kora_step_up_required()
+    client_ip = request.client.host if request.client else "unknown"
+    if not _kora_steer_limiter.acquire(client_ip):
+        raise HTTPException(
+            429, "kora steering rate limit exceeded "
+                 f"({_KORA_STEER_RATE_LIMIT} per "
+                 f"{_KORA_STEER_RATE_WINDOW:.0f}s per client)")
+    # The opaque handle parses back into the registry PK ('<executor_id>:
+    # <native_id>', slice-1 convention); a malformed handle is an unknown
+    # session, not a 500.
+    executor_id, sep, native_id = session_id.partition(":")
+    row = (store.kora_session(executor_id, native_id)
+           if sep and executor_id and native_id else None)
+    if row is None:
+        # Gate 1, send leg: a foreign/unknown triple resolves as ABSENT
+        # (the same 404 the provenance gate below returns — probes learn
+        # nothing about which triples exist).
+        return _kora_error(
+            404, "session_not_found",
+            f"Сессия {session_id} не найдена либо недоступна для стиринга "
+            "(стиринг доступен relay-origin сессиям и сессиям, "
+            "усыновлённым typed-confirm; чужие сессии — только чтение).")
+    if not _kora_session_steerable(row):
+        return _kora_error(
+            404, "session_not_found",
+            f"Сессия {session_id} не найдена либо недоступна для стиринга "
+            "(стиринг доступен relay-origin сессиям и сессиям, "
+            "усыновлённым typed-confirm; чужие сессии — только чтение).")
+    conflicts = store.kora_host_conflict(executor_id)
+    if conflicts:
+        return _kora_error(
+            409, "host_conflict",
+            "Хост исполнителя закреплён более чем за одним approved-"
+            f"исполнителем ({', '.join(c['id'] for c in conflicts)}): "
+            "инвариант UNIQUE executors.host нарушен. Разрешите конфликт "
+            "в реестре исполнителей — руление отвечает 409, видимость "
+            "сессий не блокируется (ADR 0019, gate 6).")
+    mode = kora_relay.session_mode(session_id, row["origin"])
+    confirm_required = mode == "confirm"
+    try:
+        item = kora_relay.enqueue_prompt(
+            session_id, executor_id, native_id, body.text,
+            session_state=row["state"], mode=mode,
+            confirm_required=confirm_required)
+    except kora_relay.QueueFull as exc:
+        raise HTTPException(429, f"kora relay queue is full: {exc}") from exc
+    # The North-Star falsifiability trail: every accepted prompt leaves a
+    # checkable trace — sha256 + byte length, NEVER the text.
+    store.log_kora_audit("kora.session.steer", {
+        "delivery_id": item.delivery_id,
+        "session_id": session_id,
+        "executor_id": executor_id,
+        "native_id": native_id,
+        "session_host": row.get("executor_host") or "",
+        "network_path": _kora_network_path(request),
+        "mode": mode,
+        "confirm_required": confirm_required,
+        "delivery_status": item.status,
+        "retryable": item.retryable,
+        **_prompt_trace(body.text),
+    })
+    return JSONResponse(status_code=202, content=KoraMessageAcceptedOut(
+        ok=True,
+        session_id=session_id,
+        delivery=KoraDeliveryOut(**kora_relay.delivery_view(item)),
+        confirm_required=confirm_required,
+    ).model_dump())
+
+
+@app.post("/api/kora/steering/step-up")
+async def enable_kora_steering_step_up(body: KoraStepUpIn, request: Request):
+    # No return annotation on purpose (denials are KoraErrorOut
+    # JSONResponses, success is the frozen KoraStepUpOut).
+    """Slice 3 step-up ritual (frozen contract POST /kora/steering/
+    step-up): unlocks steering for ≤900s. OFF by default; reading never
+    requires step-up. Attempts are rate limited 10/60s per client (the
+    auth-verify door number). The PIN is verified against the scrypt
+    verifier and NEVER logged in any form."""
+    denied = _kora_steering_denied(request)
+    if denied is not None:
+        return denied
+    client_ip = request.client.host if request.client else "unknown"
+    if not _kora_stepup_limiter.acquire(client_ip):
+        raise HTTPException(
+            429, "kora step-up rate limit exceeded "
+                 f"({_KORA_STEPUP_RATE_LIMIT} per "
+                 f"{_KORA_STEPUP_RATE_WINDOW:.0f}s per client) — wait and "
+                 "retry; wrong attempts are audited")
+    try:
+        grant = kora_relay.step_up_enable(body.pin)
+    except kora_relay.SteeringPinNotConfigured:
+        raise HTTPException(
+            503, "kora steering is not configured: set "
+                 f"{kora_relay.STEERING_PIN_ENV} to enable the step-up "
+                 "ritual (fail-closed — steering stays off)") from None
+    store.log_kora_audit("kora.steering.step_up", {
+        "outcome": "granted" if grant else "denied",
+        "network_path": _kora_network_path(request),
+    })
+    if grant is None:
+        return _kora_error(
+            403, "step_up_denied",
+            "Неверный PIN — руление не разблокировано. Попытки "
+            "ограничены (10/60s), попытки попадают в аудит.")
+    return KoraStepUpOut(
+        ok=True,
+        granted_until=grant["granted_until"],
+        ttl_seconds=kora_relay.STEP_UP_TTL_SECONDS,
+    )
+
+
+@app.get("/api/kora/steering/step-up")
+async def kora_steering_step_up_status(request: Request):
+    # No return annotation on purpose (denials are KoraErrorOut
+    # JSONResponses, success is the frozen KoraStepUpStatusOut).
+    """Slice 3 step-up status (frozen contract): active + remaining TTL.
+    Reading the status is ui-only and — like every read — never requires
+    step-up."""
+    denied = _kora_steering_denied(request)
+    if denied is not None:
+        return denied
+    return KoraStepUpStatusOut(**kora_relay.step_up_status())
+
+
+@app.delete("/api/kora/steering/step-up", status_code=204)
+async def revoke_kora_steering_step_up(request: Request) -> Response:
+    """Slice 3 step-up revoke (frozen contract DELETE): the one-command
+    kill switch for the steering window. 204, no body."""
+    denied = _kora_steering_denied(request)
+    if denied is not None:
+        return denied
+    kora_relay.step_up_revoke()
+    store.log_kora_audit("kora.steering.step_up", {
+        "outcome": "revoked",
+        "network_path": _kora_network_path(request),
+    })
+    return Response(status_code=204)
+
 
 
 # ---------------------------------------------------- kora hermes bridge
