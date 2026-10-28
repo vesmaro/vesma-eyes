@@ -1280,6 +1280,11 @@ export interface paths {
          *     open ExecutorOut.discovered projection); unknown id → 404, an honest
          *     verdict instead of the SPA fallback. Advisory data only — never
          *     routing authority, never capabilities.
+         *
+         *     Board-mirror wave: the response carries the additive ``models`` and
+         *     ``mcp_servers`` snapshots too ({} / [] = the leg never reported —
+         *     honest absence, never a fabricated zero); ``meta`` carries the whole
+         *     FC-6/FC-7 cap set so clients read, never hardcode.
          */
         readonly get: operations["executor_discovery_mirror_api_executors__executor_id__discovery_get"];
         readonly put?: never;
@@ -1309,6 +1314,15 @@ export interface paths {
          *     ``sessions[]`` lands in the task-session-fact store after task-linkage
          *     validation (drops audited as sessions.rejected, never 422 — the
          *     discovery-names grammar).
+         *
+         *     Board-mirror wave (FC-6/FC-7, host-intake §3.3–§3.4): ``models`` and
+         *     ``mcp_servers`` land in the per-executor models/mcp snapshots (caps
+         *     honestly 422'd: 64 rows / 50 models / 16 KiB; 32 entries / 30 names /
+         *     8 KiB; unknown auth/source enums 422). Unknown harness/exec_env
+         *     attributions and credential-shaped strings are DROPS + audits
+         *     (discovery.rejected / models.credential_leak_suspected — the store's
+         *     ingest duties), never 422s; a models-snapshot delta broadcasts the
+         *     additive model.inventory.changed frame.
          */
         readonly post: operations["executor_discovery_api_executors__executor_id__discovery_post"];
         readonly delete?: never;
@@ -1461,10 +1475,11 @@ export interface paths {
         };
         /**
          * Models Roster
-         * @description The models fleet roster (MF2 cut of the MF1 single aggregation
-         *     point): the owner provider registry (metadata only — OQ-1 additive
-         *     verdict), the agent-mirror zone (still honestly empty — the wire
-         *     carries no models slice yet) and the board-reported hermes roster.
+         * @description The models fleet roster (the MF1 single aggregation point, the
+         *     board-mirror wave cut): the owner provider registry (metadata only —
+         *     OQ-1 additive verdict), the agent-mirror zone (the FC-6 mirrors of
+         *     every non-revoked executor, aggregated + deduped by
+         *     (provider, base_url)) and the board-reported hermes roster.
          *     OPEN read — names/URLs/counts/fingerprints only; no credential field
          *     exists in the family (security verdict §5: the fingerprint is the
          *     only material-derived artifact allowed to persist).
@@ -3819,6 +3834,14 @@ export interface components {
             readonly k8s_verdicts?: {
                 readonly [key: string]: unknown;
             } | null;
+            /** Models */
+            readonly models?: {
+                readonly [key: string]: unknown;
+            } | null;
+            /** Mcp Servers */
+            readonly mcp_servers?: readonly {
+                readonly [key: string]: unknown;
+            }[] | null;
         };
         /**
          * ExecutorDiscoveryMirrorOut
@@ -3826,7 +3849,10 @@ export interface components {
          *     mirror of the executor's LAST discovery report. Just the mirror and
          *     its cap — the full registry row lives on GET /api/executors/{id};
          *     ``meta.max_entries`` rides the same read-never-hardcode discipline as
-         *     the presence thresholds.
+         *     the presence thresholds. Board-mirror wave: the additive ``models``
+         *     (the FC-6 snapshot: installations + notes + reported_at) and
+         *     ``mcp_servers`` (the FC-7 snapshot) slices join the mirror; ``meta``
+         *     carries the whole cap set (read, never hardcode).
          */
         readonly ExecutorDiscoveryMirrorOut: {
             /** Ok */
@@ -3838,6 +3864,20 @@ export interface components {
              * @default []
              */
             readonly discovered: readonly {
+                readonly [key: string]: unknown;
+            }[];
+            /**
+             * Models
+             * @default {}
+             */
+            readonly models: {
+                readonly [key: string]: unknown;
+            };
+            /**
+             * Mcp Servers
+             * @default []
+             */
+            readonly mcp_servers: readonly {
                 readonly [key: string]: unknown;
             }[];
             /** Meta */
@@ -3871,6 +3911,26 @@ export interface components {
              * @default 0
              */
             readonly sessions_dropped: number;
+            /**
+             * Models Accepted
+             * @default 0
+             */
+            readonly models_accepted: number;
+            /**
+             * Models Dropped
+             * @default 0
+             */
+            readonly models_dropped: number;
+            /**
+             * Mcp Accepted
+             * @default 0
+             */
+            readonly mcp_accepted: number;
+            /**
+             * Mcp Dropped
+             * @default 0
+             */
+            readonly mcp_dropped: number;
         } & {
             readonly [key: string]: unknown;
         };
@@ -5057,9 +5117,12 @@ export interface components {
         };
         /**
          * ModelsDiscoveredItem
-         * @description One agent-discovered provider fact (contract §3 item shape, the
-         *     mirror-wave ingest target). MF1 serves none — the field exists so the
-         *     FE contract is stable when the discovery leg lands.
+         * @description One agent-discovered provider fact (contract §3 item shape). The
+         *     board-mirror wave fills the zone from the executors' models mirrors:
+         *     ``models`` is the merged, sorted, deduped raw-string union (≤
+         *     _MODELS_MAX_PER_ROW); ``auth``/``source`` are honest merges across
+         *     every reporter; ``seen_on`` names WHERE the fact was seen (from the
+         *     snapshots, never self-reported).
          */
         readonly ModelsDiscoveredItem: {
             /** Provider */
