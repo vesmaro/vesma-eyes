@@ -2047,6 +2047,16 @@ class ExecutorDiscoveryBody(BaseModel):
     k8s_nodes: list[dict[str, Any]] | None = None    # AGW-24, additive
     k8s_pods: list[dict[str, Any]] | None = None     # AGW-24, additive
     k8s_verdicts: dict[str, Any] | None = None       # AGW-24, non-ok only
+    # Board-mirror wave (FC-6/FC-7, host-intake §3.3–§3.4; agent v0.11+):
+    # the models fleet discovery legs, additive top-level like the fields
+    # above. ``None`` = the leg did not report (mirror UNTOUCHED — the
+    # no-wipe distinction); an explicitly EMPTY report is a real
+    # zero-and-ran (mirror wiped). Caps are honest-422'd at the route
+    # (the agent pre-truncates: an over-cap POST is a contract violator,
+    # never an honest agent); unknown dictionary values are DROP + audit
+    # in the store (never 422 — the discovery-names grammar).
+    models: dict[str, Any] | None = None
+    mcp_servers: list[dict[str, Any]] | None = None
 
 
 class ExecutorDiscoveryOut(_ApiModel):
@@ -2057,6 +2067,10 @@ class ExecutorDiscoveryOut(_ApiModel):
     rejected_names: list[str] = []
     sessions_accepted: int = 0   # ME-062 additive ingest counters
     sessions_dropped: int = 0
+    models_accepted: int = 0     # board-mirror wave: FC-6/FC-7 ingest
+    models_dropped: int = 0      # counters (the sessions_* family)
+    mcp_accepted: int = 0
+    mcp_dropped: int = 0
 
 
 class ExecutorDiscoveryMirrorOut(_ApiModel):
@@ -2064,10 +2078,15 @@ class ExecutorDiscoveryMirrorOut(_ApiModel):
     mirror of the executor's LAST discovery report. Just the mirror and
     its cap — the full registry row lives on GET /api/executors/{id};
     ``meta.max_entries`` rides the same read-never-hardcode discipline as
-    the presence thresholds."""
+    the presence thresholds. Board-mirror wave: the additive ``models``
+    (the FC-6 snapshot: installations + notes + reported_at) and
+    ``mcp_servers`` (the FC-7 snapshot) slices join the mirror; ``meta``
+    carries the whole cap set (read, never hardcode)."""
     ok: bool
     executor_id: str
     discovered: list[dict[str, Any]] = []
+    models: dict[str, Any] = {}
+    mcp_servers: list[dict[str, Any]] = []
     meta: dict[str, Any]
 
 
@@ -5205,6 +5224,126 @@ _K8S_POD_BYTES = 4 * 1024
 _SURFACE_RUNTIME_BYTES = 2 * 1024
 _K8S_VERDICTS_BYTES = 2 * 1024
 
+# Board-mirror wave (FC-6/FC-7): the models fleet caps — the agent
+# contract's own shrink-to-fit limits (host-intake §3.3.5/§3.4,
+# agent-discovery §3.6), enforced board-side as honest 422s. Over-budget
+# = a contract violator, not an honest agent (shrink-to-fit makes an
+# over-cap POST impossible for the real agent). ``_MODELS_MAX_PER_ROW``
+# below is the contract §2.1 cap family member the roster meta serves
+# (read-never-hardcode).
+_MODELS_MAX_INSTALLATIONS = 64
+_MODELS_MAX_PER_ROW = 50
+_MODELS_MAX_BYTES = 16 * 1024
+_MODELS_MAX_PROVIDER = 60
+_MODEL_AUTH_ENUM = frozenset({"configured", "anonymous", "unknown"})
+_MODEL_SOURCE_ENUM = frozenset({"config", "probe"})
+_MCP_MAX_ENTRIES = 32      # one element per harness — the discovery family cap
+_MCP_MAX_NAMES = 30
+_MCP_ENTRY_BYTES = 8 * 1024
+
+
+def _validate_discovery_models(body: ExecutorDiscoveryBody) -> None:
+    """Board-mirror wave caps for the additive ``models`` / ``mcp_servers``
+    legs (the same honest-422 discipline as the environments leg):
+    row/entry counts, per-row model caps, whole-object byte ceilings,
+    REQUIRED attribution fields (a nameless row is never silently
+    trimmed — the counters stay the agent's own honest report) and the
+    closed FORM enums (auth/source). Unknown DICTIONARY values (harness,
+    exec_env) are deliberately NOT validated here — they are drops +
+    audits in the store (agent-discovery §3.11), never 422s."""
+    models = body.models
+    if models is not None:
+        installations = models.get("installations")
+        if not isinstance(installations, list):
+            raise HTTPException(
+                422, "models object must carry an installations list")
+        if len(installations) > _MODELS_MAX_INSTALLATIONS:
+            raise HTTPException(
+                422, f"too many models installations: {len(installations)} "
+                     f"(cap {_MODELS_MAX_INSTALLATIONS})")
+        size = len(json.dumps(models, ensure_ascii=False).encode("utf-8"))
+        if size > _MODELS_MAX_BYTES:
+            raise HTTPException(
+                422, f"models object exceeds 16 KiB ({size} bytes)")
+        for i, row in enumerate(installations):
+            if not isinstance(row, dict):
+                raise HTTPException(422, f"models installation row {i}: "
+                                         "must be an object")
+            # SEC-2/QA-F6: value-free messages — a row index, never the
+            # provider/harness value (a reflected value could itself be
+            # credential-shaped; the detector runs downstream).
+            provider = str(row.get("provider") or "").strip()
+            if not provider:
+                raise HTTPException(
+                    422, f"models installation row {i}: missing provider")
+            if len(provider) > _MODELS_MAX_PROVIDER:
+                raise HTTPException(
+                    422, f"models installation row {i}: provider exceeds "
+                         f"the cap ({len(provider)} > "
+                         f"{_MODELS_MAX_PROVIDER})")
+            harness = str(row.get("harness") or "").strip()
+            if not harness:
+                raise HTTPException(
+                    422, f"models installation row {i}: missing harness "
+                         f"attribution")
+            auth = str(row.get("auth") or "").strip()
+            if auth not in _MODEL_AUTH_ENUM:
+                raise HTTPException(
+                    422, f"models installation row {i}: auth must be one "
+                         f"of {sorted(_MODEL_AUTH_ENUM)}")
+            source = str(row.get("source") or "").strip()
+            if source not in _MODEL_SOURCE_ENUM:
+                raise HTTPException(
+                    422, f"models installation row {i}: source must be "
+                         f"one of {sorted(_MODEL_SOURCE_ENUM)}")
+            model_ids = row.get("models")
+            if model_ids is not None:
+                if not isinstance(model_ids, list) or \
+                        not all(isinstance(m, str) for m in model_ids):
+                    raise HTTPException(
+                        422, f"models installation row {i}: models must "
+                             f"be a list of strings")
+                if len(model_ids) > _MODELS_MAX_PER_ROW:
+                    raise HTTPException(
+                        422, f"models installation row {i}: model list "
+                             f"exceeds the cap ({len(model_ids)} > "
+                             f"{_MODELS_MAX_PER_ROW})")
+    mcp_servers = body.mcp_servers
+    if mcp_servers is not None:
+        if len(mcp_servers) > _MCP_MAX_ENTRIES:
+            raise HTTPException(
+                422, f"too many mcp_servers entries: {len(mcp_servers)} "
+                     f"(cap {_MCP_MAX_ENTRIES})")
+        for i, entry in enumerate(mcp_servers):
+            if not isinstance(entry, dict):
+                raise HTTPException(422, f"mcp_servers entry {i}: must be "
+                                         "an object")
+            harness = str(entry.get("harness") or "").strip()
+            if not harness:
+                raise HTTPException(
+                    422, f"mcp_servers entry {i}: missing harness "
+                         f"attribution")
+            servers = entry.get("servers")
+            if not isinstance(servers, list) or \
+                    not all(isinstance(s, str) for s in servers):
+                raise HTTPException(
+                    422, f"mcp_servers entry {i}: servers must be a list "
+                         f"of strings")
+            if len(servers) > _MCP_MAX_NAMES:
+                raise HTTPException(
+                    422, f"mcp_servers entry {i}: server list exceeds the "
+                         f"cap ({len(servers)} > {_MCP_MAX_NAMES})")
+            count = entry.get("count")
+            if not isinstance(count, int) or isinstance(count, bool):
+                raise HTTPException(
+                    422, f"mcp_servers entry {i}: count must be an "
+                         f"integer (the full total, even when truncated)")
+            size = len(json.dumps(entry, ensure_ascii=False).encode("utf-8"))
+            if size > _MCP_ENTRY_BYTES:
+                raise HTTPException(
+                    422, f"mcp_servers entry {i} exceeds "
+                         f"8 KiB ({size} bytes)")
+
 
 def _validate_discovery_environments(
         environments: list[dict[str, Any]]) -> None:
@@ -5308,7 +5447,16 @@ async def executor_discovery(executor_id: str, body: ExecutorDiscoveryBody,
     (caps honestly 422'd: 32 rows, 50/50/30/30 names, 8 KiB/object) and
     ``sessions[]`` lands in the task-session-fact store after task-linkage
     validation (drops audited as sessions.rejected, never 422 — the
-    discovery-names grammar)."""
+    discovery-names grammar).
+
+    Board-mirror wave (FC-6/FC-7, host-intake §3.3–§3.4): ``models`` and
+    ``mcp_servers`` land in the per-executor models/mcp snapshots (caps
+    honestly 422'd: 64 rows / 50 models / 16 KiB; 32 entries / 30 names /
+    8 KiB; unknown auth/source enums 422). Unknown harness/exec_env
+    attributions and credential-shaped strings are DROPS + audits
+    (discovery.rejected / models.credential_leak_suspected — the store's
+    ingest duties), never 422s; a models-snapshot delta broadcasts the
+    additive model.inventory.changed frame."""
     if len(body.harnesses) > _DISCOVERY_MAX_ENTRIES:
         raise HTTPException(
             422,
@@ -5321,6 +5469,7 @@ async def executor_discovery(executor_id: str, body: ExecutorDiscoveryBody,
             f"(cap {_DISCOVERY_MAX_SESSIONS})")
     _validate_discovery_environments(body.environments)
     _validate_discovery_surfaces(body)
+    _validate_discovery_models(body)
     executor = _authenticate_executor(request)
     if executor is None:
         raise HTTPException(401, "executor token required")
@@ -5350,12 +5499,44 @@ async def executor_discovery(executor_id: str, body: ExecutorDiscoveryBody,
         k8s_verdicts=body.k8s_verdicts)
     sessions = store.report_session_facts(
         executor_id, [s.model_dump() for s in body.sessions])
+    # Board-mirror wave (FC-6/FC-7): the models fleet legs land in their
+    # own per-executor snapshots. None = the leg did not report — the
+    # store is not called at all (no-wipe). A delta vs the previous
+    # models snapshot broadcasts the additive roster-invalidation frame
+    # (the model_providers mutation pattern); an identical re-report is
+    # a silent no-op — no frame, no churn.
+    models_result = {"changed": False, "accepted": 0, "dropped": 0,
+                     "added": [], "removed": [], "updated": []}
+    if body.models is not None:
+        models_result = store.report_models_mirror(executor_id, body.models)
+        # QA-F7: the frame fires only on a VISIBLE delta — added,
+        # removed or content-updated tuples. A notes-only change (or an
+        # empty-delta write) emits nothing: a frame that says nothing
+        # would thrash the FE cache for no roster-visible fact.
+        if (models_result["added"] or models_result["removed"]
+                or models_result["updated"]):
+            _broadcast({
+                "kind": "model.inventory.changed",
+                "origin": "agent",
+                "executor_id": executor_id,
+                "added": models_result["added"],
+                "removed": models_result["removed"],
+                "updated": models_result["updated"],
+                "at": _now_iso(),
+            })
+    mcp_result = {"changed": False, "accepted": 0, "dropped": 0}
+    if body.mcp_servers is not None:
+        mcp_result = store.report_mcp_mirror(executor_id, body.mcp_servers)
     fresh = store.get_executor(executor_id) or row
     return {"ok": True, "executor": _executor_public(fresh),
             "accepted": accepted, "rejected": rejected,
             "rejected_names": rejected_names,
             "sessions_accepted": sessions["accepted"],
-            "sessions_dropped": sessions["dropped"]}
+            "sessions_dropped": sessions["dropped"],
+            "models_accepted": models_result["accepted"],
+            "models_dropped": models_result["dropped"],
+            "mcp_accepted": mcp_result["accepted"],
+            "mcp_dropped": mcp_result["dropped"]}
 
 
 @app.get("/api/executors/{executor_id}/discovery")
@@ -5367,15 +5548,42 @@ async def executor_discovery_mirror(executor_id: str) -> ExecutorDiscoveryMirror
     cluster ingress is the auth boundary; the mirror already rides the
     open ExecutorOut.discovered projection); unknown id → 404, an honest
     verdict instead of the SPA fallback. Advisory data only — never
-    routing authority, never capabilities."""
+    routing authority, never capabilities.
+
+    Board-mirror wave: the response carries the additive ``models`` and
+    ``mcp_servers`` snapshots too ({} / [] = the leg never reported —
+    honest absence, never a fabricated zero); ``meta`` carries the whole
+    FC-6/FC-7 cap set so clients read, never hardcode."""
     row = store.get_executor(executor_id)
     if row is None:
         raise HTTPException(404, f"executor {executor_id} not found")
+    try:
+        models_mirror = json.loads(row.get("models_mirror") or "{}")
+    except (TypeError, ValueError):
+        models_mirror = {}
+    try:
+        mcp_mirror = json.loads(row.get("mcp_mirror") or "[]")
+    except (TypeError, ValueError):
+        mcp_mirror = []
     return {
         "ok": True,
         "executor_id": executor_id,
         "discovered": _executor_public(row)["discovered"],
-        "meta": {"max_entries": _DISCOVERY_MAX_ENTRIES},
+        "models": models_mirror if isinstance(models_mirror, dict) else {},
+        "mcp_servers": [r for r in mcp_mirror if isinstance(r, dict)],
+        "meta": {
+            "max_entries": _DISCOVERY_MAX_ENTRIES,
+            "models": {
+                "max_installations": _MODELS_MAX_INSTALLATIONS,
+                "max_models_per_row": _MODELS_MAX_PER_ROW,
+                "max_bytes": _MODELS_MAX_BYTES,
+            },
+            "mcp_servers": {
+                "max_entries": _MCP_MAX_ENTRIES,
+                "max_names": _MCP_MAX_NAMES,
+                "entry_bytes": _MCP_ENTRY_BYTES,
+            },
+        },
     }
 
 
@@ -6132,7 +6340,7 @@ async def kora_hermes_live_sessions(request: Request,
 # ONE aggregation point for every model-serving fact the board holds, with a
 # provenance marker per row (OQ-1's single-contract verdict).
 #
-# MF1 scope is honest about what exists TODAY:
+# Zones:
 # - `board`    — the cluster hermes roster, the STATIC live-verified list
 #                from hermes_client (the SAME single source the hermes status
 #                route serves; consumed, not duplicated). No agent reports
@@ -6141,20 +6349,20 @@ async def kora_hermes_live_sessions(request: Request,
 # - `providers`— the owner credential registry: MF2 landed the write leg
 #                (POST/PUT/DELETE below — metadata only, H1 vault rules);
 #                rows render here via _provider_public (OQ-1 additive).
-# - `discovered`—agent-reported provider facts (the discovery mirror). The
-#                agent wire carries NO `models` slice yet (contract §2.1 is
-#                the future shape), so the zone stays honestly empty; the row
-#                schema below is the ingest target the mirror wave fills,
-#                dedup identity (provider, base_url).
+# - `discovered`—agent-reported provider facts (the FC-6 mirror; the
+#                board-mirror wave fills it): every non-revoked executor's
+#                models snapshot aggregated, deduped by the contract
+#                identity (provider, base_url) — rows without a base_url
+#                (frontmatter/pi sources) dedupe per provider inside their
+#                own empty-base group. NO credential field exists in this
+#                family by construction (security verdict §5): names,
+#                endpoint URLs and counts are facts; key material never is.
+#                Open read — the same boundary as GET /api/executors.
 #
-# NO credential field exists in this family by construction (security
-# verdict §5): names, endpoint URLs and counts are facts; key material
-# never is. Open read — the same boundary as GET /api/executors (cluster
-# ingress is the auth boundary; the roster is names/URLs/counts metadata).
-# No SSE emitter yet: nothing mutates the roster in MF1; the additive
-# `model.inventory.changed` frame arrives with the wave that writes it.
-
-_MODELS_MAX_PER_ROW = 50  # the contract §2.1 cap family (honest-422 on ingest)
+# SSE: the additive `model.inventory.changed` frame fires from the INGEST
+# side (the discovery route, on an actual snapshot delta; the MF2 provider
+# mutations broadcast the same kind) — the roster itself is a derived
+# projection, reads never emit.
 
 
 class ModelsBoardRosterItem(BaseModel):
@@ -6168,9 +6376,12 @@ class ModelsBoardRosterItem(BaseModel):
 
 
 class ModelsDiscoveredItem(BaseModel):
-    """One agent-discovered provider fact (contract §3 item shape, the
-    mirror-wave ingest target). MF1 serves none — the field exists so the
-    FE contract is stable when the discovery leg lands."""
+    """One agent-discovered provider fact (contract §3 item shape). The
+    board-mirror wave fills the zone from the executors' models mirrors:
+    ``models`` is the merged, sorted, deduped raw-string union (≤
+    _MODELS_MAX_PER_ROW); ``auth``/``source`` are honest merges across
+    every reporter; ``seen_on`` names WHERE the fact was seen (from the
+    snapshots, never self-reported)."""
 
     provider: str
     base_url: str
@@ -6193,12 +6404,96 @@ class ModelsRosterOut(BaseModel):
     meta: dict[str, Any]
 
 
+def _discovered_zone() -> list[ModelsDiscoveredItem]:
+    """The `discovered` zone: every non-revoked executor's models snapshot
+    aggregated into contract items, deduped by the (provider, base_url)
+    identity (rows without a base_url — frontmatter/pi sources — dedupe
+    per provider inside their own empty-base group; the contract's
+    None-base rule). Honest merges across reporters:
+    - auth: any configured → configured, else any unknown → unknown,
+      else anonymous (presence outranks absence);
+    - source: config wins over probe (a config read is the stronger
+      provenance of the same provider fact);
+    - models: the merged, sorted, deduped raw-string union, capped at
+      _MODELS_MAX_PER_ROW (the roster shows the union; the per-report
+      counters stay the agents' own);
+    - seen_on: one entry per (executor_id, harness, exec_env) with the
+      snapshot's write time — last_reported_at is the LAST CHANGED
+      report, never self-reported (the P2-1 precedent: identical
+      re-reports do not churn the stamp).
+    Deterministic order: (provider, base_url) — two reads agree (the hub
+    refetches freely on SSE invalidation)."""
+    groups: dict[tuple[str, str], dict[str, Any]] = {}
+    for mirror in store.models_mirrors():
+        try:
+            snapshot = json.loads(mirror.get("models_mirror") or "{}")
+        except (TypeError, ValueError):
+            snapshot = {}
+        if not isinstance(snapshot, dict):
+            continue
+        reported_at = str(snapshot.get("reported_at") or "")
+        installations = snapshot.get("installations")
+        if not isinstance(installations, list):
+            continue
+        for row in installations:
+            if not isinstance(row, dict):
+                continue
+            provider = str(row.get("provider") or "").strip()
+            if not provider:
+                continue
+            base_url = str(row.get("base_url") or "").strip()
+            key = (provider, base_url)
+            group = groups.setdefault(key, {
+                "models": set(), "auths": set(), "sources": set(),
+                "seen": {},
+            })
+            for model_id in row.get("models") or []:
+                if isinstance(model_id, str) and model_id.strip():
+                    group["models"].add(model_id.strip())
+            auth = str(row.get("auth") or "").strip()
+            if auth:
+                group["auths"].add(auth)
+            source = str(row.get("source") or "").strip()
+            if source:
+                group["sources"].add(source)
+            harness = str(row.get("harness") or "").strip()
+            exec_env = str(row.get("exec_env") or "").strip()
+            seen_key = (mirror["id"], harness, exec_env)
+            prev = group["seen"].get(seen_key, "")
+            group["seen"][seen_key] = max(prev, reported_at)
+    items: list[ModelsDiscoveredItem] = []
+    for (provider, base_url), group in sorted(groups.items()):
+        auths = group["auths"]
+        if "configured" in auths:
+            auth = "configured"
+        elif "unknown" in auths:
+            auth = "unknown"
+        else:
+            auth = "anonymous"
+        source = "config" if "config" in group["sources"] else "probe"
+        seen_on = [{"executor_id": executor_id, "harness": harness,
+                    "exec_env": exec_env, "last_reported_at": at}
+                   for (executor_id, harness, exec_env), at
+                   in sorted(group["seen"].items())]
+        items.append(ModelsDiscoveredItem(
+            provider=provider,
+            base_url=base_url,
+            models=sorted(group["models"])[:_MODELS_MAX_PER_ROW],
+            auth=auth,
+            source=source,
+            seen_on=seen_on,
+            provenance="agent",
+        ))
+    return items
+
+
 @app.get("/api/models")
 async def models_roster() -> ModelsRosterOut:
-    """The models fleet roster (MF2 cut of the MF1 single aggregation
-    point): the owner provider registry (metadata only — OQ-1 additive
-    verdict), the agent-mirror zone (still honestly empty — the wire
-    carries no models slice yet) and the board-reported hermes roster.
+    """The models fleet roster (the MF1 single aggregation point, the
+    board-mirror wave cut): the owner provider registry (metadata only —
+    OQ-1 additive verdict), the agent-mirror zone (the FC-6 mirrors of
+    every non-revoked executor, aggregated + deduped by
+    (provider, base_url)) and the board-reported hermes roster.
     OPEN read — names/URLs/counts/fingerprints only; no credential field
     exists in the family (security verdict §5: the fingerprint is the
     only material-derived artifact allowed to persist)."""
@@ -6206,7 +6501,7 @@ async def models_roster() -> ModelsRosterOut:
         ok=True,
         providers=[_provider_public(row).model_dump()
                    for row in store.model_providers()],
-        discovered=[],
+        discovered=_discovered_zone(),
         board=[
             ModelsBoardRosterItem(
                 provider="hermes",
@@ -6218,6 +6513,7 @@ async def models_roster() -> ModelsRosterOut:
         ],
         meta={
             "max_models_per_row": _MODELS_MAX_PER_ROW,
+            "max_installations": _MODELS_MAX_INSTALLATIONS,
             # MF-HUB-OFF honesty (H1): the FE renders the disabled connect
             # CTA WITH its reason when the credential features are off.
             # Metadata only — no credential-shaped name in the payload.
@@ -10825,28 +11121,39 @@ _telemetry_limiter = RateLimiter(
 # below: the 60/60s limiter bounds such legs' frequency and the LAN
 # ingress is the trust boundary (residual risk accepted for v0).
 _TELEMETRY_BODY_MAX_BYTES = 1_048_576   # 1 MiB pre-parse Content-Length cap
+# SEC-3 (cascade 2026-10-28): the discovery ingest gets the same pre-parse
+# gate — an executor-token leg could otherwise buffer/parse hundreds of MB
+# of JSON before the honest-422 caps could answer. 256 KiB is ~15x the
+# largest legal models object (16 KiB) + the mcp leg + the inventory legs,
+# with an order of magnitude of headroom. Chunked (no Content-Length)
+# rides the post-parse caps, as for telemetry (residual risk accepted).
+_DISCOVERY_BODY_MAX_BYTES = 262_144     # 256 KiB pre-parse Content-Length cap
 
 
 @app.middleware("http")
 async def telemetry_body_cap(request: Request, call_next):
-    """C1 pre-parse gate (CWE-400): refuse an oversized DECLARED body on
-    the telemetry ingest before the body is read — the same contract 413
-    the batch cap answers, just at the earliest possible point. Header
-    only: no body buffering, no parsing; every other route passes through
-    untouched (one method+path string compare)."""
-    if (request.method == "POST"
-            and request.url.path == "/api/events/ui"):
-        declared = request.headers.get("Content-Length", "")
-        if (declared.isdigit()
-                and int(declared) > _TELEMETRY_BODY_MAX_BYTES):
-            logging.getLogger("vesmaro.telemetry").warning(
-                "ui telemetry body over pre-parse cap declared=%s",
-                declared)
-            return JSONResponse(
-                status_code=413,
-                content={"detail": "request body exceeds "
-                                   f"{_TELEMETRY_BODY_MAX_BYTES} bytes "
-                                   "(pre-parse Content-Length cap)"})
+    """C1 pre-parse gate (CWE-400), the telemetry precedent extended to
+    the discovery ingest (SEC-3, cascade 2026-10-28): refuse an oversized
+    DECLARED body BEFORE the body is read — header only, no body
+    buffering, no parsing; every other route passes through untouched."""
+    if request.method == "POST":
+        path = request.url.path
+        is_telemetry = path == "/api/events/ui"
+        is_discovery = (path.startswith("/api/executors/")
+                        and path.endswith("/discovery"))
+        if is_telemetry or is_discovery:
+            cap = (_TELEMETRY_BODY_MAX_BYTES if is_telemetry
+                   else _DISCOVERY_BODY_MAX_BYTES)
+            declared = request.headers.get("Content-Length", "")
+            if declared.isdigit() and int(declared) > cap:
+                logging.getLogger("vesmaro.telemetry").warning(
+                    "ingest body over pre-parse cap path=%s declared=%s",
+                    path, declared)
+                return JSONResponse(
+                    status_code=413,
+                    content={"detail": "request body exceeds "
+                                       f"{cap} bytes "
+                                       "(pre-parse Content-Length cap)"})
     return await call_next(request)
 
 # The frozen v0 kind registry (taxonomy §1.2) — the single dictionary the

@@ -20,6 +20,7 @@ import re
 import secrets
 import sqlite3
 import threading
+import urllib.parse
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -408,6 +409,143 @@ EXECUTOR_PENDING_CAP = 20
 # pattern keeps the value safe everywhere it lands (rules/conditions,
 # audit payloads, URLs, UI) — lowercase [a-z0-9] head, then [a-z0-9._-].
 HARNESS_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{0,59}$")
+# Board-mirror wave dictionary act (2026-10-28, owner-approved): the four
+# MODEL-SERVER surfaces the agent's probe leg attributes discovery rows to
+# (host-intake spec §3.3.4 — the fixed loopback probe table). The agent
+# emits ``source: probe`` rows whose ``harness`` carries the probe SOURCE
+# slug (agent-discovery §3.2); §3.11 forbids a silent carve-out — the
+# slugs must be CONSCIOUS dictionary members, not ad-hoc pass-throughs.
+# Seeded with a marking note so the UI renders them honestly as
+# model-server surfaces (not CLI harnesses). Unknown OTHER names stay
+# dropped + audited — discovery never auto-extends the dictionary.
+MODEL_SERVER_HARNESS_SEEDS: dict[str, str] = {
+    "ollama": "model-server surface — anonymous loopback probe (GET /api/tags:11434)",
+    "lmstudio": "model-server surface — anonymous loopback probe (GET /v1/models:1234)",
+    "llama-server": "model-server surface — anonymous loopback probe (GET /v1/models:8080)",
+    "vllm": "model-server surface — anonymous loopback probe (GET /v1/models:8000)",
+}
+
+
+# --------------------------------------------------- credential-shape detector
+# The board-side SECOND line of the leak discipline (agent-discovery §3.8/
+# §3.11, security-verdict H4): the agent's names-only validator should have
+# dropped credential-shaped strings BEFORE marshal; anything that still
+# arrives is an INCIDENT, not data — the row/entry is dropped (never
+# stored) and `models.credential_leak_suspected` is audited. The payload
+# carries the FIELD name and value-derived metadata (length + truncated
+# SHA-256) — NEVER the value itself (mask-first: CWE-538; the truncated
+# fingerprint is the only material-derived artifact the verdict allows to
+# persist). INGEST path only — never a read-time filter (mf3 §2-I).
+#
+# Shape classes (AGW-25 §3.8, verbatim families): token prefixes at string
+# start, long hex runs, base64-ish runs, key-shaped assignments. The
+# base64-ish class is deliberately PUNCTUATION-FREE (a continuous
+# [A-Za-z0-9+/=]{40,} run) so hyphen-structured model ids
+# («deepseek-ai/DeepSeek-R1-Distill-Qwen-32B») split into short word runs
+# and never trip a false positive; a real secret is one continuous run.
+_CRED_TOKEN_PREFIXES = (
+    "sk-", "sk-ant-", "ghp_", "gho_", "ghu_", "ghs_", "github_pat_",
+    "xoxb-", "xoxp-", "xoxa-", "xoxr-", "xapp-", "glpat-", "AKIA", "ASIA",
+    "AIza", "shpat_", "shpss_", "hf_", "gsk_",
+)
+_CRED_HEX_RUN_RE = re.compile(r"[0-9a-fA-F]{20,}")
+_CRED_B64_RUN_RE = re.compile(r"[A-Za-z0-9+/=]{40,}")
+_CRED_KEY_ASSIGN_RE = re.compile(
+    r"(?i)\b(api[_-]?key|apikey|access[_-]?token|auth[_-]?token|token|"
+    r"secret|password|passwd|bearer)\b\s*[:=]\s*\S")
+# Token prefixes IN an embedded position (a base_url path/query carrying
+# «/sk-…» or «?key=ghp_…» — the URL fields are scanned values too, gate 2
+# §2 amendment 2's board-side mirror) and inside free text («key: sk-…» in
+# a note). The prefix must sit at the string start or right after a
+# structural boundary — URL punctuation, whitespace, quotes, colon — so
+# hyphenated words inside legitimate ids («risk-based», «desk-check»)
+# never trip it.
+_CRED_PREFIX_BOUNDARY_RE = re.compile(
+    r"(?:^|[\s\"'(/?&=:])"
+    + r"(?:" + "|".join(re.escape(p) for p in _CRED_TOKEN_PREFIXES) + r")")
+
+
+def looks_like_credential(value: str) -> bool:
+    """True when the string carries a credential SHAPE (the §3.8 classes
+    above). A conservative fail-closed classifier: an exotic false
+    positive costs one advisory discovery row; a false negative would put
+    material into the mirror."""
+    s = (value or "").strip()
+    if not s:
+        return False
+    return (s.startswith(_CRED_TOKEN_PREFIXES)
+            or _CRED_PREFIX_BOUNDARY_RE.search(s) is not None
+            or _CRED_HEX_RUN_RE.search(s) is not None
+            or _CRED_B64_RUN_RE.search(s) is not None
+            or _CRED_KEY_ASSIGN_RE.search(s) is not None)
+
+
+def credential_fingerprint(value: str) -> dict[str, Any]:
+    """Value-derived metadata for the incident payload: length + truncated
+    SHA-256. The value itself NEVER rides the audit (red line 9)."""
+    digest = hashlib.sha256((value or "").encode("utf-8")).hexdigest()
+    return {"value_len": len(value or ""), "value_sha12": digest[:12]}
+
+
+# The frozen v4 surface vocabulary (agent-discovery §2): ``metal`` |
+# ``distrobox:<name>`` | ``pod:<name>``. Models/MCP rows are structurally
+# attributed to a surface from THIS vocabulary; unknown values are
+# dictionary drops (§3.11), never auto-extended.
+_EXEC_ENV_RE = re.compile(
+    r"^metal$|^distrobox:[A-Za-z0-9][A-Za-z0-9._-]{0,59}$"
+    r"|^pod:[A-Za-z0-9][A-Za-z0-9._-]{0,59}$")
+
+
+def exec_env_known(value: str) -> bool:
+    """True when the value is a legal v4 surface spelling."""
+    return bool(_EXEC_ENV_RE.match((value or "").strip()))
+
+
+# Red line §4.5 board-side (security-verdict §4; host-intake §3.3.6 —
+# «OQ-4 amendment 2 applies board-side too»): the mirror ingest applies
+# the base_url grammar the AGENT is bound to, for symmetry of the trust
+# boundary — the board never trusts the wire to have redacted. Query,
+# fragment and userinfo are ALWAYS stripped (scheme://authority[/path]);
+# a URL carrying userinfo or a credential-shaped query-param NAME is
+# OMITTED entirely (the row's other facts stay) — a SHORT secret defeats
+# every shape regex, so the structural grammar is the authoritative line,
+# the shape detector only the second one. Unparsable/authority-less →
+# omit, never guess (the §3.4 honest-absence rule).
+_CRED_URL_PARAM_NAMES = frozenset({
+    "key", "token", "api_key", "apikey", "api-key", "access_token",
+    "access-token", "access_key", "password", "passwd", "secret", "auth",
+    "authorization", "credential", "session_key", "sig", "signature",
+})
+_BASE_URL_MAX = 200
+
+
+def redact_base_url(value: str) -> str:
+    """Board-side §3.3.6 grammar for an agent-posted ``base_url``. Returns
+    '' (omit) for anything unparsable, authority-less, non-http(s),
+    userinfo-bearing or credential-param-bearing; otherwise the
+    normalized scheme://authority[/path] with query/fragment stripped."""
+    s = (value or "").strip()
+    if not s:
+        return ""
+    try:
+        parts = urllib.parse.urlsplit(s)
+    except ValueError:
+        return ""
+    if parts.scheme.lower() not in ("http", "https") or not parts.netloc:
+        return ""
+    if "@" in parts.netloc:   # userinfo (user:pass@host) — omit entirely
+        return ""
+    try:
+        query = urllib.parse.parse_qsl(parts.query, keep_blank_values=True)
+    except ValueError:
+        query = []
+    if any(name.strip().lower() in _CRED_URL_PARAM_NAMES
+           for name, _ in query):
+        return ""
+    authority = parts.netloc
+    path = parts.path.rstrip("/")
+    out = f"{parts.scheme.lower()}://{authority}{path}"
+    return out[:_BASE_URL_MAX]
 # Dictionary ceiling: a sane select list and a junk-abuse bound. A cap hit
 # is a 422 (entry validation), not a 429 — the dictionary is not a rate
 # resource, it is a form the owner controls.
@@ -1589,6 +1727,10 @@ class Store:
             self._migrate(db)
             self._seed_if_empty(db)
             self._seed_harnesses(db)
+            # AFTER the empty-table seed: the one-time dictionary act must
+            # not make a fresh table look non-empty (that would suppress
+            # the full seed above).
+            self._seed_model_server_harnesses(db)
 
     def _migrate_device_scope_v1(self, db: sqlite3.Connection) -> None:
         """Scope v1 data migration (ADR 0012 Amendment, archcom
@@ -1732,14 +1874,17 @@ class Store:
     KNOWN_HARNESSES = frozenset({
         "zcode", "hermes", "pi", "copilot", "claude-code", "cursor",
         "aider", "continue", "cline", "windsurf",
-    })
+    } | MODEL_SERVER_HARNESS_SEEDS.keys())
 
     def _seed_harnesses(self, db: sqlite3.Connection) -> None:
         """Seed the harness dictionary exactly once — when the table is
         still empty. INSERT OR IGNORE keeps the boot idempotent; seeding
         ONLY on empty preserves owner deletions across restarts (the
         dictionary is owner-managed since wave 3C, deleted seeds must not
-        resurrect)."""
+        resurrect). The four model-server surfaces carry their marking
+        note (MODEL_SERVER_HARNESS_SEEDS — the board-mirror wave's
+        owner-approved dictionary act: the agent attributes ``source:
+        probe`` discovery rows to these slugs)."""
         count = db.execute("SELECT COUNT(*) AS n FROM harnesses").fetchone()["n"]
         if count:
             return
@@ -1747,8 +1892,32 @@ class Store:
         db.executemany(
             "INSERT OR IGNORE INTO harnesses (name, added_at, added_via, note) "
             "VALUES (?,?,?,?)",
-            [(name, now, "seed", "") for name in sorted(self.KNOWN_HARNESSES)],
+            [(name, now, "seed", MODEL_SERVER_HARNESS_SEEDS.get(name, ""))
+             for name in sorted(self.KNOWN_HARNESSES)],
         )
+
+    def _seed_model_server_harnesses(self, db: sqlite3.Connection) -> None:
+        """The dictionary act, once per DATABASE (runs AFTER the
+        empty-table seed, never instead of it). Existing pre-wave boards
+        hold a NON-empty harnesses table — the empty-table seed never
+        fires for them — so the four model-server probe surfaces are
+        seeded here exactly once, guarded by a board_meta flag. INSERT OR
+        IGNORE + the flag: rows the owner deletes AFTER this run never
+        resurrect (the wave-3C owner-deletion rule), and rows the owner
+        added before the wave are never overwritten."""
+        if db.execute(
+                "SELECT 1 FROM board_meta WHERE key='harness_seed_models_v1'"
+        ).fetchone() is not None:
+            return
+        now = _now()
+        db.executemany(
+            "INSERT OR IGNORE INTO harnesses (name, added_at, added_via,"
+            " note) VALUES (?,?,?,?)",
+            [(name, now, "seed", note)
+             for name, note in sorted(MODEL_SERVER_HARNESS_SEEDS.items())])
+        db.execute(
+            "INSERT OR REPLACE INTO board_meta (key, value) "
+            "VALUES ('harness_seed_models_v1', '1')")
 
     def _migrate(self, db: sqlite3.Connection) -> None:
         # schema evolution for pre-0.7 databases.
@@ -1894,6 +2063,23 @@ class Store:
             db.execute(
                 "ALTER TABLE executors "
                 "ADD COLUMN exec_env_inventory TEXT NOT NULL DEFAULT '{}'")
+        # Board-mirror wave (contract «board-mirror», 2026-10-28): the
+        # models fleet discovery legs (FC-6/FC-7) — the last report's
+        # ``models`` object (installations + notes) and ``mcp_servers``
+        # list as per-executor snapshots. Two columns, not an
+        # exec_env_inventory reshaping: agent-discovery §3.10 keeps the
+        # no-wipe distinction per FIELD (a models-less report must not
+        # touch the models mirror), and each leg is its own fact class.
+        # Additive ALTER — '{}'/'[]' DEFAULTs cover pre-wave rows (honest
+        # absence); no SEED_VERSION bump (exec_env_inventory precedent).
+        if "models_mirror" not in ecols:
+            db.execute(
+                "ALTER TABLE executors "
+                "ADD COLUMN models_mirror TEXT NOT NULL DEFAULT '{}'")
+        if "mcp_mirror" not in ecols:
+            db.execute(
+                "ALTER TABLE executors "
+                "ADD COLUMN mcp_mirror TEXT NOT NULL DEFAULT '[]'")
         # P2-1: provision_host_pins was reshaped from host-PK to (host,port)
         # PK while still WIP (unreleased). A dev DB carrying the old shape
         # would silently break every pin call — drop it; pins are TOFU
@@ -4934,6 +5120,398 @@ class Store:
                     "executor_id": executor_id,
                     "sections": sorted(next_inv.keys())})
             return self._executor(db, executor_id)
+
+    # ------------------------------------- models fleet mirror (board-mirror)
+    #
+    # The FC-6/FC-7 ingest (host-intake spec §3.3–§3.4; agent-discovery
+    # §3.10/§3.11): the agent v0.11+ posts the additive top-level ``models``
+    # and ``mcp_servers`` discovery fields; the board stores the LAST report
+    # per executor (snapshot), serves the roster/mirror from it, and NEVER
+    # lets it grant anything (advisory, never authority). Ingest duties
+    # (§3.11, verbatim family):
+    # - unknown ``harness`` or ``exec_env`` attribution → row/entry DROPPED
+    #   + audited (discovery.rejected; the dictionary is closed — growth is
+    #   an owner act; the four model-server probe surfaces are conscious
+    #   MODEL_SERVER_HARNESS_SEEDS members, not carve-outs);
+    # - credential-shaped string in any field → row/entry DROPPED +
+    #   models.credential_leak_suspected audited (the incident is data
+    #   about a leak attempt, never stored material);
+    # - over-cap payloads never reach here — the route honest-422s them
+    #   (the agent shrink-to-fit makes an over-cap POST a contract
+    #   violation, not an honest report).
+    # Snapshot semantics (§3.10, the P2-1/P3-1 precedents): an identical
+    # re-report is a silent no-op (no write, no audit, no SSE delta); an
+    # explicitly EMPTY report wipes the mirror (real zero-and-ran); a
+    # report whose rows were ALL dropped never wipes the last valid
+    # snapshot (P3-1); ``None`` (the field absent from the POST) never
+    # reaches these methods — the route simply does not call them.
+    # Audit kinds: models.reported / mcp.reported (only on change),
+    # discovery.rejected (dictionary drops), models.credential_leak_
+    # suspected (incident drops).
+
+    _INSTALLATION_NAMED_FIELDS = frozenset({
+        "provider", "base_url", "harness", "exec_env", "note", "models"})
+
+    @classmethod
+    def _installation_row_scan(cls, row: dict[str, Any]) -> str:
+        """Credential-shape scan over one installation row: every named
+        field (provider, base_url, harness, exec_env, note, model ids)
+        AND every UNKNOWN extra key the row may carry — a key parked in
+        an unexpected field trips the same incident (SEC-6). Returns the
+        offending FIELD path ('' when clean). The scanned VALUE never
+        leaves this function — only the field name."""
+        for field in ("provider", "base_url", "harness", "exec_env", "note"):
+            value = row.get(field)
+            if isinstance(value, str) and looks_like_credential(value):
+                return f"installations[].{field}"
+        models = row.get("models")
+        if isinstance(models, list):
+            for i, model_id in enumerate(models):
+                if isinstance(model_id, str) and looks_like_credential(model_id):
+                    return f"installations[].models[{i}]"
+        for key, value in row.items():
+            if key in cls._INSTALLATION_NAMED_FIELDS:
+                continue
+            if isinstance(value, str):
+                if looks_like_credential(value):
+                    return f"installations[].{key}"
+            elif isinstance(value, list):
+                for i, item in enumerate(value[:32]):
+                    if looks_like_credential(str(item)):
+                        return f"installations[].{key}[{i}]"
+            elif isinstance(value, dict):
+                for k2, v2 in list(value.items())[:32]:
+                    if looks_like_credential(str(k2)) or \
+                            looks_like_credential(str(v2)):
+                        return f"installations[].{key}.{k2}"
+            elif looks_like_credential(str(value)):
+                return f"installations[].{key}"
+        return ""
+
+    def report_models_mirror(
+            self, executor_id: str, models: dict[str, Any]) -> dict[str, Any]:
+        """FC-6 ingest: normalize the report's ``models`` object and store
+        it as the per-executor ``models_mirror`` snapshot. The route has
+        ALREADY honest-422'd the caps (≤64 rows, ≤50 models/row, ≤16 KiB)
+        and the form enums (auth/source); this method enforces the
+        DICTIONARY duties (unknown harness/exec_env → drop + audit) and
+        the credential detector (any shaped string → drop the whole row +
+        incident audit).
+
+        A credential shape found in the free-form top-level ``notes``
+        object drops the notes blob (the row facts stay honest — the
+        blob is the untrusted free text), auditing field ``notes``.
+
+        Returns {"accepted", "dropped", "drop_reasons", "notes_dropped",
+        "changed", "added", "removed", "updated"} — added/removed are
+        (provider, base_url, harness, exec_env) IDENTITY tuples vs the
+        previous snapshot, ``updated`` the same-shape tuples whose
+        CONTENT changed under a stable identity (QA-F1); all three feed
+        the SSE delta and are empty when nothing roster-visible moved.
+        """
+        installations = models.get("installations")
+        if not isinstance(installations, list):  # defensive: route validated
+            installations = []
+        notes = models.get("notes")
+        notes_clean: dict[str, Any] = {}
+        notes_dropped = False
+        notes_incident: dict[str, Any] | None = None
+        if isinstance(notes, dict):
+            for key, value in list(notes.items())[:16]:
+                key_hits = looks_like_credential(str(key))
+                value_hits = looks_like_credential(str(value))
+                if key_hits or value_hits:
+                    # SEC-4: the blob drops WHOLE (the untrusted free
+                    # text never partially persists) and the offending
+                    # entry is fingerprinted (field/len/sha12 — never
+                    # the value).
+                    notes_dropped = True
+                    notes_incident = {
+                        "executor_id": executor_id,
+                        "field": f"notes.{key}",
+                        **credential_fingerprint(
+                            str(key) if key_hits else str(value))}
+                    break
+                notes_clean[str(key)[:60]] = value
+        drops: list[tuple[str, str]] = []   # (harness-or-'', reason)
+        reasons: dict[str, int] = {}
+        accepted: list[dict[str, Any]] = []
+        with self._lock, self._conn() as db:
+            row = db.execute(
+                "SELECT * FROM executors WHERE id=?", (executor_id,)).fetchone()
+            if row is None or row["state"] == "revoked":
+                return {"accepted": 0, "dropped": len(installations),
+                        "drop_reasons": {}, "notes_dropped": False,
+                        "changed": False, "added": [], "removed": [],
+                        "updated": []}
+            known = self._harness_names_db(db)
+            for raw in installations:
+                if not isinstance(raw, dict):
+                    continue
+                provider = str(raw.get("provider") or "").strip()
+                harness = str(raw.get("harness") or "").strip()
+                exec_env = str(raw.get("exec_env") or "").strip()
+                # The credential detector is the FIRST gate: a shaped
+                # string in ANY field — named or unknown (SEC-6) — drops
+                # the WHOLE row before any dictionary check; the incident
+                # is data about a leak attempt, never stored material.
+                field = self._installation_row_scan(raw)
+                if field:
+                    drops.append((harness, "credential_shape"))
+                    reasons["credential_shape"] = \
+                        reasons.get("credential_shape", 0) + 1
+                    self._log(db, "models.credential_leak_suspected", None, {
+                        "executor_id": executor_id,
+                        "field": field,
+                        **credential_fingerprint(str(raw))})
+                    continue
+                if not harness or harness not in known:
+                    drops.append((harness, "harness"))
+                    reasons["harness"] = reasons.get("harness", 0) + 1
+                    continue
+                if not exec_env or not exec_env_known(exec_env):
+                    drops.append((harness, "exec_env"))
+                    reasons["exec_env"] = reasons.get("exec_env", 0) + 1
+                    continue
+                # SEC-P1: the §3.3.6 grammar applies BOARD-SIDE too — the
+                # wire is never trusted to have redacted (red line §4.5).
+                # Query/fragment/userinfo always stripped; userinfo or a
+                # credential-shaped param NAME → the URL fact omits
+                # entirely (the row's other facts stay); unparsable →
+                # omit, never guess.
+                base_url = redact_base_url(str(raw.get("base_url") or ""))
+                model_ids = raw.get("models")
+                accepted.append({
+                    "provider": provider[:60],
+                    **({"base_url": base_url} if base_url else {}),
+                    "auth": str(raw.get("auth") or "").strip(),
+                    "models": sorted({str(m).strip()[:200]
+                                      for m in model_ids}) if model_ids else [],
+                    "harness": harness,
+                    "exec_env": exec_env,
+                    "source": str(raw.get("source") or "").strip(),
+                    **({"note": str(raw.get("note")).strip()[:200]}
+                       if str(raw.get("note") or "").strip() else {}),
+                })
+            if notes_incident is not None:
+                self._log(db, "models.credential_leak_suspected", None,
+                          notes_incident)
+            rejected_names = sorted({d[0] for d in drops
+                                     if d[1] in ("harness", "exec_env")})
+            if rejected_names:
+                self._log(db, "discovery.rejected", None, {
+                    "executor_id": executor_id, "names": rejected_names,
+                    "count": len(rejected_names), "leg": "models"})
+            accepted.sort(key=lambda r: (r["provider"], r.get("base_url", ""),
+                                         r["harness"], r["exec_env"]))
+
+            def row_tuple(r: dict[str, Any]) -> tuple[str, str, str, str]:
+                return (r["provider"], r.get("base_url", ""),
+                        r["harness"], r["exec_env"])
+
+            stored = _loads(row["models_mirror"])
+            if not isinstance(stored, dict):
+                stored = {}
+            stored_rows = [r for r in stored.get("installations", [])
+                           if isinstance(r, dict)]
+            before = {row_tuple(r) for r in stored_rows}
+            after = {row_tuple(r) for r in accepted}
+            # QA-F7, snapshot semantics (§3.10 «хранится ПОСЛЕДНИЙ
+            # отчёт»): a report WITHOUT notes after one WITH notes DROPS
+            # the stored blob (the report is the whole object); only
+            # absent-vs-absent is the no-op.
+            notes_equal = (notes_clean or None) == (stored.get("notes") or None)
+            # QA-F1: the comparator is the FULL normalized content
+            # (report_executor_inventory family) — an identity-stable
+            # re-report with changed models/auth/note is a WRITE, never
+            # a silent drop. The identity-tuple sets stay the SSE delta
+            # grammar (added/removed); ``updated`` carries the
+            # content-changed tuples.
+            content_changed = False
+            updated_tuples: list[tuple[str, str, str, str]] = []
+            # Explicit-empty wipe (real zero-and-ran) vs all-dropped
+            # no-wipe (P3-1): an empty ACCEPTED set only wipes when the
+            # agent itself reported zero installations.
+            if accepted or not installations:
+                candidate = {"installations": accepted}
+                if notes_clean:
+                    candidate["notes"] = notes_clean
+                if candidate["installations"] != stored_rows or not notes_equal:
+                    content_changed = True
+                    snapshot = dict(candidate)
+                    snapshot["reported_at"] = _now()
+                    db.execute(
+                        "UPDATE executors SET models_mirror=?, updated_at=? "
+                        "WHERE id=? AND state<>'revoked'",
+                        (json.dumps(snapshot, ensure_ascii=False), _now(),
+                         executor_id))
+                    self._log(db, "models.reported", None, {
+                        "executor_id": executor_id,
+                        "installations": len(accepted),
+                        "added": len(after - before),
+                        "removed": len(before - after)})
+                stored_by_tuple: dict[tuple[str, str, str, str], dict] = {}
+                for r in stored_rows:
+                    stored_by_tuple.setdefault(row_tuple(r), r)
+                for r in accepted:
+                    t = row_tuple(r)
+                    if t in before and stored_by_tuple.get(t) != r:
+                        updated_tuples.append(t)
+        if content_changed:
+            added_tuples = sorted(after - before)
+            removed_tuples = sorted(before - after)
+        else:
+            added_tuples, removed_tuples = [], []
+            updated_tuples = []
+        updated_tuples.sort()
+        return {
+            "accepted": len(accepted),
+            "dropped": len(drops),
+            "drop_reasons": reasons,
+            "notes_dropped": notes_dropped,
+            "changed": content_changed,
+            "added": [{"provider": p, "base_url": b, "harness": h,
+                       "exec_env": e} for p, b, h, e in added_tuples],
+            "removed": [{"provider": p, "base_url": b, "harness": h,
+                         "exec_env": e} for p, b, h, e in removed_tuples],
+            "updated": [{"provider": p, "base_url": b, "harness": h,
+                         "exec_env": e} for p, b, h, e in updated_tuples],
+        }
+
+    @staticmethod
+    def _mcp_entry_scan(entry: dict[str, Any]) -> str:
+        """Credential-shape scan over one mcp_servers entry: harness,
+        exec_env (QA-F2), server names, transport kinds. Returns the
+        offending FIELD path ('' when clean); the VALUE never leaves
+        this function."""
+        harness = entry.get("harness")
+        if isinstance(harness, str) and looks_like_credential(harness):
+            return "mcp_servers[].harness"
+        exec_env = entry.get("exec_env")
+        if isinstance(exec_env, str) and looks_like_credential(exec_env):
+            return "mcp_servers[].exec_env"
+        servers = entry.get("servers")
+        if isinstance(servers, list):
+            for i, name in enumerate(servers):
+                if isinstance(name, str) and looks_like_credential(name):
+                    return f"mcp_servers[].servers[{i}]"
+        transports = entry.get("transports")
+        if isinstance(transports, dict):
+            for key, value in transports.items():
+                if looks_like_credential(str(key)) or \
+                        looks_like_credential(str(value)):
+                    return "mcp_servers[].transports"
+        return ""
+
+    def report_mcp_mirror(
+            self, executor_id: str,
+            entries: list[dict[str, Any]]) -> dict[str, Any]:
+        """FC-7 ingest: normalize the report's ``mcp_servers`` list and
+        store it as the per-executor ``mcp_mirror`` snapshot (names +
+        counts only — argv/env/URLs never enter any column, host-intake
+        §3.4). The route has ALREADY honest-422'd the caps (≤32 entries,
+        ≤30 names, ≤8 KiB/entry, integer count); this method enforces the
+        dictionary duties and the credential detector, same grammar as
+        report_models_mirror. ``count`` stays the agent's OWN full total
+        (the honest counter, even when servers[] was truncated agent-side).
+
+        Returns {"accepted", "dropped", "drop_reasons", "changed"}.
+        """
+        drops: list[tuple[str, str]] = []
+        reasons: dict[str, int] = {}
+        accepted: list[dict[str, Any]] = []
+        with self._lock, self._conn() as db:
+            row = db.execute(
+                "SELECT * FROM executors WHERE id=?", (executor_id,)).fetchone()
+            if row is None or row["state"] == "revoked":
+                return {"accepted": 0, "dropped": len(entries),
+                        "drop_reasons": {}, "changed": False}
+            known = self._harness_names_db(db)
+            for raw in entries:
+                if not isinstance(raw, dict):
+                    continue
+                harness = str(raw.get("harness") or "").strip()
+                exec_env = str(raw.get("exec_env") or "").strip()
+                field = self._mcp_entry_scan(raw)
+                if field:
+                    drops.append((harness, "credential_shape"))
+                    reasons["credential_shape"] = \
+                        reasons.get("credential_shape", 0) + 1
+                    self._log(db, "models.credential_leak_suspected", None, {
+                        "executor_id": executor_id, "field": field,
+                        **credential_fingerprint(str(raw))})
+                    continue
+                if not harness or harness not in known:
+                    drops.append((harness, "harness"))
+                    reasons["harness"] = reasons.get("harness", 0) + 1
+                    continue
+                if not exec_env or not exec_env_known(exec_env):
+                    drops.append((harness, "exec_env"))
+                    reasons["exec_env"] = reasons.get("exec_env", 0) + 1
+                    continue
+                servers = [str(s).strip()[:120]
+                           for s in raw.get("servers") or []]
+                entry: dict[str, Any] = {
+                    "harness": harness,
+                    "exec_env": exec_env,
+                    "servers": sorted({s for s in servers if s}),
+                    "count": max(0, int(raw.get("count") or 0)),
+                }
+                # transports rides omitempty (the documented optional map,
+                # host-intake §3.4) — a leg without kinds stays honest.
+                if isinstance(raw.get("transports"), dict) \
+                        and raw["transports"]:
+                    entry["transports"] = {
+                        str(k)[:60]: str(v)[:20]
+                        for k, v in list(raw["transports"].items())[:30]}
+                accepted.append(entry)
+            rejected_names = sorted({d[0] for d in drops
+                                     if d[1] in ("harness", "exec_env")})
+            if rejected_names:
+                self._log(db, "discovery.rejected", None, {
+                    "executor_id": executor_id, "names": rejected_names,
+                    "count": len(rejected_names), "leg": "mcp_servers"})
+            accepted.sort(key=lambda r: (r["harness"], r["exec_env"]))
+            stored = [r for r in _loads(row["mcp_mirror"])
+                      if isinstance(r, dict)]
+
+            def entry_key(r: dict[str, Any]) -> tuple[str, str]:
+                return (r.get("harness", ""), r.get("exec_env", ""))
+
+            def entry_body(r: dict[str, Any]) -> tuple[Any, ...]:
+                return (r.get("servers", []), r.get("count", 0),
+                        r.get("transports", {}))
+
+            candidate = [{k: v for k, v in r.items()} for r in accepted]
+            changed = False
+            # Explicit-empty list = real zero-and-ran (wipe); a report
+            # whose entries were ALL dropped never wipes (P3-1).
+            if accepted or not entries:
+                if [(entry_key(r), entry_body(r)) for r in candidate] != \
+                        [(entry_key(r), entry_body(r)) for r in stored]:
+                    db.execute(
+                        "UPDATE executors SET mcp_mirror=?, updated_at=? "
+                        "WHERE id=? AND state<>'revoked'",
+                        (json.dumps(candidate, ensure_ascii=False),
+                         _now(), executor_id))
+                    self._log(db, "mcp.reported", None, {
+                        "executor_id": executor_id,
+                        "entries": len(accepted),
+                        "dropped": len(drops)})
+                    changed = True
+        return {"accepted": len(accepted), "dropped": len(drops),
+                "drop_reasons": reasons, "changed": changed}
+
+    def models_mirrors(self) -> list[dict[str, Any]]:
+        """Roster-projection input: (id, state, models_mirror, mcp_mirror)
+        for every NON-revoked executor. Deliberately narrow — the full
+        rows (secret_hash included) never leave the store for this read
+        (the registry projection is _executor_public's business)."""
+        with self._lock, self._conn() as db:
+            rows = db.execute(
+                "SELECT id, state, models_mirror, mcp_mirror FROM executors "
+                "WHERE state<>'revoked' ORDER BY id").fetchall()
+        return [dict(r) for r in rows]
 
 
     def update_executor(self, executor_id: str, patch: dict[str, Any],
