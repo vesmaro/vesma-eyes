@@ -692,3 +692,160 @@ class TestBodyCapC1:
         assert r.status_code == 200
         assert r.json()["accepted"] == 50
         assert len(_telemetry_rows(visit)) == 50
+
+
+# ------------------- SEC-W5-1: the Kora steering trio + kora-scan caps
+# Cascade control wave 5 fix (CWE-400): the steering POSTs and the scan
+# ingest parse their pydantic body INSIDE the handler — the ui-only guard
+# / the executor-token check run there, AFTER FastAPI has buffered the
+# body — so an anonymous ingress leg could burn CPU/memory pre-auth.
+# The C1 gate now covers them pre-parse: 128 KiB for the steering trio
+# (32,000-char prompt x 4 bytes + envelope), 6 MiB for kora-scan
+# (~4 MB realistic legal envelope + headroom). Sizing rationale at the
+# constants in server/app.py.
+_W5_STEERING_POSTS = (
+    "/api/kora/sessions",
+    "/api/kora/sessions/zbox:sess-1/messages",
+    "/api/kora/steering/step-up",
+)
+
+
+class TestBodyCapKoraSteeringScanW5:
+    """The TestBodyCapC1 discipline, replayed for the two new families."""
+
+    def _request(self, *, method: str = "POST", path: str,
+                 content_length: str | None = None) -> Request:
+        headers = ([(b"content-length", content_length.encode())]
+                   if content_length is not None else [])
+        scope = {"type": "http", "method": method, "path": path,
+                 "headers": headers, "query_string": b"",
+                 "server": ("test", 80), "client": ("127.0.0.1", 1),
+                 "scheme": "http"}
+
+        async def _no_body():   # the middleware must NEVER touch the body
+            raise AssertionError("the body channel must not be read")
+
+        return Request(scope, receive=_no_body)
+
+    @staticmethod
+    async def _sentinel(request):
+        from starlette.responses import Response
+        return Response(b"passed-through", status_code=200)
+
+    # ------------------- unit legs: the header alone decides ----------
+
+    @pytest.mark.parametrize("path", _W5_STEERING_POSTS)
+    def test_steering_oversize_declared_413_without_reading_the_body(
+            self, app_module, path):
+        """Each steering route: a 256 KiB declaration (over the 128 KiB
+        family cap) is refused by the header alone — the receive channel
+        raises if touched, call_next must not run."""
+        async def _call_next(request):
+            raise AssertionError("call_next must not run for an "
+                                 "oversize declaration")
+
+        resp = asyncio.run(app_module.telemetry_body_cap(
+            self._request(path=path, content_length=str(256 * 1024)),
+            _call_next))
+        assert resp.status_code == 413
+        assert "detail" in json.loads(resp.body.decode())
+
+    def test_kora_scan_oversize_declared_413_without_reading_the_body(
+            self, app_module):
+        """kora-scan: a 7 MiB declaration (over the 6 MiB cap) is refused
+        pre-parse, body never read."""
+        async def _call_next(request):
+            raise AssertionError("call_next must not run for an "
+                                 "oversize declaration")
+
+        resp = asyncio.run(app_module.telemetry_body_cap(
+            self._request(path="/api/executors/ex-w5/kora-scan",
+                          content_length=str(7 * 1024 * 1024)),
+            _call_next))
+        assert resp.status_code == 413
+        assert "detail" in json.loads(resp.body.decode())
+
+    def test_cap_boundaries_and_scope_matrix(self, app_module):
+        """Exactly-at-cap passes for BOTH new caps (the refusal is
+        strictly >); the steering cap does not leak onto GET legs, and
+        hermes chat — a DIFFERENT body class (20 turns x 8,000 chars)
+        deliberately outside this slice — still passes through (its own
+        cap decision is pending, pinned here so the boundary is honest)."""
+        steer = app_module._STEERING_BODY_MAX_BYTES
+        scan = app_module._KORA_SCAN_BODY_MAX_BYTES
+        cases = [
+            ("steering declared == cap",
+             self._request(path="/api/kora/sessions",
+                           content_length=str(steer))),
+            ("scan declared == cap",
+             self._request(path="/api/executors/ex-w5/kora-scan",
+                           content_length=str(scan))),
+            ("oversize on hermes chat (uncapped, own decision pending)",
+             self._request(path="/api/kora/hermes/chat",
+                           content_length=str(steer * 100))),
+            ("oversize, GET method",
+             self._request(method="GET",
+                           path="/api/kora/steering/step-up",
+                           content_length=str(steer * 100))),
+        ]
+        for name, request in cases:
+            resp = asyncio.run(app_module.telemetry_body_cap(
+                request, self._sentinel))
+            assert resp.status_code == 200 and \
+                resp.body == b"passed-through", name
+
+    # -------------- integration legs: the 413 wins BEFORE auth ---------
+
+    @pytest.mark.parametrize("path", _W5_STEERING_POSTS)
+    def test_steering_oversize_body_413_before_the_guard(self, client,
+                                                         path):
+        """A real 256 KiB body from an ANONYMOUS leg: the answer is the
+        cap's 413 — not the steering guard's 401 and not a pydantic 422 —
+        earliest refusal wins (the C1 integration precedent)."""
+        r = client.post(path, content=b"x" * (256 * 1024),
+                        headers={"Content-Type": "application/json"})
+        assert r.status_code == 413
+        assert "bytes" in r.json()["detail"]
+
+    def test_max_legal_prompt_reaches_the_guard(self, client):
+        """The honest gate: the LARGEST legal steering body (a 32,000-char
+        prompt, ~32 KB) sails under the 128 KiB cap and reaches the
+        handler — the anonymous leg then gets the steering guard's own
+        401 KoraErrorOut, not a 413 and not a parse 422."""
+        r = client.post("/api/kora/sessions", json={
+            "executor_id": "ex-w5", "project": "p", "prompt": "p" * 32_000})
+        assert r.status_code == 401
+        assert r.json()["code"] == "unauthorized"
+
+    def test_kora_scan_oversize_body_413_before_auth(self, client):
+        """A real 7 MiB scan body, anonymous: the cap's 413 — not the
+        401 the executor guard would answer, not a 422."""
+        r = client.post("/api/executors/ex-w5/kora-scan",
+                        content=b"x" * (7 * 1024 * 1024),
+                        headers={"Content-Type": "application/json"})
+        assert r.status_code == 413
+        assert "bytes" in r.json()["detail"]
+
+    def test_kora_scan_legal_max_envelope_passes(self, client, app_module,
+                                                 monkeypatch, machine_auth):
+        """The realistic LEGAL maximum — 2,000 sessions x the 2,000-char
+        preview (~4.1 MB serialized) — passes the 6 MiB cap, parses and
+        ingests: 200, scanned == 2000. Fresh scan limiter (the kora-suite
+        discipline): the shared session budget must not 429 this leg."""
+        from server.security import RateLimiter
+        monkeypatch.setattr(
+            app_module, "_kora_scan_limiter",
+            RateLimiter(limit=app_module._KORA_SCAN_RATE_LIMIT,
+                        window=app_module._KORA_SCAN_RATE_WINDOW))
+        rows = [{"native_id": f"sess_w5_{i:04x}", "harness": "zcode",
+                 "preview": "p" * 2000} for i in range(2000)]
+        payload = json.dumps({"sessions": rows, "drop_missing": False})
+        # the envelope class itself: over 4 MB of LEGAL body, under cap
+        assert 4_000_000 < len(payload.encode()) \
+            < app_module._KORA_SCAN_BODY_MAX_BYTES
+        r = client.post("/api/executors/ex-w5-cap/kora-scan",
+                        content=payload,
+                        headers={**machine_auth,
+                                 "Content-Type": "application/json"})
+        assert r.status_code == 200, r.text[:300]
+        assert r.json()["scanned"] == 2000
