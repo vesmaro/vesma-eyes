@@ -1,0 +1,44 @@
+# vesmaro-session-relay (ADR 0019 rev.2 #3, line A1) — HOST user unit.
+# Same family as vesmaro-assignment-poller-user.service: the unit only
+# supervises; execution lives where the harness store lives (distrobox
+# variant — pair with relay-unit-launcher.sh, the poller launcher
+# precedent). Restart = clean slate by design (the board queue is
+# in-memory and honest about it): a restart never fakes a delivery,
+# it only loses the board's pending handoffs (owner sees
+# «не доставлено — повторите»).
+#
+# Install (HOST side):
+#   cp vesmaro-session-relay.service ~/.config/systemd/user/
+#   cp relay-unit-launcher.sh ~/.local/bin/ && chmod 700 ~/.local/bin/relay-unit-launcher.sh
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now vesmaro-session-relay
+#   loginctl enable-linger "$USER"   # start before desktop login (optional)
+#
+# The executor token stays in ~/.config/vesma-eyes/relay.env (container-
+# side home, 0600) — sourced by the launcher, never named here:
+#   VESMARO_EXECUTOR_TOKEN=<executor secret>
+[Unit]
+Description=vesma-eyes Kora session relay (executor transport, ADR 0019 rev.2 #3)
+Documentation=https://vesmaro.abyss.lab/api
+
+[Service]
+Type=simple
+# relay-unit-launcher.sh pins the container-visible HOME and the
+# absolute container python (the two distrobox-exec traps — the poller
+# launcher precedent).
+ExecStart=%h/.local/bin/relay-unit-launcher.sh
+TimeoutStartSec=120
+# The honest stop-drain budget (A1 review P3-1): one delivery in flight
+# can legally hold the loop for lock_wait 120s + confirm retries with
+# backoff (~23s sleeps, up to ~75s more on dead-board 15s timeouts) +
+# injection grace 10s — past the 90s systemd default, a default stop
+# would SIGKILL mid-drain and orphan the confirm.
+TimeoutStopSec=240
+Restart=always
+RestartSec=10
+# Audit rows carry prompt hashes + lengths only, but stay 0600 anyway
+# (the poller AB-FU-1 discipline).
+UMask=0077
+
+[Install]
+WantedBy=default.target

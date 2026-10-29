@@ -47,6 +47,7 @@ from . import hermes_client
 from . import models_proxy
 from .kora import redaction as kora_redaction
 from .kora import relay as kora_relay
+from .kora import relay_transport as kora_relay_transport
 from .memory_registry import ServerRegistry, resolve_token, write_config_template
 from .profiles import build_profile
 from .security import (
@@ -238,6 +239,16 @@ write_config_template(DATA_DIR / "memories.yaml")
 
 store = Store(DB_PATH)
 registry = ServerRegistry(store)
+
+# Kora relay transport (ADR 0019 rev.2 #3, line A1): plug the executor-
+# side handoff into the transport seam at boot. The capability gate lives
+# per-executor (executors.capabilities carries the owner-declared
+# `session-relay`), so executors WITHOUT the capability keep answering
+# the honest failed/retryable — installing the bridge never turns a
+# send into a pretend delivery. kora_relay.reset_all() (the drain
+# ritual / tests) detaches the seam again by design.
+kora_relay_transport.install(store.get_executor,
+                             lookup_session=store.kora_session)
 
 # SSE fan-out: subscribers get every board event as it is logged.
 # UI-28 (TL verdict 2026-09-27): the strip decision is made ONCE at
@@ -1363,6 +1374,10 @@ _DISCOVERY_BODY_MAX_BYTES = 262_144     # 256 KiB pre-parse Content-Length cap
 #   Chunked (no Content-Length) rides the post-parse caps, as above.
 _STEERING_BODY_MAX_BYTES = 131_072      # 128 KiB pre-parse Content-Length cap
 _KORA_SCAN_BODY_MAX_BYTES = 6_291_456   # 6 MiB pre-parse Content-Length cap
+# Relay confirm (line A1, the same C1 shape): the unit's verdict body is
+# tiny by contract (delivery_id + a ≤500-char typed error); 16 KiB is
+# ~20x the legal envelope. Chunked rides the post-parse caps as above.
+_KORA_RELAY_CONFIRM_MAX_BYTES = 16_384  # 16 KiB pre-parse Content-Length cap
 
 
 @app.middleware("http")
@@ -1387,6 +1402,9 @@ async def telemetry_body_cap(request: Request, call_next):
         elif (path.startswith("/api/executors/")
                 and path.endswith("/kora-scan")):
             cap = _KORA_SCAN_BODY_MAX_BYTES
+        elif (path.startswith("/api/executors/")
+                and path.endswith("/kora-relay/confirm")):
+            cap = _KORA_RELAY_CONFIRM_MAX_BYTES
         elif (path == "/api/kora/sessions"
                 or path == "/api/kora/steering/step-up"
                 or (path.startswith("/api/kora/sessions/")
@@ -6765,6 +6783,131 @@ async def revoke_kora_steering_step_up(request: Request) -> Response:
         "network_path": _kora_network_path(request),
     })
     return Response(status_code=204)
+
+
+# ---------------------------------------------- kora relay transport (A1)
+# The executor-side handoff (ADR 0019 rev.2 #3): the relay unit
+# (vesmaro-session-relay.service — the assignment-poller family) pulls
+# its parked steering commands and confirms deliveries here. The board
+# NEVER pushes: the seam parked the item in server/kora/
+# relay_transport.py, the unit polls, the honest queued → delivered/
+# failed state machine closes on the unit's confirm.
+#
+# Access class (сверено с _guard-ами, the deliberate asymmetry): pickup
+# and confirm are EXECUTOR-TOKEN ONLY. The kora-scan ingest admits the
+# machine token because a listing is metadata; steering prompts are
+# ui-class CONTENT and the machine token is handed to autostarted agent
+# children (assignment_poller CHILD_ENV_KEYS) — admitting it here would
+# give every launched agent a scoop channel into owner steering. The
+# ADR's «executor-токен, никаких board-классовых кредов за пределами
+# хоста» is enforced by construction. Ingest binding (gate 1): the path
+# executor must match the token identity; pending/revoked are refused.
+#
+# Presence piggyback (ARCH-9, the scan precedent): a pickup tick IS the
+# executor's last_seen — the unit polls, so the registry reads alive
+# while the relay runs.
+#
+# Hygiene (gate 3): pickup/confirm audits carry ids + counts only; the
+# prompt text rides the pickup payload alone (executor-token leg, the
+# injection material) and is wiped by the queue settle on resolution.
+
+_KORA_RELAY_RATE_LIMIT = 120         # unit calls (pickup + confirm) ...
+_KORA_RELAY_RATE_WINDOW = 60.0       # ... per sliding minute per client;
+                                     # the unit polls ~every 5s (12/min)
+                                     # with confirm traffic on top —
+                                     # 120 leaves honest headroom, a 429
+                                     # just backs the unit off a cycle.
+_kora_relay_limiter = RateLimiter(
+    limit=_KORA_RELAY_RATE_LIMIT, window=_KORA_RELAY_RATE_WINDOW)
+
+
+class KoraRelayConfirmIn(BaseModel):
+    """The unit's delivery verdict. extra=forbid: a typo'd field is an
+    honest 422, never a silently ignored signal."""
+    model_config = ConfigDict(extra="forbid")
+
+    delivery_id: str = Field(min_length=8, max_length=64)
+    status: str = Field(pattern="^(delivered|failed)$")
+    error: str | None = Field(default=None, max_length=500)
+    retryable: bool = True
+
+
+def _guard_relay_transport(executor_id: str, request: Request) -> dict:
+    """The relay-transport class gate (see the block comment): executor
+    token ONLY — no machine fallback, identity bound, approved only."""
+    executor = _authenticate_executor(request)
+    if executor is None:
+        raise HTTPException(
+            401, "executor token required: relay pickup/confirm is "
+                 "content-class steering — the machine token must not "
+                 "read owner prompts (ADR 0019: executor token, no "
+                 "board-class credentials beyond the host)")
+    if executor["id"] != executor_id:
+        raise HTTPException(
+            403, "relay transport executor does not match the token "
+                 "identity")
+    if executor["state"] != "approved":
+        raise HTTPException(
+            403, f"executor is {executor['state']} — relay transport "
+                 "requires an approved executor")
+    return executor
+
+
+@app.post("/api/executors/{executor_id}/kora-relay/pickup")
+async def kora_relay_pickup(executor_id: str, request: Request,
+                            limit: int = 8) -> dict:
+    """Relay pickup (ADR rev.2 #3, the poller-family pull): hand the
+    unit its parked steering commands (FIFO, ≤ limit) and move them
+    into the in-flight window. Text rides ONLY here — to the owning
+    executor over the executor-token leg."""
+    _guard_relay_transport(executor_id, request)
+    client_ip = request.client.host if request.client else "unknown"
+    if not _kora_relay_limiter.acquire(client_ip):
+        raise HTTPException(
+            429, "kora relay rate limit exceeded "
+                 f"({_KORA_RELAY_RATE_LIMIT} per "
+                 f"{_KORA_RELAY_RATE_WINDOW:.0f}s per client)")
+    clamped = max(1, min(int(limit), kora_relay_transport.PICKUP_MAX_LIMIT))
+    items = kora_relay_transport.pickup(executor_id, clamped)
+    store.touch_executor_last_seen(executor_id)
+    store.log_kora_audit("kora.relay.pickup", {
+        "executor_id": executor_id,
+        "count": len(items),
+        "network_path": _kora_network_path(request),
+    })
+    return {"ok": True, "items": items}
+
+
+@app.post("/api/executors/{executor_id}/kora-relay/confirm")
+async def kora_relay_confirm(executor_id: str, body: KoraRelayConfirmIn,
+                             request: Request) -> dict:
+    """Relay confirm: close the honest delivery state machine with the
+    unit's verdict. An unknown/already-settled delivery answers
+    resolved=false (a board restart orphans the unit's confirm — the
+    in-memory design), never an error: the unit drops it and moves on."""
+    _guard_relay_transport(executor_id, request)
+    client_ip = request.client.host if request.client else "unknown"
+    if not _kora_relay_limiter.acquire(client_ip):
+        raise HTTPException(
+            429, "kora relay rate limit exceeded "
+                 f"({_KORA_RELAY_RATE_LIMIT} per "
+                 f"{_KORA_RELAY_RATE_WINDOW:.0f}s per client)")
+    try:
+        resolved = kora_relay_transport.confirm(
+            executor_id, body.delivery_id, body.status, body.error,
+            body.retryable)
+    except kora_relay_transport.RelayTransportError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    store.touch_executor_last_seen(executor_id)
+    store.log_kora_audit("kora.relay.confirm", {
+        "executor_id": executor_id,
+        "delivery_id": body.delivery_id,
+        "status": body.status,
+        "retryable": body.retryable if body.status == "failed" else None,
+        "resolved": resolved,
+        "network_path": _kora_network_path(request),
+    })
+    return {"ok": True, "resolved": resolved}
 
 
 
