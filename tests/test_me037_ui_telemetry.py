@@ -669,6 +669,34 @@ class TestBodyCapC1:
             assert resp.status_code == 200 and \
                 resp.body == b"passed-through", name
 
+    def test_giant_digit_declaration_degrades_to_413_never_500(
+            self, app_module):
+        """Cascade W6 QA P3: str.isdigit() happily accepts a 5000-digit
+        Content-Length, but int() caps at 4300 digits (CPython 3.11+
+        str→int limit) — the gate used to escape as a ValueError → 500
+        from the refusal path itself. Now a declaration wider than
+        int64's 19 decimal digits refuses 413 by LENGTH (every family
+        cap is ≤ 7 digits, so length alone is proof); an exactly
+        19-digit declaration still builds the int and refuses by VALUE —
+        the numeric path the boundary matrix pins stays intact."""
+        async def _call_next(request):
+            raise AssertionError("call_next must not run for an "
+                                 "oversize declaration")
+
+        for digits in (4_301, 5_000):
+            resp = asyncio.run(app_module.telemetry_body_cap(
+                self._request(content_length="1" * digits), _call_next))
+            assert resp.status_code == 413, digits
+            assert "detail" in json.loads(resp.body.decode())
+        # 19 digits: the widest honest int64 shape — parses, over cap.
+        resp = asyncio.run(app_module.telemetry_body_cap(
+            self._request(content_length="9" * 19), _call_next))
+        assert resp.status_code == 413
+        # 20 digits: over the length guard — refused without an int().
+        resp = asyncio.run(app_module.telemetry_body_cap(
+            self._request(content_length="9" * 20), _call_next))
+        assert resp.status_code == 413
+
     def test_real_oversize_body_413_before_any_parsing(self, client,
                                                        app_module):
         """Integration: a real multi-MB body gets the pre-parse 413 — not

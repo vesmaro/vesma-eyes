@@ -11739,10 +11739,23 @@ async def telemetry_body_cap(request: Request, call_next):
             cap = None
         if cap is not None:
             declared = request.headers.get("Content-Length", "")
-            if declared.isdigit() and int(declared) > cap:
+            # Hardened parse (cascade W6 QA P3): str.isdigit() accepts
+            # arbitrarily long digit strings, but int() caps at 4300 digits
+            # (CPython 3.11+ str→int limit) — a 5000-digit Content-Length
+            # used to escape the gate as a ValueError → 500 from the gate
+            # itself. Any declaration wider than int64's 19 decimal digits
+            # is astronomically over every family cap (the largest is 6 MiB
+            # — 7 digits), so it refuses 413 by LENGTH without ever
+            # building the int; ≤19-digit values keep the honest numeric
+            # compare. The log never echoes the giant header back (a
+            # 5000-digit declaration would be 5 KB of log noise per hit).
+            if (declared.isdigit()
+                    and (len(declared) > 19 or int(declared) > cap)):
                 logging.getLogger("vesmaro.telemetry").warning(
                     "ingest body over pre-parse cap path=%s declared=%s",
-                    path, declared)
+                    path,
+                    declared if len(declared) <= 19
+                    else f"<{len(declared)}-digit declaration>")
                 return JSONResponse(
                     status_code=413,
                     content={"detail": "request body exceeds "
