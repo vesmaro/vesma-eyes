@@ -11679,22 +11679,65 @@ _TELEMETRY_BODY_MAX_BYTES = 1_048_576   # 1 MiB pre-parse Content-Length cap
 # with an order of magnitude of headroom. Chunked (no Content-Length)
 # rides the post-parse caps, as for telemetry (residual risk accepted).
 _DISCOVERY_BODY_MAX_BYTES = 262_144     # 256 KiB pre-parse Content-Length cap
+# SEC-W5-1 (cascade control wave 5, 2026-10-29): the Kora steering POSTs
+# and the kora-scan ingest have the same C1 shape — their guards
+# (_kora_steering_denied, the executor-token check in ingest_kora_scan)
+# run INSIDE the handler, while FastAPI buffers the body and pydantic
+# parses it BEFORE any handler code: an unauthenticated ingress leg could
+# burn CPU/memory pre-auth on exactly the surfaces that added the new
+# body-bearing routes. Two new families under the same gate:
+# - the steering trio (POST /api/kora/sessions, POST /api/kora/sessions/
+#   {id}/messages, POST /api/kora/steering/step-up) -> 128 KiB: the
+#   largest legal body is the 32,000-char prompt (KoraSessionCreate /
+#   KoraMessageCreate) = 125 KiB at 4 bytes per char + the JSON envelope;
+#   the step-up PIN (<=64 chars) rides the same family cap. Exact paths
+#   for the fixed routes, the prefix+suffix form only for the dynamic
+#   {session_id} segment (the discovery precedent — never a bare suffix
+#   match). POST /api/kora/hermes/chat is deliberately NOT here: it is a
+#   different body class (20 turns x 8,000 chars) and needs its own cap
+#   decision, not a borrowed one.
+# - kora-scan (POST /api/executors/{id}/kora-scan) -> 6 MiB: sized to the
+#   realistic legal envelope (~4 MB: 2,000 sessions x ~2 KB, the
+#   2,000-char preview dominating) + ~50% headroom. A pathological
+#   every-field-maxed or all-multibyte envelope (up to ~8 MB by the
+#   letter of KoraSessionIn) exceeds the cap and is REFUSED by design —
+#   no real scanner emits that shape (fields derive from real harness
+#   stores); hitting the cap is the signal to re-size, not a bug.
+#   Chunked (no Content-Length) rides the post-parse caps, as above.
+_STEERING_BODY_MAX_BYTES = 131_072      # 128 KiB pre-parse Content-Length cap
+_KORA_SCAN_BODY_MAX_BYTES = 6_291_456   # 6 MiB pre-parse Content-Length cap
 
 
 @app.middleware("http")
 async def telemetry_body_cap(request: Request, call_next):
-    """C1 pre-parse gate (CWE-400), the telemetry precedent extended to
-    the discovery ingest (SEC-3, cascade 2026-10-28): refuse an oversized
-    DECLARED body BEFORE the body is read — header only, no body
-    buffering, no parsing; every other route passes through untouched."""
+    """C1 pre-parse gate (CWE-400) — the telemetry precedent, extended to
+    the discovery ingest (SEC-3, cascade 2026-10-28) and to the Kora
+    steering trio + kora-scan ingest (SEC-W5-1, cascade 2026-10-29):
+    refuse an oversized DECLARED body BEFORE the body is read — header
+    only, no body buffering, no parsing; every other route passes
+    through untouched."""
     if request.method == "POST":
         path = request.url.path
-        is_telemetry = path == "/api/events/ui"
-        is_discovery = (path.startswith("/api/executors/")
-                        and path.endswith("/discovery"))
-        if is_telemetry or is_discovery:
-            cap = (_TELEMETRY_BODY_MAX_BYTES if is_telemetry
-                   else _DISCOVERY_BODY_MAX_BYTES)
+        # One family -> one cap (sizing rationale at the constants):
+        # exact paths wherever the route is fixed; the prefix+suffix form
+        # ONLY where a dynamic path segment forces it (the executor id,
+        # the session handle) — the discovery precedent.
+        if path == "/api/events/ui":
+            cap = _TELEMETRY_BODY_MAX_BYTES
+        elif (path.startswith("/api/executors/")
+                and path.endswith("/discovery")):
+            cap = _DISCOVERY_BODY_MAX_BYTES
+        elif (path.startswith("/api/executors/")
+                and path.endswith("/kora-scan")):
+            cap = _KORA_SCAN_BODY_MAX_BYTES
+        elif (path == "/api/kora/sessions"
+                or path == "/api/kora/steering/step-up"
+                or (path.startswith("/api/kora/sessions/")
+                    and path.endswith("/messages"))):
+            cap = _STEERING_BODY_MAX_BYTES
+        else:
+            cap = None
+        if cap is not None:
             declared = request.headers.get("Content-Length", "")
             if declared.isdigit() and int(declared) > cap:
                 logging.getLogger("vesmaro.telemetry").warning(
