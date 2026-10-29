@@ -378,6 +378,57 @@ describe("KoraTree open-state machine (cascade W3 pins)", () => {
     ).toBe("false");
   });
 
+  it("SEARCH-CHEVRON-INERT: during a search the chevron is honestly inert — no mutation, no surprise jump after clear", () => {
+    // The cascade-W6 QA pin: while searching, every visible branch renders
+    // force-expanded, so a chevron click had ZERO visible response yet
+    // still flipped the open-set (and left it flipped in storage) — the
+    // branch surprise-folded the moment the search cleared. The honest
+    // shape: the chevron announces itself inert (aria-disabled) and the
+    // click mutates nothing — neither the open-set nor its persistence.
+    sessionStorage.setItem(
+      "vesmaro.koraTree",
+      JSON.stringify({ open: ["pi-edge"] }),
+    );
+    const { container } = mountTree({ activeHost: "" });
+    // Pre-search state: pi-edge open (the stored seed), abyss-laptop folded.
+    expect(
+      hostDisclosure(container, "pi-edge")?.getAttribute("aria-expanded"),
+    ).toBe("true");
+    expect(
+      hostDisclosure(container, "abyss-laptop")?.getAttribute("aria-expanded"),
+    ).toBe("false");
+
+    // Enter a search matching abyss-laptop: the branch force-expands…
+    const input = container.querySelector<HTMLInputElement>("input[type='search']");
+    setInputValue(input!, "laptop");
+    const chevron = hostDisclosure(container, "abyss-laptop");
+    expect(chevron?.getAttribute("aria-expanded")).toBe("true");
+    // …its chevron reads honestly inert, not silently dead…
+    expect(chevron?.getAttribute("aria-disabled")).toBe("true");
+    // …and the inert click does NOTHING: no visible response, no
+    // open-set/storage mutation (the old code folded it under the user).
+    const storageBefore = sessionStorage.getItem("vesmaro.koraTree");
+    act(() => {
+      chevron?.click();
+    });
+    expect(chevron?.getAttribute("aria-expanded")).toBe("true");
+    expect(sessionStorage.getItem("vesmaro.koraTree")).toBe(storageBefore);
+
+    // Clearing the search returns EXACTLY the pre-search state — no jump.
+    setInputValue(input!, "");
+    expect(
+      hostDisclosure(container, "abyss-laptop")?.getAttribute("aria-expanded"),
+    ).toBe("false");
+    expect(
+      hostDisclosure(container, "pi-edge")?.getAttribute("aria-expanded"),
+    ).toBe("true");
+    expect(sessionStorage.getItem("vesmaro.koraTree")).toBe(storageBefore);
+    // Outside a search the chevron is live again — no aria-disabled.
+    expect(
+      hostDisclosure(container, "abyss-laptop")?.getAttribute("aria-disabled"),
+    ).toBeNull();
+  });
+
   it("LISTID-COLLISION: hosts that sanitize to the SAME slug keep distinct ids (the FNV digest)", () => {
     // The cascade-W6 QA pin, the tree-host leg of the closed
     // kora-tree-listid-collision class (the KoraHostField precedent rides
