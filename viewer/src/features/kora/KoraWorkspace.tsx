@@ -599,11 +599,13 @@ export function KoraWorkspace({
 
         {/* CENTRAL column: the context bar (контекст «хост · харнес ·
          * режим» — kora-ide contract §2.2) above the host FIELD at
-         * /kora/host/:host (chips + grouped sessions — the В1 keeps the
-         * field as the honest host-context presentation; the composer
-         * chat-surface replaces it in В2), the KW2 hermes split / the
-         * frozen session modes / the invitation ride KoraWorkzone
-         * untouched. Flush inside the frame, a card below lg. */}
+         * /kora/host/:host (chips + grouped sessions — the field is the
+         * honest host-context presentation and is CANONICAL for v1: a
+         * presentation change was never in the ratified В2 scope; the
+         * executor-relay line will revisit it once sending comes alive),
+         * the KW2 hermes split / the frozen session modes / the
+         * invitation ride KoraWorkzone untouched. Flush inside the frame,
+         * a card below lg. */}
         <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-md border border-myelin bg-well lg:rounded-none lg:border-0">
           {contextBar}
           {sessions.isPending || resolvingDeepLink ? (

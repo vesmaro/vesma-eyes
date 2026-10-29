@@ -20,8 +20,9 @@ import {
  * Nothing pretends to be sent.
  *
  * FORBIDDEN (07a §1 — no fake delivery): «в очереди релея» / «доставлено»
- * chips, any «агент ответил» line. The relay statuses arrive with the real
- * relay (срез 3 wiring, И4).
+ * chips, any «агент ответил» line. The relay statuses arrive with the
+ * executor relay unit (vesmaro-session-relay.service wiring, И4 — the
+ * срез 3 steering perimeter itself is built and in prod).
  *
  * U5 — DRAFT PERSISTENCE (the v9 key contract, this wave's hardware): the
  * draft lives in `vesmaro.koraDraft:{sessionId}` (localStorage) and survives
