@@ -40,7 +40,12 @@ Coverage map (each test names its line):
   pre-wave boot (mirror columns absent) gains them back with the
   ingest/read legs intact (issue #6 tail a);
 - caps tails: the mcp count refuses bool-as-int like the string case
-  (issue #6 tail c).
+  (issue #6 tail c);
+- detector parity (§3.8 draft.6, vesma-specs#10): the board grammar
+  equals the agent's class list — case-insensitive prefixes (akia/AKIA),
+  the base64url alphabet, the eyJ+dot JWT shape, the ≥32 mixed run —
+  with the documented SAFE false-positive direction (a long hash-like
+  model id drops its row loudly).
 """
 
 from __future__ import annotations
@@ -58,6 +63,24 @@ from server.store import ARCHIVE_AFTER_DISABLED_S
 SENTINEL = "sk-sentinel-fake-key-0123456789abcdef"
 SENTINEL_HEX = "a3f" * 9 + "1b2c"          # 31 continuous hex chars
 SENTINEL_ASSIGN = "api_key=qwJ7x9m2LpQ4vR8tZ6wY"
+
+# §3.8 draft.6 parity sentinels (synthetic, never real credentials):
+# JWT — header.payload.sig with SHORT segments, so only the new
+# eyJ+dot class can catch it (no segment reaches the hex/b64/mixed
+# thresholds — the exact gap the draft.6 class closes);
+JWT_SENTINEL = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJxYS1ib2FyZCJ9.SflKxw"
+# 32 contiguous [A-Za-z0-9_-] defeating hex (g..v are non-hex) and
+# b64 (< 40 chars) — the mixed-run-only shape;
+MIXED_RUN_SENTINEL = "g1h2i3j4k5l6m7n8o9p0q1r2s3t4u5v6"
+# a 40-char run of the NEW base64url alphabet carried by a single '-'
+# (the old alphabet broke there) with '=' splitting the [A-Za-z0-9_-]
+# sub-runs below 32 — the b64url-class-only shape;
+B64URL_SENTINEL = "z" * 20 + "-" + "y" * 10 + "=" + "w" * 8
+# the AWS docs key shape in BOTH registers — uppercase was always
+# caught, lowercase is the drift the case-insensitive prefix rule
+# closes (§3.8 draft.6).
+AKIA_UPPER = "AKIAIOSFODNN7EXAMPLE"
+AKIA_LOWER = "akiaiosfodnn7example"
 
 MODEL_ROW = {"provider": "openrouter",
              "base_url": "https://openrouter.ai/api/v1",
@@ -630,6 +653,153 @@ class TestCredentialDetector:
             assert SENTINEL_HEX not in blob, f"sentinel leaked into {where}"
             assert SENTINEL_ASSIGN not in blob, \
                 f"sentinel leaked into {where}"
+
+
+# ------------------------------------- §3.8 draft.6 detector parity
+
+class TestDetectorParityDraft6:
+    """Agent-discovery §3.8 draft.6 parity (vesma-specs#10): the BOARD
+    detector grammar equals the agent's names-only validator class list —
+    case-insensitive token prefixes, the base64url alphabet (``-``/``_``),
+    the eyJ+dot JWT shape and the ≥32 mixed [A-Za-z0-9_-] run. The
+    detector funnels through looks_like_credential, so every scanned
+    surface (named row fields, unknown extra fields, notes, mcp entries)
+    inherits the classes — same as the agent. The false-positive
+    direction stays the documented SAFE one: a legitimate long
+    hash-like model id drops its row LOUDLY (incident + audit, the
+    value never stores) — never a silent leak."""
+
+    def test_jwt_shape_dropped_in_note_model_id_and_server_name(
+            self, client, app_module):
+        """The planted eyJ-header.payload JWT drops its carrier on all
+        three surfaces: a note (blob drops, rows stay), a model id (the
+        row drops), an mcp server name (the entry drops) — each with the
+        incident audit, the sentinel appearing nowhere in stored state
+        (the sentinel sweep)."""
+        ex_note, secret = _register(client, "mm-par-j1")
+        r = _post_discovery(client, ex_note["id"], secret,
+                            models={"installations": [MODEL_ROW],
+                                    "notes": {"default_model":
+                                              JWT_SENTINEL}})
+        assert r.status_code == 200, r.text
+        assert r.json()["models_accepted"] == 1  # row facts survive
+        ex_model, secret = _register(client, "mm-par-j2")
+        r = _post_discovery(client, ex_model["id"], secret,
+                            models={"installations": [
+                                MODEL_ROW | {"models": [JWT_SENTINEL]}]})
+        assert r.status_code == 200, r.text
+        assert r.json()["models_dropped"] == 1
+        ex_mcp, secret = _register(client, "mm-par-j3")
+        r = _post_discovery(client, ex_mcp["id"], secret,
+                            mcp_servers=[MCP_ENTRY | {"servers":
+                                                      [JWT_SENTINEL]}])
+        assert r.status_code == 200, r.text
+        assert r.json()["mcp_dropped"] == 1
+
+        expected_fields = {
+            ex_note["id"]: "notes.default_model",
+            ex_model["id"]: "installations[].models[0]",
+            ex_mcp["id"]: "mcp_servers[].servers[0]",
+        }
+        for executor_id, field in expected_fields.items():
+            incidents = _board_events(
+                app_module, "models.credential_leak_suspected", executor_id)
+            assert len(incidents) == 1, executor_id
+            assert incidents[0]["payload"]["field"] == field
+            # the value NEVER rides the audit trail
+            assert JWT_SENTINEL not in json.dumps(
+                incidents[0]["payload"])
+        # sentinel sweep: no stored surface carries the JWT
+        for executor_id in expected_fields:
+            surfaces = {
+                "mirror": json.dumps(_mirror(client, executor_id)),
+                "roster": json.dumps(_roster(client)),
+                "columns": json.dumps(
+                    _raw_columns(app_module, executor_id)),
+            }
+            for where, blob in surfaces.items():
+                assert JWT_SENTINEL not in blob, \
+                    f"JWT sentinel leaked into {where}"
+
+    def test_mixed_run_in_unknown_extra_field_trips_detector(
+            self, client, app_module):
+        """The ≥32 mixed-run class scans UNKNOWN extra fields too (SEC-6:
+        the scan covers every string value of the raw row)."""
+        executor, secret = _register(client, "mm-par-m1")
+        r = _post_discovery(client, executor["id"], secret,
+                            models={"installations": [
+                                MODEL_ROW | {"custom_field":
+                                             MIXED_RUN_SENTINEL}]})
+        assert r.status_code == 200, r.text
+        assert r.json()["models_accepted"] == 0
+        assert r.json()["models_dropped"] == 1
+        incidents = _board_events(
+            app_module, "models.credential_leak_suspected", executor["id"])
+        assert incidents[0]["payload"]["field"] == \
+            "installations[].custom_field"
+        assert MIXED_RUN_SENTINEL not in json.dumps(
+            _raw_columns(app_module, executor["id"]))
+
+    def test_hash_like_model_id_drops_loudly_safe_direction(
+            self, client, app_module):
+        """The FP direction, pinned as SAFE (§3.8): a legitimate long
+        hash-like model id takes the mixed-run class and drops its row
+        LOUDLY — incident written, mirror stays honest absence (the
+        first report was all-dropped, P3-1), roster never sees it. The
+        loud false drop is the accepted cost; the row is never
+        truncated and never emitted."""
+        executor, secret = _register(client, "mm-par-m2")
+        r = _post_discovery(client, executor["id"], secret,
+                            models={"installations": [
+                                MODEL_ROW | {"models":
+                                             [MIXED_RUN_SENTINEL]}]})
+        assert r.status_code == 200, r.text
+        assert r.json()["models_dropped"] == 1
+        incidents = _board_events(
+            app_module, "models.credential_leak_suspected", executor["id"])
+        assert incidents[0]["payload"]["field"] == \
+            "installations[].models[0]"
+        assert _mirror(client, executor["id"])["models"] == {}
+        assert _roster(client)["discovered"] == []
+
+    def test_akia_prefix_case_insensitive_both_registers(
+            self, client, app_module):
+        """§3.8 draft.6: lowercase «akia…» and uppercase «AKIA…» are
+        equal — the uppercase AWS key was always caught, the lowercase
+        one is the board↔agent drift this closes."""
+        dropped = {}
+        for name, key in (("mm-par-a1", AKIA_UPPER),
+                          ("mm-par-a2", AKIA_LOWER)):
+            executor, secret = _register(client, name)
+            r = _post_discovery(client, executor["id"], secret,
+                                models={"installations": [MODEL_ROW],
+                                        "notes": {"k": key}})
+            assert r.status_code == 200, r.text
+            assert r.json()["models_accepted"] == 1  # rows stay
+            dropped[executor["id"]] = key
+        for executor_id, key in dropped.items():
+            incidents = _board_events(
+                app_module, "models.credential_leak_suspected", executor_id)
+            assert len(incidents) == 1
+            assert incidents[0]["payload"]["field"] == "notes.k"
+            assert key not in json.dumps(incidents[0]["payload"])
+            assert "notes" not in _mirror(client, executor_id)["models"]
+
+    def test_b64url_alphabet_run_trips(self, client, app_module):
+        """The base64url alphabet: a 40-char run carried by a single
+        ``-`` (the old alphabet broke there) trips the detector —
+        URL-safe base64 tokens no longer slip between the runs."""
+        executor, secret = _register(client, "mm-par-b1")
+        r = _post_discovery(client, executor["id"], secret,
+                            models={"installations": [
+                                MODEL_ROW | {"note": B64URL_SENTINEL}]})
+        assert r.status_code == 200, r.text
+        assert r.json()["models_dropped"] == 1
+        incidents = _board_events(
+            app_module, "models.credential_leak_suspected", executor["id"])
+        assert incidents[0]["payload"]["field"] == "installations[].note"
+        assert B64URL_SENTINEL not in json.dumps(
+            _raw_columns(app_module, executor["id"]))
 
 
 def _raw_columns(app_module, executor_id: str) -> dict:
