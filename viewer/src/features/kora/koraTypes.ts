@@ -169,3 +169,30 @@ export interface HermesChatReply {
   model: string;
   completion: unknown;
 }
+
+/**
+ * KoraSpecialist — one roster row (В2a, KORA-SPECIALISTS-1; kora-ide
+ * contract §5.3). Mirrored from KoraSpecialistItem in server/app.py —
+ * hand-typed on the seam: the route is an ADDITIVE server wave and lives
+ * OUTSIDE the frozen week-0 artifact by design (the HermesBridgeStatus
+ * precedent). Open facts only: the declared name, the profile-route slug
+ * and the read-only honesty bit about the profile cache.
+ */
+export interface KoraSpecialist {
+  name: string;
+  slug: string;
+  profile_cached: boolean;
+}
+
+/**
+ * KoraSpecialistsRoster — GET /api/kora/specialists (В2a). The composer's
+ * specialist selector renders FROM THIS ROSTER only (contract §5.3: the
+ * selector draws real data or does not draw at all). Hand-typed on the
+ * seam, mirrored from KoraSpecialistsOut in server/app.py.
+ */
+export interface KoraSpecialistsRoster {
+  ok: boolean;
+  count: number;
+  items: KoraSpecialist[];
+  meta: { generated_at: string };
+}

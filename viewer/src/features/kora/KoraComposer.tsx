@@ -6,6 +6,10 @@ import { cn } from "@/lib/utils";
 import type { KoraIntentEntryPoint, KoraIntentEventPoints } from "./koraIntentEvents";
 import type { KoraSession } from "./koraTypes";
 import { clearKoraDraft, readKoraDraft, writeKoraDraft } from "./koraFrameStorage";
+import {
+  KoraComposerControls,
+  type KoraHarnessOption,
+} from "./KoraComposerControls";
 
 /**
  * The composer (07j §4.6 v9-аддендум): a REAL field and a REAL React state
@@ -44,9 +48,14 @@ const DRAFT_SAVE_DEBOUNCE_MS = 600;
 export function KoraComposer({
   session,
   intentEvents,
+  harnessOptions = [],
 }: {
   session: KoraSession;
   intentEvents: KoraIntentEventPoints;
+  /** В2 — the selector row's harness derivations (the loaded registry's
+   * harnesses of execution; the workspace owns the items, zero new
+   * requests). Optional so the week-0 mount points stay legal. */
+  harnessOptions?: readonly KoraHarnessOption[];
 }) {
   const t = useT();
   // Restore once, at mount (the parent remounts per session): the persisted
@@ -182,6 +191,10 @@ export function KoraComposer({
           </div>
         ) : null}
       </div>
+      {/* В2 — the selector row (contract §3.2): харнес · специалист ·
+       * модель · режим, each drawn from real data only; a dead session
+       * disables the row with the same visible interrupted note below. */}
+      <KoraComposerControls session={session} harnessOptions={harnessOptions} />
       <p id="kora-composer-note" className="mt-2 text-xs text-foreground-muted">
         {t(noteKey)}
       </p>

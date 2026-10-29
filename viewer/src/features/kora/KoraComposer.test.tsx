@@ -8,7 +8,10 @@ import type {
   KoraIntentEventPoints,
 } from "./koraIntentEvents";
 import { KoraComposer } from "./KoraComposer";
+import type { KoraGateway } from "./koraGateway";
+import { KoraGatewayContext } from "./koraGatewayContext";
 import type { KoraSession } from "./koraTypes";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { I18nProvider } from "@/i18n";
 import { actUnmount } from "@/test/actTools";
 
@@ -25,9 +28,28 @@ import { actUnmount } from "@/test/actTools";
  * - NO fake delivery: «в очереди»/«доставлено» never render (07a §1);
  * - a dead session disables the FIELD itself with the interrupted note;
  * - the intent call points fire started/abandoned (ME-035 taxonomy seam).
+ *
+ * В2: the composer carries the selector row (KoraComposerControls) — its
+ * own behaviors live in KoraComposerControls.test.tsx; here the mount
+ * wraps a STUB gateway with an EMPTY roster so the row renders without a
+ * specialist slot and the original assertions stay exact.
  */
 
 const mountedRoots: Root[] = [];
+
+/** A gateway stub with an honest EMPTY roster — the specialist slot is
+ * not drawn, the harness/model/mode slots need no wire. */
+function emptyRosterGateway(): KoraGateway {
+  return {
+    specialists: () =>
+      Promise.resolve({
+        ok: true,
+        count: 0,
+        items: [],
+        meta: { generated_at: "2026-10-29T00:00:00+00:00" },
+      }),
+  } as unknown as KoraGateway;
+}
 
 function session(state: KoraSession["state"]): KoraSession {
   return {
@@ -69,10 +91,17 @@ function mountComposer(
   document.body.appendChild(container);
   const root = createRoot(container);
   mountedRoots.push(root);
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   act(() => {
     root.render(
       <I18nProvider initialLang="ru">
-        <KoraComposer session={session(sessionState)} intentEvents={events} />
+        <QueryClientProvider client={queryClient}>
+          <KoraGatewayContext.Provider value={emptyRosterGateway()}>
+            <KoraComposer session={session(sessionState)} intentEvents={events} />
+          </KoraGatewayContext.Provider>
+        </QueryClientProvider>
       </I18nProvider>,
     );
   });

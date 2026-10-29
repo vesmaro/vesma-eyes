@@ -19,6 +19,7 @@ import {
   KORA_FIXTURE_HERMES_SESSIONS,
   KORA_FIXTURE_HERMES_STATUS,
   KORA_FIXTURE_SESSIONS,
+  KORA_FIXTURE_SPECIALISTS,
   KORA_FIXTURE_TRANSCRIPT,
   KORA_FIXTURE_COVERAGE,
   koraFixtureHermesChatReply,
@@ -37,6 +38,7 @@ import type {
   KoraSessionCreated,
   KoraSessionsList,
   KoraSessionsParams,
+  KoraSpecialistsRoster,
   KoraStepUpStatus,
   KoraTranscript,
   KoraTranscriptItem,
@@ -671,5 +673,15 @@ export class KoraMockAdapter implements KoraGateway {
         },
       };
     });
+  }
+
+  specialists(): Promise<KoraSpecialistsRoster> {
+    // В2a — the read-only roster (open facts; no unlock gate, no demo
+    // knob: the real route is a plain authed read for both owner
+    // classes, a cheap store projection with no outbound calls).
+    return this.delay().then(() => ({
+      ...KORA_FIXTURE_SPECIALISTS,
+      items: [...KORA_FIXTURE_SPECIALISTS.items],
+    }));
   }
 }

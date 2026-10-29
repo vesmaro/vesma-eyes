@@ -4,6 +4,7 @@ import { HonestLine } from "@/components/HonestLine/HonestLine";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { KoraComposer } from "./KoraComposer";
+import type { KoraHarnessOption } from "./KoraComposerControls";
 import { KoraTranscript } from "./KoraTranscript";
 import { KoraHermesChat } from "./KoraHermesChat";
 import { KoraMovesZone } from "./KoraMovesZone";
@@ -68,6 +69,7 @@ export function KoraWorkzone({
   hermes = null,
   intentEvents,
   frameEvents = NOOP_KORA_FRAME_EVENTS,
+  harnessOptions = [],
 }: {
   session: KoraSession | null;
   registryEmpty: KoraRegistryEmpty;
@@ -80,6 +82,9 @@ export function KoraWorkzone({
   /** The frame telemetry call points (KW3) — forwarded to the moves zone;
    * a no-op until the taxonomy v1 revision names the kinds. */
   frameEvents?: KoraFrameEventPoints;
+  /** В2 — the composer selector row's harness derivations over the
+   * LOADED registry (the workspace owns the items). */
+  harnessOptions?: readonly KoraHarnessOption[];
 }) {
   const t = useT();
 
@@ -97,6 +102,7 @@ export function KoraWorkzone({
         coverage={coverage}
         transcript={transcript}
         intentEvents={intentEvents}
+        harnessOptions={harnessOptions}
       />
     );
   }
@@ -184,11 +190,13 @@ function SessionView({
   coverage,
   transcript,
   intentEvents,
+  harnessOptions = [],
 }: {
   session: KoraSession;
   coverage: KoraCoverage | null | undefined;
   transcript: KoraTranscriptPages;
   intentEvents: KoraIntentEventPoints;
+  harnessOptions?: readonly KoraHarnessOption[];
 }) {
   const t = useT();
   const [follow, setFollow] = useState(true);
@@ -263,8 +271,14 @@ function SessionView({
       </div>
 
       {/* The composer rides below the scroll, always visible for the open
-       * session (07j §4.6 — never hidden behind a disclosure). */}
-      <KoraComposer key={session.id} session={session} intentEvents={intentEvents} />
+       * session (07j §4.6 — never hidden behind a disclosure). В2: the
+       * selector row rides inside it, fed the registry's harness facts. */}
+      <KoraComposer
+        key={session.id}
+        session={session}
+        intentEvents={intentEvents}
+        harnessOptions={harnessOptions}
+      />
     </section>
   );
 }

@@ -36,6 +36,8 @@ export const koraKeys = {
   transcriptPaged: (sessionId: string, pageSize: number) =>
     [...koraKeys.all, "transcript", "paged", pageSize, sessionId] as const,
   stepUp: () => [...koraKeys.all, "steering", "step-up"] as const,
+  /** В2a: the read-only specialist roster (the composer's selector). */
+  specialists: () => [...koraKeys.all, "specialists"] as const,
   /** T004 slice 2: the hermes bridge leg (status read; the pull mutation). */
   hermesStatus: () => [...koraKeys.all, "hermes", "status"] as const,
   /** T004 slice 3: the live hermes transcript cursor (page size in key). */
@@ -214,6 +216,22 @@ export function useKoraHermesStatus() {
   return useQuery({
     queryKey: koraKeys.hermesStatus(),
     queryFn: ({ signal }) => gateway.hermesStatus(signal),
+  });
+}
+
+/**
+ * В2a (KORA-SPECIALISTS-1) — the read-only specialist roster (kora-ide
+ * contract §5.3). A cheap store projection server-side, so the hook never
+ * polls; refetch on window focus (the query default) keeps it fresh the
+ * same way the session registry is. Pending / error / an empty roster are
+ * all the HONEST ABSENCE of the selector — the controls simply do not
+ * draw the slot (no skeletons pretending, no invented rows).
+ */
+export function useKoraSpecialists() {
+  const gateway = useKoraGateway();
+  return useQuery({
+    queryKey: koraKeys.specialists(),
+    queryFn: ({ signal }) => gateway.specialists(signal),
   });
 }
 

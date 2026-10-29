@@ -37,6 +37,8 @@ import {
 } from "./koraFrameEvents";
 import { useIsFrameViewport } from "./koraViewport";
 import { buildKoraTree, koraSummary, type KoraQuickFilter } from "./koraWorkspaceModel";
+import type { KoraHarnessOption } from "./KoraComposerControls";
+import { useKoraSpecialistAnnotation } from "./koraSpecialistStore";
 import {
   useKoraSessionPages,
   useKoraTranscriptPages,
@@ -56,8 +58,9 @@ import { useKoraEntered } from "@/telemetry/useKoraEntered"; // ME-041: kora.ent
  * the permanent LEFT DOCK «Сессии» (K-INV-1: immoveable — selection never
  * changes its composition/width/scroll/focus; the pin «Чат с кластером»
  * moved here from the tree; three views over the loaded registry), the
- * CENTRAL column (the context bar «хост · харнес · режим» — only the fields
- * that ARE real today; then the host FIELD at /kora/host/:host, the hermes
+ * CENTRAL column (the context bar «хост · харнес · модель · специалист ·
+ * режим» — the В2 full line, only the fields that ARE real; absent facts
+ * are omitted, never placeholders; then the host FIELD at /kora/host/:host, the hermes
  * split at /kora/hermes, the frozen session modes at /kora/:sessionId, the
  * invitation at /kora — the modes byte-for-byte, K-INV-4) and the RIGHT
  * panel «Дерево и мета» (the v2 tree — search + hosts→agents, the pin
@@ -237,6 +240,21 @@ export function KoraWorkspace({
   );
   const summary = useMemo(() => koraSummary(model, items), [model, items]);
 
+  // В2 — the composer selector row's harness facts: the harnesses of
+  // execution the LOADED registry actually knows, with their session
+  // counts (a pure derivation — zero new requests, contract §5.4). The
+  // current session's own harness unions in inside the controls (its
+  // count may honestly be unknown past the loaded pages).
+  const harnessOptions = useMemo<KoraHarnessOption[]>(() => {
+    const counts = new Map<string, number>();
+    for (const item of items) {
+      counts.set(item.harness, (counts.get(item.harness) ?? 0) + 1);
+    }
+    return [...counts.entries()]
+      .map(([harness, count]) => ({ harness, count }))
+      .sort((a, b) => a.harness.localeCompare(b.harness));
+  }, [items]);
+
   // states-kw4 §4 — the session-mode breadcrumb's host: the registry group
   // that owns the session's executor. A registry miss (unknown-host group)
   // reads «← Кора» — no invented host name, one way back.
@@ -384,12 +402,15 @@ export function KoraWorkspace({
     />
   );
 
-  // The CENTER context bar (kora-ide contract §2.2) — «где я сейчас», only
-  // the fields that ARE real today: the host (route or the session's
-  // registry owner), the harness (the session's, or hermes in the cluster
-  // mode), the mode word. The model/specialist segments arrive with their
-  // data lines (В2/В3) — an absent fact is NOT rendered as a placeholder.
-  // Skipped while the registry/deep-link resolves (no invented «where»).
+  // The CENTER context bar (kora-ide contract §2.2) — «где я сейчас», the
+  // В2 FULL line «хост · харнес · модель · специалист · режим»: only the
+  // fields that ARE real today — an absent fact is NOT rendered as a
+  // placeholder («пустой слот не рисуем», §4 rule; the В1 mock-drift
+  // brief). Model: only where a roster EXISTS (Q3 — the hermes roster's
+  // server default from /status; local sessions report no models, the
+  // slot omits rather than invents). Specialist: the session's LOCAL
+  // annotation (koraSpecialistStore) when one is chosen. Skipped while
+  // the registry/deep-link resolves (no invented «where»).
   const resolvingContext = sessions.isPending || resolvingDeepLink;
   const centerMode = host !== null
     ? "field"
@@ -400,11 +421,26 @@ export function KoraWorkspace({
       : cluster
         ? "chat"
         : "invite";
+  // Q3: the model fact rides the hermes roster ONLY (the default_model is
+  // the server's own value; the chat header select remains the live
+  // override). Nothing renders for the local sessions — no models are
+  // reported (K-TREE-MODEL-UNKNOWN).
+  const contextModel =
+    (cluster || session?.harness === "hermes") && hermesStatus.isSuccess
+      ? (hermesStatus.data.default_model ??
+        hermesStatus.data.models?.[0] ??
+        null)
+      : null;
+  // The hook is unconditional (rules of hooks); no session → the empty
+  // key honestly resolves to null.
+  const contextSpecialist = useKoraSpecialistAnnotation(sessionId ?? "");
   const contextSegments = resolvingContext
     ? null
     : [
         host ?? sessionHost,
         session?.harness ?? (cluster ? "hermes" : null),
+        contextModel,
+        contextSpecialist,
         t(`kora.context.mode.${centerMode}`),
       ]
         .filter((segment): segment is string => segment !== null && segment !== "")
@@ -613,6 +649,7 @@ export function KoraWorkspace({
                 hermes={hermesSplit}
                 intentEvents={NOOP_KORA_INTENT_EVENTS}
                 frameEvents={frameEvents}
+                harnessOptions={harnessOptions}
               />
             </>
           )}

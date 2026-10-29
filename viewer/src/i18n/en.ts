@@ -2658,6 +2658,26 @@ export const en: Record<TranslationKey, string> = {
   "kora.composer.draftSaved": "Draft saved",
   "kora.composer.draftFailed":
     "The draft was not saved — it lives while the page is open",
+  // The composer selector row (В2, kora-ide contract §3.2 — the Claude
+  // Code / zcode input footer): real data only; an empty slot is not drawn.
+  "kora.controls.harnessLabel": "harness",
+  "kora.controls.harnessContextNote":
+    "The harness lives in the session context — it changes when you pick a session in the dock or a harness in the tree",
+  "kora.controls.harnessCount": "sessions: {{n}}",
+  "kora.controls.specialistLabel": "specialist",
+  "kora.controls.specialistNone": "none chosen",
+  "kora.controls.specialistLocalNote":
+    "A local mark on this machine — it will ride the prompt once the relay is live",
+  "kora.controls.modelLabel": "model",
+  "kora.controls.modelUnknown": "models are not reported",
+  "kora.controls.modeLabel": "mode",
+  "kora.controls.modeConfirm": "confirm",
+  "kora.controls.modeYolo": "yolo",
+  "kora.controls.currentMark": "current",
+  "kora.controls.yoloLocalReason":
+    "yolo is for relay-origin sessions only; this session is local",
+  "kora.controls.yoloRelayOffReason":
+    "yolo opens once the relay transport is connected (the vesmaro-session-relay executor)",
   "kora.composer.finishedNote":
     "The session is finished — there is no one to write to; start a new one on the host",
   "kora.composer.interruptedNote":

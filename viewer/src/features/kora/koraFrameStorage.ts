@@ -295,3 +295,43 @@ export function writeKoraDraft(sessionId: string, text: string): boolean {
 export function clearKoraDraft(sessionId: string): void {
   removeFrameValue(DRAFT_PREFIX + sessionId);
 }
+
+// --- the specialist annotation (В2: vesmaro.koraSpecialist:{sessionId}) -----
+//
+// The composer's specialist selector is a LOCAL overlay (kora-ide contract
+// §3.1's local-overlay discipline, honestly marked): the choice annotates
+// the session's composer + context bar until the relay line carries
+// specialists on the wire (the frozen contract has no specialist field on
+// POST messages). One key per session, the same shape as the draft keys.
+
+export const SPECIALIST_PREFIX = "vesmaro.koraSpecialist:";
+/** A name annotation, not an archive — same quota discipline as drafts. */
+const SPECIALIST_LIMIT = 200;
+
+/** Read the persisted annotation; null = none or garbage (never throws). */
+export function readKoraSpecialist(sessionId: string): string | null {
+  const storage = safeLocalStorage();
+  if (storage === undefined) return null;
+  try {
+    const raw = storage.getItem(SPECIALIST_PREFIX + sessionId);
+    return typeof raw === "string" && raw.length > 0 ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Write/clear the annotation; true = persisted (the honest local bit). */
+export function writeKoraSpecialist(sessionId: string, name: string): boolean {
+  const storage = safeLocalStorage();
+  if (storage === undefined) return false;
+  try {
+    if (name.trim().length === 0) {
+      storage.removeItem(SPECIALIST_PREFIX + sessionId);
+    } else {
+      storage.setItem(SPECIALIST_PREFIX + sessionId, name.slice(0, SPECIALIST_LIMIT));
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}

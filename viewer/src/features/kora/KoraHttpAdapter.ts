@@ -44,6 +44,7 @@ import type {
   KoraSessionCreate,
   KoraSessionsList,
   KoraSessionsParams,
+  KoraSpecialistsRoster,
   KoraStepUpStatus,
   KoraTranscript,
   KoraTranscriptParams,
@@ -246,6 +247,14 @@ export class KoraHttpAdapter implements KoraGateway {
       auth: true,
       signal,
     });
+  }
+
+  /**
+   * В2a — GET /api/kora/specialists: the read-only roster (cheap store
+   * projection). Ships bare (the cookie leg) like every Kora read.
+   */
+  specialists(signal?: AbortSignal): Promise<KoraSpecialistsRoster> {
+    return this.request<KoraSpecialistsRoster>("/kora/specialists", { signal });
   }
 
   /**
