@@ -150,13 +150,19 @@ describe("KoraResizeHandle — the keyboard path (07l §3.3)", () => {
     expect(h.onReset).toHaveBeenCalledTimes(1);
     await key(el, "End");
     expect(h.onValue).toHaveBeenCalledWith(420);
-    expect(h.onCommit).toHaveBeenCalled();
+    // The commit carries the committed VALUE (same-tick value+commit: a
+    // closure read would still hold the pre-End width).
+    expect(h.onCommit).toHaveBeenCalledWith(420);
     expect(seam(h.container)).toBe(el); // the element is still mounted
   });
 
   it("Escape reverts the series to the focus value AND commits the revert", async () => {
     // A CONTROLLED parent: the keyboard series actually moves the value
-    // (320 → 336), then Escape walks it back and persists the revert.
+    // (320 → 336), then Escape walks it back and persists the revert. The
+    // commit must carry the REVERT VALUE (320) as its argument: onValue +
+    // onCommit fire in the SAME tick, so a commit reading the parent's
+    // closure state would persist the rejected 336 (kora-seam-commit-
+    // stale-closure — storage must agree with the UI it shows).
     const commits = vi.fn();
     function Controlled(): React.ReactElement {
       const [value, setValue] = useState(320);
@@ -171,7 +177,7 @@ describe("KoraResizeHandle — the keyboard path (07l §3.3)", () => {
             value={value}
             valueText={`${value} px`}
             onValue={setValue}
-            onCommit={() => commits(value)}
+            onCommit={(next) => commits(next)}
             onReset={() => setValue(320)}
           />
         </I18nProvider>
@@ -192,7 +198,9 @@ describe("KoraResizeHandle — the keyboard path (07l §3.3)", () => {
     expect(el.getAttribute("aria-valuenow")).toBe("336");
     await key(el, "Escape");
     expect(el.getAttribute("aria-valuenow")).toBe("320");
-    expect(commits).toHaveBeenCalled();
+    // WHAT was committed = the revert value, not the pre-revert closure.
+    expect(commits).toHaveBeenCalledTimes(1);
+    expect(commits).toHaveBeenCalledWith(320);
   });
 
   it("a NARROWING keyboard step below the minimum means «свернуть» (v12 stickiness)", async () => {

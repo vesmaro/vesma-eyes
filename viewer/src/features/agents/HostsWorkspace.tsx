@@ -153,12 +153,15 @@ export function HostsWorkspace({
   const now = useValidationNow();
 
   // The roster seam (the Kora 07l §3 contract, re-used component): width
-  // state + persist on COMMIT, never per frame.
+  // state + persist on COMMIT, never per frame. The seam hands the
+  // committed value DIRECTLY — the same-tick revert+commit paths (Esc /
+  // End / pointercancel) must not read the pre-revert width from a
+  // closure (kora-seam-commit-stale-closure).
   const [sideW, setSideW] = useState(readAgentsRightW);
   const onSideValue = useCallback((next: number): void => setSideW(next), []);
-  const onSideCommit = useCallback((): void => {
-    writeAgentsRightW(sideW);
-  }, [sideW]);
+  const onSideCommit = useCallback((next: number): void => {
+    writeAgentsRightW(next);
+  }, []);
   const onSideReset = useCallback((): void => {
     setSideW(AGENTS_SIDE_DEFAULT);
     writeAgentsRightW(AGENTS_SIDE_DEFAULT);

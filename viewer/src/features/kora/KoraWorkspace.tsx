@@ -178,10 +178,17 @@ export function KoraWorkspace({
   // K-PERSIST-FAIL bit — the dock names it, nothing pretends to persist.
   const [sideW, setSideW] = useState<number>(readKoraSideW);
   const onSideValue = useCallback((next: number): void => setSideW(next), []);
-  const onSideCommit = useCallback((): void => {
-    writeKoraSideW(sideW);
-    frameEvents.seamCommitted("meta");
-  }, [sideW, frameEvents]);
+  // The seam hands the committed value DIRECTLY (kora-seam-commit-stale-
+  // closure): the same-tick revert+commit paths (Esc / End / pointercancel)
+  // must not read the pre-revert width from this render's closure — the
+  // handle knows the final value, storage agrees with the UI it shows.
+  const onSideCommit = useCallback(
+    (next: number): void => {
+      writeKoraSideW(next);
+      frameEvents.seamCommitted("meta");
+    },
+    [frameEvents],
+  );
   const onSideReset = useCallback((): void => {
     setSideW(KORA_SIDE_DEFAULT);
     writeKoraSideW(KORA_SIDE_DEFAULT);
@@ -190,10 +197,13 @@ export function KoraWorkspace({
   const [dockW, setDockW] = useState<number>(readKoraDockW);
   const [persistFail, setPersistFail] = useState(false);
   const onDockValue = useCallback((next: number): void => setDockW(next), []);
-  const onDockCommit = useCallback((): void => {
-    if (!writeKoraDockW(dockW)) setPersistFail(true);
-    frameEvents.seamCommitted("dock");
-  }, [dockW, frameEvents]);
+  const onDockCommit = useCallback(
+    (next: number): void => {
+      if (!writeKoraDockW(next)) setPersistFail(true);
+      frameEvents.seamCommitted("dock");
+    },
+    [frameEvents],
+  );
   const onDockReset = useCallback((): void => {
     setDockW(KORA_DOCK_DEFAULT);
     if (!writeKoraDockW(KORA_DOCK_DEFAULT)) setPersistFail(true);

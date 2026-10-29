@@ -11,6 +11,11 @@ import { cn } from "@/lib/utils";
  * on hover/focus/drag WITHOUT shifting content (the line is an absolutely
  * centred child). Drag = pointer capture, instant (no size animation,
  * §0), persist happens on COMMIT (pointerup / keyup), never per frame.
+ * The commit carries the committed VALUE as its argument: the same-tick
+ * revert+commit paths (Escape / End / pointercancel) fire onValue+onCommit
+ * inside ONE event, so the parent's closure state is still pre-revert
+ * there — a commit that read it would persist the value the UI just
+ * rejected (storage must agree with the UI it shows).
  *
  * Keyboard (07l §3.3, WCAG 2.1.1): the element is `role="separator"`,
  * `tabindex="0"` with aria-valuemin/max/now + a px valuetext; arrows move
@@ -59,8 +64,11 @@ export function KoraResizeHandle({
   /** Keyboard step (07l §3.3: ±16px). */
   step?: number;
   onValue: (next: number) => void;
-  /** Persist — on drag end / keyboard series end, never per frame (§3.2). */
-  onCommit: () => void;
+  /** Persist — on drag end / keyboard series end, never per frame (§3.2).
+   * The argument is the value being committed, handed directly by the
+   * handle (NOT read from the parent's closure: the revert+commit paths
+   * land in one tick, the closure there is pre-revert). */
+  onCommit: (next: number) => void;
   /** dblclick / Home (07l §3.4: focus STAYS on the handle after a reset). */
   onReset: () => void;
   /** Which way the seam's edge visually moves: 1 = the edge is on the LEFT
@@ -114,12 +122,14 @@ export function KoraResizeHandle({
     setDragging(false);
     if (start === null) return;
     if (cancelled) {
-      // Cancel reverts AND commits — storage must agree with the UI.
+      // Cancel reverts AND commits — storage must agree with the UI. The
+      // committed value rides the call: onValue + onCommit land in ONE
+      // tick, so the parent's closure state is still pre-revert here.
       onValue(start.value);
-      onCommit();
+      onCommit(start.value);
       return;
     }
-    onCommit();
+    onCommit(value);
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
@@ -133,7 +143,8 @@ export function KoraResizeHandle({
     if (event.key === "End") {
       event.preventDefault();
       onValue(max);
-      onCommit();
+      // Same-tick value+commit: hand the value, never a parent closure.
+      onCommit(max);
       return;
     }
     if (event.key === "Escape") {
@@ -141,7 +152,7 @@ export function KoraResizeHandle({
       if (start !== null && start !== value) {
         event.preventDefault();
         onValue(start);
-        onCommit(); // the revert lands in storage too
+        onCommit(start); // the revert lands in storage too — value rides the call
       }
       return;
     }
@@ -176,7 +187,9 @@ export function KoraResizeHandle({
       event.key === "Home" ||
       event.key === "End"
     ) {
-      onCommit();
+      // Keyup is a separate event from the keydown that moved the value,
+      // so the controlled `value` prop here is the settled series result.
+      onCommit(value);
     }
   };
 
