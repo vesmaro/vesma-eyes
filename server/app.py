@@ -6261,6 +6261,15 @@ def _prompt_trace(text: str) -> dict[str, Any]:
             "prompt_sha256": hashlib.sha256(data).hexdigest()}
 
 
+def _project_trace(project: str) -> dict[str, Any]:
+    """Gate-3 hygiene for the client-supplied project name: sha256 +
+    byte length only (same falsifiability discipline as _prompt_trace —
+    the raw client string never rides the audit)."""
+    data = project.encode("utf-8")
+    return {"project_len": len(data),
+            "project_sha256": hashlib.sha256(data).hexdigest()}
+
+
 class KoraSessionCreate(BaseModel):
     """The frozen KoraSessionCreate body (new relay session from the
     phone). extra=forbid — BE-15: a typo'd field is an honest 422, and
@@ -6357,25 +6366,28 @@ async def create_kora_session(body: KoraSessionCreate, request: Request):
                  f"{_KORA_STEER_RATE_WINDOW:.0f}s per client)")
     executor = store.get_executor(body.executor_id)
     if executor is None:
-        raise HTTPException(
-            400, f"kora session create: unknown executor "
-                 f"{body.executor_id} — pick an enrolled executor "
-                 "(the registry lists hosts with their executors)")
+        return _kora_error(
+            400, "validation",
+            f"kora session create: unknown executor "
+            f"{body.executor_id} — pick an enrolled executor "
+            "(the registry lists hosts with their executors)")
     if executor["state"] != "approved":
-        raise HTTPException(
-            400, f"kora session create: executor {body.executor_id} is "
-                 f"{executor['state']} — only approved executors can "
-                 "host a relay session")
+        return _kora_error(
+            400, "validation",
+            f"kora session create: executor {body.executor_id} is "
+            f"{executor['state']} — only approved executors can "
+            "host a relay session")
     conflicts = store.kora_host_conflict(body.executor_id)
     if conflicts:
         # Loud host-conflict resolution (security gate 6): the store
         # ownership of the would-be session is ambiguous — visibility is
-        # never blocked, the SEND path answers 409 and the audit says so.
+        # never blocked, the SEND and CREATE paths answer 409 and the
+        # audit says so.
         store.log_kora_audit("kora.session.create", {
             "executor_id": body.executor_id,
-            "project": body.project,
             "network_path": _kora_network_path(request),
             "outcome": "host_conflict",
+            **_project_trace(body.project),
             **_prompt_trace(body.prompt),
         })
         return _kora_error(
@@ -6383,13 +6395,13 @@ async def create_kora_session(body: KoraSessionCreate, request: Request):
             "Хост исполнителя закреплён более чем за одним approved-"
             f"исполнителем ({', '.join(c['id'] for c in conflicts)}): "
             "инвариант UNIQUE executors.host нарушен. Разрешите конфликт "
-            "в реестре исполнителей — руление отвеча�� 409, видимость "
+            "в реестре исполнителей — руление отвечает 409, видимость "
             "сессий не блокируется (ADR 0019, gate 6).")
     store.log_kora_audit("kora.session.create", {
         "executor_id": body.executor_id,
-        "project": body.project,
         "network_path": _kora_network_path(request),
         "outcome": "unavailable_relay_transport",
+        **_project_trace(body.project),
         **_prompt_trace(body.prompt),
     })
     raise HTTPException(

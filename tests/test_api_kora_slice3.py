@@ -492,6 +492,38 @@ class TestSteeringBoundaries:
         assert _send(client, handle, "2").status_code == 202
         assert _send(client, handle, "3").status_code == 429
 
+    def test_total_queue_bound_429(self, client: TestClient, ui_auth: dict,
+                                   steering_ready, monkeypatch):
+        """The SECOND bound, the shared queue budget: with the
+        per-session cap far away, QUEUE_MAX_TOTAL still answers an
+        honest 429 naming the total (nothing is dropped silently)."""
+        monkeypatch.setattr(kora_relay, "QUEUE_MAX_TOTAL", 2)
+        monkeypatch.setattr(kora_relay, "transport",
+                            lambda item: ("queued", None))
+        handle = _ingest_session(client, ui_auth, "kora-s3-total",
+                                 "sess_total", steerable=True)
+        assert _send(client, handle, "1").status_code == 202
+        assert _send(client, handle, "2").status_code == 202
+        resp = _send(client, handle, "3")
+        assert resp.status_code == 429, resp.text
+        assert "pending total 2/2" in resp.json()["detail"]
+
+    def test_unknown_and_foreign_404_bodies_are_identical_bytes(
+            self, client: TestClient, ui_auth: dict, steering_ready):
+        """Probes learn nothing: the unknown-triple 404 and the
+        foreign/not-steerable 404 answer the SAME body (the handler
+        keeps one literal — pinned so a refactor cannot split the two
+        branches silently). The bodies interpolate the probed handle,
+        so equality is asserted with the handle normalized out — every
+        other byte (envelope, code, static text) must match exactly."""
+        unknown = _send(client, "exec-none:sess_ghost")
+        handle = _ingest_session(client, ui_auth, "kora-s3-f404",
+                                 "sess_f404")  # local, never adopted
+        foreign = _send(client, handle)
+        assert unknown.status_code == foreign.status_code == 404
+        assert (unknown.content.replace(b"exec-none:sess_ghost", b"<h>")
+                == foreign.content.replace(handle.encode("utf-8"), b"<h>"))
+
     def test_steering_rate_limit_30_per_60s(self, client: TestClient,
                                             steering_ready):
         """The limiter counts BEFORE triple resolution: 30 gated probes
@@ -567,10 +599,65 @@ class TestCreateSessionHonestLimit:
 
     def test_create_validates_executor(self, client: TestClient,
                                        steering_ready):
+        """The frozen contract declares create's 400 as the KoraErrorOut
+        envelope (code `validation`) — never the bare {detail} FastAPI
+        wrapper (byte-pinned like test_wrong_pin)."""
         resp = _create(client, {"executor_id": "ghost", "project": "p",
                                 "prompt": "x"})
         assert resp.status_code == 400
-        assert "unknown executor" in resp.json()["detail"]
+        body = resp.json()
+        assert body == {"ok": False, "code": "validation",
+                        "message": body["message"]}
+        assert "unknown executor" in body["message"]
+
+    def test_create_rejects_unapproved_executor(self, client: TestClient,
+                                                steering_ready):
+        """The second 400 leg (only `unknown` was pinned before): an
+        enrolled but not-approved executor cannot host a relay session —
+        the same frozen validation envelope."""
+        resp = client.post(
+            "/api/executors", headers=MACHINE_HEADERS,
+            json={"name": "kora-s3-pend", "harness": "zcode",
+                  "host": "kora-s3-pend.test-host"})
+        assert resp.status_code == 201, resp.text
+        executor_id = resp.json()["executor"]["id"]
+        resp = _create(client, {"executor_id": executor_id, "project": "p",
+                                "prompt": "x"})
+        assert resp.status_code == 400, resp.text
+        body = resp.json()
+        assert body == {"ok": False, "code": "validation",
+                        "message": body["message"]}
+        assert executor_id in body["message"]
+        assert "approved" in body["message"]
+
+    def test_create_host_conflict_is_loud_409(self, client: TestClient,
+                                              ui_auth: dict, app_module,
+                                              steering_ready):
+        """Security gate 6, create leg (was uncovered): a duplicated
+        host answers the loud 409 BEFORE the spawn boundary, the audit
+        row says host_conflict, and the frozen message survives intact
+        («отвечает» — the UTF-8 corruption regression is pinned here)."""
+        executor_id, _h = _register_executor(client, ui_auth,
+                                             "kora-s3-chc-a")
+        other_id, _h2 = _register_executor(client, ui_auth, "kora-s3-chc-b",
+                                           host="kora-s3-chc-a.test-host")
+        cursor = app_module.store.last_event_id()
+        resp = _create(client, {"executor_id": executor_id,
+                                "project": "vesma", "prompt": "x"})
+        assert resp.status_code == 409, resp.text
+        body = resp.json()
+        assert body["code"] == "host_conflict"
+        assert other_id in body["message"], "conflict named loudly"
+        assert "отвечает" in body["message"]
+        rows = _kora_audit(app_module, {"kora.session.create"}, cursor)
+        assert len(rows) == 1
+        payload = rows[0]["payload"]
+        assert payload["outcome"] == "host_conflict"
+        # gate-3 hygiene: the client-named project rides hash+length only
+        assert "project" not in payload
+        assert payload["project_len"] == len("vesma".encode("utf-8"))
+        assert len(payload["project_sha256"]) == 64
+        assert "vesma" not in str(payload)
 
     def test_create_requires_step_up_first(self, client: TestClient):
         resp = _create(client, {"executor_id": "ghost", "project": "p",
@@ -720,6 +807,12 @@ class TestLogHygiene:
         assert payload["prompt_len"] == len(PROMPT_SENTINEL.encode("utf-8"))
         assert len(payload["prompt_sha256"]) == 64
         assert PROMPT_SENTINEL not in str(payload)
+        # gate-3 hygiene: the client-named project rides hash+length
+        # only — falsifiability preserved, the raw string never logs
+        assert payload["project_len"] == len("vesma".encode("utf-8"))
+        assert len(payload["project_sha256"]) == 64
+        assert "project" not in payload
+        assert "vesma" not in str(payload)
 
 
 # ============================================ the live spec carries the delta
