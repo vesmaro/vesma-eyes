@@ -32,19 +32,27 @@ Coverage map (each test names its line):
   per provider, merged sorted model union, the honest auth merge (any
   configured → configured, else any unknown → unknown, else anonymous),
   config-wins-over-probe source merge, seen_on from the snapshots,
-  revoked executors excluded, deterministic reads;
+  revoked executors excluded while archived-but-not-revoked stay in
+  (issue #6 tail b), deterministic reads;
 - SSE: one model.inventory.changed frame on an actual delta (added/
   removed tuples), SILENCE on an identical re-report;
-- the additive ALTER: a legacy '' column reads as {} / [].
+- the additive ALTER: a legacy '' column reads as {} / [], and a REAL
+  pre-wave boot (mirror columns absent) gains them back with the
+  ingest/read legs intact (issue #6 tail a);
+- caps tails: the mcp count refuses bool-as-int like the string case
+  (issue #6 tail c).
 """
 
 from __future__ import annotations
 
 import asyncio
 import json
+import sqlite3
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from server.security import RateLimiter
+from server.store import ARCHIVE_AFTER_DISABLED_S
 
 # Synthetic sentinel — shaped like a real key, never a real credential.
 SENTINEL = "sk-sentinel-fake-key-0123456789abcdef"
@@ -357,6 +365,16 @@ class TestCaps:
         entry = MCP_ENTRY | {"count": "5"}
         r = _post_discovery(client, executor["id"], secret,
                             mcp_servers=[entry])
+        assert r.status_code == 422, r.text
+        assert "count" in r.json()["detail"]
+
+    def test_mcp_count_bool_is_422(self, client):
+        """Issue #6 tail (c): bool is not an integer on the wire — Python's
+        isinstance(True, int) must not let the JSON `true` through the
+        count gate (the "5" string case's twin)."""
+        executor, secret = self._register_quiet(client, "mm-c5b")
+        r = _post_discovery(client, executor["id"], secret,
+                            mcp_servers=[MCP_ENTRY | {"count": True}])
         assert r.status_code == 422, r.text
         assert "count" in r.json()["detail"]
 
@@ -760,6 +778,37 @@ class TestRosterAggregation:
                      json={"state": "revoked"}, headers=ui_auth)
         assert _roster(client)["discovered"] == []
 
+    def test_archived_executor_facts_still_in_seen_on(
+            self, client, app_module, ui_auth):
+        """Issue #6 tail (b): the archive verdict is computed ON READ (a
+        VIEW policy, never a registry state) — an aged-out disabled
+        executor is NOT revoked, so its installation keeps appearing in
+        the roster seen_on. Revoked is the only excluded state (the pin
+        above); archive must not grow into an exclusion."""
+        executor, secret = _register(client, "mm-r13")
+        r = _post_discovery(client, executor["id"], secret,
+                            models={"installations": [MODEL_ROW]})
+        assert r.status_code == 200, r.text
+        r = client.patch(f"/api/executors/{executor['id']}",
+                         json={"state": "approved", "enabled": False},
+                         headers=ui_auth)
+        assert r.status_code == 200, r.text
+        # time-travel the report clock past the archive threshold, the
+        # test_roster_archive_policy way (rewriting last_seen directly)
+        old = (datetime.now(timezone.utc)
+               - timedelta(seconds=ARCHIVE_AFTER_DISABLED_S + 60)
+               ).isoformat(timespec="seconds")
+        with app_module.store._lock, app_module.store._conn() as db:
+            db.execute("UPDATE executors SET last_seen=? WHERE id=?",
+                       (old, executor["id"]))
+        items = {e["id"]: e
+                 for e in client.get("/api/executors").json()["items"]}
+        assert items[executor["id"]]["archived"] is True
+        discovered = _roster(client)["discovered"]
+        assert len(discovered) == 1
+        assert {s["executor_id"]
+                for s in discovered[0]["seen_on"]} == {executor["id"]}
+
     def test_board_zone_untouched_and_deterministic(self, client):
         body = _roster(client)
         assert body["board"][0]["provider"] == "hermes"
@@ -906,6 +955,79 @@ class TestLegacyColumns:
         assert mirror["models"] == {}
         assert mirror["mcp_servers"] == []
         assert _roster(client)["discovered"] == []
+
+
+# -------------------------------------------------- pre-wave ALTER boot
+
+class TestPreWaveAlterBoot:
+    """Issue #6 tail (a): a REAL pre-wave boot. The base _SCHEMA never
+    carried the mirror columns — only ``_migrate`` ALTERs them in — so a
+    fixture database with the columns dropped is byte-honest: the boot
+    sees exactly what a pre-wave database was. The boot must add the
+    columns back cleanly and the mirror ingest/read legs must answer on
+    the migrated schema (never a 500), the store-level grammar of the
+    discovery route (test_api_hermes_bridge / test_device_grants idiom).
+    The HTTP legs on top of an _migrate-ALTERed schema are already the
+    whole test_models_mirror suite — every fresh boot runs the ALTER."""
+
+    def test_pre_wave_db_gains_columns_and_paths_work(self, tmp_path):
+        from server.store import Store
+        path = tmp_path / "board.db"
+
+        # Wave-0 database: a boot store whose executors table carries NO
+        # mirror columns, with a live executor row in it.
+        st = Store(path)
+        row, _secret = st.register_executor("prewave-1", "zcode")
+        with sqlite3.connect(path) as db:
+            db.execute("ALTER TABLE executors DROP COLUMN models_mirror")
+            db.execute("ALTER TABLE executors DROP COLUMN mcp_mirror")
+            cols = {r[1] for r in db.execute(
+                "PRAGMA table_info(executors)").fetchall()}
+        assert "models_mirror" not in cols
+        assert "mcp_mirror" not in cols
+
+        # THE boot under test: _migrate ALTERs the columns back in, the
+        # row survives, the DEFAULTs read as honest absence.
+        st2 = Store(path)
+        with sqlite3.connect(path) as db:
+            cols = {r[1] for r in db.execute(
+                "PRAGMA table_info(executors)").fetchall()}
+        assert {"models_mirror", "mcp_mirror"} <= cols
+        fresh = st2.get_executor(row["id"])
+        assert fresh is not None, "migration must not lose the row"
+        assert fresh["models_mirror"] == "{}"
+        assert fresh["mcp_mirror"] == "[]"
+        # idempotent: a third boot is a no-op, the schema stays
+        Store(path)
+        with sqlite3.connect(path) as db:
+            cols = {r[1] for r in db.execute(
+                "PRAGMA table_info(executors)").fetchall()}
+        assert {"models_mirror", "mcp_mirror"} <= cols
+
+        # The ingest legs on the migrated schema — the exact store calls
+        # the discovery route makes — accept and write, never 500.
+        models = st2.report_models_mirror(row["id"],
+                                          {"installations": [MODEL_ROW]})
+        assert models["accepted"] == 1
+        assert models["changed"] is True
+        mcp = st2.report_mcp_mirror(row["id"], [MCP_ENTRY])
+        assert mcp["accepted"] == 1
+        assert mcp["changed"] is True
+        with sqlite3.connect(path) as db:
+            n = db.execute(
+                "SELECT COUNT(*) FROM events WHERE kind='models.reported'"
+            ).fetchone()[0]
+        assert n == 1
+
+        # The read legs: the roster projection input carries the written
+        # snapshots, the raw row keeps them.
+        mirrors = st2.models_mirrors()
+        assert [m["id"] for m in mirrors] == [row["id"]]
+        assert json.loads(mirrors[0]["models_mirror"] or "{}").get(
+            "installations")
+        assert json.loads(mirrors[0]["mcp_mirror"] or "[]")
+        assert st2.get_executor(row["id"])["models_mirror"] == \
+            mirrors[0]["models_mirror"]
 
 
 # ------------------------------------------------- SEC-3 body cap

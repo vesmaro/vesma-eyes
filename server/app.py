@@ -7051,7 +7051,9 @@ class ModelsDiscoveredItem(BaseModel):
     ``models`` is the merged, sorted, deduped raw-string union (≤
     _MODELS_MAX_PER_ROW); ``auth``/``source`` are honest merges across
     every reporter; ``seen_on`` names WHERE the fact was seen (from the
-    snapshots, never self-reported)."""
+    snapshots, never self-reported).
+    grant_summary omitted — grants are MF3 (the model_providers
+    registry fact), never a discovery-mirror fact."""
 
     provider: str
     base_url: str
