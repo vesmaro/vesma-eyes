@@ -163,13 +163,14 @@ function TreeNav({
 }) {
   // The open-set seeds from sessionStorage when present; otherwise the
   // default opens exactly the hosts with live sessions (07j §11). The
-  // route's host joins the open-set on arrival (a deep link must show its
-  // selection, not a closed branch). Both beats adjust state DURING
-  // render — the react.dev «adjust state when data/props arrive» shape
-  // (no effect, no setState-in-effect cascade), in the SAME order the
-  // two effects used to run: seed first, join second, so a non-live
-  // deep-link host survives the seed; `openNow` threads the seed's
-  // result into the join within one render pass.
+  // route's host joins the open-set on arrival — INCLUDING the first
+  // arrival (a direct deep link in a fresh tab must show its selection,
+  // not a closed branch). Both beats adjust state DURING render — the
+  // react.dev «adjust state when data/props arrive» shape (no effect, no
+  // setState-in-effect cascade), in the SAME order the two effects used
+  // to run: seed first, join second, so a non-live deep-link host
+  // survives the seed; `openNow` threads the seed's result into the join
+  // within one render pass.
   // Mount-time snapshot of the persisted open-set: the useState
   // initializer runs exactly once (the render-safe equivalent of the old
   // useRef snapshot — a ref may not be read during render), so a join
@@ -194,7 +195,14 @@ function TreeNav({
     setOpen(openNow);
   }
 
-  const [joinedHost, setJoinedHost] = useState(activeHost);
+  // The join tracker seeds from NOTHING (""), not from activeHost: the
+  // first render is itself a change — from no host to the route's host —
+  // so a DIRECT deep-link entry (fresh tab, empty sessionStorage, a dead
+  // host the live-seed default never opens) joins on mount. Seeding from
+  // activeHost made the adjust skip the first render and folded the
+  // deep-linked branch (the cascade W2 QA P2 regression); "" keeps the
+  // mount and every later prop change on the SAME adjust path below.
+  const [joinedHost, setJoinedHost] = useState("");
   if (joinedHost !== activeHost) {
     setJoinedHost(activeHost);
     if (activeHost !== "" && !openNow.has(activeHost)) {
