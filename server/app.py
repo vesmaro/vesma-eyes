@@ -1142,6 +1142,12 @@ _DEVICE_READ_ROUTES: tuple[tuple[str, str], ...] = (
     # LIST is metadata for devices too — previews already pass the
     # redaction choke-point (archcom position).
     ("GET", "/api/kora/sessions"),
+    # Kora specialists roster (В2a, KORA-SPECIALISTS-1): open facts by the
+    # SAME precedent as the sessions listing — names only, a pure store
+    # projection, no content and no outbound calls; the specialists ALREADY
+    # ride GET /api/board (reads-добавка v1). The profile DETAIL stays
+    # outside this table (the profile route keeps its own discipline).
+    ("GET", "/api/kora/specialists"),
     # Kora slice-2 transcript (ADR 0019 gate 5, mnd_ = metadata-only):
     # the route rides the read table ONLY so a VALID device reaches the
     # handler's explanatory wall (403 KoraErrorOut code=metadata_only —
@@ -5784,6 +5790,62 @@ class KoraSessionsOut(_ApiModel):
     meta: dict[str, str]
 
 
+class KoraSpecialistItem(_ApiModel):
+    """One specialist of the board roster (kora-ide contract §5.3,
+    KORA-SPECIALISTS-1, additive — OUTSIDE the frozen week-0 artifact).
+    Open facts only: the NAME as the board's tasks declare it, the
+    profile-route slug (the same computation GET /api/specialists/{name}
+    ... uses) and the read-only honesty bit about the profile cache (the
+    profile DETAIL stays the existing /api/specialists/profile read)."""
+    name: str
+    slug: str
+    profile_cached: bool
+
+
+class KoraSpecialistsOut(_ApiModel):
+    ok: bool
+    count: int
+    items: list[KoraSpecialistItem]
+    meta: dict[str, str]
+
+
+def _specialist_slug(name: str) -> str:
+    """The profile-route slug computation, EXTRACTED verbatim from
+    specialist_profile() so the roster and the profile route can never
+    drift (one computation, two callers)."""
+    return (name.lower().replace("@gcw: ", "gcw-")
+            .replace(" ", "-").replace("/", "-"))
+
+
+def _board_specialist_names() -> list[str]:
+    """Every specialist name the board's ACTIVE tasks declare — union,
+    sorted, deduplicated. ONE derivation, two callers (the kora roster
+    and specialists_refresh_all) so they can never drift: no extra
+    filtering — refresh-all has never isinstance/blank-checked the
+    declared names, and the shared helper keeps that exact semantics."""
+    return sorted({
+        s for t in store.board()["tasks"]
+        for s in (t.get("specialists") or [])
+    })
+
+
+def _kora_specialists_roster() -> list[KoraSpecialistItem]:
+    """The specialist roster over the board's ACTIVE tasks — the SAME
+    derivation specialists_refresh_all() uses via _board_specialist_names()
+    (the tasks-domain registry is the source of truth; there is no
+    separate roster table). Sorted, deduplicated, unfiltered — exactly
+    what the tasks declare, empty honestly when they name none."""
+    names = _board_specialist_names()
+    return [
+        KoraSpecialistItem(
+            name=name,
+            slug=_specialist_slug(name),
+            profile_cached=store.get_profile_cache(name) is not None,
+        )
+        for name in names
+    ]
+
+
 def _kora_coverage() -> KoraCoverageOut:
     """The honest per-harness visibility statement (T004 slice-3
     reality): hermes lists + previews land via the live bridge pull
@@ -6776,6 +6838,42 @@ async def kora_hermes_live_sessions(request: Request,
             "upserted": str(ingest["upserted"]),
             "dropped": str(ingest["dropped"]),
         },
+    )
+
+
+# ------------------------------------------- kora specialists roster (В2a)
+# KORA-SPECIALISTS-1 (kora-ide contract §5.3, additive read — OUTSIDE the
+# frozen week-0 artifact): the read-only specialist roster over the board's
+# ACTIVE tasks (the tasks-domain registry is the source of truth; the
+# refresh-all derivation is the precedent). Before this line the composer's
+# specialist selector honestly did not render (§5.3: «до линии селектор
+# специалиста НЕ рисуется»); now it renders FROM THIS ROSTER only.
+#
+# Access class = the kora LISTING tier (the owner decision on the slice-1
+# review, _guard_kora_read): the ui class (owner session) and the mnd_
+# device class. Device-readable BY PRECEDENT, not by novelty: the roster is
+# open facts — specialist names already ride GET /api/board (in
+# _DEVICE_READ_ROUTES since the reads-добавка v1), and the sessions listing
+# (a STRICTER surface — it carries redacted previews) is device-readable
+# metadata by the archcom position. This read is a pure store projection:
+# no transcript content, no outbound calls (unlike the hermes status/pull
+# routes, which stay ui-only because they touch board-ops/live probes),
+# no PIN/steering. The profile DETAIL stays the existing
+# /api/specialists/profile read — this roster only names the specialists
+# and honestly reports whether the profile cache has a row.
+@app.get("/api/kora/specialists")
+async def kora_specialists(request: Request) -> KoraSpecialistsOut:
+    """Read-only specialist roster (В2a). AUTHED read, the listing tier:
+    ui (owner session) + mnd_ (metadata — see the block comment above).
+    Anonymous → 401; a machine bearer is not a listing class (401, the
+    _guard_kora_read legs)."""
+    _guard_kora_read(request)
+    items = _kora_specialists_roster()
+    return KoraSpecialistsOut(
+        ok=True,
+        count=len(items),
+        items=items,
+        meta={"generated_at": _now_iso()},
     )
 
 
@@ -9756,8 +9854,7 @@ async def specialist_profile(name: str, refresh: bool = False) -> SpecialistProf
     tree → legacy mnemos-index search for names the builder cannot
     resolve. Pass ?refresh=1 to force a rebuild.
     """
-    slug = (name.lower().replace("@gcw: ", "gcw-")
-            .replace(" ", "-").replace("/", "-"))
+    slug = _specialist_slug(name)
 
     if not refresh:
         cached = store.get_profile_cache(name)
@@ -9841,7 +9938,7 @@ async def specialists_refresh_all(request: Request) -> RefreshAllOut:
     cannot resolve fall back to the legacy memory-server refresh.
     """
     _guard_write(request, classes=("ui",))
-    specialists = sorted({s for t in store.board()["tasks"] for s in (t.get("specialists") or [])})
+    specialists = _board_specialist_names()
     built = memory_fallback = failed = 0
     for name in specialists:
         try:

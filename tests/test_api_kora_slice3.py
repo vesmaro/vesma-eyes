@@ -38,7 +38,10 @@ from conftest import BOARD_TOKEN, UI_TOKEN, DATA_DIR, get_app_module
 from server.kora import relay as kora_relay
 
 MACHINE_HEADERS = {"Authorization": f"Bearer {BOARD_TOKEN}"}
-TEST_PIN = "4321"          # synthetic ritual PIN — never a real secret
+TEST_PIN = "43214321"      # synthetic ritual PIN — never a real secret
+# (8 digits: a 4-digit literal checked as a bare substring collides
+# stochastically with the random hex of a scrypt salt/digest — the
+# flake the slice-3 review caught on a full run)
 WRONG_PIN = "9999"
 PROMPT_SENTINEL = "PROMPT-SENTINEL-4821-секрет"
 PIN_SENTINEL = "PIN-SENTINEL-9753"
@@ -767,11 +770,26 @@ class TestLogHygiene:
             assert TEST_PIN not in blob and WRONG_PIN not in blob
 
     def test_pin_verifier_is_never_plaintext(self):
+        """Pinned security edge — checked by the ENVELOPE STRUCTURE, not
+        by substring containment (a short PIN as a bare ``in`` check
+        collides stochastically with the random hex of salt/digest).
+        Grammar: ``scrypt$N$r$p$<salthex>$<hashhex>`` — all fields
+        present and well-formed, the plaintext survives as no token of
+        the envelope, and the envelope still VERIFIES the plaintext."""
         kora_relay.configure_steering_pin(TEST_PIN)
         verifier = kora_relay._pin_verifier
         assert verifier is not None
         assert verifier.startswith("scrypt$")
-        assert TEST_PIN not in verifier
+        algo, n_s, r_s, p_s, salt_hex, key_hex = verifier.split("$")
+        assert algo == "scrypt"
+        assert all(part.isdigit() for part in (n_s, r_s, p_s))
+        assert int(n_s) >= 1024 and int(r_s) >= 1 and int(p_s) >= 1
+        assert len(bytes.fromhex(salt_hex)) == 16      # 128-bit salt
+        assert len(bytes.fromhex(key_hex)) == 32       # 256-bit digest
+        assert TEST_PIN not in (algo, n_s, r_s, p_s, salt_hex, key_hex)
+        assert not any(part.startswith(TEST_PIN)
+                       for part in (n_s, r_s, p_s, salt_hex, key_hex))
+        assert kora_relay.verify_password(TEST_PIN, verifier)
         kora_relay.configure_steering_pin(None)
         assert kora_relay._pin_verifier is None
 

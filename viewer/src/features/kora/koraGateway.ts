@@ -29,6 +29,7 @@ import type {
   KoraSessionCreate,
   KoraSessionsList,
   KoraSessionsParams,
+  KoraSpecialistsRoster,
   KoraStepUpStatus,
   KoraTranscript,
   KoraTranscriptParams,
@@ -166,4 +167,13 @@ export interface KoraGateway {
     body: HermesChatRequest,
     signal?: AbortSignal,
   ): Promise<HermesChatReply>;
+
+  /**
+   * В2a (KORA-SPECIALISTS-1) — GET /api/kora/specialists: the read-only
+   * specialist roster over the board's ACTIVE tasks. A cheap store
+   * projection (no live probe, no content) — the specialist selector
+   * renders FROM IT or not at all (contract §5.3). An empty roster or a
+   * failed read is honest absence: no invented rows, no retry loop.
+   */
+  specialists(signal?: AbortSignal): Promise<KoraSpecialistsRoster>;
 }

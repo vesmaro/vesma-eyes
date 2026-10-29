@@ -2713,6 +2713,30 @@ export const ru = {
   "kora.composer.draftSaved": "Черновик сохранён",
   "kora.composer.draftFailed":
     "Черновик не сохранился — он живёт, пока открыта страница",
+  // Строка селекторов композера (В2, kora-ide contract §3.2 — футер инпута
+  // Claude Code/zcode): только реальные данные; пустой слот не рисуется.
+  "kora.controls.harnessLabel": "харнес",
+  "kora.controls.harnessContextNote":
+    "Харнес живёт в контексте сессии — меняется выбором сессии в доке или харнеса в дереве",
+  "kora.controls.harnessCount": "сессий: {{n}}",
+  "kora.controls.specialistLabel": "специалист",
+  "kora.controls.specialistNone": "не выбран",
+  "kora.controls.specialistLocalNote":
+    "Локальная пометка на этой машине — останется локальной, пока линия реле не начнёт нести специалистов",
+  // K-PERSIST-FAIL (честный бит из В1): запись пометки не дошла до
+  // хранилища — выбор живёт до перезагрузки, и интерфейс это называет.
+  "kora.controls.specialistPersistFail":
+    "Не сохранилось — хранилище браузера недоступно",
+  "kora.controls.modelLabel": "модель",
+  "kora.controls.modelUnknown": "модели не сообщаются",
+  "kora.controls.modeLabel": "режим",
+  "kora.controls.modeConfirm": "confirm",
+  "kora.controls.modeYolo": "yolo",
+  "kora.controls.currentMark": "текущий",
+  "kora.controls.yoloLocalReason":
+    "yolo — только для relay-сессий; эта сессия локальная",
+  "kora.controls.yoloRelayOffReason":
+    "yolo откроется после подключения реле-транспорта (исполнитель vesmaro-session-relay)",
   // «Завершена» в реестре сессий пока нет (live/idle/dead) — строка ждёт
   // своего состояния; «прервана» = процесс мёртв.
   "kora.composer.finishedNote":

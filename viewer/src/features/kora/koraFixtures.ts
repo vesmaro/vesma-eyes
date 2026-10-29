@@ -1,5 +1,5 @@
 import type { components } from "./koraContract";
-import type { HermesMessage } from "./koraTypes";
+import type { HermesMessage, KoraSpecialistsRoster } from "./koraTypes";
 
 type SpecSession = components["schemas"]["KoraSessionOut"];
 type SpecTranscriptItem = components["schemas"]["KoraTranscriptItemOut"];
@@ -120,6 +120,32 @@ export const KORA_FIXTURE_HERMES_STATUS = {
   // source hermes_client.HERMES_MODELS, mirrored in the mock).
   models: ["hermes-4.5-405b", "hermes-4.5-70b"],
   default_model: "hermes-4.5-405b",
+};
+
+/**
+ * The specialist roster (В2a — GET /api/kora/specialists mock, KORA-
+ * SPECIALISTS-1): open facts only — the board's declared names, the
+ * profile-route slugs, the read-only profile-cache bit. TYPED BY THE
+ * SEAM TYPE (mirrored from KoraSpecialistsOut in server/app.py — the
+ * route is an additive wave, outside the frozen artifact). The composer's
+ * specialist selector renders FROM the roster or not at all (§5.3).
+ */
+export const KORA_FIXTURE_SPECIALISTS: KoraSpecialistsRoster = {
+  ok: true,
+  count: 2,
+  items: [
+    {
+      name: "@GCW: Tech Lead",
+      slug: "gcw-tech-lead",
+      profile_cached: true,
+    },
+    {
+      name: "@GCW: Senior Frontend Developer",
+      slug: "gcw-senior-frontend-developer",
+      profile_cached: false,
+    },
+  ],
+  meta: { generated_at: "2026-10-29T00:00:00+00:00" },
 };
 
 /**

@@ -1549,6 +1549,29 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/api/kora/specialists": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Kora Specialists
+         * @description Read-only specialist roster (В2a). AUTHED read, the listing tier:
+         *     ui (owner session) + mnd_ (metadata — see the block comment above).
+         *     Anonymous → 401; a machine bearer is not a listing class (401, the
+         *     _guard_kora_read legs).
+         */
+        readonly get: operations["kora_specialists_api_kora_specialists_get"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/api/models": {
         readonly parameters: {
             readonly query?: never;
@@ -4746,6 +4769,40 @@ export interface components {
             /** Items */
             readonly items: readonly components["schemas"]["KoraSessionOut"][];
             readonly coverage: components["schemas"]["KoraCoverageOut"];
+            /** Meta */
+            readonly meta: {
+                readonly [key: string]: string;
+            };
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /**
+         * KoraSpecialistItem
+         * @description One specialist of the board roster (kora-ide contract §5.3,
+         *     KORA-SPECIALISTS-1, additive — OUTSIDE the frozen week-0 artifact).
+         *     Open facts only: the NAME as the board's tasks declare it, the
+         *     profile-route slug (the same computation GET /api/specialists/{name}
+         *     ... uses) and the read-only honesty bit about the profile cache (the
+         *     profile DETAIL stays the existing /api/specialists/profile read).
+         */
+        readonly KoraSpecialistItem: {
+            /** Name */
+            readonly name: string;
+            /** Slug */
+            readonly slug: string;
+            /** Profile Cached */
+            readonly profile_cached: boolean;
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /** KoraSpecialistsOut */
+        readonly KoraSpecialistsOut: {
+            /** Ok */
+            readonly ok: boolean;
+            /** Count */
+            readonly count: number;
+            /** Items */
+            readonly items: readonly components["schemas"]["KoraSpecialistItem"][];
             /** Meta */
             readonly meta: {
                 readonly [key: string]: string;
@@ -9297,6 +9354,26 @@ export interface operations {
                 };
                 content: {
                     readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly kora_specialists_api_kora_specialists_get: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["KoraSpecialistsOut"];
                 };
             };
         };
