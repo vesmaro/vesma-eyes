@@ -443,13 +443,30 @@ MODEL_SERVER_HARNESS_SEEDS: dict[str, str] = {
 # [A-Za-z0-9+/=]{40,} run) so hyphen-structured model ids
 # («deepseek-ai/DeepSeek-R1-Distill-Qwen-32B») split into short word runs
 # and never trip a false positive; a real secret is one continuous run.
+# Prefixes are stored LOWERCASE and matched against the lowercased value
+# (agent-discovery §3.8, draft.6: the comparison is case-INSENSITIVE —
+# lowercase «akia…» and uppercase «AKIA…» are equal; the agent lowercases
+# once before the prefix match). The dictionary extends additively (§7) —
+# the board's superset of the spec's seed list is that extension.
 _CRED_TOKEN_PREFIXES = (
     "sk-", "sk-ant-", "ghp_", "gho_", "ghu_", "ghs_", "github_pat_",
-    "xoxb-", "xoxp-", "xoxa-", "xoxr-", "xapp-", "glpat-", "AKIA", "ASIA",
-    "AIza", "shpat_", "shpss_", "hf_", "gsk_",
+    "xoxb-", "xoxp-", "xoxa-", "xoxr-", "xapp-", "glpat-", "akia", "asia",
+    "aiza", "shpat_", "shpss_", "hf_", "gsk_",
 )
 _CRED_HEX_RUN_RE = re.compile(r"[0-9a-fA-F]{20,}")
-_CRED_B64_RUN_RE = re.compile(r"[A-Za-z0-9+/=]{40,}")
+# The base64url alphabet (§3.8 draft.6): `-` and `_` join `+`/`=` —
+# URL-safe base64 tokens no longer slip between the runs.
+_CRED_B64_RUN_RE = re.compile(r"[A-Za-z0-9+/_=-]{40,}")
+# JWT shape (§3.8 draft.6): starts with `eyJ` — the base64url of the
+# JWT-header opening `{"` — and carries ≥ 1 dot (the header.payload.…
+# form). Dot-split segment lengths are deliberately NOT checked: this
+# class is independent of the b64 threshold so a JWT with segments
+# shorter than 40 still trips (the literal `eyJ` is case-sensitive —
+# base64url is case-sensitive and `{"` encodes to exactly these bytes).
+_CRED_JWT_PREFIX = "eyJ"
+# Long mixed run (§3.8 draft.6): ≥ 32 contiguous [A-Za-z0-9_-] — mixed
+# alphanumeric secrets that fall short of the hex/b64 thresholds.
+_CRED_MIXED_RUN_RE = re.compile(r"[A-Za-z0-9_-]{32,}")
 _CRED_KEY_ASSIGN_RE = re.compile(
     r"(?i)\b(api[_-]?key|apikey|access[_-]?token|auth[_-]?token|token|"
     r"secret|password|passwd|bearer)\b\s*[:=]\s*\S")
@@ -459,24 +476,35 @@ _CRED_KEY_ASSIGN_RE = re.compile(
 # a note). The prefix must sit at the string start or right after a
 # structural boundary — URL punctuation, whitespace, quotes, colon — so
 # hyphenated words inside legitimate ids («risk-based», «desk-check»)
-# never trip it.
+# never trip it. Case-insensitive like the start-anchored class (§3.8
+# draft.6).
 _CRED_PREFIX_BOUNDARY_RE = re.compile(
     r"(?:^|[\s\"'(/?&=:])"
-    + r"(?:" + "|".join(re.escape(p) for p in _CRED_TOKEN_PREFIXES) + r")")
+    + r"(?:" + "|".join(re.escape(p) for p in _CRED_TOKEN_PREFIXES) + r")",
+    re.IGNORECASE)
 
 
 def looks_like_credential(value: str) -> bool:
-    """True when the string carries a credential SHAPE (the §3.8 classes
-    above). A conservative fail-closed classifier: an exotic false
-    positive costs one advisory discovery row; a false negative would put
-    material into the mirror."""
+    """True when the string carries a credential SHAPE — the §3.8 class
+    list (draft.6), ONE list with the agent's names-only validator: a
+    token prefix (case-insensitive, prefix only), an eyJ-prefixed dotted
+    JWT, a ≥20 hex run, a ≥40 base64url run, a ≥32 mixed [A-Za-z0-9_-]
+    run, or a key-shaped assignment. A conservative fail-closed
+    classifier: an exotic false positive costs one advisory discovery
+    row (dropped LOUDLY — incident + audit, the value never stores; a
+    legitimate long hash-like model id may take that road and that is
+    the documented SAFE direction); a false negative would put material
+    into the mirror."""
     s = (value or "").strip()
     if not s:
         return False
-    return (s.startswith(_CRED_TOKEN_PREFIXES)
+    ls = s.lower()
+    return (ls.startswith(_CRED_TOKEN_PREFIXES)
             or _CRED_PREFIX_BOUNDARY_RE.search(s) is not None
+            or (s.startswith(_CRED_JWT_PREFIX) and "." in s)
             or _CRED_HEX_RUN_RE.search(s) is not None
             or _CRED_B64_RUN_RE.search(s) is not None
+            or _CRED_MIXED_RUN_RE.search(s) is not None
             or _CRED_KEY_ASSIGN_RE.search(s) is not None)
 
 
