@@ -1356,7 +1356,23 @@ export interface paths {
          */
         readonly get: operations["list_kora_sessions_api_kora_sessions_get"];
         readonly put?: never;
-        readonly post?: never;
+        /**
+         * Create Kora Session
+         * @description Slice 3: NEW session from Kora (frozen contract POST
+         *     /kora/sessions) — the FIRST relay scenario. Gates, in order: ui-only
+         *     steering guard → step-up PIN → rate limit → executor registry
+         *     validation (approved, exists) → loud host-conflict resolution.
+         *
+         *     HONEST LIMITATION (the brief's «честная 501, не притворство»): the
+         *     harness-side spawn (headless harness on the store-owner host via the
+         *     executor-side relay unit) is NOT wired in this slice —
+         *     vesmaro-session-relay.service is a separate line. The route answers
+         *     501 AFTER every gate so the ritual is fully exercised, and it does
+         *     NOT register a phantom registry row (a board-invented native_id would
+         *     never appear in a harness store — NO-DRIFT). When the relay
+         *     transport lands, only this tail changes to the 201 path.
+         */
+        readonly post: operations["create_kora_session_api_kora_sessions_post"];
         readonly delete?: never;
         readonly options?: never;
         readonly head?: never;
@@ -1411,6 +1427,73 @@ export interface paths {
         readonly put?: never;
         readonly post?: never;
         readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/kora/sessions/{session_id}/messages": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Send Kora Session Message
+         * @description Slice 3 steering (frozen contract POST /kora/sessions/{id}/
+         *     messages): a relay COMMAND, never a store write (NO-DRIFT — the
+         *     harness appends to its own store; the browser observes via the
+         *     transcript GET). Gates: ui-only steering guard → step-up PIN → rate
+         *     limit → triple resolution (unknown/foreign/not-steerable resolves as
+         *     404 session_not_found, server-side, gates 1+2) → loud host conflict
+         *     (409, gate 6) → in-memory queue with honest KoraDelivery.
+         *
+         *     Delivery is honest: accepted ≠ delivered — the 202 body carries the
+         *     CURRENT status; with the executor-side relay transport not wired,
+         *     every accepted prompt resolves failed (retryable, «не доставлено —
+         *     повторите»). The prompt rides the queue in-memory only: never
+         *     served, never logged (audits carry sha256 + length).
+         */
+        readonly post: operations["send_kora_session_message_api_kora_sessions__session_id__messages_post"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/kora/steering/step-up": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Kora Steering Step Up Status
+         * @description Slice 3 step-up status (frozen contract): active + remaining TTL.
+         *     Reading the status is ui-only and — like every read — never requires
+         *     step-up.
+         */
+        readonly get: operations["kora_steering_step_up_status_api_kora_steering_step_up_get"];
+        readonly put?: never;
+        /**
+         * Enable Kora Steering Step Up
+         * @description Slice 3 step-up ritual (frozen contract POST /kora/steering/
+         *     step-up): unlocks steering for ≤900s. OFF by default; reading never
+         *     requires step-up. Attempts are rate limited 10/60s per client (the
+         *     auth-verify door number). The PIN is verified against the scrypt
+         *     verifier and NEVER logged in any form.
+         */
+        readonly post: operations["enable_kora_steering_step_up_api_kora_steering_step_up_post"];
+        /**
+         * Revoke Kora Steering Step Up
+         * @description Slice 3 step-up revoke (frozen contract DELETE): the one-command
+         *     kill switch for the steering window. 204, no body.
+         */
+        readonly delete: operations["revoke_kora_steering_step_up_api_kora_steering_step_up_delete"];
         readonly options?: never;
         readonly head?: never;
         readonly patch?: never;
@@ -4510,6 +4593,17 @@ export interface components {
             readonly entry_point: "focus" | "button";
         };
         /**
+         * KoraMessageCreate
+         * @description The frozen KoraMessageCreate body (steering prompt). NOTE: no
+         *     client idempotency key — the ADR does not define one, and
+         *     additionalProperties:false forbids inventing it; each accepted POST
+         *     is exactly one queue entry, «повторите» means a deliberate new send.
+         */
+        readonly KoraMessageCreate: {
+            /** Text */
+            readonly text: string;
+        };
+        /**
          * KoraScanIn
          * @description Scanner ingest envelope. ``drop_missing``: a full-listing scan
          *     (the zcode store is the authority) removes registry rows the scan no
@@ -4536,6 +4630,20 @@ export interface components {
             readonly dropped: number;
         } & {
             readonly [key: string]: unknown;
+        };
+        /**
+         * KoraSessionCreate
+         * @description The frozen KoraSessionCreate body (new relay session from the
+         *     phone). extra=forbid — BE-15: a typo'd field is an honest 422, and
+         *     no client key can smuggle a mode/yolo flag past the resolver.
+         */
+        readonly KoraSessionCreate: {
+            /** Executor Id */
+            readonly executor_id: string;
+            /** Project */
+            readonly project: string;
+            /** Prompt */
+            readonly prompt: string;
         };
         /**
          * KoraSessionIn
@@ -4644,6 +4752,16 @@ export interface components {
             };
         } & {
             readonly [key: string]: unknown;
+        };
+        /**
+         * KoraStepUpIn
+         * @description The frozen KoraStepUpIn body. The PIN is validated (4..64) and
+         *     verified against the scrypt verifier; it is never echoed, stored or
+         *     logged in any form.
+         */
+        readonly KoraStepUpIn: {
+            /** Pin */
+            readonly pin: string;
         };
         /** LaunchOut */
         readonly LaunchOut: {
@@ -8923,6 +9041,39 @@ export interface operations {
             };
         };
     };
+    readonly create_kora_session_api_kora_sessions_post: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["KoraSessionCreate"];
+            };
+        };
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     readonly ingest_kora_scan_api_executors__executor_id__kora_scan_post: {
         readonly parameters: {
             readonly query?: never;
@@ -8989,6 +9140,112 @@ export interface operations {
                 content: {
                     readonly "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    readonly send_kora_session_message_api_kora_sessions__session_id__messages_post: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly session_id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["KoraMessageCreate"];
+            };
+        };
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly kora_steering_step_up_status_api_kora_steering_step_up_get: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": unknown;
+                };
+            };
+        };
+    };
+    readonly enable_kora_steering_step_up_api_kora_steering_step_up_post: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["KoraStepUpIn"];
+            };
+        };
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly revoke_kora_steering_step_up_api_kora_steering_step_up_delete: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 204: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

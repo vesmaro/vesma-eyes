@@ -145,7 +145,7 @@ export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
     /**
-     * @description Harness families wired in phase 1. T004 slice 1 (hermes-bridge, 2026-10-10) added `hermes`: the board pulls LIVE session listings from the hermes API server (ClusterIP svc) under the reserved synthetic executor id `hermes`; the frozen KoraSessionOut shape is untouched (the FE tells sources apart by harness). hermes transcripts/chat are later slices (the coverage block says so).
+     * @description Harness families wired in phase 1. T004 slice 1 (hermes-bridge, 2026-10-10) added `hermes`: the board pulls LIVE session listings from the hermes API server (ClusterIP svc) under the reserved synthetic executor id `hermes`; the frozen KoraSessionOut shape is untouched (the FE tells sources apart by harness). T004 slice 3 (2026-10-18) serves hermes transcripts + non-stream chat via the bridge routes GET /api/kora/hermes/sessions/{id}/messages and POST /api/kora/hermes/chat (bridge routes stay OUTSIDE this frozen slice 1-3 file — the slice-1 bridge precedent; SSE chat stream and steering remain future work; the coverage block says so).
      * @enum {string}
      */
     readonly KoraHarness: "zcode" | "vscode" | "pi" | "hermes";
@@ -198,7 +198,7 @@ export interface components {
       /** @description Harness family (may name families outside the enum, e.g. hermes). */
       readonly harness: string;
       /**
-       * @description Visibility level: `full` = lists + transcripts; `lists-only` = metadata + previews (vscode in slice 2: full transcript is a known gap, kind:1); `metadata-only`; `absent` = not scanned (hermes until T004).
+       * @description Visibility level: `full` = lists + transcripts; `lists-only` = metadata + previews (vscode in slice 2: full transcript is a known gap, kind:1); `metadata-only`; `absent` = not scanned. T004 slice 3: hermes serves `full` (live lists + transcripts + non-stream chat).
        * @enum {string}
        */
       readonly support: "full" | "lists-only" | "metadata-only" | "absent";
@@ -208,7 +208,7 @@ export interface components {
     /** @description Data for the «что вижу / чего нет» screen: the honest per-harness visibility statement plus explicit gaps. Rendered from slice 1. */
     readonly KoraCoverageOut: {
       readonly harnesses: readonly components["schemas"]["KoraCoverageHarness"][];
-      /** @description Explicit gap strings (e.g. remote hosts pending the W4 loopback-ingress schedule; hermes → T004; vscode full transcripts kind:1). Honest visibility, no silent holes. */
+      /** @description Explicit gap strings (e.g. remote hosts pending the W4 loopback-ingress schedule; hermes chat SSE stream + session steering; vscode full transcripts kind:1). Honest visibility, no silent holes. */
       readonly gaps: readonly string[];
     };
     readonly KoraSessionsOut: {
