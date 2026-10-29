@@ -41,8 +41,9 @@ FAKE_SECRET = "mnk_test_fake_secret_do_not_print"
 # mirroring the chart contour — same pattern as tests/conftest.py. The ui
 # token is the bearer phase B carries on its mutations (tasks CRUD, memory
 # servers CRUD, board-reflect are all classes=("ui",)); the machine token
-# stays configured-but-unused so phase B runs in the production both-classes
-# mode and a machine bearer can never silently satisfy a ui guard.
+# stays configured-but-unused except for the B4a cross-class refusal pin —
+# phase B runs in the production both-classes mode and a machine bearer
+# must 401 on a ui guard, never silently pass.
 UI_TOKEN = "dev-verify-ui-token"
 MACHINE_TOKEN = "dev-verify-machine-token"
 
@@ -267,6 +268,15 @@ def phase_b() -> None:
         check("B3: mutation with wrong token -> 401", r.status_code == 401, str(r.status_code))
         r = httpx.post(f"{base}/api/tasks", json={"title": "verify"}, headers=auth, timeout=5)
         check("B4: mutation with correct token -> 201", r.status_code == 201, str(r.status_code))
+        # --- ADR 0009 A1 cross-class refusal (the conscious follow-up to
+        # the token-split fix): the machine/board token IS configured in
+        # this phase; a machine bearer on a ui-class mutation must answer
+        # 401 — the fail-closed class separation, never a silent pass.
+        r = httpx.post(f"{base}/api/tasks", json={"title": "x"},
+                       headers={"Authorization": f"Bearer {MACHINE_TOKEN}"},
+                       timeout=5)
+        check("B4a: machine bearer on ui-class mutation -> 401",
+              r.status_code == 401, str(r.status_code))
 
         # --- SEC-1 SSRF: rejected hosts, no connection to the decoy
         for url, label in ((f"http://10.255.255.1:9999", "private host"),
