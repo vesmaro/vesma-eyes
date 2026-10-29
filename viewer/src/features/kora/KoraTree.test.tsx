@@ -96,6 +96,24 @@ function buildModel(): KoraWorkspaceModel {
   return buildKoraTree(SESSIONS, EXECUTORS);
 }
 
+/** The panel in its providers, as an element — mount and rerender share the
+ * SAME wrapper shape so a rerender reconciles (state survives). */
+function renderTree(props: Partial<Parameters<typeof KoraTreePanel>[0]> = {}) {
+  return (
+    <I18nProvider initialLang="ru">
+      <MemoryRouter initialEntries={["/kora"]}>
+        <KoraTreePanel
+          model={buildModel()}
+          treeReady={true}
+          activeHost=""
+          activeAgentId={null}
+          {...props}
+        />
+      </MemoryRouter>
+    </I18nProvider>
+  );
+}
+
 function mountTree(
   props: Partial<Parameters<typeof KoraTreePanel>[0]> = {},
 ): { container: HTMLElement; root: Root } {
@@ -103,19 +121,7 @@ function mountTree(
   document.body.appendChild(container);
   const root = createRoot(container);
   act(() => {
-    root.render(
-      <I18nProvider initialLang="ru">
-        <MemoryRouter initialEntries={["/kora"]}>
-          <KoraTreePanel
-            model={buildModel()}
-            treeReady={true}
-            activeHost=""
-            activeAgentId={null}
-            {...props}
-          />
-        </MemoryRouter>
-      </I18nProvider>,
-    );
+    root.render(renderTree(props));
   });
   return { container, root };
 }
@@ -296,5 +302,79 @@ describe("KoraTreePanel v2 (KW4, gate §9.4 / states-kw4 §3)", () => {
     );
     expect(hrefs).toEqual([]);
     expect(container.querySelector("button[aria-expanded]")).toBeNull();
+  });
+});
+
+describe("KoraTree open-state machine (cascade W3 pins)", () => {
+  it("JOIN-NO-REOPEN: a manual close of the ACTIVE host's branch survives rerenders; only a host CHANGE re-joins", () => {
+    // The cascade-W3 QA pin: the join adjust runs only when
+    // joinedHost !== activeHost — never on an ordinary rerender. Drop the
+    // guard and every rerender re-opens whatever branch the user just
+    // folded (the route's host is always «arriving» again).
+    sessionStorage.clear();
+    // Mount with the route on pi-edge (its only session is dead — the
+    // live-seed default never opens it; the JOIN did).
+    const { container, root } = mountTree({ activeHost: "pi-edge" });
+    const rerender = (activeHost: string) => {
+      act(() => {
+        root.render(renderTree({ activeHost }));
+      });
+    };
+    const piEdge = () => hostDisclosure(container, "pi-edge");
+    expect(piEdge()?.getAttribute("aria-expanded")).toBe("true");
+
+    // Phase 1 — the user folds the ACTIVE host's branch…
+    act(() => {
+      piEdge()?.click();
+    });
+    expect(piEdge()?.getAttribute("aria-expanded")).toBe("false");
+    // …and it STAYS folded across rerenders with the SAME activeHost:
+    // the guard sees joinedHost === activeHost and skips the adjust.
+    rerender("pi-edge");
+    rerender("pi-edge");
+    expect(piEdge()?.getAttribute("aria-expanded")).toBe("false");
+
+    // Phase 2 — a navigation to ANOTHER host joins that host's branch…
+    rerender("abyss-laptop");
+    expect(
+      hostDisclosure(container, "abyss-laptop")?.getAttribute("aria-expanded"),
+    ).toBe("true");
+    // …and does NOT drag the folded branch back open on its way.
+    expect(piEdge()?.getAttribute("aria-expanded")).toBe("false");
+
+    // Phase 3 — returning to pi-edge IS a host change: the branch
+    // re-joins (the route must always show its selection).
+    rerender("pi-edge");
+    expect(piEdge()?.getAttribute("aria-expanded")).toBe("true");
+  });
+
+  it("SEED-PRECEDENCE: a stored open-set beats the live default — the default is the no-persistence fallback only", () => {
+    // The cascade-W3 QA pin (07j §3.3/§11): the live-only default seeds the
+    // open-set ONLY when sessionStorage holds nothing. A stored seed REPLACES
+    // the default even where the two disagree — a persisted DEAD host opens,
+    // which the live default would never do; a live host left out of the
+    // stored set stays folded, so the seed is no union either.
+    sessionStorage.setItem(
+      "vesmaro.koraTree",
+      JSON.stringify({ open: ["pi-edge"] }),
+    );
+    const stored = mountTree({ activeHost: "" });
+    expect(
+      hostDisclosure(stored.container, "pi-edge")?.getAttribute("aria-expanded"),
+    ).toBe("true");
+    expect(
+      hostDisclosure(stored.container, "abyss-laptop")?.getAttribute("aria-expanded"),
+    ).toBe("false");
+
+    // Complementary: with NO persistence the default opens exactly the
+    // live hosts — pi-edge stays folded (07j §11).
+    sessionStorage.clear();
+    const fresh = mountTree({ activeHost: "" });
+    expect(
+      hostDisclosure(fresh.container, "abyss-laptop")?.getAttribute("aria-expanded"),
+    ).toBe("true");
+    expect(
+      hostDisclosure(fresh.container, "pi-edge")?.getAttribute("aria-expanded"),
+    ).toBe("false");
   });
 });
