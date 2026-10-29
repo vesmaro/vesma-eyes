@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -164,33 +164,45 @@ function TreeNav({
   // The open-set seeds from sessionStorage when present; otherwise the
   // default opens exactly the hosts with live sessions (07j §11). The
   // route's host joins the open-set on arrival (a deep link must show its
-  // selection, not a closed branch).
-  const persisted = useRef(readKoraTreeState());
-  const seeded = useRef(false);
-  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
+  // selection, not a closed branch). Both beats adjust state DURING
+  // render — the react.dev «adjust state when data/props arrive» shape
+  // (no effect, no setState-in-effect cascade), in the SAME order the
+  // two effects used to run: seed first, join second, so a non-live
+  // deep-link host survives the seed; `openNow` threads the seed's
+  // result into the join within one render pass.
+  // Mount-time snapshot of the persisted open-set: the useState
+  // initializer runs exactly once (the render-safe equivalent of the old
+  // useRef snapshot — a ref may not be read during render), so a join
+  // that writes sessionStorage later can never leak into the seed.
+  const [persistedAtMount] = useState(() => readKoraTreeState());
   const hasAnyHost = hosts.length > 0 || unknown.length > 0;
+  // The open-set initializer is EMPTY by design (the seed derives from
+  // hosts, unlike the dock's initializer): the adjust below must run even
+  // on a prefilled first render, so `seeded` starts false unconditionally.
+  const [seeded, setSeeded] = useState(false);
+  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
 
-  useEffect(() => {
-    if (seeded.current || !hasAnyHost) return;
-    seeded.current = true;
-    const stored = persisted.current;
-    const initial =
+  let openNow = open;
+  if (!seeded && hasAnyHost) {
+    setSeeded(true);
+    const stored = persistedAtMount;
+    openNow = new Set(
       stored !== null
         ? stored.open
-        : hosts.filter((host) => host.state === "live").map((host) => host.host ?? "");
-    setOpen(new Set(initial));
-  }, [hosts, hasAnyHost]);
+        : hosts.filter((host) => host.state === "live").map((host) => host.host ?? ""),
+    );
+    setOpen(openNow);
+  }
 
-  useEffect(() => {
-    if (activeHost === "") return;
-    setOpen((previous) => {
-      if (previous.has(activeHost)) return previous;
-      const next = new Set(previous);
-      next.add(activeHost);
-      writeKoraTreeState({ open: [...next] });
-      return next;
-    });
-  }, [activeHost]);
+  const [joinedHost, setJoinedHost] = useState(activeHost);
+  if (joinedHost !== activeHost) {
+    setJoinedHost(activeHost);
+    if (activeHost !== "" && !openNow.has(activeHost)) {
+      openNow = new Set([...openNow, activeHost]);
+      writeKoraTreeState({ open: [...openNow] });
+      setOpen(openNow);
+    }
+  }
 
   const toggle = (key: string) => {
     setOpen((previous) => {

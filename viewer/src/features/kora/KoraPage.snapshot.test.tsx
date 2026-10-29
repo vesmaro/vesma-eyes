@@ -213,10 +213,14 @@ describe("Kora workspace snapshots (Kora IDE В1 «док + чат + права�
     const html = await renderKoraPage("ru");
     expect(html).toContain('href="/kora/host/abyss-laptop"');
     expect(html).toContain('href="/kora/host/pi-edge"');
-    // The agent ?agent= rows render EXPANDED only (the open-set seeds in a
-    // client effect — SSR renders the collapsed frame); the interaction pin
-    // lives in KoraTree.test.tsx («agent leaves carry ?agent=»).
-    expect(html).not.toContain("?agent=");
+    // The agent ?agent= leaves ride the live host's OPEN branch: since
+    // the eslint-canon fix (react-hooks/setState-in-effect) the open-set
+    // seeds DURING render — no client effect — so even the SSR string
+    // carries the derived first paint; the interaction pins (toggle +
+    // persist) live in KoraTree.test.tsx («agent leaves carry ?agent=»).
+    expect(html).toContain(
+      'href="/kora/host/abyss-laptop?agent=exec-zcode-main"',
+    );
     // Gate §9.4 narrowed, В1: the session deep links ride the DOCK rows
     // (the frozen /kora/:sessionId grammar), never the tree.
     expect(html).toContain('href="/kora/exec-zcode-main%3Asess_7f3a91"');
