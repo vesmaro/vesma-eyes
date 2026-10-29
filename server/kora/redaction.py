@@ -20,6 +20,7 @@ the clamp bound survives.
 from __future__ import annotations
 
 import re
+from typing import Any
 
 # The preview clamp from the frozen contract (KoraSessionOut.
 # last_line_preview maxLength: 160).
@@ -121,3 +122,39 @@ def redact_body(text: str) -> tuple[str, bool]:
     """Transcript-body choke-point: redact IN FULL, never clamp (slice 2
     serves bodies; the signature keeps the module one serving surface)."""
     return redact(text)
+
+
+def redact_json(value: Any) -> tuple[Any, bool]:
+    """Structured-field choke-point (the hermes ``tool_calls`` passthrough):
+    walk a JSON-shaped value and redact every string leaf, container shape
+    preserved verbatim. Returns (masked_copy, applied) — the input is
+    never mutated.
+
+    Why leaf-wise instead of json.dumps → redact_body → json.loads: the
+    ``\\S+`` pattern tails (aws_secret_access_key=, plain:) would swallow
+    JSON structural characters when a secret sits at a string edge and
+    corrupt the document past parsing. Leaf-wise replacement happens
+    strictly inside strings, so dicts/lists and every untouched leaf
+    survive byte-exact. Mapping KEYS are redacted too (a credential can
+    sit in a key position) — the documented collateral: two
+    credential-shaped keys masking to the same marker merge in the copy,
+    which is acceptable garbage-on-garbage, never silent loss of clean
+    data.
+    """
+    applied = False
+
+    def _walk(node: Any) -> Any:
+        nonlocal applied
+        if isinstance(node, str):
+            masked, hit = redact(node)
+            if hit:
+                applied = True
+            return masked
+        if isinstance(node, dict):
+            return {_walk(k): _walk(v) for k, v in node.items()}
+        if isinstance(node, (list, tuple)):
+            walked = [_walk(item) for item in node]
+            return walked if isinstance(node, list) else type(node)(walked)
+        return node
+
+    return _walk(value), applied

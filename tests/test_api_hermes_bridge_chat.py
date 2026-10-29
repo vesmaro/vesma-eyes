@@ -247,6 +247,45 @@ class TestMessagesRoute:
         assert body["items"][1]["redaction_applied"] is False
         assert body["items"][1]["content"] == "чистый ответ"
 
+    def test_choke_point_masks_reasoning_and_tool_calls(
+            self, app_module, client: TestClient, fake_hermes) -> None:
+        """Cascade fix (trusted-surface finding, 2026-10-29): the hermes
+        passthrough fields ride the SAME choke-point as content —
+        reasoning (both spellings) and tool_calls sentinels never leave
+        unmasked, redaction_applied stays the honest per-entry signal,
+        and redaction is NOT removal (shape + clean text survive)."""
+        reasoning_sentinel = "ghp_AbCdEf1234567890aBcDeF"
+        args_sentinel = "sk-AbCdEf1234567890aBcDeF"
+        poisoned = json.loads(json.dumps(_HERMES_TRANSCRIPT))
+        poisoned["data"][1]["reasoning"] = \
+            f"ключ {reasoning_sentinel} утёк в размышление"
+        poisoned["data"][1]["tool_calls"][0]["function"]["arguments"] = \
+            json.dumps({"args": ["get", "pods"], "token": args_sentinel})
+        poisoned["data"][3]["reasoning_content"] = \
+            f"alternate {reasoning_sentinel} spelling"
+        fake_hermes.messages = poisoned
+        resp = _get_messages(client, _NATIVE_ID, app_module)
+        assert resp.status_code == 200
+        body = resp.json()
+        assistant = body["items"][1]
+        assert assistant["redaction_applied"] is True
+        assert reasoning_sentinel not in assistant["reasoning"]
+        assert "gh*_" in assistant["reasoning"]
+        # tool_calls: masked IN DEPTH, shape intact (redaction ≠ removal)
+        calls = assistant["tool_calls"]
+        assert calls[0]["function"]["name"] == "kubectl"
+        assert "args" in calls[0]["function"]["arguments"]
+        assert args_sentinel not in json.dumps(calls)
+        assert "sk-<redacted>" in calls[0]["function"]["arguments"]
+        # the reasoning_content alternate spelling rides the same mask
+        assert body["items"][3]["redaction_applied"] is True
+        assert reasoning_sentinel not in body["items"][3]["reasoning"]
+        # belt and braces: no raw sentinel anywhere in the response
+        assert reasoning_sentinel not in resp.text
+        assert args_sentinel not in resp.text
+        # clean turns still report False
+        assert body["items"][0]["redaction_applied"] is False
+
     def test_unknown_session_404_frozen_body(
             self, app_module, client: TestClient, transcript_env) -> None:
         resp = _get_messages(client, "no_such_session", app_module)

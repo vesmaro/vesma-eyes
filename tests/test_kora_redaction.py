@@ -181,3 +181,72 @@ class TestStraddleAndExpansion:
         preview, applied = redaction.redact_preview(text)
         assert len(preview) <= 160
         assert applied is True
+
+
+class TestStructuredJson:
+    """redact_json — the structured-field choke-point (the hermes
+    ``tool_calls`` passthrough, cascade fix 2026-10-29): every string
+    leaf masked, container shape preserved verbatim (the FE contract
+    keeps ``tool_calls: list[object]`` — redaction ≠ reshaping)."""
+
+    def test_string_leaves_masked_shape_preserved(self):
+        """The live hermes tool_calls shape: the sentinel inside the
+        arguments string masks; the call structure and clean leaves
+        survive byte-exact."""
+        value = {
+            "id": "call_1", "type": "function",
+            "function": {"name": "kubectl",
+                         "arguments": '{"token": "sk-AbCdEf1234567890aBcDeF"}'},
+        }
+        out, applied = redaction.redact_json(value)
+        assert applied is True
+        assert out["id"] == "call_1"
+        assert out["function"]["name"] == "kubectl"
+        assert "sk-AbCdEf1234567890aBcDeF" not in out["function"]["arguments"]
+        assert "sk-<redacted>" in out["function"]["arguments"]
+
+    def test_greedy_tail_cannot_corrupt_structure(self):
+        """Why NOT json.dumps → redact → json.loads: the ``\\S+`` pattern
+        tails (aws_secret_access_key=, plain:) would eat across the JSON
+        string edge and break the document. Leaf-wise redaction cannot."""
+        value = {"arguments": "aws_secret_access_key=supersecret1",
+                 "note": "plain:hunter2"}
+        out, applied = redaction.redact_json(value)
+        assert applied is True
+        assert out == {"arguments": "aws_secret_access_key=<redacted>",
+                       "note": "plain:<redacted>"}
+
+    def test_credential_shaped_key_masked(self):
+        """A credential can sit in a key position; keys ride the same
+        pack (documented collateral: two credential-shaped keys masking
+        to one marker would merge — garbage-on-garbage)."""
+        out, applied = redaction.redact_json(
+            {"ghp_AbCdEf1234567890aBcDeF": "v"})
+        assert applied is True
+        assert list(out) == ["gh*_<redacted>"]
+
+    def test_clean_structure_verbatim_and_applied_false(self):
+        value = {"a": 1, "b": [True, None, "чисто"], "c": {"d": 2.5}}
+        out, applied = redaction.redact_json(value)
+        assert applied is False
+        assert out == value
+
+    def test_input_not_mutated(self):
+        value = {"function": {"arguments": "mnd_dev7f3a91b2c4"}}
+        out, _applied = redaction.redact_json(value)
+        assert value["function"]["arguments"] == "mnd_dev7f3a91b2c4"
+        assert out is not value
+
+    def test_nested_list_shape_and_scalars_ride(self):
+        """The exact route payload: a LIST of call dicts with scalars —
+        list order, scalars and None survive."""
+        value = [{"id": "c1", "n": 2, "x": None,
+                  "function": {"name": "kubectl",
+                               "arguments": "Bearer abcdef12345678"}},
+                 {"id": "c2"}]
+        out, applied = redaction.redact_json(value)
+        assert applied is True
+        assert isinstance(out, list) and len(out) == 2
+        assert out[1] == {"id": "c2"}
+        assert out[0]["n"] == 2 and out[0]["x"] is None
+        assert "abcdef12345678" not in out[0]["function"]["arguments"]
