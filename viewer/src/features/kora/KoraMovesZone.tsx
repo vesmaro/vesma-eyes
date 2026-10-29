@@ -116,8 +116,8 @@ export function KoraMovesZone({
         dragSign={1}
         collapseBelow={KORA_BAND_COLLAPSE_AT}
         onValue={band.onValue}
-        onCommit={() => {
-          band.onCommit();
+        onCommit={(next) => {
+          band.onCommit(next);
           frameEvents.seamCommitted("moves");
         }}
         onReset={band.onReset}

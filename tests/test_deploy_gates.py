@@ -132,7 +132,7 @@ class FakeWorld:
                   cat "$S/live.yaml"
                 fi ;;
               upgrade)
-                python3 - "$S/hist.json" <<'PYB'
+                __PYTHON__ - "$S/hist.json" <<'PYB'
             import json, sys
             rows = json.load(open(sys.argv[1]))
             rev = (max(r["revision"] for r in rows) + 1) if rows else 1
@@ -142,7 +142,8 @@ class FakeWorld:
                 exit 0 ;;
               rollback) exit 0 ;;
               *) exit 1 ;;
-            esac""").replace("__STATE__", str(self.state)))
+            esac""").replace("__STATE__", str(self.state))
+                  .replace("__PYTHON__", sys.executable))
         self._write("podman-stub", (
             "#!/usr/bin/env bash\n"
             f'echo "podman $*" >> "{self.state}/podman.log"\n'

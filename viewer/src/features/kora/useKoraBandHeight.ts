@@ -46,8 +46,10 @@ export interface KoraBandHeight {
   collapse: () => void;
   /** KoraResizeHandle onValue — clamps, deploys. */
   onValue: (next: number) => void;
-  /** KoraResizeHandle onCommit — persists the fixed height only. */
-  onCommit: () => void;
+  /** KoraResizeHandle onCommit — persists the fixed height only. The seam
+   * hands the committed value DIRECTLY (the same-tick revert+commit paths
+   * must not read a pre-revert closure). */
+  onCommit: (next: number) => void;
   /** KoraResizeHandle onReset (dblclick/Home) — auto mode, key removed. */
   onReset: () => void;
 }
@@ -109,11 +111,17 @@ export function useKoraBandHeight({
   }, []);
   const deploy = useCallback((): void => setExpanded(true), []);
   const collapse = useCallback((): void => setExpanded(false), []);
-  const onCommit = useCallback((): void => {
-    // Only a deployed fixed height is a persisted user decision; the auto
-    // mode is the ABSENCE of the key (07l §3.2).
-    if (fixedH > 0) writeH(fixedH);
-  }, [fixedH, writeH]);
+  const onCommit = useCallback(
+    (next: number): void => {
+      // Only a deployed fixed height is a persisted user decision; the auto
+      // mode is the ABSENCE of the key (07l §3.2). The seam hands the
+      // committed value directly — the same-tick revert+commit paths (Esc /
+      // End / pointercancel) must not read a pre-revert closure — clamped
+      // to the geometry onValue actually deploys (storage agrees with UI).
+      if (fixedH !== 0) writeH(Math.min(max, Math.max(min, next)));
+    },
+    [fixedH, min, max, writeH],
+  );
   const onReset = useCallback((): void => {
     // Reset = auto mode: the key is REMOVED, not zeroed (07l §3.2).
     clearH();

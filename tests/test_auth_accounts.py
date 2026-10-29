@@ -505,6 +505,64 @@ class TestSlidingReissue:
         assert r.status_code == 422
         assert "set-cookie" not in r.headers
 
+    def test_wrapper_error_responses_slide_nothing(
+            self, app_module, monkeypatch):
+        """ui-reissue-cookie-on-failure (cascade W1), the ME-080 leg: the
+        password-session marker rides the SAME wrapper gate as vesmaro_ui.
+        Handlers that RETURN error responses (the kora envelopes, the
+        egress relay) pass through the wrapper with the marker set — no
+        Set-Cookie, no per-session budget, no DB slide on 403/409/429/501;
+        a 2xx with the marker still reissues the cookie."""
+        import asyncio
+
+        def make_handler(status):
+            async def original(request):
+                return app_module.JSONResponse(
+                    status_code=status, content={"detail": "planted"})
+            return original
+
+        for status in (403, 409, 429, 501):
+            monkeypatch.setattr(app_module.APIRoute, "get_route_handler",
+                                lambda self: make_handler(status))
+            route = app_module._UiCookieReissueRoute(
+                "/api/tasks", endpoint=lambda request: None,
+                methods=["POST"])
+            handler = route.get_route_handler()
+            request = app_module.Request(scope={
+                "type": "http", "asgi": {"version": "3.0"},
+                "http_version": "1.1", "method": "POST",
+                "scheme": "http", "path": "/api/tasks",
+                "query_string": b"", "headers": [],
+                "client": ("198.51.100.7", 47000),
+                "server": ("testserver", 80),
+            })
+            request.state.vesmaro_auth_reissue = True
+            request.state.vesmaro_auth_token = "session-token-for-test"
+            response = asyncio.run(handler(request))
+            assert response.status_code == status, (status, response.status_code)
+            assert "set-cookie" not in response.headers, status
+            assert app_module._auth_reissue_last == {}, status
+        # The success leg still commits: fresh cookie + budget spent.
+        monkeypatch.setattr(app_module.APIRoute, "get_route_handler",
+                            lambda self: make_handler(200))
+        route = app_module._UiCookieReissueRoute(
+            "/api/tasks", endpoint=lambda request: None, methods=["POST"])
+        handler = route.get_route_handler()
+        request = app_module.Request(scope={
+            "type": "http", "asgi": {"version": "3.0"},
+            "http_version": "1.1", "method": "POST",
+            "scheme": "http", "path": "/api/tasks",
+            "query_string": b"", "headers": [],
+            "client": ("198.51.100.7", 47000),
+            "server": ("testserver", 80),
+        })
+        request.state.vesmaro_auth_reissue = True
+        request.state.vesmaro_auth_token = "session-token-for-test"
+        response = asyncio.run(handler(request))
+        assert "vesmaro_auth=" in response.headers.get(
+            "set-cookie", "").lower()
+        assert app_module._auth_reissue_last, "the budget was spent"
+
 
 # ------------------------------------------------------------------ hashing
 class TestPasswordHashing:

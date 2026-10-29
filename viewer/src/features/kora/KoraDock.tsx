@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { ChevronDown, ChevronRight, Radio, Search, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -112,10 +112,12 @@ export function KoraDock({
   // The group open-set seeds from persistence, else live groups open by
   // default (K-GRP-DEFAULT). The initializer computes from the CURRENT
   // items so a prefilled first render (snapshot/SSR, warm client cache)
-  // paints the default already; the effect re-seeds once when a cold
-  // client's rows arrive — a pending dock must not seed an empty set over
-  // the default.
-  const seeded = useRef(false);
+  // paints the default already; a cold client's rows arriving later
+  // re-seed HERE, during render — the react.dev «adjust state when data
+  // arrives» shape (no effect, no setState-in-effect cascade): the
+  // guarded one-shot compare re-renders immediately, a pending dock
+  // never seeds an empty set over the default.
+  const [seeded, setSeeded] = useState(dockReady && items.length > 0);
   const [open, setOpen] = useState<ReadonlySet<string>>(() => {
     const persisted = readKoraDockGroups();
     if (persisted !== null) return new Set(persisted);
@@ -125,22 +127,19 @@ export function KoraDock({
         .map((group) => `work:${group.key}`),
     );
   });
-  useEffect(() => {
-    if (seeded.current || !dockReady || items.length === 0) return;
-    seeded.current = true;
+  if (!seeded && dockReady && items.length > 0) {
+    setSeeded(true);
     const persisted = readKoraDockGroups();
-    if (persisted !== null) {
-      setOpen(new Set(persisted));
-      return;
-    }
     setOpen(
-      new Set(
-        buildProjectGroups(items)
-          .filter((group) => group.hasLive)
-          .map((group) => `work:${group.key}`),
-      ),
+      persisted !== null
+        ? new Set(persisted)
+        : new Set(
+            buildProjectGroups(items)
+              .filter((group) => group.hasLive)
+              .map((group) => `work:${group.key}`),
+          ),
     );
-  }, [dockReady, items]);
+  }
 
   const toggle = (key: string): void => {
     setOpen((previous) => {

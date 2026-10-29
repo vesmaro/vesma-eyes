@@ -123,9 +123,12 @@ export function KoraComposerControls({
   const annotation = useKoraSpecialistAnnotation(session.id);
 
   // The mode facts (ADR-0019 resolver): confirm is the default for every
-  // session; yolo needs BOTH relay origin AND the transport line.
+  // session; yolo needs BOTH relay origin AND the transport line. The
+  // срез 3 steering perimeter IS built and in prod — what is unbuilt is
+  // the executor-side unit (vesmaro-session-relay.service) + its FE
+  // wiring, which is what keeps the transport line off here.
   const yoloLocalOnly = session.origin !== "relay";
-  const relayOff = true; // the transport seam is unbuilt (срез 3 verdict)
+  const relayOff = true; // the executor relay unit is unbuilt (срез 3 is in prod)
 
   return (
     <div
