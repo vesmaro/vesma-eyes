@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -83,6 +83,7 @@ function mount(
     { harness: "pi", count: 1 },
     { harness: "zcode", count: 3 },
   ],
+  resolvedModel: string | null = null,
 ): { container: HTMLElement; root: Root } {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -99,6 +100,7 @@ function mount(
             <KoraComposerControls
               session={sessionRow}
               harnessOptions={harnessOptions}
+              resolvedModel={resolvedModel}
             />
           </KoraGatewayContext.Provider>
         </QueryClientProvider>
@@ -187,7 +189,8 @@ describe("KoraComposerControls (В2 selector row)", () => {
     expect(text).not.toContain("сессий: 2"); // vscode is not in the registry
     expect(text).not.toContain("vscode");
     // The current context harness is marked, others are informational
-    // (aria-disabled menu items, no buttons to «switch» with).
+    // rows (aria-disabled, no buttons to «switch» with — 07j disclosure
+    // discipline: no menu roles, honest aria markers only).
     const current = menu?.querySelector('[aria-current="true"]');
     expect(current?.textContent).toContain("zcode");
     expect(menu?.querySelectorAll("button").length).toBe(0);
@@ -220,9 +223,10 @@ describe("KoraComposerControls (В2 selector row)", () => {
     // Real roster names only.
     expect(menu?.textContent).toContain("@GCW: Tech Lead");
     expect(menu?.textContent).toContain("@GCW: Senior Frontend Developer");
-    // The honest local-overlay note (no relay bind pretending).
+    // The honest local-overlay note (no relay bind pretending): the mark
+    // stays local until the relay line carries specialists.
     expect(menu?.textContent).toContain(
-      "Локальная пометка на этой машине — уйдёт с промптом, когда заработает реле",
+      "Локальная пометка на этой машине — останется локальной, пока линия реле не начнёт нести специалистов",
     );
     const techLead = [...(menu?.querySelectorAll("button") ?? [])].find(
       (button) => button.textContent?.includes("@GCW: Tech Lead"),
@@ -244,7 +248,7 @@ describe("KoraComposerControls (В2 selector row)", () => {
         new MouseEvent("click", { bubbles: true }),
       );
     });
-    const checked = container.querySelector('[aria-checked="true"]');
+    const checked = container.querySelector('[aria-pressed="true"]');
     expect(checked?.textContent).toContain("@GCW: Tech Lead");
     await act(async () => {
       checked?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -301,5 +305,85 @@ describe("KoraComposerControls (В2 selector row)", () => {
         "aria-disabled",
       ),
     ).toBe("true");
+  });
+
+  it("model slot: the workspace's real fact replaces the honest unknown wording (P3)", async () => {
+    // Without a fact: the read-only honest wording, no value invented.
+    const unknown = mount(session(), rosterGateway(ROSTER));
+    expect(
+      unknown.container.querySelector('[data-testid="kora-sel-model"]')
+        ?.textContent,
+    ).toContain("модели не сообщаются");
+    await actUnmount(unknown.root);
+
+    // With the workspace's resolved fact (the hermes roster's default):
+    // the real value — the slot never contradicts the context bar.
+    const resolved = mount(session(), rosterGateway(ROSTER), undefined, "qwen3:32b");
+    expect(
+      resolved.container.querySelector('[data-testid="kora-sel-model"]')
+        ?.textContent,
+    ).toContain("qwen3:32b");
+    expect(
+      resolved.container.querySelector('[data-testid="kora-sel-model"]')
+        ?.textContent,
+    ).not.toContain("модели не сообщаются");
+  });
+
+  it("a refused annotation write shows the honest persist-fail note; a later success clears it (K-PERSIST-FAIL)", async () => {
+    const { container } = mount(session(), rosterGateway(ROSTER));
+    await waitFor(
+      () => container.querySelector("#kora-sel-specialist-trigger") !== null,
+      "roster arrives",
+    );
+    // Private mode: every setItem refuses (removeItem still works — only
+    // the annotation write is under test). The instance spy: happy-dom's
+    // localStorage does not route through Storage.prototype.
+    const setItem = vi
+      .spyOn(localStorage, "setItem")
+      .mockImplementation(() => {
+        throw new DOMException("denied", "SecurityError");
+      });
+    await act(async () => {
+      trigger(container, "kora-sel-specialist").dispatchEvent(
+        new MouseEvent("click", { bubbles: true }),
+      );
+    });
+    const techLead = [...(container.querySelectorAll("button") ?? [])].find(
+      (button) => button.textContent?.includes("@GCW: Tech Lead"),
+    );
+    await act(async () => {
+      techLead?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    // The in-memory choice still works this visit (the trigger shows it),
+    // but the write is NAMED — visible without opening the disclosure.
+    expect(trigger(container, "kora-sel-specialist").textContent).toContain(
+      "@GCW: Tech Lead",
+    );
+    const note = container.querySelector(
+      '[data-testid="kora-specialist-persist-fail"]',
+    );
+    expect(note?.textContent).toContain("Не сохранилось");
+    expect(localStorage.getItem(`${SPECIALIST_PREFIX}exec-zc:sess-1`)).toBeNull();
+    setItem.mockRestore();
+    // A later successful write clears the bit: the note goes, storage
+    // carries the choice.
+    await act(async () => {
+      trigger(container, "kora-sel-specialist").dispatchEvent(
+        new MouseEvent("click", { bubbles: true }),
+      );
+    });
+    const senior = [...(container.querySelectorAll("button") ?? [])].find(
+      (button) =>
+        button.textContent?.includes("@GCW: Senior Frontend Developer"),
+    );
+    await act(async () => {
+      senior?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(
+      container.querySelector('[data-testid="kora-specialist-persist-fail"]'),
+    ).toBeNull();
+    expect(localStorage.getItem(`${SPECIALIST_PREFIX}exec-zc:sess-1`)).toBe(
+      "@GCW: Senior Frontend Developer",
+    );
   });
 });

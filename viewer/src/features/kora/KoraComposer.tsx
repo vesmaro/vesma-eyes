@@ -49,6 +49,7 @@ export function KoraComposer({
   session,
   intentEvents,
   harnessOptions = [],
+  resolvedModel = null,
 }: {
   session: KoraSession;
   intentEvents: KoraIntentEventPoints;
@@ -56,6 +57,10 @@ export function KoraComposer({
    * harnesses of execution; the workspace owns the items, zero new
    * requests). Optional so the week-0 mount points stay legal. */
   harnessOptions?: readonly KoraHarnessOption[];
+  /** В2 review (P3) — the workspace's REAL model fact for the selector
+   * row (the hermes roster's default via /status); optional, null keeps
+   * the honest «модели не сообщаются» slot. */
+  resolvedModel?: string | null;
 }) {
   const t = useT();
   // Restore once, at mount (the parent remounts per session): the persisted
@@ -194,7 +199,11 @@ export function KoraComposer({
       {/* В2 — the selector row (contract §3.2): харнес · специалист ·
        * модель · режим, each drawn from real data only; a dead session
        * disables the row with the same visible interrupted note below. */}
-      <KoraComposerControls session={session} harnessOptions={harnessOptions} />
+      <KoraComposerControls
+        session={session}
+        harnessOptions={harnessOptions}
+        resolvedModel={resolvedModel}
+      />
       <p id="kora-composer-note" className="mt-2 text-xs text-foreground-muted">
         {t(noteKey)}
       </p>

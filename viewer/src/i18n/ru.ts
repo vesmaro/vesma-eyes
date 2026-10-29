@@ -2722,7 +2722,11 @@ export const ru = {
   "kora.controls.specialistLabel": "специалист",
   "kora.controls.specialistNone": "не выбран",
   "kora.controls.specialistLocalNote":
-    "Локальная пометка на этой машине — уйдёт с промптом, когда заработает реле",
+    "Локальная пометка на этой машине — останется локальной, пока линия реле не начнёт нести специалистов",
+  // K-PERSIST-FAIL (честный бит из В1): запись пометки не дошла до
+  // хранилища — выбор живёт до перезагрузки, и интерфейс это называет.
+  "kora.controls.specialistPersistFail":
+    "Не сохранилось — хранилище браузера недоступно",
   "kora.controls.modelLabel": "модель",
   "kora.controls.modelUnknown": "модели не сообщаются",
   "kora.controls.modeLabel": "режим",

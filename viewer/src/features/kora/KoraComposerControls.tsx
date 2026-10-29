@@ -7,19 +7,23 @@ import { useKoraSpecialists } from "./useKora";
 import {
   setSpecialistAnnotation,
   useKoraSpecialistAnnotation,
+  useKoraSpecialistPersistFailure,
 } from "./koraSpecialistStore";
 
 /**
  * The composer's SELECTOR ROW (kora-ide contract §3.2, wave В2 — the
  * Claude Code / zcode input-footer pattern): [харнес · специалист ·
- * модель · режим] under the field, each selector a disclosure menu.
+ * модель · режим] under the field, each selector a disclosure (07j §6.1
+ * discipline — plain expand/collapse, NO menu roles or arrow mechanics:
+ * informational rows carry honest aria markers, real choices are real
+ * tabbable buttons).
  *
  * Honesty per contract §7 В2 acceptance (а) — «селекторы рисуются только
  * из реальных данных»:
  *
  * - ХАРНЕС = CONTEXT (ADR: the harness lives in the session context; it
  *   changes in the dock/tree). The trigger DISPLAYS the session's
- *   harness; the menu lists the harnesses of execution the loaded
+ *   harness; the disclosure lists the harnesses of execution the loaded
  *   registry actually knows (a derivation — zero new requests), the
  *   current one marked. Other rows are informational, NOT commands: no
  *   invented navigation, the footer names where the context changes.
@@ -29,12 +33,15 @@ import {
  *   рисуется»). A choice is a LOCAL per-session annotation
  *   (vesmaro.koraSpecialist:{sessionId}) — the footer says so; it never
  *   pretends to bind the relay send (K-COMPOSER-RELAY-OFF: sending is
- *   honestly deferred until the transport line).
- * - МОДЕЛЬ = Q3 verdict: inherited from the context harness; local
- *   sessions report no roster → the slot is READ-ONLY honest
- *   («модели не сообщаются», K-TREE-MODEL-UNKNOWN — no invented value).
- *   The hermes chat keeps its own real select (the per-input override
- *   where a roster exists).
+ *   honestly deferred until the transport line). A storage-refused write
+ *   raises the honest K-PERSIST-FAIL note below the row (the store's
+ *   bit; nothing pretends to persist).
+ * - МОДЕЛЬ = Q3 verdict: inherited from the context harness. When the
+ *   workspace resolved a REAL model fact (the hermes roster via
+ *   /status — `resolvedModel`), the slot shows it; without one the slot
+ *   is READ-ONLY honest («модели не сообщаются», K-TREE-MODEL-UNKNOWN —
+ *   no invented value). The hermes chat keeps its own real select (the
+ *   per-input override where a roster exists).
  * - РЕЖИМ = confirm/yolo (ADR-0019): confirm is the resolver's real
  *   default for every session; yolo is RELAY-origin-only AND needs the
  *   transport line — today both facts hold, so yolo renders as a
@@ -56,18 +63,27 @@ export interface KoraHarnessOption {
 export function KoraComposerControls({
   session,
   harnessOptions = [],
+  resolvedModel = null,
 }: {
   session: KoraSession;
   /** Derivations over the LOADED registry (the workspace owns the
    * items); the current session's harness is unioned in by this
    * component, so the display never contradicts the context. */
   harnessOptions?: readonly KoraHarnessOption[];
+  /** The workspace's REAL model fact (the hermes roster's default via
+   * /status — the same value the context bar shows). A string replaces
+   * the honest «модели не сообщаются» slot (no contradiction between
+   * surfaces); null keeps the read-only honest wording. */
+  resolvedModel?: string | null;
 }) {
   const t = useT();
   const dead = session.state === "dead";
   const [openMenu, setOpenMenu] = useState<
     "harness" | "specialist" | "mode" | null
   >(null);
+  // The honest K-PERSIST-FAIL bit (В2 review): the store records a
+  // refused annotation write; the note below the row names it.
+  const persistFail = useKoraSpecialistPersistFailure(session.id);
 
   // Click-outside + Escape close whichever menu is open (a11y disclosure:
   // the trigger keeps aria-expanded/controls, focus returns to it).
@@ -140,9 +156,11 @@ export function KoraComposerControls({
         {harnesses.map((opt) => {
           const current = opt.harness === session.harness;
           return (
+            // Informational row (07j disclosure discipline — no menu
+            // roles): aria-disabled marks it honestly as NOT activatable,
+            // aria-current marks the context fact.
             <div
               key={opt.harness}
-              role="menuitem"
               aria-disabled={!current || undefined}
               aria-current={current || undefined}
               className={cn(
@@ -193,8 +211,7 @@ export function KoraComposerControls({
               <button
                 key={item.slug}
                 type="button"
-                role="menuitemradio"
-                aria-checked={chosen || undefined}
+                aria-pressed={chosen}
                 className={cn(
                   "flex w-full items-center gap-2 px-3 py-2 text-left font-mono text-xs",
                   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright",
@@ -230,8 +247,10 @@ export function KoraComposerControls({
         </SelectorButton>
       ) : null}
 
-      {/* МОДЕЛЬ — read-only honest slot (Q3; no roster for local sessions,
-       * the value is never invented). No menu: nothing to choose here. */}
+      {/* МОДЕЛЬ — the workspace's real fact when it resolved one (Q3;
+       * the hermes roster's default — never an invented value), the
+       * read-only honest slot only when no fact exists. No menu: nothing
+       * to choose here. */}
       <span
         data-testid="kora-sel-model"
         className="inline-flex min-h-12 items-center gap-1 px-2 font-mono text-xs text-foreground-muted md:min-h-6"
@@ -239,7 +258,9 @@ export function KoraComposerControls({
         <span className="text-foreground-secondary">
           {t("kora.controls.modelLabel")}:
         </span>
-        <span>{t("kora.controls.modelUnknown")}</span>
+        <span title={resolvedModel ?? undefined}>
+          {resolvedModel ?? t("kora.controls.modelUnknown")}
+        </span>
       </span>
 
       {/* РЕЖИМ — the resolver's real default, yolo disabled with reason. */}
@@ -254,7 +275,6 @@ export function KoraComposerControls({
         }
       >
         <div
-          role="menuitem"
           aria-current="true"
           className="flex items-center gap-2 px-3 py-2 font-mono text-xs text-foreground"
         >
@@ -267,7 +287,6 @@ export function KoraComposerControls({
           </span>
         </div>
         <div
-          role="menuitem"
           aria-disabled="true"
           className="flex items-center gap-2 px-3 py-2 font-mono text-xs text-foreground-muted"
         >
@@ -282,14 +301,27 @@ export function KoraComposerControls({
               : null}
         </p>
       </SelectorButton>
+      {/* K-PERSIST-FAIL (the В1 bit): a refused annotation write is
+       * NAMED, visible without opening the disclosure — the choice still
+       * works this visit, a reload will lose it (4.1.3 polite status). */}
+      {persistFail ? (
+        <p
+          role="status"
+          className="w-full text-xs text-warning"
+          data-testid="kora-specialist-persist-fail"
+        >
+          {t("kora.controls.specialistPersistFail")}
+        </p>
+      ) : null}
     </div>
   );
 }
 
 /** One selector: the trigger chip (label + value + chevron) and, when
- * open, its upward menu (the composer sits at the bottom of the frame).
- * The trigger carries the disclosure a11y pair (aria-expanded +
- * aria-controls, 07j §6.1). */
+ * open, its upward disclosure panel (the composer sits at the bottom of
+ * the frame). The trigger carries the disclosure a11y pair (aria-expanded
+ * + aria-controls, 07j §6.1); the panel is plain content — no menu roles,
+ * no arrow mechanics (the 07j tree precedent: Tab cost is acceptable). */
 function SelectorButton({
   id,
   label,
@@ -344,7 +376,6 @@ function SelectorButton({
       {open ? (
         <div
           id={`${id}-menu`}
-          role="menu"
           aria-labelledby={`${id}-trigger`}
           data-testid={`${id}-menu`}
           className="absolute bottom-full left-0 z-20 mb-1 min-w-56 rounded-md border border-border-subtle bg-background py-1 shadow-lg"

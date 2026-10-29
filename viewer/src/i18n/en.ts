@@ -2667,7 +2667,11 @@ export const en: Record<TranslationKey, string> = {
   "kora.controls.specialistLabel": "specialist",
   "kora.controls.specialistNone": "none chosen",
   "kora.controls.specialistLocalNote":
-    "A local mark on this machine — it will ride the prompt once the relay is live",
+    "A local mark on this machine — it stays local until the relay line starts carrying specialists",
+  // K-PERSIST-FAIL (the honest В1 bit): the mark's write did not reach
+  // storage — the choice lives until a reload, and the UI names it.
+  "kora.controls.specialistPersistFail":
+    "Not saved — browser storage is unavailable",
   "kora.controls.modelLabel": "model",
   "kora.controls.modelUnknown": "models are not reported",
   "kora.controls.modeLabel": "mode",

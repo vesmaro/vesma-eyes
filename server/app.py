@@ -5817,16 +5817,25 @@ def _specialist_slug(name: str) -> str:
             .replace(" ", "-").replace("/", "-"))
 
 
-def _kora_specialists_roster() -> list[KoraSpecialistItem]:
-    """The specialist roster over the board's ACTIVE tasks — the SAME
-    derivation specialists_refresh_all() uses (the tasks-domain registry
-    is the source of truth; there is no separate roster table). Sorted,
-    deduplicated, empty honestly when the board names none."""
-    names = sorted({
+def _board_specialist_names() -> list[str]:
+    """Every specialist name the board's ACTIVE tasks declare — union,
+    sorted, deduplicated. ONE derivation, two callers (the kora roster
+    and specialists_refresh_all) so they can never drift: no extra
+    filtering — refresh-all has never isinstance/blank-checked the
+    declared names, and the shared helper keeps that exact semantics."""
+    return sorted({
         s for t in store.board()["tasks"]
         for s in (t.get("specialists") or [])
-        if isinstance(s, str) and s.strip()
     })
+
+
+def _kora_specialists_roster() -> list[KoraSpecialistItem]:
+    """The specialist roster over the board's ACTIVE tasks — the SAME
+    derivation specialists_refresh_all() uses via _board_specialist_names()
+    (the tasks-domain registry is the source of truth; there is no
+    separate roster table). Sorted, deduplicated, unfiltered — exactly
+    what the tasks declare, empty honestly when they name none."""
+    names = _board_specialist_names()
     return [
         KoraSpecialistItem(
             name=name,
@@ -9929,7 +9938,7 @@ async def specialists_refresh_all(request: Request) -> RefreshAllOut:
     cannot resolve fall back to the legacy memory-server refresh.
     """
     _guard_write(request, classes=("ui",))
-    specialists = sorted({s for t in store.board()["tasks"] for s in (t.get("specialists") or [])})
+    specialists = _board_specialist_names()
     built = memory_fallback = failed = 0
     for name in specialists:
         try:

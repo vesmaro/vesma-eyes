@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getSpecialistAnnotation,
+  getSpecialistPersistFailure,
   resetSpecialistAnnotationsForTests,
   setSpecialistAnnotation,
   subscribeSpecialist,
@@ -17,7 +18,9 @@ import { SPECIALIST_PREFIX } from "./koraFrameStorage";
  * - null clears (storage + memory);
  * - every change notifies subscribers (the bar re-renders);
  * - a seed from storage: a value written before the first read (a
- *   reload) is returned verbatim.
+ *   reload) is returned verbatim;
+ * - a refused write raises the honest K-PERSIST-FAIL bit (the choice
+ *   still works this visit — the UI names the non-persistence).
  */
 
 afterEach(() => {
@@ -64,5 +67,41 @@ describe("koraSpecialistStore (В2 local annotation)", () => {
     setSpecialistAnnotation("s1", "   ");
     expect(getSpecialistAnnotation("s1")).toBeNull();
     expect(localStorage.getItem(`${SPECIALIST_PREFIX}s1`)).toBeNull();
+  });
+
+  it("a refused write raises the honest K-PERSIST-FAIL bit; a later success clears it", () => {
+    // Private mode: the storage refuses every write (the instance spy —
+    // happy-dom's localStorage does not route through Storage.prototype).
+    const setItem = vi
+      .spyOn(localStorage, "setItem")
+      .mockImplementation(() => {
+        throw new DOMException("denied", "SecurityError");
+      });
+    setSpecialistAnnotation("s1", "@GCW: Tech Lead");
+    // The in-memory choice still works this visit — but the refused
+    // write is recorded, not swallowed (the UI's honest note reads it).
+    expect(getSpecialistAnnotation("s1")).toBe("@GCW: Tech Lead");
+    expect(getSpecialistPersistFailure("s1")).toBe(true);
+    // Another session stays clean (per-session bits).
+    expect(getSpecialistPersistFailure("s2")).toBe(false);
+    setItem.mockRestore();
+    // A successful write clears the bit.
+    setSpecialistAnnotation("s1", "owner");
+    expect(getSpecialistPersistFailure("s1")).toBe(false);
+    expect(localStorage.getItem(`${SPECIALIST_PREFIX}s1`)).toBe("owner");
+  });
+
+  it("a failed clear (removeItem refusing) raises the bit too", () => {
+    const removeItem = vi
+      .spyOn(localStorage, "removeItem")
+      .mockImplementation(() => {
+        throw new DOMException("denied", "SecurityError");
+      });
+    setSpecialistAnnotation("s1", null);
+    expect(getSpecialistAnnotation("s1")).toBeNull();
+    expect(getSpecialistPersistFailure("s1")).toBe(true);
+    removeItem.mockRestore();
+    setSpecialistAnnotation("s1", "owner");
+    expect(getSpecialistPersistFailure("s1")).toBe(false);
   });
 });

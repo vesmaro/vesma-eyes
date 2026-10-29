@@ -650,6 +650,7 @@ export function KoraWorkspace({
                 intentEvents={NOOP_KORA_INTENT_EVENTS}
                 frameEvents={frameEvents}
                 harnessOptions={harnessOptions}
+                resolvedModel={contextModel}
               />
             </>
           )}

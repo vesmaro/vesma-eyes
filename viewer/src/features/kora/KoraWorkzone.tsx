@@ -70,6 +70,7 @@ export function KoraWorkzone({
   intentEvents,
   frameEvents = NOOP_KORA_FRAME_EVENTS,
   harnessOptions = [],
+  resolvedModel = null,
 }: {
   session: KoraSession | null;
   registryEmpty: KoraRegistryEmpty;
@@ -85,6 +86,10 @@ export function KoraWorkzone({
   /** В2 — the composer selector row's harness derivations over the
    * LOADED registry (the workspace owns the items). */
   harnessOptions?: readonly KoraHarnessOption[];
+  /** В2 review (P3) — the workspace's REAL model fact (the hermes
+   * roster's default via /status, the same value the context bar shows);
+   * feeds the composer's model slot so it never contradicts the context. */
+  resolvedModel?: string | null;
 }) {
   const t = useT();
 
@@ -103,6 +108,7 @@ export function KoraWorkzone({
         transcript={transcript}
         intentEvents={intentEvents}
         harnessOptions={harnessOptions}
+        resolvedModel={resolvedModel}
       />
     );
   }
@@ -191,12 +197,17 @@ function SessionView({
   transcript,
   intentEvents,
   harnessOptions = [],
+  resolvedModel = null,
 }: {
   session: KoraSession;
   coverage: KoraCoverage | null | undefined;
   transcript: KoraTranscriptPages;
   intentEvents: KoraIntentEventPoints;
   harnessOptions?: readonly KoraHarnessOption[];
+  /** The workspace's REAL model fact (В2 review P3): rides to the
+   * composer's model slot — a real value shows, null keeps the honest
+   * «модели не сообщаются» wording. */
+  resolvedModel?: string | null;
 }) {
   const t = useT();
   const [follow, setFollow] = useState(true);
@@ -272,12 +283,14 @@ function SessionView({
 
       {/* The composer rides below the scroll, always visible for the open
        * session (07j §4.6 — never hidden behind a disclosure). В2: the
-       * selector row rides inside it, fed the registry's harness facts. */}
+       * selector row rides inside it, fed the registry's harness facts
+       * and the workspace's real model fact. */}
       <KoraComposer
         key={session.id}
         session={session}
         intentEvents={intentEvents}
         harnessOptions={harnessOptions}
+        resolvedModel={resolvedModel}
       />
     </section>
   );

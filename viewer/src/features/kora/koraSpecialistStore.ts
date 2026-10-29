@@ -16,14 +16,20 @@ import { readKoraSpecialist, writeKoraSpecialist } from "./koraFrameStorage";
  * carries no specialist field on POST messages, so until the relay line
  * wires specialists, both surfaces mark the choice «локально» (the
  * dropdown footer and the honest aria text say so). A failed write keeps
- * the in-memory choice for the visit — the same non-fatal degradation as
- * every frame-storage key.
+ * the in-memory choice for the visit — and raises the honest
+ * K-PERSIST-FAIL bit (the dock's В1 pattern): the store records the
+ * refused write instead of swallowing the boolean, so the UI can say
+ * «не сохранилось» — the choice will NOT survive a reload.
  *
  * Values come ONLY from the real roster (the composer validates before
  * calling setSpecialist) — the store never invents a specialist.
  */
 
 const annotations = new Map<string, string>();
+/** Session ids whose LAST annotation write the storage refused (the
+ * honest K-PERSIST-FAIL bit, В1's dock pattern): the in-memory choice
+ * still works this visit, a later successful write clears the bit. */
+const persistFailures = new Set<string>();
 const listeners = new Set<() => void>();
 
 function notify(): void {
@@ -53,28 +59,40 @@ export function getSpecialistAnnotation(sessionId: string): string | null {
 }
 
 /**
- * Set/clear the annotation (null clears). Persists honestly; the
+ * Set/clear the annotation (null clears). Persists honestly: the
  * in-memory value always reflects the call so the surfaces stay in sync
- * even when storage refuses (private mode — the honest local bit lives
- * with the write, the choice still works this visit).
+ * even when storage refuses (private mode — the choice still works this
+ * visit), and the write's boolean is NOT swallowed — a refused write
+ * sets the session's K-PERSIST-FAIL bit (see below), a successful one
+ * clears it.
  */
 export function setSpecialistAnnotation(
   sessionId: string,
   name: string | null,
 ): void {
-  if (name === null || name.trim().length === 0) {
-    annotations.set(sessionId, "");
-    writeKoraSpecialist(sessionId, "");
+  const value = name === null || name.trim().length === 0 ? "" : name;
+  annotations.set(sessionId, value);
+  if (writeKoraSpecialist(sessionId, value)) {
+    persistFailures.delete(sessionId);
   } else {
-    annotations.set(sessionId, name);
-    writeKoraSpecialist(sessionId, name);
+    persistFailures.add(sessionId);
   }
   notify();
+}
+
+/**
+ * The honest K-PERSIST-FAIL bit for one session: the LAST annotation
+ * write did not reach storage — the choice still works this visit, but
+ * a reload will lose it, and the UI says so instead of pretending.
+ */
+export function getSpecialistPersistFailure(sessionId: string): boolean {
+  return persistFailures.has(sessionId);
 }
 
 /** Tests only: module state by design (one annotation domain per app). */
 export function resetSpecialistAnnotationsForTests(): void {
   annotations.clear();
+  persistFailures.clear();
   listeners.clear();
 }
 
@@ -87,6 +105,16 @@ export function useKoraSpecialistAnnotation(sessionId: string): string | null {
     subscribe,
     () => getSpecialistAnnotation(sessionId),
     () => getSpecialistAnnotation(sessionId),
+  );
+}
+
+/** React binding: the session's K-PERSIST-FAIL bit, live across readers
+ * (the same synchronous-store discipline as the annotation itself). */
+export function useKoraSpecialistPersistFailure(sessionId: string): boolean {
+  return useSyncExternalStore(
+    subscribe,
+    () => getSpecialistPersistFailure(sessionId),
+    () => getSpecialistPersistFailure(sessionId),
   );
 }
 
