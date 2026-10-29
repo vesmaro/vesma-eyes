@@ -12,6 +12,8 @@ The single module server/kora/redaction.py carries the pattern pack
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from server.kora import redaction
@@ -181,3 +183,146 @@ class TestStraddleAndExpansion:
         preview, applied = redaction.redact_preview(text)
         assert len(preview) <= 160
         assert applied is True
+
+
+class TestStructuredJson:
+    """redact_json — the structured-field choke-point (the hermes
+    ``tool_calls`` passthrough, cascade fix 2026-10-29): every string
+    leaf masked, container shape preserved verbatim (the FE contract
+    keeps ``tool_calls: list[object]`` — redaction ≠ reshaping)."""
+
+    def test_string_leaves_masked_shape_preserved(self):
+        """The live hermes tool_calls shape: the sentinel inside the
+        arguments string masks; the call structure and clean leaves
+        survive byte-exact."""
+        value = {
+            "id": "call_1", "type": "function",
+            "function": {"name": "kubectl",
+                         "arguments": '{"token": "sk-AbCdEf1234567890aBcDeF"}'},
+        }
+        out, applied = redaction.redact_json(value)
+        assert applied is True
+        assert out["id"] == "call_1"
+        assert out["function"]["name"] == "kubectl"
+        assert "sk-AbCdEf1234567890aBcDeF" not in out["function"]["arguments"]
+        assert "sk-<redacted>" in out["function"]["arguments"]
+
+    def test_greedy_tail_cannot_corrupt_structure(self):
+        """Why NOT json.dumps → redact → json.loads: the ``\\S+`` pattern
+        tails (aws_secret_access_key=, plain:) would eat across the JSON
+        string edge and break the document. Leaf-wise redaction cannot."""
+        value = {"arguments": "aws_secret_access_key=supersecret1",
+                 "note": "plain:hunter2"}
+        out, applied = redaction.redact_json(value)
+        assert applied is True
+        assert out == {"arguments": "aws_secret_access_key=<redacted>",
+                       "note": "plain:<redacted>"}
+
+    def test_credential_shaped_key_masked(self):
+        """A credential can sit in a key position; keys ride the same
+        pack (documented collateral: two credential-shaped keys masking
+        to one marker would merge — garbage-on-garbage)."""
+        out, applied = redaction.redact_json(
+            {"ghp_AbCdEf1234567890aBcDeF": "v"})
+        assert applied is True
+        assert list(out) == ["gh*_<redacted>"]
+
+    def test_clean_structure_verbatim_and_applied_false(self):
+        value = {"a": 1, "b": [True, None, "чисто"], "c": {"d": 2.5}}
+        out, applied = redaction.redact_json(value)
+        assert applied is False
+        assert out == value
+
+    def test_input_not_mutated(self):
+        value = {"function": {"arguments": "mnd_dev7f3a91b2c4"}}
+        out, _applied = redaction.redact_json(value)
+        assert value["function"]["arguments"] == "mnd_dev7f3a91b2c4"
+        assert out is not value
+
+    def test_nested_list_shape_and_scalars_ride(self):
+        """The exact route payload: a LIST of call dicts with scalars —
+        list order, scalars and None survive."""
+        value = [{"id": "c1", "n": 2, "x": None,
+                  "function": {"name": "kubectl",
+                               "arguments": "Bearer abcdef12345678"}},
+                 {"id": "c2"}]
+        out, applied = redaction.redact_json(value)
+        assert applied is True
+        assert isinstance(out, list) and len(out) == 2
+        assert out[1] == {"id": "c2"}
+        assert out[0]["n"] == 2 and out[0]["x"] is None
+        assert "abcdef12345678" not in out[0]["function"]["arguments"]
+
+
+class TestJsonSafeStringLeaves:
+    """Review P3 (2026-10-29): two credential patterns carry greedy
+    ``\\S+`` tails. Inside a STRING leaf whose content is itself
+    JSON-encoded (``tool_calls`` ``arguments``), ``\\S+`` eats the
+    leaf's own closing quote/comma — the masked leaf stops parsing as
+    JSON. In the redact_json context those two tails run as
+    ``[^"\\s\\]+`` (the secret ends at the leaf's quote/whitespace/
+    backslash); free-text redaction keeps the greedy tails unchanged."""
+
+    def test_review_case_encoded_leaf_stays_valid_json(self):
+        """The review's exact case: a shell-export secret mid-leaf in a
+        JSON-encoded ``arguments`` string — after masking the leaf is
+        STILL valid JSON, the secret is gone, the neighbour key
+        survives."""
+        leaf = ('{"cmd": "export AWS_SECRET_ACCESS_KEY=wJalrXUt7QbP2nMx",'
+                ' "cwd": "/srv"}')
+        out, applied = redaction.redact_json({"arguments": leaf})
+        assert applied is True
+        masked = out["arguments"]
+        assert "wJalrXUt7QbP2nMx" not in masked
+        assert "aws_secret_access_key=<redacted>" in masked
+        parsed = json.loads(masked)      # the leaf STILL parses
+        assert parsed["cwd"] == "/srv"   # neighbours survive
+        assert parsed["cmd"] == "export aws_secret_access_key=<redacted>"
+
+    def test_plain_colon_encoded_leaf_stays_valid_json(self):
+        """Same defect, plain: family — the old greedy tail swallowed
+        ``", "n": 1}`` off the leaf."""
+        leaf = '{"note": "plain:hunter2", "n": 1}'
+        out, applied = redaction.redact_json({"arguments": leaf})
+        assert applied is True
+        parsed = json.loads(out["arguments"])
+        assert parsed["note"] == "plain:<redacted>"
+        assert parsed["n"] == 1
+
+    def test_tail_stops_at_backslash_escape(self):
+        """The json_safe tail also respects a backslash escape: the
+        secret ends before ``\\"`` and the escaped quote survives
+        inside the leaf value."""
+        leaf = '{"note": "plain:abc123def456\\", end", "n": 1}'
+        out, applied = redaction.redact_json({"arguments": leaf})
+        assert applied is True
+        parsed = json.loads(out["arguments"])
+        assert "abc123def456" not in parsed["note"]
+        assert parsed["note"] == 'plain:<redacted>", end'
+        assert parsed["n"] == 1
+
+    def test_free_text_keeps_greedy_tail(self):
+        """The swap is a redact_json-context ONLY: plain redact/
+        redact_body keep the greedy ``\\S+`` tail (runs to whitespace,
+        trailing punctuation is eaten with the secret) — pinned so the
+        free-text contract never drifts."""
+        out, applied = redaction.redact_body(
+            "export aws_secret_access_key=abc123def456, done")
+        assert applied is True
+        assert "abc123def456" not in out
+        assert out == "export aws_secret_access_key=<redacted> done"
+
+    def test_pack_pair_differs_exactly_in_the_two_tails(self):
+        """Single source of truth: the json_safe pack is the free-text
+        pack with EXACTLY the two credential-tail entries swapped —
+        same length, same order, same markers, no ``\\S+`` left in the
+        swapped ones."""
+        free = redaction._PATTERNS
+        safe = redaction._JSON_SAFE_PATTERNS
+        assert len(free) == len(safe)
+        diff = [i for i, (f, s) in enumerate(zip(free, safe)) if f != s]
+        assert len(diff) == 2
+        for i in diff:
+            assert r"\S+" not in safe[i][0].pattern
+            assert safe[i][0].pattern.endswith('[^"\\s\\\\]+')
+            assert safe[i][1] == free[i][1]

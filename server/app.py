@@ -8587,8 +8587,9 @@ async def executor_model_catalog(executor_id: str, provider_key: str,
 # has no stable store cursor — the frozen «seq is never renumbered»
 # guarantee belongs to the store-backed zcode path; a hermes transcript
 # is a live proxy view: pages are consistent within one read, hermes may
-# append between reads). Every content byte passes the redaction
-# choke-point. Every successful read emits the frozen
+# append between reads). Every content byte AND the reasoning/tool_calls
+# passthrough fields pass the redaction choke-point. Every successful read
+# emits the frozen
 # session.transcript_viewed audit (the Kora precedent). Chat answers
 # carry the honest source marker «hermes · real-time» — the board never
 # presents hermes output as local.
@@ -8613,7 +8614,9 @@ _kora_hermes_chat_limiter = RateLimiter(
 class HermesTranscriptItemOut(KoraTranscriptItemOut):
     """The frozen Kora transcript row + the hermes passthrough fields
     (additive, optional): display_kind maps to ``kind`` (the base
-    contract), reasoning/tool_calls ride as hermes sent them."""
+    contract), reasoning/tool_calls ride through the SAME redaction
+    choke-point as content (reasoning as a body string, tool_calls
+    shape-preserving via redact_json)."""
     reasoning: str | None = None
     tool_calls: list[dict[str, Any]] | None = None
 
@@ -8666,7 +8669,8 @@ async def kora_hermes_session_messages(
     """Live hermes transcript through the frozen Kora transcript form
     (seq cursor: items with seq > after_seq, next_after_seq / has_more).
     ui-only (the explanatory mnd_ wall), redaction choke-point on every
-    content byte, session.transcript_viewed audit on every successful
+    content byte AND the reasoning/tool_calls passthrough fields,
+    session.transcript_viewed audit on every successful
     read — the zcode-transcript discipline. The handle is the native
     hermes id or the listing's canonical 'hermes:<native_id>'. NO
     registry re-validation by design: hermes IS the authority for a live
@@ -8702,8 +8706,30 @@ async def kora_hermes_session_messages(
     for idx, raw in enumerate(rows, start=1):
         row = hermes_client.message_row(raw)
         content, applied = kora_redaction.redact_body(row["content"])
-        reasoning = raw.get("reasoning", raw.get("reasoning_content"))
+        # The passthrough fields ride the SAME choke-point as content
+        # (cascade finding 2026-10-29: reasoning/tool_calls used to leave
+        # unmasked — the module law is «a field that cannot go through the
+        # choke-point does not ship»): reasoning as a body string,
+        # tool_calls leaf-wise via redact_json (shape-preserving — the FE
+        # contract keeps list[object]). ``redaction_applied`` stays the
+        # honest per-entry signal across all three fields.
+        # ``or``, not dict.get(a, b): a NULL "reasoning" key EXISTS and
+        # get() would return None with the default unexamined — a null
+        # spelling must not shadow a non-empty reasoning_content
+        # (review P3, 2026-10-29). The fallback fires on any falsy
+        # first spelling; both falsy → None, nothing to mask.
+        reasoning = raw.get("reasoning") or raw.get("reasoning_content")
         tool_calls = raw.get("tool_calls")
+        reasoning_out = None
+        tool_calls_out = None
+        if reasoning is not None:
+            reasoning_out, reasoning_applied = kora_redaction.redact_body(
+                str(reasoning))
+            applied = applied or reasoning_applied
+        if isinstance(tool_calls, list):
+            tool_calls_out, calls_applied = kora_redaction.redact_json(
+                tool_calls)
+            applied = applied or calls_applied
         items.append(HermesTranscriptItemOut(
             seq=idx,
             role=row["role"],
@@ -8711,8 +8737,8 @@ async def kora_hermes_session_messages(
             ts=(row["ts"] or None),
             content=content,
             redaction_applied=applied,
-            reasoning=(None if reasoning is None else str(reasoning)),
-            tool_calls=(tool_calls if isinstance(tool_calls, list) else None),
+            reasoning=reasoning_out,
+            tool_calls=tool_calls_out,
         ))
     page = [it for it in items if it.seq > after_seq][:limit]
     next_after_seq = (page[-1].seq if page else after_seq)
