@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { readKoraTreeState, writeKoraTreeState } from "./koraTreeState";
+import { koraDisclosureListId } from "./koraWorkspaceModel";
 import type {
   KoraAgentNode,
   KoraHostNode,
@@ -274,7 +275,11 @@ function HostBranch({
 }) {
   const t = useT();
   const key = host.host ?? "";
-  const listId = `kora-tree-host-${key.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+  // The digest-suffixed id (kora-tree-listid-collision, the class closed
+  // for the project groups in KoraHostField): hosts «a.b» and «a_b» both
+  // flatten to the same slug, and a duplicated DOM id breaks the
+  // aria-controls link — the shared FNV core keeps the family apart.
+  const listId = koraDisclosureListId("kora-tree-host", key);
 
   return (
     <li>

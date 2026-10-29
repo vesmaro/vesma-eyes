@@ -377,4 +377,61 @@ describe("KoraTree open-state machine (cascade W3 pins)", () => {
       hostDisclosure(fresh.container, "pi-edge")?.getAttribute("aria-expanded"),
     ).toBe("false");
   });
+
+  it("LISTID-COLLISION: hosts that sanitize to the SAME slug keep distinct ids (the FNV digest)", () => {
+    // The cascade-W6 QA pin, the tree-host leg of the closed
+    // kora-tree-listid-collision class (the KoraHostField precedent rides
+    // the same koraDisclosureListId core): «a.b» and «a_b» both flatten to
+    // kora-tree-host-a_b — the bare-slug form duplicated the DOM id and the
+    // aria-controls idref resolved to the FIRST list only. The digest
+    // suffix keeps the pair apart; both branches open so both lists are in
+    // the DOM (the collision is observable exactly then).
+    sessionStorage.setItem(
+      "vesmaro.koraTree",
+      JSON.stringify({ open: ["a.b", "a_b"] }),
+    );
+    const collideModel = buildKoraTree(
+      [
+        session({
+          id: "exec-dot:s1",
+          executor_id: "exec-dot",
+          state: "live",
+          harness: "zcode",
+        }),
+        session({
+          id: "exec-us:s2",
+          executor_id: "exec-us",
+          state: "idle",
+          harness: "zcode",
+        }),
+      ],
+      [executor("exec-dot", "zcode", "a.b"), executor("exec-us", "zcode", "a_b")],
+    );
+    const { container } = mountTree({ model: collideModel });
+
+    const buttons = [
+      ...container.querySelectorAll<HTMLButtonElement>("button[aria-expanded]"),
+    ];
+    expect(buttons.length).toBe(2);
+    const controls = buttons.map((button) => button.getAttribute("aria-controls"));
+    // The collision premise itself: both slugs flatten identically…
+    for (const id of controls) {
+      expect(id).toMatch(/^kora-tree-host-a_b-/);
+    }
+    // …yet the ids (and the lists they point at) stay DISTINCT, each
+    // resolving to EXACTLY ONE list element.
+    expect(new Set(controls).size).toBe(2);
+    for (const id of controls) {
+      const lists = document.querySelectorAll(`ul[id="${id}"]`);
+      expect(lists.length).toBe(1);
+    }
+    // The pairing is honest per branch: each button's aria-controls names
+    // the list INSIDE its own branch li, not the neighbour's.
+    for (const button of buttons) {
+      const own = button.closest("li")?.querySelector(
+        `ul[id="${button.getAttribute("aria-controls")}"]`,
+      );
+      expect(own).not.toBeNull();
+    }
+  });
 });
