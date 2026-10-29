@@ -16,8 +16,10 @@ Layers:
    a dead session still fails non-retryable before the handoff.
 4. THE UNIT DRIVER (scripts/kora/relay_unit.py): delivered/failed
    classification against FAKE harness binaries, the argv hygiene pin
-   (prompt on stdin, NEVER in argv), the per-session writer mutex, and
-   the bounded confirm-retry discipline.
+   (prompt on stdin, NEVER in argv), the >64 KiB bounded-stdin pin (the
+   unit never blocks on a harness that does not read — A1 review P2),
+   the per-session writer mutex, and the bounded confirm-retry
+   discipline.
 
 Relay state is module-global: every test runs under a fixture that
 resets the queue/grants and RE-INSTALLS the bridge exactly as app.py
@@ -30,6 +32,7 @@ import json
 import os
 import textwrap
 import threading
+import time
 import uuid
 from pathlib import Path
 
@@ -634,6 +637,90 @@ class TestZcodeStdinDriver:
                 PROMPT_SENTINEL.encode("utf-8"))
             assert len(row.get("prompt_sha256", "")) in (0, 64)
 
+    # ------------------------------------------------- A1-P2: bounded stdin
+    def test_oversized_prompt_nonreading_child_times_out_not_stalls(
+            self, tmp_path):
+        """THE PIN (A1 review P2): a prompt over the 64 KiB OS pipe
+        buffer (32000 chars × 4 UTF-8 bytes ≈ 128 KB) with a harness
+        that NEVER reads stdin must not block the single-threaded unit —
+        the pre-fix code stalled forever on the blocked write, BEFORE
+        the grace loop, out of SIGTERM's reach. Honest semantics: the
+        turn never started, so the delivery settles failed/retryable
+        («prompt delivery timed out»), the child is killed, the writer
+        mutex is released and the next session is served."""
+        from scripts.kora.relay_unit import AuditLog, DriverConfig, \
+            SteeringCommand, ZcodeStdinDriver
+        script = tmp_path / "fake-harness-noread.sh"
+        script.write_text(textwrap.dedent("""\
+            #!/bin/sh
+            printf '%s\\n' "$@" > "$FAKE_ARGV_FILE"
+            # never touches stdin; outlives the grace window
+            sleep 30
+            """))
+        script.chmod(0o755)
+        os.environ["FAKE_ARGV_FILE"] = str(tmp_path / "argv.txt")
+        audit = AuditLog(tmp_path / "audit.jsonl")
+        driver = ZcodeStdinDriver(
+            DriverConfig(harness="zcode-stdin", command=("sh",
+                                                         str(script))),
+            grace=1.0, lock_wait=2.0, audit=audit)
+        big = "A" * (100 * 1024)   # >64 KiB — the OS pipe buffer
+        command = SteeringCommand(delivery_id=uuid.uuid4().hex,
+                                  session_id="ex-1:sess_big",
+                                  native_id="sess_big", mode="confirm",
+                                  confirm_required=True, text=big,
+                                  cwd="/proj")
+        started = time.monotonic()
+        result = driver.inject(command)
+        elapsed = time.monotonic() - started
+        assert result.delivered is False
+        assert result.retryable is True
+        assert "timed out" in result.error
+        assert "A" * 64 not in result.error      # content-free reason
+        assert elapsed < 5.0, f"stalled {elapsed:.1f}s on stdin"
+        # the writer mutex is released — the unit can serve others now
+        assert driver._lock_for("sess_big").locked() is False
+        other = driver.inject(DriverHarness(tmp_path).command(
+            native_id="sess_next"))
+        assert other.delivered is True
+        rows = [json.loads(line)
+                for line in (tmp_path / "audit.jsonl").read_text(
+                    encoding="utf-8").splitlines()]
+        assert any(r["event"] == "failed"
+                   and r["outcome"] == "stdin-timeout" for r in rows)
+
+    def test_oversized_prompt_fully_delivered_to_reading_child(
+            self, tmp_path):
+        """The other half of the pin: the >64 KiB prompt crosses the OS
+        pipe buffer in bounded chunks — a harness that reads gets every
+        byte (the old single blind write() would block mid-prompt
+        here)."""
+        h = DriverHarness(tmp_path, grace=2.0)
+        big = "B" * (100 * 1024)
+        result = h.driver.inject(
+            h.command(native_id="sess_bigread", text=big))
+        assert result.delivered is True
+        assert h.stdin_file.read_text() == big
+
+    def test_stderr_grandchild_cannot_stall_classification(
+            self, tmp_path):
+        """A1 review P3-2: classification makes ONE non-blocking read of
+        the stderr tail — a grandchild that inherited stderr keeps the
+        pipe open (no EOF) after the child exits, and the old blocking
+        read(4000) would stall the loop until the stranger exits (the
+        orphaned ``sleep 30`` dies on its own)."""
+        h = DriverHarness(tmp_path, rc_script=(
+            'echo "Error: Session not found: sess_x" >&2; '
+            'sh -c "sleep 30" &   # inherits stderr — delays EOF\n'
+            'exit 1'))
+        started = time.monotonic()
+        result = h.driver.inject(h.command())
+        elapsed = time.monotonic() - started
+        assert result.delivered is False
+        assert result.retryable is False
+        assert "unknown session" in result.error   # tail WAS read
+        assert elapsed < 5.0, f"stalled {elapsed:.1f}s waiting for EOF"
+
 
 class TestUnitConfirmDiscipline:
     """The unit's confirm: bounded retries, then the honest
@@ -742,3 +829,86 @@ class TestUnitConfirmDiscipline:
         with pytest.raises(BoardError) as exc_info:
             SteeringCommand.from_payload({"native_id": "x"})
         assert "missing fields" in str(exc_info.value)
+
+    def test_malformed_native_id_is_settled_failed_non_retryable(
+            self, tmp_path):
+        """A1 review P3-4: a poisoned native_id never reaches argv; the
+        unit settles THAT delivery failed/non-retryable with a typed,
+        content-free reason (no payload echo) instead of wedging the
+        batch or sitting out the 1h inflight sweep."""
+        confirms: list[dict] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.url.path.endswith("/pickup"):
+                return httpx.Response(200, json={"items": [{
+                    "delivery_id": "d" * 32, "session_id": "ex-1:sess_x",
+                    "native_id": "-evil-flag", "mode": "confirm",
+                    "confirm_required": True, "text": PROMPT_SENTINEL,
+                    "text_len": 10, "text_sha256": "0" * 64,
+                    "queued_at": "2026-01-01T00:00:00+00:00",
+                    "picked_at": "2026-01-01T00:00:00+00:00",
+                    "cwd": ""}]})
+            confirms.append(json.loads(request.content.decode()))
+            return httpx.Response(200, json={"ok": True, "resolved": True})
+
+        unit, board = self._unit(tmp_path, httpx.MockTransport(handler))
+        unit.step()   # refuses, settles, moves on — no raise
+        board.close()
+        assert len(confirms) == 1
+        body = confirms[0]
+        assert body["status"] == "failed"
+        assert body["retryable"] is False
+        assert "native_id" in body["error"]
+        assert "-evil-flag" not in json.dumps(body)   # no payload echo
+        assert PROMPT_SENTINEL not in json.dumps(body)
+
+
+class TestRelayConfigAndBoundary:
+    """Config fail-fast (A1 review P3-3) and the payload boundary gates
+    (A1 review P3-4, P3-5)."""
+
+    @staticmethod
+    def _config(**overrides):
+        from scripts.kora.relay_unit import RelayConfig
+        raw: dict = {"board_url": "https://board.test",
+                     "executor_id": "ex-1"}
+        raw.update(overrides)
+        return RelayConfig.from_dict(raw)
+
+    def test_poll_jitter_above_interval_is_config_error(self):
+        """jitter > interval makes uniform() negative-spread →
+        max(0.0, …) → a tight busy-loop — refused at load time."""
+        from scripts.kora.relay_unit import ConfigError
+        with pytest.raises(ConfigError) as exc_info:
+            self._config(poll_interval=5.0, poll_jitter=6.0)
+        assert "poll_jitter" in str(exc_info.value)
+        assert "poll_interval" in str(exc_info.value)
+
+    def test_poll_jitter_equal_to_interval_is_accepted(self):
+        config = self._config(poll_interval=5.0, poll_jitter=5.0)
+        assert config.poll_jitter == 5.0
+
+    def test_native_id_charset_gate(self):
+        """native_id rides argv (--resume <id>): charset-gated at the
+        boundary; a leading '-' would parse as a harness flag."""
+        from scripts.kora.relay_unit import BoardError, SteeringCommand
+        base = {"delivery_id": "d" * 32, "session_id": "ex-1:s",
+                "mode": "confirm", "confirm_required": True, "text": "x"}
+        for bad in ("-resume", "sess x", "sess;id", "sess\nid", "",
+                    "sess$(id)"):
+            with pytest.raises(BoardError) as exc_info:
+                SteeringCommand.from_payload({**base, "native_id": bad})
+            assert "native_id" in str(exc_info.value)
+        good = SteeringCommand.from_payload(
+            {**base, "native_id": "sess_x:9.1-b"})
+        assert good.native_id == "sess_x:9.1-b"
+
+    def test_audit_file_is_created_0600(self, tmp_path):
+        """A1 review P3-5: audit rows carry hashes/lengths/ids — the
+        file is 0600 at creation regardless of the process umask (the
+        service's UMask=0077 does not cover a manual run)."""
+        from scripts.kora.relay_unit import AuditLog
+        path = tmp_path / "audit-0600.jsonl"
+        audit = AuditLog(path)
+        audit.append(event="probe")
+        assert (path.stat().st_mode & 0o777) == 0o600

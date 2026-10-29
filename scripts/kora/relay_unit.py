@@ -48,6 +48,17 @@ running children alone (the poller precedent — the next start's
 recovery is the board's dead-session honesty, and the store stays the
 single source of truth).
 
+The stdin write is bounded, never blocking (A1 review P2): the prompt
+crosses the child's stdin through a non-blocking select+os.write pump
+inside the SAME grace window. The 64 KiB OS pipe buffer is SMALLER
+than the 32000-char contract cap (up to 4 UTF-8 bytes per char ≈
+128 KB), so a plain ``write`` CAN block forever against a harness that
+does not read (slow start, hung auth) — before the grace loop, out of
+SIGTERM's reach, stalling the single-threaded unit. A harness that
+never consumed the whole prompt never started the turn: the child is
+killed (its own process group) and the delivery confirms
+failed/retryable «prompt delivery timed out» — never a hung write.
+
 Per-session writer mutex (ADR §2): one injection at a time per native
 session id, held for the child's whole lifetime (a steering prompt
 lands after the previous turn frees the session — same as typing in
@@ -69,6 +80,7 @@ import logging
 import os
 import random
 import re
+import select
 import signal
 import subprocess
 import sys
@@ -99,6 +111,11 @@ STDERR_CLASSIFY_CAP = 4000        # scanned tail for typed failure classes
 _SESSION_NOT_FOUND_RE = re.compile(r"Session not found", re.IGNORECASE)
 _AUTH_RE = re.compile(r"not (?:logged )?in|unauthenticated|login required",
                       re.IGNORECASE)
+
+# native_id rides the driver argv (--resume <native_id>): charset-gated
+# at the payload boundary — no shell is involved, but a value starting
+# with '-' would be parsed as a harness flag (A1 review P3-4).
+_NATIVE_ID_RE = re.compile(r"^[A-Za-z0-9._:-]+$")
 
 
 def _now_iso() -> str:
@@ -235,13 +252,22 @@ class RelayConfig:
             raise ConfigError(f"ca_bundle not found: {ca_bundle}")
         audit = raw.get("audit_path")
         lock = raw.get("lock_path")
+        poll_interval = _number("poll_interval", POLL_INTERVAL_DEFAULT,
+                                minimum=0.5)
+        poll_jitter = _number("poll_jitter", POLL_JITTER_DEFAULT,
+                              minimum=0.0)
+        if poll_jitter > poll_interval:
+            # jitter above the interval makes uniform() negative-spread
+            # → max(0.0, …) → a tight busy-loop against the board
+            # (A1 review P3-3) — refuse at load time, not at runtime
+            raise ConfigError(
+                f"poll_jitter ({poll_jitter}) must not exceed poll_interval "
+                f"({poll_interval})")
         return cls(
             board_url=board_url,
             executor_id=executor_id,
-            poll_interval=_number("poll_interval", POLL_INTERVAL_DEFAULT,
-                                  minimum=0.5),
-            poll_jitter=_number("poll_jitter", POLL_JITTER_DEFAULT,
-                                minimum=0.0),
+            poll_interval=poll_interval,
+            poll_jitter=poll_jitter,
             batch_limit=batch_limit,
             injection_grace=_number("injection_grace",
                                     INJECTION_GRACE_DEFAULT, minimum=0.5),
@@ -276,16 +302,26 @@ class SteeringCommand:
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> "SteeringCommand":
         """Boundary check: a malformed 200 must surface as a typed
-        BoardError, never as a KeyError crashing the loop."""
+        BoardError, never as a KeyError crashing the loop. ``native_id``
+        is charset-gated here — it is the only payload field that rides
+        the driver argv (A1 review P3-4)."""
         missing = [k for k in ("delivery_id", "session_id", "native_id",
                                "mode", "confirm_required", "text")
                    if k not in payload]
         if missing:
             raise BoardError(200, "pickup", f"missing fields: {missing}")
+        native_id = str(payload["native_id"])
+        if not _NATIVE_ID_RE.fullmatch(native_id) or native_id.startswith("-"):
+            # the value stays truncated in the LOCAL log only; the
+            # board-facing error is the typed reason (no payload echo)
+            raise BoardError(
+                200, "pickup",
+                f"invalid native_id {native_id!r:.120}: must match "
+                r"^[A-Za-z0-9._:-]+$ and must not start with '-'")
         return cls(
             delivery_id=str(payload["delivery_id"]),
             session_id=str(payload["session_id"]),
-            native_id=str(payload["native_id"]),
+            native_id=native_id,
             mode=str(payload["mode"]),
             confirm_required=bool(payload["confirm_required"]),
             text=str(payload["text"]),
@@ -358,7 +394,28 @@ class RelayBoardClient:
         for payload in items:
             if not isinstance(payload, dict):
                 raise BoardError(200, path, "malformed pickup item")
-            commands.append(SteeringCommand.from_payload(payload))
+            try:
+                commands.append(SteeringCommand.from_payload(payload))
+            except BoardError as exc:
+                # A poisoned item must not wedge the whole batch, and
+                # must not sit out the 1h inflight sweep with a generic
+                # reason: settle THAT delivery honestly failed —
+                # non-retryable, the payload (not the transport) is
+                # broken, a retry cannot fix it. No payload values are
+                # echoed onto the board (A1 review P3-4).
+                log.error("pickup: refusing malformed item: %s", exc)
+                delivery_id = payload.get("delivery_id")
+                if not (isinstance(delivery_id, str) and delivery_id):
+                    raise   # nothing to settle against — drop the batch
+                try:
+                    self.confirm(delivery_id, "failed",
+                                 error="relay unit refused the delivery: "
+                                       "malformed payload (native_id "
+                                       "charset)",
+                                 retryable=False)
+                except BoardError as confirm_exc:
+                    log.error("confirm of refused item %s failed: %s",
+                              delivery_id[:12], confirm_exc)
         return commands
 
     def confirm(self, delivery_id: str, status: str, *, error: str = "",
@@ -380,7 +437,10 @@ class RelayBoardClient:
 class AuditLog:
     """Append-only local relay log (the poller AuditLog pattern): one
     JSON per line, ids + hashes + lengths ONLY — the prompt text and the
-    token never enter a record (ADR gate 3)."""
+    token never enter a record (ADR gate 3). The file is created 0600
+    (the lock-file discipline): rows carry hashes/lengths/ids — not for
+    group/other eyes. The service unit sets UMask=0077, but a MANUAL run
+    must not publish them via the process umask (A1 review P3-5)."""
 
     def __init__(self, path: Path):
         self.path = Path(path)
@@ -397,7 +457,9 @@ class AuditLog:
             "prompt_len": prompt_len, "prompt_sha256": prompt_sha256,
             "pid": pid, "outcome": outcome,
         }
-        with self.path.open("a", encoding="utf-8") as fh:
+        fd = os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_APPEND,
+                     0o600)
+        with os.fdopen(fd, "a", encoding="utf-8") as fh:
             fh.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
@@ -497,36 +559,129 @@ class ZcodeStdinDriver:
                 delivered=False,
                 error=f"spawn failed: {type(exc).__name__}",
                 retryable=True)
-        try:
-            # The OS pipe buffer is far larger than the 32000-char
-            # contract cap — the write cannot block the loop.
-            proc.stdin.write(prompt_bytes)
-            proc.stdin.close()
-        except (BrokenPipeError, OSError):
-            pass   # the child died instantly; classification handles it
         deadline = self._clock() + self.grace
-        while self._clock() < deadline:
-            rc = proc.poll()
-            if rc is not None:
-                return self._finish_exited(command, proc, rc, session_lock)
-            time.sleep(0.05)
-        # Alive at the grace deadline → the harness accepted the prompt
-        # and the turn is in flight. The watcher releases the writer
-        # mutex when the child exits; the unit does NOT wait for the
-        # turn (delivery ≠ completion).
-        pid = proc.pid
-        threading.Thread(target=self._watch_exit,
-                         args=(command, proc, session_lock),
-                         name=f"relay-watch-{command.native_id}",
-                         daemon=True).start()
-        self.audit.append(event="delivered", delivery_id=command.delivery_id,
+        if self._pump_prompt(proc, prompt_bytes, deadline):
+            # The whole prompt crossed stdin (EOF signalled) — classify
+            # the harness verdict inside the remaining grace window.
+            while self._clock() < deadline:
+                rc = proc.poll()
+                if rc is not None:
+                    return self._finish_exited(command, proc, rc,
+                                               session_lock)
+                time.sleep(0.05)
+            # Alive at the grace deadline → the harness accepted the
+            # prompt and the turn is in flight. The watcher releases the
+            # writer mutex when the child exits; the unit does NOT wait
+            # for the turn (delivery ≠ completion).
+            pid = proc.pid
+            threading.Thread(target=self._watch_exit,
+                             args=(command, proc, session_lock),
+                             name=f"relay-watch-{command.native_id}",
+                             daemon=True).start()
+            self.audit.append(event="delivered",
+                              delivery_id=command.delivery_id,
+                              native_id=command.native_id,
+                              mode=command.mode,
+                              confirm_required=command.confirm_required,
+                              prompt_len=len(prompt_bytes),
+                              prompt_sha256=hashlib.sha256(
+                                  prompt_bytes).hexdigest(),
+                              pid=pid, outcome="in-flight")
+            return SteeringResult(delivered=True)
+        # The pump gave up: either the child died mid-write (classify on
+        # its stderr, as before) or the grace window closed with the
+        # prompt not fully consumed — the turn NEVER started, so the
+        # honest verdict is failed/timed-out: the child is killed, the
+        # writer mutex released, the loop free for other sessions
+        # (A1 review P2).
+        rc = proc.poll()
+        if rc is not None:
+            self._close_stdin(proc)
+            return self._finish_exited(command, proc, rc, session_lock)
+        self._abandon_unfed(proc)
+        session_lock.release()
+        self.audit.append(event="failed", delivery_id=command.delivery_id,
                           native_id=command.native_id, mode=command.mode,
                           confirm_required=command.confirm_required,
                           prompt_len=len(prompt_bytes),
                           prompt_sha256=hashlib.sha256(
                               prompt_bytes).hexdigest(),
-                          pid=pid, outcome="in-flight")
-        return SteeringResult(delivered=True)
+                          pid=proc.pid, outcome="stdin-timeout")
+        return SteeringResult(
+            delivered=False,
+            error="prompt delivery timed out: the harness did not "
+                  "consume the prompt within the grace window",
+            retryable=True)
+
+    @staticmethod
+    def _close_stdin(proc: subprocess.Popen) -> None:
+        try:
+            if proc.stdin is not None:
+                proc.stdin.close()
+        except (BrokenPipeError, OSError):
+            pass
+
+    def _pump_prompt(self, proc: subprocess.Popen, prompt_bytes: bytes,
+                     deadline: float) -> bool:
+        """Cross the WHOLE prompt to the child's stdin without ever
+        blocking the loop (A1 review P2). The 64 KiB OS pipe buffer is
+        SMALLER than the 32000-char contract cap (up to 4 UTF-8 bytes
+        per char ≈ 128 KB): a single ``write`` CAN block forever against
+        a harness that does not read (slow start, hung auth) — before
+        the grace loop, out of SIGTERM's reach, stalling the
+        single-threaded unit. The fd is non-blocking; select bounds
+        every wait to the remaining grace. Returns True when the prompt
+        is fully written (stdin closed → EOF signalled), False when the
+        grace window closed first or the child died mid-write."""
+        view = memoryview(prompt_bytes)
+        fd = proc.stdin.fileno()
+        os.set_blocking(fd, False)
+        try:
+            while view.nbytes:
+                if proc.poll() is not None:
+                    return False   # died mid-write; classify on stderr
+                remaining = deadline - self._clock()
+                if remaining <= 0:
+                    return False   # grace spent with the prompt unfed
+                _r, writable, _x = select.select([], [fd], [], remaining)
+                if not writable:
+                    continue   # select timed out — re-check the deadline
+                try:
+                    sent = os.write(fd, view)
+                except BrokenPipeError:
+                    return False   # child gone; classification handles it
+                except BlockingIOError:
+                    continue   # spurious writability — retry the select
+                view = view[sent:]
+            return True
+        finally:
+            if not view.nbytes:
+                self._close_stdin(proc)
+
+    def _abandon_unfed(self, proc: subprocess.Popen) -> None:
+        """A harness that never consumed the whole prompt will never
+        start the turn — left alone it would sit on stdin forever. Kill
+        its (isolated, start_new_session) process group and reap;
+        bounded, with the SIGKILL escalation. SIGTERM before the stdin
+        close: a killed harness must never see EOF and run a PARTIAL
+        prompt."""
+        try:
+            os.killpg(proc.pid, signal.SIGTERM)
+        except OSError:
+            pass   # already gone between the poll and the kill
+        self._close_stdin(proc)
+        deadline = self._clock() + 1.0
+        while self._clock() < deadline and proc.poll() is None:
+            time.sleep(0.02)
+        if proc.poll() is None:
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except OSError:
+                pass
+            try:
+                proc.wait(timeout=1.0)
+            except subprocess.TimeoutExpired:
+                pass   # unreapable — the audit keeps the pid trail
 
     def _finish_exited(self, command: SteeringCommand,
                        proc: subprocess.Popen, rc: int,
@@ -534,9 +689,16 @@ class ZcodeStdinDriver:
         session_lock.release()
         tail = ""
         try:
-            stderr = proc.stderr.read(STDERR_CLASSIFY_CAP) \
-                if proc.stderr else b""
-            tail = stderr.decode("utf-8", errors="replace")
+            if proc.stderr is not None:
+                fd = proc.stderr.fileno()
+                os.set_blocking(fd, False)
+                # ONE non-blocking read of the scanned tail (A1 review
+                # P3-2): a blocking read(4000) waits for EOF or the full
+                # 4000 bytes — a grandchild that inherited stderr keeps
+                # the pipe open past the child's exit and would stall
+                # the loop until the stranger exits.
+                tail = os.read(fd, STDERR_CLASSIFY_CAP).decode(
+                    "utf-8", errors="replace")
         except (OSError, ValueError):
             tail = ""
         result = SteeringResult(delivered=True) if rc == 0 \

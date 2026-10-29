@@ -28,6 +28,12 @@ Type=simple
 # launcher precedent).
 ExecStart=%h/.local/bin/relay-unit-launcher.sh
 TimeoutStartSec=120
+# The honest stop-drain budget (A1 review P3-1): one delivery in flight
+# can legally hold the loop for lock_wait 120s + confirm retries with
+# backoff (~23s sleeps, up to ~75s more on dead-board 15s timeouts) +
+# injection grace 10s — past the 90s systemd default, a default stop
+# would SIGKILL mid-drain and orphan the confirm.
+TimeoutStopSec=240
 Restart=always
 RestartSec=10
 # Audit rows carry prompt hashes + lengths only, but stay 0600 anyway
