@@ -71,3 +71,4 @@
 2026-10-28T15:37:23+0300 | gws-1.94.0-train | deploy | rev 138>139 | image 1.94.0 | chart 1.94.0 | HEAD 2fdffce | auto-waived: image.tag drift = previous release (deployed-revision appVersion) | docs-drift: allowed (VESMARO_DEPLOY_DOCS_DRIFT=allow) — drifted corpora: mnemos
 2026-10-29T00:33:58+0300 | gws-1.95.0-train | deploy | rev 139>140 | image 1.95.0 | chart 1.95.0 | HEAD 37289ae | auto-waived: image.tag drift = previous release (deployed-revision appVersion) | docs-drift: allowed (VESMARO_DEPLOY_DOCS_DRIFT=allow) — drifted corpora: mnemos
 2026-10-29T02:50:38+0300 | gws-1.96.0-train | deploy | rev 140>141 | image 1.96.0 | chart 1.96.0 | HEAD e63eea5 | auto-waived: image.tag drift = previous release (deployed-revision appVersion)
+2026-10-29T04:48:12+0300 | gws-1.97.0-train | deploy | rev 141>142 | image 1.97.0 | chart 1.97.0 | HEAD 79f6f71 | auto-waived: image.tag drift = previous release (deployed-revision appVersion)
