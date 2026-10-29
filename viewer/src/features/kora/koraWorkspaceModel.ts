@@ -368,24 +368,35 @@ export interface KoraProjectGroup {
 }
 
 /**
- * The DOM id of one project group's disclosure list (the
- * aria-controls ↔ id pair). The sanitized key alone COLLIDES: two
- * different cwds can flatten to the same slug (`/a/proj+one` and
- * `/a/proj-one` — every non-word char becomes `_`), and a duplicated id
- * breaks the disclosure link (an idref must resolve to exactly one
- * element; getElementById returns the first). A full 32-bit FNV-1a
- * digest of the RAW key suffixes the slug — deterministic, stable across
- * sessions, distinct for the colliding pair (hygiene batch review tail
- * kora-tree-listid-collision).
+ * The digest-suffixed disclosure id CORE, shared by every disclosure
+ * family (the project groups via koraGroupListId, the tree host branches
+ * via KoraTree). The sanitized key alone COLLIDES: two different raw keys
+ * can flatten to the same slug (`/a/proj+one` and `/a/proj-one`, or the
+ * hosts `a.b` and `a_b` — every non-word char becomes `_`), and a
+ * duplicated id breaks the disclosure link (an idref must resolve to
+ * exactly one element; getElementById returns the first). A full 32-bit
+ * FNV-1a digest of the RAW key suffixes the slug — deterministic, stable
+ * across sessions, distinct for the colliding pair (hygiene batch review
+ * tail kora-tree-listid-collision; the tree host leg closed in the
+ * cascade W6 fix slice).
  */
-export function koraGroupListId(key: string): string {
+export function koraDisclosureListId(prefix: string, key: string): string {
   let hash = 0x811c9dc5;
   for (let i = 0; i < key.length; i++) {
     hash ^= key.charCodeAt(i);
     hash = Math.imul(hash, 16777619);
   }
   const digest = (hash >>> 0).toString(16).padStart(8, "0");
-  return `kora-group-${key.replace(/[^a-zA-Z0-9_-]/g, "_")}-${digest}`;
+  return `${prefix}-${key.replace(/[^a-zA-Z0-9_-]/g, "_")}-${digest}`;
+}
+
+/**
+ * The DOM id of one project group's disclosure list (the
+ * aria-controls ↔ id pair) — the group family of the shared
+ * koraDisclosureListId core; see its doc for the collision rationale.
+ */
+export function koraGroupListId(key: string): string {
+  return koraDisclosureListId("kora-group", key);
 }
 
 /** The basename of a posix path — a pure string cut (no Node path module in

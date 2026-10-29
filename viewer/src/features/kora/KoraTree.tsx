@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { readKoraTreeState, writeKoraTreeState } from "./koraTreeState";
+import { koraDisclosureListId } from "./koraWorkspaceModel";
 import type {
   KoraAgentNode,
   KoraHostNode,
@@ -213,11 +214,19 @@ function TreeNav({
   }
 
   const toggle = (key: string) => {
+    // Honestly inert while searching: every visible branch renders
+    // force-expanded (the answer must not need a second click), so a
+    // chevron click has NO visible response — and it must not mutate
+    // the open-set either, or the fold would surprise-jump out the
+    // moment the search clears. The button mirrors this with
+    // aria-disabled (DisclosureButton), so the control reads inert,
+    // not silently dead.
+    if (searching) return;
     setOpen((previous) => {
       const next = new Set(previous);
       if (next.has(key)) next.delete(key);
       else next.add(key);
-      if (!searching) writeKoraTreeState({ open: [...next] });
+      writeKoraTreeState({ open: [...next] });
       return next;
     });
   };
@@ -228,12 +237,14 @@ function TreeNav({
         <HostBranch
           key={host.host ?? ""}
           host={host}
-          // The search answers in one click: every visible branch is expanded
-          // while a query is live (toggles stay inert for persistence).
+          // The search answers in one click: every visible branch is
+          // expanded while a query is live — the chevron stays honestly
+          // inert for the whole search (aria-disabled, no-op click).
           expanded={searching || open.has(host.host ?? "")}
           active={(host.host ?? "") === activeHost}
           activeAgentId={activeAgentId}
           onToggle={toggle}
+          inert={searching}
         />
       ))}
       {unknown.map((host) => (
@@ -265,16 +276,23 @@ function HostBranch({
   active,
   activeAgentId,
   onToggle,
+  inert,
 }: {
   host: KoraHostNode;
   expanded: boolean;
   active: boolean;
   activeAgentId: string | null;
   onToggle: (key: string) => void;
+  /** While a search is live the chevron is honestly inert (see toggle). */
+  inert: boolean;
 }) {
   const t = useT();
   const key = host.host ?? "";
-  const listId = `kora-tree-host-${key.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+  // The digest-suffixed id (kora-tree-listid-collision, the class closed
+  // for the project groups in KoraHostField): hosts «a.b» and «a_b» both
+  // flatten to the same slug, and a duplicated DOM id breaks the
+  // aria-controls link — the shared FNV core keeps the family apart.
+  const listId = koraDisclosureListId("kora-tree-host", key);
 
   return (
     <li>
@@ -284,6 +302,7 @@ function HostBranch({
           controls={listId}
           onToggle={() => onToggle(key)}
           label={key}
+          inert={inert}
         />
         <Link
           to={`/kora/host/${encodeURIComponent(key)}`}
@@ -416,21 +435,33 @@ function DisclosureButton({
   controls,
   onToggle,
   label,
+  inert = false,
 }: {
   expanded: boolean;
   controls: string;
   onToggle: () => void;
   label: string;
+  /** While a search is live the branch renders force-expanded: the
+   * chevron is honestly INERT — announced via aria-disabled, its click
+   * a no-op — instead of a zero-response control that still mutates
+   * state under the user (the cascade W6 fix). */
+  inert?: boolean;
 }) {
   const t = useT();
+  // Plain concatenation, NOT cn(): twMerge folds `focus-visible:outline`
+  // into `focus-visible:outline-2` (same class group) and the focus ring
+  // loses its style half — the pair is deliberate, pin-shape: outline
+  // (style) + outline-2 (width) + outline-offset-2 + the colour.
+  const baseClass = "flex size-12 md:size-6 shrink-0 items-center justify-center rounded-sm text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright";
   return (
     <button
       type="button"
       aria-expanded={expanded}
       aria-controls={controls}
+      aria-disabled={inert || undefined}
       onClick={onToggle}
       aria-label={`${label}: ${expanded ? t("kora.tree.collapse") : t("kora.tree.expand")}`}
-      className="flex size-12 md:size-6 shrink-0 items-center justify-center rounded-sm text-foreground-secondary transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+      className={inert ? `${baseClass} cursor-default opacity-60` : baseClass}
     >
       {expanded ? (
         <ChevronDown aria-hidden className="size-4" />

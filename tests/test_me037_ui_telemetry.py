@@ -669,6 +669,34 @@ class TestBodyCapC1:
             assert resp.status_code == 200 and \
                 resp.body == b"passed-through", name
 
+    def test_giant_digit_declaration_degrades_to_413_never_500(
+            self, app_module):
+        """Cascade W6 QA P3: str.isdigit() happily accepts a 5000-digit
+        Content-Length, but int() caps at 4300 digits (CPython 3.11+
+        str→int limit) — the gate used to escape as a ValueError → 500
+        from the refusal path itself. Now a declaration wider than
+        int64's 19 decimal digits refuses 413 by LENGTH (every family
+        cap is ≤ 7 digits, so length alone is proof); an exactly
+        19-digit declaration still builds the int and refuses by VALUE —
+        the numeric path the boundary matrix pins stays intact."""
+        async def _call_next(request):
+            raise AssertionError("call_next must not run for an "
+                                 "oversize declaration")
+
+        for digits in (4_301, 5_000):
+            resp = asyncio.run(app_module.telemetry_body_cap(
+                self._request(content_length="1" * digits), _call_next))
+            assert resp.status_code == 413, digits
+            assert "detail" in json.loads(resp.body.decode())
+        # 19 digits: the widest honest int64 shape — parses, over cap.
+        resp = asyncio.run(app_module.telemetry_body_cap(
+            self._request(content_length="9" * 19), _call_next))
+        assert resp.status_code == 413
+        # 20 digits: over the length guard — refused without an int().
+        resp = asyncio.run(app_module.telemetry_body_cap(
+            self._request(content_length="9" * 20), _call_next))
+        assert resp.status_code == 413
+
     def test_real_oversize_body_413_before_any_parsing(self, client,
                                                        app_module):
         """Integration: a real multi-MB body gets the pre-parse 413 — not
@@ -682,6 +710,11 @@ class TestBodyCapC1:
         assert r.status_code == 413
         assert "detail" in r.json()
         assert "bytes" in r.json()["detail"]
+        # Cascade W6 (Архком-3): the 413 rides the FULL stack — the header
+        # middleware wraps the cap's short-circuit too.
+        assert r.headers["Content-Security-Policy"]
+        assert r.headers["X-Content-Type-Options"] == "nosniff"
+        assert r.headers["Referrer-Policy"] == "no-referrer"
 
     def test_normal_batches_are_not_affected(self, client, ui_auth):
         """The honest gate: the largest LEGAL batch (50 events, ~6 KB)
@@ -806,6 +839,12 @@ class TestBodyCapKoraSteeringScanW5:
                         headers={"Content-Type": "application/json"})
         assert r.status_code == 413
         assert "bytes" in r.json()["detail"]
+        # Cascade W6 (Архком-3): the 413 short-circuit still rides the
+        # header middleware — CSP/nosniff/no-referrer on it, like on the
+        # 401 control leg in test_max_legal_prompt_reaches_the_guard.
+        assert r.headers["Content-Security-Policy"]
+        assert r.headers["X-Content-Type-Options"] == "nosniff"
+        assert r.headers["Referrer-Policy"] == "no-referrer"
 
     def test_max_legal_prompt_reaches_the_guard(self, client):
         """The honest gate: the LARGEST legal steering body (a 32,000-char
@@ -825,6 +864,10 @@ class TestBodyCapKoraSteeringScanW5:
                         headers={"Content-Type": "application/json"})
         assert r.status_code == 413
         assert "bytes" in r.json()["detail"]
+        # Cascade W6 (Архком-3): headers on the 413 as on every answer.
+        assert r.headers["Content-Security-Policy"]
+        assert r.headers["X-Content-Type-Options"] == "nosniff"
+        assert r.headers["Referrer-Policy"] == "no-referrer"
 
     def test_kora_scan_legal_max_envelope_passes(self, client, app_module,
                                                  monkeypatch, machine_auth):

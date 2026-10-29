@@ -1304,6 +1304,124 @@ async def device_scope_guard(request: Request, call_next):
     request.state.device = device
     return await call_next(request)
 
+# ------------------------------------------------- pre-parse body cap
+# REGISTRATION ORDER (cascade W6 fix, Архком-3 invariant «CSP/nosniff
+# on EVERY response»): this cap registers AFTER device_scope_guard and
+# BEFORE add_security_headers — Starlette runs the LAST-registered
+# middleware OUTERMOST, so the header middleware wraps EVERY answer,
+# including this cap's 413 short-circuit (it used to register last,
+# outermost, and its 413s shipped without CSP/nosniff) — while the
+# cap still sits OUTSIDE device_scope_guard, keeping 413-before-401
+# for the pre-auth refusal (the W5 integration pins).
+# Cascade C1 (1.52.0 release security audit, P2 / CWE-400): the ingest's
+# 403/413/429 verdicts all fired only AFTER Starlette had buffered the
+# whole body and pydantic had parsed every element — an unauthenticated
+# leg could POST hundreds of MB of VALID events and burn CPU/memory
+# before the first refusal. A pydantic max_length (or a route dependency)
+# cannot close that: FastAPI reads ``request.body()`` before any handler
+# or dependency code runs. The cap below is a PRE-PARSE gate — a
+# middleware reading Content-Length from the ASGI scope (never the body)
+# and answering 413 before routing, so not a single body byte is read.
+# 1 MiB is ~100x the largest legal batch (50 events x ~200 B); scoped to
+# this one route on purpose — a global body cap would change every other
+# endpoint's contract in one move (a separate owner-level decision). A
+# body WITHOUT Content-Length (chunked) rides the post-parse batch 413
+# below: the 60/60s limiter bounds such legs' frequency and the LAN
+# ingress is the trust boundary (residual risk accepted for v0).
+_TELEMETRY_BODY_MAX_BYTES = 1_048_576   # 1 MiB pre-parse Content-Length cap
+# SEC-3 (cascade 2026-10-28): the discovery ingest gets the same pre-parse
+# gate — an executor-token leg could otherwise buffer/parse hundreds of MB
+# of JSON before the honest-422 caps could answer. 256 KiB is ~15x the
+# largest legal models object (16 KiB) + the mcp leg + the inventory legs,
+# with an order of magnitude of headroom. Chunked (no Content-Length)
+# rides the post-parse caps, as for telemetry (residual risk accepted).
+_DISCOVERY_BODY_MAX_BYTES = 262_144     # 256 KiB pre-parse Content-Length cap
+# SEC-W5-1 (cascade control wave 5, 2026-10-29): the Kora steering POSTs
+# and the kora-scan ingest have the same C1 shape — their guards
+# (_kora_steering_denied, the executor-token check in ingest_kora_scan)
+# run INSIDE the handler, while FastAPI buffers the body and pydantic
+# parses it BEFORE any handler code: an unauthenticated ingress leg could
+# burn CPU/memory pre-auth on exactly the surfaces that added the new
+# body-bearing routes. Two new families under the same gate:
+# - the steering trio (POST /api/kora/sessions, POST /api/kora/sessions/
+#   {id}/messages, POST /api/kora/steering/step-up) -> 128 KiB: the
+#   largest legal body is the 32,000-char prompt (KoraSessionCreate /
+#   KoraMessageCreate) = 125 KiB at 4 bytes per char + the JSON envelope;
+#   the step-up PIN (<=64 chars) rides the same family cap. Exact paths
+#   for the fixed routes, the prefix+suffix form only for the dynamic
+#   {session_id} segment (the discovery precedent — never a bare suffix
+#   match). POST /api/kora/hermes/chat is deliberately NOT here: it is a
+#   different body class (20 turns x 8,000 chars) and needs its own cap
+#   decision, not a borrowed one.
+# - kora-scan (POST /api/executors/{id}/kora-scan) -> 6 MiB: sized to the
+#   realistic legal envelope (~4 MB: 2,000 sessions x ~2 KB, the
+#   2,000-char preview dominating) + ~50% headroom. A pathological
+#   every-field-maxed or all-multibyte envelope (up to ~8 MB by the
+#   letter of KoraSessionIn) exceeds the cap and is REFUSED by design —
+#   no real scanner emits that shape (fields derive from real harness
+#   stores); hitting the cap is the signal to re-size, not a bug.
+#   Chunked (no Content-Length) rides the post-parse caps, as above.
+_STEERING_BODY_MAX_BYTES = 131_072      # 128 KiB pre-parse Content-Length cap
+_KORA_SCAN_BODY_MAX_BYTES = 6_291_456   # 6 MiB pre-parse Content-Length cap
+
+
+@app.middleware("http")
+async def telemetry_body_cap(request: Request, call_next):
+    """C1 pre-parse gate (CWE-400) — the telemetry precedent, extended to
+    the discovery ingest (SEC-3, cascade 2026-10-28) and to the Kora
+    steering trio + kora-scan ingest (SEC-W5-1, cascade 2026-10-29):
+    refuse an oversized DECLARED body BEFORE the body is read — header
+    only, no body buffering, no parsing; every other route passes
+    through untouched."""
+    if request.method == "POST":
+        path = request.url.path
+        # One family -> one cap (sizing rationale at the constants):
+        # exact paths wherever the route is fixed; the prefix+suffix form
+        # ONLY where a dynamic path segment forces it (the executor id,
+        # the session handle) — the discovery precedent.
+        if path == "/api/events/ui":
+            cap = _TELEMETRY_BODY_MAX_BYTES
+        elif (path.startswith("/api/executors/")
+                and path.endswith("/discovery")):
+            cap = _DISCOVERY_BODY_MAX_BYTES
+        elif (path.startswith("/api/executors/")
+                and path.endswith("/kora-scan")):
+            cap = _KORA_SCAN_BODY_MAX_BYTES
+        elif (path == "/api/kora/sessions"
+                or path == "/api/kora/steering/step-up"
+                or (path.startswith("/api/kora/sessions/")
+                    and path.endswith("/messages"))):
+            cap = _STEERING_BODY_MAX_BYTES
+        else:
+            cap = None
+        if cap is not None:
+            declared = request.headers.get("Content-Length", "")
+            # Hardened parse (cascade W6 QA P3): str.isdigit() accepts
+            # arbitrarily long digit strings, but int() caps at 4300 digits
+            # (CPython 3.11+ str→int limit) — a 5000-digit Content-Length
+            # used to escape the gate as a ValueError → 500 from the gate
+            # itself. Any declaration wider than int64's 19 decimal digits
+            # is astronomically over every family cap (the largest is 6 MiB
+            # — 7 digits), so it refuses 413 by LENGTH without ever
+            # building the int; ≤19-digit values keep the honest numeric
+            # compare. The log never echoes the giant header back (a
+            # 5000-digit declaration would be 5 KB of log noise per hit).
+            if (declared.isdigit()
+                    and (len(declared) > 19 or int(declared) > cap)):
+                logging.getLogger("vesmaro.telemetry").warning(
+                    "ingest body over pre-parse cap path=%s declared=%s",
+                    path,
+                    declared if len(declared) <= 19
+                    else f"<{len(declared)}-digit declaration>")
+                return JSONResponse(
+                    status_code=413,
+                    content={"detail": "request body exceeds "
+                                       f"{cap} bytes "
+                                       "(pre-parse Content-Length cap)"})
+    return await call_next(request)
+
+
+
 
 # --------------------------------------------------- security headers (Ф0a)
 # АРХКОМ-3 decision 13 / security verdict §5.2: on EVERY response — CSP,
@@ -11655,100 +11773,6 @@ _TELEMETRY_RATE_WINDOW = 60.0      # ... per sliding window (seconds)
 _TELEMETRY_BATCH_MAX = 50          # events per request (taxonomy §3.1)
 _telemetry_limiter = RateLimiter(
     limit=_TELEMETRY_RATE_LIMIT, window=_TELEMETRY_RATE_WINDOW)
-
-# Cascade C1 (1.52.0 release security audit, P2 / CWE-400): the ingest's
-# 403/413/429 verdicts all fired only AFTER Starlette had buffered the
-# whole body and pydantic had parsed every element — an unauthenticated
-# leg could POST hundreds of MB of VALID events and burn CPU/memory
-# before the first refusal. A pydantic max_length (or a route dependency)
-# cannot close that: FastAPI reads ``request.body()`` before any handler
-# or dependency code runs. The cap below is a PRE-PARSE gate — a
-# middleware reading Content-Length from the ASGI scope (never the body)
-# and answering 413 before routing, so not a single body byte is read.
-# 1 MiB is ~100x the largest legal batch (50 events x ~200 B); scoped to
-# this one route on purpose — a global body cap would change every other
-# endpoint's contract in one move (a separate owner-level decision). A
-# body WITHOUT Content-Length (chunked) rides the post-parse batch 413
-# below: the 60/60s limiter bounds such legs' frequency and the LAN
-# ingress is the trust boundary (residual risk accepted for v0).
-_TELEMETRY_BODY_MAX_BYTES = 1_048_576   # 1 MiB pre-parse Content-Length cap
-# SEC-3 (cascade 2026-10-28): the discovery ingest gets the same pre-parse
-# gate — an executor-token leg could otherwise buffer/parse hundreds of MB
-# of JSON before the honest-422 caps could answer. 256 KiB is ~15x the
-# largest legal models object (16 KiB) + the mcp leg + the inventory legs,
-# with an order of magnitude of headroom. Chunked (no Content-Length)
-# rides the post-parse caps, as for telemetry (residual risk accepted).
-_DISCOVERY_BODY_MAX_BYTES = 262_144     # 256 KiB pre-parse Content-Length cap
-# SEC-W5-1 (cascade control wave 5, 2026-10-29): the Kora steering POSTs
-# and the kora-scan ingest have the same C1 shape — their guards
-# (_kora_steering_denied, the executor-token check in ingest_kora_scan)
-# run INSIDE the handler, while FastAPI buffers the body and pydantic
-# parses it BEFORE any handler code: an unauthenticated ingress leg could
-# burn CPU/memory pre-auth on exactly the surfaces that added the new
-# body-bearing routes. Two new families under the same gate:
-# - the steering trio (POST /api/kora/sessions, POST /api/kora/sessions/
-#   {id}/messages, POST /api/kora/steering/step-up) -> 128 KiB: the
-#   largest legal body is the 32,000-char prompt (KoraSessionCreate /
-#   KoraMessageCreate) = 125 KiB at 4 bytes per char + the JSON envelope;
-#   the step-up PIN (<=64 chars) rides the same family cap. Exact paths
-#   for the fixed routes, the prefix+suffix form only for the dynamic
-#   {session_id} segment (the discovery precedent — never a bare suffix
-#   match). POST /api/kora/hermes/chat is deliberately NOT here: it is a
-#   different body class (20 turns x 8,000 chars) and needs its own cap
-#   decision, not a borrowed one.
-# - kora-scan (POST /api/executors/{id}/kora-scan) -> 6 MiB: sized to the
-#   realistic legal envelope (~4 MB: 2,000 sessions x ~2 KB, the
-#   2,000-char preview dominating) + ~50% headroom. A pathological
-#   every-field-maxed or all-multibyte envelope (up to ~8 MB by the
-#   letter of KoraSessionIn) exceeds the cap and is REFUSED by design —
-#   no real scanner emits that shape (fields derive from real harness
-#   stores); hitting the cap is the signal to re-size, not a bug.
-#   Chunked (no Content-Length) rides the post-parse caps, as above.
-_STEERING_BODY_MAX_BYTES = 131_072      # 128 KiB pre-parse Content-Length cap
-_KORA_SCAN_BODY_MAX_BYTES = 6_291_456   # 6 MiB pre-parse Content-Length cap
-
-
-@app.middleware("http")
-async def telemetry_body_cap(request: Request, call_next):
-    """C1 pre-parse gate (CWE-400) — the telemetry precedent, extended to
-    the discovery ingest (SEC-3, cascade 2026-10-28) and to the Kora
-    steering trio + kora-scan ingest (SEC-W5-1, cascade 2026-10-29):
-    refuse an oversized DECLARED body BEFORE the body is read — header
-    only, no body buffering, no parsing; every other route passes
-    through untouched."""
-    if request.method == "POST":
-        path = request.url.path
-        # One family -> one cap (sizing rationale at the constants):
-        # exact paths wherever the route is fixed; the prefix+suffix form
-        # ONLY where a dynamic path segment forces it (the executor id,
-        # the session handle) — the discovery precedent.
-        if path == "/api/events/ui":
-            cap = _TELEMETRY_BODY_MAX_BYTES
-        elif (path.startswith("/api/executors/")
-                and path.endswith("/discovery")):
-            cap = _DISCOVERY_BODY_MAX_BYTES
-        elif (path.startswith("/api/executors/")
-                and path.endswith("/kora-scan")):
-            cap = _KORA_SCAN_BODY_MAX_BYTES
-        elif (path == "/api/kora/sessions"
-                or path == "/api/kora/steering/step-up"
-                or (path.startswith("/api/kora/sessions/")
-                    and path.endswith("/messages"))):
-            cap = _STEERING_BODY_MAX_BYTES
-        else:
-            cap = None
-        if cap is not None:
-            declared = request.headers.get("Content-Length", "")
-            if declared.isdigit() and int(declared) > cap:
-                logging.getLogger("vesmaro.telemetry").warning(
-                    "ingest body over pre-parse cap path=%s declared=%s",
-                    path, declared)
-                return JSONResponse(
-                    status_code=413,
-                    content={"detail": "request body exceeds "
-                                       f"{cap} bytes "
-                                       "(pre-parse Content-Length cap)"})
-    return await call_next(request)
 
 # The frozen v0 kind registry (taxonomy §1.2) — the single dictionary the
 # ingest validates against and the tests lock. Kinds are additive by
