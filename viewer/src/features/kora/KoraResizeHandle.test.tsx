@@ -14,8 +14,11 @@ import { KoraResizeHandle } from "./KoraResizeHandle";
  * series), the honest separator aria (orientation/min/max/now/valuetext),
  * commit-on-keyup (persist per series, never per frame), the collapse
  * stickiness below the line, and dblclick reset with focus retention
- * (07l §3.4). Pointer capture is an enhancement — happy-dom has no real
- * pointer pipeline, the drag contract is covered by the callbacks.
+ * (07l §3.4). The POINTER path (cascade W2 QA P3) dispatches synthetic
+ * PointerEvents on the seam itself (the TaskBoard.cardMenu pattern) —
+ * happy-dom carries them into the React handlers; setPointerCapture rides
+ * the component's optional chaining, so no real capture pipeline is
+ * needed for the drag/commit contract.
  */
 
 const mountedRoots: Root[] = [];
@@ -77,6 +80,28 @@ async function keyUp(element: HTMLElement, keyName: string): Promise<void> {
   await act(async () => {
     element.dispatchEvent(
       new KeyboardEvent("keyup", { key: keyName, bubbles: true, cancelable: true }),
+    );
+  });
+}
+
+/** One raw pointer event on the seam (the TaskBoard.cardMenu dispatch
+ * pattern): down/move/up/cancel reach the React handlers by bubbling. */
+async function pointer(
+  element: HTMLElement,
+  type: "pointerdown" | "pointermove" | "pointerup" | "pointercancel",
+  clientX: number,
+): Promise<void> {
+  await act(async () => {
+    element.dispatchEvent(
+      new PointerEvent(type, {
+        bubbles: true,
+        cancelable: true,
+        button: 0,
+        isPrimary: true,
+        pointerId: 1,
+        clientX,
+        clientY: 100,
+      }),
     );
   });
 }
@@ -242,5 +267,76 @@ describe("KoraResizeHandle — the keyboard path (07l §3.3)", () => {
     await key(el, "+");
     expect(h.onValue).not.toHaveBeenCalled();
     expect(h.onCommit).not.toHaveBeenCalled();
+  });
+});
+
+describe("KoraResizeHandle — the pointer path (cascade W2 QA P3)", () => {
+  /** A CONTROLLED seam (the Escape-test shape): onValue actually moves the
+   * prop, so the commit's closure reads are observable — the mount range
+   * mirrors mountHandle (240–420, start 320). */
+  function mountControlled(): {
+    container: HTMLElement;
+    commits: ReturnType<typeof vi.fn>;
+  } {
+    const commits = vi.fn();
+    function Controlled(): React.ReactElement {
+      const [value, setValue] = useState(320);
+      return (
+        <I18nProvider initialLang="ru">
+          <KoraResizeHandle
+            orientation="vertical"
+            label="Ширина панели хостов и сессий"
+            tooltip="Потяните"
+            min={240}
+            max={420}
+            value={value}
+            valueText={`${value} px`}
+            onValue={setValue}
+            onCommit={(next) => commits(next)}
+            onReset={() => setValue(320)}
+          />
+        </I18nProvider>
+      );
+    }
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+    act(() => {
+      root.render(<Controlled />);
+    });
+    return { container, commits };
+  }
+
+  it("drag release (pointerup) commits the CLAMPED drag value", async () => {
+    // A 500px leftward drag on a vertical seam: the raw candidate is
+    // 320 + 500 = 820, the clamp floors it at the max — the parent shows
+    // 420, and THAT is what the commit must persist: not the unclamped
+    // 820, not the pre-drag 320 a stale closure would still hold.
+    const { container, commits } = mountControlled();
+    const el = seam(container);
+    await pointer(el, "pointerdown", 100);
+    await pointer(el, "pointermove", -400);
+    expect(el.getAttribute("aria-valuenow")).toBe("420"); // the clamped UI
+    await pointer(el, "pointerup", -400);
+    expect(commits).toHaveBeenCalledTimes(1);
+    expect(commits).toHaveBeenCalledWith(420);
+  });
+
+  it("pointercancel reverts AND commits the REVERT value in the same tick", async () => {
+    // The same-tick class the seam fix (350e138) was made for: cancel
+    // fires onValue(revert) + onCommit(revert) inside ONE event, while
+    // the parent's closure still holds the dragged 360 — a commit reading
+    // it would persist the value the UI just rejected. The revert value
+    // (the drag's start, 320) must ride the call.
+    const { container, commits } = mountControlled();
+    const el = seam(container);
+    await pointer(el, "pointerdown", 100);
+    await pointer(el, "pointermove", 60); // +40 wider → the parent shows 360
+    expect(el.getAttribute("aria-valuenow")).toBe("360");
+    await pointer(el, "pointercancel", 60);
+    expect(el.getAttribute("aria-valuenow")).toBe("320"); // reverted
+    expect(commits).toHaveBeenCalledTimes(1);
+    expect(commits).toHaveBeenCalledWith(320); // …and THAT is what persisted
   });
 });
