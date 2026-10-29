@@ -12,6 +12,8 @@ The single module server/kora/redaction.py carries the pattern pack
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from server.kora import redaction
@@ -250,3 +252,77 @@ class TestStructuredJson:
         assert out[1] == {"id": "c2"}
         assert out[0]["n"] == 2 and out[0]["x"] is None
         assert "abcdef12345678" not in out[0]["function"]["arguments"]
+
+
+class TestJsonSafeStringLeaves:
+    """Review P3 (2026-10-29): two credential patterns carry greedy
+    ``\\S+`` tails. Inside a STRING leaf whose content is itself
+    JSON-encoded (``tool_calls`` ``arguments``), ``\\S+`` eats the
+    leaf's own closing quote/comma — the masked leaf stops parsing as
+    JSON. In the redact_json context those two tails run as
+    ``[^"\\s\\]+`` (the secret ends at the leaf's quote/whitespace/
+    backslash); free-text redaction keeps the greedy tails unchanged."""
+
+    def test_review_case_encoded_leaf_stays_valid_json(self):
+        """The review's exact case: a shell-export secret mid-leaf in a
+        JSON-encoded ``arguments`` string — after masking the leaf is
+        STILL valid JSON, the secret is gone, the neighbour key
+        survives."""
+        leaf = ('{"cmd": "export AWS_SECRET_ACCESS_KEY=wJalrXUt7QbP2nMx",'
+                ' "cwd": "/srv"}')
+        out, applied = redaction.redact_json({"arguments": leaf})
+        assert applied is True
+        masked = out["arguments"]
+        assert "wJalrXUt7QbP2nMx" not in masked
+        assert "aws_secret_access_key=<redacted>" in masked
+        parsed = json.loads(masked)      # the leaf STILL parses
+        assert parsed["cwd"] == "/srv"   # neighbours survive
+        assert parsed["cmd"] == "export aws_secret_access_key=<redacted>"
+
+    def test_plain_colon_encoded_leaf_stays_valid_json(self):
+        """Same defect, plain: family — the old greedy tail swallowed
+        ``", "n": 1}`` off the leaf."""
+        leaf = '{"note": "plain:hunter2", "n": 1}'
+        out, applied = redaction.redact_json({"arguments": leaf})
+        assert applied is True
+        parsed = json.loads(out["arguments"])
+        assert parsed["note"] == "plain:<redacted>"
+        assert parsed["n"] == 1
+
+    def test_tail_stops_at_backslash_escape(self):
+        """The json_safe tail also respects a backslash escape: the
+        secret ends before ``\\"`` and the escaped quote survives
+        inside the leaf value."""
+        leaf = '{"note": "plain:abc123def456\\", end", "n": 1}'
+        out, applied = redaction.redact_json({"arguments": leaf})
+        assert applied is True
+        parsed = json.loads(out["arguments"])
+        assert "abc123def456" not in parsed["note"]
+        assert parsed["note"] == 'plain:<redacted>", end'
+        assert parsed["n"] == 1
+
+    def test_free_text_keeps_greedy_tail(self):
+        """The swap is a redact_json-context ONLY: plain redact/
+        redact_body keep the greedy ``\\S+`` tail (runs to whitespace,
+        trailing punctuation is eaten with the secret) — pinned so the
+        free-text contract never drifts."""
+        out, applied = redaction.redact_body(
+            "export aws_secret_access_key=abc123def456, done")
+        assert applied is True
+        assert "abc123def456" not in out
+        assert out == "export aws_secret_access_key=<redacted> done"
+
+    def test_pack_pair_differs_exactly_in_the_two_tails(self):
+        """Single source of truth: the json_safe pack is the free-text
+        pack with EXACTLY the two credential-tail entries swapped —
+        same length, same order, same markers, no ``\\S+`` left in the
+        swapped ones."""
+        free = redaction._PATTERNS
+        safe = redaction._JSON_SAFE_PATTERNS
+        assert len(free) == len(safe)
+        diff = [i for i, (f, s) in enumerate(zip(free, safe)) if f != s]
+        assert len(diff) == 2
+        for i in diff:
+            assert r"\S+" not in safe[i][0].pattern
+            assert safe[i][0].pattern.endswith('[^"\\s\\\\]+')
+            assert safe[i][1] == free[i][1]
