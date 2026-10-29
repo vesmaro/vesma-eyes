@@ -127,6 +127,23 @@ class TestSecurityHeaders:
         assert r.headers["Content-Security-Policy"] == CSP
         assert r.headers["Cache-Control"] == "no-store"
 
+    def test_413_body_cap_response_still_carries_headers(self, client):
+        """Cascade W6 fix (Архком-3 invariant «headers on EVERY response»):
+        the pre-parse body cap's 413 short-circuit used to bypass this
+        middleware — the cap registered LAST, so it ran OUTERMOST and its
+        answers shipped without CSP/nosniff while the control 401 leg
+        carried the full set. The cap now registers INSIDE the header
+        middleware; its 413 must carry the complete set like any other
+        answer (oversize POST over the 1 MiB telemetry cap)."""
+        r = client.post("/api/events/ui",
+                        content=b"x" * (1 * 1024 * 1024 + 1),
+                        headers={"Content-Type": "application/json"})
+        assert r.status_code == 413
+        assert r.headers["Content-Security-Policy"] == CSP
+        assert r.headers["X-Content-Type-Options"] == "nosniff"
+        assert r.headers["Referrer-Policy"] == "no-referrer"
+        assert r.headers["Cache-Control"] == "no-store"
+
     def test_sse_streams_with_headers(self, app_module):
         """SSE under the middleware: frames flush immediately (no body
         buffering — otherwise the infinite stream would deadlock), the

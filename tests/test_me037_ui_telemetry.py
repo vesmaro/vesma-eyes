@@ -710,6 +710,11 @@ class TestBodyCapC1:
         assert r.status_code == 413
         assert "detail" in r.json()
         assert "bytes" in r.json()["detail"]
+        # Cascade W6 (Архком-3): the 413 rides the FULL stack — the header
+        # middleware wraps the cap's short-circuit too.
+        assert r.headers["Content-Security-Policy"]
+        assert r.headers["X-Content-Type-Options"] == "nosniff"
+        assert r.headers["Referrer-Policy"] == "no-referrer"
 
     def test_normal_batches_are_not_affected(self, client, ui_auth):
         """The honest gate: the largest LEGAL batch (50 events, ~6 KB)
@@ -834,6 +839,12 @@ class TestBodyCapKoraSteeringScanW5:
                         headers={"Content-Type": "application/json"})
         assert r.status_code == 413
         assert "bytes" in r.json()["detail"]
+        # Cascade W6 (Архком-3): the 413 short-circuit still rides the
+        # header middleware — CSP/nosniff/no-referrer on it, like on the
+        # 401 control leg in test_max_legal_prompt_reaches_the_guard.
+        assert r.headers["Content-Security-Policy"]
+        assert r.headers["X-Content-Type-Options"] == "nosniff"
+        assert r.headers["Referrer-Policy"] == "no-referrer"
 
     def test_max_legal_prompt_reaches_the_guard(self, client):
         """The honest gate: the LARGEST legal steering body (a 32,000-char
@@ -853,6 +864,10 @@ class TestBodyCapKoraSteeringScanW5:
                         headers={"Content-Type": "application/json"})
         assert r.status_code == 413
         assert "bytes" in r.json()["detail"]
+        # Cascade W6 (Архком-3): headers on the 413 as on every answer.
+        assert r.headers["Content-Security-Policy"]
+        assert r.headers["X-Content-Type-Options"] == "nosniff"
+        assert r.headers["Referrer-Policy"] == "no-referrer"
 
     def test_kora_scan_legal_max_envelope_passes(self, client, app_module,
                                                  monkeypatch, machine_auth):
