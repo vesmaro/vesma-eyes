@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Fail-closed push-time golden gate (card git-merge-bypasses-golden-hook):
+# git merge bypasses pre-commit and post-merge cannot block the merge, so
+# THIS hook is the enforcement point — a push of an unverified golden state
+# is REFUSED. Runs the shared golden set (scripts/githooks/golden.sh)
+# unconditionally for any non-delete push: the suite is seconds, and
+# correctness at the push boundary is the one place the render gate can no
+# longer be bypassed by any flow (commit, merge, pull, cherry-pick).
+# Working-tree caveat inherited from every vitest-based hook: the gate
+# verifies the checked-out tree — exact for the normal push-from-checkout
+# flow, which is what this repo's train does.
+set -euo pipefail
+
+hook_dir="$(cd "$(dirname "$0")" && pwd -P)"
+
+# stdin: "<local_ref> <local_sha> <remote_ref> <remote_sha>" per refspec.
+# A deletion pushes no commits — the gate has nothing to verify for one.
+pushing=false
+while read -r _local_ref local_sha _remote_ref _remote_sha; do
+  case "$local_sha" in
+    '' | *[!0]*) pushing=true; break ;;  # any non-zero digit = a real push
+  esac
+done
+
+if [ "$pushing" = false ]; then
+  exit 0
+fi
+
+if ! bash "$hook_dir/golden.sh"; then
+  echo >&2 "✖ GOLDEN GATE FAILED — PUSH REFUSED (fail-closed): the golden/hostile render + token-parity gate is red in this tree."
+  echo >&2 "  Fix the tree or re-baseline the goldens deliberately (see scripts/githooks/golden.sh), then push again."
+  exit 1
+fi
+exit 0
