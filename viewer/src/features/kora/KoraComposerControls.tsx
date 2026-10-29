@@ -32,8 +32,8 @@ import {
  *   is not drawn at all (§5.3: «до линии селектор специалиста НЕ
  *   рисуется»). A choice is a LOCAL per-session annotation
  *   (vesmaro.koraSpecialist:{sessionId}) — the footer says so; it never
- *   pretends to bind the relay send (K-COMPOSER-RELAY-OFF: sending is
- *   honestly deferred until the transport line). A storage-refused write
+ *   pretends to bind the relay send (the send lives or dies by the A1
+ *   relay signal — see KoraComposer). A storage-refused write
  *   raises the honest K-PERSIST-FAIL note below the row (the store's
  *   bit; nothing pretends to persist).
  * - МОДЕЛЬ = Q3 verdict: inherited from the context harness. When the
@@ -43,9 +43,13 @@ import {
  *   no invented value). The hermes chat keeps its own real select (the
  *   per-input override where a roster exists).
  * - РЕЖИМ = confirm/yolo (ADR-0019): confirm is the resolver's real
- *   default for every session; yolo is RELAY-origin-only AND needs the
- *   transport line — today both facts hold, so yolo renders as a
- *   disabled row with the visible reason, never a toggle that lies.
+ *   default for every session; yolo is RELAY-origin-only AND needs BOTH
+ *   the transport line and the per-session opt-in wire. The transport
+ *   signal rides `relayAlive` (the A1 derivation: ∃ approved executor
+ *   with the `session-relay` capability); the opt-in WIRE is still a
+ *   future additive line — the frozen week-0 contract carries no opt-in
+ *   route — so yolo renders as a disabled row with the visible reason
+ *   for whichever gate is missing, never a toggle that lies.
  *
  * K-COMPOSER-DEAD: a dead session disables the WHOLE row (the field's
  * own visible reason — the interrupted note — sits right below).
@@ -64,6 +68,7 @@ export function KoraComposerControls({
   session,
   harnessOptions = [],
   resolvedModel = null,
+  relayAlive = false,
 }: {
   session: KoraSession;
   /** Derivations over the LOADED registry (the workspace owns the
@@ -75,6 +80,11 @@ export function KoraComposerControls({
    * the honest «модели не сообщаются» slot (no contradiction between
    * surfaces); null keeps the read-only honest wording. */
   resolvedModel?: string | null;
+  /** A1 — the relay signal (the workspace's derivation over the loaded
+   * executors registry: ∃ approved, enabled executor with the
+   * `session-relay` capability). Default false = the honest relay-off
+   * (K-COMPOSER-RELAY-OFF). */
+  relayAlive?: boolean;
 }) {
   const t = useT();
   const dead = session.state === "dead";
@@ -123,12 +133,13 @@ export function KoraComposerControls({
   const annotation = useKoraSpecialistAnnotation(session.id);
 
   // The mode facts (ADR-0019 resolver): confirm is the default for every
-  // session; yolo needs BOTH relay origin AND the transport line. The
-  // срез 3 steering perimeter IS built and in prod — what is unbuilt is
-  // the executor-side unit (vesmaro-session-relay.service) + its FE
-  // wiring, which is what keeps the transport line off here.
+  // session; yolo needs the relay origin AND the transport line. The A1
+  // leg replaces the hardcoded relay-off with the DERIVED signal — the
+  // transport unit lives or dies by the executors registry, so the
+  // reason names whichever gate is actually missing (origin / transport
+  // / the opt-in wire that no frozen route carries yet).
   const yoloLocalOnly = session.origin !== "relay";
-  const relayOff = true; // the executor relay unit is unbuilt (срез 3 is in prod)
+  const relayOff = !relayAlive;
 
   return (
     <div
@@ -301,7 +312,7 @@ export function KoraComposerControls({
             ? t("kora.controls.yoloLocalReason")
             : relayOff
               ? t("kora.controls.yoloRelayOffReason")
-              : null}
+              : t("kora.controls.yoloOptInReason")}
         </p>
       </SelectorButton>
       {/* K-PERSIST-FAIL (the В1 bit): a refused annotation write is
