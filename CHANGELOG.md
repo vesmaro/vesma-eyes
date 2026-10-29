@@ -10,6 +10,10 @@ workflow — this file is the repo-side trail).
 
 ## [Unreleased]
 
+### Added
+
+- **KORA-РЕЛЕ: ТРАНСПОРТ-ИСПОЛНИТЕЛЬ — КНОПКА ОТПРАВКИ ОЖИВАЕТ (ADR 0019 rev.2 #3, линия A1).** Борт-сторона: исходящий хэндофф `server/kora/relay_transport.py` (парковка доставки для исполнителей с capability `session-relay`, честные TTL-свипы «не забрал / не отчиталось» → failed retryable) + роуты `POST /api/executors/{id}/kora-relay/pickup` и `/confirm` (executor-token ONLY — промпты это ui-класс контента, machine-токен у детей-агентов; identity-bound, approved-only; пре-парс кап 16 KiB; presence-piggyback). Исполнитель: `scripts/kora/relay_unit.py` (`vesmaro-session-relay`, семья assignment-поллера: poll → inject → confirm; flock-синглтон, audit jsonl hash+длина, SIGTERM-drain). Инъекция по закрытому факт-чеку недели 0: zcode 0.17.0 `--resume <id> --prompt=-` читает промпт из STDIN (argv-запрет ADR соблюдён, тайминг-проба), `--mode` маппится конфигом (confirm→build, yolo→yolo); delivered = харнесс принял ход (не конец хода); per-session writer-mutex; «сессия занята» → failed retryable. deploy/relay/: systemd user unit + distrobox-лаунчер + zcode-stdin-обёртка + README. 36 новых тестов (outbox, роуты, e2e-гейт «очередь→шов→pickup→инъекция→delivered», dead-сессия → failed non-retryable, argv-гигиена, writer-mutex, confirm-retries).
+
 ## [1.97.1] — 2026-10-30
 
 ### Fixed

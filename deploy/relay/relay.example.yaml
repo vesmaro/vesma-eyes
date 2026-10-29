@@ -1,0 +1,40 @@
+# vesmaro-session-relay — example config (ADR 0019 rev.2 #3, line A1).
+# Install target: ~/.config/vesma-eyes/relay.yaml (0600).
+# The executor token is NOT here: $VESMARO_EXECUTOR_TOKEN in the
+# environment (relay.env sourced by the unit), never in a file.
+board_url: https://board.local
+# The executor registry id this unit acts as (the pickup/confirm paths
+# bind to the token identity — a mismatch is a 403).
+executor_id: ex-example-laptop
+
+# Poll cadence (the poller family numbers; pickup doubles as the
+# executor presence tick).
+poll_interval: 5.0
+poll_jitter: 1.5
+batch_limit: 8
+
+# «Delivered» classification window: a harness child alive past this
+# many seconds means the turn is in flight (delivered, honest).
+injection_grace: 10.0
+# Bound on waiting for the per-session writer mutex (the previous turn
+# still running): past it the delivery confirms failed/retryable
+# «сессия занята» instead of stalling the queue.
+lock_wait: 120.0
+
+# Lab CA for self-signed board TLS (poller parity). Empty = system CAs.
+ca_bundle: ""
+
+driver:
+  harness: zcode-stdin
+  # The wrapper supplies the minimal-env provider config; the unit
+  # appends --cwd/--resume/--prompt=-/--json/--mode (prompt on STDIN,
+  # never argv). First token is ~-expanded.
+  command:
+    - ~/.local/bin/zcode-stdin-headless.sh
+  # Headless permission mapping (config-visible on purpose):
+  # confirm (the board default) runs the turn under the permissioned
+  # mode; yolo — only for sessions explicitly opted in (relay-origin,
+  # audited) — passes --mode yolo.
+  mode_map:
+    confirm: build
+    yolo: yolo

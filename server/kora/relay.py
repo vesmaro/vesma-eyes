@@ -366,6 +366,36 @@ def _settle(item: DeliveryItem) -> None:
         _items.pop(drop_id, None)
 
 
+def resolve_transport_result(delivery_id: str, *, status: str,
+                             error: str | None,
+                             retryable: bool = True) -> bool:
+    """The transport seam's ASYNC half: the executor-side relay unit
+    (vesmaro-session-relay.service) reports its verdict for a handoff
+    that left this board as ``queued`` (server/kora/relay_transport.py
+    pickup/confirm). Settles a still-pending item through the SAME
+    honest state machine as a synchronous transport result: delivered
+    stamps ``delivered_at``; failed carries the retryable flag + the
+    human reason (no content — the executor confirms typed reasons).
+    Returns False for unknown or already-settled deliveries (a board
+    restart orphans the unit's confirm — in-memory design, not a fault).
+    A malformed status raises ValueError (caller contract bug)."""
+    if status not in (STATUS_DELIVERED, STATUS_FAILED):
+        raise ValueError(f"invalid transport resolution status: {status!r}")
+    with _queue_lock:
+        item = _items.get(delivery_id)
+        if item is None or item.status != STATUS_QUEUED:
+            return False
+        item.status = status
+        if status == STATUS_DELIVERED:
+            item.delivered_at = _iso(_now())
+            item.error = None
+        else:
+            item.error = error
+            item.retryable = bool(retryable)
+        _settle(item)
+    return True
+
+
 def delivery_view(item: DeliveryItem) -> dict[str, Any]:
     """The frozen KoraDeliveryOut payload — the ONLY projection of a
     queue item: statuses and the honest error line, never the text."""
