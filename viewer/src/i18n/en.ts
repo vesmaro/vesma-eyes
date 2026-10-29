@@ -2653,6 +2653,25 @@ export const en: Record<TranslationKey, string> = {
   "kora.composer.sendLaterChip": "Sending will arrive later",
   "kora.composer.sendLaterNote":
     "Sending messages to the agent will arrive later — for now Kora shows how sessions run. The draft is kept on this machine and survives a page reload.",
+  // Relay send (the A1 FE leg): the verdict is the REAL KoraDelivery from
+  // the 202 body; the board has no live status updates (no queue GET, no
+  // events) — the queued line names that honestly in itself.
+  "kora.composer.relayNote":
+    "Sending over the relay: the turn joins the executor's queue, the verdict appears under the field",
+  "kora.composer.readOnlyNote":
+    "Someone else's session — read-only; relay sessions accept writing",
+  "kora.composer.sending": "Sending…",
+  "kora.composer.delivered": "Delivered to the agent",
+  "kora.composer.queued":
+    "In the relay queue — the executor will pick the turn up; there are no live status updates, the verdict refreshes on the next action",
+  "kora.composer.failedRetryable": "Not delivered — try again",
+  "kora.composer.failed": "Not delivered",
+  "kora.composer.retry": "Retry",
+  "kora.composer.stepUpRequired":
+    "Sending is gated by the step-up ritual: enable steering with the PIN ritual on the board — the relay opens for about 15 minutes",
+  "kora.composer.sendUnauthorized":
+    "The owner session has expired — sign in again and retry the send",
+  "kora.composer.sendError": "Did not send: {{reason}}",
   // Draft persistence (U5, the vesmaro.koraDraft:{sessionId} key): honest
   // indication — «saved» only after a real write, a failure is named.
   "kora.composer.draftSaved": "Draft saved",
@@ -2682,6 +2701,8 @@ export const en: Record<TranslationKey, string> = {
     "yolo is for relay-origin sessions only; this session is local",
   "kora.controls.yoloRelayOffReason":
     "yolo opens once the relay transport is connected (the vesmaro-session-relay executor)",
+  "kora.controls.yoloOptInReason":
+    "yolo is an explicit per-session opt-in — the toggle line is not built yet, turns go out in confirm",
   "kora.composer.finishedNote":
     "The session is finished — there is no one to write to; start a new one on the host",
   "kora.composer.interruptedNote":

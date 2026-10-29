@@ -4,30 +4,38 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type {
   KoraIntentAbandonedPayload,
+  KoraIntentCompletedPayload,
   KoraIntentEntryPoint,
   KoraIntentEventPoints,
 } from "./koraIntentEvents";
 import { KoraComposer } from "./KoraComposer";
-import type { KoraGateway } from "./koraGateway";
+import { KoraError, type KoraGateway } from "./koraGateway";
 import { KoraGatewayContext } from "./koraGatewayContext";
-import type { KoraSession } from "./koraTypes";
+import type { KoraMessageAccepted, KoraSession } from "./koraTypes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { I18nProvider } from "@/i18n";
-import { actUnmount } from "@/test/actTools";
+import { actFlush, actUnmount } from "@/test/actTools";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 /**
  * The composer state machine (07j §4.6, И1 honest cut): the field and the
- * machine are REAL — typing, Enter/Shift+Enter, the draft in page memory —
- * while the send is honestly deferred. The contract under test:
- * - the send button renders ONLY for a non-empty draft and is DISABLED
- *   with a visible chip + service line (never a tooltip-only reason);
- * - Enter on a non-empty draft ANNOUNCES the deferred status (the action
- *   never stays silent), Shift+Enter inserts a newline;
- * - NO fake delivery: «в очереди»/«доставлено» never render (07a §1);
+ * machine are REAL — typing, Enter/Shift+Enter, the draft in page memory.
+ * The contract under test:
+ * - WITHOUT the relay signal the send button renders ONLY for a non-empty
+ *   draft and is DISABLED with a visible chip + service line (never a
+ *   tooltip-only reason); Enter ANNOUNCES the deferred status politely;
+ * - NO fake delivery: «в очереди»/«доставлено» never render without a
+ *   REAL server verdict (07a §1);
  * - a dead session disables the FIELD itself with the interrupted note;
  * - the intent call points fire started/abandoned (ME-035 taxonomy seam).
+ *
+ * A1 (the relay leg): with `relayAlive` (the honest executors-registry
+ * derivation) + a steerable session the button LIVES — the POST goes out
+ * and the REAL KoraDelivery verdict from the 202 body renders (queued /
+ * delivered / failed-retryable «повторите» = a NEW POST; a refusal names
+ * itself — the step-up plate, the server's reason). Accepted verdicts
+ * clear the draft; failures keep it (the retry resends the same text).
  *
  * В2: the composer carries the selector row (KoraComposerControls) — its
  * own behaviors live in KoraComposerControls.test.tsx; here the mount
@@ -51,6 +59,27 @@ function emptyRosterGateway(): KoraGateway {
   } as unknown as KoraGateway;
 }
 
+/** A roster stub + the send implementation under test (A1). */
+function sendGateway(
+  impl: (sessionId: string, text: string) => Promise<KoraMessageAccepted>,
+): KoraGateway {
+  return {
+    ...emptyRosterGateway(),
+    sendMessage: impl,
+  } as unknown as KoraGateway;
+}
+
+function accepted(
+  delivery: KoraMessageAccepted["delivery"],
+): KoraMessageAccepted {
+  return {
+    ok: true,
+    session_id: "exec-zc:live",
+    delivery,
+    confirm_required: true,
+  };
+}
+
 function session(state: KoraSession["state"]): KoraSession {
   return {
     id: `exec-zc:${state}`,
@@ -72,20 +101,25 @@ function session(state: KoraSession["state"]): KoraSession {
 function spyIntentEvents(): KoraIntentEventPoints & {
   started: ReturnType<typeof vi.fn>;
   abandoned: ReturnType<typeof vi.fn>;
+  completed: ReturnType<typeof vi.fn>;
 } {
   const started = vi.fn();
   const abandoned = vi.fn();
+  const completed = vi.fn();
   return {
     started,
     abandoned,
+    completed,
     intentStarted: (entryPoint: KoraIntentEntryPoint) => started(entryPoint),
     intentAbandoned: (payload: KoraIntentAbandonedPayload) => abandoned(payload),
+    intentCompleted: (payload: KoraIntentCompletedPayload) => completed(payload),
   };
 }
 
 function mountComposer(
   sessionState: KoraSession["state"],
   events: KoraIntentEventPoints,
+  opts: { relayAlive?: boolean; gateway?: KoraGateway; session?: KoraSession } = {},
 ): { container: HTMLElement; root: Root } {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -98,8 +132,14 @@ function mountComposer(
     root.render(
       <I18nProvider initialLang="ru">
         <QueryClientProvider client={queryClient}>
-          <KoraGatewayContext.Provider value={emptyRosterGateway()}>
-            <KoraComposer session={session(sessionState)} intentEvents={events} />
+          <KoraGatewayContext.Provider
+            value={opts.gateway ?? emptyRosterGateway()}
+          >
+            <KoraComposer
+              session={opts.session ?? session(sessionState)}
+              intentEvents={events}
+              relayAlive={opts.relayAlive}
+            />
           </KoraGatewayContext.Provider>
         </QueryClientProvider>
       </I18nProvider>,
@@ -337,5 +377,344 @@ describe("KoraComposer draft persistence (U5, vesmaro.koraDraft:{sessionId})", (
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+/** The deferred-answer handle for the A1 send tests: the stub gateway
+ * holds the POST until the test resolves the REAL 202 body it wants. */
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+describe("KoraComposer relay send (A1 FE leg — the live button + the REAL verdict)", () => {
+  it("relay-off (no signal): the button stays DISABLED with the deferred chip — no invented send", () => {
+    const events = spyIntentEvents();
+    const gateway = sendGateway(() => {
+      throw new Error("send must not fire without the relay signal");
+    });
+    const { container } = mountComposer("live", events, { gateway });
+    act(() => {
+      typeInto(input(container), "доделай кейс");
+    });
+    const send = [...container.querySelectorAll("button")].find((button) =>
+      button.textContent?.includes("Отправить"),
+    );
+    expect(send?.disabled).toBe(true);
+    expect(container.textContent).toContain("Отправка появится позже");
+    // The honest relay-off service line (the derivation said no).
+    expect(container.textContent).toContain(
+      "Отправка сообщений агенту появится позже",
+    );
+  });
+
+  it("relay-alive steerable session: the button LIVES, the POST rides the draft, the QUEUED verdict renders verbatim", async () => {
+    const events = spyIntentEvents();
+    const gate = deferred<KoraMessageAccepted>();
+    const send = vi.fn(() => gate.promise);
+    const { container } = mountComposer("live", events, {
+      relayAlive: true,
+      gateway: sendGateway(send),
+    });
+    act(() => {
+      typeInto(input(container), "доделай кейс");
+    });
+    const button = [...container.querySelectorAll("button")].find((b) =>
+      b.textContent?.includes("Отправить"),
+    );
+    expect(button?.disabled).toBe(false);
+    // No deferred chip on a live send path.
+    expect(container.textContent).not.toContain("Отправка появится позже");
+    // The honest relay service line replaced the deferred one.
+    expect(container.textContent).toContain("Отправка через реле");
+
+    await act(async () => {
+      button?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(send).toHaveBeenCalledWith("exec-zc:live", "доделай кейс");
+    // In flight: the polite sending status, the button paused.
+    expect(container.textContent).toContain("Отправляем…");
+
+    await act(async () => {
+      gate.resolve(
+        accepted({
+          status: "queued",
+          queued_at: "2026-10-29T12:00:00+00:00",
+          delivered_at: null,
+          retryable: true,
+          error: null,
+        }),
+      );
+    });
+    // Suite canon (actTools): TanStack mutation settlements land on
+    // LATER tasks — flush inside act before asserting the verdict.
+    await actFlush();
+    // The REAL verdict (07a §1 allows the server's own words).
+    const verdict = container.querySelector('[data-testid="kora-delivery-verdict"]');
+    expect(verdict?.textContent).toContain("В очереди реле");
+    // The honest real-time limit is NAMED in the line itself.
+    expect(verdict?.textContent).toContain("живых обновлений статуса нет");
+    // An ACCEPTED verdict clears the draft (the text left for the queue).
+    expect(input(container).value).toBe("");
+    expect(localStorage.getItem("vesmaro.koraDraft:exec-zc:live")).toBeNull();
+    // И4 completion point fired with the REAL delivery status.
+    expect(events.completed).toHaveBeenCalledTimes(1);
+    expect(events.completed).toHaveBeenCalledWith({ deliveryStatus: "queued" });
+  });
+
+  it("DELIVERED verdict renders and fires the completion point", async () => {
+    const events = spyIntentEvents();
+    const gate = deferred<KoraMessageAccepted>();
+    const { container } = mountComposer("live", events, {
+      relayAlive: true,
+      gateway: sendGateway(() => gate.promise),
+    });
+    act(() => {
+      typeInto(input(container), "статусный отчёт");
+    });
+    await act(async () => {
+      [...container.querySelectorAll("button")]
+        .find((b) => b.textContent?.includes("Отправить"))
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {
+      gate.resolve(
+        accepted({
+          status: "delivered",
+          queued_at: "2026-10-29T12:00:00+00:00",
+          delivered_at: "2026-10-29T12:00:05+00:00",
+          retryable: false,
+          error: null,
+        }),
+      );
+    });
+    // Suite canon (actTools): TanStack mutation settlements land on
+    // LATER tasks — flush inside act before asserting the verdict.
+    await actFlush();
+    expect(
+      container.querySelector('[data-testid="kora-delivery-verdict"]')
+        ?.textContent,
+    ).toContain("Доставлено агенту");
+    expect(events.completed).toHaveBeenCalledWith({
+      deliveryStatus: "delivered",
+    });
+    expect(input(container).value).toBe("");
+  });
+
+  it("FAILED retryable: «не доставлено — повторите» + the retry is a NEW POST with the KEPT draft", async () => {
+    const events = spyIntentEvents();
+    const gates = [deferred<KoraMessageAccepted>(), deferred<KoraMessageAccepted>()];
+    let call = 0;
+    const send = vi.fn(() => {
+      call += 1;
+      return (call === 1 ? gates[0] : gates[1]).promise;
+    });
+    const { container } = mountComposer("live", events, {
+      relayAlive: true,
+      gateway: sendGateway(send),
+    });
+    act(() => {
+      typeInto(input(container), "доделай кейс");
+    });
+    await act(async () => {
+      [...container.querySelectorAll("button")]
+        .find((b) => b.textContent?.includes("Отправить"))
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {
+      gates[0].resolve(
+        accepted({
+          status: "failed",
+          queued_at: "2026-10-29T12:00:00+00:00",
+          delivered_at: null,
+          retryable: true,
+          error: "исполнитель не забрал ход",
+        }),
+      );
+    });
+    // Suite canon (actTools): TanStack mutation settlements land on
+    // LATER tasks — flush inside act before asserting the verdict.
+    await actFlush();
+    const verdict = container.querySelector('[data-testid="kora-delivery-verdict"]');
+    expect(verdict?.textContent).toContain("Не доставлено — повторите");
+    // The server's human reason rides alongside (honest diagnostics).
+    expect(verdict?.textContent).toContain("исполнитель не забрал ход");
+    // A FAILED verdict KEEPS the draft — the retry resends the same text.
+    expect(input(container).value).toBe("доделай кейс");
+    expect(events.completed).toHaveBeenCalledWith({ deliveryStatus: "failed" });
+
+    // The retry = a NEW POST (not a client-side pretend).
+    await act(async () => {
+      container
+        .querySelector<HTMLButtonElement>('[data-testid="kora-delivery-retry"]')
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(send).toHaveBeenLastCalledWith("exec-zc:live", "доделай кейс");
+    await act(async () => {
+      gates[1].resolve(
+        accepted({
+          status: "delivered",
+          queued_at: "2026-10-29T12:01:00+00:00",
+          delivered_at: "2026-10-29T12:01:02+00:00",
+          retryable: false,
+          error: null,
+        }),
+      );
+    });
+    // Suite canon (actTools): TanStack mutation settlements land on
+    // LATER tasks — flush inside act before asserting the verdict.
+    await actFlush();
+    expect(
+      container.querySelector('[data-testid="kora-delivery-verdict"]')
+        ?.textContent,
+    ).toContain("Доставлено агенту");
+  });
+
+  it("FAILED non-retryable (the dead-session race): the refusal renders, NO retry control", async () => {
+    const events = spyIntentEvents();
+    const gate = deferred<KoraMessageAccepted>();
+    const { container } = mountComposer("live", events, {
+      relayAlive: true,
+      gateway: sendGateway(() => gate.promise),
+    });
+    act(() => {
+      typeInto(input(container), "поздний ход");
+    });
+    await act(async () => {
+      [...container.querySelectorAll("button")]
+        .find((b) => b.textContent?.includes("Отправить"))
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {
+      gate.resolve(
+        accepted({
+          status: "failed",
+          queued_at: "2026-10-29T12:00:00+00:00",
+          delivered_at: null,
+          retryable: false,
+          error: "сессия прервана",
+        }),
+      );
+    });
+    // Suite canon (actTools): TanStack mutation settlements land on
+    // LATER tasks — flush inside act before asserting the verdict.
+    await actFlush();
+    const verdict = container.querySelector('[data-testid="kora-delivery-verdict"]');
+    expect(verdict?.textContent).toContain("Не доставлено");
+    expect(verdict?.textContent).not.toContain("повторите");
+    expect(
+      container.querySelector('[data-testid="kora-delivery-retry"]'),
+    ).toBeNull();
+  });
+
+  it("the frozen 403 step_up_required gets its own honest plate, not a raw dump", async () => {
+    const events = spyIntentEvents();
+    const { container } = mountComposer("live", events, {
+      relayAlive: true,
+      gateway: sendGateway(() =>
+        Promise.reject(
+          new KoraError(
+            "step_up_required",
+            "Руление требует подтверждения step-up",
+          ),
+        ),
+      ),
+    });
+    act(() => {
+      typeInto(input(container), "без пина");
+    });
+    await act(async () => {
+      [...container.querySelectorAll("button")]
+        .find((b) => b.textContent?.includes("Отправить"))
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    const plate = container.querySelector('[data-testid="kora-send-step-up"]');
+    expect(plate?.textContent).toContain("step-up-ритуалом");
+    expect(plate?.getAttribute("role")).toBe("alert");
+    // The draft survives a refusal — the retry after the PIN ritual
+    // resends the same text.
+    expect(input(container).value).toBe("без пина");
+    expect(events.completed).not.toHaveBeenCalled();
+  });
+
+  it("a non-steerable session stays read-only even with the relay alive", () => {
+    const events = spyIntentEvents();
+    const gateway = sendGateway(() => {
+      throw new Error("send must not fire for a non-steerable session");
+    });
+    const { container } = mountComposer("live", events, {
+      relayAlive: true,
+      gateway,
+      session: {
+        ...session("live"),
+        origin: "local",
+        steerable: false,
+      },
+    });
+    act(() => {
+      typeInto(input(container), "чужая сессия");
+    });
+    const sendButton = [...container.querySelectorAll("button")].find((b) =>
+      b.textContent?.includes("Отправить"),
+    );
+    expect(sendButton?.disabled).toBe(true);
+    expect(container.textContent).toContain("Чужая сессия — только чтение");
+  });
+
+  it("a dead session keeps the whole composer dark even with the relay alive", () => {
+    const { container } = mountComposer("dead", spyIntentEvents(), {
+      relayAlive: true,
+    });
+    expect(input(container).disabled).toBe(true);
+    // No send button node at all for a dead session (hasDraft && !dead).
+    expect(container.innerHTML).not.toContain(">Отправить<");
+    expect(container.textContent).toContain(
+      "Сессия прервана — агент здесь уже не слушает",
+    );
+  });
+
+  it("Enter SENDS when the relay path is live (the same action as the button)", async () => {
+    const events = spyIntentEvents();
+    const gate = deferred<KoraMessageAccepted>();
+    const send = vi.fn(() => gate.promise);
+    const { container } = mountComposer("live", events, {
+      relayAlive: true,
+      gateway: sendGateway(send),
+    });
+    const field = input(container);
+    act(() => {
+      typeInto(field, "ход по Enter");
+    });
+    await act(async () => {
+      field.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }),
+      );
+    });
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenCalledWith("exec-zc:live", "ход по Enter");
+    await act(async () => {
+      gate.resolve(
+        accepted({
+          status: "delivered",
+          queued_at: "2026-10-29T12:00:00+00:00",
+          delivered_at: "2026-10-29T12:00:01+00:00",
+          retryable: false,
+          error: null,
+        }),
+      );
+    });
+    // Suite canon (actTools): TanStack mutation settlements land on
+    // LATER tasks — flush inside act before asserting the verdict.
+    await actFlush();
+    expect(
+      container.querySelector('[data-testid="kora-delivery-verdict"]')
+        ?.textContent,
+    ).toContain("Доставлено агенту");
   });
 });

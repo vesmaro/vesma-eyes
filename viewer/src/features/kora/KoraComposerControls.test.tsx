@@ -25,9 +25,11 @@ import { actUnmount } from "@/test/actTools";
  * - модель = read-only honest «модели не сообщаются» (Q3; no invented
  *   value for local sessions);
  * - режим = the resolver's real confirm default; yolo is a DISABLED row
- *   with the visible reason (relay-origin + transport — neither exists);
+ *   whose visible reason names whichever gate is missing (relay-origin,
+ *   the derived transport signal, or the opt-in wire);
  * - a dead session disables the whole row (K-COMPOSER-DEAD);
- * - K-COMPOSER-RELAY-OFF: nothing here pretends to send.
+ * - K-COMPOSER-RELAY-OFF: the default (no relay signal) — nothing here
+ *   pretends to send.
  */
 
 const mountedRoots: Root[] = [];
@@ -84,6 +86,7 @@ function mount(
     { harness: "zcode", count: 3 },
   ],
   resolvedModel: string | null = null,
+  relayAlive = false,
 ): { container: HTMLElement; root: Root } {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -101,6 +104,7 @@ function mount(
               session={sessionRow}
               harnessOptions={harnessOptions}
               resolvedModel={resolvedModel}
+              relayAlive={relayAlive}
             />
           </KoraGatewayContext.Provider>
         </QueryClientProvider>
@@ -291,6 +295,40 @@ describe("KoraComposerControls (В2 selector row)", () => {
       .querySelector("#kora-sel-mode-menu")
       ?.querySelector('[aria-disabled="true"]');
     expect(relayYolo?.tagName.toLowerCase()).toBe("div");
+  });
+
+  it("mode menu with the relay ALIVE (A1): yolo still disabled — the reason names the missing opt-in wire, and the local-origin reason is unchanged", async () => {
+    // A relay-origin row + the derived relay signal: the transport gate
+    // has PASSED — the honest refusal now names the opt-in wire (the
+    // frozen contract carries no per-session toggle route yet).
+    const relay = mount(session({ origin: "relay" }), rosterGateway(ROSTER), undefined, null, true);
+    await act(async () => {
+      trigger(relay.container, "kora-sel-mode").dispatchEvent(
+        new MouseEvent("click", { bubbles: true }),
+      );
+    });
+    const menu = relay.container.querySelector("#kora-sel-mode-menu");
+    expect(menu?.textContent).toContain(
+      "yolo включается вручную для сессии (opt-in)",
+    );
+    // Yolo STAYS a disabled informational row — the signal never fakes a
+    // toggle the server cannot honor.
+    const yolo = menu?.querySelector('[aria-disabled="true"]');
+    expect(yolo?.textContent).toContain("yolo");
+    expect(yolo?.tagName.toLowerCase()).toBe("div");
+    await actUnmount(relay.root);
+
+    // A local-origin row with the relay alive: the origin gate still
+    // refuses first — the reason is unchanged.
+    const local = mount(session({ origin: "local" }), rosterGateway(ROSTER), undefined, null, true);
+    await act(async () => {
+      trigger(local.container, "kora-sel-mode").dispatchEvent(
+        new MouseEvent("click", { bubbles: true }),
+      );
+    });
+    expect(
+      local.container.querySelector("#kora-sel-mode-menu")?.textContent,
+    ).toContain("yolo — только для relay-сессий; эта сессия локальная");
   });
 
   it("dead session: the whole row is disabled (K-COMPOSER-DEAD ties the selectors to the field)", () => {

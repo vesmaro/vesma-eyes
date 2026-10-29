@@ -71,6 +71,7 @@ export function KoraWorkzone({
   frameEvents = NOOP_KORA_FRAME_EVENTS,
   harnessOptions = [],
   resolvedModel = null,
+  relayAlive = false,
 }: {
   session: KoraSession | null;
   registryEmpty: KoraRegistryEmpty;
@@ -90,6 +91,9 @@ export function KoraWorkzone({
    * roster's default via /status, the same value the context bar shows);
    * feeds the composer's model slot so it never contradicts the context. */
   resolvedModel?: string | null;
+  /** A1 — the relay signal (the workspace's derivation over the loaded
+   * executors registry); feeds the composer's live send button. */
+  relayAlive?: boolean;
 }) {
   const t = useT();
 
@@ -109,6 +113,7 @@ export function KoraWorkzone({
         intentEvents={intentEvents}
         harnessOptions={harnessOptions}
         resolvedModel={resolvedModel}
+        relayAlive={relayAlive}
       />
     );
   }
@@ -198,6 +203,7 @@ function SessionView({
   intentEvents,
   harnessOptions = [],
   resolvedModel = null,
+  relayAlive = false,
 }: {
   session: KoraSession;
   coverage: KoraCoverage | null | undefined;
@@ -208,6 +214,8 @@ function SessionView({
    * composer's model slot — a real value shows, null keeps the honest
    * «модели не сообщаются» wording. */
   resolvedModel?: string | null;
+  /** A1 — the relay signal: rides to the composer's live send button. */
+  relayAlive?: boolean;
 }) {
   const t = useT();
   const [follow, setFollow] = useState(true);
@@ -284,13 +292,15 @@ function SessionView({
       {/* The composer rides below the scroll, always visible for the open
        * session (07j §4.6 — never hidden behind a disclosure). В2: the
        * selector row rides inside it, fed the registry's harness facts
-       * and the workspace's real model fact. */}
+       * and the workspace's real model fact. A1: the relay signal feeds
+       * the send button. */}
       <KoraComposer
         key={session.id}
         session={session}
         intentEvents={intentEvents}
         harnessOptions={harnessOptions}
         resolvedModel={resolvedModel}
+        relayAlive={relayAlive}
       />
     </section>
   );

@@ -37,6 +37,7 @@ import {
 } from "./koraFrameEvents";
 import { useIsFrameViewport } from "./koraViewport";
 import { buildKoraTree, koraSummary, type KoraQuickFilter } from "./koraWorkspaceModel";
+import { deriveRelayAlive } from "./koraRelay";
 import type { KoraHarnessOption } from "./KoraComposerControls";
 import { useKoraSpecialistAnnotation } from "./koraSpecialistStore";
 import {
@@ -264,6 +265,16 @@ export function KoraWorkspace({
       .map(([harness, count]) => ({ harness, count }))
       .sort((a, b) => a.harness.localeCompare(b.harness));
   }, [items]);
+
+  // A1 — the relay signal: a pure derivation over the LOADED executors
+  // registry (zero new requests, same §5.4 discipline as the harness
+  // facts): ∃ approved, enabled executor with the `session-relay`
+  // capability → the composer's send button lives. A pending/failed
+  // registry read is the honest relay-off.
+  const relayAlive = useMemo(
+    () => deriveRelayAlive(executors.data?.items ?? []),
+    [executors.data],
+  );
 
   // states-kw4 §4 — the session-mode breadcrumb's host: the registry group
   // that owns the session's executor. A registry miss (unknown-host group)
@@ -663,6 +674,7 @@ export function KoraWorkspace({
                 frameEvents={frameEvents}
                 harnessOptions={harnessOptions}
                 resolvedModel={contextModel}
+                relayAlive={relayAlive}
               />
             </>
           )}
