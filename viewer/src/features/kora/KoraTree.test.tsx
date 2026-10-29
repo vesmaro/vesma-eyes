@@ -120,6 +120,19 @@ function mountTree(
   return { container, root };
 }
 
+/** The disclosure button of ONE host's branch, found by its host link
+ * (the exact href matches the host row only — agent rows carry ?agent=). */
+function hostDisclosure(
+  container: HTMLElement,
+  host: string,
+): HTMLButtonElement | null {
+  return (
+    [...container.querySelectorAll("li")]
+      .find((li) => li.querySelector(`a[href="/kora/host/${host}"]`))
+      ?.querySelector("button[aria-expanded]") ?? null
+  );
+}
+
 const setInputValue = (input: HTMLInputElement, value: string): void => {
   const setter = Object.getOwnPropertyDescriptor(
     HTMLInputElement.prototype,
@@ -172,6 +185,39 @@ describe("KoraTreePanel v2 (KW4, gate §9.4 / states-kw4 §3)", () => {
       'a[href="/kora/host/abyss-laptop?agent=exec-zcode-main"]',
     );
     expect(agentLink).not.toBeNull();
+    // JOIN-PATH (strengthened, cascade W2): even a PREFILLED closed
+    // open-set must not keep the route's host folded — the join overrides
+    // the persisted seed on a direct mount, not only on a prop change.
+    sessionStorage.setItem("vesmaro.koraTree", JSON.stringify({ open: [] }));
+    const routed = mountTree({ activeHost: "abyss-laptop" });
+    expect(
+      hostDisclosure(routed.container, "abyss-laptop")?.getAttribute("aria-expanded"),
+    ).toBe("true");
+  });
+
+  it("a DIRECT deep link (fresh tab) joins a dead host's branch on mount", () => {
+    // The cascade-W2 QA pin: /kora/host/pi-edge opened by URL in a NEW
+    // tab or a shared link — sessionStorage EMPTY, so the live-seed
+    // default cannot open pi-edge (its only session is dead). The join
+    // must fire ON MOUNT (the first render is a change from nothing ""),
+    // not only on a later activeHost prop change — else the deep link
+    // shows a closed branch: the regression the canon fix 37c27e2
+    // introduced by initializing joinedHost to activeHost.
+    sessionStorage.clear();
+    const { container } = mountTree({ activeHost: "pi-edge" });
+    const disclosure = hostDisclosure(container, "pi-edge");
+    expect(disclosure).not.toBeNull();
+    // The deep link shows its selection: the branch is open…
+    expect(disclosure?.getAttribute("aria-expanded")).toBe("true");
+    // …its agent leaf is visible without a disclosure click…
+    expect(
+      container.querySelector('a[href="/kora/host/pi-edge?agent=exec-pi-edge"]'),
+    ).not.toBeNull();
+    // …and the join persists for the rest of the browser session.
+    const stored = JSON.parse(sessionStorage.getItem("vesmaro.koraTree") ?? "{}") as {
+      open?: string[];
+    };
+    expect(stored.open).toContain("pi-edge");
   });
 
   it("every disclosure carries aria-expanded + aria-controls to a real id", () => {
