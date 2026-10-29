@@ -286,6 +286,29 @@ class TestMessagesRoute:
         # clean turns still report False
         assert body["items"][0]["redaction_applied"] is False
 
+    def test_null_reasoning_does_not_shadow_reasoning_content(
+            self, app_module, client: TestClient, fake_hermes) -> None:
+        """Review P3 fix (2026-10-29): ``dict.get(a, b)`` returns the
+        STORED value when the key exists — a hermes row carrying
+        ``"reasoning": null`` shadowed a non-empty ``reasoning_content``
+        and its text was silently dropped from the transcript. The
+        ``or`` fallback fires on the null spelling and the alternate
+        text rides, masked."""
+        reasoning_sentinel = "ghp_AbCdEf1234567890aBcDeF"
+        poisoned = json.loads(json.dumps(_HERMES_TRANSCRIPT))
+        poisoned["data"][3]["reasoning"] = None
+        poisoned["data"][3]["reasoning_content"] = \
+            f"fallback {reasoning_sentinel} spelling"
+        fake_hermes.messages = poisoned
+        resp = _get_messages(client, _NATIVE_ID, app_module)
+        assert resp.status_code == 200
+        item = resp.json()["items"][3]
+        assert item["reasoning"] is not None
+        assert "fallback" in item["reasoning"]
+        assert reasoning_sentinel not in item["reasoning"]
+        assert "gh*_" in item["reasoning"]
+        assert item["redaction_applied"] is True
+
     def test_unknown_session_404_frozen_body(
             self, app_module, client: TestClient, transcript_env) -> None:
         resp = _get_messages(client, "no_such_session", app_module)

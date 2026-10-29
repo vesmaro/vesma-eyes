@@ -8713,7 +8713,12 @@ async def kora_hermes_session_messages(
         # tool_calls leaf-wise via redact_json (shape-preserving — the FE
         # contract keeps list[object]). ``redaction_applied`` stays the
         # honest per-entry signal across all three fields.
-        reasoning = raw.get("reasoning", raw.get("reasoning_content"))
+        # ``or``, not dict.get(a, b): a NULL "reasoning" key EXISTS and
+        # get() would return None with the default unexamined — a null
+        # spelling must not shadow a non-empty reasoning_content
+        # (review P3, 2026-10-29). The fallback fires on any falsy
+        # first spelling; both falsy → None, nothing to mask.
+        reasoning = raw.get("reasoning") or raw.get("reasoning_content")
         tool_calls = raw.get("tool_calls")
         reasoning_out = None
         tool_calls_out = None
