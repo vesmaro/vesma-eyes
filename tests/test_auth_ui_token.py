@@ -409,6 +409,69 @@ class TestSlidingReissue:
         assert r2.status_code == 201
         assert "set-cookie" not in r2.headers     # throttled (< 5 min)
 
+    def test_wrapper_error_responses_commit_nothing(
+            self, app_module, monkeypatch):
+        """ui-reissue-cookie-on-failure (cascade W1): the wrapper's commit
+        (Set-Cookie + the 5-minute throttle budget) must ride only a
+        SUCCEEDED response. Real handlers RETURN error responses (the
+        kora envelopes, the §2-I egress relay) — those DO pass through
+        the route wrapper with the guard's marker already set; raised
+        HTTPExceptions never reach it (the app-level handlers sit above
+        the route), so the gate has to be status-based."""
+        import asyncio
+
+        for status in (403, 409, 429, 501):
+            async def original(request, _status=status):
+                return app_module.JSONResponse(
+                    status_code=_status, content={"detail": "planted"})
+
+            monkeypatch.setattr(app_module.APIRoute, "get_route_handler",
+                                lambda self: original)
+            route = app_module._UiCookieReissueRoute(
+                "/api/tasks", endpoint=lambda request: None,
+                methods=["POST"])
+            handler = route.get_route_handler()
+            request = app_module.Request(scope={
+                "type": "http", "asgi": {"version": "3.0"},
+                "http_version": "1.1", "method": "POST",
+                "scheme": "http", "path": "/api/tasks",
+                "query_string": b"", "headers": [],
+                "client": ("198.51.100.7", 47000),
+                "server": ("testserver", 80),
+            })
+            request.state.vesmaro_ui_reissue = True
+            response = asyncio.run(handler(request))
+            assert response.status_code == status, (status, response.status_code)
+            assert "set-cookie" not in response.headers, status
+            assert app_module._ui_reissue_last == {}, status
+
+    def test_wrapper_success_response_commits(
+            self, app_module, monkeypatch, split_tokens):
+        """The same wrapper, the success leg: a 2xx response with the
+        marker spends the budget and mints the fresh Max-Age cookie."""
+        import asyncio
+
+        async def original(request):
+            return app_module.JSONResponse(status_code=200, content={})
+
+        monkeypatch.setattr(app_module.APIRoute, "get_route_handler",
+                            lambda self: original)
+        route = app_module._UiCookieReissueRoute(
+            "/api/tasks", endpoint=lambda request: None, methods=["POST"])
+        handler = route.get_route_handler()
+        request = app_module.Request(scope={
+            "type": "http", "asgi": {"version": "3.0"},
+            "http_version": "1.1", "method": "POST",
+            "scheme": "http", "path": "/api/tasks",
+            "query_string": b"", "headers": [],
+            "client": ("198.51.100.7", 47000),
+            "server": ("testserver", 80),
+        })
+        request.state.vesmaro_ui_reissue = True
+        response = asyncio.run(handler(request))
+        assert "max-age=21600" in _set_cookie_header(response).lower()
+        assert "198.51.100.7" in app_module._ui_reissue_last
+
     def test_machine_header_leg_never_reissues(self, client, split_tokens,
                                                ui_auth, machine_auth,
                                                fresh_report_limiter):

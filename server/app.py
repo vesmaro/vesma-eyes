@@ -1011,6 +1011,16 @@ class _UiCookieReissueRoute(APIRoute):
 
         async def reissue_handler(request: Request) -> Response:
             response = await original(request)
+            # ui-reissue-cookie-on-failure (cascade W1): the guards mark on
+            # the way IN (a pre-check), but the commit — the Set-Cookie AND
+            # the throttle budget — rides only a SUCCEEDED response. A
+            # handler that RETURNS an error response (the kora envelopes,
+            # the §2-I egress relay) reaches this wrapper with the marker
+            # already set; raised HTTPExceptions never do (the app-level
+            # handlers sit above the route), so the gate is status-based
+            # and covers BOTH marker halves (vesmaro_ui + vesmaro_auth).
+            if response.status_code >= 400:
+                return response
             if getattr(request.state, "vesmaro_ui_reissue", False):
                 request.state.vesmaro_ui_reissue = False
                 _commit_ui_cookie_reissue(request)
