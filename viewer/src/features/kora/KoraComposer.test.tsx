@@ -11,6 +11,7 @@ import type {
 import { KoraComposer } from "./KoraComposer";
 import { KoraError, type KoraGateway } from "./koraGateway";
 import { KoraGatewayContext } from "./koraGatewayContext";
+import { ApiError } from "@/lib/errors";
 import type { KoraMessageAccepted, KoraSession } from "./koraTypes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { I18nProvider } from "@/i18n";
@@ -30,11 +31,12 @@ import { actFlush, actUnmount } from "@/test/actTools";
  * - a dead session disables the FIELD itself with the interrupted note;
  * - the intent call points fire started/abandoned (ME-035 taxonomy seam).
  *
- * A1 (the relay leg): with `relayAlive` (the honest executors-registry
- * derivation) + a steerable session the button LIVES — the POST goes out
+ * A1 (the relay leg): with `relayAlive` (the honest PER-SESSION
+ * executors-registry derivation — the session's own executor qualifies)
+ * + a steerable session the button LIVES — the POST goes out
  * and the REAL KoraDelivery verdict from the 202 body renders (queued /
  * delivered / failed-retryable «повторите» = a NEW POST; a refusal names
- * itself — the step-up plate, the server's reason). Accepted verdicts
+ * itself — the step-up plate, the 401 sign-in plate, the server's reason). Accepted verdicts
  * clear the draft; failures keep it (the retry resends the same text).
  *
  * В2: the composer carries the selector row (KoraComposerControls) — its
@@ -182,7 +184,7 @@ describe("KoraComposer (07j §4.6, И1 honest cut)", () => {
     expect(html).toContain("Написать агенту в эту сессию");
     expect(input(container).placeholder).toBe("Написать агенту…");
     expect(html).toContain(
-      "Отправка сообщений агенту появится позже — пока Кора показывает ход сессий. Черновик сохраняется на этой машине и переживёт перезагрузку страницы.",
+      "Отправка через реле появится позже: реле-транспорт не подключён или исполнитель выключен. Черновик сохраняется на этой машине и переживёт перезагрузку страницы.",
     );
     // Empty draft ⇒ no send button at all (07j §4.6).
     expect(html).not.toContain(">Отправить<");
@@ -409,7 +411,7 @@ describe("KoraComposer relay send (A1 FE leg — the live button + the REAL verd
     expect(container.textContent).toContain("Отправка появится позже");
     // The honest relay-off service line (the derivation said no).
     expect(container.textContent).toContain(
-      "Отправка сообщений агенту появится позже",
+      "Отправка через реле появится позже",
     );
   });
 
@@ -634,12 +636,76 @@ describe("KoraComposer relay send (A1 FE leg — the live button + the REAL verd
         .find((b) => b.textContent?.includes("Отправить"))
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
+    // Suite canon (actTools): TanStack mutation settlements land on
+    // LATER tasks — flush inside act before asserting the refusal.
+    await actFlush();
     const plate = container.querySelector('[data-testid="kora-send-step-up"]');
     expect(plate?.textContent).toContain("step-up-ритуалом");
     expect(plate?.getAttribute("role")).toBe("alert");
     // The draft survives a refusal — the retry after the PIN ritual
     // resends the same text.
     expect(input(container).value).toBe("без пина");
+    expect(events.completed).not.toHaveBeenCalled();
+  });
+
+  it("401 (the owner session rotted) names itself: the sign-in plate, not a raw dump", async () => {
+    const events = spyIntentEvents();
+    const { container } = mountComposer("live", events, {
+      relayAlive: true,
+      gateway: sendGateway(() =>
+        Promise.reject(new ApiError(401, "session expired")),
+      ),
+    });
+    act(() => {
+      typeInto(input(container), "после истёкшей сессии");
+    });
+    await act(async () => {
+      [...container.querySelectorAll("button")]
+        .find((b) => b.textContent?.includes("Отправить"))
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    // Suite canon (actTools): TanStack mutation settlements land on
+    // LATER tasks — flush inside act before asserting the refusal.
+    await actFlush();
+    const plate = container.querySelector('[data-testid="kora-send-error"]');
+    expect(plate?.textContent).toContain("Сессия владельца истекла");
+    expect(plate?.getAttribute("role")).toBe("alert");
+    // A 401 is NOT the step-up ritual — the plates do not blur.
+    expect(
+      container.querySelector('[data-testid="kora-send-step-up"]'),
+    ).toBeNull();
+    // The draft survives the refusal; the intent never completed.
+    expect(input(container).value).toBe("после истёкшей сессии");
+    expect(events.completed).not.toHaveBeenCalled();
+  });
+
+  it("a generic failure renders the server's own reason verbatim — no invented cause", async () => {
+    const events = spyIntentEvents();
+    const { container } = mountComposer("live", events, {
+      relayAlive: true,
+      gateway: sendGateway(() =>
+        Promise.reject(
+          new KoraError("session_not_found", "сессия не найдена в реестре"),
+        ),
+      ),
+    });
+    act(() => {
+      typeInto(input(container), "в неизвестную сессию");
+    });
+    await act(async () => {
+      [...container.querySelectorAll("button")]
+        .find((b) => b.textContent?.includes("Отправить"))
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    // Suite canon (actTools): TanStack mutation settlements land on
+    // LATER tasks — flush inside act before asserting the refusal.
+    await actFlush();
+    const plate = container.querySelector('[data-testid="kora-send-error"]');
+    expect(plate?.textContent).toContain(
+      "Не отправилось: сессия не найдена в реестре",
+    );
+    expect(plate?.getAttribute("role")).toBe("alert");
+    expect(input(container).value).toBe("в неизвестную сессию");
     expect(events.completed).not.toHaveBeenCalled();
   });
 

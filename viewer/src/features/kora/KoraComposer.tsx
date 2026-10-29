@@ -20,9 +20,11 @@ import {
  * The composer (07j §4.6 v9-аддендум): a REAL field and a REAL React state
  * machine — typing works, Enter/Shift+Enter work. The SEND is the A1 relay
  * leg: the button LIVES only for a steerable session when the relay signal
- * is honestly derivable (`relayAlive` — ∃ approved, enabled executor with
- * the `session-relay` capability, derived by the workspace over the
- * executors registry it already loaded). A live button POSTs to
+ * is honestly derivable (`relayAlive` — the session's OWN executor is
+ * approved, enabled and carries the `session-relay` capability, derived by
+ * the workspace over the executors registry it already loaded; the board
+ * parks the turn by that very executor, so a relay-capable row elsewhere
+ * in a divergent registry must not light the button). A live button POSTs to
  * /api/kora/sessions/{id}/messages and renders the REAL KoraDelivery
  * verdict from the 202 body — queued / delivered / failed (retryable
  * renders «повторите», the retry is a NEW POST with the kept draft).
@@ -80,10 +82,11 @@ export function KoraComposer({
    * row (the hermes roster's default via /status); optional, null keeps
    * the honest «модели не сообщаются» slot. */
   resolvedModel?: string | null;
-  /** A1 — the relay signal: ∃ approved, enabled executor with the
-   * `session-relay` capability (the workspace's derivation over the
-   * loaded executors registry). Default false = the honest relay-off:
-   * no signal, no send button. */
+  /** A1 — the relay signal: the session's OWN executor is approved,
+   * enabled and carries the `session-relay` capability (the workspace's
+   * PER-SESSION derivation over the loaded executors registry — the board
+   * parks the turn by that very executor). Default false = the honest
+   * relay-off: no signal, no send button. */
   relayAlive?: boolean;
 }) {
   const t = useT();
@@ -334,7 +337,7 @@ export function KoraComposer({
               ? t("kora.composer.delivered")
               : send.data.delivery.status === "queued"
                 ? t("kora.composer.queued")
-                : send.data.delivery.retryable
+                : send.data.delivery.retryable !== false
                   ? t("kora.composer.failedRetryable")
                   : t("kora.composer.failed")}
             {send.data.delivery.error
@@ -342,9 +345,15 @@ export function KoraComposer({
               : ""}
           </span>
           {/* The honest retry: a NEW POST with the kept draft (failed
-           * keeps the text precisely so this can re-send it). */}
+           * keeps the text precisely so this can re-send it). The guard
+           * mirrors handleSend's own — a retry control NEVER renders when
+           * the action would silently no-op (the signal went off or the
+           * draft is gone); `retryable !== false` reads the contract's
+           * optional field defensively (absent = retryable for failed). */}
           {send.data.delivery.status === "failed" &&
-          send.data.delivery.retryable ? (
+          send.data.delivery.retryable !== false &&
+          hasDraft &&
+          sendable ? (
             <Button
               type="button"
               variant="outline"

@@ -289,7 +289,7 @@ describe("KoraComposerControls (В2 selector row)", () => {
     });
     expect(
       relay.container.querySelector("#kora-sel-mode-menu")?.textContent,
-    ).toContain("yolo откроется после подключения реле-транспорта");
+    ).toContain("yolo откроется, когда заработает реле-транспорт");
     // Yolo never renders as an enabled control (no fake toggle).
     const relayYolo = relay.container
       .querySelector("#kora-sel-mode-menu")

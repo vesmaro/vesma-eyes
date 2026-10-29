@@ -37,7 +37,7 @@ import {
 } from "./koraFrameEvents";
 import { useIsFrameViewport } from "./koraViewport";
 import { buildKoraTree, koraSummary, type KoraQuickFilter } from "./koraWorkspaceModel";
-import { deriveRelayAlive } from "./koraRelay";
+import { deriveSessionRelayAlive } from "./koraRelay";
 import type { KoraHarnessOption } from "./KoraComposerControls";
 import { useKoraSpecialistAnnotation } from "./koraSpecialistStore";
 import {
@@ -266,14 +266,25 @@ export function KoraWorkspace({
       .sort((a, b) => a.harness.localeCompare(b.harness));
   }, [items]);
 
-  // A1 — the relay signal: a pure derivation over the LOADED executors
-  // registry (zero new requests, same §5.4 discipline as the harness
-  // facts): ∃ approved, enabled executor with the `session-relay`
-  // capability → the composer's send button lives. A pending/failed
-  // registry read is the honest relay-off.
+  // A1 — the relay signal: a pure PER-SESSION derivation over the LOADED
+  // executors registry (zero new requests, same §5.4 discipline as the
+  // harness facts): the session's OWN executor (the `session.id` prefix —
+  // the board's `{executor_id}:{native_id}` handle) is approved, enabled
+  // and declares the `session-relay` capability → the composer's send
+  // button lives. The board parks the turn by the SESSION'S executor
+  // (the transport seam looks the item up by `executor_id`), so the
+  // registry-existential signal is NOT enough: in a divergent registry
+  // (a relay-capable row elsewhere, this session's executor without the
+  // capability) a live button would promise a POST that settles failed
+  // «исполнитель без реле» — a permanent refusal wearing a «повторите».
+  // A pending/failed registry read and an unknown executor prefix are
+  // the honest relay-off.
   const relayAlive = useMemo(
-    () => deriveRelayAlive(executors.data?.items ?? []),
-    [executors.data],
+    () =>
+      session === null
+        ? false
+        : deriveSessionRelayAlive(executors.data?.items ?? [], session.id),
+    [executors.data, session],
   );
 
   // states-kw4 §4 — the session-mode breadcrumb's host: the registry group
