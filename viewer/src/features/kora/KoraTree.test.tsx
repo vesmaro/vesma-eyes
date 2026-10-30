@@ -429,6 +429,72 @@ describe("KoraTree open-state machine (cascade W3 pins)", () => {
     ).toBeNull();
   });
 
+  it("MANUAL-TOGGLE-WRITE: a fold/unfold outside a search persists the UPDATED open-set (the plain-toggle write path)", () => {
+    // The card kora-tree-toggle-write-unpinned pin (cycle-2 S-batch): the
+    // open-state machine has THREE write paths — the join (pinned above),
+    // the seed precedence (pinned above) and the PLAIN MANUAL TOGGLE, the
+    // path users hit most, unpinned until now. Every toggle click must land
+    // writeKoraTreeState({ open: [...] }) with the UPDATED set, in BOTH
+    // directions. Storage starts EMPTY and the live-seed default does NOT
+    // write — the first write is the user's own click (the seed's shape is
+    // the SEED-PRECEDENCE pin's business, not a persistence claim).
+    sessionStorage.clear();
+    const { container } = mountTree({ activeHost: "" });
+    expect(sessionStorage.getItem("vesmaro.koraTree")).toBeNull();
+    expect(
+      hostDisclosure(container, "abyss-laptop")?.getAttribute("aria-expanded"),
+    ).toBe("true");
+
+    // Fold the live host: the write lands the updated set (without it) —
+    // exactly { open: [] }, not a missing field, not the pre-click set.
+    act(() => {
+      hostDisclosure(container, "abyss-laptop")?.click();
+    });
+    expect(
+      hostDisclosure(container, "abyss-laptop")?.getAttribute("aria-expanded"),
+    ).toBe("false");
+    expect(
+      JSON.parse(sessionStorage.getItem("vesmaro.koraTree") ?? "null"),
+    ).toEqual({ open: [] });
+
+    // Unfold again: the same path writes the updated set (with it back).
+    act(() => {
+      hostDisclosure(container, "abyss-laptop")?.click();
+    });
+    expect(
+      hostDisclosure(container, "abyss-laptop")?.getAttribute("aria-expanded"),
+    ).toBe("true");
+    expect(
+      JSON.parse(sessionStorage.getItem("vesmaro.koraTree") ?? "null"),
+    ).toEqual({ open: ["abyss-laptop"] });
+  });
+
+  it("TOGGLE-NO-WRITE-WHILE-SEARCHING: from EMPTY storage a search-mode click creates NO koraTreeState entry at all", () => {
+    // The inertness leg of the same card — the half SEARCH-CHEVRON-INERT
+    // (W6) cannot observe: that pin starts from a SEEDED storage and pins
+    // byte-identity; from EMPTY storage the pre-W6 toggle would have
+    // CREATED the key with the mutated set — a write from nothing. The
+    // early-return `if (searching)` must prevent even the first write.
+    sessionStorage.clear();
+    const { container } = mountTree({ activeHost: "" });
+    const input = container.querySelector<HTMLInputElement>(
+      "input[type='search']",
+    );
+    setInputValue(input!, "laptop");
+    const chevron = hostDisclosure(container, "abyss-laptop");
+    expect(chevron?.getAttribute("aria-expanded")).toBe("true");
+    act(() => {
+      chevron?.click();
+    });
+    // writeKoraTreeState never ran: the key does not exist.
+    expect(sessionStorage.getItem("vesmaro.koraTree")).toBeNull();
+    // Clearing the search restores the untouched live default.
+    setInputValue(input!, "");
+    expect(
+      hostDisclosure(container, "abyss-laptop")?.getAttribute("aria-expanded"),
+    ).toBe("true");
+  });
+
   it("LISTID-COLLISION: hosts that sanitize to the SAME slug keep distinct ids (the FNV digest)", () => {
     // The cascade-W6 QA pin, the tree-host leg of the closed
     // kora-tree-listid-collision class (the KoraHostField precedent rides
