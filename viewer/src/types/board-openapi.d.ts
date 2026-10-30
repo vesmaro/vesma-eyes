@@ -387,6 +387,16 @@ export interface paths {
          *     keeps its old offset for the next page. ``truncated`` is true when
          *     the requested limit exceeded the page cap (silent cap); content drops
          *     beyond the page always come with a non-null ``next_cursor``.
+         *
+         *     The native flat selector is honored additively (S-batch cycle 2, card
+         *     board-adapter-memories-offset-ignored): with NO cursor, ``offset``
+         *     seeds EVERY active server's window — the caller speaks the vesma
+         *     offset contract and the merged page starts ``offset`` records deep on
+         *     each server, exactly like the native listing. A cursor keeps owning
+         *     the window (its per-server offsets win, ``offset`` is ignored — the
+         *     cursor was issued under the cursor contract, ADR 0011 §11); the
+         *     cursor remains the continuation primitive, ``next_cursor`` still
+         *     carries the absolute per-server offsets either way.
          */
         readonly get: operations["memories_merged_api_memories_get"];
         readonly put?: never;
@@ -1499,6 +1509,52 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/api/executors/{executor_id}/kora-relay/pickup": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Kora Relay Pickup
+         * @description Relay pickup (ADR rev.2 #3, the poller-family pull): hand the
+         *     unit its parked steering commands (FIFO, ≤ limit) and move them
+         *     into the in-flight window. Text rides ONLY here — to the owning
+         *     executor over the executor-token leg.
+         */
+        readonly post: operations["kora_relay_pickup_api_executors__executor_id__kora_relay_pickup_post"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/executors/{executor_id}/kora-relay/confirm": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Kora Relay Confirm
+         * @description Relay confirm: close the honest delivery state machine with the
+         *     unit's verdict. An unknown/already-settled delivery answers
+         *     resolved=false (a board restart orphans the unit's confirm — the
+         *     in-memory design), never an error: the unit drops it and moves on.
+         */
+        readonly post: operations["kora_relay_confirm_api_executors__executor_id__kora_relay_confirm_post"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/api/kora/hermes/status": {
         readonly parameters: {
             readonly query?: never;
@@ -1837,7 +1893,8 @@ export interface paths {
          * @description Live hermes transcript through the frozen Kora transcript form
          *     (seq cursor: items with seq > after_seq, next_after_seq / has_more).
          *     ui-only (the explanatory mnd_ wall), redaction choke-point on every
-         *     content byte, session.transcript_viewed audit on every successful
+         *     content byte AND the reasoning/tool_calls passthrough fields,
+         *     session.transcript_viewed audit on every successful
          *     read — the zcode-transcript discipline. The handle is the native
          *     hermes id or the listing's canonical 'hermes:<native_id>'. NO
          *     registry re-validation by design: hermes IS the authority for a live
@@ -4627,6 +4684,24 @@ export interface components {
             readonly text: string;
         };
         /**
+         * KoraRelayConfirmIn
+         * @description The unit's delivery verdict. extra=forbid: a typo'd field is an
+         *     honest 422, never a silently ignored signal.
+         */
+        readonly KoraRelayConfirmIn: {
+            /** Delivery Id */
+            readonly delivery_id: string;
+            /** Status */
+            readonly status: string;
+            /** Error */
+            readonly error?: string | null;
+            /**
+             * Retryable
+             * @default true
+             */
+            readonly retryable: boolean;
+        };
+        /**
          * KoraScanIn
          * @description Scanner ingest envelope. ``drop_missing``: a full-listing scan
          *     (the zcode store is the authority) removes registry rows the scan no
@@ -5298,6 +5373,8 @@ export interface components {
          *     _MODELS_MAX_PER_ROW); ``auth``/``source`` are honest merges across
          *     every reporter; ``seen_on`` names WHERE the fact was seen (from the
          *     snapshots, never self-reported).
+         *     grant_summary omitted — grants are MF3 (the model_providers
+         *     registry fact), never a discovery-mirror fact.
          */
         readonly ModelsDiscoveredItem: {
             /** Provider */
@@ -9304,6 +9381,78 @@ export interface operations {
                     readonly [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    readonly kora_relay_pickup_api_executors__executor_id__kora_relay_pickup_post: {
+        readonly parameters: {
+            readonly query?: {
+                readonly limit?: number;
+            };
+            readonly header?: never;
+            readonly path: {
+                readonly executor_id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": {
+                        readonly [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly kora_relay_confirm_api_executors__executor_id__kora_relay_confirm_post: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly executor_id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["KoraRelayConfirmIn"];
+            };
+        };
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": {
+                        readonly [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };
