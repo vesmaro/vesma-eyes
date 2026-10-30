@@ -8,8 +8,10 @@ import { isApiError } from "@/lib/errors";
  *
  *   closed ──openLogin───────────────────────▶ open(manual, no run queued)
  *   closed ──run without token───────────────▶ open(required, run queued)
- *   closed ──run, 401 mid-flight─────────────▶ probe; dead → open(rejected,
- *                                              run queued); live → replay
+ *   closed ──run, 401 mid-flight─────────────▶ password-live → cookie
+ *                                              replay; probe; dead →
+ *                                              open(rejected, run queued);
+ *                                              probe-live → replay
  *   open   ──submitToken(server 200)─────────▶ closed → queued run re-runs
  *   open   ──submitToken(server 401/429/503)─▶ open(rejected at the door,
  *                                              NOTHING stored)
@@ -31,9 +33,11 @@ import { isApiError } from "@/lib/errors";
  * submit goes over the wire BEFORE anything is stored — the false-success
  * login (paste → stored → boom on first mutation) is gone. Without the
  * injection (mock adapter, SSR harnesses, legacy tests) the gate keeps the
- * historical paste-and-store behavior. The re-probe (`probe`) fires in the
- * 401 branch BEFORE the window opens: a stale header token beside a live
- * cookie must replay on the cookie leg, not re-prompt (the incident's
+ * historical paste-and-store behavior. The 401 branch replays BEFORE the
+ * window may open: a live password session (ME-081) replays header-less on
+ * the `vesmaro_auth` cookie — the same admission the guard entry applies —
+ * and the re-probe (`probe`) catches a stale header token beside a live
+ * cookie; either way the run must replay, not re-prompt (the incident's
  * mid-flight beat).
  */
 
@@ -433,12 +437,33 @@ export class UiTokenGate {
       await run();
     } catch (error) {
       if (!isApiError(error) || error.status !== 401) return; // callback's business
-      // Stale/rejected credential: queue the same run for a retry behind a
-      // fresh value. ADR 0014 Ф2 re-probe FIRST (never on a replay — that
-      // cannot loop): a live cookie beside the stale header token means
-      // the run replays on the cookie leg and the window must NOT open
-      // (the second-login-elsewhere rotation case, the incident's
-      // mid-flight beat).
+      // Stale/rejected credential. Before queueing: the SAME admission the
+      // guard entry applies (ME-081) — a live password session is a
+      // signed-in owner, and the `vesmaro_auth` cookie rides every
+      // same-origin fetch. The stale bearer was the ONLY thing that
+      // failed: drop it and replay header-less (never on a replay — a
+      // second 401 means the session itself is gone, the honest queue
+      // below). Queueing instead would open the window with the false
+      // «сессия истекла» line for an action the cookie leg carries.
+      if (!isReplay && this.passwordSessionLive()) {
+        clearUiToken(); // the stored header value is stale by definition
+        this.pending = null;
+        this.setState({
+          open: false,
+          reason: "rejected",
+          tokenPresent: this.uiPresent(),
+          rejectKind: undefined,
+          rejectDetail: undefined,
+        });
+        void this.guard(run, onDeferred, true);
+        return;
+      }
+      // A paired mnd_ browser with an expired injected ui-token keeps the honest queue — cookie replay would be wrong-class admission (read-scope) and auto de-pairing is destructive; review verdict 30.10.
+      // ADR 0014 Ф2 re-probe next (never on a replay — that cannot loop):
+      // a live `vesmaro_ui` cookie beside the stale header token means the
+      // run replays on the cookie leg and the window must NOT open (the
+      // second-login-elsewhere rotation case, the incident's mid-flight
+      // beat).
       if (!isReplay && this.probe && (await this.probe())) {
         clearUiToken(); // the stored header value is stale by definition
         this.pending = null;

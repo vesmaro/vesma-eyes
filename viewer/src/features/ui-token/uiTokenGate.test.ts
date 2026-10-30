@@ -792,4 +792,72 @@ describe("UiTokenGate password session (ME-081)", () => {
     expect(events).toEqual([]); // the pre-flight 403 refusal does NOT fire
     expect(gate.getState().open).toBe(false);
   });
+
+  // devices-revoke-401-guard-password-live: the mid-flight 401 beat honors
+  // the SAME admission the guard entry applies — a stale bearer beside a
+  // live password session replays header-less (the vesmaro_auth cookie
+  // rides every same-origin fetch), it does NOT queue behind the false
+  // «сессия истекла» window.
+  it("401 mid-flight + stale bearer + LIVE password session: replays cookie-only, window never opens", async () => {
+    sessionStorage.setItem(UI_TOKEN_STORAGE_KEY, "stale-header-token");
+    // The vesmaro_ui cookie is DEAD — this is NOT the probe-replay path;
+    // the password session is the only live leg.
+    const passwordGate = new UiTokenGate({
+      hasToken: () => hasUiToken(),
+      probe: async () => false,
+      hasPasswordSession: () => true,
+    });
+    const events: { type: string }[] = [];
+    passwordGate.listen((event) => events.push({ type: event.type }));
+    const bearerAtCall: boolean[] = [];
+    const onDeferred = vi.fn();
+    let attempts = 0;
+    const run = vi.fn(async () => {
+      attempts += 1;
+      bearerAtCall.push(hasUiToken()); // the header source, per attempt
+      if (attempts === 1) throw new ApiError(401, "ui token rejected");
+    });
+    passwordGate.runAuthorized(run, onDeferred);
+    await vi.waitFor(() => expect(attempts).toBe(2));
+    // The replay went out with the stale bearer ALREADY dropped — the
+    // server rules from the cookie leg alone.
+    expect(bearerAtCall).toEqual([true, false]);
+    // No queue, no false session-expired beat, no rejection toast.
+    expect(passwordGate.getState()).toMatchObject({
+      open: false,
+      rejectKind: undefined,
+    });
+    expect(onDeferred).not.toHaveBeenCalled();
+    expect(events).toEqual([]);
+    expect(hasUiToken()).toBe(false);
+  });
+
+  it("the replay is ONE: a second 401 (the session itself is gone) queues with the honest session-expired beat", async () => {
+    sessionStorage.setItem(UI_TOKEN_STORAGE_KEY, "stale-header-token");
+    const gate = new UiTokenGate({
+      hasToken: () => hasUiToken(),
+      hasPasswordSession: () => true, // live in the store, dead on the server
+    });
+    const events: { type: string }[] = [];
+    gate.listen((event) => events.push({ type: event.type }));
+    const onDeferred = vi.fn();
+    let attempts = 0;
+    const run = vi.fn(async () => {
+      attempts += 1;
+      throw new ApiError(401, "ui session missing or expired");
+    });
+    gate.runAuthorized(run, onDeferred);
+    await vi.waitFor(() =>
+      expect(gate.getState()).toMatchObject({
+        open: true,
+        reason: "rejected",
+        rejectKind: "session",
+      }),
+    );
+    // Original + one header-less replay — then the honest window. No loop.
+    expect(attempts).toBe(2);
+    expect(hasUiToken()).toBe(false);
+    expect(events).toEqual([{ type: "tokenRejected" }]);
+    expect(onDeferred).toHaveBeenCalledTimes(1);
+  });
 });

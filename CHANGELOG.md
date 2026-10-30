@@ -10,6 +10,10 @@ workflow — this file is the repo-side trail).
 
 ## [Unreleased]
 
+### Fixed
+
+- Мутации устройств при живой password-сессии перестают ложно падать с „сессия истекла“ при протухшем bearer.
+
 ## [1.97.4] — 2026-10-30
 
 ### Added
