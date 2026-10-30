@@ -10,6 +10,8 @@ workflow — this file is the repo-side trail).
 
 ## [Unreleased]
 
+## [1.98.0] — 2026-10-30
+
 ### Added
 
 - Кора: символьные меню композера @ (файлы cwd) / # (ссылка на сессию) / / (локальные команды pin-view-filter) / $ (специалисты) — „!“-shell исключён по дизайну
