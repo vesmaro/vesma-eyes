@@ -196,3 +196,47 @@ export interface KoraSpecialistsRoster {
   items: KoraSpecialist[];
   meta: { generated_at: string };
 }
+
+/**
+ * KoraModelInstallation — one models-mirror installation row projected for
+ * the tree (В3a, KORA-MODELS-1; kora-ide contract §5.3). Mirrored from
+ * KoraModelInstallation in server/app.py — hand-typed on the seam, the
+ * HermesBridgeStatus precedent: the route is an ADDITIVE server wave and
+ * lives OUTSIDE the frozen week-0 artifact by design. Open facts only:
+ * the harness the installation serves, the provider, the honest auth/
+ * source bits, the reported model ids. Deliberately narrower than the
+ * mirror (no base_url, no notes) — and NO context-limit field: no source
+ * reports one today, absent is never invented (§4).
+ */
+export interface KoraModelInstallation {
+  harness: string;
+  provider: string;
+  auth: string;
+  source: string;
+  models: string[];
+}
+
+/**
+ * KoraExecutorModels — one executor's models snapshot (executor_id + the
+ * snapshot's own reported_at + the projected installations). An executor
+ * without a snapshot is NOT listed — the FE reads the miss as
+ * «модели не сообщаются» (K-TREE-MODEL-UNKNOWN).
+ */
+export interface KoraExecutorModels {
+  executor_id: string;
+  reported_at: string | null;
+  installations: KoraModelInstallation[];
+}
+
+/**
+ * KoraModelsRoster — GET /api/kora/models (В3a). The tree's model level
+ * renders FROM THIS ROSTER and the hermes /status roster only (contract
+ * §5.3: real data or the honest «не сообщаются»). Hand-typed on the seam,
+ * mirrored from KoraModelsOut in server/app.py.
+ */
+export interface KoraModelsRoster {
+  ok: boolean;
+  count: number;
+  executors: KoraExecutorModels[];
+  meta: { generated_at: string };
+}

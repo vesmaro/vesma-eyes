@@ -39,6 +39,7 @@ import type {
   HermesMessagesPage,
   HermesMessagesParams,
   KoraMessageAccepted,
+  KoraModelsRoster,
   KoraSession,
   KoraSessionCreated,
   KoraSessionCreate,
@@ -255,6 +256,15 @@ export class KoraHttpAdapter implements KoraGateway {
    */
   specialists(signal?: AbortSignal): Promise<KoraSpecialistsRoster> {
     return this.request<KoraSpecialistsRoster>("/kora/specialists", { signal });
+  }
+
+  /**
+   * В3a — GET /api/kora/models: the read-only per-executor models roster
+   * (cheap store projection over the FC-6 discovery mirror). Ships bare
+   * (the cookie leg) like every Kora read.
+   */
+  models(signal?: AbortSignal): Promise<KoraModelsRoster> {
+    return this.request<KoraModelsRoster>("/kora/models", { signal });
   }
 
   /**

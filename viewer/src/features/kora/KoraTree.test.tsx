@@ -526,9 +526,14 @@ describe("KoraTree open-state machine (cascade W3 pins)", () => {
     );
     const { container } = mountTree({ model: collideModel });
 
+    // В3: harness branches carry their OWN chevrons (kora-tree-agent-*)
+    // — this pin stays about the HOST family, so the agent chevrons are
+    // scoped out of the count.
     const buttons = [
       ...container.querySelectorAll<HTMLButtonElement>("button[aria-expanded]"),
-    ];
+    ].filter((button) =>
+      (button.getAttribute("aria-controls") ?? "").startsWith("kora-tree-host-"),
+    );
     expect(buttons.length).toBe(2);
     const controls = buttons.map((button) => button.getAttribute("aria-controls"));
     // The collision premise itself: both slugs flatten identically…
@@ -550,5 +555,175 @@ describe("KoraTree open-state machine (cascade W3 pins)", () => {
       );
       expect(own).not.toBeNull();
     }
+  });
+});
+
+describe("KoraTreePanel v3 (kora-ide В3 — model level + health dots)", () => {
+  /** The В3a mirror fixture (one reporting executor + one silent one). */
+  const MIRROR = new Map([
+    [
+      "exec-zcode-main",
+      {
+        executor_id: "exec-zcode-main",
+        reported_at: "2026-10-28T18:20:00+00:00",
+        installations: [
+          {
+            harness: "zcode",
+            provider: "z-ai",
+            auth: "configured",
+            source: "config",
+            models: ["glm-5.3", "glm-4.6"],
+          },
+        ],
+      },
+    ],
+  ]);
+  const HERMES = {
+    models: ["hermes-4.5-405b", "hermes-4.5-70b"],
+    defaultModel: "hermes-4.5-405b",
+  };
+
+  it("the model level renders from the В3a mirror: id + provider badge, joined open via ?agent=", () => {
+    // The route's ?agent= opens the harness branch on arrival (the deep-
+    // link parity): the models are visible without a second click.
+    const { container } = mountTree({
+      activeHost: "abyss-laptop",
+      activeAgentId: "exec-zcode-main",
+      mirror: MIRROR,
+      mirrorReady: true,
+    });
+    const branch = [...container.querySelectorAll("li")].find((el) =>
+      el.querySelector('a[href="/kora/host/abyss-laptop?agent=exec-zcode-main"]'),
+    );
+    expect(branch).not.toBeUndefined();
+    const disclosure = branch?.querySelector<HTMLButtonElement>(
+      'button[aria-expanded][aria-controls^="kora-tree-agent"]',
+    );
+    expect(disclosure?.getAttribute("aria-expanded")).toBe("true");
+    expect(branch?.textContent).toContain("glm-5.3");
+    expect(branch?.textContent).toContain("glm-4.6");
+    expect(branch?.textContent).toContain("z-ai");
+    // Honest: no «не сообщаются» line where data IS reported.
+    expect(branch?.textContent).not.toContain("модели не сообщаются");
+  });
+
+  it("K-TREE-MODEL-UNKNOWN: a harness whose mirror row is missing reads «модели не сообщаются»", () => {
+    const { container } = mountTree({
+      activeHost: "pi-edge",
+      activeAgentId: "exec-pi-edge",
+      mirror: MIRROR,
+      mirrorReady: true,
+    });
+    const link = container.querySelector<HTMLAnchorElement>(
+      'a[href="/kora/host/pi-edge?agent=exec-pi-edge"]',
+    );
+    const branch = link?.closest("li");
+    expect(branch?.textContent).toContain("модели не сообщаются");
+    // And nothing is invented in its place: exactly ONE sub-row (the
+    // honest line), no model rows.
+    expect(branch?.querySelectorAll("li li").length).toBe(1);
+  });
+
+  it("hermes reads the /status roster: bare model rows, the default marked, NO provider badge invented", () => {
+    const hermesExecutor = executor("hermes", "hermes", "hermes-node");
+    const model = buildKoraTree(
+      [
+        session({
+          id: "hermes:api-server-main",
+          executor_id: "hermes",
+          harness: "hermes",
+          state: "live",
+          project: "hermes:api_server",
+          age_seconds: 600,
+        }),
+      ],
+      [hermesExecutor],
+    );
+    const { container } = mountTree({
+      model,
+      activeHost: "hermes-node",
+      activeAgentId: "hermes",
+      hermes: HERMES,
+      hermesReady: true,
+    });
+    const branch = [...container.querySelectorAll("li")].find((el) =>
+      el.querySelector('a[href="/kora/host/hermes-node?agent=hermes"]'),
+    );
+    expect(branch?.textContent).toContain("hermes-4.5-405b");
+    expect(branch?.textContent).toContain("hermes-4.5-70b");
+    expect(branch?.textContent).toContain("по умолчанию");
+    // The roster is bare strings — the tree invents no provider badge.
+    expect(branch?.textContent).not.toContain("z-ai");
+  });
+
+  it("an unsettled models read reads «модели: загрузка…» — pending, never a fake verdict", () => {
+    const { container } = mountTree({
+      activeHost: "abyss-laptop",
+      activeAgentId: "exec-zcode-main",
+      mirror: MIRROR,
+      mirrorReady: false,
+    });
+    const branch = [...container.querySelectorAll("li")].find((el) =>
+      el.querySelector('a[href="/kora/host/abyss-laptop?agent=exec-zcode-main"]'),
+    );
+    expect(branch?.textContent).toContain("модели: загрузка…");
+  });
+
+  it("health dots read PRESENCE (В3 acceptance (б)): online → «присутствует», expired → «не сообщает»", () => {
+    const online = mountTree();
+    expect(online.container.textContent).toContain("присутствует");
+    expect(online.container.textContent).not.toContain("не сообщает");
+    online.root.unmount();
+    document.body.innerHTML = "";
+
+    // The SAME tree, the executors' presence expired: every dot flips to
+    // the honest gray («не сообщает»), sessions stay in the model.
+    const offlineExecutors = EXECUTORS.map((row) => ({
+      ...row,
+      presence: "offline" as const,
+    }));
+    const offline = mountTree({
+      model: buildKoraTree(SESSIONS, offlineExecutors),
+    });
+    expect(offline.container.textContent).toContain("не сообщает");
+    expect(offline.container.textContent).not.toContain("присутствует");
+    offline.root.unmount();
+    document.body.innerHTML = "";
+  });
+
+  it("the unknown-host group renders NO health dot — no executor row, no invented state", () => {
+    const { container } = mountTree();
+    const unknown = [...container.querySelectorAll("li")].find((el) =>
+      el.textContent?.includes("exec-ghost"),
+    );
+    expect(unknown).not.toBeUndefined();
+    expect(unknown?.querySelector("span.sr-only")).toBeNull();
+  });
+
+  it("the harness branch's disclosure id resolves (aria-controls → a real element) and toggles honestly", () => {
+    const { container } = mountTree({
+      activeHost: "abyss-laptop",
+      mirror: MIRROR,
+      mirrorReady: true,
+    });
+    const branch = [...container.querySelectorAll("li")].find((el) =>
+      el.querySelector('a[href="/kora/host/abyss-laptop?agent=exec-zcode-main"]'),
+    );
+    const disclosure = branch?.querySelector<HTMLButtonElement>(
+      'button[aria-expanded][aria-controls^="kora-tree-agent"]',
+    );
+    expect(disclosure).not.toBeUndefined();
+    const controls = disclosure?.getAttribute("aria-controls") ?? "";
+    expect(document.getElementById(controls)).toBeNull(); // closed: no list yet
+    act(() => {
+      disclosure?.click();
+    });
+    expect(disclosure?.getAttribute("aria-expanded")).toBe("true");
+    expect(document.getElementById(controls)).not.toBeNull();
+    // The open-set persists with the `agent:` namespace key.
+    const stored = JSON.parse(sessionStorage.getItem("vesmaro.koraTree") ?? "{}") as {
+      open?: string[];
+    };
+    expect(stored.open).toContain("agent:exec-zcode-main");
   });
 });

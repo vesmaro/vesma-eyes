@@ -38,6 +38,8 @@ export const koraKeys = {
   stepUp: () => [...koraKeys.all, "steering", "step-up"] as const,
   /** В2a: the read-only specialist roster (the composer's selector). */
   specialists: () => [...koraKeys.all, "specialists"] as const,
+  /** В3a: the read-only per-executor models roster (the tree's models). */
+  models: () => [...koraKeys.all, "models"] as const,
   /** T004 slice 2: the hermes bridge leg (status read; the pull mutation). */
   hermesStatus: () => [...koraKeys.all, "hermes", "status"] as const,
   /** T004 slice 3: the live hermes transcript cursor (page size in key). */
@@ -232,6 +234,24 @@ export function useKoraSpecialists() {
   return useQuery({
     queryKey: koraKeys.specialists(),
     queryFn: ({ signal }) => gateway.specialists(signal),
+  });
+}
+
+/**
+ * В3a (KORA-MODELS-1) — the read-only per-executor models roster
+ * (kora-ide contract §5.3). A cheap store projection server-side (over
+ * the agents' own FC-6 discovery mirror), so the hook never polls — the
+ * same discipline as the specialists roster. Pending / error / a missing
+ * executor row are all the HONEST ABSENCE of models: the tree reads the
+ * node as «модели не сообщаются» (K-TREE-MODEL-UNKNOWN), never an
+ * invented roster. The hermes harness keeps its OWN single source — the
+ * hermes /status roster (this route deliberately does not duplicate it).
+ */
+export function useKoraModels() {
+  const gateway = useKoraGateway();
+  return useQuery({
+    queryKey: koraKeys.models(),
+    queryFn: ({ signal }) => gateway.models(signal),
   });
 }
 

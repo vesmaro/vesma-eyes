@@ -2551,6 +2551,17 @@ export const ru = {
   "kora.tree.searchPlaceholder": "Найти хост или агента…",
   "kora.tree.noMatches": "Ничего не найдено",
   "kora.tree.found": "найдено: {{n}}",
+  // В3 — health-точки (присутствие ≠ живость) и уровень моделей (§2.3/§5.3).
+  // Формулировки контракта: «присутствует / не сообщает / статус не
+  // сообщается» — никаких «online»; моделей нет данных → «не сообщаются».
+  "kora.tree.health.present": "присутствует",
+  "kora.tree.health.silent": "не сообщает",
+  "kora.tree.modelsUnknown": "модели не сообщаются",
+  "kora.tree.modelsPending": "модели: загрузка…",
+  "kora.tree.modelDefault": "по умолчанию",
+  "kora.tree.modelAuth.configured": "ключ настроен",
+  "kora.tree.modelAuth.anonymous": "без ключа",
+  "kora.tree.modelAuth.unknown": "доступность неизвестна",
   "kora.breadcrumb.field": "← {{host}} · поле",
   "kora.breadcrumb.kora": "← Кора",
   "kora.list.loadingMore": "Загружаем…",
@@ -2677,6 +2688,9 @@ export const ru = {
   "kora.dock.noMatches": "Ничего не найдено",
   "kora.dock.emptyFiltered": "Под этот фильтр сессий нет",
   "kora.dock.resetFilter": "Сбросить фильтр",
+  // В3 — контекстный фильтр дока (клик харнеса/хоста в дереве, §2.3).
+  "kora.dock.contextFilter": "Фильтр: {{context}}",
+  "kora.dock.contextClear": "показать все",
   "kora.dock.persistFail": "Не сохранилось — хранилище браузера недоступно",
   "kora.resize.dock.label": "Ширина панели сессий",
   // Контекст-бар центра («где я сейчас», kora-ide contract §2.2): только

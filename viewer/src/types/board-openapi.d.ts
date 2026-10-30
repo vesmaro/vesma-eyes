@@ -1628,6 +1628,33 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/api/kora/models": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Kora Models
+         * @description Read-only per-executor models roster (В3a, KORA-MODELS-1). AUTHED
+         *     read, the listing tier (_guard_kora_read): ui (owner session) + mnd_
+         *     (metadata — see the device-table comment; the SAME facts already ride
+         *     the OPEN GET /api/executors/{id}/discovery mirror). A pure store
+         *     projection over the FC-6 models_mirror snapshots: no transcript
+         *     content, no outbound calls, no live probes. The hermes roster is NOT
+         *     here — it stays the hermes status route's single source (consumed,
+         *     never duplicated, the fleet roster's `board` zone precedent).
+         */
+        readonly get: operations["kora_models_api_kora_models_get"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/api/models": {
         readonly parameters: {
             readonly query?: never;
@@ -4620,6 +4647,25 @@ export interface components {
              */
             readonly latency_class: "a" | "b" | "c";
         };
+        /**
+         * KoraExecutorModels
+         * @description One executor's models snapshot: the executor id (the Kora tree joins
+         *     it to the harness nodes client-side over the executors registry it
+         *     already loads), the snapshot's own reported_at (the LAST CHANGED report
+         *     — the P2-1 precedent) and the projected installations. An executor
+         *     without a models snapshot is NOT listed — honest absence, the FE reads
+         *     it as «модели не сообщаются» (K-TREE-MODEL-UNKNOWN).
+         */
+        readonly KoraExecutorModels: {
+            /** Executor Id */
+            readonly executor_id: string;
+            /** Reported At */
+            readonly reported_at?: string | null;
+            /** Installations */
+            readonly installations?: readonly components["schemas"]["KoraModelInstallation"][];
+        } & {
+            readonly [key: string]: unknown;
+        };
         /** KoraIntentAbandonedEvent */
         readonly KoraIntentAbandonedEvent: {
             /** Visit Id */
@@ -4682,6 +4728,48 @@ export interface components {
         readonly KoraMessageCreate: {
             /** Text */
             readonly text: string;
+        };
+        /**
+         * KoraModelInstallation
+         * @description One models-mirror installation row projected for the Kora tree
+         *     (kora-ide contract §5.3, KORA-MODELS-1, additive — OUTSIDE the frozen
+         *     week-0 artifact, the KoraSpecialistItem precedent). Open facts only:
+         *     the harness the installation serves, the provider, the honest
+         *     auth/source bits, the reported model ids. Deliberately NARROWER than
+         *     the mirror: no base_url, no notes (the discovery mirror's GET serves
+         *     those on its own boundary; the Kora tree needs none of them). Context
+         *     limits: NO source reports them today (the FC-6 mirror and the hermes
+         *     roster carry none) — the field does not exist here; absent, never
+         *     invented (§4: ни одно состояние не выдумывает данные).
+         */
+        readonly KoraModelInstallation: {
+            /** Harness */
+            readonly harness: string;
+            /** Provider */
+            readonly provider: string;
+            /** Auth */
+            readonly auth: string;
+            /** Source */
+            readonly source: string;
+            /** Models */
+            readonly models?: readonly string[];
+        } & {
+            readonly [key: string]: unknown;
+        };
+        /** KoraModelsOut */
+        readonly KoraModelsOut: {
+            /** Ok */
+            readonly ok: boolean;
+            /** Count */
+            readonly count: number;
+            /** Executors */
+            readonly executors?: readonly components["schemas"]["KoraExecutorModels"][];
+            /** Meta */
+            readonly meta: {
+                readonly [key: string]: string;
+            };
+        } & {
+            readonly [key: string]: unknown;
         };
         /**
          * KoraRelayConfirmIn
@@ -9524,6 +9612,26 @@ export interface operations {
                 };
                 content: {
                     readonly "application/json": components["schemas"]["KoraSpecialistsOut"];
+                };
+            };
+        };
+    };
+    readonly kora_models_api_kora_models_get: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["KoraModelsOut"];
                 };
             };
         };

@@ -1169,6 +1169,12 @@ _DEVICE_READ_ROUTES: tuple[tuple[str, str], ...] = (
     # ride GET /api/board (reads-добавка v1). The profile DETAIL stays
     # outside this table (the profile route keeps its own discipline).
     ("GET", "/api/kora/specialists"),
+    # Kora per-harness models roster (В3a, KORA-MODELS-1): open facts by the
+    # SAME precedent as the specialists roster — the agents' own discovery
+    # mirror already rides the OPEN GET /api/executors/{id}/discovery, so a
+    # device reading the SAME facts through this narrower projection adds
+    # nothing new; a pure store projection, no content, no outbound calls.
+    ("GET", "/api/kora/models"),
     # Kora slice-2 transcript (ADR 0019 gate 5, mnd_ = metadata-only):
     # the route rides the read table ONLY so a VALID device reaches the
     # handler's explanatory wall (403 KoraErrorOut code=metadata_only —
@@ -7175,6 +7181,105 @@ async def kora_specialists(request: Request) -> KoraSpecialistsOut:
         ok=True,
         count=len(items),
         items=items,
+        meta={"generated_at": _now_iso()},
+    )
+
+
+class KoraModelInstallation(_ApiModel):
+    """One models-mirror installation row projected for the Kora tree
+    (kora-ide contract §5.3, KORA-MODELS-1, additive — OUTSIDE the frozen
+    week-0 artifact, the KoraSpecialistItem precedent). Open facts only:
+    the harness the installation serves, the provider, the honest
+    auth/source bits, the reported model ids. Deliberately NARROWER than
+    the mirror: no base_url, no notes (the discovery mirror's GET serves
+    those on its own boundary; the Kora tree needs none of them). Context
+    limits: NO source reports them today (the FC-6 mirror and the hermes
+    roster carry none) — the field does not exist here; absent, never
+    invented (§4: ни одно состояние не выдумывает данные)."""
+    harness: str
+    provider: str
+    auth: str
+    source: str
+    models: list[str] = Field(default_factory=list)
+
+
+class KoraExecutorModels(_ApiModel):
+    """One executor's models snapshot: the executor id (the Kora tree joins
+    it to the harness nodes client-side over the executors registry it
+    already loads), the snapshot's own reported_at (the LAST CHANGED report
+    — the P2-1 precedent) and the projected installations. An executor
+    without a models snapshot is NOT listed — honest absence, the FE reads
+    it as «модели не сообщаются» (K-TREE-MODEL-UNKNOWN)."""
+    executor_id: str
+    reported_at: str | None = None
+    installations: list[KoraModelInstallation] = Field(default_factory=list)
+
+
+class KoraModelsOut(_ApiModel):
+    ok: bool
+    count: int
+    executors: list[KoraExecutorModels] = Field(default_factory=list)
+    meta: dict[str, str]
+
+
+@app.get("/api/kora/models")
+async def kora_models(request: Request) -> KoraModelsOut:
+    """Read-only per-executor models roster (В3a, KORA-MODELS-1). AUTHED
+    read, the listing tier (_guard_kora_read): ui (owner session) + mnd_
+    (metadata — see the device-table comment; the SAME facts already ride
+    the OPEN GET /api/executors/{id}/discovery mirror). A pure store
+    projection over the FC-6 models_mirror snapshots: no transcript
+    content, no outbound calls, no live probes. The hermes roster is NOT
+    here — it stays the hermes status route's single source (consumed,
+    never duplicated, the fleet roster's `board` zone precedent)."""
+    _guard_kora_read(request)
+    items: list[KoraExecutorModels] = []
+    for mirror in store.models_mirrors():
+        try:
+            snapshot = json.loads(mirror.get("models_mirror") or "{}")
+        except (TypeError, ValueError):
+            snapshot = {}
+        if not isinstance(snapshot, dict):
+            continue
+        rows = snapshot.get("installations")
+        if not isinstance(rows, list):
+            continue
+        installations: list[KoraModelInstallation] = []
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            provider = str(row.get("provider") or "").strip()
+            harness = str(row.get("harness") or "").strip()
+            if not provider or not harness:
+                continue
+            models = sorted({
+                str(model).strip() for model in (row.get("models") or [])
+                if isinstance(model, str) and model.strip()
+            })
+            installations.append(KoraModelInstallation(
+                harness=harness,
+                provider=provider,
+                auth=str(row.get("auth") or "").strip(),
+                source=str(row.get("source") or "").strip(),
+                models=models,
+            ))
+        # The snapshot keeps the client's report order; the response is
+        # deterministic (the fleet roster's sorted-seen_on precedent):
+        # (harness, provider).
+        installations.sort(key=lambda i: (i.harness, i.provider))
+        if not installations:
+            continue
+        reported = str(snapshot.get("reported_at") or "").strip() or None
+        items.append(KoraExecutorModels(
+            executor_id=str(mirror["id"]),
+            reported_at=reported,
+            installations=installations,
+        ))
+    items.sort(key=lambda item: item.executor_id)
+    return KoraModelsOut(
+        ok=True,
+        count=len(items),
+        executors=items,
         meta={"generated_at": _now_iso()},
     )
 
