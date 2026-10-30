@@ -1,6 +1,17 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
-import { ChevronDown, ChevronRight, Radio, Search, Star } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ChevronRight,
+  EyeOff,
+  MoreHorizontal,
+  Pencil,
+  Radio,
+  Search,
+  Star,
+  X,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,6 +26,17 @@ import {
   type KoraDockView,
 } from "./koraFrameStorage";
 import {
+  clearKoraDockHidden,
+  setKoraDockAlias,
+  setKoraDockHidden,
+  setKoraDockPinned,
+  useKoraDockAlias,
+  useKoraDockAliases,
+  useKoraDockCustomPersistFailure,
+  useKoraDockHidden,
+  useKoraDockPins,
+} from "./koraDockCustomStore";
+import {
   buildProjectGroups,
   koraAgeUnit,
   koraGroupListId,
@@ -27,8 +49,8 @@ import {
 import type { KoraRegistryEmpty } from "./KoraWorkzone";
 
 /**
- * The sessions DOCK (Kora IDE contract §2.1/§3.1, wave В1) — the permanent
- * LEFT zone the KW4 two-zone frame retired. The dock is IMMOVABLE
+ * The sessions DOCK (Kora IDE contract §2.1/§3.1, wave В1 + В4) — the
+ * permanent LEFT zone the KW4 two-zone frame retired. The dock is IMMOVABLE
  * (K-INV-1): selecting a session, a harness or a host never changes the
  * dock's composition, width, scroll or focus — only the CENTER changes with
  * the route. The pin «★ Чат с кластером» moves here from the tree (the
@@ -45,11 +67,24 @@ import type { KoraRegistryEmpty } from "./KoraWorkzone";
  * grouping — an emptied group never renders (07c §3). Honest empties:
  * K-DOCK-PENDING (skeletons), K-DOCK-EMPTY (registry facts, action-free —
  * the connect CTA lives ONCE, in the center, ME-072),
- * K-DOCK-FILTERED-EMPTY (with the reset), K-DOCK-SEARCH-0. The «скрытые»
- * slot does NOT exist in В1 (an empty slot never renders; aliases/hiding
- * are a В4 surface). Persistence: the view and the group open-set ride
- * localStorage (vesmaro.koraDockView / vesmaro.koraDockGroups); a failed
- * write sets the honest K-PERSIST-FAIL bit — nothing pretends to persist.
+ * K-DOCK-FILTERED-EMPTY (with the reset), K-DOCK-SEARCH-0 and — В4 —
+ * K-DOCK-HIDDEN (everything this view would show is hidden LOCALLY: the
+ * line names the count and offers the way back; hiding is client-side,
+ * no server archive exists and none is pretended).
+ *
+ * В4 customization (contract §3.1/§7 В4, the koraDockCustomStore): the
+ * pin-SECTION of sessions above the views (beside the cluster pin), the
+ * LOCAL aliases (the «локально» badge — the server name is never
+ * rewritten, it stays the row's tooltip) and the LOCAL hiding. The
+ * customization is a LOCAL overlay end to end: pinned rows render from
+ * the LOADED slice only (a pin past the loaded pages renders nothing —
+ * no invented rows), the search reads aliases alongside the honest row
+ * words, and a refused storage write raises the honest K-PERSIST-FAIL
+ * bit (the store's bit rides the dock's own line). Persistence: the view
+ * and the group open-set ride localStorage (vesmaro.koraDockView /
+ * vesmaro.koraDockGroups), the customization rides the В4 keys
+ * (vesmaro.koraDockPins / vesmaro.koraDockHidden /
+ * vesmaro.koraAlias:{sessionId}) — nothing pretends to persist.
  */
 
 const STATE_DOT: Record<KoraSession["state"], string> = {
@@ -117,6 +152,12 @@ export function KoraDock({
   // The quick filters stay local UI state in В1 (the brief's persist list:
   // widths / view / groups — filter persistence is a later polish surface).
   const [quickFilter, setQuickFilter] = useState<KoraQuickFilter | null>(null);
+  // В4 — the customization overlays (the koraDockCustomStore; honest
+  // K-PERSIST-FAIL bit rides the dock's own persist-fail line).
+  const pins = useKoraDockPins();
+  const aliasMap = useKoraDockAliases();
+  const hiddenSet = useKoraDockHidden();
+  const customPersistFail = useKoraDockCustomPersistFailure();
 
   // The group open-set seeds from persistence, else live groups open by
   // default (K-GRP-DEFAULT). The initializer computes from the CURRENT
@@ -167,22 +208,36 @@ export function KoraDock({
 
   const needle = query.trim().toLowerCase();
 
+  // В4 — the LOCAL hiding is the FIRST stage of the funnel: a hidden row
+  // leaves every view AND the search (hidden means hidden — searching is
+  // not a way to peek behind the user's own hiding). The K-DOCK-HIDDEN
+  // count below reads the intersection with the LOADED slice, so stale
+  // ids for sessions gone from the registry count nothing.
+  const unhidden = useMemo(
+    () => items.filter((session) => !hiddenSet.has(session.id)),
+    [items, hiddenSet],
+  );
+  const hiddenVisibleCount = items.length - unhidden.length;
+
   // Filters + search run BEFORE grouping — an emptied group never renders.
   // The search reads the row's honest words (name, preview, native id, cwd)
-  // over the already-loaded slice — zero new requests.
+  // plus the LOCAL alias when one exists — over the already-loaded slice,
+  // zero new requests.
   const filtered = useMemo(
     () =>
-      items.filter((session) => {
+      unhidden.filter((session) => {
         if (!quickFilterMatches(session, quickFilter)) return false;
         if (needle === "") return true;
+        const alias = aliasMap.get(session.id);
         return (
           koraSessionName(session).toLowerCase().includes(needle) ||
+          (alias !== undefined && alias.toLowerCase().includes(needle)) ||
           (session.last_line_preview ?? "").toLowerCase().includes(needle) ||
           session.native_id.toLowerCase().includes(needle) ||
           (session.cwd ?? "").toLowerCase().includes(needle)
         );
       }),
-    [items, quickFilter, needle],
+    [unhidden, quickFilter, needle, aliasMap],
   );
 
   // В3 — the context filter (contract §2.3), the LAST stage before
@@ -228,6 +283,20 @@ export function KoraDock({
   const rowsTotal = contextFiltered.length;
   const searching = needle !== "";
 
+  // The pin-section's RESOLVED rows: the pin order, mapped over the
+  // loaded slice, hidden rows excluded (hidden wins), ghost ids (past
+  // the loaded pages) rendering nothing.
+  const pinnedRows = useMemo(
+    () =>
+      pins
+        .map((id) => items.find((session) => session.id === id))
+        .filter(
+          (session): session is KoraSession =>
+            session !== undefined && !hiddenSet.has(session.id),
+        ),
+    [pins, items, hiddenSet],
+  );
+
   return (
     // NO own landmark label: the placement element (the frame's dock aside
     // / the flow card) carries aria-label «Сессии» — a second, nested
@@ -236,9 +305,10 @@ export function KoraDock({
       <h2 className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
         {t("kora.dock.region")}
       </h2>
-      {persistFail ? (
-        // K-PERSIST-FAIL: the honest bit — the view/width/groups do NOT
-        // pretend to persist while the storage refuses writes.
+      {(persistFail || customPersistFail) ? (
+        // K-PERSIST-FAIL: the honest bit — the view/width/groups AND the
+        // В4 customization (pins/aliases/hiding) do NOT pretend to persist
+        // while the storage refuses writes.
         <p role="status" className="mt-1 text-xs text-foreground-muted">
           {t("kora.dock.persistFail")}
         </p>
@@ -262,6 +332,30 @@ export function KoraDock({
           {t("kora.nav.clusterChat")}
         </span>
       </Link>
+
+      {/* В4 — the pin-SECTION of sessions (contract §3.1: pin-секция
+       * сверху): the user's fixed shelf ABOVE the views — a pinned row
+       * renders regardless of the view, the quick filters or the context
+       * (that is what pinning is for), but ONLY from the LOADED slice (a
+       * pin past the loaded pages renders nothing — no invented rows) and
+       * never for a locally hidden row (hidden wins). No RESOLVED pins —
+       * no section (пустой слот не рисуем). */}
+      {pinnedRows.length > 0 ? (
+        <div data-testid="kora-dock-pin-section">
+          <p className="mt-2 text-xs uppercase tracking-wide text-foreground-muted">
+            {t("kora.dock.pinnedSection")}
+          </p>
+          <ul role="list" className="mt-1 space-y-0.5">
+            {pinnedRows.map((session) => (
+              <DockSessionRow
+                key={session.id}
+                session={session}
+                selected={session.id === selectedSessionId}
+              />
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       {/* The view switcher (contract §3.1: По работе / По хосту / Таймлайн). */}
       <div
@@ -334,6 +428,28 @@ export function KoraDock({
         />
       </div>
 
+      {/* В4 — the honest K-DOCK-HIDDEN line: N loaded rows are hidden
+       * LOCALLY (no server archive exists, none is pretended) — the count
+       * and the one-click way back («показать» clears the whole hidden
+       * set). Stale ids (the session left the registry) count nothing. */}
+      {dockReady && hiddenVisibleCount > 0 ? (
+        <p
+          role="status"
+          data-testid="kora-dock-hidden-line"
+          className="mt-1 flex min-h-4 flex-wrap items-center gap-x-2 text-xs text-foreground-muted"
+        >
+          <span>{t("kora.dock.hiddenLine", { n: hiddenVisibleCount })}</span>
+          <button
+            type="button"
+            data-testid="kora-dock-hidden-show"
+            onClick={() => clearKoraDockHidden()}
+            className="min-h-6 rounded-sm text-xs text-foreground-secondary underline decoration-border-subtle underline-offset-2 transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+          >
+            {t("kora.dock.hiddenShow")}
+          </button>
+        </p>
+      ) : null}
+
       <div className="mt-1">
         {!dockReady ? (
           // K-DOCK-PENDING: skeletons — no invented rows.
@@ -385,6 +501,14 @@ export function KoraDock({
               ) : null}
             </div>
           </div>
+        ) : rowsTotal === 0 && hiddenVisibleCount > 0 ? (
+          // K-DOCK-HIDDEN: everything this view would show is hidden
+          // LOCALLY — the count + the way back sit in the line above; here
+          // only the honest explanation (the «Здесь сессий нет» residue
+          // would pretend the slice is empty, it is not — it is hidden).
+          <p className="text-sm text-foreground-secondary">
+            {t("kora.dock.hiddenAll")}
+          </p>
         ) : view === "work" ? (
           <WorkView
             filtered={contextFiltered}
@@ -684,7 +808,16 @@ function GroupDisclosure({
 /** The dock's session row — the KoraSessionList grammar (state dot + name +
  * age/state + origin/steerable badges + preview), the frozen
  * /kora/:sessionId deep link. The route's selection reads aria-current —
- * nothing else about the row moves (K-INV-1). */
+ * nothing else about the row moves (K-INV-1).
+ *
+ * В4 customization rides the row honestly (koraDockCustomStore): the LOCAL
+ * alias replaces the display name ONLY with the «локально» badge — the
+ * server name stays the tooltip and the search key; the row menu (one
+ * disclosure per row, the 07j §6.1 discipline — a real trigger with the
+ * aria-expanded/controls pair, plain command rows, NO menu roles) carries
+ * the three actions: pin/unpin, the LOCAL rename (the form replaces the
+ * link while open; the server name is never written anywhere) and the
+ * LOCAL hide. */
 function DockSessionRow({
   session,
   selected = false,
@@ -695,13 +828,56 @@ function DockSessionRow({
   const t = useT();
   const { unit, n } = koraAgeUnit(session.age_seconds);
   const age = t(`kora.age.${unit}`, { n });
+  const alias = useKoraDockAlias(session.id);
+  const pins = useKoraDockPins();
+  const pinned = pins.includes(session.id);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const menuId = `kora-dock-row-menu-${session.id.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+
+  // Click-outside + Escape close the row menu; focus returns to the
+  // trigger (the SelectorButton disclosure contract: the focus never
+  // drops to body).
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (wasOpen.current && !menuOpen) triggerRef.current?.focus();
+    wasOpen.current = menuOpen;
+  }, [menuOpen]);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onPointerDown = (event: PointerEvent): void => {
+      const target = event.target as Element | null;
+      if (target?.closest(`[data-kora-row-menu="${menuId}"]`) === null) {
+        setMenuOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuOpen, menuId]);
+
+  if (renaming) {
+    return (
+      <li>
+        <DockRenameForm session={session} onDone={() => setRenaming(false)} />
+      </li>
+    );
+  }
+
   return (
-    <li>
+    <li className="relative flex items-stretch gap-0.5">
       <Link
         to={`/kora/${encodeURIComponent(session.id)}`}
         aria-current={selected ? "page" : undefined}
         className={cn(
-          "flex min-h-12 flex-col gap-0.5 rounded-md border-l-2 px-2 py-1.5 transition-colors duration-instant hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright md:min-h-6",
+          "flex min-h-12 min-w-0 flex-1 flex-col gap-0.5 rounded-md border-l-2 px-2 py-1.5 transition-colors duration-instant hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright md:min-h-6",
           selected ? "border-iris bg-iris-tint" : "border-transparent",
         )}
       >
@@ -710,8 +886,11 @@ function DockSessionRow({
             aria-hidden
             className={cn("size-1.5 shrink-0 self-center rounded-full", STATE_DOT[session.state])}
           />
-          <span className="min-w-0 flex-1 truncate text-sm font-medium">
-            {koraSessionName(session)}
+          <span
+            className="min-w-0 flex-1 truncate text-sm font-medium"
+            title={koraSessionName(session)}
+          >
+            {alias ?? koraSessionName(session)}
           </span>
           <span className="inline-flex shrink-0 items-center gap-1 text-xs text-foreground-secondary">
             {session.state === "live"
@@ -720,6 +899,17 @@ function DockSessionRow({
           </span>
         </span>
         <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 pl-3.5 font-mono text-xs text-foreground-muted">
+          {alias !== null ? (
+            // The LOCAL overlay names itself (contract В4 acceptance (б)):
+            // the alias never masks as the server name.
+            <Badge
+              variant="outline"
+              data-testid="kora-dock-alias-badge"
+              title={t("kora.dock.aliasHint")}
+            >
+              {t("kora.dock.aliasBadge")}
+            </Badge>
+          ) : null}
           <Badge
             variant="outline"
             title={t(
@@ -743,6 +933,142 @@ function DockSessionRow({
           </span>
         ) : null}
       </Link>
+      {/* The row's actions trigger: one disclosure, the ≥48px touch target
+       * below md (the ladder rule), the menu anchored RIGHT (the dock is
+       * the left edge — a left-anchored panel would clip). */}
+      <div className="flex shrink-0 items-center" data-kora-row-menu={menuId}>
+        <button
+          ref={triggerRef}
+          type="button"
+          data-testid="kora-dock-row-menu"
+          aria-label={t("kora.dock.rowMenuLabel")}
+          title={t("kora.dock.rowMenuLabel")}
+          aria-haspopup="true"
+          aria-expanded={menuOpen}
+          aria-controls={menuOpen ? menuId : undefined}
+          onClick={() => setMenuOpen((current) => !current)}
+          className="inline-flex min-h-12 min-w-8 items-center justify-center rounded-sm text-foreground-muted transition-colors duration-instant hover:bg-elevated hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright md:min-h-6"
+        >
+          <MoreHorizontal aria-hidden className="size-4" />
+        </button>
+        {menuOpen ? (
+          <div
+            id={menuId}
+            data-testid="kora-dock-row-menu-panel"
+            className="absolute left-full top-0 z-20 ml-1 min-w-52 rounded-md border border-border-subtle bg-background py-1 shadow-lg"
+          >
+            <button
+              type="button"
+              data-testid="kora-dock-row-pin"
+              onClick={() => {
+                setKoraDockPinned(session.id);
+                setMenuOpen(false);
+              }}
+              className="flex min-h-12 w-full items-center gap-2 px-3 py-2 text-left text-xs text-foreground-secondary transition-colors duration-instant hover:bg-elevated hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-iris-bright md:min-h-6"
+            >
+              {pinned ? (
+                <Star aria-hidden className="size-3.5 shrink-0 fill-iris-bright text-iris-bright" />
+              ) : (
+                <Star aria-hidden className="size-3.5 shrink-0" />
+              )}
+              {t(pinned ? "kora.dock.unpinSession" : "kora.dock.pinSession")}
+            </button>
+            <button
+              type="button"
+              data-testid="kora-dock-row-rename"
+              onClick={() => {
+                setRenaming(true);
+                setMenuOpen(false);
+              }}
+              className="flex min-h-12 w-full items-center gap-2 px-3 py-2 text-left text-xs text-foreground-secondary transition-colors duration-instant hover:bg-elevated hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-iris-bright md:min-h-6"
+            >
+              <Pencil aria-hidden className="size-3.5 shrink-0" />
+              {t("kora.dock.renameSession")}
+            </button>
+            <button
+              type="button"
+              data-testid="kora-dock-row-hide"
+              onClick={() => {
+                setKoraDockHidden(session.id, true);
+                setMenuOpen(false);
+              }}
+              className="flex min-h-12 w-full items-center gap-2 px-3 py-2 text-left text-xs text-foreground-secondary transition-colors duration-instant hover:bg-elevated hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-iris-bright md:min-h-6"
+            >
+              <EyeOff aria-hidden className="size-3.5 shrink-0" />
+              {t("kora.dock.hideSession")}
+            </button>
+          </div>
+        ) : null}
+      </div>
     </li>
+  );
+}
+
+/** The LOCAL rename form (contract §3.1 «локальные алиасы»): an input for
+ * the local name only — the server name is shown untouched underneath and
+ * is NEVER written anywhere. An emptied submit clears the alias; Escape
+ * cancels. */
+function DockRenameForm({
+  session,
+  onDone,
+}: {
+  session: KoraSession;
+  onDone: () => void;
+}) {
+  const t = useT();
+  const current = useKoraDockAlias(session.id);
+  const [value, setValue] = useState(current ?? "");
+  const inputId = `kora-dock-rename-${session.id.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+  const submit = (): void => {
+    setKoraDockAlias(session.id, value);
+    onDone();
+  };
+  return (
+    <div className="rounded-md border border-border-subtle px-2 py-1.5">
+      <label htmlFor={inputId} className="sr-only">
+        {t("kora.dock.renameLabel")}
+      </label>
+      <input
+        id={inputId}
+        data-testid="kora-dock-rename-input"
+        value={value}
+        autoFocus
+        onChange={(event) => setValue(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            submit();
+          } else if (event.key === "Escape") {
+            event.preventDefault();
+            onDone();
+          }
+        }}
+        className="h-8 w-full rounded-sm border border-border-subtle bg-background px-2 text-sm text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+      />
+      <p className="mt-1 text-xs text-foreground-muted">{t("kora.dock.aliasHint")}</p>
+      <p className="truncate text-xs text-foreground-secondary">
+        {koraSessionName(session)}
+      </p>
+      <div className="mt-1 flex items-center gap-1">
+        <button
+          type="button"
+          data-testid="kora-dock-rename-save"
+          aria-label={t("kora.dock.renameSave")}
+          onClick={submit}
+          className="inline-flex min-h-8 min-w-8 items-center justify-center rounded-sm text-foreground-secondary transition-colors duration-instant hover:bg-elevated hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+        >
+          <Check aria-hidden className="size-3.5" />
+        </button>
+        <button
+          type="button"
+          data-testid="kora-dock-rename-cancel"
+          aria-label={t("kora.dock.renameCancel")}
+          onClick={onDone}
+          className="inline-flex min-h-8 min-w-8 items-center justify-center rounded-sm text-foreground-muted transition-colors duration-instant hover:bg-elevated hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+        >
+          <X aria-hidden className="size-3.5" />
+        </button>
+      </div>
+    </div>
   );
 }
