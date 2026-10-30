@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Golden gate on MERGE (card git-merge-bypasses-golden-hook): git merge does
+# NOT run pre-commit — a merge (or a pull that merges) can bring viewer/ or
+# tokens.css changes whose golden/hostile render gate never ran. post-merge
+# cannot undo the merge (git keeps it regardless of this hook's exit code),
+# so THIS hook only SHOUTS: non-zero exit plus the explicit stderr banner
+# below. The fail-closed enforcement lives in pre-push (the same golden
+# set) — the push refuses until the gate is green.
+set -euo pipefail
+
+hook_dir="$(cd "$(dirname "$0")" && pwd -P)"
+
+# Scope: only merges that actually touched the gate's contract paths (the
+# pre-commit staged-path rule, applied to the merge diff). ORIG_HEAD is what
+# merge/pull set to the pre-merge HEAD; without it there is nothing honest
+# to compare against — stay silent (pre-push still guards).
+changed="$(git diff --name-only ORIG_HEAD HEAD 2>/dev/null \
+  | grep -E '^viewer/|^web/styles/tokens\.css$' || true)"
+if [ -z "$changed" ]; then
+  exit 0
+fi
+
+if ! bash "$hook_dir/golden.sh"; then
+  {
+    echo "================================================================================"
+    echo "GOLDEN GATE FAILED ON MERGE — run npx vitest (the golden set in"
+    echo "scripts/githooks/golden.sh) before push."
+    echo ""
+    echo "The merge brought viewer/ or tokens.css changes whose golden/hostile"
+    echo "render + token-parity gate is RED in this working tree. The merge commit"
+    echo "stands (a hook cannot roll a merge back) — but the pre-push hook will"
+    echo "REFUSE the push until the gate is green."
+    echo "Direct run: bash scripts/githooks/golden.sh   (repo root, needs node/npx)"
+    echo "================================================================================"
+  } >&2
+  exit 1
+fi
+exit 0

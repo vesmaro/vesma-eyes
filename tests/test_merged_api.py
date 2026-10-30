@@ -139,6 +139,46 @@ class TestMemoriesMerged:
         assert set(decoded["offsets"]) == {SERVER_A, SERVER_B}
         assert decoded["offsets"] == {SERVER_A: 1, SERVER_B: 1}
 
+    def test_native_offset_seeds_every_server_window(self, mem_env, client):
+        """The flat offset selector (card board-adapter-memories-offset-ignored,
+        S-batch cycle 2): with NO cursor, offset=N starts EVERY active
+        server's window N records deep — two calls with different offsets
+        give different merged windows, and the doubles actually received
+        the shifted offset (the wire reaches the native listing)."""
+        first = client.get("/api/memories?limit=2&offset=0")
+        second = client.get("/api/memories?limit=2&offset=1")
+        assert first.status_code == 200 and second.status_code == 200
+        ids_first = [i["id"] for i in first.json()["items"]]
+        ids_second = [i["id"] for i in second.json()["items"]]
+        assert ids_first != ids_second
+        _, fake_a, fake_b = mem_env
+        for fake in (fake_a, fake_b):
+            calls = _listing_calls(fake)
+            assert len(calls) == 2
+            assert calls[0]["offset"] == ["0"]
+            assert calls[-1]["offset"] == ["1"]
+
+    def test_offset_is_not_a_cursor_continuation_double_shift(
+            self, mem_env, client):
+        """A cursor was issued under the cursor contract (ADR 0011 §11) —
+        combining it with a flat offset must not double-shift the window:
+        the cursor's per-server offsets win and the page is identical to
+        the cursor-only continuation."""
+        page1 = client.get("/api/memories?limit=2").json()
+        cursor = page1["next_cursor"]
+        assert cursor
+        cont_plain = client.get(
+            f"/api/memories?limit=2&cursor={cursor}").json()
+        cont_mixed = client.get(
+            f"/api/memories?limit=2&cursor={cursor}&offset=1").json()
+        assert [i["id"] for i in cont_mixed["items"]] == \
+            [i["id"] for i in cont_plain["items"]]
+
+    def test_negative_offset_422(self, mem_env, client):
+        """The selector is a window start — a negative one is a client
+        bug, refused by the query contract like a bad limit."""
+        assert client.get("/api/memories?limit=1&offset=-1").status_code == 422
+
     def test_limit_cap_marks_truncated(self, mem_env, client):
         r = client.get("/api/memories", params={"limit": 1000})
         assert r.status_code == 200

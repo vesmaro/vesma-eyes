@@ -800,12 +800,15 @@ class TestBodyCapKoraSteeringScanW5:
 
     def test_cap_boundaries_and_scope_matrix(self, app_module):
         """Exactly-at-cap passes for BOTH new caps (the refusal is
-        strictly >); the steering cap does not leak onto GET legs, and
-        hermes chat — a DIFFERENT body class (20 turns x 8,000 chars)
-        deliberately outside this slice — still passes through (its own
-        cap decision is pending, pinned here so the boundary is honest)."""
+        strictly >); the steering cap does not leak onto GET legs. The
+        hermes chat leg — pinned here as 'own decision pending' when the
+        family was out of scope — is now its OWN capped family (S-batch
+        cycle 2): its boundary moved to TestBodyCapHermesChat, this matrix
+        keeps the == cap pass-through for the hermes cap too, so a cap
+        leak ACROSS families cannot pass silently."""
         steer = app_module._STEERING_BODY_MAX_BYTES
         scan = app_module._KORA_SCAN_BODY_MAX_BYTES
+        chat = app_module._KORA_HERMES_CHAT_MAX_BYTES
         cases = [
             ("steering declared == cap",
              self._request(path="/api/kora/sessions",
@@ -813,9 +816,9 @@ class TestBodyCapKoraSteeringScanW5:
             ("scan declared == cap",
              self._request(path="/api/executors/ex-w5/kora-scan",
                            content_length=str(scan))),
-            ("oversize on hermes chat (uncapped, own decision pending)",
+            ("hermes chat declared == cap",
              self._request(path="/api/kora/hermes/chat",
-                           content_length=str(steer * 100))),
+                           content_length=str(chat))),
             ("oversize, GET method",
              self._request(method="GET",
                            path="/api/kora/steering/step-up",
@@ -892,3 +895,119 @@ class TestBodyCapKoraSteeringScanW5:
                                  "Content-Type": "application/json"})
         assert r.status_code == 200, r.text[:300]
         assert r.json()["scanned"] == 2000
+
+
+# ------------------- SEC: the hermes chat body cap (S-batch cycle 2,
+# 2026-10-30, card hermes-chat-body-cap). The last POST family outside the
+# pre-parse gate: kora_hermes_chat buffers its body INSIDE the handler (the
+# ui-only guard runs there) — the same CWE-400 class. Own cap decision (the
+# one the W5 matrix pinned as pending): 20 turns x 8,000 chars ≈ 160 KB
+# legal + envelope -> 1 MiB. Sizing rationale at the constants in
+# server/app.py.
+_HERMES_CHAT_POST = "/api/kora/hermes/chat"
+
+
+class TestBodyCapHermesChat:
+    """The TestBodyCapC1 discipline, replayed for the hermes chat family."""
+
+    def _request(self, *, method: str = "POST",
+                 path: str = _HERMES_CHAT_POST,
+                 content_length: str | None = None) -> Request:
+        headers = ([(b"content-length", content_length.encode())]
+                   if content_length is not None else [])
+        scope = {"type": "http", "method": method, "path": path,
+                 "headers": headers, "query_string": b"",
+                 "server": ("test", 80), "client": ("127.0.0.1", 1),
+                 "scheme": "http"}
+
+        async def _no_body():   # the middleware must NEVER touch the body
+            raise AssertionError("the body channel must not be read")
+
+        return Request(scope, receive=_no_body)
+
+    @staticmethod
+    async def _sentinel(request):
+        from starlette.responses import Response
+        return Response(b"passed-through", status_code=200)
+
+    def test_oversize_declared_413_without_reading_the_body(
+            self, app_module):
+        """The C1 core on the chat route: a 2 MiB declaration (over the
+        1 MiB family cap) is refused by the header alone — the receive
+        channel raises if touched, call_next must not run."""
+        async def _call_next(request):
+            raise AssertionError("call_next must not run for an "
+                                 "oversize declaration")
+
+        resp = asyncio.run(app_module.telemetry_body_cap(
+            self._request(
+                content_length=str(app_module._KORA_HERMES_CHAT_MAX_BYTES + 1)),
+            _call_next))
+        assert resp.status_code == 413
+        assert "detail" in json.loads(resp.body.decode())
+
+    def test_cap_boundaries_and_scope_matrix(self, app_module):
+        """Exactly-at-cap passes (the refusal is strictly >); small and
+        absent declarations pass (chunked rides the post-parse caps); a
+        non-numeric declaration passes (transport-level garbage is not
+        the middleware's verdict); an over-cap declaration on a NEIGHBOUR
+        cap value proves the family cap is the hermes one, and the gate
+        stays route-scoped: other paths and methods ride untouched."""
+        chat = app_module._KORA_HERMES_CHAT_MAX_BYTES
+        cases = [
+            ("declared == cap", self._request(content_length=str(chat))),
+            ("declared small", self._request(content_length="1234")),
+            ("no declaration (chunked)", self._request()),
+            ("non-numeric declaration",
+             self._request(content_length="not-a-number")),
+            ("steering cap does not cover the chat route",
+             self._request(
+                 content_length=str(
+                     app_module._STEERING_BODY_MAX_BYTES * 2))),
+            ("oversize, other path",
+             self._request(path="/api/task-drafts",
+                           content_length=str(chat * 10))),
+            ("oversize, GET method",
+             self._request(method="GET", content_length=str(chat * 10))),
+        ]
+        for name, request in cases:
+            resp = asyncio.run(app_module.telemetry_body_cap(
+                request, self._sentinel))
+            assert resp.status_code == 200 and \
+                resp.body == b"passed-through", name
+
+    def test_oversize_body_413_before_the_guard(self, client, app_module):
+        """Integration: a real >1 MiB body from an ANONYMOUS leg answers
+        the cap's 413 — not the kora guard's 401, not a pydantic 422 —
+        earliest refusal wins (the C1 integration precedent)."""
+        cap = app_module._KORA_HERMES_CHAT_MAX_BYTES
+        r = client.post(_HERMES_CHAT_POST,
+                        content=b"x" * (cap + 1),
+                        headers={"Content-Type": "application/json"})
+        assert r.status_code == 413
+        assert "detail" in r.json()
+        assert "bytes" in r.json()["detail"]
+        # Cascade W6 (Архком-3): the 413 rides the FULL stack — CSP/
+        # nosniff/no-referrer on the cap's short-circuit, as on every answer.
+        assert r.headers["Content-Security-Policy"]
+        assert r.headers["X-Content-Type-Options"] == "nosniff"
+        assert r.headers["Referrer-Policy"] == "no-referrer"
+
+    def test_legal_max_conversation_reaches_the_guard(self, client,
+                                                      app_module):
+        """The honest gate: the LARGEST legal chat body (a 20-turn
+        conversation, 8,000 chars per message ≈ 160 KB + envelope) sails
+        under the 1 MiB cap and reaches the handler — the anonymous leg
+        then gets the kora guard's own 401 KoraErrorOut, not a 413 and
+        not a parse 422."""
+        payload = {"messages": [{"role": "user", "content": "p" * 8_000}
+                                for _ in range(20)]}
+        body = json.dumps(payload).encode()
+        # the envelope class itself: the legal maximum, well under the cap
+        assert 150_000 < len(body) < app_module._KORA_HERMES_CHAT_MAX_BYTES
+        r = client.post(_HERMES_CHAT_POST, content=body,
+                        headers={"Content-Type": "application/json"})
+        assert r.status_code == 401
+        # _guard_kora_read is the plain HTTPException guard ({"detail"}),
+        # not the steering KoraErrorOut — the honest 401 names the door.
+        assert "detail" in r.json()

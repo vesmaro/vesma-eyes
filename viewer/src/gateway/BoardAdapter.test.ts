@@ -219,6 +219,57 @@ describe("BoardAdapter wire contract", () => {
     expect((fetchMock.mock.calls[1] as [string])[0]).not.toContain("agent=");
   });
 
+  it("listMemories: the native offset passes through — two calls with different offsets give different windows", async () => {
+    // Card board-adapter-memories-offset-ignored (P1, S-batch cycle 2):
+    // listMemories used to DROP the vesma offset — on the board backend the
+    // flat selector had no wire leg, so an offset-driven listing looped page
+    // 1 (the cursor contract has no client-side offset translation). The
+    // merged endpoint now honors the flat selector (offset seeds every
+    // server's window when no cursor is present, ADR 0011 §11 cursor stays
+    // the continuation primitive) — the adapter must RELAY it: two calls
+    // with different offsets answer different windows.
+    const corpus = Array.from({ length: 5 }, (_, i) => ({
+      id: `mem-${i}`,
+      server: "cluster",
+      title: `Row ${i}`,
+      tags: [],
+      status: "published",
+      project: "x",
+      created_at: "2026-09-19T10:00:00Z",
+      updated_at: "2026-09-19T10:00:00Z",
+      excerpt: `body ${i}`,
+    }));
+    const windowingFetch = vi.fn(async (input: string | URL | Request) => {
+      const url = new URL(String(input), "http://board.local");
+      const offset = Number(url.searchParams.get("offset") ?? 0);
+      const limit = Number(url.searchParams.get("limit") ?? 50);
+      return jsonResponse({
+        items: corpus.slice(offset, offset + limit),
+        next_cursor: null,
+        truncated: false,
+        errors: [],
+      });
+    });
+    const adapter = new BoardAdapter({
+      fetchImpl: windowingFetch as unknown as typeof fetch,
+    });
+
+    const first = await adapter.listMemories({ limit: 2, offset: 0 });
+    const second = await adapter.listMemories({ limit: 2, offset: 2 });
+
+    // The selector rides the wire verbatim (0 included, like archive).
+    expect((windowingFetch.mock.calls[0] as [string])[0]).toContain("offset=0");
+    expect((windowingFetch.mock.calls[1] as [string])[0]).toContain("offset=2");
+    // …and the windows genuinely differ — page 1 does not loop.
+    expect(first.map((m) => m.id)).toEqual(["mem-0", "mem-1"]);
+    expect(second.map((m) => m.id)).toEqual(["mem-2", "mem-3"]);
+    // Omitted offset stays off the wire (no noise on plain lists).
+    await adapter.listMemories({ limit: 5 });
+    expect((windowingFetch.mock.calls[2] as [string])[0]).not.toContain(
+      "offset=",
+    );
+  });
+
   it("getMemory: maps the ok-envelope from the first resolving server", async () => {
     const fetchMock = respondingFetch({
       ok: true,

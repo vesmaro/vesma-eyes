@@ -7759,6 +7759,7 @@ export interface operations {
             readonly query?: {
                 readonly limit?: number;
                 readonly cursor?: string;
+                readonly offset?: number;
                 readonly scope?: string;
                 readonly status?: string;
                 readonly project?: string;

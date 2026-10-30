@@ -1361,9 +1361,9 @@ _DISCOVERY_BODY_MAX_BYTES = 262_144     # 256 KiB pre-parse Content-Length cap
 #   the step-up PIN (<=64 chars) rides the same family cap. Exact paths
 #   for the fixed routes, the prefix+suffix form only for the dynamic
 #   {session_id} segment (the discovery precedent — never a bare suffix
-#   match). POST /api/kora/hermes/chat is deliberately NOT here: it is a
-#   different body class (20 turns x 8,000 chars) and needs its own cap
-#   decision, not a borrowed one.
+#   match). POST /api/kora/hermes/chat has its OWN family cap below (the
+#   pending decision settled: a different body class — 20 turns x 8,000
+#   chars — sized to 1 MiB, see the constants).
 # - kora-scan (POST /api/executors/{id}/kora-scan) -> 6 MiB: sized to the
 #   realistic legal envelope (~4 MB: 2,000 sessions x ~2 KB, the
 #   2,000-char preview dominating) + ~50% headroom. A pathological
@@ -1378,13 +1378,25 @@ _KORA_SCAN_BODY_MAX_BYTES = 6_291_456   # 6 MiB pre-parse Content-Length cap
 # tiny by contract (delivery_id + a ≤500-char typed error); 16 KiB is
 # ~20x the legal envelope. Chunked rides the post-parse caps as above.
 _KORA_RELAY_CONFIRM_MAX_BYTES = 16_384  # 16 KiB pre-parse Content-Length cap
+# S-batch cycle 2 (2026-10-30, card hermes-chat-body-cap): the hermes chat
+# call gets the same pre-parse gate — its ui-only guard (_guard_kora_read)
+# runs INSIDE the handler while FastAPI buffers the body (the same CWE-400
+# class). Own cap decision (the one the W5 matrix pinned as pending): ONE
+# non-stream chat call — the legal body class is the 20-turn conversation,
+# a legal maximum of 160K chars (8,000 per message) + the JSON envelope;
+# worst-case UTF-8 (4 bytes per char) is ~640 KB, so the 1 MiB cap leaves
+# ~1.6x headroom to the worst case (~6x to the plain-ASCII case, and still
+# 6x under the kora-scan ingest). Chunked (no Content-Length) rides the
+# post-parse caps as above.
+_KORA_HERMES_CHAT_MAX_BYTES = 1_048_576  # 1 MiB pre-parse Content-Length cap
 
 
 @app.middleware("http")
 async def telemetry_body_cap(request: Request, call_next):
     """C1 pre-parse gate (CWE-400) — the telemetry precedent, extended to
-    the discovery ingest (SEC-3, cascade 2026-10-28) and to the Kora
-    steering trio + kora-scan ingest (SEC-W5-1, cascade 2026-10-29):
+    the discovery ingest (SEC-3, cascade 2026-10-28), to the Kora
+    steering trio + kora-scan ingest (SEC-W5-1, cascade 2026-10-29), and
+    to the hermes chat call (S-batch cycle 2, 2026-10-30):
     refuse an oversized DECLARED body BEFORE the body is read — header
     only, no body buffering, no parsing; every other route passes
     through untouched."""
@@ -1410,6 +1422,8 @@ async def telemetry_body_cap(request: Request, call_next):
                 or (path.startswith("/api/kora/sessions/")
                     and path.endswith("/messages"))):
             cap = _STEERING_BODY_MAX_BYTES
+        elif path == "/api/kora/hermes/chat":
+            cap = _KORA_HERMES_CHAT_MAX_BYTES
         else:
             cap = None
         if cap is not None:
@@ -3422,6 +3436,7 @@ def _upstream_error(server_name: str, code: int, body: Any) -> dict[str, Any]:
 async def memories_merged(
     limit: int = Query(50, ge=1),
     cursor: str = "",
+    offset: int = Query(0, ge=0),
     scope: str = "",
     status: str = "",
     project: str = "",
@@ -3447,6 +3462,16 @@ async def memories_merged(
     keeps its old offset for the next page. ``truncated`` is true when
     the requested limit exceeded the page cap (silent cap); content drops
     beyond the page always come with a non-null ``next_cursor``.
+
+    The native flat selector is honored additively (S-batch cycle 2, card
+    board-adapter-memories-offset-ignored): with NO cursor, ``offset``
+    seeds EVERY active server's window — the caller speaks the vesma
+    offset contract and the merged page starts ``offset`` records deep on
+    each server, exactly like the native listing. A cursor keeps owning
+    the window (its per-server offsets win, ``offset`` is ignored — the
+    cursor was issued under the cursor contract, ADR 0011 §11); the
+    cursor remains the continuation primitive, ``next_cursor`` still
+    carries the absolute per-server offsets either way.
     """
     truncated = limit > _MEMORY_PAGE_CAP
     limit = min(limit, _MEMORY_PAGE_CAP)
@@ -3459,6 +3484,12 @@ async def memories_merged(
         servers = matched
     else:
         servers = registry.active_servers()
+
+    # The flat offset selector (S-batch cycle 2): no cursor -> every server
+    # starts its window at ``offset``; with a cursor the cursor's per-server
+    # offsets are authoritative and ``offset`` is ignored (see docstring).
+    if offset and not cursor:
+        offsets = {s["name"]: offset for s in servers}
 
     listing_filters = {k: v for k, v in (
         ("status", status), ("project", project), ("agent", agent),
