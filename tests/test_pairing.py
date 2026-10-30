@@ -878,6 +878,10 @@ class TestOwnerPasswordChannel:
             json={"username": "dev-cookie-owner",
                   "password": "parol-dev-cookie-1"},
         ).status_code == 200
+        # pin: the password-session leg only — the reissue wrapper would
+        # shadow it (review 1.94 audit): with a live vesmaro_ui planted
+        # into the jar this test stayed green on the WRONG leg
+        client.cookies.delete("vesmaro_ui")
         r = client.get("/api/devices")  # cookie leg, no Authorization header
         assert r.status_code == 200, r.text
         assert r.json()["ok"] is True

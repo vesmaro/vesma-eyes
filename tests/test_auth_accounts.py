@@ -455,6 +455,12 @@ class TestSessionGuardLeg:
         assert _register(client).status_code == 201
         assert _login(client).status_code == 200
         assert _make_task(client, "both-cookies").status_code == 201
+        # Leg precision (review 1.94 audit): the 201 above is admitted by
+        # EITHER live cookie — with a forged vesmaro_ui it still passed on
+        # the password leg. Drop the password one so the next mutation
+        # proves the LEGACY ui leg specifically.
+        client.cookies.delete("vesmaro_auth")
+        assert _make_task(client, "ui-leg-only").status_code == 201
 
     def test_fail_closed_503_preserved(self, client, no_board_token):
         """Accounts do NOT bypass the board fail-closed: no token class

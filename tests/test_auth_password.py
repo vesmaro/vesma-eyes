@@ -292,6 +292,11 @@ class TestRecoveryLeg:
         same recovery without any cookie."""
         monkeypatch.setattr(app_module, "UI_WRITE_TOKEN", UI_TOKEN)
         assert _register(client).status_code == 201
+        # Leg precision (review 1.94 audit): the docstring promises a pure
+        # header leg — clear the jar so the register's vesmaro_auth session
+        # cannot ride along (determinism is pinned elsewhere; this makes
+        # the promise tested, not assumed).
+        client.cookies.clear()
         r = client.post("/api/auth/password",
                         headers={"Authorization": f"Bearer {UI_TOKEN}"},
                         json={"username": "owner",
