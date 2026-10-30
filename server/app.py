@@ -1361,9 +1361,9 @@ _DISCOVERY_BODY_MAX_BYTES = 262_144     # 256 KiB pre-parse Content-Length cap
 #   the step-up PIN (<=64 chars) rides the same family cap. Exact paths
 #   for the fixed routes, the prefix+suffix form only for the dynamic
 #   {session_id} segment (the discovery precedent — never a bare suffix
-#   match). POST /api/kora/hermes/chat is deliberately NOT here: it is a
-#   different body class (20 turns x 8,000 chars) and needs its own cap
-#   decision, not a borrowed one.
+#   match). POST /api/kora/hermes/chat has its OWN family cap below (the
+#   pending decision settled: a different body class — 20 turns x 8,000
+#   chars — sized to 1 MiB, see the constants).
 # - kora-scan (POST /api/executors/{id}/kora-scan) -> 6 MiB: sized to the
 #   realistic legal envelope (~4 MB: 2,000 sessions x ~2 KB, the
 #   2,000-char preview dominating) + ~50% headroom. A pathological
@@ -1378,13 +1378,24 @@ _KORA_SCAN_BODY_MAX_BYTES = 6_291_456   # 6 MiB pre-parse Content-Length cap
 # tiny by contract (delivery_id + a ≤500-char typed error); 16 KiB is
 # ~20x the legal envelope. Chunked rides the post-parse caps as above.
 _KORA_RELAY_CONFIRM_MAX_BYTES = 16_384  # 16 KiB pre-parse Content-Length cap
+# S-batch cycle 2 (2026-10-30, card hermes-chat-body-cap): the hermes chat
+# call gets the same pre-parse gate — its ui-only guard (_guard_kora_read)
+# runs INSIDE the handler while FastAPI buffers the body (the same CWE-400
+# class). Own cap decision (the one the W5 matrix pinned as pending): ONE
+# non-stream chat call — the legal body class is the 20-turn conversation,
+# 8,000 chars per message ≈ 160 KB at 4 bytes per char + the JSON envelope;
+# 1 MiB is ~6x that legal maximum (generous headroom, still 6x under the
+# kora-scan ingest). Chunked (no Content-Length) rides the post-parse caps
+# as above.
+_KORA_HERMES_CHAT_MAX_BYTES = 1_048_576  # 1 MiB pre-parse Content-Length cap
 
 
 @app.middleware("http")
 async def telemetry_body_cap(request: Request, call_next):
     """C1 pre-parse gate (CWE-400) — the telemetry precedent, extended to
-    the discovery ingest (SEC-3, cascade 2026-10-28) and to the Kora
-    steering trio + kora-scan ingest (SEC-W5-1, cascade 2026-10-29):
+    the discovery ingest (SEC-3, cascade 2026-10-28), to the Kora
+    steering trio + kora-scan ingest (SEC-W5-1, cascade 2026-10-29), and
+    to the hermes chat call (S-batch cycle 2, 2026-10-30):
     refuse an oversized DECLARED body BEFORE the body is read — header
     only, no body buffering, no parsing; every other route passes
     through untouched."""
@@ -1410,6 +1421,8 @@ async def telemetry_body_cap(request: Request, call_next):
                 or (path.startswith("/api/kora/sessions/")
                     and path.endswith("/messages"))):
             cap = _STEERING_BODY_MAX_BYTES
+        elif path == "/api/kora/hermes/chat":
+            cap = _KORA_HERMES_CHAT_MAX_BYTES
         else:
             cap = None
         if cap is not None:
