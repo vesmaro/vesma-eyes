@@ -1383,10 +1383,11 @@ _KORA_RELAY_CONFIRM_MAX_BYTES = 16_384  # 16 KiB pre-parse Content-Length cap
 # runs INSIDE the handler while FastAPI buffers the body (the same CWE-400
 # class). Own cap decision (the one the W5 matrix pinned as pending): ONE
 # non-stream chat call — the legal body class is the 20-turn conversation,
-# 8,000 chars per message ≈ 160 KB at 4 bytes per char + the JSON envelope;
-# 1 MiB is ~6x that legal maximum (generous headroom, still 6x under the
-# kora-scan ingest). Chunked (no Content-Length) rides the post-parse caps
-# as above.
+# a legal maximum of 160K chars (8,000 per message) + the JSON envelope;
+# worst-case UTF-8 (4 bytes per char) is ~640 KB, so the 1 MiB cap leaves
+# ~1.6x headroom to the worst case (~6x to the plain-ASCII case, and still
+# 6x under the kora-scan ingest). Chunked (no Content-Length) rides the
+# post-parse caps as above.
 _KORA_HERMES_CHAT_MAX_BYTES = 1_048_576  # 1 MiB pre-parse Content-Length cap
 
 
