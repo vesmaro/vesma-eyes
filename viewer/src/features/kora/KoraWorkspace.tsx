@@ -39,6 +39,8 @@ import { useIsFrameViewport } from "./koraViewport";
 import { buildKoraTree, koraSummary, type KoraQuickFilter } from "./koraWorkspaceModel";
 import { deriveSessionRelayAlive } from "./koraRelay";
 import type { KoraHarnessOption } from "./KoraComposerControls";
+import type { KoraSlashCommands } from "./koraComposerSymbols";
+import { setKoraDockPinned } from "./koraDockCustomStore";
 import { useKoraSpecialistAnnotation } from "./koraSpecialistStore";
 import {
   useKoraSessionPages,
@@ -301,6 +303,36 @@ export function KoraWorkspace({
     }
     return null;
   }, [session, model]);
+
+  // В4 — the composer's LOCAL slash commands (kora-ide contract §3.2):
+  // each handler is ONE real workspace action — /pin toggles the dock
+  // pin-section's pin (the koraDockCustomStore, the LOCAL overlay), /view
+  // rides the frozen /kora/:sessionId route, /filter rides the tree's own
+  // harness-click route /kora/host/:host?agent= (the dock narrows — the
+  // route IS the selection, K-INV-2). An unknown host (registry miss) is
+  // the honest noHost refusal — the composer announces it. No command
+  // pretends: each returns what actually happened.
+  const slashCommands = useMemo<KoraSlashCommands | null>(() => {
+    if (session === null) return null;
+    const current = session;
+    return {
+      pin: () => {
+        const pinned = setKoraDockPinned(current.id);
+        return { ok: true, note: pinned ? "pin.on" : "pin.off" };
+      },
+      view: () => {
+        navigate(`/kora/${encodeURIComponent(current.id)}`);
+        return { ok: true, note: "view.open" };
+      },
+      filter: () => {
+        if (sessionHost === null) return { ok: false, reason: "noHost" };
+        navigate(
+          `/kora/host/${encodeURIComponent(sessionHost)}?agent=${encodeURIComponent(current.executor_id)}`,
+        );
+        return { ok: true, note: "filter.host" };
+      },
+    };
+  }, [session, sessionHost, navigate]);
 
   // The route IS the page context (KW4): ?agent= selects the field's agent
   // (empty → the freshest default, K-CTX-NO-AGENT). The quick filter stays
@@ -739,6 +771,8 @@ export function KoraWorkspace({
                 harnessOptions={harnessOptions}
                 resolvedModel={contextModel}
                 relayAlive={relayAlive}
+                registryItems={items}
+                slashCommands={slashCommands}
               />
             </>
           )}

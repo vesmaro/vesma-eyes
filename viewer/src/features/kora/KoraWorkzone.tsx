@@ -5,6 +5,7 @@ import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { KoraComposer } from "./KoraComposer";
 import type { KoraHarnessOption } from "./KoraComposerControls";
+import type { KoraSlashCommands } from "./koraComposerSymbols";
 import { KoraTranscript } from "./KoraTranscript";
 import { KoraHermesChat } from "./KoraHermesChat";
 import { KoraMovesZone } from "./KoraMovesZone";
@@ -72,6 +73,8 @@ export function KoraWorkzone({
   harnessOptions = [],
   resolvedModel = null,
   relayAlive = false,
+  registryItems = [],
+  slashCommands = null,
 }: {
   session: KoraSession | null;
   registryEmpty: KoraRegistryEmpty;
@@ -94,6 +97,12 @@ export function KoraWorkzone({
   /** A1 — the relay signal (the workspace's derivation over the loaded
    * executors registry); feeds the composer's live send button. */
   relayAlive?: boolean;
+  /** В4 — the LOADED session registry slice (the # symbol's search
+   * space; the workspace owns the read). */
+  registryItems?: readonly KoraSession[];
+  /** В4 — the LOCAL slash-command handlers (pin/view/filter — real
+   * workspace actions); null keeps the honest unavailable note. */
+  slashCommands?: KoraSlashCommands | null;
 }) {
   const t = useT();
 
@@ -114,6 +123,8 @@ export function KoraWorkzone({
         harnessOptions={harnessOptions}
         resolvedModel={resolvedModel}
         relayAlive={relayAlive}
+        registryItems={registryItems}
+        slashCommands={slashCommands}
       />
     );
   }
@@ -204,6 +215,8 @@ function SessionView({
   harnessOptions = [],
   resolvedModel = null,
   relayAlive = false,
+  registryItems = [],
+  slashCommands = null,
 }: {
   session: KoraSession;
   coverage: KoraCoverage | null | undefined;
@@ -216,6 +229,10 @@ function SessionView({
   resolvedModel?: string | null;
   /** A1 — the relay signal: rides to the composer's live send button. */
   relayAlive?: boolean;
+  /** В4 — the LOADED registry slice (the # symbol's search space). */
+  registryItems?: readonly KoraSession[];
+  /** В4 — the LOCAL slash-command handlers (real workspace actions). */
+  slashCommands?: KoraSlashCommands | null;
 }) {
   const t = useT();
   const [follow, setFollow] = useState(true);
@@ -301,6 +318,8 @@ function SessionView({
         harnessOptions={harnessOptions}
         resolvedModel={resolvedModel}
         relayAlive={relayAlive}
+        registryItems={registryItems}
+        slashCommands={slashCommands}
       />
     </section>
   );
