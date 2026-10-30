@@ -151,6 +151,25 @@ class TestProjection:
         harnesses = {i["harness"] for i in body["executors"][0]["installations"]}
         assert harnesses == {"zcode", "pi"}
 
+    def test_installations_sorted_by_harness_provider(self, client: TestClient):
+        """The response is deterministic: installations within a row are
+        sorted by (harness, provider) — the fleet-roster precedent — not
+        the client's report order."""
+        executor, secret = _register(client, "kora-models-sorted")
+        _report_models(client, executor["id"], secret, [
+            ZCODE_ROW,
+            {**ZCODE_ROW, "harness": "cursor", "provider": "openai"},
+            {**ZCODE_ROW, "harness": "copilot", "provider": "anthropic"},
+            {**ZCODE_ROW, "harness": "pi", "provider": "zzz"},
+            {**ZCODE_ROW, "harness": "pi", "provider": "aaa"},
+        ])
+        body = _roster(client)
+        keys = [(i["harness"], i["provider"])
+                for i in body["executors"][0]["installations"]]
+        assert keys == [("copilot", "anthropic"), ("cursor", "openai"),
+                        ("pi", "aaa"), ("pi", "zzz"),
+                        ("zcode", "openrouter")]
+
 
 # -------------------------------------------------------- honest absence
 class TestHonestAbsence:

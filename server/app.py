@@ -7232,6 +7232,10 @@ async def kora_models(request: Request) -> KoraModelsOut:
                 source=str(row.get("source") or "").strip(),
                 models=models,
             ))
+        # The snapshot keeps the client's report order; the response is
+        # deterministic (the fleet roster's sorted-seen_on precedent):
+        # (harness, provider).
+        installations.sort(key=lambda i: (i.harness, i.provider))
         if not installations:
             continue
         reported = str(snapshot.get("reported_at") or "").strip() or None

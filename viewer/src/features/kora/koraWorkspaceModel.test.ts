@@ -605,6 +605,19 @@ describe("koraHarnessModels (В3, KORA-MODELS-1 consumer)", () => {
     ).toEqual({ state: "unknown" });
   });
 
+  it("hermes with a SETTLED read and no data reads unknown — a failed /status is «не сообщаются», never the eternal «загрузка»", () => {
+    // The В3 review pin: the workspace resolves hermesReady=true with
+    // hermes=null when the /status fetch settled with an error; the
+    // mirror leg's settled-miss shape applies (unknown), pending would
+    // hang the node forever.
+    expect(
+      koraHarnessModels(
+        { harness: "hermes", executorId: "hermes" },
+        { ...ready, hermes: null },
+      ),
+    ).toEqual({ state: "unknown" });
+  });
+
   it("a mirror hit filters to the node's OWN harness and merges per provider", () => {
     const result = koraHarnessModels(
       { harness: "zcode", executorId: "exec-zc" },

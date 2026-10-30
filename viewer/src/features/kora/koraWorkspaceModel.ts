@@ -268,8 +268,14 @@ export function koraHarnessModels(
   sources: KoraModelsSources,
 ): KoraHarnessModels {
   if (agent.harness === "hermes") {
-    if (!sources.hermesReady || sources.hermes === null) {
+    if (!sources.hermesReady) {
       return { state: "pending" };
+    }
+    // A SETTLED read with no roster (the /status fetch failed) is the
+    // honest «не сообщаются» — the mirror leg's shape; pending here
+    // would hang the node on an eternal «загрузка…».
+    if (sources.hermes === null) {
+      return { state: "unknown" };
     }
     const models = sources.hermes.models
       .filter((model) => typeof model === "string" && model.trim() !== "")
