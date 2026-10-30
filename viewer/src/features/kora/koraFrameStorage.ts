@@ -37,6 +37,17 @@
  * surfaces keep separate open-sets). The dock writes return the honest
  * «persisted?» boolean the K-PERSIST-FAIL bit reads.
  *
+ * KORA-IDE В4 (kora-ide contract §2.5/§3.1 — the dock CUSTOMIZATION): three
+ * more keys — `vesmaro.koraDockPins` (the dock pin-section's session ids, a
+ * JSON array, pin order preserved), `vesmaro.koraDockHidden` (the locally
+ * hidden session ids, a JSON array) and `vesmaro.koraAlias:{sessionId}`
+ * (the LOCAL session alias, one key per session, the same shape as the
+ * specialist keys; renaming NEVER touches the server name — the honest
+ * «локально» badge is the UI's contract). The contract risk table puts
+ * aliases inside the K-INV-5 perimeter: a local key holds a NAME the user
+ * typed, never transcript content — nothing here reads a transcript to
+ * pre-fill it.
+ *
  * Guards (07l §5.2 «безопасные геттеры»): every read/write is try/catch —
  * private mode, disabled storage and SSR all degrade to the in-memory
  * default. Garbage values reset to the default, out-of-range numbers clamp
@@ -329,6 +340,105 @@ export function writeKoraSpecialist(sessionId: string, name: string): boolean {
       storage.removeItem(SPECIALIST_PREFIX + sessionId);
     } else {
       storage.setItem(SPECIALIST_PREFIX + sessionId, name.slice(0, SPECIALIST_LIMIT));
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// --- the dock customization (В4: pins / hidden / local aliases) --------------
+//
+// kora-ide contract §3.1 + §7 В4: the pin-SECTION of sessions (above the
+// views, beside the cluster pin), the LOCAL hiding (instead of a server
+// archive — the honest K-DOCK-HIDDEN line names the count and offers the
+// way back) and the LOCAL aliases (marked «локально», the server name is
+// never rewritten). All three live in the frame-storage guards with the
+// honest boolean the K-PERSIST-FAIL bit reads (the W1 discipline).
+
+/** The dock pin-section (ordered session ids — pin order is render order). */
+const DOCK_PINS_KEY = "vesmaro.koraDockPins";
+/** The locally hidden session ids (the honest K-DOCK-HIDDEN count reads
+ * the intersection with the LOADED slice — stale ids count nothing). */
+const DOCK_HIDDEN_KEY = "vesmaro.koraDockHidden";
+/** The local alias prefix (one key per session, like the draft/specialist
+ * keys). */
+export const ALIAS_PREFIX = "vesmaro.koraAlias:";
+/** A name annotation, not an archive — same quota discipline as the
+ * specialist keys. */
+const ALIAS_LIMIT = 200;
+
+/** Read a JSON string-array key; null when absent or garbage (never
+ * throws) — the same payload discipline as the group open-sets. */
+function readStringArrayKey(key: string): readonly string[] | null {
+  const storage = safeLocalStorage();
+  if (storage === undefined) return null;
+  try {
+    const raw = storage.getItem(key);
+    if (raw === null) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      Array.isArray(parsed) &&
+      parsed.every((item) => typeof item === "string")
+    ) {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Write a JSON string-array key; true = persisted (K-PERSIST-FAIL reads
+ * the lie). */
+function writeStringArrayKey(key: string, values: readonly string[]): boolean {
+  const storage = safeLocalStorage();
+  if (storage === undefined) return false;
+  try {
+    storage.setItem(key, JSON.stringify([...values]));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** The persisted pin order; null = absent or garbage. */
+export const readKoraDockPins = (): readonly string[] | null =>
+  readStringArrayKey(DOCK_PINS_KEY);
+/** Persist the pin order; true = persisted (the honest local bit). */
+export const writeKoraDockPins = (ids: readonly string[]): boolean =>
+  writeStringArrayKey(DOCK_PINS_KEY, ids);
+
+/** The persisted hidden ids; null = absent or garbage. */
+export const readKoraDockHidden = (): readonly string[] | null =>
+  readStringArrayKey(DOCK_HIDDEN_KEY);
+/** Persist the hidden set; true = persisted (the honest local bit). */
+export const writeKoraDockHidden = (ids: readonly string[]): boolean =>
+  writeStringArrayKey(DOCK_HIDDEN_KEY, ids);
+
+/** Read the persisted alias; null = none or garbage (never throws). */
+export function readKoraAlias(sessionId: string): string | null {
+  const storage = safeLocalStorage();
+  if (storage === undefined) return null;
+  try {
+    const raw = storage.getItem(ALIAS_PREFIX + sessionId);
+    return typeof raw === "string" && raw.length > 0 ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Write/clear the alias; true = persisted (the honest local bit). An
+ * emptied name removes the key. A name the user typed — NEVER transcript
+ * content (K-INV-5: the local key accepts no transcript pre-fill). */
+export function writeKoraAlias(sessionId: string, name: string): boolean {
+  const storage = safeLocalStorage();
+  if (storage === undefined) return false;
+  try {
+    if (name.trim().length === 0) {
+      storage.removeItem(ALIAS_PREFIX + sessionId);
+    } else {
+      storage.setItem(ALIAS_PREFIX + sessionId, name.slice(0, ALIAS_LIMIT));
     }
     return true;
   } catch {
