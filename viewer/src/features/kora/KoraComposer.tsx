@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n";
@@ -10,11 +11,24 @@ import {
   isKoraUnauthorized,
   koraErrorCode,
 } from "./koraGateway";
-import { useKoraSendMessage } from "./useKora";
+import { useKoraSendMessage, koraKeys } from "./useKora";
 import {
   KoraComposerControls,
   type KoraHarnessOption,
 } from "./KoraComposerControls";
+import {
+  atSuggestions,
+  detectSymbolToken,
+  dollarSuggestions,
+  hashSuggestions,
+  insertSuggestion,
+  slashSuggestions,
+  stripToken,
+  type KoraSlashCommandId,
+  type KoraSlashCommands,
+  type KoraSlashSuggestion,
+  type KoraSymbolSuggestion,
+} from "./koraComposerSymbols";
 
 /**
  * The composer (07j §4.6 v9-аддендум): a REAL field and a REAL React state
@@ -60,6 +74,23 @@ import {
  * The parent keys this component by session id, so a session switch is an
  * UNMOUNT: the intent telemetry rides that; the DRAFT survives it (per-
  * session keys, read back on the next mount).
+ *
+ * В4 — the SYMBOL grammar (kora-ide contract §3.2, the zcode four symbols,
+ * research §7.3): typing @ # / $ at a token boundary opens the symbol
+ * menu above the field — @ offers the session's cwd as a REFERENCE (the
+ * registry reports no file list — the honest degradation says so; links,
+ * never content reads), # fuzzy-searches the LOADED session registry (a
+ * mention of a past session), $ lists the В2a specialist roster (a
+ * mention inserted into the text), / carries the LOCAL commands —
+ * /pin (the dock pin-section), /view (open the session), /filter (the
+ * dock's host context) — all three real workspace actions via
+ * `slashCommands`; the RELAY commands arrive with the relay-transport
+ * line and the menu's footer says so. «!» is NOT a symbol (the anti-argv
+ * ADR-0019 pin): the trigger set is closed, a draft beginning with «!» is
+ * text and opens nothing. While a menu is active, Enter/Tab ACCEPT the
+ * highlighted row (never a send), arrows move, Escape dismisses; a menu
+ * with zero activatable rows is informational only — the keyboard falls
+ * through honestly.
  */
 
 /** One real storage write is scheduled this long after the last keystroke. */
@@ -71,6 +102,8 @@ export function KoraComposer({
   harnessOptions = [],
   resolvedModel = null,
   relayAlive = false,
+  registryItems = [],
+  slashCommands = null,
 }: {
   session: KoraSession;
   intentEvents: KoraIntentEventPoints;
@@ -88,6 +121,16 @@ export function KoraComposer({
    * parks the turn by that very executor). Default false = the honest
    * relay-off: no signal, no send button. */
   relayAlive?: boolean;
+  /** В4 — the LOADED session registry slice (the # symbol's search
+   * space; the workspace owns the read, zero new requests). Default
+   * empty = the week-0 mounts: the # menu reads the honest zero-match
+   * note over nothing. */
+  registryItems?: readonly KoraSession[];
+  /** В4 — the LOCAL slash-command handlers (the workspace's real
+   * actions: the dock pin toggle, the session route, the host-context
+   * route). Default null = the week-0 mounts: the commands render
+   * honestly unavailable («команды доступны в рабочем пространстве»). */
+  slashCommands?: KoraSlashCommands | null;
 }) {
   const t = useT();
   // Restore once, at mount (the parent remounts per session): the persisted
@@ -104,6 +147,17 @@ export function KoraComposer({
   // The pending unsaved text + its timer — flushed on unmount.
   const pendingRef = useRef<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // В4 — the symbol-menu state: the caret the token reads, the token
+  // Escape dismissed (per token instance — a new token reopens), the
+  // highlighted row and the caret a menu selection applies after the
+  // draft update lands (the textarea's own selection follows in an
+  // effect — a programmatic insert must move the REAL caret, not only
+  // the state's idea of it).
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const [caret, setCaret] = useState(0);
+  const [dismissed, setDismissed] = useState<{ symbol: string; start: number } | null>(null);
+  const pendingCaretRef = useRef<number | null>(null);
 
   // The relay send (A1): the seam's slice-3 hook — POST messages → the
   // 202 body with the REAL KoraDelivery; success invalidates the
@@ -124,6 +178,145 @@ export function KoraComposer({
         ? "kora.composer.relayNote"
         : "kora.composer.sendLaterNote";
   const hasDraft = draft.trim().length > 0;
+
+  // ── В4 — the symbol grammar (the derivation over ALREADY-LOADED data;
+  // zero new requests, §5.4). The $ roster is read from the react-query
+  // CACHE the selector row's own observer keeps warm — a second observer
+  // here would double-subscribe the query and race the mutation's act
+  // commits (the A1 send test caught it); the cache IS the same fact the
+  // selector row shows, read at the keystroke the menu opens. ──
+  const queryClient = useQueryClient();
+  const rosterItems = useMemo(() => {
+    const cached = queryClient.getQueryData(koraKeys.specialists()) as
+      | { count: number; items: { name: string; slug: string }[] }
+      | undefined;
+    return cached !== undefined && cached.count > 0 ? cached.items : [];
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- getQueryData is a NON-reactive read: draft/caret are the keystroke signal that re-reads the cache when the menu opens (the deps look unnecessary to the linter; they are the point)
+  }, [queryClient, draft, caret]);
+
+  const token = useMemo(
+    () => (dead ? null : detectSymbolToken(draft, caret)),
+    [dead, draft, caret],
+  );
+
+  type SymbolRow =
+    | { readonly kind: "suggestion"; readonly suggestion: KoraSymbolSuggestion }
+    | {
+        readonly kind: "command";
+        readonly command: KoraSlashSuggestion;
+        readonly enabled: boolean;
+      };
+
+  const symbolRows = useMemo<readonly SymbolRow[]>(() => {
+    if (token === null) return [];
+    switch (token.symbol) {
+      case "@":
+        return atSuggestions(session, token.body).map((suggestion) => ({
+          kind: "suggestion" as const,
+          suggestion,
+        }));
+      case "#":
+        return hashSuggestions(registryItems, session.id, token.body).map(
+          (suggestion) => ({ kind: "suggestion" as const, suggestion }),
+        );
+      case "$":
+        return dollarSuggestions(rosterItems, token.body).map((suggestion) => ({
+          kind: "suggestion" as const,
+          suggestion,
+        }));
+      case "/":
+        return slashSuggestions(token.body).map((command) => ({
+          kind: "command" as const,
+          command,
+          enabled: slashCommands !== null,
+        }));
+      default:
+        return [];
+    }
+  }, [token, session, registryItems, rosterItems, slashCommands]);
+
+  // The menu is KEYBOARD-active only over activatable rows: a zero-match
+  // or an all-disabled panel is informational — Enter falls through to
+  // the field's own Enter semantics (honest, never a swallowed action).
+  // The Escape-dismissal holds for exactly this token instance — and it
+  // closes the PANEL visually, not only the keyboard interception (the
+  // dismissed token is a done conversation; a new token reopens).
+  const dismissedThisToken =
+    token !== null &&
+    dismissed?.symbol === token.symbol &&
+    dismissed.start === token.start;
+  const menuActive =
+    token !== null &&
+    !dismissedThisToken &&
+    symbolRows.some((row) =>
+      row.kind === "suggestion"
+        ? true
+        : row.kind === "command" && row.enabled,
+    );
+
+  // The highlighted row is TOKEN-SCOPED and resets WITHOUT an effect (the
+  // react.dev «adjust state when data changes» pattern — a same-value
+  // setState inside a passive effect proved to swallow a concurrently
+  // scheduled external update, the A1 mutation's notify; a render-time
+  // adjust commits before the tree and keeps no lingering work).
+  const tokenKey = token !== null ? `${token.symbol}:${token.start}` : "";
+  const [highlightState, setHighlightState] = useState({ key: "", index: 0 });
+  if (highlightState.key !== tokenKey) {
+    setHighlightState({ key: tokenKey, index: 0 });
+  }
+  const highlight =
+    highlightState.key === tokenKey
+      ? Math.min(highlightState.index, Math.max(symbolRows.length - 1, 0))
+      : 0;
+  const moveHighlight = (delta: number): void => {
+    const count = symbolRows.length;
+    if (count === 0) return;
+    setHighlightState({ key: tokenKey, index: (highlight + delta + count) % count });
+  };
+
+  // A menu selection inserts into the draft through the SAME path as
+  // typing (the debounce, the honest save beat), then moves the REAL
+  // caret to just after the inserted text. The caret state moves ONLY
+  // when it truly changes — a same-value setState inside an effect is
+  // the poison pattern above (it must never appear here).
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- runs after EVERY render on purpose: a pending caret from a menu selection must land even when no dep changed; the null-check + same-value setState keep the no-op render free (no update chain)
+  useEffect(() => {
+    const pending = pendingCaretRef.current;
+    if (pending === null) return;
+    pendingCaretRef.current = null;
+    const el = inputRef.current;
+    if (el !== null) el.setSelectionRange(pending, pending);
+    setCaret((current) => (current === pending ? current : pending));
+  });
+
+  const applySuggestion = (suggestion: KoraSymbolSuggestion): void => {
+    if (token === null) return;
+    const next = insertSuggestion(draft, token, suggestion);
+    setDismissed(null);
+    handleInput(next.text, "input");
+    pendingCaretRef.current = next.caret;
+  };
+
+  const runCommand = (command: KoraSlashCommandId): void => {
+    if (token === null || slashCommands === null) return;
+    const outcome = slashCommands[command]();
+    const stripped = stripToken(draft, token);
+    setDismissed(null);
+    handleInput(stripped.text, "input");
+    pendingCaretRef.current = stripped.caret;
+    // The workspace's real outcome is announced politely (4.1.3) — a
+    // refusal names its reason (the honest «подсказка» of the brief).
+    setAnnounce(
+      outcome.ok
+        ? t(`kora.composer.cmdDone.${outcome.note}`)
+        : t(`kora.composer.cmdFail.${outcome.reason}`),
+    );
+  };
+
+  const activateRow = (row: SymbolRow): void => {
+    if (row.kind === "suggestion") applySuggestion(row.suggestion);
+    else if (row.enabled) runCommand(row.command.id);
+  };
 
   const flushSave = useCallback(
     (text: string): void => {
@@ -207,7 +400,32 @@ export function KoraComposer({
   // button performs, never a silent no-op. Without the relay send (the
   // honest deferred cut) Enter announces the deferred status politely
   // (07j §4.6: «действие не молчит и не притворяется отправленным»).
+  //
+  // В4 — while a symbol menu is ACTIVE the field's keys serve it first
+  // (the zcode autocomplete contract): arrows move the highlight, Enter
+  // and Tab ACCEPT the highlighted row (never a send — typing "@file⏎"
+  // must not fire the draft at the agent), Escape dismisses this token
+  // instance. A zero-activatable panel never intercepts — the keyboard
+  // falls through honestly.
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (menuActive && token !== null) {
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        moveHighlight(event.key === "ArrowDown" ? 1 : -1);
+        return;
+      }
+      if (event.key === "Enter" || event.key === "Tab") {
+        event.preventDefault();
+        const row = symbolRows[highlight] ?? symbolRows[0];
+        if (row !== undefined) activateRow(row);
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setDismissed({ symbol: token.symbol, start: token.start });
+        return;
+      }
+    }
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       if (hasDraft && sendable) {
@@ -219,21 +437,53 @@ export function KoraComposer({
     // Shift+Enter falls through to the textarea's own newline.
   };
 
+  const trackCaret = (el: HTMLTextAreaElement): void => {
+    setCaret(el.selectionStart ?? 0);
+  };
+
+  // The honest per-symbol notes: the EMPTY fact (a zero-match / an absent
+  // source) and the always-on footer (what the menu reads from). No state
+  // invents data — the notes name the real sources.
+  const emptyNoteKey =
+    token?.symbol === "@"
+      ? "kora.composer.symAtEmpty"
+      : token?.symbol === "#"
+        ? "kora.composer.symHashEmpty"
+        : token?.symbol === "$"
+          ? "kora.composer.symDollarEmpty"
+          : "kora.composer.symSlashUnknown";
+  const footerNoteKey =
+    token?.symbol === "@"
+      ? "kora.composer.symAtNote"
+      : token?.symbol === "#"
+        ? "kora.composer.symHashNote"
+        : token?.symbol === "$"
+          ? "kora.composer.symDollarNote"
+          : token !== null && slashCommands === null
+            ? "kora.composer.symSlashUnavailable"
+            : "kora.composer.symSlashNote";
+
   return (
     <div className="border-t border-myelin bg-well px-4 py-3">
-      <div className="flex items-start gap-2">
+      <div className="relative flex items-start gap-2">
         <label className="sr-only" htmlFor="kora-composer-input">
           {t("kora.composer.label")}
         </label>
         <textarea
           id="kora-composer-input"
+          ref={inputRef}
           rows={2}
           className="min-h-11 w-full resize-y rounded-md border border-border-subtle bg-background px-3 py-2 font-ui text-sm text-foreground placeholder:text-foreground-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright disabled:cursor-not-allowed disabled:text-foreground-muted"
           placeholder={t("kora.composer.placeholder")}
           aria-describedby="kora-composer-note"
           disabled={dead}
           value={draft}
-          onChange={(event) => handleInput(event.target.value, "input")}
+          onChange={(event) => {
+            handleInput(event.target.value, "input");
+            trackCaret(event.target);
+          }}
+          onClick={(event) => trackCaret(event.currentTarget)}
+          onKeyUp={(event) => trackCaret(event.currentTarget)}
           onKeyDown={handleKeyDown}
           onBlur={() => {
             if (startedRef.current && hadTextRef.current) {
@@ -244,6 +494,73 @@ export function KoraComposer({
             }
           }}
         />
+        {/* В4 — the symbol menu (contract §3.2, the zcode four symbols):
+         * a panel ABOVE the field while a @ # / $ token sits under the
+         * caret. Rows are real buttons (the 07j disclosure discipline —
+         * no menu roles); a zero-activatable panel is informational only.
+         * «!» is not in the closed trigger set — a draft with «!» opens
+         * nothing (the anti-argv pin, ADR-0019). */}
+        {token !== null && !dismissedThisToken ? (
+          <div
+            data-testid="kora-symbol-menu"
+            role="group"
+            aria-label={t("kora.composer.symbolMenuLabel", { symbol: token.symbol })}
+            className="absolute bottom-full left-0 z-20 mb-1 w-full min-w-56 rounded-md border border-border-subtle bg-background py-1 shadow-lg"
+          >
+            {symbolRows.length === 0 ? (
+              <p className="px-3 py-2 text-xs text-foreground-muted" data-testid="kora-symbol-empty">
+                {t(emptyNoteKey)}
+              </p>
+            ) : (
+              symbolRows.map((row, index) =>
+                row.kind === "suggestion" ? (
+                  <button
+                    key={row.suggestion.key}
+                    type="button"
+                    data-testid="kora-symbol-row"
+                    data-highlight={index === highlight || undefined}
+                    onClick={() => applySuggestion(row.suggestion)}
+                    className={cn(
+                      "flex w-full items-baseline gap-2 px-3 py-2 text-left text-xs",
+                      "focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-iris-bright",
+                      index === highlight
+                        ? "bg-elevated text-foreground"
+                        : "text-foreground-secondary",
+                    )}
+                  >
+                    <span className="min-w-0 flex-1 truncate">{row.suggestion.label}</span>
+                    {row.suggestion.detail ? (
+                      <span className="shrink-0 font-mono text-foreground-muted">
+                        {row.suggestion.detail}
+                      </span>
+                    ) : null}
+                  </button>
+                ) : (
+                  <button
+                    key={row.command.id}
+                    type="button"
+                    data-testid="kora-symbol-row"
+                    data-highlight={index === highlight || undefined}
+                    aria-disabled={!row.enabled || undefined}
+                    onClick={() => activateRow(row)}
+                    className={cn(
+                      "flex w-full items-baseline gap-2 px-3 py-2 text-left font-mono text-xs",
+                      "focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-iris-bright",
+                      row.enabled ? "text-foreground-secondary" : "text-foreground-muted",
+                      index === highlight && row.enabled ? "bg-elevated text-foreground" : "",
+                      !row.enabled && "cursor-not-allowed",
+                    )}
+                  >
+                    {t(`kora.composer.cmd.${row.command.id}`)}
+                  </button>
+                ),
+              )
+            )}
+            <p className="border-t border-myelin-hairline px-3 py-2 text-xs text-foreground-muted">
+              {t(footerNoteKey)}
+            </p>
+          </div>
+        ) : null}
         {/* The send node renders ONLY for a non-empty draft (07j §4.6).
          * A1: with the relay signal + a steerable session the button is
          * LIVE (disabled only while a send is in flight); without it the

@@ -2639,6 +2639,24 @@ export const en: Record<TranslationKey, string> = {
   "kora.dock.contextFilter": "Filter: {{context}}",
   "kora.dock.contextClear": "show all",
   "kora.dock.persistFail": "Not saved — browser storage is unavailable",
+  // В4 — the dock customization (the pin-section, local aliases, local
+  // hiding; kora-ide contract §3.1). Everything local is honestly marked:
+  // an alias never masks as the server name, hiding never pretends to be
+  // a server archive (K-DOCK-HIDDEN).
+  "kora.dock.pinnedSection": "Pinned",
+  "kora.dock.pinSession": "Pin to the dock (local)",
+  "kora.dock.unpinSession": "Unpin",
+  "kora.dock.renameSession": "Rename locally",
+  "kora.dock.hideSession": "Hide locally",
+  "kora.dock.rowMenuLabel": "Session actions",
+  "kora.dock.aliasBadge": "local",
+  "kora.dock.aliasHint": "A local name — the server name stays",
+  "kora.dock.renameLabel": "Local session name",
+  "kora.dock.renameSave": "Save",
+  "kora.dock.renameCancel": "Cancel",
+  "kora.dock.hiddenLine": "Hidden locally: {{n}}",
+  "kora.dock.hiddenShow": "show",
+  "kora.dock.hiddenAll": "Every session of this view is hidden locally",
   "kora.resize.dock.label": "Sessions panel width",
   // The center context bar («where am I», kora-ide contract §2.2): only the
   // fields that ARE real; model/specialist arrive with their data (В2/В3).
@@ -2691,6 +2709,38 @@ export const en: Record<TranslationKey, string> = {
   "kora.composer.draftSaved": "Draft saved",
   "kora.composer.draftFailed":
     "The draft was not saved — it lives while the page is open",
+  // The composer symbols (В4, kora-ide contract §3.2 — the zcode four
+  // symbols, research §7.3): @ — a cwd reference (NOT a content read; no
+  // file list exists in any registry — the honest degradation), # — a
+  // past-session mention (a search over the loaded registry), / — LOCAL
+  // commands (the relay ones arrive with the relay), $ — specialists from
+  // the В2a roster. «!» is NOT a symbol (the anti-argv ADR-0019): the
+  // menu never opens a shell.
+  "kora.composer.symbolMenuLabel": "{{symbol}} menu",
+  "kora.composer.symAtEmpty": "The session's directory is not reported",
+  "kora.composer.symAtNote":
+    "The registry reports no directory files — the cwd itself is the available reference; no content is read",
+  "kora.composer.symHashEmpty": "No sessions match",
+  "kora.composer.symHashNote":
+    "A search over the loaded session registry — the mention is inserted into the text",
+  "kora.composer.symDollarEmpty": "The specialist roster is not reported",
+  "kora.composer.symDollarNote":
+    "A specialist mention from the roster is inserted into the text — a local choice, not a send binding",
+  "kora.composer.symSlashUnknown": "Unknown command",
+  "kora.composer.symSlashNote":
+    "Local commands; the relay ones arrive with the relay transport",
+  "kora.composer.symSlashUnavailable":
+    "Commands are available inside the Kora workspace",
+  "kora.composer.cmd.pin": "/pin — pin the session to the dock",
+  "kora.composer.cmd.view": "/view — open the session",
+  "kora.composer.cmd.filter": "/filter — narrow the dock to the session's host",
+  "kora.composer.cmdDone.pin.on": "Pinned locally",
+  "kora.composer.cmdDone.pin.off": "Unpinned",
+  "kora.composer.cmdDone.view.open": "The session is open",
+  "kora.composer.cmdDone.filter.host": "The dock narrowed to the session's host",
+  "kora.composer.cmdFail.noHost":
+    "The session's host is not reported — the filter is unavailable",
+  "kora.composer.cmdFail.unavailable": "The command is unavailable",
   // The composer selector row (В2, kora-ide contract §3.2 — the Claude
   // Code / zcode input footer): real data only; an empty slot is not drawn.
   "kora.controls.harnessLabel": "harness",

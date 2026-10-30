@@ -2692,6 +2692,24 @@ export const ru = {
   "kora.dock.contextFilter": "Фильтр: {{context}}",
   "kora.dock.contextClear": "показать все",
   "kora.dock.persistFail": "Не сохранилось — хранилище браузера недоступно",
+  // В4 — кастомизация дока (пин-секция, локальные алиасы, локальное
+  // скрытие; kora-ide contract §3.1). Всё локальное помечено честно:
+  // алиас не маскируется под серверное имя, скрытие не притворяется
+  // серверным архивом (K-DOCK-HIDDEN).
+  "kora.dock.pinnedSection": "Закреплённые",
+  "kora.dock.pinSession": "Закрепить в доке (локально)",
+  "kora.dock.unpinSession": "Открепить",
+  "kora.dock.renameSession": "Переименовать локально",
+  "kora.dock.hideSession": "Скрыть локально",
+  "kora.dock.rowMenuLabel": "Действия сессии",
+  "kora.dock.aliasBadge": "локально",
+  "kora.dock.aliasHint": "Локальное имя — серверное не меняется",
+  "kora.dock.renameLabel": "Локальное имя сессии",
+  "kora.dock.renameSave": "Сохранить",
+  "kora.dock.renameCancel": "Отмена",
+  "kora.dock.hiddenLine": "Скрыты локально: {{n}}",
+  "kora.dock.hiddenShow": "показать",
+  "kora.dock.hiddenAll": "Все сессии этой выборки скрыты локально",
   "kora.resize.dock.label": "Ширина панели сессий",
   // Контекст-бар центра («где я сейчас», kora-ide contract §2.2): только
   // реально доступные поля; модель/специалист появятся с их данными (В2/В3).
@@ -2749,6 +2767,35 @@ export const ru = {
   "kora.composer.draftSaved": "Черновик сохранён",
   "kora.composer.draftFailed":
     "Черновик не сохранился — он живёт, пока открыта страница",
+  // Символы композера (В4, kora-ide contract §3.2 — 4 символа zcode,
+  // ресёрч §7.3): @ — ссылка на cwd (НЕ чтение контента; файлов в реестре
+  // нет — честная деградация), # — упоминание прошлой сессии (поиск по
+  // загруженному реестру), / — ЛОКАЛЬНЫЕ команды (релейные — с реле),
+  // $ — специалисты из ростера В2a. «!» — НЕ символ (анти-argv
+  // ADR-0019): меню не открывает shell никогда.
+  "kora.composer.symbolMenuLabel": "Меню {{symbol}}",
+  "kora.composer.symAtEmpty": "Каталог сессии не сообщается",
+  "kora.composer.symAtNote":
+    "Реестр не сообщает файлы каталога — доступна ссылка на сам cwd; контент не читается",
+  "kora.composer.symHashEmpty": "Сессий не найдено",
+  "kora.composer.symHashNote": "Поиск по загруженному реестру сессий — упоминание вставляется в текст",
+  "kora.composer.symDollarEmpty": "Ростер специалистов не сообщается",
+  "kora.composer.symDollarNote":
+    "Упоминание специалиста из ростера вставляется в текст — локальный выбор, не привязка к отправке",
+  "kora.composer.symSlashUnknown": "Неизвестная команда",
+  "kora.composer.symSlashNote":
+    "Локальные команды; релейные появятся вместе с реле-транспортом",
+  "kora.composer.symSlashUnavailable":
+    "Команды доступны в рабочем пространстве Коры",
+  "kora.composer.cmd.pin": "/pin — закрепить сессию в доке",
+  "kora.composer.cmd.view": "/view — открыть сессию",
+  "kora.composer.cmd.filter": "/filter — сузить док до хоста сессии",
+  "kora.composer.cmdDone.pin.on": "Закреплено локально",
+  "kora.composer.cmdDone.pin.off": "Откреплено",
+  "kora.composer.cmdDone.view.open": "Сессия открыта",
+  "kora.composer.cmdDone.filter.host": "Док сужен до хоста сессии",
+  "kora.composer.cmdFail.noHost": "Хост сессии не сообщается — фильтр недоступен",
+  "kora.composer.cmdFail.unavailable": "Команда недоступна",
   // Строка селекторов композера (В2, kora-ide contract §3.2 — футер инпута
   // Claude Code/zcode): только реальные данные; пустой слот не рисуется.
   "kora.controls.harnessLabel": "харнес",
