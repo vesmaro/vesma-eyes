@@ -3435,6 +3435,7 @@ def _upstream_error(server_name: str, code: int, body: Any) -> dict[str, Any]:
 async def memories_merged(
     limit: int = Query(50, ge=1),
     cursor: str = "",
+    offset: int = Query(0, ge=0),
     scope: str = "",
     status: str = "",
     project: str = "",
@@ -3460,6 +3461,16 @@ async def memories_merged(
     keeps its old offset for the next page. ``truncated`` is true when
     the requested limit exceeded the page cap (silent cap); content drops
     beyond the page always come with a non-null ``next_cursor``.
+
+    The native flat selector is honored additively (S-batch cycle 2, card
+    board-adapter-memories-offset-ignored): with NO cursor, ``offset``
+    seeds EVERY active server's window — the caller speaks the vesma
+    offset contract and the merged page starts ``offset`` records deep on
+    each server, exactly like the native listing. A cursor keeps owning
+    the window (its per-server offsets win, ``offset`` is ignored — the
+    cursor was issued under the cursor contract, ADR 0011 §11); the
+    cursor remains the continuation primitive, ``next_cursor`` still
+    carries the absolute per-server offsets either way.
     """
     truncated = limit > _MEMORY_PAGE_CAP
     limit = min(limit, _MEMORY_PAGE_CAP)
@@ -3472,6 +3483,12 @@ async def memories_merged(
         servers = matched
     else:
         servers = registry.active_servers()
+
+    # The flat offset selector (S-batch cycle 2): no cursor -> every server
+    # starts its window at ``offset``; with a cursor the cursor's per-server
+    # offsets are authoritative and ``offset`` is ignored (see docstring).
+    if offset and not cursor:
+        offsets = {s["name"]: offset for s in servers}
 
     listing_filters = {k: v for k, v in (
         ("status", status), ("project", project), ("agent", agent),

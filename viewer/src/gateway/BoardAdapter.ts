@@ -124,7 +124,7 @@ import type {
  *
  * Wire contract (board-openapi-snapshot.json):
  * - search         GET /api/mnemos/search        ?q&limit&project&scope (proxied)
- * - listMemories   GET /api/memories             ?limit&cursor&scope&status&project&…
+ * - listMemories   GET /api/memories             ?limit&cursor&offset&scope&status&project&…
  * - getMemory      GET /api/memories/item/{id}   (first resolving server)
  * - listTags       GET /api/tags                 (aggregated, count DESC/name ASC)
  * - mergedTags     GET /api/tags                 (raw TagListOut: + errors[]/servers_scanned, UI-17 §6)
@@ -206,6 +206,13 @@ export interface BoardListParams {
   limit?: number;
   /** Opaque cursor from a previous page's `next_cursor`. */
   cursor?: string;
+  /**
+   * Native vesma flat window selector (S-batch cycle 2, card
+   * board-adapter-memories-offset-ignored): with NO cursor, the merged
+   * listing starts `offset` records deep on EVERY server. Ignored when a
+   * cursor is present — the cursor owns the window then (ADR 0011 §11).
+   */
+  offset?: number;
   /** `'all'` (default) or one ACTIVE server name; unknown names → 404. */
   scope?: string;
   /** Native vesma listing filters — pass through verbatim. */
@@ -696,10 +703,12 @@ export class BoardAdapter implements BoardGateway {
   /**
    * Merged list, first page flattened for the `MemoryGateway` contract.
    * `status`/`project` filters pass through to the merged endpoint; the
-   * vesma `offset` has no wire counterpart (the cursor contract replaces
-   * it, ADR 0011 §11) and is ignored — continuation goes through
-   * `listMemoriesPage`. List rows carry an excerpt only (SEC-4), which
-   * lands in `Memory.content`; the full card comes from `getMemory`.
+   * vesma `offset` rides the merged endpoint's flat selector (S-batch
+   * cycle 2, card board-adapter-memories-offset-ignored — with no cursor
+   * every server's window starts `offset` records deep), while cursor
+   * continuation goes through `listMemoriesPage`. List rows carry an
+   * excerpt only (SEC-4), which lands in `Memory.content`; the full card
+   * comes from `getMemory`.
    */
   async listMemories(
     params: ListMemoriesParams = {},
@@ -717,6 +726,10 @@ export class BoardAdapter implements BoardGateway {
         // UI-17 §5.6: the «Открыть в Записях» path narrows the merged list
         // by tag — a native vesma listing filter, pass-through verbatim.
         tags: params.tags,
+        // The native flat window selector: honored by the merged endpoint
+        // when no cursor is present (ADR 0011 §11 cursor stays the
+        // continuation primitive; listMemoriesPage owns cursor pages).
+        offset: params.offset,
       },
       signal,
     );
@@ -731,6 +744,7 @@ export class BoardAdapter implements BoardGateway {
       query: {
         limit: params.limit,
         cursor: params.cursor,
+        offset: params.offset,
         scope: params.scope,
         status: params.status,
         project: params.project,
