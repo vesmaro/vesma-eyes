@@ -10,6 +10,8 @@ workflow — this file is the repo-side trail).
 
 ## [Unreleased]
 
+## [1.97.4] — 2026-10-30
+
 ### Added
 
 - **GIT-ХУКИ: GOLDEN-ГЕЙТ НА MERGE И PUSH (feat/c2-sbatch).** `git merge` не исполняет pre-commit — поезд-мерж мог принести изменения viewer/tokens мимо golden-гейта (прецедент каскадной волны 1: 13 файлов, хук молчал). Теперь gate-механика (golden/hostile render + token-parity) живёт в одном `scripts/githooks/golden.sh` с тремя вызывателями: pre-commit делегирует байт-в-байт прежнему поведению, post-merge при касании viewer/ или tokens.css прогоняет гейт и громко баннерит красный (мерж стоит, пуш откажут), pre-push fail-closed — любой непубликующий-удаление пуш несёт гейт.
