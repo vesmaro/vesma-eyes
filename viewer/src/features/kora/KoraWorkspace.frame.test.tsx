@@ -328,7 +328,7 @@ describe("KoraWorkspace frame (07l §3; Kora IDE В1 — three zones)", () => {
     );
   });
 
-  it("K-INV-1: a host selection and the cluster route leave the dock byte-still; focus never jumps", () => {
+  it("K-INV-1: a host selection keeps the dock's node, seam, scroll and focus — and В3 narrows its ROWS to the host context", () => {
     const first = mountWorkspace();
     const dock = labelled(first.container, "Сессии")[0];
     const input = dock.querySelector<HTMLInputElement>("input[type='search']");
@@ -339,13 +339,24 @@ describe("KoraWorkspace frame (07l §3; Kora IDE В1 — three zones)", () => {
     const beforeHrefs = dockHrefs(first.container);
     const beforeSeam = dockSeam(first.container).getAttribute("aria-valuenow");
 
-    // Host context: the center turns into the field, the dock holds still.
+    // Host context (kora-ide В3, contract §2.3): the center turns into
+    // the field and the dock FILTERS to that host's rows — the row set
+    // narrowing is the CONTRACT; what must never move is the dock's
+    // machinery: the SAME node, the seam value, no focus theft.
     first.rerender({ host: "abyss-laptop" });
     expect(labelled(first.container, "Сессии")[0]).toBe(dock);
-    expect(dockHrefs(first.container)).toEqual(beforeHrefs);
+    const hostHrefs = dockHrefs(first.container);
+    // The narrowed ROW set (the context-clear link "/kora" is the filter's
+    // own way out, not a row): the pin stays, the host's live zcode row
+    // stays, the hermes rows are out.
+    const hostRows = hostHrefs.filter((href) => href !== "/kora");
+    expect(hostRows).toEqual([
+      "/kora/hermes",
+      `/kora/${encodeURIComponent("exec-zcode-main:sess_7f3a91")}`,
+    ]);
     expect(dockSeam(first.container).getAttribute("aria-valuenow")).toBe(beforeSeam);
 
-    // Cluster route: same stillness.
+    // Cluster route: the context leaves, the full slice returns.
     first.rerender({ cluster: true });
     expect(labelled(first.container, "Сессии")[0]).toBe(dock);
     expect(dockHrefs(first.container)).toEqual(beforeHrefs);

@@ -46,7 +46,9 @@ import {
   useKoraHermesStatus,
   useKoraHermesPull,
   useKoraHermesTranscriptPages,
+  useKoraModels,
 } from "./useKora";
+import type { KoraExecutorModels } from "./koraTypes";
 import { pageGridClass } from "@/layout/pageGrid";
 import { useKoraEntered } from "@/telemetry/useKoraEntered"; // ME-041: kora.entered
 
@@ -321,6 +323,32 @@ export function KoraWorkspace({
   const hermesStatus = useKoraHermesStatus();
   const hermesPull = useKoraHermesPull();
 
+  // В3a (KORA-MODELS-1) — the per-executor models roster: the tree's
+  // model source for zcode/vscode/pi (hermes keeps its /status roster).
+  // ONE cheap store projection; never polled; a failed/empty read is the
+  // honest «модели не сообщаются» (K-TREE-MODEL-UNKNOWN), never a retry
+  // loop.
+  const modelsRoster = useKoraModels();
+  const mirrorModels = useMemo(() => {
+    const map = new Map<string, KoraExecutorModels>();
+    for (const row of modelsRoster.data?.executors ?? []) {
+      map.set(row.executor_id, row);
+    }
+    return map;
+  }, [modelsRoster.data]);
+  const modelsReady = modelsRoster.isSuccess || modelsRoster.isError;
+  const hermesRoster = useMemo(
+    () =>
+      hermesStatus.data
+        ? {
+            models: hermesStatus.data.models ?? [],
+            defaultModel: hermesStatus.data.default_model ?? null,
+          }
+        : null,
+    [hermesStatus.data],
+  );
+  const hermesReady = hermesStatus.isSuccess || hermesStatus.isError;
+
   const registryEmpty: KoraRegistryEmpty =
     !sessions.isPending && sessions.error === null && items.length === 0
       ? noExecutors
@@ -410,6 +438,10 @@ export function KoraWorkspace({
       activeHost={host ?? ""}
       activeAgentId={agentParam}
       hermesLine={hermesLine}
+      mirror={mirrorModels}
+      mirrorReady={modelsReady}
+      hermes={hermesRoster}
+      hermesReady={hermesReady}
     />
   );
 
@@ -431,6 +463,12 @@ export function KoraWorkspace({
       clusterActive={cluster}
       persistFail={persistFail}
       onPersistFail={onPersistFail}
+      // В3 (contract §2.3): the route context filters the dock — the host
+      // route keeps its sessions, ?agent= narrows to that harness. The
+      // filter rides ONLY the field route (a session/hermes mode has no
+      // host context).
+      contextHost={host}
+      contextExecutorId={host !== null ? agentParam : null}
     />
   );
 
@@ -463,6 +501,21 @@ export function KoraWorkspace({
         hermesStatus.data.models?.[0] ??
         null)
       : null;
+  // В3 — the context bar's HARNESS segment at the host-field mode: when
+  // the route carries ?agent= (a harness click in the tree — contract
+  // §2.3 «клик харнеса → … + контекст»), the bar names that harness. The
+  // composer's own context display follows when a session of the harness
+  // opens (the composer mounts per session; the field mode hosts none —
+  // the ratified В1/В2 presentation).
+  const fieldHarness = useMemo(() => {
+    if (host === null || agentParam === null) return null;
+    for (const group of [...model.hosts, ...model.unknown]) {
+      for (const agent of group.agents) {
+        if (agent.executorId === agentParam) return agent.harness;
+      }
+    }
+    return null;
+  }, [host, agentParam, model]);
   // The hook is unconditional (rules of hooks); no session → the empty
   // key honestly resolves to null.
   const contextSpecialist = useKoraSpecialistAnnotation(sessionId ?? "");
@@ -470,7 +523,7 @@ export function KoraWorkspace({
     ? null
     : [
         host ?? sessionHost,
-        session?.harness ?? (cluster ? "hermes" : null),
+        session?.harness ?? fieldHarness ?? (cluster ? "hermes" : null),
         contextModel,
         contextSpecialist,
         t(`kora.context.mode.${centerMode}`),

@@ -242,10 +242,17 @@ describe("Kora workspace (union И1 — 07j §6 / 07l §7)", () => {
     expect(html).toContain('aria-controls="kora-meta-about-body"');
   });
 
-  it("session state is dot + text, never colour alone (1.4.1)", () => {
+  it("states are dot + text, never colour alone (1.4.1) — В3: the tree dots carry the PRESENCE words", () => {
     const html = renderKoraSession();
-    expect(html).toContain("running ·"); // the live pill text rides the dot
-    expect(html).toContain("process dead"); // the dead row names its state
+    expect(html).toContain("running ·"); // the live pill text rides the dock dot
+    // kora-ide В3 (contract §2.3/§4): the tree's health dots read the
+    // executors' computed PRESENCE — «present» / «not reporting» / «status
+    // not reported», never a bare colour and never an «online»-style
+    // liveness claim. All fixture executors are online, so every tree dot
+    // (the host aggregate + the three harness rows) carries its word.
+    // The session states stay dot + text on the DOCK rows (the dead row
+    // names its state whenever it is visible).
+    expect(html.match(/>present<\/span>/g)?.length).toBe(4);
   });
 
   it("the composer labels its field and ties the reason to it (4.1.2 / 2.5.3)", () => {

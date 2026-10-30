@@ -24,6 +24,7 @@ import type {
   HermesMessagesParams,
   KoraErrorCode,
   KoraMessageAccepted,
+  KoraModelsRoster,
   KoraSession,
   KoraSessionCreated,
   KoraSessionCreate,
@@ -176,4 +177,14 @@ export interface KoraGateway {
    * failed read is honest absence: no invented rows, no retry loop.
    */
   specialists(signal?: AbortSignal): Promise<KoraSpecialistsRoster>;
+
+  /**
+   * В3a (KORA-MODELS-1) — GET /api/kora/models: the read-only per-executor
+   * models roster (the FC-6 discovery mirror projection). A cheap store
+   * projection (no live probe, no content) — the tree's model level
+   * renders FROM IT (plus the hermes /status roster) or reads the honest
+   * «модели не сообщаются» (contract §5.3). A missing executor row or a
+   * failed read is honest absence: no invented models.
+   */
+  models(signal?: AbortSignal): Promise<KoraModelsRoster>;
 }

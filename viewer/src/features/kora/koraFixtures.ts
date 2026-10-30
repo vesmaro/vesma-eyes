@@ -1,5 +1,5 @@
 import type { components } from "./koraContract";
-import type { HermesMessage, KoraSpecialistsRoster } from "./koraTypes";
+import type { HermesMessage, KoraModelsRoster, KoraSpecialistsRoster } from "./koraTypes";
 
 type SpecSession = components["schemas"]["KoraSessionOut"];
 type SpecTranscriptItem = components["schemas"]["KoraTranscriptItemOut"];
@@ -143,6 +143,62 @@ export const KORA_FIXTURE_SPECIALISTS: KoraSpecialistsRoster = {
       name: "@GCW: Senior Frontend Developer",
       slug: "gcw-senior-frontend-developer",
       profile_cached: false,
+    },
+  ],
+  meta: { generated_at: "2026-10-29T00:00:00+00:00" },
+};
+
+/**
+ * The per-executor models roster (В3a — GET /api/kora/models mock,
+ * KORA-MODELS-1). TYPED BY THE SEAM TYPE (mirrored from KoraModelsOut in
+ * server/app.py — the additive wave, outside the frozen artifact). The
+ * executor ids match the BOARD mock's registry (MOCK_EXECUTORS — the tree
+ * joins the roster against THAT registry, so the built mock playground
+ * demonstrates the model level: the laptop zcode executor reports two
+ * providers (configured + anonymous — the availability bits), the mesh-2
+ * zcode executor reports one; every executor absent here (old-laptop,
+ * the copilots) reads the honest «модели не сообщаются»,
+ * K-TREE-MODEL-UNKNOWN, and hermes keeps its OWN single source — the
+ * /status roster. NO context-limit field anywhere — no source reports
+ * one today, the mock does not invent it (§4: ни одно состояние не
+ * выдумывает данные).
+ */
+export const KORA_FIXTURE_MODELS: KoraModelsRoster = {
+  ok: true,
+  count: 2,
+  executors: [
+    {
+      executor_id: "exec-laptop-zcode",
+      reported_at: "2026-10-28T18:20:00+00:00",
+      installations: [
+        {
+          harness: "zcode",
+          provider: "z-ai",
+          auth: "configured",
+          source: "config",
+          models: ["glm-5.3", "glm-4.6"],
+        },
+        {
+          harness: "zcode",
+          provider: "openrouter",
+          auth: "anonymous",
+          source: "probe",
+          models: ["anthropic/claude-sonnet-4.5"],
+        },
+      ],
+    },
+    {
+      executor_id: "exec-mesh-qa",
+      reported_at: "2026-10-27T09:05:00+00:00",
+      installations: [
+        {
+          harness: "zcode",
+          provider: "ollama",
+          auth: "anonymous",
+          source: "probe",
+          models: ["qwen3:32b"],
+        },
+      ],
     },
   ],
   meta: { generated_at: "2026-10-29T00:00:00+00:00" },

@@ -80,6 +80,8 @@ export function KoraDock({
   clusterActive = false,
   persistFail = false,
   onPersistFail,
+  contextHost = null,
+  contextExecutorId = null,
 }: {
   /** The already-loaded registry slice (the workspace owns the read). */
   items: readonly KoraSession[];
@@ -101,6 +103,13 @@ export function KoraDock({
    * refused (the dock's own writes and the workspace's dock-seam commits). */
   persistFail?: boolean;
   onPersistFail?: () => void;
+  /** В3 context filter (contract §2.3): the route's :host — the dock
+   * shows only that host's sessions. Null off the field route. */
+  contextHost?: string | null;
+  /** В3 context filter: the route's ?agent= — only that harness's
+   * sessions («переключение харнеса → динамический список сессий»). A
+   * derivation over the LOADED registry — zero new requests (§5.4). */
+  contextExecutorId?: string | null;
 }) {
   const t = useT();
   const [view, setView] = useState<KoraDockView>(() => readKoraDockView() ?? "work");
@@ -176,7 +185,47 @@ export function KoraDock({
     [items, quickFilter, needle],
   );
 
-  const rowsTotal = filtered.length;
+  // В3 — the context filter (contract §2.3), the LAST stage before
+  // grouping: a harness context keeps that executor's rows, a host
+  // context keeps the host's agents' rows. A pure derivation over the
+  // already-loaded slice — zero new requests (acceptance (в)). The
+  // context never rewrites the dock's machinery (K-INV-1: the view
+  // switcher, search and pin stay put) — only the row set narrows, and
+  // the context line below names it honestly.
+  const contextActive = contextExecutorId !== null || contextHost !== null;
+  const contextFiltered = useMemo(() => {
+    if (contextExecutorId !== null) {
+      return filtered.filter((session) => session.executor_id === contextExecutorId);
+    }
+    if (contextHost !== null) {
+      const hostNode = [...model.hosts, ...model.unknown].find(
+        (candidate) => candidate.host === contextHost,
+      );
+      if (hostNode === undefined) return [];
+      const ids = new Set(hostNode.agents.map((agent) => agent.executorId));
+      return filtered.filter((session) => ids.has(session.executor_id));
+    }
+    return filtered;
+  }, [filtered, model, contextHost, contextExecutorId]);
+
+  // The context label: the harness node's own label (executor name, else
+  // the harness name — the tree's grammar); a registry miss keeps the
+  // mono id (no invented name), the host context the host name.
+  const contextLabel = useMemo(() => {
+    if (contextExecutorId !== null) {
+      for (const group of [...model.hosts, ...model.unknown]) {
+        for (const agent of group.agents) {
+          if (agent.executorId === contextExecutorId) {
+            return agent.executor?.name ?? agent.harness;
+          }
+        }
+      }
+      return contextExecutorId;
+    }
+    return contextHost;
+  }, [model, contextExecutorId, contextHost]);
+
+  const rowsTotal = contextFiltered.length;
   const searching = needle !== "";
 
   return (
@@ -248,9 +297,25 @@ export function KoraDock({
           className="h-12 w-full rounded-md border border-border-subtle bg-background pl-7 pr-2 text-xs text-foreground placeholder:text-foreground-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright md:h-7"
         />
       </div>
-      {/* The honest counter — polite live region (the tree's pattern). */}
+      {/* The honest counter — polite live region (the tree's pattern).
+       * В3: when a context filter is live (and no search), the line names
+       * it with the one-click way out («показать все» → /kora). */}
       <p role="status" className="mt-1 min-h-4 text-xs text-foreground-muted">
-        {searching ? t("kora.dock.found", { n: rowsTotal }) : ""}
+        {searching ? (
+          t("kora.dock.found", { n: rowsTotal })
+        ) : contextActive && contextLabel !== null ? (
+          <>
+            {t("kora.dock.contextFilter", { context: contextLabel })}{" "}
+            <Link
+              to="/kora"
+              className="underline decoration-border-subtle underline-offset-2 transition-colors duration-instant hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-iris-bright"
+            >
+              {t("kora.dock.contextClear")}
+            </Link>
+          </>
+        ) : (
+          ""
+        )}
       </p>
 
       {/* The quick filters («идёт / за 24 ч») — BEFORE grouping. */}
@@ -290,37 +355,53 @@ export function KoraDock({
           <p className="text-sm text-foreground-secondary">
             {t("kora.dock.noMatches")}
           </p>
-        ) : quickFilter !== null && rowsTotal === 0 ? (
-          // K-DOCK-FILTERED-EMPTY: the fact + the reset way out.
+        ) : (quickFilter !== null || contextActive) && rowsTotal === 0 ? (
+          // K-DOCK-FILTERED-EMPTY: the fact + the way out (the quick
+          // filter's reset; the context's «показать все»).
           <div className="text-sm text-foreground-secondary">
             <p>{t("kora.dock.emptyFiltered")}</p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setQuickFilter(null)}
-              className="mt-2 h-12 border-border-subtle px-3 font-mono text-xs text-foreground-secondary md:h-7"
-            >
-              {t("kora.dock.resetFilter")}
-            </Button>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {quickFilter !== null ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setQuickFilter(null)}
+                  className="h-12 border-border-subtle px-3 font-mono text-xs text-foreground-secondary md:h-7"
+                >
+                  {t("kora.dock.resetFilter")}
+                </Button>
+              ) : null}
+              {contextActive ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  asChild
+                  className="h-12 border-border-subtle px-3 font-mono text-xs text-foreground-secondary md:h-7"
+                >
+                  <Link to="/kora">{t("kora.dock.contextClear")}</Link>
+                </Button>
+              ) : null}
+            </div>
           </div>
         ) : view === "work" ? (
           <WorkView
-            filtered={filtered}
+            filtered={contextFiltered}
             selectedSessionId={selectedSessionId}
             open={open}
             onToggle={toggle}
           />
         ) : view === "host" ? (
           <HostView
-            filtered={filtered}
+            filtered={contextFiltered}
             model={model}
             selectedSessionId={selectedSessionId}
             open={open}
             onToggle={toggle}
           />
         ) : (
-          <TimelineView filtered={filtered} selectedSessionId={selectedSessionId} />
+          <TimelineView filtered={contextFiltered} selectedSessionId={selectedSessionId} />
         )}
       </div>
 

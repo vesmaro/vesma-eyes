@@ -2501,6 +2501,17 @@ export const en: Record<TranslationKey, string> = {
   "kora.tree.searchPlaceholder": "Find a host or agent…",
   "kora.tree.noMatches": "Nothing found",
   "kora.tree.found": "found: {{n}}",
+  // В3 — the health dots (presence ≠ liveness) and the model level
+  // (§2.3/§5.3). The contract's own wording: present / not reporting /
+  // status not reported — never «online»; no model data → «not reported».
+  "kora.tree.health.present": "present",
+  "kora.tree.health.silent": "not reporting",
+  "kora.tree.modelsUnknown": "models not reported",
+  "kora.tree.modelsPending": "models: loading…",
+  "kora.tree.modelDefault": "default",
+  "kora.tree.modelAuth.configured": "key configured",
+  "kora.tree.modelAuth.anonymous": "no key",
+  "kora.tree.modelAuth.unknown": "availability unknown",
   "kora.breadcrumb.field": "← {{host}} · field",
   "kora.breadcrumb.kora": "← Kora",
   "kora.list.loadingMore": "Loading…",
@@ -2624,6 +2635,9 @@ export const en: Record<TranslationKey, string> = {
   "kora.dock.noMatches": "Nothing found",
   "kora.dock.emptyFiltered": "No sessions match this filter",
   "kora.dock.resetFilter": "Reset the filter",
+  // В3 — the dock's context filter (a harness/host click in the tree, §2.3).
+  "kora.dock.contextFilter": "Filter: {{context}}",
+  "kora.dock.contextClear": "show all",
   "kora.dock.persistFail": "Not saved — browser storage is unavailable",
   "kora.resize.dock.label": "Sessions panel width",
   // The center context bar («where am I», kora-ide contract §2.2): only the

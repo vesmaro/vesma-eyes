@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ExecutorItem } from "@/gateway/boardTypes";
-import type { KoraSession } from "./koraTypes";
+import type { KoraExecutorModels, KoraSession } from "./koraTypes";
 import {
   buildKoraTree,
   buildProjectGroups,
@@ -8,6 +8,9 @@ import {
   groupKoraTranscript,
   koraAgeUnit,
   koraGroupListId,
+  koraHarnessModels,
+  koraHostHealth,
+  koraNodeHealth,
   koraSessionName,
   koraSummary,
   koraTranscriptAnchorId,
@@ -520,5 +523,154 @@ describe("pathBasename", () => {
     expect(pathBasename("proj")).toBe("proj");
     expect(pathBasename("/")).toBe("/");
     expect(pathBasename("/a/b/c.dee")).toBe("c.dee");
+  });
+});
+
+/* ── Kora IDE В3 — the model level + the health dots ───────────────────── */
+
+function executorWithPresence(
+  id: string,
+  harness: string,
+  host: string,
+  presence: ExecutorItem["presence"],
+): ExecutorItem {
+  return { ...executor(id, harness, host), presence };
+}
+
+const MIRROR_ROW: KoraExecutorModels = {
+  executor_id: "exec-zc",
+  reported_at: "2026-10-28T18:20:00+00:00",
+  installations: [
+    {
+      harness: "zcode",
+      provider: "z-ai",
+      auth: "configured",
+      source: "config",
+      models: ["glm-5.3"],
+    },
+    {
+      // The SAME provider on a second installation of the SAME harness:
+      // the merge unions the model ids and strengthens the auth fact.
+      harness: "zcode",
+      provider: "z-ai",
+      auth: "anonymous",
+      source: "probe",
+      models: ["glm-4.6"],
+    },
+    {
+      harness: "vscode",
+      provider: "openai",
+      auth: "configured",
+      source: "config",
+      models: ["gpt-5.1-codex"],
+    },
+  ],
+};
+
+describe("koraHarnessModels (В3, KORA-MODELS-1 consumer)", () => {
+  const ready = {
+    mirror: new Map([["exec-zc", MIRROR_ROW]]),
+    mirrorReady: true,
+    hermes: { models: ["hermes-4.5-405b", "hermes-4.5-70b"], defaultModel: "hermes-4.5-405b" },
+    hermesReady: true,
+  };
+
+  it("hermes reads the /status roster: bare rows, provider null, the server default marked", () => {
+    const result = koraHarnessModels(
+      { harness: "hermes", executorId: "hermes" },
+      ready,
+    );
+    if (result.state !== "known") throw new Error("expected known");
+    expect(result.models).toEqual([
+      { model: "hermes-4.5-405b", provider: null, auth: null, source: null, isDefault: true },
+      { model: "hermes-4.5-70b", provider: null, auth: null, source: null, isDefault: false },
+    ]);
+  });
+
+  it("hermes with an unsettled status read reads PENDING — never «не сообщаются»", () => {
+    expect(
+      koraHarnessModels(
+        { harness: "hermes", executorId: "hermes" },
+        { ...ready, hermesReady: false },
+      ),
+    ).toEqual({ state: "pending" });
+  });
+
+  it("hermes with an empty roster reads unknown (the honest nothing)", () => {
+    expect(
+      koraHarnessModels(
+        { harness: "hermes", executorId: "hermes" },
+        { ...ready, hermes: { models: [], defaultModel: null } },
+      ),
+    ).toEqual({ state: "unknown" });
+  });
+
+  it("a mirror hit filters to the node's OWN harness and merges per provider", () => {
+    const result = koraHarnessModels(
+      { harness: "zcode", executorId: "exec-zc" },
+      ready,
+    );
+    if (result.state !== "known") throw new Error("expected known");
+    // Two z-ai installations merge: model ids sorted+unioned, auth takes
+    // the STRONGEST fact (configured beats anonymous), config beats probe.
+    expect(result.models).toEqual([
+      { model: "glm-4.6", provider: "z-ai", auth: "configured", source: "config", isDefault: false },
+      { model: "glm-5.3", provider: "z-ai", auth: "configured", source: "config", isDefault: false },
+    ]);
+  });
+
+  it("the mirror's OTHER-harness installations never leak into this node", () => {
+    const result = koraHarnessModels(
+      { harness: "pi", executorId: "exec-zc" },
+      ready,
+    );
+    // exec-zc reported zcode+vscode installations only — pi reads the
+    // honest «не сообщаются», no cross-harness invention.
+    expect(result).toEqual({ state: "unknown" });
+  });
+
+  it("a mirror miss (the executor never reported) reads unknown", () => {
+    expect(
+      koraHarnessModels(
+        { harness: "pi", executorId: "exec-ghost" },
+        ready,
+      ),
+    ).toEqual({ state: "unknown" });
+  });
+
+  it("an unsettled mirror read reads PENDING — the honest wait", () => {
+    expect(
+      koraHarnessModels(
+        { harness: "zcode", executorId: "exec-zc" },
+        { ...ready, mirrorReady: false },
+      ),
+    ).toEqual({ state: "pending" });
+  });
+});
+
+describe("koraNodeHealth / koraHostHealth (В3 health dots, presence ≠ liveness)", () => {
+  it("a node with an online executor reads present; expired presence reads silent", () => {
+    expect(koraNodeHealth(executorWithPresence("e1", "zcode", "h", "online"))).toBe("present");
+    expect(koraNodeHealth(executorWithPresence("e1", "zcode", "h", "stale"))).toBe("silent");
+    expect(koraNodeHealth(executorWithPresence("e1", "zcode", "h", "offline"))).toBe("silent");
+  });
+
+  it("no executor row reads unknown — no state is invented", () => {
+    expect(koraNodeHealth(null)).toBe("unknown");
+    expect(koraNodeHealth(undefined)).toBe("unknown");
+  });
+
+  it("a host is present when ANY executor ticks; silent when only expired ones report", () => {
+    const mixed = [
+      { executor: executorWithPresence("e1", "zcode", "h", "offline"), executorId: "e1", harness: "zcode", sessions: [] },
+      { executor: executorWithPresence("e2", "pi", "h", "online"), executorId: "e2", harness: "pi", sessions: [] },
+    ];
+    expect(koraHostHealth(mixed)).toBe("present");
+    const silentOnly = [
+      { executor: executorWithPresence("e1", "zcode", "h", "stale"), executorId: "e1", harness: "zcode", sessions: [] },
+    ];
+    expect(koraHostHealth(silentOnly)).toBe("silent");
+    const unknownOnly = [{ executor: null, executorId: "g", harness: "zcode", sessions: [] }];
+    expect(koraHostHealth(unknownOnly)).toBe("unknown");
   });
 });

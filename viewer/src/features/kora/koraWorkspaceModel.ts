@@ -1,5 +1,5 @@
 import type { ExecutorItem } from "@/gateway/boardTypes";
-import type { KoraCoverage, KoraSession } from "./koraTypes";
+import type { KoraCoverage, KoraExecutorModels, KoraSession } from "./koraTypes";
 
 /**
  * Kora workspace model (union И1, 07j §1–3 + i1-dressing-map §1.2.2) — the
@@ -203,6 +203,167 @@ export function buildKoraTree(
   });
 
   return { hosts: hostNodes, unknown: unknownNodes };
+}
+
+/* ── Kora IDE В3 — the tree's MODEL level + the health dots ──────────────
+ * kora-ide contract §2.3/§5.3: the tree v3 is host → harness → MODELS
+ * (provider badge, context limit, availability) with honest health dots
+ * (presence ≠ liveness). Two model sources EXIST and only two: the В3a
+ * per-executor roster (GET /api/kora/models — the agents' own FC-6
+ * discovery mirror) for zcode/vscode/pi, and the hermes /status roster
+ * for hermes. Anything else reads «модели не сообщаются»
+ * (K-TREE-MODEL-UNKNOWN) — a derivation NEVER invents a model, a provider
+ * badge or a context limit (§4: пустой слот не рисуем). Context limits:
+ * NO source reports one today — the field does not exist anywhere in the
+ * chain (mirror/hermes/status verified 2026-10-30), so no node renders
+ * one; when a source gains the datum the derivation extends. */
+
+/** One model row of the tree (the model id + its open facts). */
+export interface KoraModelNode {
+  readonly model: string;
+  /** The provider badge; null = no provider fact (the hermes roster is
+   * bare strings — the bridge IS the provider, naming one would invent). */
+  readonly provider: string | null;
+  /** The availability bit as the mirror reports it (configured /
+   * anonymous / unknown); null = no fact (hermes). */
+  readonly auth: string | null;
+  /** The provenance bit (config / probe); null = no fact (hermes). */
+  readonly source: string | null;
+  /** The hermes roster's server default (the ONLY default marker that
+   * exists; the mirror rows carry none). */
+  readonly isDefault: boolean;
+}
+
+/** The models verdict for ONE harness node: known rows, the honest
+ * «не сообщаются», or the pending read (an honest wait, not a verdict). */
+export type KoraHarnessModels =
+  | { readonly state: "known"; readonly models: readonly KoraModelNode[] }
+  | { readonly state: "unknown" }
+  | { readonly state: "pending" };
+
+export interface KoraModelsSources {
+  /** The В3a roster by executor id (a missing id = not reported). */
+  readonly mirror: ReadonlyMap<string, KoraExecutorModels>;
+  /** The В3a read SETTLED (success or error) — pending reads wait. */
+  readonly mirrorReady: boolean;
+  /** The hermes /status roster (global; null = no data). */
+  readonly hermes: {
+    readonly models: readonly string[];
+    readonly defaultModel: string | null;
+  } | null;
+  /** The hermes status read settled. */
+  readonly hermesReady: boolean;
+}
+
+/**
+ * The model rows of ONE harness node (В3). hermes reads the /status
+ * roster (the provider-less bare strings + the server default marker);
+ * every other harness reads the executor's mirror installations OF THAT
+ * harness, merged per provider (the fleet's honest merge: any configured
+ * → configured, else any unknown → unknown, else anonymous; config wins
+ * over probe). Deterministic: providers sorted, model ids sorted.
+ */
+export function koraHarnessModels(
+  agent: Pick<KoraAgentNode, "harness" | "executorId">,
+  sources: KoraModelsSources,
+): KoraHarnessModels {
+  if (agent.harness === "hermes") {
+    if (!sources.hermesReady || sources.hermes === null) {
+      return { state: "pending" };
+    }
+    const models = sources.hermes.models
+      .filter((model) => typeof model === "string" && model.trim() !== "")
+      .map(
+        (model): KoraModelNode => ({
+          model,
+          provider: null,
+          auth: null,
+          source: null,
+          isDefault: model === sources.hermes?.defaultModel,
+        }),
+      );
+    return models.length > 0 ? { state: "known", models } : { state: "unknown" };
+  }
+  if (!sources.mirrorReady) return { state: "pending" };
+  const row = sources.mirror.get(agent.executorId);
+  if (row === undefined) return { state: "unknown" };
+  interface MutableGroup {
+    models: Set<string>;
+    auths: Set<string>;
+    sources: Set<string>;
+  }
+  const groups = new Map<string, MutableGroup>();
+  for (const installation of row.installations) {
+    if (installation.harness !== agent.harness) continue;
+    const provider =
+      typeof installation.provider === "string"
+        ? installation.provider.trim()
+        : "";
+    if (provider === "") continue;
+    const group = groups.get(provider) ?? {
+      models: new Set<string>(),
+      auths: new Set<string>(),
+      sources: new Set<string>(),
+    };
+    for (const model of installation.models) {
+      if (typeof model === "string" && model.trim() !== "") {
+        group.models.add(model);
+      }
+    }
+    if (installation.auth) group.auths.add(installation.auth);
+    if (installation.source) group.sources.add(installation.source);
+    groups.set(provider, group);
+  }
+  const nodes: KoraModelNode[] = [];
+  for (const [provider, group] of [...groups.entries()].sort(([a], [b]) =>
+    a.localeCompare(b),
+  )) {
+    const auth = group.auths.has("configured")
+      ? "configured"
+      : group.auths.has("unknown")
+        ? "unknown"
+        : group.auths.has("anonymous")
+          ? "anonymous"
+          : null;
+    const source = group.sources.has("config")
+      ? "config"
+      : group.sources.has("probe")
+        ? "probe"
+        : null;
+    for (const model of [...group.models].sort((a, b) => a.localeCompare(b))) {
+      nodes.push({ model, provider, auth, source, isDefault: false });
+    }
+  }
+  return nodes.length > 0 ? { state: "known", models: nodes } : { state: "unknown" };
+}
+
+/**
+ * The health verdict of ONE node (В3 acceptance (б)): derived from the
+ * executor registry's computed PRESENCE — never from session liveness.
+ * present = the executor ticks (presence online); silent = the presence
+ * expired or never arrived («не сообщает», K-HARNESS-OFFLINE — sessions
+ * stay visible); unknown = no executor row at all («статус не
+ * сообщается» — no dot renders, no state is invented).
+ */
+export type KoraHealth = "present" | "silent" | "unknown";
+
+export function koraNodeHealth(
+  executor: ExecutorItem | null | undefined,
+): KoraHealth {
+  if (!executor) return "unknown";
+  return executor.presence === "online" ? "present" : "silent";
+}
+
+/** The host branch's aggregate health: any present agent → present; else
+ * any reporting agent → silent; else unknown (no executor rows). */
+export function koraHostHealth(agents: readonly KoraAgentNode[]): KoraHealth {
+  let sawSilent = false;
+  for (const agent of agents) {
+    const health = koraNodeHealth(agent.executor);
+    if (health === "present") return "present";
+    if (health === "silent") sawSilent = true;
+  }
+  return sawSilent ? "silent" : "unknown";
 }
 
 /** Header summary numbers (07j §3.2) — every value is a registry derivative. */

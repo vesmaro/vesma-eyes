@@ -18,6 +18,7 @@ import {
   KORA_FIXTURE_HERMES_MESSAGES,
   KORA_FIXTURE_HERMES_SESSIONS,
   KORA_FIXTURE_HERMES_STATUS,
+  KORA_FIXTURE_MODELS,
   KORA_FIXTURE_SESSIONS,
   KORA_FIXTURE_SPECIALISTS,
   KORA_FIXTURE_TRANSCRIPT,
@@ -33,6 +34,7 @@ import type {
   HermesMessagesPage,
   HermesMessagesParams,
   KoraMessageAccepted,
+  KoraModelsRoster,
   KoraSession,
   KoraSessionCreate,
   KoraSessionCreated,
@@ -682,6 +684,24 @@ export class KoraMockAdapter implements KoraGateway {
     return this.delay().then(() => ({
       ...KORA_FIXTURE_SPECIALISTS,
       items: [...KORA_FIXTURE_SPECIALISTS.items],
+    }));
+  }
+
+  models(): Promise<KoraModelsRoster> {
+    // В3a — the read-only per-executor models roster (open facts; no
+    // unlock gate, no demo knob — the real route is a plain authed read
+    // for both owner classes, a cheap store projection). The fixture's
+    // stories: zcode/vscode report, pi does NOT — the honest
+    // K-TREE-MODEL-UNKNOWN is exercised in the mock itself.
+    return this.delay().then(() => ({
+      ...KORA_FIXTURE_MODELS,
+      executors: KORA_FIXTURE_MODELS.executors.map((row) => ({
+        ...row,
+        installations: row.installations.map((installation) => ({
+          ...installation,
+          models: [...installation.models],
+        })),
+      })),
     }));
   }
 }
